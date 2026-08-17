@@ -1,16 +1,25 @@
 export const FIRST_TENANT_ID = "automodz";
+export const FIRST_STUDIO_ID = "studio-ahmedabad";
 
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
 export const DEFAULT_CURRENCY = "INR";
 export const DEFAULT_TAX_RATE_PERCENT = 18;
 export const DEFAULT_TAX_DESCRIPTION = "GST 18%";
 
+export const SLOT_INTERVAL_MINUTES = 30;
+export const TURNOVER_BUFFER_MINUTES = 15;
+export const MAX_ADVANCE_BOOKING_DAYS = 30;
+export const MAX_CUSTOMER_RESCHEDULES = 3;
+export const CANCELLATION_FREE_WINDOW_HOURS = 24;
+
 export const JOB_STATUS_TRANSITIONS: Record<string, string[]> = {
-  VEHICLE_RECEIVED: ["IN_PROGRESS"],
-  IN_PROGRESS: ["QUALITY_CHECK"],
+  PENDING_VEHICLE: ["VEHICLE_RECEIVED", "CANCELLED"],
+  VEHICLE_RECEIVED: ["IN_PROGRESS", "CANCELLED"],
+  IN_PROGRESS: ["QUALITY_CHECK", "CANCELLED"],
   QUALITY_CHECK: ["READY_FOR_DELIVERY", "IN_PROGRESS"],
   READY_FOR_DELIVERY: ["DELIVERED"],
   DELIVERED: [],
+  CANCELLED: [],
 } as const;
 
 export const BOOKING_STATUS_TRANSITIONS: Record<string, string[]> = {

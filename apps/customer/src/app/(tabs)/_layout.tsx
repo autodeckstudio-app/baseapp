@@ -12,6 +12,14 @@ export default function TabsLayout() {
         options={{ title: "Services", tabBarLabel: "Services" }}
       />
       <Tabs.Screen
+        name="bookings"
+        options={{ title: "My Bookings", tabBarLabel: "Bookings" }}
+      />
+      <Tabs.Screen
+        name="book"
+        options={{ href: null }} // booking flow, hidden from tab bar
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: "Profile", tabBarLabel: "Me" }}
       />

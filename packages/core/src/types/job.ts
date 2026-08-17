@@ -1,9 +1,11 @@
 export type JobStatus =
-  | "VEHICLE_RECEIVED"
+  | "PENDING_VEHICLE"      // Created from booking; vehicle not yet arrived
+  | "VEHICLE_RECEIVED"     // Vehicle checked in (or walk-in)
   | "IN_PROGRESS"
   | "QUALITY_CHECK"
   | "READY_FOR_DELIVERY"
-  | "DELIVERED";
+  | "DELIVERED"
+  | "CANCELLED";
 
 export interface JobStatusHistoryEntry {
   status: JobStatus;
@@ -24,6 +26,10 @@ export interface ServiceJob {
   assignedEmployeeId: string | null;
   status: JobStatus;
   statusHistory: JobStatusHistoryEntry[]; // append-only embedded array
+  scheduledAt: string; // ISO UTC — booked start time or walk-in creation time
+  scheduledDate: string; // "YYYY-MM-DD" in studio TZ — used for date-scoped queries
+  estimatedEndAt: string; // ISO UTC = scheduledAt + estimatedDurationMinutes
+  estimatedDurationMinutes: number; // snapshotted from service at job creation
   studioNotes: string | null;
   additionalWorkDelta: number; // paise — sum of approved ApprovalRequests
   paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
@@ -35,8 +41,8 @@ export interface ServiceJob {
 
 export interface ApprovalRequest {
   id: string;
-  tenantId: string; // REQUIRED — tenant isolation
-  studioId: string; // REQUIRED — studio scoping
+  tenantId: string;
+  studioId: string;
   jobId: string;
   customerId: string;
   requestedBy: string; // employeeId

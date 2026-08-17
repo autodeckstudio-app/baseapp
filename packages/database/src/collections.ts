@@ -23,6 +23,7 @@ export const COLLECTIONS = {
   inventory: () => "inventory",
   auditLog: () => "auditLog",
   notifications: () => "notifications",
+  bookingIntents: () => "bookingIntents",
 } as const;
 
 // Subcollection paths

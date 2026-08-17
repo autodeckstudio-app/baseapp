@@ -23,7 +23,11 @@ export type AuditAction =
   | "service.created"
   | "service.updated"
   | "service.activated"
-  | "service.deactivated";
+  | "service.deactivated"
+  | "booking.rescheduled"
+  | "booking.expired"
+  | "job.walkin_created"
+  | "job.bay_reassigned";
 
 export interface AuditLog {
   id: string;

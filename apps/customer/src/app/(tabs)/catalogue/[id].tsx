@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Service, VehicleCategory, PriceBreakdown } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -30,6 +30,7 @@ function formatPrice(paise: number): string {
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
@@ -135,6 +136,13 @@ export default function ServiceDetailScreen() {
           </View>
         </View>
       ) : null}
+
+      <TouchableOpacity
+        style={styles.bookButton}
+        onPress={() => router.push(`/(tabs)/book/${id}`)}
+      >
+        <Text style={styles.bookButtonText}>Book This Service</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -183,4 +191,12 @@ const styles = StyleSheet.create({
   priceValue: { color: "#333", fontSize: 14 },
   totalLabel: { fontWeight: "700", fontSize: 16 },
   totalValue: { fontWeight: "700", fontSize: 16 },
+  bookButton: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 24,
+  },
+  bookButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

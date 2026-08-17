@@ -17,5 +17,18 @@ export { createService } from "./functions/service/createService.js";
 export { updateService } from "./functions/service/updateService.js";
 export { setServiceActive } from "./functions/service/setServiceActive.js";
 
+// ─── Booking ─────────────────────────────────────────────────────────────────
+export { getAvailability } from "./functions/booking/getAvailability.js";
+export { createBooking } from "./functions/booking/createBooking.js";
+export { cancelBooking } from "./functions/booking/cancelBooking.js";
+export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
+export { getMyBookings } from "./functions/booking/getMyBookings.js";
+
+// ─── Studio Jobs ──────────────────────────────────────────────────────────────
+export { createWalkinJob } from "./functions/job/createWalkinJob.js";
+export { advanceJobStatus } from "./functions/job/advanceJobStatus.js";
+export { getStudioJobs } from "./functions/job/getStudioJobs.js";
+export { assignBay } from "./functions/job/assignBay.js";
+
 // ─── Emulator smoke test ─────────────────────────────────────────────────────
 export { healthCheck } from "./functions/health.js";
