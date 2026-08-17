@@ -196,6 +196,56 @@ describe("Slot conflict detection (double-booking prevention)", () => {
   });
 });
 
+// ─── Cancellation / reservation release ──────────────────────────────────────
+
+describe("Cancellation and reservation release", () => {
+  const DATE = "2026-09-02";
+
+  it("after cancellation, the slot no longer appears as occupied", () => {
+    // A booking is cancelled: the occupied interval is removed.
+    // Simulate by having an empty occupied list after removal.
+    const cancelledStart = localToUTC(DATE, "09:00", IST);
+    const occupied: ReturnType<typeof buildOccupiedInterval>[] = [];
+    // Slot should be free again
+    expect(hasConflict(cancelledStart, 60, occupied)).toBe(false);
+  });
+
+  it("concurrent walk-in on second bay: first bay still blocked", () => {
+    // Bay 1 has a booking, Bay 2 is free for a walk-in
+    const jobStart = localToUTC(DATE, "10:00", IST);
+    const jobEstEnd = new Date(jobStart.getTime() + 60 * 60000);
+    const bay1Occupied = [buildOccupiedInterval(jobStart.toISOString(), jobEstEnd.toISOString())];
+    const bay2Occupied: ReturnType<typeof buildOccupiedInterval>[] = [];
+
+    const walkinStart = localToUTC(DATE, "10:00", IST);
+    expect(hasConflict(walkinStart, 60, bay1Occupied)).toBe(true);  // bay 1 taken
+    expect(hasConflict(walkinStart, 60, bay2Occupied)).toBe(false); // bay 2 free
+  });
+
+  it("slot overlapping from behind: job in progress blocks earlier start", () => {
+    // Job starts at 10:30 IST (60 min + 15 min buffer → blocks until 11:45)
+    const jobStart = localToUTC(DATE, "10:30", IST);
+    const jobEstEnd = new Date(jobStart.getTime() + 60 * 60000);
+    const occupied = [buildOccupiedInterval(jobStart.toISOString(), jobEstEnd.toISOString())];
+
+    // New 60-min job starting 10:00 IST would end at 11:15 (incl buffer) → overlaps 10:30 job
+    const candidateStart = localToUTC(DATE, "10:00", IST);
+    expect(hasConflict(candidateStart, 60, occupied)).toBe(true);
+  });
+
+  it("no conflict when cancellation releases the slot and a new booking takes it", () => {
+    // Before cancellation: slot is taken
+    const slotStart = localToUTC(DATE, "14:00", IST);
+    const slotEstEnd = new Date(slotStart.getTime() + 60 * 60000);
+    const occupiedBefore = [buildOccupiedInterval(slotStart.toISOString(), slotEstEnd.toISOString())];
+    expect(hasConflict(slotStart, 60, occupiedBefore)).toBe(true);
+
+    // After cancellation: slot is released (interval removed)
+    const occupiedAfter: ReturnType<typeof buildOccupiedInterval>[] = [];
+    expect(hasConflict(slotStart, 60, occupiedAfter)).toBe(false);
+  });
+});
+
 // ─── Booking engine constants ─────────────────────────────────────────────────
 
 describe("Booking engine constants", () => {

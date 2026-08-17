@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studio-service";
@@ -36,7 +36,6 @@ const ADVANCE_ACTION_LABELS: Record<string, string> = {
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [config, setConfig] = useState<StudioConfig | null>(null);
   const [loading, setLoading] = useState(true);

@@ -255,3 +255,182 @@ describe("/payments — no client writes", () => {
     );
   });
 });
+
+// ─── Booking rules ────────────────────────────────────────────────────────────
+
+async function seedBooking(
+  bookingId: string,
+  customerId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("bookings").doc(bookingId).set({
+      id: bookingId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      customerId,
+      vehicleId: "vehicle-1",
+      serviceId: "service-1",
+      status: "CONFIRMED",
+      scheduledAt: now,
+      scheduledDate: "2026-08-18",
+      scheduledTime: "10:00",
+      bayId: "bay-wash-1",
+      priceBreakdown: { total: 50000 },
+      totalAmount: 50000,
+      paymentStatus: "unpaid",
+      rescheduleCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+async function seedJob(
+  jobId: string,
+  customerId: string,
+  studioId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("jobs").doc(jobId).set({
+      id: jobId,
+      tenantId,
+      studioId,
+      customerId,
+      vehicleId: "vehicle-1",
+      serviceId: "service-1",
+      bayId: "bay-wash-1",
+      status: "PENDING_VEHICLE",
+      statusHistory: [],
+      scheduledAt: now,
+      scheduledDate: "2026-08-18",
+      estimatedEndAt: now,
+      estimatedDurationMinutes: 60,
+      isWalkIn: false,
+      paymentStatus: "unpaid",
+      additionalWorkDelta: 0,
+      createdAt: now,
+      updatedAt: now,
+      sealedAt: null,
+    });
+  });
+}
+
+describe("/bookings — ownership and isolation", () => {
+  it("Customer can read their own booking", async () => {
+    await seedBooking("booking-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("bookings").doc("booking-alice").get());
+  });
+
+  it("Customer cannot read another customer's booking", async () => {
+    await seedBooking("booking-bob", "uid-bob");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("bookings").doc("booking-bob").get());
+  });
+
+  it("Customer cannot create a booking document directly", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("bookings").doc("direct-booking").set({
+        id: "direct-booking",
+        tenantId: FIRST_TENANT_ID,
+        customerId: "uid-alice",
+        status: "CONFIRMED",
+      }),
+    );
+  });
+
+  it("Customer cannot update priceBreakdown or totalAmount on a booking", async () => {
+    await seedBooking("booking-price-test", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("bookings").doc("booking-price-test").update({
+        totalAmount: 1,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Studio can read bookings for own tenant", async () => {
+    await seedBooking("booking-studio-read", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertSucceeds(
+      studio.firestore().collection("bookings").doc("booking-studio-read").get(),
+    );
+  });
+});
+
+// ─── Job rules ────────────────────────────────────────────────────────────────
+
+describe("/jobs — customer cannot mutate, studio can", () => {
+  it("Customer can read their own job", async () => {
+    await seedJob("job-alice", "uid-alice", "studio-ahmedabad");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("jobs").doc("job-alice").get());
+  });
+
+  it("Customer cannot read another customer's job", async () => {
+    await seedJob("job-bob", "uid-bob", "studio-ahmedabad");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("jobs").doc("job-bob").get());
+  });
+
+  it("Customer cannot write to /jobs directly (no bay assignment)", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("jobs").doc("direct-job").set({
+        id: "direct-job",
+        tenantId: FIRST_TENANT_ID,
+        customerId: "uid-alice",
+        bayId: "bay-wash-1",
+        status: "VEHICLE_RECEIVED",
+      }),
+    );
+  });
+
+  it("Customer cannot change job status directly", async () => {
+    await seedJob("job-status-test", "uid-alice", "studio-ahmedabad");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("jobs").doc("job-status-test").update({
+        status: "DELIVERED",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Studio can update a job in own tenant", async () => {
+    await seedJob("job-studio-advance", "uid-alice", "studio-ahmedabad");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertSucceeds(
+      studio.firestore().collection("jobs").doc("job-studio-advance").update({
+        status: "VEHICLE_RECEIVED",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Studio from another tenant cannot read jobs", async () => {
+    await seedJob("job-tenant-iso", "uid-alice", "studio-ahmedabad", FIRST_TENANT_ID);
+    const otherStudio = testEnv.authenticatedContext("uid-other-studio", {
+      role: "studio",
+      tenantId: "tenant-b",
+      studioId: "studio-b",
+    });
+    await assertFails(
+      otherStudio.firestore().collection("jobs").doc("job-tenant-iso").get(),
+    );
+  });
+});

@@ -1,5 +1,19 @@
 {
   "extends": "@autodeck/config/typescript/next",
-  "include": ["src", "next.config.ts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next", "dist"]
+  "compilerOptions": {
+    "baseUrl": ".",
+    "allowJs": true,
+    "incremental": true,
+    "isolatedModules": true
+  },
+  "include": [
+    "src",
+    "next.config.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist"
+  ]
 }

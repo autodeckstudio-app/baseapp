@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";

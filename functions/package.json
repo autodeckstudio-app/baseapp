@@ -13,6 +13,7 @@
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
     "test:emulator": "vitest run --config vitest.emulator.config.ts",
+    "seed:emulator": "tsx src/test/emulator/seed.ts",
     "serve": "firebase emulators:start --only auth,firestore,functions,storage",
     "clean": "rm -rf lib"
   },
