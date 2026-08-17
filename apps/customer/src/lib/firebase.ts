@@ -1,13 +1,13 @@
 import { getApps, initializeApp } from "firebase/app";
-import { initializeAuth, inMemoryPersistence } from "firebase/auth";
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
-// NOTE: getReactNativePersistence is in the React Native build of @firebase/auth (index.rn.d.ts)
-// which requires Metro bundler configuration to resolve properly.
-// For Phase 1a (emulator development), inMemoryPersistence is used — auth token stays in memory
-// for the session. For production, configure Metro to resolve firebase/auth to the RN build,
-// or migrate to @react-native-firebase/auth (requires Expo custom dev build).
+// metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
+// the "react-native" package-exports condition so Metro picks @firebase/auth's RN build
+// (dist/rn/index.js), which exports getReactNativePersistence. AsyncStorage persists the
+// auth token to device storage so the session survives app restarts.
 
 const firebaseConfig = {
   apiKey: process.env["EXPO_PUBLIC_FIREBASE_API_KEY"] ?? "demo-key",
@@ -21,10 +21,10 @@ const firebaseConfig = {
   appId: process.env["EXPO_PUBLIC_FIREBASE_APP_ID"] ?? "1:000000000000:web:demo",
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]!;
+const app = getApps()[0] ?? initializeApp(firebaseConfig);
 
 export const auth = initializeAuth(app, {
-  persistence: inMemoryPersistence,
+  persistence: getReactNativePersistence(AsyncStorage),
 });
 
 export const db = getFirestore(app);

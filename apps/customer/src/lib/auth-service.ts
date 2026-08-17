@@ -22,6 +22,7 @@ import {
   type User,
   type ConfirmationResult,
   type Unsubscribe,
+  type ApplicationVerifier,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { auth, functions, useEmulator } from "./firebase";
@@ -72,7 +73,7 @@ export async function sendPhoneOtp(phoneNumber: string): Promise<ConfirmationRes
   const verifier = new EmulatorPhoneVerifier();
   const verificationId = await provider.verifyPhoneNumber(
     phoneNumber,
-    verifier as unknown as import("firebase/auth").ApplicationVerifier,
+    verifier as unknown as ApplicationVerifier,
   );
 
   // Return a ConfirmationResult-compatible object

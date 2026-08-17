@@ -17,14 +17,11 @@ import {
   getPendingConfirmation,
   clearPendingConfirmation,
 } from "./login";
-import { useAuth } from "../../hooks/useAuth";
-
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const auth = useAuth();
 
   async function handleVerify() {
     const confirmation = getPendingConfirmation();
