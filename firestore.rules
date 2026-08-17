@@ -1,0 +1,232 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function tenantId() {
+      return request.auth.token.tenantId;
+    }
+
+    function studioId() {
+      return request.auth.token.studioId;
+    }
+
+    function isSuperadmin() {
+      return isAuthenticated() && role() == 'superadmin';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && role() == 'admin';
+    }
+
+    function isStudio() {
+      return isAuthenticated() && role() == 'studio';
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && role() == 'customer';
+    }
+
+    function isAdminOrAbove() {
+      return isAdmin() || isSuperadmin();
+    }
+
+    function isStudioOrAbove() {
+      return isStudio() || isAdminOrAbove();
+    }
+
+    // Tenant isolation: token tenantId must match document tenantId
+    function ownTenant(doc) {
+      return tenantId() == doc.tenantId;
+    }
+
+    // Studio scoping: token studioId must match document studioId
+    function ownStudio(doc) {
+      return studioId() == doc.studioId;
+    }
+
+    // ─── /tenants/{tenantId} ────────────────────────────────────────────────
+    // tenantId is the document ID, not a field — standard ownTenant() does not apply.
+    match /tenants/{tid} {
+      allow read: if isSuperadmin()
+                  || (isAdmin() && tenantId() == tid);
+      allow write: if false; // Admin SDK only
+    }
+
+    // ─── /customers/{userId} ────────────────────────────────────────────────
+    match /customers/{userId} {
+      allow read: if isAuthenticated()
+                  && (request.auth.uid == userId || isStudioOrAbove())
+                  && (isSuperadmin() || ownTenant(resource.data));
+      // Create via Admin SDK on first login only
+      allow create: if false;
+      // Customer updates own profile (allowlist enforced in Cloud Function)
+      allow update: if isAuthenticated()
+                    && request.auth.uid == userId
+                    && ownTenant(resource.data)
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['name', 'notificationPrefs', 'updatedAt']);
+      // Admin updates via Cloud Function — no direct admin write
+      allow delete: if false;
+    }
+
+    // ─── /vehicles/{vehicleId} ──────────────────────────────────────────────
+    match /vehicles/{vehicleId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.ownerId == request.auth.uid);
+      allow create: if false; // Cloud Function only
+      allow update: if isAuthenticated()
+                    && ownTenant(resource.data)
+                    && (isStudioOrAbove()
+                        || (isCustomer() && resource.data.ownerId == request.auth.uid
+                            && request.resource.data.diff(resource.data).affectedKeys()
+                                .hasOnly(['make', 'model', 'year', 'color', 'registrationNumber', 'photoUrl', 'odometer', 'updatedAt'])));
+      allow delete: if false;
+    }
+
+    // ─── /bookings/{bookingId} ──────────────────────────────────────────────
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false; // Cloud Function only
+      allow update: if isAuthenticated()
+                    && ownTenant(resource.data)
+                    && isStudioOrAbove()
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['priceBreakdown', 'totalAmount', 'membershipDiscountApplied', 'paymentStatus']);
+      allow delete: if false;
+    }
+
+    // ─── /jobs/{jobId} ──────────────────────────────────────────────────────
+    match /jobs/{jobId} {
+      // Customer can only read their own job — restricted field set enforced in app layer
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false; // Cloud Function only
+      allow update: if isAuthenticated()
+                    && ownTenant(resource.data)
+                    && isStudioOrAbove();
+      allow delete: if false; // Jobs are permanent records
+    }
+
+    // ─── /approvals/{approvalId} ────────────────────────────────────────────
+    match /approvals/{approvalId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false; // Cloud Function only
+      allow update: if false; // Cloud Function only (respondToApproval)
+      allow delete: if false;
+    }
+
+    // ─── /payments/{paymentId} ──────────────────────────────────────────────
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false; // Cloud Function / Admin SDK only
+      allow update: if false; // Cloud Function / Admin SDK only
+      allow delete: if false; // Immutable
+    }
+
+    // ─── /invoices/{invoiceId} ──────────────────────────────────────────────
+    match /invoices/{invoiceId} {
+      // Customer reads own invoice by document ID (app layer validates ownership)
+      // Unauthenticated public invoice view is handled via publicToken in app layer (not Firestore rules)
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ─── /warranties/{warrantyId} ───────────────────────────────────────────
+    match /warranties/{warrantyId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false; // System only, on job seal
+      allow update: if isAdminOrAbove() && ownTenant(resource.data);
+      allow delete: if false; // revokedAt field for exceptional cases
+    }
+
+    // ─── /memberships/{membershipId} ────────────────────────────────────────
+    match /memberships/{membershipId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isAdminOrAbove() || resource.data.customerId == request.auth.uid);
+      allow create: if false; // Cloud Function only
+      allow update: if false; // Cloud Function only
+      allow delete: if false;
+
+      // ─── /memberships/{membershipId}/usage/{usageId} ──────────────────────
+      match /usage/{usageId} {
+        allow read: if isAuthenticated()
+                    && (isSuperadmin() || ownTenant(resource.data))
+                    && (isAdminOrAbove() || resource.data.customerId == request.auth.uid);
+        allow write: if false; // Cloud Function only
+      }
+    }
+
+    // ─── /services/{serviceId} ──────────────────────────────────────────────
+    match /services/{serviceId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data));
+      allow write: if isAdminOrAbove() && (isSuperadmin() || ownTenant(resource.data));
+    }
+
+    // ─── /employees/{employeeId} ────────────────────────────────────────────
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isAdminOrAbove() || request.auth.uid == resource.data.authUid);
+      allow create: if false; // Admin via Cloud Function only (sets custom claim simultaneously)
+      allow update: if isAdminOrAbove() && (isSuperadmin() || ownTenant(resource.data));
+      allow delete: if false; // Soft delete only
+    }
+
+    // ─── /studioConfig/{studioId} ───────────────────────────────────────────
+    match /studioConfig/{studioId} {
+      allow read: if isStudioOrAbove()
+                  && (isSuperadmin() || ownTenant(resource.data));
+      allow write: if isAdminOrAbove()
+                   && (isSuperadmin() || ownTenant(resource.data));
+    }
+
+    // ─── /auditLog/{entryId} ────────────────────────────────────────────────
+    match /auditLog/{entryId} {
+      allow read: if isAdminOrAbove()
+                  && (isSuperadmin() || ownTenant(resource.data));
+      allow create: if false; // Admin SDK / Cloud Function system account only
+      allow update: if false; // Immutable
+      allow delete: if false; // Immutable
+    }
+
+    // ─── /notifications/{notificationId} ────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && resource.data.userId == request.auth.uid;
+      allow write: if false; // Cloud Function only
+    }
+
+    // ─── Deny everything else ────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

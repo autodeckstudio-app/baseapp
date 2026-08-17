@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "autodeck-dev",
+    "dev": "autodeck-dev",
+    "staging": "autodeck-staging",
+    "prod": "autodeck-prod"
+  }
+}

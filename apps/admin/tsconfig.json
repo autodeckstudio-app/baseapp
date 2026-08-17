@@ -1,0 +1,5 @@
+{
+  "extends": "@autodeck/config/typescript/next",
+  "include": ["src", "next.config.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next", "dist"]
+}

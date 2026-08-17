@@ -1,0 +1,33 @@
+{
+  "name": "@autodeck/functions",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:emulator": "vitest run --config vitest.emulator.config.ts",
+    "serve": "firebase emulators:start --only auth,firestore,functions,storage",
+    "clean": "rm -rf lib"
+  },
+  "dependencies": {
+    "@autodeck/auth": "workspace:*",
+    "@autodeck/core": "workspace:*",
+    "@autodeck/database": "workspace:*",
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.1.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@autodeck/config": "workspace:*",
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
