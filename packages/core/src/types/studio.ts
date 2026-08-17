@@ -20,6 +20,7 @@ export interface StudioConfig {
   id: string;
   tenantId: string;
   studioId: string;
+  name: string; // e.g. "AutoDeck Ahmedabad" — display name, admin-configurable
   timezone: string; // IANA timezone — "Asia/Kolkata" (India default)
   currency: string; // ISO 4217 — "INR" (India default)
   taxRatePercent: number; // default 18 (GST India)
@@ -31,12 +32,13 @@ export interface StudioConfig {
   maxAdvanceBookingDays: number;
   cancellationWindowHours: number;
   bays: Bay[];
+  updatedAt: string; // ISO timestamp — last admin mutation
 }
 
 export interface Employee {
   id: string;
   tenantId: string;
-  studioId: string;
+  studioId: string | null; // null for tenant admins (not studio-scoped)
   authUid: string;
   name: string;
   phone: string;

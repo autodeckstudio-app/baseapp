@@ -665,3 +665,175 @@ describe("/invoices — client cannot write invoice total", () => {
     );
   });
 });
+
+// ─── Admin business-control security rules (Phase 1e) ────────────────────────
+
+function makeAdminClaims(tenantId = FIRST_TENANT_ID) {
+  return { role: "admin", tenantId, studioId: null };
+}
+
+function makeStudioClaims(studioId = "studio-ahmedabad", tenantId = FIRST_TENANT_ID) {
+  return { role: "studio", tenantId, studioId };
+}
+
+async function seedService(serviceId: string, tenantId = FIRST_TENANT_ID) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("services").doc(serviceId).set({
+      id: serviceId,
+      tenantId,
+      name: "Test Wash",
+      category: "washing",
+      brand: null,
+      description: "Basic wash",
+      basePrice: 50000,
+      currency: "INR",
+      estimatedDurationMinutes: 30,
+      warrantyLabel: null,
+      vehicleCategoryPricing: [],
+      requiredBayType: "wash",
+      membershipWashEligible: false,
+      active: true,
+      displayOrder: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+async function seedStudioConfig(studioId = "studio-ahmedabad", tenantId = FIRST_TENANT_ID) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("studioConfig").doc(studioId).set({
+      id: studioId,
+      tenantId,
+      studioId,
+      name: "Test Studio",
+      timezone: "Asia/Kolkata",
+      currency: "INR",
+      taxRatePercent: 18,
+      taxDescription: "GST 18%",
+      operatingHours: [],
+      holidays: [],
+      vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
+      slotIntervalMinutes: 30,
+      maxAdvanceBookingDays: 30,
+      cancellationWindowHours: 24,
+      bays: [],
+      updatedAt: now,
+    });
+  });
+}
+
+async function seedEmployee(employeeId: string, tenantId = FIRST_TENANT_ID, studioId: string | null = null) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("employees").doc(employeeId).set({
+      id: employeeId,
+      tenantId,
+      studioId,
+      authUid: employeeId,
+      name: "Test Employee",
+      phone: "",
+      role: "admin",
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+      terminatedAt: null,
+    });
+  });
+}
+
+describe("/services — catalogue mutations are server-authoritative", () => {
+  it("Customer cannot write to /services directly", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("services").doc("tampered").set({ id: "tampered", active: true }),
+    );
+  });
+
+  it("Studio cannot write to /services directly", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", makeStudioClaims());
+    await assertFails(
+      studio.firestore().collection("services").doc("tampered").set({ id: "tampered", active: true }),
+    );
+  });
+
+  it("Admin cannot write to /services directly, even in their own tenant (Cloud Function only)", async () => {
+    await seedService("service-1");
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims());
+    await assertFails(
+      admin.firestore().collection("services").doc("service-1").update({ basePrice: 1 }),
+    );
+  });
+
+  it("Customer from tenant A cannot read a service from tenant B", async () => {
+    await seedService("service-b", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a", { role: "customer", tenantId: "tenant-a", studioId: null });
+    await assertFails(tenantAUser.firestore().collection("services").doc("service-b").get());
+  });
+});
+
+describe("/studioConfig — resource and settings mutations are server-authoritative", () => {
+  it("Customer cannot read studioConfig", async () => {
+    await seedStudioConfig();
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("studioConfig").doc("studio-ahmedabad").get());
+  });
+
+  it("Studio can read studioConfig", async () => {
+    await seedStudioConfig();
+    const studio = testEnv.authenticatedContext("uid-studio", makeStudioClaims());
+    await assertSucceeds(studio.firestore().collection("studioConfig").doc("studio-ahmedabad").get());
+  });
+
+  it("Studio cannot write studioConfig directly", async () => {
+    await seedStudioConfig();
+    const studio = testEnv.authenticatedContext("uid-studio", makeStudioClaims());
+    await assertFails(
+      studio.firestore().collection("studioConfig").doc("studio-ahmedabad").update({ name: "Hacked" }),
+    );
+  });
+
+  it("Admin cannot write studioConfig directly, even in their own tenant (Cloud Function only)", async () => {
+    await seedStudioConfig();
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims());
+    await assertFails(
+      admin.firestore().collection("studioConfig").doc("studio-ahmedabad").update({ name: "Hacked" }),
+    );
+  });
+
+  it("Admin from tenant A cannot read studioConfig from tenant B", async () => {
+    await seedStudioConfig("studio-b", "tenant-b");
+    const tenantAAdmin = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(tenantAAdmin.firestore().collection("studioConfig").doc("studio-b").get());
+  });
+});
+
+describe("/employees — staff mutations are server-authoritative", () => {
+  it("Customer cannot read employees", async () => {
+    await seedEmployee("emp-1");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("employees").doc("emp-1").get());
+  });
+
+  it("Admin cannot write to employees directly, even in their own tenant (Cloud Function only)", async () => {
+    await seedEmployee("emp-1");
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims());
+    await assertFails(
+      admin.firestore().collection("employees").doc("emp-1").update({ role: "admin" }),
+    );
+  });
+
+  it("Employee can read their own record", async () => {
+    await seedEmployee("uid-self");
+    const self = testEnv.authenticatedContext("uid-self", makeStudioClaims());
+    await assertSucceeds(self.firestore().collection("employees").doc("uid-self").get());
+  });
+
+  it("Admin from tenant A cannot read an employee from tenant B", async () => {
+    await seedEmployee("emp-b", "tenant-b");
+    const tenantAAdmin = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(tenantAAdmin.firestore().collection("employees").doc("emp-b").get());
+  });
+});

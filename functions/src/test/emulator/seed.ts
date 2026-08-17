@@ -10,6 +10,7 @@
  */
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import type { StudioConfig } from "@autodeck/core";
 import {
   FIRST_TENANT_ID,
@@ -36,6 +37,7 @@ const studioConfig: StudioConfig = {
   id: FIRST_STUDIO_ID,
   tenantId: FIRST_TENANT_ID,
   studioId: FIRST_STUDIO_ID,
+  name: "AutoDeck Ahmedabad",
   timezone: DEFAULT_TIMEZONE,
   currency: DEFAULT_CURRENCY,
   taxRatePercent: DEFAULT_TAX_RATE_PERCENT,
@@ -97,12 +99,59 @@ const studioConfig: StudioConfig = {
       active: true,
     },
   ],
+  updatedAt: new Date().toISOString(),
 };
+
+// Emulator-only bootstrap admin account — lets a developer log into the admin
+// web app locally without a manual claims-setting script. NEVER run against
+// a real Firebase project (this script only ever targets the Auth/Firestore
+// emulators — see FIRESTORE_EMULATOR_HOST/GCLOUD_PROJECT defaults above).
+const BOOTSTRAP_ADMIN_EMAIL = "admin@autodeck.dev";
+const BOOTSTRAP_ADMIN_PASSWORD = "DevAdmin123!";
+
+async function seedBootstrapAdmin() {
+  const auth = getAuth();
+  let uid: string;
+  try {
+    const existing = await auth.getUserByEmail(BOOTSTRAP_ADMIN_EMAIL);
+    uid = existing.uid;
+  } catch {
+    const created = await auth.createUser({
+      email: BOOTSTRAP_ADMIN_EMAIL,
+      password: BOOTSTRAP_ADMIN_PASSWORD,
+      emailVerified: true,
+    });
+    uid = created.uid;
+  }
+
+  await auth.setCustomUserClaims(uid, {
+    role: "admin",
+    tenantId: FIRST_TENANT_ID,
+    studioId: null,
+  });
+
+  await db.collection("employees").doc(uid).set({
+    id: uid,
+    tenantId: FIRST_TENANT_ID,
+    studioId: null, // tenant admin — not studio-scoped
+    authUid: uid,
+    name: "Dev Admin",
+    phone: "",
+    role: "admin",
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    terminatedAt: null,
+  });
+
+  console.warn(`[seed] Bootstrap admin ready: ${BOOTSTRAP_ADMIN_EMAIL} / ${BOOTSTRAP_ADMIN_PASSWORD}`);
+}
 
 async function seed() {
   await db.collection("studioConfig").doc(FIRST_STUDIO_ID).set(studioConfig);
   console.warn(`[seed] studioConfig/${FIRST_STUDIO_ID} written`);
   console.warn(`[seed] Bays: 2 wash + 3 protection`);
+  await seedBootstrapAdmin();
 }
 
 seed().catch((err: unknown) => {

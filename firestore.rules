@@ -183,28 +183,33 @@ service cloud.firestore {
     }
 
     // ─── /services/{serviceId} ──────────────────────────────────────────────
+    // Catalogue mutations are server-authoritative (createService/updateService/
+    // setServiceActive) so they are audited — no direct client write, even by admin.
     match /services/{serviceId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data));
-      allow write: if isAdminOrAbove() && (isSuperadmin() || ownTenant(resource.data));
+      allow write: if false;
     }
 
     // ─── /employees/{employeeId} ────────────────────────────────────────────
+    // All mutations go through Cloud Functions (addStaffMember/updateStaffRole/
+    // deactivateStaffMember) so the Firestore record and the custom claims never
+    // drift apart, and every change is audited.
     match /employees/{employeeId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isAdminOrAbove() || request.auth.uid == resource.data.authUid);
-      allow create: if false; // Admin via Cloud Function only (sets custom claim simultaneously)
-      allow update: if isAdminOrAbove() && (isSuperadmin() || ownTenant(resource.data));
-      allow delete: if false; // Soft delete only
+      allow write: if false;
     }
 
     // ─── /studioConfig/{studioId} ───────────────────────────────────────────
+    // All mutations go through Cloud Functions (updateStudioSettings/addHoliday/
+    // removeHoliday/upsertBay) — no direct client write, even by admin, so every
+    // business-configuration change is audited.
     match /studioConfig/{studioId} {
       allow read: if isStudioOrAbove()
                   && (isSuperadmin() || ownTenant(resource.data));
-      allow write: if isAdminOrAbove()
-                   && (isSuperadmin() || ownTenant(resource.data));
+      allow write: if false;
     }
 
     // ─── /auditLog/{entryId} ────────────────────────────────────────────────

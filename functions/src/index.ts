@@ -41,5 +41,16 @@ export { initiateRefund } from "./functions/payment/initiateRefund.js";
 export { getInvoice } from "./functions/invoice/getInvoice.js";
 export { voidInvoice } from "./functions/invoice/voidInvoice.js";
 
+// ─── Studio Settings (Admin) ────────────────────────────────────────────────
+export { updateStudioSettings } from "./functions/studio/updateStudioSettings.js";
+export { addHoliday } from "./functions/studio/addHoliday.js";
+export { removeHoliday } from "./functions/studio/removeHoliday.js";
+export { upsertBay } from "./functions/studio/upsertBay.js";
+
+// ─── Staff (Admin) ───────────────────────────────────────────────────────────
+export { addStaffMember } from "./functions/employee/addStaffMember.js";
+export { updateStaffRole } from "./functions/employee/updateStaffRole.js";
+export { deactivateStaffMember } from "./functions/employee/deactivateStaffMember.js";
+
 // ─── Emulator smoke test ─────────────────────────────────────────────────────
 export { healthCheck } from "./functions/health.js";

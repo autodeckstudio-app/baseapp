@@ -1,0 +1,41 @@
+/* Functional styling only — the visual design system is handled separately. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: #111;
+  background: #fafafa;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 14px;
+}
+th {
+  background: #f0f0f0;
+}
+button {
+  cursor: pointer;
+  padding: 6px 12px;
+}
+input,
+select {
+  padding: 4px 8px;
+}
+.error {
+  color: #b00020;
+}
+.nav a {
+  margin-right: 16px;
+}
+fieldset {
+  margin-bottom: 12px;
+}

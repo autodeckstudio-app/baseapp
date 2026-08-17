@@ -1,8 +1,17 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAdminAuth } from "../lib/auth-context";
+
 export default function AdminRoot() {
-  return (
-    <main>
-      <h1>AutoDeck Admin</h1>
-      <p>Phase 1e placeholder — admin web is built in Phase 1e.</p>
-    </main>
-  );
+  const { user, claims, loading } = useAdminAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+    router.replace(user && claims ? "/studio" : "/login");
+  }, [loading, user, claims, router]);
+
+  return null;
 }
