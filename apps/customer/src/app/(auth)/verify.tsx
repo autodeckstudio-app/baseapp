@@ -1,14 +1,5 @@
 import { useState } from "react";
-import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   setupCustomerProfile,
@@ -18,6 +9,8 @@ import {
   getPendingConfirmation,
   clearPendingConfirmation,
 } from "./login";
+import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
+
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const [otp, setOtp] = useState("");
@@ -62,60 +55,27 @@ export default function VerifyScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={styles.heading}>Verify OTP</Text>
-      <Text style={styles.subheading}>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xs }}>Verify OTP</Text>
+      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl, lineHeight: 22 }}>
         Enter the 6-digit code sent to {phone}
         {"\n"}
         {__DEV__ && "(Emulator: use code 123456)"}
       </Text>
 
       <TextInput
-        style={styles.input}
         placeholder="123456"
         keyboardType="number-pad"
         maxLength={6}
         value={otp}
         onChangeText={setOtp}
         autoFocus
+        textAlign="center"
       />
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleVerify}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Confirm</Text>
-        )}
-      </TouchableOpacity>
+      <Button label="Confirm" onPress={() => void handleVerify()} loading={loading} style={{ marginTop: spacing.xl }} />
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  heading: { fontSize: 28, fontWeight: "700", marginBottom: 8 },
-  subheading: { fontSize: 15, color: "#666", marginBottom: 32, lineHeight: 22 },
-  input: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#333",
-    fontSize: 32,
-    paddingVertical: 8,
-    marginBottom: 32,
-    letterSpacing: 8,
-    textAlign: "center",
-  },
-  button: {
-    backgroundColor: "#1a1a1a",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-});

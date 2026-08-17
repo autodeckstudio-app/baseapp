@@ -1,17 +1,8 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
+import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
+import { Text } from "react-native";
 import { createVehicle } from "../../../lib/vehicle-service";
 
 type FormState = {
@@ -78,48 +69,24 @@ export default function AddVehicleScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Add a Vehicle</Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
+        <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>Add a Vehicle</Text>
 
-      {FIELDS.map(({ key, label, placeholder, autoCapitalize = "sentences", keyboardType = "default" }) => (
-        <View key={key} style={styles.field}>
-          <Text style={styles.label}>{label}</Text>
+        {FIELDS.map(({ key, label, placeholder, autoCapitalize = "sentences", keyboardType = "default" }) => (
           <TextInput
-            style={styles.input}
+            key={key}
+            label={label}
             placeholder={placeholder}
             value={form[key]}
             onChangeText={(v: string) => update(key, v)}
             autoCapitalize={autoCapitalize}
             keyboardType={keyboardType}
           />
-        </View>
-      ))}
+        ))}
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleAdd}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Add Vehicle</Text>
-        )}
-      </TouchableOpacity>
+        <Button label="Add Vehicle" onPress={() => void handleAdd()} loading={loading} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 24 },
-  heading: { fontSize: 24, fontWeight: "700", marginBottom: 24 },
-  field: { marginBottom: 20 },
-  label: { fontSize: 13, fontWeight: "600", color: "#666", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
-  input: { borderBottomWidth: 1, borderBottomColor: "#ddd", fontSize: 17, paddingVertical: 8 },
-  button: { backgroundColor: "#1a1a1a", padding: 16, borderRadius: 8, alignItems: "center", marginTop: 12 },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-});

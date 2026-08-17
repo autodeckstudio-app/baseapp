@@ -10,7 +10,7 @@ export default function AdminRoot() {
 
   useEffect(() => {
     if (loading) return;
-    router.replace(user && claims ? "/studio" : "/login");
+    router.replace(user && claims ? "/dashboard" : "/login");
   }, [loading, user, claims, router]);
 
   return null;

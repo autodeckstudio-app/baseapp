@@ -1,18 +1,10 @@
 import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { colors, spacing, typography, TextInput, Button, ListRow, Divider, LoadingState, ErrorState } from "@autodeck/ui";
 import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle } from "../../../lib/vehicle-service";
 
@@ -64,7 +56,7 @@ export default function VehicleDetailScreen() {
     }
   }
 
-  async function handleArchive() {
+  function handleArchive() {
     Alert.alert("Remove Vehicle", "Remove this vehicle from your garage?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -83,95 +75,48 @@ export default function VehicleDetailScreen() {
     ]);
   }
 
-  if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" /></View>;
-  }
-
-  if (!vehicle) {
-    return <View style={styles.centered}><Text>Vehicle not found.</Text></View>;
-  }
+  if (loading) return <LoadingState />;
+  if (!vehicle) return <ErrorState title="Vehicle not found" />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.plate}>{vehicle.registrationNumber}</Text>
-      <Text style={styles.title}>{vehicle.year} {vehicle.make} {vehicle.model}</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
+      <Text style={{ ...typography.caption, color: colors.textMuted, letterSpacing: 1 }}>{vehicle.registrationNumber}</Text>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>
+        {vehicle.year} {vehicle.make} {vehicle.model}
+      </Text>
 
       {editing ? (
-        <>
-          {(["make", "model", "color"] as const).map((field) => (
-            <View key={field} style={styles.field}>
-              <Text style={styles.label}>{field.charAt(0).toUpperCase() + field.slice(1)}</Text>
-              <TextInput
-                style={styles.input}
-                value={form[field]}
-                onChangeText={(v: string) => setForm((p: typeof form) => ({ ...p, [field]: v }))}
-                autoCapitalize="words"
-              />
-            </View>
-          ))}
-          <View style={styles.field}>
-            <Text style={styles.label}>Odometer (km)</Text>
-            <TextInput
-              style={styles.input}
-              value={form.odometer}
-              onChangeText={(v: string) => setForm((p: typeof form) => ({ ...p, odometer: v }))}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, saving && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setEditing(false)}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </>
+        <View>
+          <TextInput label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
+          <TextInput label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
+          <TextInput label="Color" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
+          <TextInput
+            label="Odometer (km)"
+            value={form.odometer}
+            onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))}
+            keyboardType="numeric"
+          />
+          <Button label="Save Changes" onPress={() => void handleSave()} loading={saving} />
+          <View style={{ height: spacing.sm }} />
+          <Button label="Cancel" onPress={() => setEditing(false)} variant="ghost" />
+        </View>
       ) : (
-        <>
-          <View style={styles.detail}>
-            <Text style={styles.detailLabel}>Color</Text>
-            <Text style={styles.detailValue}>{vehicle.color}</Text>
+        <View>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: spacing.lg }}>
+            <ListRow label="Color" value={vehicle.color} />
+            {vehicle.odometer !== null && (
+              <>
+                <Divider />
+                <ListRow label="Odometer" value={`${vehicle.odometer?.toLocaleString("en-IN")} km`} />
+              </>
+            )}
           </View>
-          {vehicle.odometer !== null && (
-            <View style={styles.detail}>
-              <Text style={styles.detailLabel}>Odometer</Text>
-              <Text style={styles.detailValue}>{vehicle.odometer?.toLocaleString("en-IN")} km</Text>
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
-            <Text style={styles.buttonText}>Edit Vehicle</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.archiveButton} onPress={handleArchive}>
-            <Text style={styles.archiveText}>Remove from Garage</Text>
-          </TouchableOpacity>
-        </>
+          <View style={{ height: spacing.xl }} />
+          <Button label="Edit Vehicle" onPress={() => setEditing(true)} variant="secondary" />
+          <View style={{ height: spacing.sm }} />
+          <Button label="Remove from Garage" onPress={handleArchive} variant="destructive" />
+        </View>
       )}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 24 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  plate: { fontSize: 14, letterSpacing: 2, color: "#666", marginBottom: 4 },
-  title: { fontSize: 26, fontWeight: "700", marginBottom: 24 },
-  detail: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
-  detailLabel: { color: "#666" },
-  detailValue: { fontWeight: "500" },
-  field: { marginBottom: 20 },
-  label: { fontSize: 12, fontWeight: "600", color: "#666", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
-  input: { borderBottomWidth: 1, borderBottomColor: "#ddd", fontSize: 17, paddingVertical: 8 },
-  button: { backgroundColor: "#1a1a1a", padding: 16, borderRadius: 8, alignItems: "center", marginTop: 24 },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  cancelButton: { padding: 16, alignItems: "center", marginTop: 8 },
-  cancelText: { color: "#666", fontSize: 16 },
-  archiveButton: { padding: 16, alignItems: "center", marginTop: 8 },
-  archiveText: { color: "#c00", fontSize: 16 },
-});

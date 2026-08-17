@@ -1,18 +1,9 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { View, Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import type { ConfirmationResult } from "firebase/auth";
 import { sendPhoneOtp } from "../../lib/auth-service";
+import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
 
 // Store the confirmation result between screens
 // In a full implementation, use a Context or router params
@@ -50,60 +41,29 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={styles.heading}>AutoDeck</Text>
-      <Text style={styles.subheading}>Enter your India mobile number</Text>
+      <Text style={{ ...typography.display, color: colors.textPrimary, marginBottom: spacing.xs }}>AutoDeck</Text>
+      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl }}>
+        Enter your India mobile number
+      </Text>
 
-      <View style={styles.inputRow}>
-        <Text style={styles.prefix}>+91</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="98765 43210"
-          keyboardType="phone-pad"
-          maxLength={10}
-          value={phone}
-          onChangeText={setPhone}
-          autoFocus
-        />
+      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, marginBottom: spacing.xl }}>
+        <Text style={{ ...typography.title, color: colors.textSecondary, paddingBottom: 14 }}>+91</Text>
+        <View style={{ flex: 1 }}>
+          <TextInput
+            placeholder="98765 43210"
+            keyboardType="phone-pad"
+            maxLength={10}
+            value={phone}
+            onChangeText={setPhone}
+            autoFocus
+          />
+        </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSendOtp}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Send OTP</Text>
-        )}
-      </TouchableOpacity>
+      <Button label="Send OTP" onPress={() => void handleSendOtp()} loading={loading} />
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  heading: { fontSize: 32, fontWeight: "700", marginBottom: 8 },
-  subheading: { fontSize: 16, color: "#666", marginBottom: 32 },
-  inputRow: { flexDirection: "row", alignItems: "center", marginBottom: 24 },
-  prefix: { fontSize: 18, marginRight: 8, color: "#333" },
-  input: {
-    flex: 1,
-    borderBottomWidth: 2,
-    borderBottomColor: "#333",
-    fontSize: 20,
-    paddingVertical: 8,
-    letterSpacing: 2,
-  },
-  button: {
-    backgroundColor: "#1a1a1a",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-});

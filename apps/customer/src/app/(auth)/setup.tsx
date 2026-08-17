@@ -1,16 +1,8 @@
 import { useState } from "react";
-import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { setupCustomerProfile, refreshAuthToken } from "../../lib/auth-service";
+import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
 
 export default function SetupScreen() {
   const [name, setName] = useState("");
@@ -38,14 +30,15 @@ export default function SetupScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={styles.heading}>What's your name?</Text>
-      <Text style={styles.subheading}>This is shown to the studio team.</Text>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xs }}>What's your name?</Text>
+      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl }}>
+        This is shown to the studio team.
+      </Text>
 
       <TextInput
-        style={styles.input}
         placeholder="Rahul Shah"
         autoCapitalize="words"
         maxLength={100}
@@ -53,41 +46,10 @@ export default function SetupScreen() {
         onChangeText={setName}
         autoFocus
         returnKeyType="done"
-        onSubmitEditing={handleSetup}
+        onSubmitEditing={() => void handleSetup()}
       />
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSetup}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Continue</Text>
-        )}
-      </TouchableOpacity>
+      <Button label="Continue" onPress={() => void handleSetup()} loading={loading} />
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  heading: { fontSize: 28, fontWeight: "700", marginBottom: 8 },
-  subheading: { fontSize: 15, color: "#666", marginBottom: 32 },
-  input: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#333",
-    fontSize: 22,
-    paddingVertical: 8,
-    marginBottom: 32,
-  },
-  button: {
-    backgroundColor: "#1a1a1a",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-});

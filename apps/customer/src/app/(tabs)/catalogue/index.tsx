@@ -1,40 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
+import { View, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import type { Service } from "@autodeck/core";
+import { colors, spacing, ServiceCard, EmptyState, LoadingState, ErrorState } from "@autodeck/ui";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
-
-function formatPrice(paise: number): string {
-  return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
-
-function ServiceCard({ service, onPress }: { service: Service; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardName}>{service.name}</Text>
-        {service.brand !== null && <Text style={styles.cardBrand}>{service.brand}</Text>}
-      </View>
-      <Text style={styles.cardDesc} numberOfLines={2}>
-        {service.description}
-      </Text>
-      <View style={styles.cardMeta}>
-        <Text style={styles.cardPrice}>from {formatPrice(service.basePrice)}</Text>
-        <Text style={styles.cardDuration}>{service.estimatedDurationMinutes} min</Text>
-      </View>
-      {service.warrantyLabel !== null && (
-        <Text style={styles.cardWarranty}>{service.warrantyLabel}</Text>
-      )}
-    </TouchableOpacity>
-  );
-}
 
 export default function CatalogueScreen() {
   const router = useRouter();
@@ -59,76 +28,23 @@ export default function CatalogueScreen() {
     void load();
   }, [load]);
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Couldn't load services.</Text>
-        <Text style={styles.errorDetail}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => void load()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (services.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>No services available.</Text>
-      </View>
-    );
-  }
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
-    <FlatList
-      style={styles.list}
-      contentContainerStyle={styles.content}
-      data={services}
-      keyExtractor={(s) => s.id}
-      onRefresh={() => void load()}
-      refreshing={loading}
-      renderItem={({ item }) => (
-        <ServiceCard
-          service={item}
-          onPress={() => router.push(`/(tabs)/catalogue/${item.id}`)}
-        />
-      )}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-    />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <FlatList
+        data={services}
+        keyExtractor={(s) => s.id}
+        contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
+        onRefresh={() => void load()}
+        refreshing={loading}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        renderItem={({ item }) => (
+          <ServiceCard service={item} onPress={() => router.push(`/(tabs)/catalogue/${item.id}`)} />
+        )}
+        ListEmptyComponent={<EmptyState title="No services available" message="Please check back later." fill={false} />}
+      />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  list: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 16 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff", padding: 24 },
-  emptyText: { color: "#666", fontSize: 16 },
-  errorText: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
-  errorDetail: { fontSize: 13, color: "#888", textAlign: "center", marginBottom: 16 },
-  retryButton: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#1a1a1a", borderRadius: 8 },
-  retryButtonText: { color: "#fff", fontWeight: "600" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e8e8e8",
-  },
-  cardHeader: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 4 },
-  cardName: { fontSize: 16, fontWeight: "700", flex: 1 },
-  cardBrand: { fontSize: 12, color: "#666" },
-  cardDesc: { fontSize: 14, color: "#555", lineHeight: 20, marginBottom: 10 },
-  cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  cardPrice: { fontSize: 15, fontWeight: "600", color: "#1a1a1a" },
-  cardDuration: { fontSize: 13, color: "#888" },
-  cardWarranty: { fontSize: 12, color: "#4a90d9", marginTop: 6 },
-  separator: { height: 12 },
-});

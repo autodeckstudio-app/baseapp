@@ -1,41 +1,178 @@
-/* Functional styling only — the visual design system is handled separately. */
+/*
+ * AutoDeck design tokens, mirrored from @autodeck/ui/tokens for CSS custom
+ * properties (that package exports plain TS objects for RN consumption and
+ * cannot be imported directly into a stylesheet). Keep values in sync with
+ * packages/ui/src/tokens/*.ts.
+ */
+:root {
+  --color-background: #f6f6f7;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #efeff1;
+  --color-text-primary: #1c1c1e;
+  --color-text-secondary: #48484c;
+  --color-text-muted: #8a8a8e;
+  --color-text-on-accent: #ffffff;
+  --color-border: #e2e2e5;
+  --color-border-strong: #c9c9cd;
+  --color-divider: #ebebed;
+  --color-accent: #d2571f;
+  --color-accent-pressed: #ae481a;
+  --color-accent-muted: #fbe6d9;
+  --color-success: #1e8e5a;
+  --color-success-muted: #e3f5ec;
+  --color-warning: #b3760a;
+  --color-warning-muted: #fbf0da;
+  --color-error: #c23b3b;
+  --color-error-muted: #fbe8e8;
+
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --font-heading-size: 22px;
+  --font-title-size: 17px;
+  --font-body-size: 15px;
+  --font-caption-size: 13px;
+}
+
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  color: #111;
-  background: #fafafa;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: var(--font-body-size);
+  color: var(--color-text-primary);
+  background: var(--color-background);
 }
+
+h1 {
+  font-size: var(--font-heading-size);
+  font-weight: 700;
+  margin: 0 0 var(--space-lg);
+}
+
+h2 {
+  font-size: var(--font-title-size);
+  font-weight: 600;
+  margin: var(--space-xl) 0 var(--space-md);
+}
+
+p {
+  font-size: var(--font-body-size);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
 }
 th,
 td {
-  border: 1px solid #ddd;
-  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-divider);
+  padding: var(--space-sm) var(--space-md);
   text-align: left;
-  font-size: 14px;
+  font-size: var(--font-caption-size);
+}
+tr:last-child td {
+  border-bottom: none;
 }
 th {
-  background: #f0f0f0;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 11px;
 }
+
 button {
   cursor: pointer;
-  padding: 6px 12px;
+  font-size: var(--font-caption-size);
+  font-weight: 600;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
 }
+button:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button[type="submit"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+button[type="submit"]:hover:not(:disabled) {
+  background: var(--color-accent-pressed);
+  border-color: var(--color-accent-pressed);
+}
+
 input,
-select {
-  padding: 4px 8px;
+select,
+textarea {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-body-size);
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+label {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
 .error {
-  color: #b00020;
+  color: var(--color-error);
+  background: var(--color-error-muted);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-caption-size);
 }
+
 .nav a {
-  margin-right: 16px;
+  margin-right: var(--space-lg);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-caption-size);
+  font-weight: 600;
 }
+.nav a:hover {
+  color: var(--color-text-primary);
+}
+
 fieldset {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-md);
+  border: none;
+  padding: 0;
 }

@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Alert } from "react-native";
 import { signOut } from "../../lib/auth-service";
 import { useAuth } from "../../hooks/useAuth";
+import { colors, spacing, radius, typography, Avatar, Button, LoadingState } from "@autodeck/ui";
 
 export default function ProfileScreen() {
   const auth = useAuth();
@@ -18,31 +19,30 @@ export default function ProfileScreen() {
     ]);
   }
 
-  if (auth.status !== "ready") {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  if (auth.status !== "ready") return <LoadingState />;
+
+  const displayName = auth.user.displayName ?? "Customer";
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.name}>{auth.user.displayName ?? "Customer"}</Text>
-      <Text style={styles.phone}>{auth.user.phoneNumber}</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.xl }}>
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: colors.surface,
+          borderRadius: radius.lg,
+          paddingVertical: spacing.xxl,
+          marginTop: spacing.lg,
+          marginBottom: spacing.xl,
+        }}
+      >
+        <Avatar name={displayName} size={72} />
+        <Text style={{ ...typography.heading, color: colors.textPrimary, marginTop: spacing.md }}>{displayName}</Text>
+        {auth.user.phoneNumber !== null && (
+          <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.xxs }}>{auth.user.phoneNumber}</Text>
+        )}
+      </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+      <Button label="Sign Out" onPress={() => void handleSignOut()} variant="destructive" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: "#fff" },
-  centered: { justifyContent: "center", alignItems: "center" },
-  name: { fontSize: 24, fontWeight: "700", marginTop: 32, marginBottom: 4 },
-  phone: { fontSize: 16, color: "#666", marginBottom: 32 },
-  signOutButton: { padding: 16, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, alignItems: "center" },
-  signOutText: { color: "#c00", fontWeight: "500" },
-});

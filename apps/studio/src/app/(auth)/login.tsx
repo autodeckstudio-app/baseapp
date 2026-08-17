@@ -1,18 +1,10 @@
 import { useState } from "react";
-import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../../lib/firebase";
+import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
 
 export default function StudioLoginScreen() {
   const router = useRouter();
@@ -36,14 +28,13 @@ export default function StudioLoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, justifyContent: "center", padding: spacing.xxl, backgroundColor: colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={styles.title}>AutoDeck Studio</Text>
-      <Text style={styles.subtitle}>Staff sign in</Text>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs }}>AutoDeck Studio</Text>
+      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl }}>Staff sign in</Text>
 
       <TextInput
-        style={styles.input}
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
@@ -52,55 +43,9 @@ export default function StudioLoginScreen() {
         autoCorrect={false}
         editable={!loading}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!loading}
-      />
+      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry editable={!loading} />
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={() => void handleLogin()}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign In</Text>
-        )}
-      </TouchableOpacity>
+      <Button label="Sign In" onPress={() => void handleLogin()} loading={loading} />
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 32,
-    backgroundColor: "#fff",
-  },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
-  subtitle: { fontSize: 15, color: "#666", marginBottom: 40 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 14,
-  },
-  button: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-});

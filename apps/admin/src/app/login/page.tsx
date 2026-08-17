@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "../../lib/auth-context";
+import { colors, spacing, radius } from "@autodeck/ui/tokens";
 
 export default function LoginPage() {
   const { signIn, error } = useAdminAuth();
@@ -18,7 +19,7 @@ export default function LoginPage() {
     setLocalError(null);
     try {
       await signIn(email, password);
-      router.push("/studio");
+      router.push("/dashboard");
     } catch {
       setLocalError("Sign-in failed. Check your email and password.");
     } finally {
@@ -27,8 +28,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ maxWidth: 360, margin: "80px auto" }}>
-      <h1>AutoDeck Admin</h1>
+    <main
+      style={{
+        maxWidth: 360,
+        margin: "96px auto",
+        padding: spacing.xl,
+        background: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.lg,
+      }}
+    >
+      <h1 style={{ marginBottom: spacing.xs }}>AutoDeck Admin</h1>
+      <p style={{ marginTop: 0, marginBottom: spacing.xl }}>Sign in to manage studio operations.</p>
       <form onSubmit={handleSubmit}>
         <fieldset>
           <label htmlFor="email">Email</label>
@@ -55,7 +66,7 @@ export default function LoginPage() {
           />
         </fieldset>
         {(localError ?? error) && <p className="error">{localError ?? error}</p>}
-        <button type="submit" disabled={submitting}>
+        <button type="submit" disabled={submitting} style={{ width: "100%" }}>
           {submitting ? "Signing in…" : "Sign in"}
         </button>
       </form>

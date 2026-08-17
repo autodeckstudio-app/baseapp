@@ -1,13 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -21,6 +13,19 @@ import {
 import type { ServiceJob, StudioConfig, Payment, Invoice } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import {
+  colors,
+  spacing,
+  radius,
+  typography,
+  Button,
+  StatusBadge,
+  statusTone,
+  LoadingState,
+  ErrorState,
+  formatPaise,
+  formatTime,
+} from "@autodeck/ui";
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Awaiting confirmation",
@@ -154,21 +159,8 @@ export default function JobDetailScreen() {
     }
   }
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (!job) {
-    return (
-      <View style={styles.centered}>
-        <Text>Job not found.</Text>
-      </View>
-    );
-  }
+  if (loading) return <LoadingState />;
+  if (!job) return <ErrorState title="Job not found" />;
 
   const transitions = JOB_STATUS_TRANSITIONS[job.status] ?? [];
   const canAdvance = transitions.some((s) => s !== "CANCELLED");
@@ -185,124 +177,94 @@ export default function JobDetailScreen() {
     hour12: true,
   });
 
-  const compatibleBays =
-    config?.bays.filter((b) => b.active && b.id !== job.bayId) ?? [];
+  const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId) ?? [];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.statusLabel}>{statusLabel}</Text>
-        {job.isWalkIn && (
-          <View style={styles.walkInBadge}>
-            <Text style={styles.walkInText}>Walk-in</Text>
-          </View>
-        )}
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
+        <StatusBadge label={statusLabel} tone={statusTone(job.status)} />
+        {job.isWalkIn && <StatusBadge label="Walk-in" tone="accent" />}
       </View>
 
-      <View style={styles.section}>
+      <Section>
         <Row label="Bay" value={job.bayId} />
         <Row label="Service" value={job.serviceId} />
         <Row label="Scheduled" value={scheduledTime} />
         <Row label="Duration" value={`~${job.estimatedDurationMinutes} min`} />
         <Row label="Payment" value={job.paymentStatus} />
-      </View>
+      </Section>
 
-      {/* Status history */}
-      <Text style={styles.sectionTitle}>Status History</Text>
-      <View style={styles.section}>
+      <Text style={sectionTitle}>Status History</Text>
+      <Section>
         {job.statusHistory.map((entry, i) => (
-          <View key={i} style={styles.historyRow}>
-            <Text style={styles.historyStatus}>
-              {JOB_STATUS_LABELS[entry.status] ?? entry.status}
-            </Text>
-            <Text style={styles.historyTime}>
-              {new Date(entry.changedAt).toLocaleTimeString("en-IN", {
-                timeZone: "Asia/Kolkata",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </Text>
+          <View key={i} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ ...typography.caption, color: colors.textPrimary }}>{JOB_STATUS_LABELS[entry.status] ?? entry.status}</Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>{formatTime(entry.changedAt)}</Text>
           </View>
         ))}
-      </View>
+      </Section>
 
-      {/* Payment & invoice — same flow for a booking-sourced job or a walk-in */}
-      <Text style={styles.sectionTitle}>Payment</Text>
-      <View style={styles.section}>
-        <Row
-          label="Status"
-          value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"}
-        />
-        <Row label="Amount" value={`₹${(job.totalAmount / 100).toLocaleString("en-IN")}`} />
+      <Text style={sectionTitle}>Payment</Text>
+      <Section>
+        <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
+        <Row label="Amount" value={formatPaise(job.totalAmount)} />
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
         {!payment && (
-          <TouchableOpacity
-            style={[styles.paymentButton, paymentActionLoading && styles.disabled]}
+          <Button
+            label="Record cash payment"
             onPress={() => void handleRecordCashPayment()}
-            disabled={paymentActionLoading}
-          >
-            <Text style={styles.paymentButtonText}>Record cash payment</Text>
-          </TouchableOpacity>
+            loading={paymentActionLoading}
+            size="md"
+            style={{ marginTop: spacing.xs }}
+          />
         )}
         {payment && (payment.status === "pending" || payment.status === "processing") && (
-          <View style={styles.paymentActionsRow}>
-            <TouchableOpacity
-              style={[styles.paymentButton, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
-              onPress={() => void handleConfirmPayment("success")}
-              disabled={paymentActionLoading}
-            >
-              <Text style={styles.paymentButtonText}>Confirm received</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.paymentButtonSecondary, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
-              onPress={() => void handleConfirmPayment("failure")}
-              disabled={paymentActionLoading}
-            >
-              <Text style={styles.paymentButtonSecondaryText}>Mark failed</Text>
-            </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs }}>
+            <View style={{ flex: 1 }}>
+              <Button label="Confirm received" onPress={() => void handleConfirmPayment("success")} loading={paymentActionLoading} size="md" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Mark failed"
+                onPress={() => void handleConfirmPayment("failure")}
+                loading={paymentActionLoading}
+                size="md"
+                variant="destructive"
+              />
+            </View>
           </View>
         )}
-      </View>
+      </Section>
 
-      {/* Actions */}
       {canAdvance && (
-        <TouchableOpacity
-          style={[styles.advanceButton, advancing && styles.disabled]}
-          onPress={() => void handleAdvance()}
-          disabled={advancing}
-        >
-          {advancing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.advanceButtonText}>{advanceLabel}</Text>
-          )}
-        </TouchableOpacity>
+        <Button label={advanceLabel} onPress={() => void handleAdvance()} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}
 
-      {/* Bay reassignment */}
       {compatibleBays.length > 0 && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
         <>
-          <Text style={styles.sectionTitle}>Reassign Bay</Text>
-          <View style={styles.bayRow}>
+          <Text style={sectionTitle}>Reassign Bay</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.lg }}>
             {compatibleBays.map((bay) => (
               <TouchableOpacity
                 key={bay.id}
-                style={[styles.bayChip, reassigning && styles.disabled]}
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: colors.textPrimary,
+                  opacity: reassigning ? 0.5 : 1,
+                }}
                 onPress={() => {
-                  Alert.alert(
-                    "Reassign Bay",
-                    `Move job to ${bay.name}?`,
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Confirm", onPress: () => void handleReassignBay(bay.id) },
-                    ],
-                  );
+                  Alert.alert("Reassign Bay", `Move job to ${bay.name}?`, [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Confirm", onPress: () => void handleReassignBay(bay.id) },
+                  ]);
                 }}
                 disabled={reassigning}
               >
-                <Text style={styles.bayChipText}>{bay.name}</Text>
+                <Text style={{ ...typography.captionMedium, color: colors.textPrimary }}>{bay.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -312,80 +274,21 @@ export default function JobDetailScreen() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBottom: spacing.sm } as const;
+
+function Section({ children }: { children: React.ReactNode }) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+    <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, gap: spacing.sm }}>
+      {children}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 },
-  statusLabel: { fontSize: 22, fontWeight: "700" },
-  walkInBadge: {
-    backgroundColor: "#fff3e0",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  walkInText: { fontSize: 12, color: "#f57c00", fontWeight: "600" },
-  section: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 20,
-    gap: 10,
-  },
-  sectionTitle: { fontSize: 15, fontWeight: "600", marginBottom: 10 },
-  row: { flexDirection: "row", justifyContent: "space-between" },
-  rowLabel: { color: "#888", fontSize: 14 },
-  rowValue: { color: "#333", fontSize: 14, fontWeight: "500", maxWidth: "60%", textAlign: "right" },
-  historyRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 4,
-  },
-  historyStatus: { fontSize: 13, color: "#333" },
-  historyTime: { fontSize: 13, color: "#888" },
-  advanceButton: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  advanceButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  disabled: { opacity: 0.5 },
-  paymentButton: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  paymentButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  paymentActionsRow: { flexDirection: "row", gap: 8, marginTop: 8 },
-  paymentButtonFlex: { flex: 1, marginTop: 0 },
-  paymentButtonSecondary: {
-    borderWidth: 1,
-    borderColor: "#c00",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  paymentButtonSecondaryText: { color: "#c00", fontWeight: "700", fontSize: 14 },
-  bayRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
-  bayChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#1a1a1a",
-  },
-  bayChipText: { fontSize: 13, color: "#1a1a1a", fontWeight: "500" },
-});
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
+      <Text style={{ ...typography.captionMedium, color: colors.textPrimary, maxWidth: "60%", textAlign: "right" }}>{value}</Text>
+    </View>
+  );
+}

@@ -1,13 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -16,6 +8,7 @@ import { getAvailability, todayIST, type AvailableSlot } from "../../../lib/book
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID, FIRST_TENANT_ID } from "@autodeck/core";
+import { colors, spacing, radius, typography, LoadingState, EmptyState } from "@autodeck/ui";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -101,23 +94,9 @@ export default function BookServiceScreen() {
     });
   }
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState />;
+  if (!service) return <EmptyState title="Service not found" />;
 
-  if (!service) {
-    return (
-      <View style={styles.centered}>
-        <Text>Service not found.</Text>
-      </View>
-    );
-  }
-
-  // Group slots by date
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
     if (!acc[slot.date]) acc[slot.date] = [];
     (acc[slot.date] as AvailableSlot[]).push(slot);
@@ -125,81 +104,73 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Book {service.name}</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>Book {service.name}</Text>
 
-      {/* Vehicle picker */}
-      <Text style={styles.sectionTitle}>Select Vehicle</Text>
+      <Text style={sectionTitle}>Select Vehicle</Text>
       {vehicles.length === 0 ? (
-        <Text style={styles.hint}>
+        <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
           No vehicles found. Add a vehicle in the Cars tab first.
         </Text>
       ) : (
-        <View style={styles.vehicleList}>
-          {vehicles.map((v) => (
-            <TouchableOpacity
-              key={v.id}
-              style={[styles.vehicleChip, selectedVehicle?.id === v.id && styles.chipSelected]}
-              onPress={() => {
-                setSelectedVehicle(v);
-                if (v.category) setSelectedCategory(v.category);
-              }}
-            >
-              <Text
-                style={[
-                  styles.vehicleChipText,
-                  selectedVehicle?.id === v.id && styles.chipTextSelected,
-                ]}
+        <View style={{ gap: spacing.xs, marginBottom: spacing.lg }}>
+          {vehicles.map((v) => {
+            const selected = selectedVehicle?.id === v.id;
+            return (
+              <TouchableOpacity
+                key={v.id}
+                onPress={() => {
+                  setSelectedVehicle(v);
+                  if (v.category) setSelectedCategory(v.category);
+                }}
+                style={[chipStyle, selected && chipSelectedStyle]}
               >
-                {v.make} {v.model} · {v.registrationNumber}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={{ ...typography.body, color: selected ? colors.white : colors.textPrimary }}>
+                  {v.make} {v.model} · {v.registrationNumber}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
 
-      {/* Vehicle category picker */}
-      <Text style={styles.sectionTitle}>Vehicle Type</Text>
-      <View style={styles.categoryRow}>
-        {VEHICLE_CATEGORIES.map(({ value, label }) => (
-          <TouchableOpacity
-            key={value}
-            style={[styles.catChip, selectedCategory === value && styles.chipSelected]}
-            onPress={() => setSelectedCategory(value)}
-          >
-            <Text
-              style={[styles.catChipText, selectedCategory === value && styles.chipTextSelected]}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <Text style={sectionTitle}>Vehicle Type</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.lg }}>
+        {VEHICLE_CATEGORIES.map(({ value, label }) => {
+          const selected = selectedCategory === value;
+          return (
+            <TouchableOpacity key={value} onPress={() => setSelectedCategory(value)} style={[pillStyle, selected && pillSelectedStyle]}>
+              <Text style={{ ...typography.caption, color: selected ? colors.accentPressed : colors.textSecondary }}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* Slot picker */}
-      <Text style={styles.sectionTitle}>Available Times</Text>
+      <Text style={sectionTitle}>Available Times</Text>
       {slotsLoading ? (
-        <ActivityIndicator style={{ marginTop: 16 }} />
+        <LoadingState fill={false} />
       ) : Object.keys(slotsByDate).length === 0 ? (
-        <Text style={styles.hint}>No slots available in the next 7 days.</Text>
+        <Text style={{ ...typography.caption, color: colors.textMuted }}>No slots available in the next 7 days.</Text>
       ) : (
         Object.entries(slotsByDate).map(([date, daySlots]) => (
-          <View key={date} style={styles.dayGroup}>
-            <Text style={styles.dayHeading}>
-              {new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", {
-                weekday: "long",
-                day: "numeric",
-                month: "short",
-              })}
+          <View key={date} style={{ marginBottom: spacing.lg }}>
+            <Text style={{ ...typography.captionMedium, color: colors.textSecondary, marginBottom: spacing.sm }}>
+              {new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
             </Text>
-            <View style={styles.slotRow}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
               {daySlots.map((slot) => (
                 <TouchableOpacity
                   key={slot.startAt}
-                  style={styles.slotChip}
                   onPress={() => handleSelectSlot(slot)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.accent,
+                    borderRadius: radius.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                  }}
                 >
-                  <Text style={styles.slotTime}>{slot.startTime}</Text>
+                  <Text style={{ ...typography.bodyMedium, color: colors.accent }}>{slot.startTime}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -210,42 +181,20 @@ export default function BookServiceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  heading: { fontSize: 22, fontWeight: "700", marginBottom: 24 },
-  sectionTitle: { fontSize: 15, fontWeight: "600", marginBottom: 10, marginTop: 8 },
-  hint: { color: "#888", fontSize: 14, marginBottom: 16 },
-  vehicleList: { gap: 8, marginBottom: 16 },
-  vehicleChip: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  chipSelected: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
-  vehicleChipText: { fontSize: 14, color: "#333" },
-  chipTextSelected: { color: "#fff" },
-  categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  catChip: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  catChipText: { fontSize: 13, color: "#555" },
-  dayGroup: { marginBottom: 20 },
-  dayHeading: { fontSize: 14, fontWeight: "600", color: "#444", marginBottom: 10 },
-  slotRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  slotChip: {
-    borderWidth: 1,
-    borderColor: "#1a1a1a",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  slotTime: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
-});
+const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBottom: spacing.sm } as const;
+const chipStyle = {
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: radius.md,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm + 2,
+} as const;
+const chipSelectedStyle = { backgroundColor: colors.textPrimary, borderColor: colors.textPrimary } as const;
+const pillStyle = {
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: radius.full,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
+} as const;
+const pillSelectedStyle = { backgroundColor: colors.accentMuted, borderColor: colors.accent } as const;

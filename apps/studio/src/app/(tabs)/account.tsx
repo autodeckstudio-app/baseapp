@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Alert } from "react-native";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
+import { colors, spacing, radius, typography, Avatar, Button, LoadingState } from "@autodeck/ui";
 
 export default function AccountScreen() {
   const authState = useAuth();
@@ -17,40 +18,35 @@ export default function AccountScreen() {
     ]);
   }
 
-  if (authState.status !== "ready") {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  if (authState.status !== "ready") return <LoadingState />;
+
+  const email = authState.user.email ?? "Studio staff";
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.email}>{authState.user.email}</Text>
-      <Text style={styles.role}>{authState.claims.role}</Text>
-      {authState.claims.studioId && <Text style={styles.studio}>Studio: {authState.claims.studioId}</Text>}
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.xl }}>
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: colors.surface,
+          borderRadius: radius.lg,
+          paddingVertical: spacing.xxl,
+          marginTop: spacing.lg,
+          marginBottom: spacing.xl,
+        }}
+      >
+        <Avatar name={email} size={64} />
+        <Text style={{ ...typography.title, color: colors.textPrimary, marginTop: spacing.md }}>{email}</Text>
+        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs, textTransform: "capitalize" }}>
+          {authState.claims.role}
+        </Text>
+        {authState.claims.studioId && (
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
+            Studio: {authState.claims.studioId}
+          </Text>
+        )}
+      </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+      <Button label="Sign Out" onPress={handleSignOut} variant="destructive" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: "#fff" },
-  centered: { justifyContent: "center", alignItems: "center" },
-  email: { fontSize: 20, fontWeight: "700", marginTop: 32, marginBottom: 4 },
-  role: { fontSize: 14, color: "#666", textTransform: "capitalize" },
-  studio: { fontSize: 13, color: "#888", marginTop: 4, marginBottom: 32 },
-  signOutButton: {
-    marginTop: 32,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  signOutText: { color: "#c00", fontWeight: "500" },
-});
