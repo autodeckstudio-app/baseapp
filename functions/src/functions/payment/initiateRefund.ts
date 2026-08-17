@@ -89,7 +89,15 @@ export const initiateRefund = onCall({ region: "asia-south1" }, async (request) 
       }
     }
 
-    // Update booking paymentStatus
+    // Update job paymentStatus — the job is always present, booking-sourced or walk-in
+    if (payment.jobId) {
+      tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), {
+        paymentStatus: "refunded",
+        updatedAt: now,
+      });
+    }
+
+    // Sync linked booking, if any
     if (payment.bookingId) {
       tx.update(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId), {
         paymentStatus: "refunded",

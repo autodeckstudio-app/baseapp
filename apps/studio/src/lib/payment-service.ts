@@ -4,13 +4,14 @@ import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Payment, PaymentMethod, Invoice } from "@autodeck/core";
 
-type RecordManualPaymentInput = { bookingId: string; method: PaymentMethod; manualReference?: string };
+type RecordManualPaymentInput = { jobId: string; method: PaymentMethod; manualReference?: string };
 type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
 
 // Studio/admin only — records a cash/UPI/bank-transfer payment collected in
-// person. Completes the payment and issues the invoice immediately (no
-// customer action involved — a customer can never mark their own payment
-// successful; only this function or confirmPaymentMock can).
+// person, keyed by jobId so it works identically for a booking-sourced job
+// or a walk-in job. Completes the payment and issues the invoice immediately
+// (no customer action involved — a customer can never mark their own
+// payment successful; only this function or confirmPaymentMock can).
 export async function recordManualPayment(input: RecordManualPaymentInput): Promise<RecordManualPaymentOutput> {
   const fn = httpsCallable<RecordManualPaymentInput, RecordManualPaymentOutput>(functions, "recordManualPayment");
   const result = await fn(input);
@@ -28,14 +29,20 @@ export async function confirmPaymentMock(paymentId: string, mockResult: "success
   return result.data;
 }
 
-export function listenToPaymentForBooking(
-  bookingId: string,
+// Filters by tenantId as well as jobId: the /payments rule requires
+// ownTenant(resource.data) unconditionally (regardless of role), so
+// Firestore rejects the list query outright unless tenantId is also
+// constrained by an equality filter it can verify statically.
+export function listenToPaymentForJob(
+  jobId: string,
+  tenantId: string,
   onData: (payment: Payment | null) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
   const q = query(
     collection(db, COLLECTIONS.payments()),
-    where("bookingId", "==", bookingId),
+    where("jobId", "==", jobId),
+    where("tenantId", "==", tenantId),
     orderBy("createdAt", "desc"),
     limit(1),
   );
@@ -46,12 +53,17 @@ export function listenToPaymentForBooking(
   );
 }
 
-export function listenToInvoiceForBooking(
-  bookingId: string,
+export function listenToInvoiceForJob(
+  jobId: string,
+  tenantId: string,
   onData: (invoice: Invoice | null) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(collection(db, COLLECTIONS.invoices()), where("bookingId", "==", bookingId));
+  const q = query(
+    collection(db, COLLECTIONS.invoices()),
+    where("jobId", "==", jobId),
+    where("tenantId", "==", tenantId),
+  );
   return onSnapshot(
     q,
     (snap) => onData(snap.empty ? null : (snap.docs.at(0)?.data() as Invoice | undefined) ?? null),

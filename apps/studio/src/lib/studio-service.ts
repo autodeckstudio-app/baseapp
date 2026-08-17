@@ -11,6 +11,7 @@ import {
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, StudioConfig, Service } from "@autodeck/core";
+import { FIRST_TENANT_ID } from "@autodeck/core";
 
 type GetStudioJobsInput = { studioId: string; date?: string };
 type GetStudioJobsOutput = { jobs: ServiceJob[]; date: string };
@@ -81,6 +82,11 @@ export async function getStudioConfig(studioId: string): Promise<StudioConfig | 
   return snap.data() as StudioConfig;
 }
 
+// Filters by tenantId as well: the /jobs rule requires
+// ownTenant(resource.data) unconditionally (regardless of role), so
+// Firestore rejects the list query outright unless tenantId is also
+// constrained by an equality filter it can verify statically. V1 is
+// single-tenant, so FIRST_TENANT_ID is the studio user's own tenant.
 export function listenToJobsByDate(
   studioId: string,
   date: string,
@@ -89,6 +95,7 @@ export function listenToJobsByDate(
 ): Unsubscribe {
   const q = query(
     collection(db, COLLECTIONS.jobs()),
+    where("tenantId", "==", FIRST_TENANT_ID),
     where("studioId", "==", studioId),
     where("scheduledDate", "==", date),
   );

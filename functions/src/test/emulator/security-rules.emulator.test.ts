@@ -837,3 +837,145 @@ describe("/employees — staff mutations are server-authoritative", () => {
     await assertFails(tenantAAdmin.firestore().collection("employees").doc("emp-b").get());
   });
 });
+
+// ─── Walk-in financial records (Phase 1f.1) ───────────────────────────────────
+// Walk-in payments/invoices carry bookingId: null (never a fabricated
+// bookingId) and are keyed by jobId instead — these rules must protect them
+// identically to booking-sourced records.
+
+async function seedWalkinPayment(paymentId: string, customerId: string, tenantId = FIRST_TENANT_ID) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("payments").doc(paymentId).set({
+      id: paymentId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      jobId: "walkin-job-1",
+      bookingId: null,
+      customerId,
+      amount: 47200,
+      currency: "INR",
+      method: "cash",
+      status: "completed",
+      razorpayPaymentLinkId: null,
+      razorpayPaymentId: null,
+      razorpayOrderId: null,
+      razorpayRefundId: null,
+      refundAmount: null,
+      manualReference: null,
+      recordedBy: "uid-studio",
+      invoiceId: "walkin-invoice-1",
+      providerEventId: null,
+      completedAt: now,
+      failedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+async function seedWalkinInvoice(invoiceId: string, customerId: string, tenantId = FIRST_TENANT_ID) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("invoices").doc(invoiceId).set({
+      id: invoiceId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      jobId: "walkin-job-1",
+      bookingId: null, // walk-in — never a fabricated bookingId
+      customerId,
+      vehicleId: "vehicle-1",
+      paymentId: "walkin-payment-1",
+      invoiceNumber: "INV-2026-00002",
+      lineItems: [{ description: "Wash", quantity: 1, unitPrice: 40000, total: 40000 }],
+      subtotal: 40000,
+      taxRatePercent: 18,
+      taxDescription: "GST 18%",
+      tax: 7200,
+      total: 47200,
+      currency: "INR",
+      status: "issued",
+      pdfUrl: null,
+      publicToken: "test-uuid-walkin",
+      issuedAt: now,
+      voidedAt: null,
+      voidedReason: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+describe("Walk-in financial records — same protections as booking-sourced records", () => {
+  it("Customer can read their own walk-in payment (bookingId: null)", async () => {
+    await seedWalkinPayment("wpay-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("payments").doc("wpay-alice").get());
+  });
+
+  it("Customer cannot directly write a walk-in payment (Cloud Function only)", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("payments").doc("wpay-tamper").set({
+        id: "wpay-tamper",
+        tenantId: FIRST_TENANT_ID,
+        jobId: "walkin-job-x",
+        bookingId: null,
+        customerId: "uid-alice",
+        amount: 1,
+        status: "completed",
+      }),
+    );
+  });
+
+  it("Customer cannot alter a walk-in invoice total (immutability)", async () => {
+    await seedWalkinInvoice("winv-tamper", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("invoices").doc("winv-tamper").update({
+        total: 1,
+        status: "paid",
+      }),
+    );
+  });
+
+  it("Studio cannot directly write a walk-in invoice (Cloud Function only)", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("invoices").doc("winv-studio-direct").set({
+        id: "winv-studio-direct",
+        tenantId: FIRST_TENANT_ID,
+        jobId: "walkin-job-x",
+        bookingId: null,
+        total: 100,
+        status: "issued",
+      }),
+    );
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B's walk-in payment", async () => {
+    await seedWalkinPayment("wpay-tenant-b", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(tenantAUser.firestore().collection("payments").doc("wpay-tenant-b").get());
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B's walk-in invoice", async () => {
+    await seedWalkinInvoice("winv-tenant-b", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(tenantAUser.firestore().collection("invoices").doc("winv-tenant-b").get());
+  });
+});

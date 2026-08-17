@@ -1,24 +1,43 @@
-// Builds an Invoice from a Booking's immutable price snapshot.
-// The booking.priceBreakdown is the authoritative source of all invoice amounts.
-// Catalogue pricing changes after booking must NOT affect this invoice.
-import type { Invoice, Booking } from "@autodeck/core";
+// Builds an Invoice from an immutable server-computed price snapshot.
+// The snapshot (priceBreakdown) is the authoritative source of all invoice
+// amounts — catalogue pricing changes after the snapshot was taken must NOT
+// affect this invoice. The snapshot may originate from a Booking or from a
+// walk-in Job; this function has no dependency on either — it only needs the
+// resolved PriceBreakdown and the entity references to stamp onto the Invoice.
+import type { Invoice, PriceBreakdown } from "@autodeck/core";
 import { randomUUID } from "node:crypto";
 
 export interface BuildInvoiceParams {
   invoiceId: string;
   invoiceNumber: string; // allocated atomically by allocateInvoiceNumber()
-  booking: Booking;
-  paymentId: string | null;
+  tenantId: string;
   studioId: string;
-  serviceName: string; // snapshotted from booking context (not re-read from catalogue)
+  jobId: string; // the payable operational job — booking-sourced or walk-in
+  bookingId: string | null; // null for walk-ins; never a fabricated value
+  customerId: string;
+  vehicleId: string;
+  priceBreakdown: PriceBreakdown; // immutable snapshot — booking's or job's own
+  paymentId: string | null;
+  serviceName: string; // snapshotted from context (not re-read from catalogue)
 }
 
 export function buildInvoice(params: BuildInvoiceParams): Invoice {
-  const { invoiceId, invoiceNumber, booking, paymentId, studioId, serviceName } = params;
-  const pb = booking.priceBreakdown;
+  const {
+    invoiceId,
+    invoiceNumber,
+    tenantId,
+    studioId,
+    jobId,
+    bookingId,
+    customerId,
+    vehicleId,
+    priceBreakdown: pb,
+    paymentId,
+    serviceName,
+  } = params;
   const now = new Date().toISOString();
 
-  // Line items reflect the immutable booking price breakdown
+  // Line items reflect the immutable price snapshot
   const lineItems: Invoice["lineItems"] = [
     {
       description: serviceName,
@@ -50,12 +69,12 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
 
   return {
     id: invoiceId,
-    tenantId: booking.tenantId,
+    tenantId,
     studioId,
-    jobId: "", // set by caller when job is sealed
-    bookingId: booking.id,
-    customerId: booking.customerId,
-    vehicleId: booking.vehicleId,
+    jobId,
+    bookingId,
+    customerId,
+    vehicleId,
     paymentId,
     invoiceNumber,
     lineItems,
@@ -63,7 +82,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     taxRatePercent: pb.taxRatePercent,
     taxDescription: pb.taxDescription,
     tax: pb.tax,
-    total: pb.total, // must equal booking.totalAmount — never editable
+    total: pb.total, // must equal the source's totalAmount — never editable
     currency: pb.currency,
     status: paymentId ? "issued" : "draft",
     pdfUrl: null,

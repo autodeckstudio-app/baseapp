@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Booking, Payment } from "@autodeck/core";
+import type { ServiceJob, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -8,34 +8,37 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { initiatePaymentSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
+// Keyed by jobId — the payable operational job — so the same flow works for a
+// booking-sourced job or a walk-in job. bookingId (nullable) is carried onto
+// the Payment record purely as a cross-reference, never as the lookup key.
 export const initiatePayment = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(initiatePaymentSchema, request.data);
 
   const db = getFirestore();
-  const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
+  const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(data.jobId).get();
 
-  if (!bookingSnap.exists) throw new HttpsError("not-found", "Booking not found.");
+  if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
 
-  const booking = bookingSnap.data() as Booking;
+  const job = jobSnap.data() as ServiceJob;
 
-  // Ownership: customer pays own booking; studio/admin can initiate payment for any booking
-  const isOwner = booking.customerId === user.uid;
+  // Ownership: customer pays own job; studio/admin can initiate payment for any job
+  const isOwner = job.customerId === user.uid;
   const isStudioOrAdmin = ["studio", "admin", "superadmin"].includes(user.claims.role);
   if (!isOwner && !isStudioOrAdmin) {
-    throw new HttpsError("permission-denied", "Cannot initiate payment for this booking.");
+    throw new HttpsError("permission-denied", "Cannot initiate payment for this job.");
   }
-  if (booking.tenantId !== user.claims.tenantId) {
+  if (job.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if (booking.status === "CANCELLED" || booking.status === "EXPIRED") {
-    throw new HttpsError("failed-precondition", "Cannot pay for a cancelled or expired booking.");
+  if (job.status === "CANCELLED") {
+    throw new HttpsError("failed-precondition", "Cannot pay for a cancelled job.");
   }
 
-  // Check for existing non-failed/cancelled payment for this booking (prevent duplicates)
+  // Check for existing non-failed/cancelled payment for this job (prevent duplicates)
   const existingPayments = await db
     .collection(COLLECTIONS.payments())
-    .where("bookingId", "==", data.bookingId)
+    .where("jobId", "==", data.jobId)
     .where("status", "in", ["pending", "processing", "completed"])
     .limit(1)
     .get();
@@ -43,7 +46,7 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
   if (!existingPayments.empty) {
     const existing = existingPayments.docs[0]?.data() as Payment;
     if (existing?.status === "completed") {
-      throw new HttpsError("already-exists", "This booking has already been paid.");
+      throw new HttpsError("already-exists", "This job has already been paid.");
     }
     // Return existing pending payment rather than creating a duplicate
     return { paymentId: existing.id, paymentUrl: null, status: existing.status };
@@ -52,8 +55,8 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
   const now = new Date().toISOString();
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
 
-  // Amount ALWAYS comes from booking.totalAmount (immutable price snapshot) — NEVER from client
-  const amount = booking.totalAmount;
+  // Amount ALWAYS comes from job.totalAmount (immutable price snapshot) — NEVER from client
+  const amount = job.totalAmount;
 
   let paymentUrl: string | null = null;
   let razorpayPaymentLinkId: string | null = null;
@@ -63,9 +66,9 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
     const provider = getPaymentProvider();
     const result = await provider.createPaymentLink({
       amount,
-      currency: booking.priceBreakdown.currency,
-      bookingId: booking.id,
-      description: `AutoDeck Booking ${booking.id}`,
+      currency: job.priceBreakdown.currency,
+      bookingId: job.bookingId ?? job.id,
+      description: `AutoDeck Job ${job.id}`,
       customerName: user.email ?? user.phone ?? "Customer",
       customerPhone: user.phone ?? "",
       referenceId: paymentRef.id,
@@ -77,13 +80,13 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
 
   const payment: Payment = {
     id: paymentRef.id,
-    tenantId: booking.tenantId,
-    studioId: booking.studioId,
-    jobId: "", // linked to job when job is sealed
-    bookingId: booking.id,
-    customerId: booking.customerId,
+    tenantId: job.tenantId,
+    studioId: job.studioId,
+    jobId: job.id,
+    bookingId: job.bookingId,
+    customerId: job.customerId,
     amount,
-    currency: booking.priceBreakdown.currency,
+    currency: job.priceBreakdown.currency,
     method: data.method,
     status: "pending",
     razorpayPaymentLinkId,
@@ -110,8 +113,8 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
       entityType: "Payment",
       entityId: paymentRef.id,
       user,
-      studioId: booking.studioId,
-      after: { bookingId: booking.id, amount, method: data.method, status: "pending" },
+      studioId: job.studioId,
+      after: { jobId: job.id, bookingId: job.bookingId, amount, method: data.method, status: "pending" },
     });
   });
 

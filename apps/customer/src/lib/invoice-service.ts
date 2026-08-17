@@ -20,15 +20,27 @@ export function listenToInvoice(
 }
 
 /**
- * Real-time listener for the invoice linked to a booking (there is at most one).
- * Firestore rules restrict reads to the invoice's own customerId.
+ * Real-time listener for the invoice linked to a job (there is at most one) —
+ * works identically for a booking-sourced job or a walk-in job.
+ *
+ * Filters by tenantId and customerId as well as jobId: Firestore rejects a
+ * list query outright unless every field the security rule checks is
+ * constrained by an equality filter it can verify statically (see
+ * job-service.ts's listenToJobForBooking for the full explanation).
  */
-export function listenToInvoiceForBooking(
-  bookingId: string,
+export function listenToInvoiceForJob(
+  jobId: string,
+  tenantId: string,
+  customerId: string,
   onData: (invoice: Invoice | null) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(collection(db, COLLECTIONS.invoices()), where("bookingId", "==", bookingId));
+  const q = query(
+    collection(db, COLLECTIONS.invoices()),
+    where("jobId", "==", jobId),
+    where("tenantId", "==", tenantId),
+    where("customerId", "==", customerId),
+  );
   return onSnapshot(
     q,
     (snap) => onData(snap.empty ? null : (snap.docs.at(0)?.data() as Invoice | undefined) ?? null),

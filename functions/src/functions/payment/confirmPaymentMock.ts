@@ -1,9 +1,13 @@
 // DEV/EMULATOR ONLY: Simulates a payment provider webhook internally.
 // Allows testing the full payment → invoice flow without a real provider.
 // Gated: only runs when FUNCTIONS_EMULATOR=true or USE_PAYMENT_MOCK=true.
+//
+// Operates on the Payment's jobId (always populated) rather than bookingId,
+// so it confirms a customer-initiated payment identically whether the
+// underlying job came from a booking or a walk-in.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Payment, Booking, ServiceJob } from "@autodeck/core";
+import type { Payment, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -39,19 +43,22 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
   if (payment.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if (payment.status !== "pending" && payment.status !== "processing") {
-    throw new HttpsError(
-      "failed-precondition",
-      `Payment is already in terminal state: ${payment.status}`,
-    );
-  }
 
-  // Idempotency: check if this mock event was already processed
+  // Idempotency check comes BEFORE the terminal-state guard: a redelivered
+  // webhook event for a payment that already finished processing must return
+  // gracefully, not error out just because the payment is no longer pending.
   const mockEventId = `mock_${data.paymentId}_${data.mockResult}`;
   const eventRef = db.collection(COLLECTIONS.paymentEvents()).doc(mockEventId);
   const eventSnap = await eventRef.get();
   if (eventSnap.exists) {
     return { paymentId: data.paymentId, result: data.mockResult, idempotent: true };
+  }
+
+  if (payment.status !== "pending" && payment.status !== "processing") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Payment is already in terminal state: ${payment.status}`,
+    );
   }
 
   const now = new Date().toISOString();
@@ -61,36 +68,27 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
     // All reads must happen before any writes within a Firestore transaction —
     // the event-idempotency write is deferred until after the reads below.
     if (isSuccess) {
-      // Fetch booking for invoice
-      const bookingId = payment.bookingId;
-      if (!bookingId) throw new HttpsError("failed-precondition", "Payment has no linked booking.");
+      if (!payment.jobId) throw new HttpsError("failed-precondition", "Payment has no linked job.");
 
-      const bookingSnap = await tx.get(db.collection(COLLECTIONS.bookings()).doc(bookingId));
-      if (!bookingSnap.exists) throw new HttpsError("not-found", "Booking not found.");
-      const booking = bookingSnap.data() as Booking;
-
-      // Fetch job for service name snapshot (try to find linked job)
-      let serviceName = `Service ${booking.serviceId}`;
-      const jobsSnap = await db
-        .collection(COLLECTIONS.jobs())
-        .where("bookingId", "==", bookingId)
-        .limit(1)
-        .get();
-      if (!jobsSnap.empty) {
-        const job = jobsSnap.docs[0]?.data() as ServiceJob;
-        if (job) serviceName = `Service ${job.serviceId}`;
-      }
+      const jobSnap = await tx.get(db.collection(COLLECTIONS.jobs()).doc(payment.jobId));
+      if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
+      const job = jobSnap.data() as ServiceJob;
 
       // Allocate invoice number and build invoice atomically
       const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
-      const invoiceNumber = await allocateInvoiceNumber(tx, db, booking.tenantId);
+      const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
       const invoice = buildInvoice({
         invoiceId: invoiceRef.id,
         invoiceNumber,
-        booking,
+        tenantId: job.tenantId,
+        studioId: job.studioId,
+        jobId: job.id,
+        bookingId: job.bookingId,
+        customerId: job.customerId,
+        vehicleId: job.vehicleId,
+        priceBreakdown: job.priceBreakdown,
         paymentId: data.paymentId,
-        studioId: booking.studioId,
-        serviceName,
+        serviceName: `Service ${job.serviceId}`,
       });
 
       // Mark event as processed (idempotency) — first write, now that all reads are done
@@ -105,11 +103,19 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
         updatedAt: now,
       });
 
-      // Update booking → paymentStatus: paid
-      tx.update(db.collection(COLLECTIONS.bookings()).doc(bookingId), {
+      // Update job → paid
+      tx.update(db.collection(COLLECTIONS.jobs()).doc(job.id), {
         paymentStatus: "paid",
         updatedAt: now,
       });
+
+      // Sync linked booking, if any
+      if (job.bookingId) {
+        tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId), {
+          paymentStatus: "paid",
+          updatedAt: now,
+        });
+      }
 
       // Write invoice
       tx.set(invoiceRef, invoice);

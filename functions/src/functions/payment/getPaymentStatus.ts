@@ -13,7 +13,7 @@ export const getPaymentStatus = onCall({ region: "asia-south1" }, async (request
   const db = getFirestore();
   const paymentsSnap = await db
     .collection(COLLECTIONS.payments())
-    .where("bookingId", "==", data.bookingId)
+    .where("jobId", "==", data.jobId)
     .orderBy("createdAt", "desc")
     .limit(1)
     .get();

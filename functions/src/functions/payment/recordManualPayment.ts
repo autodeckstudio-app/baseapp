@@ -1,9 +1,13 @@
 // Studio/admin records a manual cash or direct UPI payment.
 // Payment is immediately COMPLETED (no provider roundtrip needed for cash/UPI).
-// Amount ALWAYS comes from booking.totalAmount — client cannot set it.
+// Amount ALWAYS comes from job.totalAmount — client cannot set it.
+//
+// Keyed by jobId so the same function pays a booking-sourced job or a
+// walk-in job identically — bookingId (nullable) is carried onto the
+// Payment/Invoice as a cross-reference only.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Booking, Payment } from "@autodeck/core";
+import type { ServiceJob, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -22,37 +26,37 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   const data = validate(recordManualPaymentSchema, request.data);
 
   const db = getFirestore();
-  const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
-  if (!bookingSnap.exists) throw new HttpsError("not-found", "Booking not found.");
+  const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(data.jobId).get();
+  if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
 
-  const booking = bookingSnap.data() as Booking;
+  const job = jobSnap.data() as ServiceJob;
 
-  if (booking.tenantId !== user.claims.tenantId) {
+  if (job.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if (booking.paymentStatus === "paid") {
-    throw new HttpsError("already-exists", "This booking has already been marked as paid.");
+  if (job.paymentStatus === "paid") {
+    throw new HttpsError("already-exists", "This job has already been marked as paid.");
   }
-  if (booking.status === "CANCELLED" || booking.status === "EXPIRED") {
-    throw new HttpsError("failed-precondition", "Cannot record payment for a cancelled/expired booking.");
+  if (job.status === "CANCELLED") {
+    throw new HttpsError("failed-precondition", "Cannot record payment for a cancelled job.");
   }
 
   const now = new Date().toISOString();
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
   const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
 
-  // Amount ALWAYS from booking snapshot — NEVER from client
-  const amount = booking.totalAmount;
+  // Amount ALWAYS from the job's server-computed snapshot — NEVER from client
+  const amount = job.totalAmount;
 
   const payment: Payment = {
     id: paymentRef.id,
-    tenantId: booking.tenantId,
-    studioId: booking.studioId,
-    jobId: "",
-    bookingId: booking.id,
-    customerId: booking.customerId,
+    tenantId: job.tenantId,
+    studioId: job.studioId,
+    jobId: job.id,
+    bookingId: job.bookingId,
+    customerId: job.customerId,
     amount,
-    currency: booking.priceBreakdown.currency,
+    currency: job.priceBreakdown.currency,
     method: data.method,
     status: "completed",
     razorpayPaymentLinkId: null,
@@ -73,29 +77,40 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   };
 
   await db.runTransaction(async (tx) => {
-    const invoiceNumber = await allocateInvoiceNumber(tx, db, booking.tenantId);
+    const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
     const invoice = buildInvoice({
       invoiceId: invoiceRef.id,
       invoiceNumber,
-      booking,
+      tenantId: job.tenantId,
+      studioId: job.studioId,
+      jobId: job.id,
+      bookingId: job.bookingId,
+      customerId: job.customerId,
+      vehicleId: job.vehicleId,
+      priceBreakdown: job.priceBreakdown,
       paymentId: paymentRef.id,
-      studioId: booking.studioId,
-      serviceName: `Service ${booking.serviceId}`,
+      serviceName: `Service ${job.serviceId}`,
     });
 
     tx.set(paymentRef, payment);
     tx.set(invoiceRef, invoice);
-    tx.update(db.collection(COLLECTIONS.bookings()).doc(booking.id), {
+    tx.update(db.collection(COLLECTIONS.jobs()).doc(job.id), {
       paymentStatus: "paid",
       updatedAt: now,
     });
+    if (job.bookingId) {
+      tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId), {
+        paymentStatus: "paid",
+        updatedAt: now,
+      });
+    }
 
     writeAuditLog(tx, {
       action: "payment.completed",
       entityType: "Payment",
       entityId: paymentRef.id,
       user,
-      studioId: booking.studioId,
+      studioId: job.studioId,
       after: { method: data.method, amount, status: "completed", invoiceId: invoiceRef.id },
     });
     writeAuditLog(tx, {
@@ -103,7 +118,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       entityType: "Invoice",
       entityId: invoiceRef.id,
       user,
-      studioId: booking.studioId,
+      studioId: job.studioId,
       after: { invoiceNumber, total: invoice.total, status: "issued" },
     });
   });

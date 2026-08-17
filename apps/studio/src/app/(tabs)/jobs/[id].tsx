@@ -15,8 +15,8 @@ import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studi
 import {
   recordManualPayment,
   confirmPaymentMock,
-  listenToPaymentForBooking,
-  listenToInvoiceForBooking,
+  listenToPaymentForJob,
+  listenToInvoiceForJob,
 } from "../../../lib/payment-service";
 import type { ServiceJob, StudioConfig, Payment, Invoice } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
@@ -83,23 +83,23 @@ export default function JobDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (!job?.bookingId) {
+    if (!job) {
       setPayment(null);
       setInvoice(null);
       return;
     }
-    const bookingId = job.bookingId;
-    const unsubPayment = listenToPaymentForBooking(bookingId, setPayment, () => undefined);
-    const unsubInvoice = listenToInvoiceForBooking(bookingId, setInvoice, () => undefined);
+    const jobId = job.id;
+    const unsubPayment = listenToPaymentForJob(jobId, job.tenantId, setPayment, () => undefined);
+    const unsubInvoice = listenToInvoiceForJob(jobId, job.tenantId, setInvoice, () => undefined);
     return () => {
       unsubPayment();
       unsubInvoice();
     };
-  }, [job?.bookingId]);
+  }, [job?.id]);
 
   async function handleRecordCashPayment() {
-    const bookingId = job?.bookingId;
-    if (!bookingId) return;
+    const jobId = job?.id;
+    if (!jobId) return;
     Alert.alert("Record cash payment?", "Confirms the customer paid in full at the studio.", [
       { text: "Cancel", style: "cancel" },
       {
@@ -107,7 +107,7 @@ export default function JobDetailScreen() {
         onPress: async () => {
           setPaymentActionLoading(true);
           try {
-            await recordManualPayment({ bookingId, method: "cash" });
+            await recordManualPayment({ jobId, method: "cash" });
           } catch (err) {
             Alert.alert("Error", err instanceof Error ? err.message : "Failed to record payment.");
           } finally {
@@ -227,50 +227,42 @@ export default function JobDetailScreen() {
         ))}
       </View>
 
-      {/* Payment & invoice */}
+      {/* Payment & invoice — same flow for a booking-sourced job or a walk-in */}
       <Text style={styles.sectionTitle}>Payment</Text>
       <View style={styles.section}>
-        {!job.bookingId ? (
-          <Text style={styles.paymentNote}>
-            Walk-in job — not linked to a booking, so it isn't payable through the payment system yet.
-          </Text>
-        ) : (
-          <>
-            <Row
-              label="Status"
-              value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"}
-            />
-            {payment && <Row label="Amount" value={`₹${(payment.amount / 100).toLocaleString("en-IN")}`} />}
-            {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
+        <Row
+          label="Status"
+          value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"}
+        />
+        <Row label="Amount" value={`₹${(job.totalAmount / 100).toLocaleString("en-IN")}`} />
+        {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
-            {!payment && (
-              <TouchableOpacity
-                style={[styles.paymentButton, paymentActionLoading && styles.disabled]}
-                onPress={() => void handleRecordCashPayment()}
-                disabled={paymentActionLoading}
-              >
-                <Text style={styles.paymentButtonText}>Record cash payment</Text>
-              </TouchableOpacity>
-            )}
-            {payment && (payment.status === "pending" || payment.status === "processing") && (
-              <View style={styles.paymentActionsRow}>
-                <TouchableOpacity
-                  style={[styles.paymentButton, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
-                  onPress={() => void handleConfirmPayment("success")}
-                  disabled={paymentActionLoading}
-                >
-                  <Text style={styles.paymentButtonText}>Confirm received</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.paymentButtonSecondary, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
-                  onPress={() => void handleConfirmPayment("failure")}
-                  disabled={paymentActionLoading}
-                >
-                  <Text style={styles.paymentButtonSecondaryText}>Mark failed</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
+        {!payment && (
+          <TouchableOpacity
+            style={[styles.paymentButton, paymentActionLoading && styles.disabled]}
+            onPress={() => void handleRecordCashPayment()}
+            disabled={paymentActionLoading}
+          >
+            <Text style={styles.paymentButtonText}>Record cash payment</Text>
+          </TouchableOpacity>
+        )}
+        {payment && (payment.status === "pending" || payment.status === "processing") && (
+          <View style={styles.paymentActionsRow}>
+            <TouchableOpacity
+              style={[styles.paymentButton, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
+              onPress={() => void handleConfirmPayment("success")}
+              disabled={paymentActionLoading}
+            >
+              <Text style={styles.paymentButtonText}>Confirm received</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.paymentButtonSecondary, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
+              onPress={() => void handleConfirmPayment("failure")}
+              disabled={paymentActionLoading}
+            >
+              <Text style={styles.paymentButtonSecondaryText}>Mark failed</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -369,7 +361,6 @@ const styles = StyleSheet.create({
   },
   advanceButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   disabled: { opacity: 0.5 },
-  paymentNote: { fontSize: 13, color: "#888" },
   paymentButton: {
     backgroundColor: "#1a1a1a",
     borderRadius: 8,

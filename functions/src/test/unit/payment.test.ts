@@ -159,31 +159,51 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
   };
 }
 
+// buildInvoice no longer takes a Booking — it takes the resolved price
+// snapshot plus entity references directly, so it works identically for a
+// booking-sourced job or a walk-in job. This helper maps a Booking fixture
+// (still convenient for readable test data) onto that generic param shape.
+function invoiceParamsFromBooking(
+  booking: Booking,
+  extra: { invoiceId: string; invoiceNumber: string; paymentId: string | null; serviceName: string },
+) {
+  return {
+    ...extra,
+    tenantId: booking.tenantId,
+    studioId: booking.studioId,
+    jobId: "job-1",
+    bookingId: booking.id,
+    customerId: booking.customerId,
+    vehicleId: booking.vehicleId,
+    priceBreakdown: booking.priceBreakdown,
+  };
+}
+
 describe("buildInvoice", () => {
-  it("invoice total equals booking.totalAmount (historical price immutability)", () => {
+  it("invoice total equals the source's totalAmount (historical price immutability)", () => {
     const booking = makeBooking();
-    const invoice = buildInvoice({
-      invoiceId: "inv-1",
-      invoiceNumber: "INV-2026-00001",
-      booking,
-      paymentId: "pay-1",
-      studioId: "studio-ahmedabad",
-      serviceName: "LLumar Gloss PPF",
-    });
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-1",
+        invoiceNumber: "INV-2026-00001",
+        paymentId: "pay-1",
+        serviceName: "LLumar Gloss PPF",
+      }),
+    );
     expect(invoice.total).toBe(booking.totalAmount);
     expect(invoice.total).toBe(590000);
   });
 
-  it("invoice tax is snapshotted from booking (not recalculated)", () => {
+  it("invoice tax is snapshotted from the price breakdown (not recalculated)", () => {
     const booking = makeBooking();
-    const invoice = buildInvoice({
-      invoiceId: "inv-2",
-      invoiceNumber: "INV-2026-00002",
-      booking,
-      paymentId: "pay-2",
-      studioId: "studio-ahmedabad",
-      serviceName: "Service",
-    });
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-2",
+        invoiceNumber: "INV-2026-00002",
+        paymentId: "pay-2",
+        serviceName: "Service",
+      }),
+    );
     expect(invoice.taxRatePercent).toBe(18);
     expect(invoice.taxDescription).toBe("GST 18%");
     expect(invoice.tax).toBe(90000);
@@ -191,56 +211,56 @@ describe("buildInvoice", () => {
 
   it("invoice status is 'issued' when paymentId is provided", () => {
     const booking = makeBooking();
-    const invoice = buildInvoice({
-      invoiceId: "inv-3",
-      invoiceNumber: "INV-2026-00003",
-      booking,
-      paymentId: "pay-3",
-      studioId: "studio-ahmedabad",
-      serviceName: "Service",
-    });
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-3",
+        invoiceNumber: "INV-2026-00003",
+        paymentId: "pay-3",
+        serviceName: "Service",
+      }),
+    );
     expect(invoice.status).toBe("issued");
     expect(invoice.issuedAt).not.toBeNull();
   });
 
   it("invoice status is 'draft' when no paymentId", () => {
     const booking = makeBooking();
-    const invoice = buildInvoice({
-      invoiceId: "inv-4",
-      invoiceNumber: "INV-2026-00004",
-      booking,
-      paymentId: null,
-      studioId: "studio-ahmedabad",
-      serviceName: "Service",
-    });
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-4",
+        invoiceNumber: "INV-2026-00004",
+        paymentId: null,
+        serviceName: "Service",
+      }),
+    );
     expect(invoice.status).toBe("draft");
     expect(invoice.issuedAt).toBeNull();
   });
 
   it("publicToken is a valid UUID", () => {
     const booking = makeBooking();
-    const invoice = buildInvoice({
-      invoiceId: "inv-5",
-      invoiceNumber: "INV-2026-00005",
-      booking,
-      paymentId: null,
-      studioId: "studio-ahmedabad",
-      serviceName: "Service",
-    });
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-5",
+        invoiceNumber: "INV-2026-00005",
+        paymentId: null,
+        serviceName: "Service",
+      }),
+    );
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
     expect(invoice.publicToken).toMatch(uuidRegex);
   });
 
   it("each invoice gets a unique publicToken", () => {
     const booking = makeBooking();
-    const params = {
-      booking,
+    const params = invoiceParamsFromBooking(booking, {
+      invoiceId: "inv-6",
+      invoiceNumber: "INV-2026-00006",
       paymentId: null,
-      studioId: "studio-ahmedabad",
       serviceName: "Service",
-    };
-    const inv1 = buildInvoice({ invoiceId: "inv-6", invoiceNumber: "INV-2026-00006", ...params });
-    const inv2 = buildInvoice({ invoiceId: "inv-7", invoiceNumber: "INV-2026-00007", ...params });
+    });
+    const inv1 = buildInvoice({ ...params, invoiceId: "inv-6", invoiceNumber: "INV-2026-00006" });
+    const inv2 = buildInvoice({ ...params, invoiceId: "inv-7", invoiceNumber: "INV-2026-00007" });
     expect(inv1.publicToken).not.toBe(inv2.publicToken);
   });
 
@@ -262,33 +282,54 @@ describe("buildInvoice", () => {
       currency: "INR",
     };
     const booking = makeBooking({ priceBreakdown: pb, totalAmount: pb.total });
-    const invoice = buildInvoice({
-      invoiceId: "inv-8",
-      invoiceNumber: "INV-2026-00008",
-      booking,
-      paymentId: "pay-8",
-      studioId: "studio-ahmedabad",
-      serviceName: "PPF",
-    });
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-8",
+        invoiceNumber: "INV-2026-00008",
+        paymentId: "pay-8",
+        serviceName: "PPF",
+      }),
+    );
     // Line items: main service + add-on
     const addOnLine = invoice.lineItems.find((li) => li.description === "Ceramic Coat");
     expect(addOnLine).toBeDefined();
     expect(addOnLine?.total).toBe(100000);
   });
 
-  it("invoice total cannot be overridden — always equals booking.priceBreakdown.total", () => {
+  it("invoice total cannot be overridden — always equals the price breakdown's total", () => {
     const booking = makeBooking();
     // Attempt to "pass" a different total — but buildInvoice uses pb.total directly
-    const invoice = buildInvoice({
-      invoiceId: "inv-9",
-      invoiceNumber: "INV-2026-00009",
-      booking,
-      paymentId: "pay-9",
-      studioId: "studio-ahmedabad",
-      serviceName: "Service",
-    });
-    // No parameter for "total" — it comes exclusively from booking.priceBreakdown
+    const invoice = buildInvoice(
+      invoiceParamsFromBooking(booking, {
+        invoiceId: "inv-9",
+        invoiceNumber: "INV-2026-00009",
+        paymentId: "pay-9",
+        serviceName: "Service",
+      }),
+    );
+    // No parameter for "total" — it comes exclusively from priceBreakdown
     expect(invoice.total).toBe(booking.priceBreakdown.total);
+  });
+
+  it("walk-in invoice (no bookingId) is built identically to a booking invoice", () => {
+    const booking = makeBooking();
+    const invoice = buildInvoice({
+      invoiceId: "inv-10",
+      invoiceNumber: "INV-2026-00010",
+      tenantId: booking.tenantId,
+      studioId: booking.studioId,
+      jobId: "walkin-job-1",
+      bookingId: null, // walk-in — no fabricated bookingId
+      customerId: booking.customerId,
+      vehicleId: booking.vehicleId,
+      priceBreakdown: booking.priceBreakdown,
+      paymentId: "pay-10",
+      serviceName: "Walk-in Wash",
+    });
+    expect(invoice.bookingId).toBeNull();
+    expect(invoice.jobId).toBe("walkin-job-1");
+    expect(invoice.total).toBe(booking.priceBreakdown.total);
+    expect(invoice.status).toBe("issued");
   });
 });
 

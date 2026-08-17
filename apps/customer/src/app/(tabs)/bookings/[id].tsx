@@ -11,7 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, cancelBooking } from "../../../lib/booking-service";
 import { listenToJobForBooking } from "../../../lib/job-service";
-import { listenToPaymentForBooking, initiatePayment } from "../../../lib/payment-service";
+import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
 import type { Booking, ServiceJob, Payment } from "@autodeck/core";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -67,20 +67,20 @@ export default function BookingDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (!id) return;
-    const unsubJob = listenToJobForBooking(id, setJob, () => undefined);
-    const unsubPayment = listenToPaymentForBooking(id, setPayment, () => undefined);
-    return () => {
-      unsubJob();
-      unsubPayment();
-    };
-  }, [id]);
+    if (!id || !booking) return;
+    return listenToJobForBooking(id, booking.tenantId, booking.customerId, setJob, () => undefined);
+  }, [id, booking?.tenantId, booking?.customerId]);
+
+  useEffect(() => {
+    if (!job) return;
+    return listenToPaymentForJob(job.id, job.tenantId, job.customerId, setPayment, () => undefined);
+  }, [job?.id]);
 
   async function handlePayAtStudio() {
-    if (!id) return;
+    if (!job) return;
     setPayingNow(true);
     try {
-      await initiatePayment(id, "cash");
+      await initiatePayment(job.id, "cash");
       Alert.alert("Payment requested", "Pay the studio team in person — your status will update once confirmed.");
     } catch (err) {
       Alert.alert("Couldn't start payment", err instanceof Error ? err.message : "Please try again.");
@@ -179,15 +179,20 @@ export default function BookingDetailScreen() {
       <Text style={styles.sectionTitle}>Payment</Text>
       <View style={styles.section}>
         <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
-        {payment?.invoiceId && (
+        {payment?.invoiceId && job && (
           <TouchableOpacity
             style={styles.invoiceLink}
-            onPress={() => router.push({ pathname: "/(tabs)/bookings/invoice", params: { bookingId: booking.id } })}
+            onPress={() =>
+              router.push({
+                pathname: "/(tabs)/bookings/invoice",
+                params: { jobId: job.id, tenantId: job.tenantId, customerId: job.customerId },
+              })
+            }
           >
             <Text style={styles.invoiceLinkText}>View invoice</Text>
           </TouchableOpacity>
         )}
-        {canPay && !payment && (
+        {canPay && !payment && job && (
           <TouchableOpacity
             style={[styles.payButton, payingNow && styles.disabled]}
             onPress={() => void handlePayAtStudio()}

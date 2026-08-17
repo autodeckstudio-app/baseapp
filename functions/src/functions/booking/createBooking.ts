@@ -204,6 +204,8 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       estimatedDurationMinutes: service.estimatedDurationMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,
+      priceBreakdown: breakdown, // same snapshot already computed for the booking — not recomputed
+      totalAmount: breakdown.total,
       paymentStatus: "unpaid",
       isWalkIn: false,
       createdAt: nowIso,

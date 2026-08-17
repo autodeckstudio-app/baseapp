@@ -13,6 +13,7 @@ import {
   type OccupiedInterval,
 } from "../../lib/availability.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { calculatePrice } from "../../lib/pricing.js";
 
 export const createWalkinJob = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -55,6 +56,17 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
       `Bay type '${bay.bayType}' is not compatible with service requiring '${service.requiredBayType}'.`,
     );
   }
+
+  // Server-authoritative price snapshot — same pricing engine used by createBooking.
+  // Resolved once, at creation, from (service, vehicleCategory); immutable thereafter.
+  const priceBreakdown = calculatePrice({
+    basePrice: service.basePrice,
+    vehicleCategory: data.vehicleCategory,
+    vehicleCategoryPricing: service.vehicleCategoryPricing,
+    taxRatePercent: config.taxRatePercent,
+    taxDescription: config.taxDescription,
+    currency: config.currency,
+  });
 
   const scheduledDate = utcToLocalDate(now, config.timezone);
   const estimatedEndAt = new Date(
@@ -111,6 +123,8 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
       estimatedDurationMinutes: service.estimatedDurationMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,
+      priceBreakdown,
+      totalAmount: priceBreakdown.total,
       paymentStatus: "unpaid",
       isWalkIn: true,
       createdAt: nowIso,
@@ -131,6 +145,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
         serviceId: data.serviceId,
         vehicleId: data.vehicleId,
         customerId: data.customerId,
+        totalAmount: priceBreakdown.total,
       },
     });
   });

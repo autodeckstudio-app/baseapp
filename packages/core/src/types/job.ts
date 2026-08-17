@@ -1,3 +1,5 @@
+import type { PriceBreakdown } from "./booking.js";
+
 export type JobStatus =
   | "PENDING_VEHICLE"      // Created from booking; vehicle not yet arrived
   | "VEHICLE_RECEIVED"     // Vehicle checked in (or walk-in)
@@ -32,6 +34,14 @@ export interface ServiceJob {
   estimatedDurationMinutes: number; // snapshotted from service at job creation
   studioNotes: string | null;
   additionalWorkDelta: number; // paise — sum of approved ApprovalRequests
+  // Server-authoritative price snapshot, resolved at job creation from
+  // (service, vehicleCategory) via the shared pricing engine. For a
+  // booking-sourced job this is a copy of the booking's own snapshot
+  // (computed once, never recomputed); for a walk-in it is computed
+  // directly since there is no booking. Immutable after creation — this is
+  // the historical truth for payment/invoice, independent of bookingId.
+  priceBreakdown: PriceBreakdown;
+  totalAmount: number; // paise — equals priceBreakdown.total
   paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
   isWalkIn: boolean;
   createdAt: string;

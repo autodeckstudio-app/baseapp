@@ -2,23 +2,29 @@ import { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { Invoice } from "@autodeck/core";
-import { listenToInvoiceForBooking } from "../../../lib/invoice-service";
+import { listenToInvoiceForJob } from "../../../lib/invoice-service";
 
 function formatPrice(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
 }
 
 export default function InvoiceScreen() {
-  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const { jobId, tenantId, customerId } = useLocalSearchParams<{
+    jobId: string;
+    tenantId: string;
+    customerId: string;
+  }>();
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!bookingId) return;
-    return listenToInvoiceForBooking(
-      bookingId,
+    if (!jobId || !tenantId || !customerId) return;
+    return listenToInvoiceForJob(
+      jobId,
+      tenantId,
+      customerId,
       (inv) => {
         setInvoice(inv);
         setLoading(false);
@@ -28,7 +34,7 @@ export default function InvoiceScreen() {
         setLoading(false);
       },
     );
-  }, [bookingId]);
+  }, [jobId, tenantId, customerId]);
 
   if (loading) {
     return (

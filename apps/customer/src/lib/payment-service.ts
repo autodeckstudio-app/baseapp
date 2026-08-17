@@ -4,31 +4,41 @@ import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Payment, PaymentMethod } from "@autodeck/core";
 
-type InitiatePaymentInput = { bookingId: string; method: PaymentMethod };
+type InitiatePaymentInput = { jobId: string; method: PaymentMethod };
 type InitiatePaymentOutput = { paymentId: string; paymentUrl: string | null; status: string };
 
-// Development uses MockPaymentProvider — no real Razorpay charge occurs.
-// Payment only becomes "completed" once studio/admin confirms it
-// (confirmPaymentMock / recordManualPayment) — the customer app never has
-// access to a function that can mark its own payment successful.
-export async function initiatePayment(bookingId: string, method: PaymentMethod): Promise<InitiatePaymentOutput> {
+// Keyed by jobId — the payable operational job — so this works identically
+// whether the job came from a booking or a walk-in. Development uses
+// MockPaymentProvider — no real Razorpay charge occurs. Payment only becomes
+// "completed" once studio/admin confirms it (confirmPaymentMock /
+// recordManualPayment) — the customer app never has access to a function
+// that can mark its own payment successful.
+export async function initiatePayment(jobId: string, method: PaymentMethod): Promise<InitiatePaymentOutput> {
   const fn = httpsCallable<InitiatePaymentInput, InitiatePaymentOutput>(functions, "initiatePayment");
-  const result = await fn({ bookingId, method });
+  const result = await fn({ jobId, method });
   return result.data;
 }
 
 /**
- * Real-time listener for the most recent payment on a booking.
- * Firestore rules restrict reads to the payment's own customerId.
+ * Real-time listener for the most recent payment on a job.
+ *
+ * Filters by tenantId and customerId as well as jobId: Firestore rejects a
+ * list query outright unless every field the security rule checks is
+ * constrained by an equality filter it can verify statically (see
+ * job-service.ts's listenToJobForBooking for the full explanation).
  */
-export function listenToPaymentForBooking(
-  bookingId: string,
+export function listenToPaymentForJob(
+  jobId: string,
+  tenantId: string,
+  customerId: string,
   onData: (payment: Payment | null) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
   const q = query(
     collection(db, COLLECTIONS.payments()),
-    where("bookingId", "==", bookingId),
+    where("jobId", "==", jobId),
+    where("tenantId", "==", tenantId),
+    where("customerId", "==", customerId),
     orderBy("createdAt", "desc"),
     limit(1),
   );
