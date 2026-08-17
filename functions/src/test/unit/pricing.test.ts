@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculatePrice, calculateTax, assertValidMinorUnits } from "../../lib/pricing.js";
+import { calculatePrice, calculateTax, assertValidMinorUnits, applyMembershipBenefit } from "../../lib/pricing.js";
 import type { VehicleCategoryPricing } from "@autodeck/core";
 import { DEFAULT_CURRENCY, DEFAULT_TAX_RATE_PERCENT, DEFAULT_TAX_DESCRIPTION } from "@autodeck/core";
 
@@ -262,5 +262,42 @@ describe("historical price snapshot immutability", () => {
     expect(snapshot.total).toBe(590000); // original price
     expect(newQuote.total).toBe(708000); // new price
     expect(snapshot.total).not.toBe(newQuote.total);
+  });
+});
+
+describe("applyMembershipBenefit", () => {
+  const base = calculatePrice({
+    basePrice: 500000,
+    vehicleCategory: "hatchback",
+    vehicleCategoryPricing: NO_CATEGORY_PRICING,
+  });
+
+  it("consumeWash zeroes the total (fully covered by an included wash credit)", () => {
+    const result = applyMembershipBenefit(base, { discountPercent: 10, consumeWash: true });
+    expect(result.membershipDiscount).toBe(base.subtotal);
+    expect(result.membershipDiscountPercent).toBeNull();
+    expect(result.tax).toBe(0);
+    expect(result.total).toBe(0);
+  });
+
+  it("percent discount reduces subtotal before tax, does not zero the total", () => {
+    const result = applyMembershipBenefit(base, { discountPercent: 10, consumeWash: false });
+    const expectedDiscount = Math.round(base.subtotal * 0.1);
+    expect(result.membershipDiscount).toBe(expectedDiscount);
+    expect(result.membershipDiscountPercent).toBe(10);
+    expect(result.tax).toBe(calculateTax(base.subtotal - expectedDiscount, base.taxRatePercent));
+    expect(result.total).toBe(base.subtotal - expectedDiscount + result.tax);
+  });
+
+  it("0% discount with no wash consumption leaves the price unchanged", () => {
+    const result = applyMembershipBenefit(base, { discountPercent: 0, consumeWash: false });
+    expect(result.membershipDiscount).toBe(0);
+    expect(result.total).toBe(base.total);
+  });
+
+  it("does not mutate the input breakdown", () => {
+    const before = { ...base };
+    applyMembershipBenefit(base, { discountPercent: 20, consumeWash: false });
+    expect(base).toEqual(before);
   });
 });

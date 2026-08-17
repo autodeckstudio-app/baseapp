@@ -24,6 +24,7 @@ const emptyForm = {
   warrantyLabel: "",
   requiredBayType: "wash" as BayType,
   displayOrder: 0,
+  membershipWashEligible: false,
   vehicleCategoryPricing: [] as VehicleCategoryPricing[],
 };
 
@@ -63,6 +64,7 @@ export default function ServiceCataloguePage() {
       warrantyLabel: s.warrantyLabel ?? "",
       requiredBayType: s.requiredBayType,
       displayOrder: s.displayOrder,
+      membershipWashEligible: s.membershipWashEligible,
       vehicleCategoryPricing: s.vehicleCategoryPricing,
     });
   }
@@ -81,6 +83,7 @@ export default function ServiceCataloguePage() {
         warrantyLabel: form.warrantyLabel || null,
         requiredBayType: form.requiredBayType,
         displayOrder: form.displayOrder,
+        membershipWashEligible: form.membershipWashEligible,
         vehicleCategoryPricing: form.vehicleCategoryPricing,
       };
       if (form.serviceId) {
@@ -140,6 +143,7 @@ export default function ServiceCataloguePage() {
               <th>Category</th>
               <th>Base price (₹)</th>
               <th>Duration (min)</th>
+              <th>Wash-eligible</th>
               <th>Active</th>
               <th></th>
             </tr>
@@ -152,6 +156,7 @@ export default function ServiceCataloguePage() {
                 <td>{s.category}</td>
                 <td>{(s.basePrice / 100).toFixed(2)}</td>
                 <td>{s.estimatedDurationMinutes}</td>
+                <td>{s.membershipWashEligible ? "Yes" : "No"}</td>
                 <td>{s.active ? "Yes" : "No"}</td>
                 <td>
                   <button onClick={() => loadIntoForm(s)}>Edit</button>{" "}
@@ -246,6 +251,16 @@ export default function ServiceCataloguePage() {
             value={form.displayOrder}
             onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })}
           />
+        </label>
+      </fieldset>
+      <fieldset>
+        <label>
+          <input
+            type="checkbox"
+            checked={form.membershipWashEligible}
+            onChange={(e) => setForm({ ...form, membershipWashEligible: e.target.checked })}
+          />{" "}
+          Eligible for membership included washes
         </label>
       </fieldset>
 

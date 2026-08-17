@@ -37,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <a href="/dashboard">Dashboard</a>
           <a href="/studio">Studio</a>
           <a href="/services">Services</a>
+          <a href="/memberships">Memberships</a>
           <a href="/staff">Staff</a>
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>

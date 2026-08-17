@@ -32,3 +32,5 @@ export const BOOKING_STATUS_TRANSITIONS: Record<string, string[]> = {
 } as const;
 
 export const APPROVAL_EXPIRY_HOURS = 24;
+
+export const MEMBERSHIP_DURATION_DAYS = 30;

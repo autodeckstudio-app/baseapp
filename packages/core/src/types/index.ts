@@ -16,9 +16,16 @@ export type {
   InvoiceCounter,
   PaymentMethod,
   PaymentStatus,
+  PaymentTargetType,
   InvoiceStatus,
 } from "./payment.js";
 export type { Bay, OperatingHours, StudioConfig, Employee } from "./studio.js";
-export type { Membership, MembershipUsage, MembershipTier, MembershipStatus } from "./membership.js";
+export type {
+  Membership,
+  MembershipPlan,
+  MembershipUsage,
+  MembershipTier,
+  MembershipStatus,
+} from "./membership.js";
 export type { AuditLog, AuditAction } from "./audit.js";
 export type { Warranty } from "./warranty.js";

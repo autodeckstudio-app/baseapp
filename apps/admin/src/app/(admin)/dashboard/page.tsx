@@ -7,6 +7,7 @@ import { colors, spacing, radius } from "@autodeck/ui/tokens";
 const SECTIONS = [
   { href: "/studio", label: "Studio Settings", description: "Operating hours, holidays, bays and resources." },
   { href: "/services", label: "Service Catalogue", description: "Services, pricing, and vehicle category rules." },
+  { href: "/memberships", label: "Membership Plans", description: "Tiers, pricing, included washes, and discounts." },
   { href: "/staff", label: "Staff", description: "Studio and admin accounts, roles, and access." },
 ];
 

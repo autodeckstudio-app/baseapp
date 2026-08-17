@@ -1,16 +1,24 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Service, StudioConfig, ServiceJob, Booking, Vehicle } from "@autodeck/core";
+import type {
+  Service,
+  StudioConfig,
+  ServiceJob,
+  Booking,
+  Vehicle,
+  Membership,
+  MembershipUsage,
+} from "@autodeck/core";
 import {
   TURNOVER_BUFFER_MINUTES,
   MAX_ADVANCE_BOOKING_DAYS,
 } from "@autodeck/core";
-import { COLLECTIONS } from "@autodeck/database";
+import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { createBookingSchema } from "../../schemas/booking.js";
-import { calculatePrice } from "../../lib/pricing.js";
+import { calculatePrice, applyMembershipBenefit } from "../../lib/pricing.js";
 import {
   buildOccupiedInterval,
   hasConflict,
@@ -71,6 +79,33 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
   );
   if (compatibleBays.length === 0) {
     throw new HttpsError("failed-precondition", "No bays available for this service type.");
+  }
+
+  // Membership pre-validation (cheap, non-transactional fail-fast). The
+  // authoritative check happens again inside the transaction against a fresh
+  // read, since washesUsed is mutable and racy across concurrent bookings.
+  const todayStr = now.toISOString().slice(0, 10);
+  if (data.membershipId !== undefined) {
+    const membershipSnap = await db.collection(COLLECTIONS.memberships()).doc(data.membershipId).get();
+    if (!membershipSnap.exists) {
+      throw new HttpsError("not-found", "Membership not found.");
+    }
+    const membership = membershipSnap.data() as Membership;
+    if (membership.tenantId !== user.claims.tenantId) {
+      throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    }
+    if (membership.customerId !== user.uid) {
+      throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
+    }
+    if (membership.status !== "active") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Membership is not active (status: ${membership.status}).`,
+      );
+    }
+    if (!membership.endDate || membership.endDate < todayStr) {
+      throw new HttpsError("failed-precondition", "Membership has expired.");
+    }
   }
 
   // Compute server-authoritative price
@@ -144,6 +179,75 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       );
     }
 
+    // Membership benefit — re-validated against a FRESH read inside the
+    // transaction (the race-safety guarantee: two concurrent bookings both
+    // reading washesUsed and racing to consume the last credit will have one
+    // transaction retried/serialized by Firestore, exactly like bay
+    // assignment above — doc07 §7.5).
+    let finalBreakdown = breakdown;
+    let membershipWashUsed = false;
+    let membershipDiscountApplied = false;
+    const membershipRef = data.membershipId
+      ? db.collection(COLLECTIONS.memberships()).doc(data.membershipId)
+      : null;
+
+    if (membershipRef) {
+      const membershipSnap = await tx.get(membershipRef);
+      if (!membershipSnap.exists) {
+        throw new HttpsError("not-found", "Membership not found.");
+      }
+      const membership = membershipSnap.data() as Membership;
+      if (membership.tenantId !== user.claims.tenantId || membership.customerId !== user.uid) {
+        throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
+      }
+      if (membership.status !== "active" || !membership.endDate || membership.endDate < data.scheduledDate) {
+        throw new HttpsError("failed-precondition", "Membership is not active or has expired.");
+      }
+
+      const consumeWash = service.membershipWashEligible && membership.washesUsed < membership.washesTotal;
+      finalBreakdown = applyMembershipBenefit(breakdown, {
+        discountPercent: membership.discountPercent,
+        consumeWash,
+      });
+      membershipWashUsed = consumeWash;
+      membershipDiscountApplied = consumeWash || finalBreakdown.membershipDiscount !== null && finalBreakdown.membershipDiscount > 0;
+
+      if (consumeWash) {
+        tx.update(membershipRef, { washesUsed: membership.washesUsed + 1, updatedAt: nowIso });
+      }
+
+      if (membershipDiscountApplied) {
+        const usageRef = db.collection(SUBCOLLECTIONS.membershipUsage(data.membershipId as string)).doc();
+        const usage: MembershipUsage = {
+          id: usageRef.id,
+          tenantId: user.claims.tenantId,
+          membershipId: data.membershipId as string,
+          customerId: user.uid,
+          usageType: consumeWash ? "wash" : "discount",
+          jobId: jobRef.id,
+          bookingId: bookingRef.id,
+          valueRedeemed: consumeWash ? breakdown.subtotal : (finalBreakdown.membershipDiscount ?? 0),
+          usedAt: nowIso,
+        };
+        tx.set(usageRef, usage);
+        writeAuditLog(tx, {
+          action: consumeWash ? "membership.wash_used" : "membership.discount_applied",
+          entityType: "Membership",
+          entityId: data.membershipId as string,
+          user,
+          studioId: data.studioId,
+          after: {
+            jobId: jobRef.id,
+            bookingId: bookingRef.id,
+            valueRedeemed: usage.valueRedeemed,
+            washesRemaining: consumeWash
+              ? membership.washesTotal - (membership.washesUsed + 1)
+              : membership.washesTotal - membership.washesUsed,
+          },
+        });
+      }
+    }
+
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
@@ -162,9 +266,11 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       bayId: assignedBayId,
       assignedEmployeeId: null,
       status: "CONFIRMED",
-      priceBreakdown: breakdown,
-      totalAmount: breakdown.total,
-      membershipDiscountApplied: false,
+      priceBreakdown: finalBreakdown,
+      totalAmount: finalBreakdown.total,
+      membershipId: data.membershipId ?? null,
+      membershipDiscountApplied,
+      membershipWashUsed,
       paymentStatus: "unpaid",
       notes: data.notes ?? null,
       idempotencyKey: data.idempotencyKey,
@@ -204,8 +310,8 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       estimatedDurationMinutes: service.estimatedDurationMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,
-      priceBreakdown: breakdown, // same snapshot already computed for the booking — not recomputed
-      totalAmount: breakdown.total,
+      priceBreakdown: finalBreakdown, // same snapshot already computed for the booking — not recomputed
+      totalAmount: finalBreakdown.total,
       paymentStatus: "unpaid",
       isWalkIn: false,
       createdAt: nowIso,

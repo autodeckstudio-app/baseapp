@@ -28,6 +28,7 @@ export const createBookingSchema = z.object({
   scheduledTime: timeStr,
   idempotencyKey: z.string().min(1).max(128),
   notes: z.string().max(500).optional(),
+  membershipId: z.string().min(1).optional(),
 });
 
 export const cancelBookingSchema = z.object({

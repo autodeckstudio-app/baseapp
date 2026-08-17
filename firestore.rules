@@ -182,6 +182,16 @@ service cloud.firestore {
       }
     }
 
+    // ─── /membershipPlans/{planId} ──────────────────────────────────────────
+    // Admin-managed catalogue (createMembershipPlan/updateMembershipPlan/
+    // setMembershipPlanActive) — mirrors /services: no direct client write,
+    // even by admin, so every plan change is audited.
+    match /membershipPlans/{planId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data));
+      allow write: if false;
+    }
+
     // ─── /services/{serviceId} ──────────────────────────────────────────────
     // Catalogue mutations are server-authoritative (createService/updateService/
     // setServiceActive) so they are audited — no direct client write, even by admin.

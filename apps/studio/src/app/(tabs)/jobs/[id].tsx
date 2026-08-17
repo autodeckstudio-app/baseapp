@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studio-service";
 import {
@@ -10,7 +10,8 @@ import {
   listenToPaymentForJob,
   listenToInvoiceForJob,
 } from "../../../lib/payment-service";
-import type { ServiceJob, StudioConfig, Payment, Invoice } from "@autodeck/core";
+import { getCustomerMembership } from "../../../lib/membership-service";
+import type { ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import {
@@ -64,6 +65,11 @@ export default function JobDetailScreen() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [paymentActionLoading, setPaymentActionLoading] = useState(false);
+  const [bookingMembership, setBookingMembership] = useState<{
+    membership: Membership;
+    washUsed: boolean;
+    discountApplied: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -100,6 +106,29 @@ export default function JobDetailScreen() {
       unsubPayment();
       unsubInvoice();
     };
+  }, [job?.id]);
+
+  // Read-only membership status for this job's booking (if any) — studio can
+  // see it but has no authority to alter it (doc08 §8.2).
+  useEffect(() => {
+    if (!job?.bookingId) {
+      setBookingMembership(null);
+      return;
+    }
+    void (async () => {
+      const bookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
+      if (!bookingSnap.exists()) return;
+      const booking = bookingSnap.data() as Booking;
+      if (!booking.membershipId) return;
+      const membership = await getCustomerMembership(job.customerId, booking.membershipId);
+      if (membership) {
+        setBookingMembership({
+          membership,
+          washUsed: booking.membershipWashUsed,
+          discountApplied: booking.membershipDiscountApplied,
+        });
+      }
+    })();
   }, [job?.id]);
 
   async function handleRecordCashPayment() {
@@ -193,6 +222,25 @@ export default function JobDetailScreen() {
         <Row label="Duration" value={`~${job.estimatedDurationMinutes} min`} />
         <Row label="Payment" value={job.paymentStatus} />
       </Section>
+
+      {bookingMembership && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacing.sm,
+            backgroundColor: colors.accentMuted,
+            borderRadius: radius.lg,
+            padding: spacing.md,
+            marginBottom: spacing.lg,
+          }}
+        >
+          <StatusBadge label={`${bookingMembership.membership.tier} member`} tone="accent" />
+          <Text style={{ ...typography.caption, color: colors.accentPressed, flexShrink: 1 }}>
+            {bookingMembership.washUsed ? "Wash credit used" : bookingMembership.discountApplied ? "Membership discount applied" : "Member"}
+          </Text>
+        </View>
+      )}
 
       <Text style={sectionTitle}>Status History</Text>
       <Section>

@@ -7,7 +7,7 @@
 // underlying job came from a booking or a walk-in.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Payment, ServiceJob } from "@autodeck/core";
+import type { Payment, ServiceJob, Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -67,6 +67,28 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
   await db.runTransaction(async (tx) => {
     // All reads must happen before any writes within a Firestore transaction —
     // the event-idempotency write is deferred until after the reads below.
+    if (isSuccess && payment.targetType === "membership") {
+      // Membership purchase: mark the payment completed only. Activation is a
+      // SEPARATE admin-only step (activateMembership) — payment succeeding
+      // does not itself activate the membership (doc08 §8.2; doc16 §16.3).
+      tx.set(eventRef, { paymentId: data.paymentId, result: data.mockResult, processedAt: now });
+      tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
+        status: "completed",
+        razorpayPaymentId: `mock_pay_${Date.now()}`,
+        completedAt: now,
+        updatedAt: now,
+      });
+      writeAuditLog(tx, {
+        action: "payment.completed",
+        entityType: "Payment",
+        entityId: data.paymentId,
+        user,
+        studioId: null,
+        after: { status: "completed", targetType: "membership", membershipId: payment.membershipId },
+      });
+      return;
+    }
+
     if (isSuccess) {
       if (!payment.jobId) throw new HttpsError("failed-precondition", "Payment has no linked job.");
 
@@ -136,6 +158,47 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
         studioId: payment.studioId,
         after: { invoiceNumber, total: invoice.total, status: "issued" },
       });
+    } else if (payment.targetType === "membership" && payment.membershipId) {
+      // Membership purchase payment failed: cancel the pending membership
+      // rather than leaving it stuck in 'pending' forever (docs are silent on
+      // this case — resolved by mirroring the booking auto-expiry pattern of
+      // not leaving orphaned pending records around).
+      const membershipRef = db.collection(COLLECTIONS.memberships()).doc(payment.membershipId);
+      const membershipSnap = await tx.get(membershipRef);
+
+      tx.set(eventRef, { paymentId: data.paymentId, result: data.mockResult, processedAt: now });
+      tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
+        status: "failed",
+        failedAt: now,
+        updatedAt: now,
+      });
+      writeAuditLog(tx, {
+        action: "payment.failed",
+        entityType: "Payment",
+        entityId: data.paymentId,
+        user,
+        studioId: null,
+        after: { status: "failed", targetType: "membership" },
+      });
+
+      if (membershipSnap.exists && (membershipSnap.data() as Membership).status === "pending") {
+        tx.update(membershipRef, {
+          status: "cancelled",
+          cancelledAt: now,
+          cancelledBy: "system",
+          cancellationReason: "payment_failed",
+          updatedAt: now,
+        });
+        writeAuditLog(tx, {
+          action: "membership.cancelled",
+          entityType: "Membership",
+          entityId: payment.membershipId,
+          user,
+          studioId: null,
+          before: { status: "pending" },
+          after: { status: "cancelled", reason: "payment_failed" },
+        });
+      }
     } else {
       // Payment failed — no reads in this branch, so the event write can go first.
       tx.set(eventRef, { paymentId: data.paymentId, result: data.mockResult, processedAt: now });

@@ -48,7 +48,9 @@ export interface Booking {
   status: BookingStatus;
   priceBreakdown: PriceBreakdown;
   totalAmount: number; // paise — equals priceBreakdown.total
-  membershipDiscountApplied: boolean;
+  membershipId: string | null; // set when a membership benefit was applied at booking creation
+  membershipDiscountApplied: boolean; // true for either wash-credit or percent-discount redemption
+  membershipWashUsed: boolean; // true only when an included wash credit was consumed
   paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
   notes: string | null;
   idempotencyKey: string;

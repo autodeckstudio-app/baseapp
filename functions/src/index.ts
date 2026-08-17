@@ -41,6 +41,18 @@ export { initiateRefund } from "./functions/payment/initiateRefund.js";
 export { getInvoice } from "./functions/invoice/getInvoice.js";
 export { voidInvoice } from "./functions/invoice/voidInvoice.js";
 
+// ─── Membership ───────────────────────────────────────────────────────────────
+export { createMembershipPlan } from "./functions/membership/createMembershipPlan.js";
+export { updateMembershipPlan } from "./functions/membership/updateMembershipPlan.js";
+export { setMembershipPlanActive } from "./functions/membership/setMembershipPlanActive.js";
+export { getMembershipPlans } from "./functions/membership/getMembershipPlans.js";
+export { purchaseMembership } from "./functions/membership/purchaseMembership.js";
+export { activateMembership } from "./functions/membership/activateMembership.js";
+export { cancelMembership } from "./functions/membership/cancelMembership.js";
+export { getMyMemberships } from "./functions/membership/getMyMemberships.js";
+export { getMembershipUsage } from "./functions/membership/getMembershipUsage.js";
+export { expireStaleMemberships } from "./functions/membership/expireStaleMemberships.js";
+
 // ─── Studio Settings (Admin) ────────────────────────────────────────────────
 export { updateStudioSettings } from "./functions/studio/updateStudioSettings.js";
 export { addHoliday } from "./functions/studio/addHoliday.js";

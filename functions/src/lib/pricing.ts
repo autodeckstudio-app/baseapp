@@ -52,6 +52,42 @@ export function calculatePrice(input: CalculatePriceInput): PriceBreakdown {
   };
 }
 
+export interface MembershipBenefitInput {
+  discountPercent: number; // membership.discountPercent
+  consumeWash: boolean; // true when an included wash credit is being redeemed
+}
+
+// Applies a membership benefit to an already-computed base breakdown.
+// Mutually exclusive per booking (D-10 / doc03 §Membership):
+//   - consumeWash: the service is fully covered by an included wash credit —
+//     membershipDiscount absorbs the entire subtotal, tax is recomputed on the
+//     remaining (zero) subtotal, total becomes 0.
+//   - !consumeWash: a percentage discount (discountPercent) is applied to the
+//     subtotal before tax — "N% off other services".
+// Never mutates the input; returns a new PriceBreakdown.
+export function applyMembershipBenefit(
+  base: PriceBreakdown,
+  benefit: MembershipBenefitInput,
+): PriceBreakdown {
+  const membershipDiscount = benefit.consumeWash
+    ? base.subtotal
+    : Math.round((base.subtotal * benefit.discountPercent) / 100);
+
+  assertValidMinorUnits(membershipDiscount, "membershipDiscount");
+
+  const taxableSubtotal = base.subtotal - membershipDiscount;
+  const tax = calculateTax(taxableSubtotal, base.taxRatePercent);
+  const total = taxableSubtotal + tax;
+
+  return {
+    ...base,
+    membershipDiscount,
+    membershipDiscountPercent: benefit.consumeWash ? null : benefit.discountPercent,
+    tax,
+    total,
+  };
+}
+
 // Integer-safe GST calculation.
 // Rounds to the nearest paise: Math.round avoids systematic bias (banker's rounding is V2+).
 export function calculateTax(subtotalPaise: number, taxRatePercent: number): number {

@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Booking, ServiceJob } from "@autodeck/core";
+import type { Booking, ServiceJob, Membership } from "@autodeck/core";
 import { CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
@@ -67,12 +67,38 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
     .get();
 
   await db.runTransaction(async (tx) => {
+    // All reads before any writes. Restore the membership wash credit if one
+    // was consumed by this booking — doc07 §7.9 step 3. Discount-type usage
+    // is NOT reversed (docs are silent; treated as historical fact, matching
+    // the append-only MembershipUsage record, which has no reversal field).
+    const membershipRef = booking.membershipId
+      ? db.collection(COLLECTIONS.memberships()).doc(booking.membershipId)
+      : null;
+    const membershipSnap = membershipRef ? await tx.get(membershipRef) : null;
+
     tx.update(bookingRef, {
       status: "CANCELLED",
       cancelledAt: now,
       cancellationReason: data.reason,
       updatedAt: now,
     });
+
+    if (booking.membershipWashUsed && membershipRef && membershipSnap?.exists) {
+      const membership = membershipSnap.data() as Membership;
+      tx.update(membershipRef, {
+        washesUsed: Math.max(0, membership.washesUsed - 1),
+        updatedAt: now,
+      });
+      writeAuditLog(tx, {
+        action: "membership.wash_restored",
+        entityType: "Membership",
+        entityId: booking.membershipId as string,
+        user,
+        studioId: booking.studioId,
+        before: { washesUsed: membership.washesUsed },
+        after: { washesUsed: Math.max(0, membership.washesUsed - 1), reason: `Booking cancelled: ${data.bookingId}` },
+      });
+    }
 
     // Cancel the associated job if it hasn't progressed past VEHICLE_RECEIVED
     if (!jobsSnap.empty) {

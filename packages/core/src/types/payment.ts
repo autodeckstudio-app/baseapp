@@ -12,12 +12,16 @@ export type PaymentStatus =
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 
+export type PaymentTargetType = "job" | "membership";
+
 export interface Payment {
   id: string;
   tenantId: string;
-  studioId: string;
-  jobId: string;
+  studioId: string | null; // null for membership purchases — not studio-scoped
+  targetType: PaymentTargetType;
+  jobId: string | null; // set when targetType === "job"
   bookingId: string | null;
+  membershipId: string | null; // set when targetType === "membership"
   customerId: string;
   // Amount is ALWAYS taken from booking.totalAmount — never from client request
   amount: number; // paise

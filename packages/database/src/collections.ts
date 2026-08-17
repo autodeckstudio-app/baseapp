@@ -16,6 +16,7 @@ export const COLLECTIONS = {
   invoices: () => "invoices",
   warranties: () => "warranties",
   memberships: () => "memberships",
+  membershipPlans: () => "membershipPlans",
   services: () => "services",
   serviceScopes: () => "serviceScopes",
   employees: () => "employees",
@@ -49,6 +50,7 @@ export const DOC_PATHS = {
   invoice: (invoiceId: string) => `invoices/${invoiceId}`,
   warranty: (warrantyId: string) => `warranties/${warrantyId}`,
   membership: (membershipId: string) => `memberships/${membershipId}`,
+  membershipPlan: (planId: string) => `membershipPlans/${planId}`,
   membershipUsage: (membershipId: string, usageId: string) =>
     `memberships/${membershipId}/usage/${usageId}`,
   service: (serviceId: string) => `services/${serviceId}`,
