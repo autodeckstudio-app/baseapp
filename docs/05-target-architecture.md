@@ -285,8 +285,9 @@ functions/src/
     middleware.ts
     firestore.ts
     auth.ts
-    stripe.ts
-    tabby.ts
+    payment-provider.ts
+    razorpay-provider.ts
+    mock-payment-provider.ts
     whatsapp.ts
     email.ts
     pdf.ts

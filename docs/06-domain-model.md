@@ -533,18 +533,19 @@ interface Payment {
   bookingId: string | null;
   customerId: string;              // indexed
   amount: number;
-  currency: string;
-  method: 'stripe' | 'tabby' | 'cash' | 'upi' | 'bank_transfer';
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  currency: string;                // "INR"
+  method: 'razorpay_payment_link' | 'cash' | 'upi_manual' | 'bank_transfer';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'refunded';
 
-  // Gateway references
-  stripePaymentIntentId: string | null;
-  stripeChargeId: string | null;
-  tabbyPaymentId: string | null;
+  // Gateway references (null for cash/manual)
+  razorpayPaymentLinkId: string | null;
+  razorpayPaymentId: string | null;
+  razorpayOrderId: string | null;
+  razorpayRefundId: string | null;
 
   // Manual payment
-  reference: string | null;        // bank transfer ref, UPI ref, cash receipt #
-  collectedBy: string | null;      // employeeId for manual collection
+  manualReference: string | null;  // bank transfer ref, UPI ref, cash receipt #
+  recordedBy: string | null;       // employeeId for manual collection
 
   receiptUrl: string | null;       // Razorpay receipt URL or generated PDF
   settledAt: Timestamp | null;
@@ -671,8 +672,8 @@ interface Membership {
 
   // Payment
   amountPaid: number;
-  currency: string;
-  stripeSubscriptionId: string | null;
+  currency: string;                // "INR"
+  razorpaySubscriptionId: string | null; // Razorpay UPI AutoPay subscription (recurring)
   paymentReference: string | null; // for manual payment
 
   // Admin actions

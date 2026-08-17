@@ -124,6 +124,8 @@ These are decisions that must be made before or during implementation. Each has 
 
 **Production activation requires:** India-registered business entity with Indian bank account — REQUIRES APPROVAL.
 
+**Implementation status (2026-08-17):** Payment and invoicing Cloud Functions are built against the `PaymentProvider` interface. In development/emulator, `MockPaymentProvider` stands in for Razorpay end-to-end (`confirmPaymentMock`). The production Razorpay webhook handler (`RazorpayProvider.verifyWebhookSignature` / `parseWebhookEvent` consumer) is implemented in the provider but has no deployed `onRequest` endpoint yet — **deferred until Razorpay production activation is explicitly approved** (see above).
+
 **Owner:** Business owner  
 **Must decide by:** Before Phase 2 (payments) — sandbox usable from Phase 0
 

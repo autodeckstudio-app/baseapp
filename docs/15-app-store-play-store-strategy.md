@@ -192,7 +192,7 @@ All sensitive build values stored in EAS Secrets (not in eas.json):
 - `APPLE_APP_SPECIFIC_PASSWORD`
 - `FIREBASE_GOOGLE_SERVICES_INFO_PLIST` (iOS)
 - `FIREBASE_GOOGLE_SERVICES_JSON` (Android)
-- `STRIPE_PUBLISHABLE_KEY`
+- `RAZORPAY_KEY_ID`
 - Play Store service account key (file secret)
 
 ---
