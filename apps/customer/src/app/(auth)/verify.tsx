@@ -50,7 +50,7 @@ export default function VerifyScreen() {
       } else {
         // Returning customer — refresh claims and go to app
         await refreshAuthToken();
-        router.replace("/(tabs)/vehicles");
+        router.replace("/(tabs)");
       }
     } catch (err) {
       Alert.alert("Error", err instanceof Error ? err.message : "Invalid OTP.");

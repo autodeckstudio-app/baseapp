@@ -27,7 +27,7 @@ export default function SetupScreen() {
       await setupCustomerProfile(name.trim());
       // Force-refresh token to receive custom claims (role, tenantId)
       await refreshAuthToken();
-      router.replace("/(tabs)/vehicles");
+      router.replace("/(tabs)");
     } catch (err) {
       Alert.alert("Error", err instanceof Error ? err.message : "Setup failed.");
     } finally {

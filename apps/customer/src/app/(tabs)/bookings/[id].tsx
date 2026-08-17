@@ -8,9 +8,30 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, cancelBooking } from "../../../lib/booking-service";
-import type { Booking } from "@autodeck/core";
+import { listenToJobForBooking } from "../../../lib/job-service";
+import { listenToPaymentForBooking, initiatePayment } from "../../../lib/payment-service";
+import type { Booking, ServiceJob, Payment } from "@autodeck/core";
+
+const JOB_STATUS_LABELS: Record<string, string> = {
+  PENDING_VEHICLE: "Awaiting vehicle drop-off",
+  VEHICLE_RECEIVED: "Vehicle received",
+  IN_PROGRESS: "Service in progress",
+  QUALITY_CHECK: "Quality check",
+  READY_FOR_DELIVERY: "Ready for pickup",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Awaiting confirmation at studio",
+  processing: "Processing",
+  completed: "Paid",
+  failed: "Payment failed — please try again",
+  cancelled: "Payment cancelled",
+  refunded: "Refunded",
+};
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Pending confirmation",
@@ -27,9 +48,13 @@ function formatPrice(paise: number): string {
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [job, setJob] = useState<ServiceJob | null>(null);
+  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payingNow, setPayingNow] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -40,6 +65,29 @@ export default function BookingDetailScreen() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const unsubJob = listenToJobForBooking(id, setJob, () => undefined);
+    const unsubPayment = listenToPaymentForBooking(id, setPayment, () => undefined);
+    return () => {
+      unsubJob();
+      unsubPayment();
+    };
+  }, [id]);
+
+  async function handlePayAtStudio() {
+    if (!id) return;
+    setPayingNow(true);
+    try {
+      await initiatePayment(id, "cash");
+      Alert.alert("Payment requested", "Pay the studio team in person — your status will update once confirmed.");
+    } catch (err) {
+      Alert.alert("Couldn't start payment", err instanceof Error ? err.message : "Please try again.");
+    } finally {
+      setPayingNow(false);
+    }
+  }
 
   async function handleCancel() {
     if (!booking || !id) return;
@@ -90,6 +138,8 @@ export default function BookingDetailScreen() {
 
   const statusLabel = STATUS_LABELS[booking.status] ?? booking.status;
   const canCancel = booking.status === "CONFIRMED" || booking.status === "PENDING";
+  const canPay =
+    booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
 
   const scheduledAt = new Date(booking.scheduledAt);
   const displayDate = scheduledAt.toLocaleDateString("en-IN", {
@@ -116,8 +166,36 @@ export default function BookingDetailScreen() {
         <Row label="Date" value={displayDate} />
         <Row label="Time" value={`${displayTime} IST`} />
         <Row label="Duration" value={`~${booking.durationMinutes} min`} />
-        <Row label="Payment" value={booking.paymentStatus} />
         {booking.notes !== null && <Row label="Notes" value={booking.notes} />}
+      </View>
+
+      {job && (
+        <View style={styles.jobBox}>
+          <Text style={styles.jobLabel}>Studio status</Text>
+          <Text style={styles.jobStatus}>{JOB_STATUS_LABELS[job.status] ?? job.status}</Text>
+        </View>
+      )}
+
+      <Text style={styles.sectionTitle}>Payment</Text>
+      <View style={styles.section}>
+        <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
+        {payment?.invoiceId && (
+          <TouchableOpacity
+            style={styles.invoiceLink}
+            onPress={() => router.push({ pathname: "/(tabs)/bookings/invoice", params: { bookingId: booking.id } })}
+          >
+            <Text style={styles.invoiceLinkText}>View invoice</Text>
+          </TouchableOpacity>
+        )}
+        {canPay && !payment && (
+          <TouchableOpacity
+            style={[styles.payButton, payingNow && styles.disabled]}
+            onPress={() => void handlePayAtStudio()}
+            disabled={payingNow}
+          >
+            {payingNow ? <ActivityIndicator color="#fff" /> : <Text style={styles.payButtonText}>Pay at studio</Text>}
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text style={styles.sectionTitle}>Price Breakdown</Text>
@@ -190,4 +268,11 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: { color: "#c00", fontWeight: "600", fontSize: 15 },
   disabled: { opacity: 0.5 },
+  jobBox: { backgroundColor: "#e3f2fd", borderRadius: 10, padding: 14, marginBottom: 16 },
+  jobLabel: { fontSize: 12, color: "#1565c0" },
+  jobStatus: { fontSize: 15, fontWeight: "700", color: "#0d47a1", marginTop: 2 },
+  invoiceLink: { alignSelf: "flex-start" },
+  invoiceLinkText: { color: "#1a1a1a", fontWeight: "700", textDecorationLine: "underline" },
+  payButton: { backgroundColor: "#1a1a1a", borderRadius: 8, paddingVertical: 12, alignItems: "center", marginTop: 4 },
+  payButtonText: { color: "#fff", fontWeight: "700" },
 });

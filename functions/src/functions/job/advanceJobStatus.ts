@@ -51,27 +51,6 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
     notes: data.notes ?? null,
   };
 
-  const updates: Record<string, unknown> = {
-    status: nextStatus,
-    statusHistory: [...job.statusHistory, newHistoryEntry],
-    updatedAt: now,
-  };
-
-  // Seal the job when delivered
-  if (nextStatus === "DELIVERED") {
-    updates["sealedAt"] = now;
-    // Update the linked booking to COMPLETED
-    if (job.bookingId) {
-      updates["_linkedBookingId"] = job.bookingId;
-    }
-  }
-
-  // When vehicle is received (check-in), transition booking to ACTIVE
-  if (nextStatus === "VEHICLE_RECEIVED" && job.bookingId) {
-    updates["_linkedBookingId"] = job.bookingId;
-    updates["_bookingStatus"] = "ACTIVE";
-  }
-
   await db.runTransaction(async (tx) => {
     tx.update(db.collection(COLLECTIONS.jobs()).doc(data.jobId), {
       status: nextStatus,

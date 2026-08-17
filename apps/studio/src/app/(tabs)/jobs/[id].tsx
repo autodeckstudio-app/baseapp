@@ -12,9 +12,24 @@ import { useLocalSearchParams } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studio-service";
-import type { ServiceJob, StudioConfig } from "@autodeck/core";
+import {
+  recordManualPayment,
+  confirmPaymentMock,
+  listenToPaymentForBooking,
+  listenToInvoiceForBooking,
+} from "../../../lib/payment-service";
+import type { ServiceJob, StudioConfig, Payment, Invoice } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Awaiting confirmation",
+  processing: "Processing",
+  completed: "Paid",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+};
 
 const JOB_STATUS_LABELS: Record<string, string> = {
   PENDING_VEHICLE: "Awaiting Vehicle",
@@ -41,6 +56,9 @@ export default function JobDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [reassigning, setReassigning] = useState(false);
+  const [payment, setPayment] = useState<Payment | null>(null);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [paymentActionLoading, setPaymentActionLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -63,6 +81,54 @@ export default function JobDetailScreen() {
     );
     return unsub;
   }, [id]);
+
+  useEffect(() => {
+    if (!job?.bookingId) {
+      setPayment(null);
+      setInvoice(null);
+      return;
+    }
+    const bookingId = job.bookingId;
+    const unsubPayment = listenToPaymentForBooking(bookingId, setPayment, () => undefined);
+    const unsubInvoice = listenToInvoiceForBooking(bookingId, setInvoice, () => undefined);
+    return () => {
+      unsubPayment();
+      unsubInvoice();
+    };
+  }, [job?.bookingId]);
+
+  async function handleRecordCashPayment() {
+    const bookingId = job?.bookingId;
+    if (!bookingId) return;
+    Alert.alert("Record cash payment?", "Confirms the customer paid in full at the studio.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Confirm",
+        onPress: async () => {
+          setPaymentActionLoading(true);
+          try {
+            await recordManualPayment({ bookingId, method: "cash" });
+          } catch (err) {
+            Alert.alert("Error", err instanceof Error ? err.message : "Failed to record payment.");
+          } finally {
+            setPaymentActionLoading(false);
+          }
+        },
+      },
+    ]);
+  }
+
+  async function handleConfirmPayment(result: "success" | "failure") {
+    if (!payment) return;
+    setPaymentActionLoading(true);
+    try {
+      await confirmPaymentMock(payment.id, result);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to update payment.");
+    } finally {
+      setPaymentActionLoading(false);
+    }
+  }
 
   async function handleAdvance() {
     if (!job || !id) return;
@@ -161,6 +227,53 @@ export default function JobDetailScreen() {
         ))}
       </View>
 
+      {/* Payment & invoice */}
+      <Text style={styles.sectionTitle}>Payment</Text>
+      <View style={styles.section}>
+        {!job.bookingId ? (
+          <Text style={styles.paymentNote}>
+            Walk-in job — not linked to a booking, so it isn't payable through the payment system yet.
+          </Text>
+        ) : (
+          <>
+            <Row
+              label="Status"
+              value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"}
+            />
+            {payment && <Row label="Amount" value={`₹${(payment.amount / 100).toLocaleString("en-IN")}`} />}
+            {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
+
+            {!payment && (
+              <TouchableOpacity
+                style={[styles.paymentButton, paymentActionLoading && styles.disabled]}
+                onPress={() => void handleRecordCashPayment()}
+                disabled={paymentActionLoading}
+              >
+                <Text style={styles.paymentButtonText}>Record cash payment</Text>
+              </TouchableOpacity>
+            )}
+            {payment && (payment.status === "pending" || payment.status === "processing") && (
+              <View style={styles.paymentActionsRow}>
+                <TouchableOpacity
+                  style={[styles.paymentButton, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
+                  onPress={() => void handleConfirmPayment("success")}
+                  disabled={paymentActionLoading}
+                >
+                  <Text style={styles.paymentButtonText}>Confirm received</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.paymentButtonSecondary, styles.paymentButtonFlex, paymentActionLoading && styles.disabled]}
+                  onPress={() => void handleConfirmPayment("failure")}
+                  disabled={paymentActionLoading}
+                >
+                  <Text style={styles.paymentButtonSecondaryText}>Mark failed</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+
       {/* Actions */}
       {canAdvance && (
         <TouchableOpacity
@@ -256,6 +369,25 @@ const styles = StyleSheet.create({
   },
   advanceButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   disabled: { opacity: 0.5 },
+  paymentNote: { fontSize: 13, color: "#888" },
+  paymentButton: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  paymentButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  paymentActionsRow: { flexDirection: "row", gap: 8, marginTop: 8 },
+  paymentButtonFlex: { flex: 1, marginTop: 0 },
+  paymentButtonSecondary: {
+    borderWidth: 1,
+    borderColor: "#c00",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  paymentButtonSecondaryText: { color: "#c00", fontWeight: "700", fontSize: 14 },
   bayRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
   bayChip: {
     paddingHorizontal: 14,

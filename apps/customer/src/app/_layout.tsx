@@ -18,7 +18,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     } else if (auth.status === "authenticated_no_claims" && !inAuthGroup) {
       router.replace("/(auth)/setup");
     } else if (auth.status === "ready" && inAuthGroup) {
-      router.replace("/(tabs)/vehicles");
+      router.replace("/(tabs)");
     }
   }, [auth.status, segments, router]);
 
