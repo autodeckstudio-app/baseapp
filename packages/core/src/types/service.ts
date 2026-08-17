@@ -1,29 +1,70 @@
-export type VehicleCategory = "hatchback" | "sedan" | "suv" | "luxury" | "commercial";
-export type ServiceCategory = "protection" | "wash" | "detailing" | "repair" | "inspection";
+// Vehicle categories (doc06 §6.2 Vehicle): used for pricing differentials across services.
+export type VehicleCategory =
+  | "hatchback"
+  | "sedan"
+  | "suv"
+  | "luxury"
+  | "commercial"
+  | "van";
 
-export interface Service {
-  id: string;
-  tenantId: string;
-  name: string;
-  description: string;
-  category: ServiceCategory;
-  durationMinutes: number;
-  basePrice: number; // stored in paise (INR * 100); never decimal
-  currency: string; // ISO 4217 — "INR" for V1
-  warrantyLabel: string | null; // e.g. "5-year film warranty"
-  requiresBayType: BayType;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ServiceScope {
-  id: string;
-  tenantId: string;
-  serviceId: string;
-  vehicleCategory: VehicleCategory;
-  additionalMinutes: number;
-  additionalPrice: number; // paise
-}
+// Service categories (doc06 §6.2 Service)
+export type ServiceCategory =
+  | "ppf"
+  | "ceramic"
+  | "washing"
+  | "coating"
+  | "inspection"
+  | "tinting"
+  | "other";
 
 export type BayType = "wash" | "protection" | "general";
+
+// Per-vehicle-category price and duration adjustment embedded in a Service document.
+// Keeps pricing co-located with the service template; V1 has at most 6 entries (one per category).
+export interface VehicleCategoryPricing {
+  vehicleCategory: VehicleCategory;
+  additionalPricePaise: number; // non-negative integer; SUVs/luxury cost more than hatchbacks
+  additionalMinutes: number; // non-negative integer
+}
+
+// Service catalogue entry. Written by admin only. This is a TEMPLATE — completed jobs
+// snapshot relevant fields at creation time. Never re-read this for historical records.
+// (doc06 §6.2 Service + §6.4 Historical Truth Rule 9)
+export interface Service {
+  id: string;
+  tenantId: string; // tenant isolation key (not in doc06 spec but architecturally required)
+  name: string; // e.g. "LLumar Gloss PPF"
+  category: ServiceCategory;
+  brand: string | null; // e.g. "LLumar", "Kovalent"
+  description: string;
+  basePrice: number; // paise (INR * 100); never decimal; minimum billable for any vehicle
+  currency: string; // ISO 4217 — "INR" for V1
+  estimatedDurationMinutes: number;
+  warrantyLabel: string | null; // e.g. "5-year film warranty"; full warrantyTemplate is V2+
+  vehicleCategoryPricing: VehicleCategoryPricing[]; // inline array; max 6 entries
+  requiredBayType: BayType;
+  membershipWashEligible: boolean;
+  active: boolean;
+  displayOrder: number; // ascending; lower = shown first
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+}
+
+// Immutable price record written at booking/job creation time.
+// Changing the service catalogue after this snapshot must not affect this record.
+// (doc06 §6.4 Historical Truth Rules 1, 9)
+export interface PriceSnapshot {
+  serviceId: string;
+  serviceName: string; // SNAPSHOT — immutable
+  serviceCategory: ServiceCategory; // SNAPSHOT — immutable
+  vehicleCategory: VehicleCategory; // SNAPSHOT — immutable
+  basePrice: number; // paise — as of snapshot time
+  vehicleCategoryAdjustment: number; // paise — from vehicleCategoryPricing at snapshot time
+  subtotal: number; // paise = basePrice + vehicleCategoryAdjustment
+  taxRatePercent: number; // e.g. 18 for "GST 18%"; tenant-configurable
+  taxDescription: string; // e.g. "GST 18%"; SNAPSHOT
+  tax: number; // paise = Math.round(subtotal * taxRatePercent / 100)
+  total: number; // paise = subtotal + tax
+  currency: string; // ISO 4217 — SNAPSHOT
+  snapshotAt: string; // ISO timestamp when this snapshot was computed
+}

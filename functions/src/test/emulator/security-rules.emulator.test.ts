@@ -4,7 +4,7 @@
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080)
  * Rules are loaded from ../../../../../../firestore.rules (repo root)
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
 import {
   initializeTestEnvironment,
   assertFails,
@@ -19,7 +19,7 @@ const RULES_PATH = resolve(__dirname, "../../../../../../firestore.rules");
 
 let testEnv: RulesTestEnvironment;
 
-function makeCustomerClaims(uid: string) {
+function makeCustomerClaims(_uid: string) {
   return { role: "customer", tenantId: FIRST_TENANT_ID, studioId: null };
 }
 

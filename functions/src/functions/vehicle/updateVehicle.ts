@@ -41,6 +41,7 @@ export const updateVehicle = onCall({ region: "asia-south1" }, async (request) =
     if (data.year !== undefined) updates["year"] = data.year;
     if (data.color !== undefined) updates["color"] = data.color;
     if (data.odometer !== undefined) updates["odometer"] = data.odometer;
+    if (data.category !== undefined) updates["category"] = data.category;
 
     tx.update(ref, updates);
 

@@ -22,6 +22,7 @@ export type AuditAction =
   | "studio.config_updated"
   | "service.created"
   | "service.updated"
+  | "service.activated"
   | "service.deactivated";
 
 export interface AuditLog {

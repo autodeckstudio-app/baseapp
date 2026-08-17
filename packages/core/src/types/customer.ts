@@ -22,6 +22,7 @@ export interface Vehicle {
   model: string;
   year: number;
   color: string;
+  category: import("./service.js").VehicleCategory | null; // used for service pricing; null if not yet set
   photoUrl: string | null;
   odometer: number | null; // km
   createdAt: string;

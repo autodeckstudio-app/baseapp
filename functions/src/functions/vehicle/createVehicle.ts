@@ -27,6 +27,7 @@ export const createVehicle = onCall({ region: "asia-south1" }, async (request) =
     model: data.model,
     year: data.year,
     color: data.color,
+    category: data.category ?? null,
     photoUrl: null,
     odometer: null,
     createdAt: now,

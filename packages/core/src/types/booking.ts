@@ -8,20 +8,24 @@ export type BookingStatus =
   | "CANCELLED"
   | "EXPIRED";
 
+// Price breakdown — snapshotted at booking creation; immutable thereafter.
+// All amounts in paise (INR * 100). No floating-point arithmetic for money.
+// (doc06 §6.4 Historical Truth Rule 1)
 export interface PriceBreakdown {
-  basePrice: number; // paise
-  scopeAdjustment: number; // paise — based on vehicle category
-  addOns: Array<{ id: string; name: string; price: number }>; // paise
-  subtotal: number; // paise
-  membershipDiscount: number | null; // paise
-  membershipDiscountPercent: number | null;
+  vehicleCategory: VehicleCategory; // snapshotted — drives scopeAdjustment
+  basePrice: number; // paise — service.basePrice at snapshot time
+  scopeAdjustment: number; // paise — vehicle category adjustment (V1); scope adjustment (V2+)
+  addOns: Array<{ id: string; name: string; price: number }>; // paise each; empty in V1
+  subtotal: number; // paise = basePrice + scopeAdjustment + sum(addOns)
+  membershipDiscount: number | null; // paise; null in V1
+  membershipDiscountPercent: number | null; // null in V1
   pickupFee: number; // paise — 0 in V1 (no pickup/drop)
   dropFee: number; // paise — 0 in V1
-  taxRatePercent: number; // snapshotted at booking creation; default 18 (GST)
-  taxDescription: string; // e.g. "GST 18%"
-  tax: number; // paise
-  total: number; // paise
-  currency: string; // ISO 4217 — "INR" for V1
+  taxRatePercent: number; // snapshotted; default 18 (GST 18%)
+  taxDescription: string; // e.g. "GST 18%"; snapshotted
+  tax: number; // paise = Math.round(subtotal * taxRatePercent / 100)
+  total: number; // paise = subtotal + tax
+  currency: string; // ISO 4217; snapshotted
 }
 
 export interface Booking {

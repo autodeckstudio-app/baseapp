@@ -10,11 +10,12 @@ export { createVehicle } from "./functions/vehicle/createVehicle.js";
 export { updateVehicle } from "./functions/vehicle/updateVehicle.js";
 export { archiveVehicle } from "./functions/vehicle/archiveVehicle.js";
 
-// ─── Phase 1b+ (placeholders) ────────────────────────────────────────────────
-// export * from "./functions/booking.js";
-// export * from "./functions/job.js";
-// export * from "./functions/payment.js";
-// export * from "./functions/admin.js";
+// ─── Service Catalogue ───────────────────────────────────────────────────────
+export { getServiceCatalogue } from "./functions/service/getServiceCatalogue.js";
+export { calculateServicePrice } from "./functions/service/calculatePrice.js";
+export { createService } from "./functions/service/createService.js";
+export { updateService } from "./functions/service/updateService.js";
+export { setServiceActive } from "./functions/service/setServiceActive.js";
 
 // ─── Emulator smoke test ─────────────────────────────────────────────────────
 export { healthCheck } from "./functions/health.js";

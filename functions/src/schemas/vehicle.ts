@@ -5,6 +5,15 @@ import { z } from "zod";
 // Tenant-configurable regex — this is the default India format
 const INDIA_PLATE_REGEX = /^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/;
 
+const vehicleCategorySchema = z.enum([
+  "hatchback",
+  "sedan",
+  "suv",
+  "luxury",
+  "commercial",
+  "van",
+]);
+
 export const createVehicleSchema = z.object({
   registrationNumber: z
     .string()
@@ -14,6 +23,7 @@ export const createVehicleSchema = z.object({
   model: z.string().min(1).max(100).trim(),
   year: z.number().int().min(1980).max(new Date().getFullYear() + 1),
   color: z.string().min(1).max(50).trim(),
+  category: vehicleCategorySchema.nullable().optional(),
 });
 
 export const updateVehicleSchema = z.object({
@@ -28,6 +38,7 @@ export const updateVehicleSchema = z.object({
   year: z.number().int().min(1980).max(new Date().getFullYear() + 1).optional(),
   color: z.string().min(1).max(50).trim().optional(),
   odometer: z.number().int().min(0).optional(),
+  category: vehicleCategorySchema.nullable().optional(),
 });
 
 export const archiveVehicleSchema = z.object({
