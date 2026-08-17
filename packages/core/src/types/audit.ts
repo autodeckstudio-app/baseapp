@@ -1,4 +1,9 @@
 export type AuditAction =
+  | "customer.created"
+  | "customer.profile_updated"
+  | "vehicle.created"
+  | "vehicle.updated"
+  | "vehicle.archived"
   | "booking.created"
   | "booking.confirmed"
   | "booking.cancelled"
@@ -22,7 +27,7 @@ export type AuditAction =
 export interface AuditLog {
   id: string;
   tenantId: string;
-  studioId: string;
+  studioId: string | null; // null for tenant-level operations (e.g. customer creation)
   action: AuditAction;
   entityType: string; // e.g. "Booking", "ServiceJob"
   entityId: string;

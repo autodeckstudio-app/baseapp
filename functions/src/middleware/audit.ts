@@ -9,7 +9,7 @@ interface AuditParams {
   entityType: string;
   entityId: string;
   user: AuthorizedUser;
-  studioId: string;
+  studioId: string | null;
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
   metadata?: Record<string, unknown>;
