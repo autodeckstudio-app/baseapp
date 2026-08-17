@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { signOut } from "../../lib/auth-service";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -18,7 +18,13 @@ export default function ProfileScreen() {
     ]);
   }
 
-  if (auth.status !== "ready") return null;
+  if (auth.status !== "ready") {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -34,6 +40,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, backgroundColor: "#fff" },
+  centered: { justifyContent: "center", alignItems: "center" },
   name: { fontSize: 24, fontWeight: "700", marginTop: 32, marginBottom: 4 },
   phone: { fontSize: 16, color: "#666", marginBottom: 32 },
   signOutButton: { padding: 16, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, alignItems: "center" },

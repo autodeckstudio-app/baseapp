@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { setupCustomerProfile, refreshAuthToken } from "../../lib/auth-service";
@@ -36,7 +37,10 @@ export default function SetupScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <Text style={styles.heading}>What's your name?</Text>
       <Text style={styles.subheading}>This is shown to the studio team.</Text>
 
@@ -63,7 +67,7 @@ export default function SetupScreen() {
           <Text style={styles.buttonText}>Continue</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

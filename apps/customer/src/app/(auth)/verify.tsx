@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -60,7 +61,10 @@ export default function VerifyScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <Text style={styles.heading}>Verify OTP</Text>
       <Text style={styles.subheading}>
         Enter the 6-digit code sent to {phone}
@@ -89,7 +93,7 @@ export default function VerifyScreen() {
           <Text style={styles.buttonText}>Confirm</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

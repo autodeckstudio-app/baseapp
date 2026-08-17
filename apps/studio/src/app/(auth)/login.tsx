@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -34,7 +35,10 @@ export default function StudioLoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <Text style={styles.title}>AutoDeck Studio</Text>
       <Text style={styles.subtitle}>Staff sign in</Text>
 
@@ -68,7 +72,7 @@ export default function StudioLoginScreen() {
           <Text style={styles.buttonText}>Sign In</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -115,12 +115,15 @@ export async function setupCustomerProfile(name?: string): Promise<{
 }
 
 /**
- * Force-refreshes the ID token so the client receives updated custom claims
- * (role, tenantId) set by the setupCustomerProfile Cloud Function.
+ * Force-refreshes the ID token (custom claims: role, tenantId) AND reloads
+ * the user profile (displayName) so both are current after
+ * setupCustomerProfile sets them server-side — a getIdToken(true) alone only
+ * refreshes the token, not cached profile fields like displayName.
  * Must be called after setupCustomerProfile succeeds.
  */
 export async function refreshAuthToken(): Promise<void> {
   await auth.currentUser?.getIdToken(true);
+  await auth.currentUser?.reload();
 }
 
 export async function signOut(): Promise<void> {

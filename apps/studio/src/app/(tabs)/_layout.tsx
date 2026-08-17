@@ -15,6 +15,10 @@ export default function StudioTabsLayout() {
         name="jobs"
         options={{ href: null }} // sub-route, hidden from tab bar
       />
+      <Tabs.Screen
+        name="account"
+        options={{ title: "Account", tabBarLabel: "Account" }}
+      />
     </Tabs>
   );
 }

@@ -90,6 +90,13 @@ export const setupCustomerProfile = onCall(
       studioId: null,
     });
 
+    // Phone-OTP sign-in never sets the Firebase Auth displayName on its own —
+    // set it here on first setup so the client (Home greeting, Profile) has
+    // something other than a blank name to show.
+    if (result.isNew) {
+      await adminAuth.updateUser(uid, { displayName: result.customer.name });
+    }
+
     return {
       customer: result.customer,
       isNew: result.isNew,

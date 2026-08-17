@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import type { ConfirmationResult } from "firebase/auth";
@@ -47,7 +49,10 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <Text style={styles.heading}>AutoDeck</Text>
       <Text style={styles.subheading}>Enter your India mobile number</Text>
 
@@ -75,7 +80,7 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>Send OTP</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

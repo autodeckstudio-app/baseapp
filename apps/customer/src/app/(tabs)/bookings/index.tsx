@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
@@ -72,17 +71,19 @@ export default function MyBookingsScreen() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
     const auth = getAuth();
     const uid = auth.currentUser?.uid;
     if (!uid) return;
     setLoading(true);
+    setError(null);
     try {
       const data = await getMyBookings(uid, FIRST_TENANT_ID);
       setBookings(data);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Could not load bookings.");
+      setError(err instanceof Error ? err.message : "Could not load bookings.");
     } finally {
       setLoading(false);
     }
@@ -92,10 +93,22 @@ export default function MyBookingsScreen() {
     void loadBookings();
   }, [loadBookings]);
 
-  if (loading) {
+  if (loading && bookings.length === 0) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error && bookings.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.emptyText}>Couldn't load your bookings.</Text>
+        <Text style={styles.emptyHint}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => void loadBookings()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -106,6 +119,8 @@ export default function MyBookingsScreen() {
       contentContainerStyle={styles.content}
       data={bookings}
       keyExtractor={(b) => b.id}
+      onRefresh={() => void loadBookings()}
+      refreshing={loading}
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No bookings yet.</Text>
@@ -126,7 +141,7 @@ export default function MyBookingsScreen() {
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: "#fff" },
   content: { padding: 16 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   card: {
     backgroundColor: "#fff",
     borderRadius: 8,
@@ -148,5 +163,7 @@ const styles = StyleSheet.create({
   separator: { height: 10 },
   empty: { paddingTop: 60, alignItems: "center" },
   emptyText: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
-  emptyHint: { color: "#888", fontSize: 14 },
+  emptyHint: { color: "#888", fontSize: 14, textAlign: "center" },
+  retryButton: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#1a1a1a", borderRadius: 8 },
+  retryButtonText: { color: "#fff", fontWeight: "600" },
 });

@@ -9,8 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { useAuth } from "../../hooks/useAuth";
 import { listenToJobsByDate } from "../../lib/studio-service";
 import type { ServiceJob } from "@autodeck/core";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
@@ -72,20 +71,10 @@ function JobCard({ job, onPress }: { job: ServiceJob; onPress: () => void }) {
 
 export default function TodaysJobsScreen() {
   const router = useRouter();
+  const authState = useAuth();
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authReady, setAuthReady] = useState(false);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.replace("/(auth)/login");
-        return;
-      }
-      setAuthReady(true);
-    });
-    return unsub;
-  }, [router]);
+  const authReady = authState.status === "ready";
 
   useEffect(() => {
     if (!authReady) return;

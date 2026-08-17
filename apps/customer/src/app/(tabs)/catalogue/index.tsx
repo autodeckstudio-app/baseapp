@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import type { Service } from "@autodeck/core";
@@ -41,14 +40,16 @@ export default function CatalogueScreen() {
   const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getServiceCatalogue();
       setServices(data);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Could not load services.");
+      setError(err instanceof Error ? err.message : "Could not load services.");
     } finally {
       setLoading(false);
     }
@@ -62,6 +63,18 @@ export default function CatalogueScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Couldn't load services.</Text>
+        <Text style={styles.errorDetail}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => void load()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -80,6 +93,8 @@ export default function CatalogueScreen() {
       contentContainerStyle={styles.content}
       data={services}
       keyExtractor={(s) => s.id}
+      onRefresh={() => void load()}
+      refreshing={loading}
       renderItem={({ item }) => (
         <ServiceCard
           service={item}
@@ -94,8 +109,12 @@ export default function CatalogueScreen() {
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: "#fff" },
   content: { padding: 16 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff", padding: 24 },
   emptyText: { color: "#666", fontSize: 16 },
+  errorText: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
+  errorDetail: { fontSize: 13, color: "#888", textAlign: "center", marginBottom: 16 },
+  retryButton: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#1a1a1a", borderRadius: 8 },
+  retryButtonText: { color: "#fff", fontWeight: "600" },
   card: {
     backgroundColor: "#fff",
     borderRadius: 8,
