@@ -2,7 +2,7 @@
  * Firestore security rules tests.
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080)
- * Rules are loaded from ../../../../../../firestore.rules (repo root)
+ * Rules are loaded from ../../../../firestore.rules (repo root)
  */
 import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
 import {
@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FIRST_TENANT_ID } from "@autodeck/core";
 
-const RULES_PATH = resolve(__dirname, "../../../../../../firestore.rules");
+const RULES_PATH = resolve(__dirname, "../../../../firestore.rules");
 
 let testEnv: RulesTestEnvironment;
 
@@ -431,6 +431,237 @@ describe("/jobs — customer cannot mutate, studio can", () => {
     });
     await assertFails(
       otherStudio.firestore().collection("jobs").doc("job-tenant-iso").get(),
+    );
+  });
+});
+
+// ─── Payment security rules ───────────────────────────────────────────────────
+
+async function seedPayment(
+  paymentId: string,
+  customerId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("payments").doc(paymentId).set({
+      id: paymentId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      jobId: "",
+      bookingId: "booking-1",
+      customerId,
+      amount: 500000,
+      currency: "INR",
+      method: "razorpay_payment_link",
+      status: "pending",
+      razorpayPaymentLinkId: null,
+      razorpayPaymentId: null,
+      razorpayOrderId: null,
+      razorpayRefundId: null,
+      refundAmount: null,
+      manualReference: null,
+      recordedBy: null,
+      invoiceId: null,
+      providerEventId: null,
+      completedAt: null,
+      failedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+async function seedInvoice(
+  invoiceId: string,
+  customerId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("invoices").doc(invoiceId).set({
+      id: invoiceId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      jobId: "",
+      bookingId: "booking-1",
+      customerId,
+      vehicleId: "vehicle-1",
+      paymentId: "payment-1",
+      invoiceNumber: "INV-2026-00001",
+      lineItems: [{ description: "PPF", quantity: 1, unitPrice: 500000, total: 500000 }],
+      subtotal: 500000,
+      taxRatePercent: 18,
+      taxDescription: "GST 18%",
+      tax: 90000,
+      total: 590000,
+      currency: "INR",
+      status: "issued",
+      pdfUrl: null,
+      publicToken: "test-uuid",
+      issuedAt: now,
+      voidedAt: null,
+      voidedReason: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+describe("/payments — client cannot write payment success", () => {
+  it("Customer can read their own payment", async () => {
+    await seedPayment("payment-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("payments").doc("payment-alice").get());
+  });
+
+  it("Customer cannot read another customer's payment", async () => {
+    await seedPayment("payment-bob", "uid-bob");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("payments").doc("payment-bob").get());
+  });
+
+  it("Customer cannot create a payment document (client-side payment tampering)", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("payments").doc("tampered-payment").set({
+        id: "tampered-payment",
+        tenantId: FIRST_TENANT_ID,
+        customerId: "uid-alice",
+        amount: 1,
+        status: "completed",
+      }),
+    );
+  });
+
+  it("Customer cannot update a payment to mark it as completed (amount tampering)", async () => {
+    await seedPayment("payment-tamper-test", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("payments").doc("payment-tamper-test").update({
+        status: "completed",
+        amount: 1,
+      }),
+    );
+  });
+
+  it("Studio cannot write to /payments directly", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("payments").doc("studio-direct-payment").set({
+        id: "studio-direct-payment",
+        tenantId: FIRST_TENANT_ID,
+        amount: 500000,
+        status: "completed",
+      }),
+    );
+  });
+
+  it("Customer from tenant A cannot read payment from tenant B", async () => {
+    await seedPayment("payment-tenant-b", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(
+      tenantAUser.firestore().collection("payments").doc("payment-tenant-b").get(),
+    );
+  });
+});
+
+// ─── Invoice security rules ───────────────────────────────────────────────────
+
+describe("/invoices — client cannot write invoice total", () => {
+  it("Customer can read their own invoice", async () => {
+    await seedInvoice("invoice-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("invoices").doc("invoice-alice").get());
+  });
+
+  it("Customer cannot read another customer's invoice", async () => {
+    await seedInvoice("invoice-bob", "uid-bob");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("invoices").doc("invoice-bob").get());
+  });
+
+  it("Customer cannot create an invoice document (tampering)", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("invoices").doc("fake-invoice").set({
+        id: "fake-invoice",
+        tenantId: FIRST_TENANT_ID,
+        customerId: "uid-alice",
+        total: 1,
+        status: "paid",
+      }),
+    );
+  });
+
+  it("Customer cannot update invoice total (immutability)", async () => {
+    await seedInvoice("invoice-tamper", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("invoices").doc("invoice-tamper").update({
+        total: 1,
+        status: "paid",
+      }),
+    );
+  });
+
+  it("Studio cannot write invoices directly", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("invoices").doc("studio-invoice").set({
+        id: "studio-invoice",
+        tenantId: FIRST_TENANT_ID,
+        total: 100,
+        status: "issued",
+      }),
+    );
+  });
+
+  it("invoiceCounters are inaccessible to all clients", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("invoiceCounters").doc(FIRST_TENANT_ID).get(),
+    );
+    const admin = testEnv.authenticatedContext("uid-admin", {
+      role: "admin",
+      tenantId: FIRST_TENANT_ID,
+      studioId: null,
+    });
+    await assertFails(
+      admin.firestore().collection("invoiceCounters").doc(FIRST_TENANT_ID).set({ nextNumber: 1 }),
+    );
+  });
+
+  it("paymentEvents are inaccessible to all clients", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("paymentEvents").doc("evt-001").get(),
+    );
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B invoice", async () => {
+    await seedInvoice("invoice-tenant-b", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(
+      tenantAUser.firestore().collection("invoices").doc("invoice-tenant-b").get(),
     );
   });
 });

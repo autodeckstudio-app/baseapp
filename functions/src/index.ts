@@ -30,5 +30,16 @@ export { advanceJobStatus } from "./functions/job/advanceJobStatus.js";
 export { getStudioJobs } from "./functions/job/getStudioJobs.js";
 export { assignBay } from "./functions/job/assignBay.js";
 
+// ─── Payments ────────────────────────────────────────────────────────────────
+export { initiatePayment } from "./functions/payment/initiatePayment.js";
+export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
+export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
+export { getPaymentStatus } from "./functions/payment/getPaymentStatus.js";
+export { initiateRefund } from "./functions/payment/initiateRefund.js";
+
+// ─── Invoices ─────────────────────────────────────────────────────────────────
+export { getInvoice } from "./functions/invoice/getInvoice.js";
+export { voidInvoice } from "./functions/invoice/voidInvoice.js";
+
 // ─── Emulator smoke test ─────────────────────────────────────────────────────
 export { healthCheck } from "./functions/health.js";

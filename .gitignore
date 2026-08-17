@@ -45,3 +45,8 @@ functions/lib/
 # Packages compiled output
 packages/*/dist/
 packages/*/lib/
+
+# Next.js generated files
+apps/admin/next-env.d.ts
+apps/admin/tsconfig.tsbuildinfo
+apps/*/tsconfig.tsbuildinfo

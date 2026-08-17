@@ -27,7 +27,17 @@ export type AuditAction =
   | "booking.rescheduled"
   | "booking.expired"
   | "job.walkin_created"
-  | "job.bay_reassigned";
+  | "job.bay_reassigned"
+  | "payment.initiated"
+  | "payment.completed"
+  | "payment.failed"
+  | "payment.cancelled"
+  | "payment.refund_requested"
+  | "payment.refunded"
+  | "invoice.created"
+  | "invoice.issued"
+  | "invoice.paid"
+  | "invoice.voided";
 
 export interface AuditLog {
   id: string;

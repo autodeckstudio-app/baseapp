@@ -224,6 +224,18 @@ service cloud.firestore {
       allow write: if false; // Cloud Function only
     }
 
+    // ─── /invoiceCounters/{tenantId} ────────────────────────────────────────
+    // Atomic invoice number counters — Admin SDK only; no client access
+    match /invoiceCounters/{tenantId} {
+      allow read, write: if false;
+    }
+
+    // ─── /paymentEvents/{eventId} ───────────────────────────────────────────
+    // Idempotency guard for payment webhooks — Admin SDK only; no client access
+    match /paymentEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

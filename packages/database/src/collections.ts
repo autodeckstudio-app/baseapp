@@ -24,6 +24,10 @@ export const COLLECTIONS = {
   auditLog: () => "auditLog",
   notifications: () => "notifications",
   bookingIntents: () => "bookingIntents",
+  // invoiceCounters/{tenantId} — atomic invoice number counter (Admin SDK only)
+  invoiceCounters: () => "invoiceCounters",
+  // paymentEvents/{providerEventId} — idempotency guard for webhook/event deduplication
+  paymentEvents: () => "paymentEvents",
 } as const;
 
 // Subcollection paths
