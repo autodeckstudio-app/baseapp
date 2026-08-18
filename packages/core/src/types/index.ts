@@ -29,3 +29,4 @@ export type {
 } from "./membership.js";
 export type { AuditLog, AuditAction } from "./audit.js";
 export type { Warranty } from "./warranty.js";
+export type { Notification, NotificationType, NotificationEntityType } from "./notification.js";

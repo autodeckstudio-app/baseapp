@@ -64,5 +64,9 @@ export { addStaffMember } from "./functions/employee/addStaffMember.js";
 export { updateStaffRole } from "./functions/employee/updateStaffRole.js";
 export { deactivateStaffMember } from "./functions/employee/deactivateStaffMember.js";
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
+export { markNotificationRead } from "./functions/notification/markNotificationRead.js";
+
 // ─── Emulator smoke test ─────────────────────────────────────────────────────
 export { healthCheck } from "./functions/health.js";

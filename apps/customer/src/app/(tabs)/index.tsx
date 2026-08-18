@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import type { Booking } from "@autodeck/core";
-import { colors, spacing, radius, typography, Button, LoadingState, formatDateShort } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, IconButton, LoadingState, formatDateShort } from "@autodeck/ui";
 import { getMyBookings } from "../../lib/booking-service";
+import { listenToMyNotifications } from "../../lib/notification-service";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function HomeScreen() {
@@ -11,6 +12,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [nextBooking, setNextBooking] = useState<Booking | null>(null);
   const [loadingBooking, setLoadingBooking] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (auth.status !== "ready") return;
@@ -25,18 +27,59 @@ export default function HomeScreen() {
       .finally(() => setLoadingBooking(false));
   }, [auth.status]);
 
+  useEffect(() => {
+    if (auth.status !== "ready") return;
+    return listenToMyNotifications(
+      auth.claims.tenantId,
+      auth.user.uid,
+      (notifications) => setUnreadCount(notifications.filter((n) => n.readAt === null).length),
+      () => undefined,
+    );
+  }, [auth.status]);
+
   if (auth.status !== "ready") {
     return <LoadingState />;
   }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text style={{ ...typography.display, color: colors.textPrimary, marginTop: spacing.md }}>
-        Hi{auth.user.displayName ? `, ${auth.user.displayName.split(" ")[0]}` : ""}
-      </Text>
-      <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xxs, marginBottom: spacing.xl }}>
-        What would you like to get done today?
-      </Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: spacing.md }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ ...typography.display, color: colors.textPrimary }}>
+            Hi{auth.user.displayName ? `, ${auth.user.displayName.split(" ")[0]}` : ""}
+          </Text>
+          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xxs, marginBottom: spacing.xl }}>
+            What would you like to get done today?
+          </Text>
+        </View>
+        <View>
+          <IconButton
+            glyph="⍾"
+            accessibilityLabel="Notifications"
+            onPress={() => router.push("/(tabs)/notifications")}
+          />
+          {unreadCount > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: 2,
+                right: 2,
+                minWidth: 16,
+                height: 16,
+                borderRadius: radius.full,
+                backgroundColor: colors.accent,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 3,
+              }}
+            >
+              <Text style={{ ...typography.label, color: colors.white, fontSize: 10 }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
 
       {loadingBooking ? (
         <LoadingState fill={false} />

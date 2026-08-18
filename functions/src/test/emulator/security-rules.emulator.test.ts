@@ -979,3 +979,84 @@ describe("Walk-in financial records — same protections as booking-sourced reco
     await assertFails(tenantAUser.firestore().collection("invoices").doc("winv-tenant-b").get());
   });
 });
+
+// ─── Notifications (Phase 2C) ──────────────────────────────────────────────────
+
+async function seedNotification(
+  notificationId: string,
+  userId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("notifications").doc(notificationId).set({
+      id: notificationId,
+      tenantId,
+      userId,
+      auditLogId: notificationId,
+      type: "booking_confirmed",
+      title: "Booking confirmed",
+      body: "Your Swift booking is confirmed for 10:00 AM.",
+      entityType: "Booking",
+      entityId: "booking-1",
+      createdAt: new Date().toISOString(),
+      readAt: null,
+    });
+  });
+}
+
+describe("/notifications — customer read-own, mark-read only via Cloud Function", () => {
+  it("Customer cannot create a notification directly", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice
+        .firestore()
+        .collection("notifications")
+        .doc("fake-1")
+        .set({
+          id: "fake-1",
+          tenantId: FIRST_TENANT_ID,
+          userId: "uid-alice",
+          auditLogId: "fake-1",
+          type: "booking_confirmed",
+          title: "Fabricated",
+          body: "Self-authored notification",
+          entityType: null,
+          entityId: null,
+          createdAt: new Date().toISOString(),
+          readAt: null,
+        }),
+    );
+  });
+
+  it("Customer cannot alter notification content (e.g. mark read via direct write)", async () => {
+    await seedNotification("notif-1", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("notifications").doc("notif-1").update({
+        readAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Customer can read their own notification", async () => {
+    await seedNotification("notif-2", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("notifications").doc("notif-2").get());
+  });
+
+  it("Cross-customer: Bob cannot read Alice's notification", async () => {
+    await seedNotification("notif-3", "uid-alice");
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertFails(bob.firestore().collection("notifications").doc("notif-3").get());
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B's notification", async () => {
+    await seedNotification("notif-4", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(tenantAUser.firestore().collection("notifications").doc("notif-4").get());
+  });
+});

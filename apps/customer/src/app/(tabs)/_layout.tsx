@@ -28,6 +28,10 @@ export default function TabsLayout() {
         options={{ href: null }} // booking flow, hidden from tab bar
       />
       <Tabs.Screen
+        name="notifications"
+        options={{ title: "Notifications", href: null }} // accessed via Home bell icon, hidden from tab bar
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: "Profile", tabBarLabel: "Me" }}
       />
