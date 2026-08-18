@@ -9,6 +9,7 @@ import type {
   BayType,
   PriceBreakdown,
   PriceSnapshot,
+  WarrantyDurationUnit,
 } from "@autodeck/core";
 import { functions } from "./firebase";
 
@@ -43,6 +44,8 @@ export interface CreateServiceInput {
   currency?: string;
   estimatedDurationMinutes: number;
   warrantyLabel: string | null;
+  warrantyDurationValue: number | null;
+  warrantyDurationUnit: WarrantyDurationUnit | null;
   vehicleCategoryPricing?: VehicleCategoryPricing[];
   requiredBayType?: BayType;
   membershipWashEligible?: boolean;

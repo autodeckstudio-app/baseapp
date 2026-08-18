@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Service, ServiceCategory, BayType, VehicleCategory, VehicleCategoryPricing } from "@autodeck/core";
+import type {
+  Service,
+  ServiceCategory,
+  BayType,
+  VehicleCategory,
+  VehicleCategoryPricing,
+  WarrantyDurationUnit,
+} from "@autodeck/core";
 import {
   getServiceCatalogue,
   createService,
@@ -12,6 +19,7 @@ import {
 const CATEGORIES: ServiceCategory[] = ["ppf", "ceramic", "washing", "coating", "inspection", "tinting", "other"];
 const BAY_TYPES: BayType[] = ["wash", "protection", "general"];
 const VEHICLE_CATEGORIES: VehicleCategory[] = ["hatchback", "sedan", "suv", "luxury", "commercial", "van"];
+const DURATION_UNITS: WarrantyDurationUnit[] = ["days", "months", "years", "lifetime"];
 
 const emptyForm = {
   serviceId: null as string | null,
@@ -22,11 +30,25 @@ const emptyForm = {
   basePrice: 0,
   estimatedDurationMinutes: 30,
   warrantyLabel: "",
+  // "" = not configured — distinct from any real duration unit, including 'lifetime'.
+  warrantyDurationUnit: "" as WarrantyDurationUnit | "",
+  // Kept as a string so an empty field is visually and logically distinct
+  // from "0" while typing; parsed to an integer only at save time.
+  warrantyDurationValue: "",
   requiredBayType: "wash" as BayType,
   displayOrder: 0,
   membershipWashEligible: false,
   vehicleCategoryPricing: [] as VehicleCategoryPricing[],
 };
+
+function formatWarrantySummary(s: Service): string {
+  if (!s.warrantyLabel) return "—";
+  if (s.warrantyDurationUnit === "lifetime") return `${s.warrantyLabel} (lifetime)`;
+  if (s.warrantyDurationUnit && s.warrantyDurationValue) {
+    return `${s.warrantyLabel} (${s.warrantyDurationValue} ${s.warrantyDurationUnit})`;
+  }
+  return `${s.warrantyLabel} (duration not configured)`;
+}
 
 export default function ServiceCataloguePage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -62,6 +84,8 @@ export default function ServiceCataloguePage() {
       basePrice: s.basePrice,
       estimatedDurationMinutes: s.estimatedDurationMinutes,
       warrantyLabel: s.warrantyLabel ?? "",
+      warrantyDurationUnit: s.warrantyDurationUnit ?? "",
+      warrantyDurationValue: s.warrantyDurationValue?.toString() ?? "",
       requiredBayType: s.requiredBayType,
       displayOrder: s.displayOrder,
       membershipWashEligible: s.membershipWashEligible,
@@ -69,9 +93,35 @@ export default function ServiceCataloguePage() {
     });
   }
 
+  // Not configured ("") or 'lifetime' both resolve without a value — a
+  // duration value is only required (and only meaningful) for days/months/
+  // years. Returns null when a value is required but missing/invalid, so
+  // the caller can block the save with a clear message instead of sending
+  // a guessed number to the server.
+  function resolveWarrantyDuration():
+    | { warrantyDurationValue: number | null; warrantyDurationUnit: WarrantyDurationUnit | null }
+    | null {
+    if (form.warrantyDurationUnit === "") {
+      return { warrantyDurationValue: null, warrantyDurationUnit: null };
+    }
+    if (form.warrantyDurationUnit === "lifetime") {
+      return { warrantyDurationValue: null, warrantyDurationUnit: "lifetime" };
+    }
+    const n = Number(form.warrantyDurationValue);
+    if (!Number.isInteger(n) || n <= 0) return null;
+    return { warrantyDurationValue: n, warrantyDurationUnit: form.warrantyDurationUnit };
+  }
+
   async function handleSave() {
     setError(null);
     setStatus(null);
+
+    const warrantyDuration = resolveWarrantyDuration();
+    if (!warrantyDuration) {
+      setError("Enter a positive whole number for the warranty duration, or choose Lifetime / Not configured.");
+      return;
+    }
+
     try {
       const payload = {
         name: form.name,
@@ -81,6 +131,7 @@ export default function ServiceCataloguePage() {
         basePrice: form.basePrice,
         estimatedDurationMinutes: form.estimatedDurationMinutes,
         warrantyLabel: form.warrantyLabel || null,
+        ...warrantyDuration,
         requiredBayType: form.requiredBayType,
         displayOrder: form.displayOrder,
         membershipWashEligible: form.membershipWashEligible,
@@ -143,6 +194,7 @@ export default function ServiceCataloguePage() {
               <th>Category</th>
               <th>Base price (₹)</th>
               <th>Duration (min)</th>
+              <th>Warranty</th>
               <th>Wash-eligible</th>
               <th>Active</th>
               <th></th>
@@ -156,6 +208,7 @@ export default function ServiceCataloguePage() {
                 <td>{s.category}</td>
                 <td>{(s.basePrice / 100).toFixed(2)}</td>
                 <td>{s.estimatedDurationMinutes}</td>
+                <td>{formatWarrantySummary(s)}</td>
                 <td>{s.membershipWashEligible ? "Yes" : "No"}</td>
                 <td>{s.active ? "Yes" : "No"}</td>
                 <td>
@@ -225,6 +278,61 @@ export default function ServiceCataloguePage() {
             onChange={(e) => setForm({ ...form, estimatedDurationMinutes: Number(e.target.value) })}
           />
         </label>
+      </fieldset>
+      <fieldset>
+        <legend>Warranty</legend>
+        <label>
+          Label
+          <br />
+          <input
+            value={form.warrantyLabel}
+            onChange={(e) => setForm({ ...form, warrantyLabel: e.target.value })}
+            placeholder="e.g. 5-Year PPF Film Warranty"
+          />
+        </label>
+        <br />
+        <label>
+          Duration unit
+          <br />
+          <select
+            value={form.warrantyDurationUnit}
+            onChange={(e) => {
+              const unit = e.target.value as WarrantyDurationUnit | "";
+              setForm({
+                ...form,
+                warrantyDurationUnit: unit,
+                // Lifetime carries no value — clear it so a stale number is
+                // never silently sent alongside 'lifetime'.
+                warrantyDurationValue: unit === "lifetime" ? "" : form.warrantyDurationValue,
+              });
+            }}
+          >
+            <option value="">Not configured</option>
+            {DURATION_UNITS.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </label>
+        <br />
+        <label>
+          Duration value
+          <br />
+          <input
+            type="number"
+            min={1}
+            step={1}
+            placeholder="e.g. 5"
+            value={form.warrantyDurationValue}
+            disabled={form.warrantyDurationUnit === "" || form.warrantyDurationUnit === "lifetime"}
+            onChange={(e) => setForm({ ...form, warrantyDurationValue: e.target.value })}
+          />
+        </label>
+        <p style={{ fontSize: 12, color: "#666" }}>
+          Used to compute the warranty expiry date when a job is completed and a warranty is issued. Changing
+          this later never affects warranties already issued.
+        </p>
       </fieldset>
       <fieldset>
         <label>

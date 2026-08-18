@@ -21,6 +21,7 @@ import { createBooking } from "../../functions/booking/createBooking.js";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
 import { createProtection } from "../../functions/protection/createProtection.js";
 import { updateProtection } from "../../functions/protection/updateProtection.js";
+import { createService } from "../../functions/service/createService.js";
 import { updateService } from "../../functions/service/updateService.js";
 
 const db = getFirestore();
@@ -353,5 +354,125 @@ describe("Garage / Vehicle Ownership system", () => {
     expect(historySnap.docs.length).toBe(1);
     const historyJob = historySnap.docs[0]?.data() as ServiceJob;
     expect(historyJob.status).toBe("DELIVERED");
+  });
+});
+
+// ─── Admin warranty duration configuration (Phase 2D.2) ────────────────────────
+// The admin UI is a thin form over createService/updateService — these tests
+// exercise those same Cloud Functions directly, since the Next.js layer adds
+// no validation of its own (per the phase instruction: don't duplicate it).
+
+function newServicePayload(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    name: "Config Test Service",
+    category: "ppf" as const,
+    brand: null,
+    description: "Test service for warranty configuration",
+    basePrice: 1000000,
+    estimatedDurationMinutes: 60,
+    warrantyLabel: "Configured Warranty",
+    requiredBayType: "protection" as const, // matches this file's seeded studio bays
+    ...overrides,
+  };
+}
+
+describe("Admin warranty duration configuration", () => {
+  let adminUid: string;
+  let studioUid: string;
+
+  beforeAll(async () => {
+    await seedStudio(STUDIO_ID, TENANT_A); // idempotent re-seed — independent describe block
+    adminUid = uid("admin-config");
+    studioUid = uid("studio-config");
+  });
+
+  it("1. create service with duration (days/months/years all accepted)", async () => {
+    for (const [unit, value] of [
+      ["days", 90],
+      ["months", 6],
+      ["years", 5],
+    ] as const) {
+      const result = (await createService.run({
+        data: newServicePayload({ warrantyDurationUnit: unit, warrantyDurationValue: value }),
+        auth: adminAuth(adminUid),
+      } as never)) as { service: Service };
+      expect(result.service.warrantyDurationUnit).toBe(unit);
+      expect(result.service.warrantyDurationValue).toBe(value);
+    }
+  });
+
+  it("2. update duration on an existing service", async () => {
+    const created = (await createService.run({
+      data: newServicePayload({ warrantyDurationUnit: "months", warrantyDurationValue: 3 }),
+      auth: adminAuth(adminUid),
+    } as never)) as { service: Service };
+
+    await updateService.run({
+      data: { serviceId: created.service.id, warrantyDurationUnit: "years", warrantyDurationValue: 2 },
+      auth: adminAuth(adminUid),
+    } as never);
+
+    const snap = await db.collection("services").doc(created.service.id).get();
+    const updated = snap.data() as Service;
+    expect(updated.warrantyDurationUnit).toBe("years");
+    expect(updated.warrantyDurationValue).toBe(2);
+  });
+
+  it("3. lifetime is accepted with a null duration value", async () => {
+    const result = (await createService.run({
+      data: newServicePayload({ warrantyDurationUnit: "lifetime", warrantyDurationValue: null }),
+      auth: adminAuth(adminUid),
+    } as never)) as { service: Service };
+    expect(result.service.warrantyDurationUnit).toBe("lifetime");
+    expect(result.service.warrantyDurationValue).toBeNull();
+  });
+
+  it("4. invalid duration values are rejected (zero, negative, non-integer)", async () => {
+    for (const invalid of [0, -5, 1.5]) {
+      await expect(
+        createService.run({
+          data: newServicePayload({ warrantyDurationUnit: "days", warrantyDurationValue: invalid }),
+          auth: adminAuth(adminUid),
+        } as never),
+      ).rejects.toMatchObject({ code: "invalid-argument" });
+    }
+  });
+
+  it("5. empty/unconfigured (both fields omitted or null) is accepted", async () => {
+    const result = (await createService.run({
+      data: newServicePayload(),
+      auth: adminAuth(adminUid),
+    } as never)) as { service: Service };
+    expect(result.service.warrantyDurationUnit).toBeNull();
+    expect(result.service.warrantyDurationValue).toBeNull();
+  });
+
+  it("7. completing a job after admin configures duration produces the correct Warranty.endDate", async () => {
+    const cust = uid("cust-configured-flow");
+    const created = (await createService.run({
+      data: newServicePayload({ warrantyLabel: "Configured Flow Warranty" }), // unconfigured at first
+      auth: adminAuth(adminUid),
+    } as never)) as { service: Service };
+
+    // Admin configures duration only after the service already exists —
+    // exercises the update path, not just create.
+    await updateService.run({
+      data: { serviceId: created.service.id, warrantyDurationUnit: "years", warrantyDurationValue: 3 },
+      auth: adminAuth(adminUid),
+    } as never);
+
+    const configuredService = (await db.collection("services").doc(created.service.id).get()).data() as Service;
+
+    const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
+    const booking = await bookOnce(cust, vehicle.id, configuredService);
+    const jobDoc = await jobForBooking(booking.id);
+    await deliverJob(jobDoc.id, studioUid);
+
+    const warranty = (await db.collection("warranties").doc(jobDoc.id).get()).data() as Warranty;
+    expect(warranty.warrantyLabel).toBe("Configured Flow Warranty");
+    expect(warranty.endDate).not.toBeNull();
+    const expected = new Date(warranty.startDate);
+    expected.setUTCFullYear(expected.getUTCFullYear() + 3);
+    expect(warranty.endDate).toBe(expected.toISOString().slice(0, 10));
   });
 });
