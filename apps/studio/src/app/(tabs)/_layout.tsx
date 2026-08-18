@@ -16,6 +16,10 @@ export default function StudioTabsLayout() {
         options={{ title: "Calendar", tabBarLabel: "Calendar" }}
       />
       <Tabs.Screen
+        name="lookup"
+        options={{ title: "Lookup", tabBarLabel: "Lookup" }}
+      />
+      <Tabs.Screen
         name="jobs"
         options={{ href: null }} // sub-route, hidden from tab bar
       />

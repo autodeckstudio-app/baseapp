@@ -12,6 +12,7 @@ import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime } from "../../../../lib/format";
 
 type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
+type ConfirmManualPaymentOutput = { paymentId: string; invoiceId: string | null; alreadyCompleted: boolean };
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,7 @@ export default function JobDetailPage() {
   const [reference, setReference] = useState("");
   const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (!id) return undefined;
@@ -80,6 +82,21 @@ export default function JobDetailPage() {
     }
   }
 
+  async function handleConfirmCashPayment() {
+    if (!payment) return;
+    setStatus(null);
+    setConfirming(true);
+    try {
+      const fn = httpsCallable<{ paymentId: string }, ConfirmManualPaymentOutput>(functions, "confirmManualPayment");
+      await fn({ paymentId: payment.id });
+      setStatus("Payment confirmed and invoice issued.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to confirm payment.");
+    } finally {
+      setConfirming(false);
+    }
+  }
+
   if (error) return <p className="error">{error}</p>;
   if (job === undefined) return <p>Loading…</p>;
   if (job === null) return <p>Job not found.</p>;
@@ -124,6 +141,14 @@ export default function JobDetailPage() {
             <>
               <div className="kv"><span>Payment</span><span><StatusBadge label={payment.status} /> · {payment.method}</span></div>
               <div className="kv"><span>Amount</span><span>{formatPaise(payment.amount)}</span></div>
+              {(payment.status === "pending" || payment.status === "processing") &&
+                (payment.method === "razorpay_payment_link" ? (
+                  <p style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Awaiting online payment confirmation from the payment provider.</p>
+                ) : (
+                  <button onClick={() => void handleConfirmCashPayment()} disabled={confirming} style={{ marginTop: 8 }}>
+                    {confirming ? "Confirming…" : "Confirm cash received"}
+                  </button>
+                ))}
             </>
           ) : (
             <p style={{ margin: "0 0 8px", color: "var(--color-text-muted)", fontSize: 13 }}>No payment initiated yet.</p>

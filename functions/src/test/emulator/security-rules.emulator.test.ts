@@ -1462,3 +1462,44 @@ describe("Admin console — cross-tenant list query isolation", () => {
     await assertSucceeds(superadmin.firestore().collection("bookings").doc("adm-booking-e").get());
   });
 });
+
+// ─── Studio console — customer/vehicle lookup job-history query (Phase 3I) ───
+// Exercises the exact tenantId+studioId+customerId (and +vehicleId) query
+// shape apps/studio/src/lib/lookup-service.ts uses.
+describe("Studio lookup — job history query shape", () => {
+  it("Studio can list a customer's jobs at their own studio", async () => {
+    await seedJob("lookup-job-a", "uid-lookup-cust", "studio-ahmedabad", FIRST_TENANT_ID);
+    const studio = testEnv.authenticatedContext("uid-studio-lookup", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertSucceeds(
+      studio
+        .firestore()
+        .collection("jobs")
+        .where("tenantId", "==", FIRST_TENANT_ID)
+        .where("studioId", "==", "studio-ahmedabad")
+        .where("customerId", "==", "uid-lookup-cust")
+        .get(),
+    );
+  });
+
+  it("Studio cannot run the lookup job-history query for a different tenant", async () => {
+    await seedJob("lookup-job-b", "uid-lookup-cust-b", "studio-b", "tenant-b");
+    const studio = testEnv.authenticatedContext("uid-studio-lookup-b", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio
+        .firestore()
+        .collection("jobs")
+        .where("tenantId", "==", "tenant-b")
+        .where("studioId", "==", "studio-b")
+        .where("customerId", "==", "uid-lookup-cust-b")
+        .get(),
+    );
+  });
+});

@@ -49,6 +49,7 @@ export type RateLimitAction =
   | "invoice.void"
   | "read.availability"
   | "read.catalogue"
+  | "read.calculatePrice"
   | "read.studioJobs"
   | "read.myMemberships"
   | "read.membershipPlans"
@@ -110,6 +111,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "invoice.void": { limit: 30, windowMs: 60_000 },
   "read.availability": { limit: 120, windowMs: 60_000 },
   "read.catalogue": { limit: 120, windowMs: 60_000 },
+  "read.calculatePrice": { limit: 120, windowMs: 60_000 },
   "read.studioJobs": { limit: 120, windowMs: 60_000 },
   "read.myMemberships": { limit: 120, windowMs: 60_000 },
   "read.membershipPlans": { limit: 120, windowMs: 60_000 },

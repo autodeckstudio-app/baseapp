@@ -74,7 +74,13 @@ export const getServiceCatalogueSchema = z.object({
   category: serviceCategoryEnum.optional(),
 });
 
+export const calculatePriceSchema = z.object({
+  serviceId: z.string().min(1),
+  vehicleCategory: vehicleCategoryEnum,
+});
+
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;
 export type SetServiceActiveInput = z.infer<typeof setServiceActiveSchema>;
 export type GetServiceCatalogueInput = z.infer<typeof getServiceCatalogueSchema>;
+export type CalculatePriceInput = z.infer<typeof calculatePriceSchema>;

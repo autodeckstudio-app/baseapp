@@ -12,6 +12,7 @@ export { archiveVehicle } from "./functions/vehicle/archiveVehicle.js";
 
 // ─── Service Catalogue ───────────────────────────────────────────────────────
 export { getServiceCatalogue } from "./functions/service/getServiceCatalogue.js";
+export { calculateServicePrice } from "./functions/service/calculatePrice.js";
 export { createService } from "./functions/service/createService.js";
 export { updateService } from "./functions/service/updateService.js";
 export { setServiceActive } from "./functions/service/setServiceActive.js";
