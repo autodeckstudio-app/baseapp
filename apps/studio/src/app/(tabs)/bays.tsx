@@ -50,9 +50,9 @@ export default function BayBoardScreen() {
   }, [studioId]);
 
   useEffect(() => {
-    if (!studioId) return undefined;
-    return listenToJobsByDate(studioId, todayIST(), setJobs, () => undefined);
-  }, [studioId]);
+    if (auth.status !== "ready" || !studioId) return undefined;
+    return listenToJobsByDate(auth.claims.tenantId, studioId, todayIST(), setJobs, () => undefined);
+  }, [auth.status, studioId]);
 
   useEffect(() => {
     if (auth.status !== "ready" || !studioId) return undefined;

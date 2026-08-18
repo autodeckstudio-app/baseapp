@@ -16,10 +16,12 @@ export default function TodaysJobsScreen() {
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
   const studioId = authState.status === "ready" ? authState.claims.studioId : null;
+  const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
 
   useEffect(() => {
-    if (!studioId) return undefined;
+    if (!studioId || !tenantId) return undefined;
     const unsub = listenToJobsByDate(
+      tenantId,
       studioId,
       todayIST(),
       (data) => {
@@ -32,7 +34,7 @@ export default function TodaysJobsScreen() {
       },
     );
     return unsub;
-  }, [studioId]);
+  }, [studioId, tenantId]);
 
   if (loading) return <LoadingState />;
 

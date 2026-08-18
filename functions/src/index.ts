@@ -34,6 +34,7 @@ export { assignBay } from "./functions/job/assignBay.js";
 export { initiatePayment } from "./functions/payment/initiatePayment.js";
 export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
 export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
+export { confirmManualPayment } from "./functions/payment/confirmManualPayment.js";
 export { getPaymentStatus } from "./functions/payment/getPaymentStatus.js";
 export { initiateRefund } from "./functions/payment/initiateRefund.js";
 

@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getAuth } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { useAuth } from "../../../hooks/useAuth";
 import { getAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { FIRST_STUDIO_ID, FIRST_TENANT_ID } from "@autodeck/core";
+// V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
+// is the correct, intentional value here, unlike tenantId which must always
+// come from the authenticated user's own claims (see Phase 3G HANDOFF).
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { colors, spacing, radius, typography, LoadingState, EmptyState } from "@autodeck/ui";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
@@ -22,7 +25,7 @@ const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
 export default function BookServiceScreen() {
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
   const router = useRouter();
-  const auth = getAuth();
+  const auth = useAuth();
 
   const [service, setService] = useState<Service | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -33,18 +36,16 @@ export default function BookServiceScreen() {
   const [slotsLoading, setSlotsLoading] = useState(false);
 
   useEffect(() => {
-    if (!serviceId) return;
+    if (!serviceId || auth.status !== "ready") return;
     void (async () => {
       try {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
         const [serviceSnap, vehiclesSnap] = await Promise.all([
           getDoc(doc(db, COLLECTIONS.services(), serviceId)),
           getDocs(
             query(
               collection(db, COLLECTIONS.vehicles()),
-              where("ownerId", "==", uid),
-              where("tenantId", "==", FIRST_TENANT_ID),
+              where("ownerId", "==", auth.user.uid),
+              where("tenantId", "==", auth.claims.tenantId),
               where("deletedAt", "==", null),
             ),
           ),
@@ -62,7 +63,7 @@ export default function BookServiceScreen() {
         setLoading(false);
       }
     })();
-  }, [serviceId]);
+  }, [serviceId, auth.status]);
 
   useEffect(() => {
     if (!serviceId || !service) return;

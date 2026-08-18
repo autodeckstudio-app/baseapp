@@ -39,6 +39,16 @@ describe("Rate limiting middleware — direct unit-style coverage", () => {
     ).rejects.toMatchObject({ code: "resource-exhausted" });
   });
 
+  it("payment.confirmManual (Phase 3G) is rate limited at its configured threshold (60/60s)", async () => {
+    const u = uid("rl-confirm-manual");
+    for (let i = 0; i < 60; i++) {
+      await enforceRateLimit({ uid: u, tenantId: "t1", role: "studio" }, "payment.confirmManual");
+    }
+    await expect(
+      enforceRateLimit({ uid: u, tenantId: "t1", role: "studio" }, "payment.confirmManual"),
+    ).rejects.toMatchObject({ code: "resource-exhausted" });
+  });
+
   it("resets after the window elapses (expired windows are overwritten, not deleted)", async () => {
     const u = uid("rl-reset");
     const key = `t1__${u}__membership.purchase`;

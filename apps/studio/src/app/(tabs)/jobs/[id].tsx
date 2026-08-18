@@ -6,7 +6,7 @@ import { db } from "../../../lib/firebase";
 import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studio-service";
 import {
   recordManualPayment,
-  confirmPaymentMock,
+  confirmManualPayment,
   listenToPaymentForJob,
   listenToInvoiceForJob,
 } from "../../../lib/payment-service";
@@ -215,16 +215,24 @@ export default function JobDetailScreen() {
     ]);
   }
 
-  async function handleConfirmPayment(result: "success" | "failure") {
+  function handleConfirmCashPayment() {
     if (!payment) return;
-    setPaymentActionLoading(true);
-    try {
-      await confirmPaymentMock(payment.id, result);
-    } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to update payment.");
-    } finally {
-      setPaymentActionLoading(false);
-    }
+    Alert.alert("Confirm cash received?", "Marks this payment complete and issues the invoice.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Confirm",
+        onPress: async () => {
+          setPaymentActionLoading(true);
+          try {
+            await confirmManualPayment(payment.id);
+          } catch (err) {
+            Alert.alert("Error", err instanceof Error ? err.message : "Failed to confirm payment.");
+          } finally {
+            setPaymentActionLoading(false);
+          }
+        },
+      },
+    ]);
   }
 
   async function handleAdvance() {
@@ -330,21 +338,21 @@ export default function JobDetailScreen() {
             style={{ marginTop: spacing.xs }}
           />
         )}
-        {payment && (payment.status === "pending" || payment.status === "processing") && (
-          <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs }}>
-            <View style={{ flex: 1 }}>
-              <Button label="Confirm received" onPress={() => void handleConfirmPayment("success")} loading={paymentActionLoading} size="md" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button
-                label="Mark failed"
-                onPress={() => void handleConfirmPayment("failure")}
-                loading={paymentActionLoading}
-                size="md"
-                variant="destructive"
-              />
-            </View>
-          </View>
+        {payment &&
+          (payment.status === "pending" || payment.status === "processing") &&
+          payment.method !== "razorpay_payment_link" && (
+            <Button
+              label="Confirm cash received"
+              onPress={handleConfirmCashPayment}
+              loading={paymentActionLoading}
+              size="md"
+              style={{ marginTop: spacing.xs }}
+            />
+          )}
+        {payment && payment.status === "pending" && payment.method === "razorpay_payment_link" && (
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+            Awaiting online payment confirmation from the payment provider.
+          </Text>
         )}
       </Section>
 

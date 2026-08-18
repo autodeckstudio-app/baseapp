@@ -11,21 +11,23 @@ type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
 // person, keyed by jobId so it works identically for a booking-sourced job
 // or a walk-in job. Completes the payment and issues the invoice immediately
 // (no customer action involved — a customer can never mark their own
-// payment successful; only this function or confirmPaymentMock can).
+// payment successful; only this function or confirmManualPayment can).
 export async function recordManualPayment(input: RecordManualPaymentInput): Promise<RecordManualPaymentOutput> {
   const fn = httpsCallable<RecordManualPaymentInput, RecordManualPaymentOutput>(functions, "recordManualPayment");
   const result = await fn(input);
   return result.data;
 }
 
-type ConfirmPaymentMockInput = { paymentId: string; mockResult: "success" | "failure" };
-type ConfirmPaymentMockOutput = { paymentId: string; result: string; idempotent: boolean };
+type ConfirmManualPaymentInput = { paymentId: string };
+type ConfirmManualPaymentOutput = { paymentId: string; invoiceId: string | null; alreadyCompleted: boolean };
 
-// DEV/EMULATOR ONLY — confirms a customer-initiated pending payment, simulating
-// the Razorpay webhook. Studio/admin role required (enforced server-side).
-export async function confirmPaymentMock(paymentId: string, mockResult: "success" | "failure"): Promise<ConfirmPaymentMockOutput> {
-  const fn = httpsCallable<ConfirmPaymentMockInput, ConfirmPaymentMockOutput>(functions, "confirmPaymentMock");
-  const result = await fn({ paymentId, mockResult });
+// Studio/admin only — confirms an EXISTING pending cash/manual payment the
+// customer already initiated from the app (production path). Online
+// (razorpay_payment_link) payments are rejected server-side — those complete
+// only via the payment provider, never manually.
+export async function confirmManualPayment(paymentId: string): Promise<ConfirmManualPaymentOutput> {
+  const fn = httpsCallable<ConfirmManualPaymentInput, ConfirmManualPaymentOutput>(functions, "confirmManualPayment");
+  const result = await fn({ paymentId });
   return result.data;
 }
 

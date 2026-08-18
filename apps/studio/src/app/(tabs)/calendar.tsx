@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { listenToJobsByDate } from "../../lib/studio-service";
+import { useAuth } from "../../hooks/useAuth";
 import type { ServiceJob } from "@autodeck/core";
+// V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
+// is the correct, intentional value here, unlike tenantId which must always
+// come from the authenticated user's own claims (see Phase 3G HANDOFF).
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { colors, spacing, radius, typography, statusTone, StatusBadge, EmptyState, LoadingState, formatTime } from "@autodeck/ui";
 
@@ -26,6 +30,7 @@ function formatDisplayDate(dateStr: string): string {
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const auth = useAuth();
   const [selectedDate, setSelectedDate] = useState(todayIST());
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,8 +39,10 @@ export default function CalendarScreen() {
   const dateDays = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
   useEffect(() => {
+    if (auth.status !== "ready") return undefined;
     setLoading(true);
     const unsub = listenToJobsByDate(
+      auth.claims.tenantId,
       FIRST_STUDIO_ID,
       selectedDate,
       (data) => {
@@ -48,7 +55,7 @@ export default function CalendarScreen() {
       },
     );
     return unsub;
-  }, [selectedDate]);
+  }, [selectedDate, auth.status]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

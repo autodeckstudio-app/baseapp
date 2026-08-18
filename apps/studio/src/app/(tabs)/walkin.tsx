@@ -89,9 +89,9 @@ export default function WalkinScreen() {
   }, [studioId]);
 
   useEffect(() => {
-    if (!studioId) return undefined;
-    return listenToJobsByDate(studioId, todayIST(), setJobs, () => undefined);
-  }, [studioId]);
+    if (auth.status !== "ready" || !studioId) return undefined;
+    return listenToJobsByDate(auth.claims.tenantId, studioId, todayIST(), setJobs, () => undefined);
+  }, [auth.status, studioId]);
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) ?? null;

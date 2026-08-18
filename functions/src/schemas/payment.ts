@@ -21,6 +21,10 @@ export const recordManualPaymentSchema = z.object({
   manualReference: z.string().optional(),
 });
 
+export const confirmManualPaymentSchema = z.object({
+  paymentId: z.string().min(1),
+});
+
 export const getPaymentStatusSchema = z.object({
   jobId: z.string().min(1),
 });
