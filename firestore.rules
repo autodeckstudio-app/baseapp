@@ -267,6 +267,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ─── /rateLimits/{key} ──────────────────────────────────────────────────
+    // Server-only abuse counters (Phase 3D) — key is server-derived
+    // (tenantId__uid__action), never client-supplied. No client access,
+    // not even read, so callers cannot time bursts against their own counter.
+    match /rateLimits/{key} {
+      allow read, write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { assertTenant } from "../../middleware/auth.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getServiceCatalogueSchema } from "../../schemas/service.js";
 
 export const getServiceCatalogue = onCall({ region: "asia-south1" }, async (request) => {
@@ -13,6 +14,7 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" }, async (requ
   assertTenant(user, user.claims.tenantId);
 
   const data = validate(getServiceCatalogueSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "read.catalogue");
 
   const db = getFirestore();
   let query = db

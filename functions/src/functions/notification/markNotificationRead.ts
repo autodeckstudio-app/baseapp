@@ -9,6 +9,7 @@ import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { markNotificationReadSchema } from "../../schemas/notification.js";
 
 export const markNotificationRead = onCall({ region: "asia-south1" }, async (request) => {
@@ -16,6 +17,7 @@ export const markNotificationRead = onCall({ region: "asia-south1" }, async (req
   assertRole(user, "customer");
 
   const data = validate(markNotificationReadSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "notification.markRead");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.notifications()).doc(data.notificationId);

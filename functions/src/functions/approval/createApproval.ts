@@ -9,6 +9,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createApprovalSchema } from "../../schemas/approval.js";
 import { buildApproval } from "../../lib/approval-builder.js";
 
@@ -17,6 +18,7 @@ export const createApproval = onCall({ region: "asia-south1" }, async (request) 
   assertRole(user, "studio", "admin", "superadmin");
 
   const data = validate(createApprovalSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "approval.create");
   const quantity = data.quantity ?? 1;
 
   const db = getFirestore();

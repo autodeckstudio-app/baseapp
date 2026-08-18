@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { addHolidaySchema } from "../../schemas/studio.js";
 
 export const addHoliday = onCall({ region: "asia-south1" }, async (request) => {
@@ -12,6 +13,7 @@ export const addHoliday = onCall({ region: "asia-south1" }, async (request) => {
   assertRole(user, "admin", "superadmin");
 
   const data = validate(addHolidaySchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "studio.addHoliday");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.studioConfig()).doc(data.studioId);

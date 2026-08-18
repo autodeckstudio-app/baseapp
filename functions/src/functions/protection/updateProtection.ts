@@ -10,6 +10,7 @@ import { SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateProtectionSchema } from "../../schemas/protection.js";
 
 export const updateProtection = onCall({ region: "asia-south1" }, async (request) => {
@@ -17,6 +18,7 @@ export const updateProtection = onCall({ region: "asia-south1" }, async (request
   assertRole(user, "admin", "superadmin");
 
   const data = validate(updateProtectionSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "protection.update");
 
   const db = getFirestore();
   const ref = db.collection(SUBCOLLECTIONS.vehicleProtections(data.vehicleId)).doc(data.protectionId);

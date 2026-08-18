@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createServiceSchema } from "../../schemas/service.js";
 import { assertValidMinorUnits } from "../../lib/pricing.js";
 
@@ -14,6 +15,7 @@ export const createService = onCall({ region: "asia-south1" }, async (request) =
   assertTenant(user, user.claims.tenantId);
 
   const data = validate(createServiceSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "service.create");
   assertValidMinorUnits(data.basePrice, "basePrice");
   const vehicleCategoryPricing = data.vehicleCategoryPricing ?? [];
   for (const rule of vehicleCategoryPricing) {

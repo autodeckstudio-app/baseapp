@@ -7,6 +7,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractRawAuth } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit } from "../../middleware/rateLimit.js";
 import { setupCustomerProfileSchema } from "../../schemas/customer.js";
 
 /**
@@ -27,6 +28,7 @@ export const setupCustomerProfile = onCall(
   async (request) => {
     const rawAuth = extractRawAuth(request);
     const data = validate(setupCustomerProfileSchema, request.data);
+    await enforceRateLimit({ uid: rawAuth.uid, tenantId: null, role: null }, "auth.setupProfile");
 
     const { uid, phone } = rawAuth;
     const tenantId = FIRST_TENANT_ID; // Server-determined — not client-settable

@@ -4,6 +4,7 @@ import type { Service, StudioConfig, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getAvailabilitySchema } from "../../schemas/booking.js";
 import {
   computeAvailability,
@@ -17,6 +18,7 @@ const MAX_RETURNED_SLOTS = 60;
 export const getAvailability = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(getAvailabilitySchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "read.availability");
 
   const db = getFirestore();
   const lookAheadDays = data.lookAheadDays ?? 14;

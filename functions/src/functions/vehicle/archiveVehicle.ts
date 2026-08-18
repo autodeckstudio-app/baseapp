@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { archiveVehicleSchema } from "../../schemas/vehicle.js";
 
 export const archiveVehicle = onCall({ region: "asia-south1" }, async (request) => {
@@ -12,6 +13,7 @@ export const archiveVehicle = onCall({ region: "asia-south1" }, async (request) 
   assertRole(user, "customer", "studio", "admin", "superadmin");
 
   const data = validate(archiveVehicleSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "vehicle.archive");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);

@@ -12,6 +12,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { recordManualPaymentSchema } from "../../schemas/payment.js";
 import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
 import { buildInvoice } from "../../lib/invoice-builder.js";
@@ -24,6 +25,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   }
 
   const data = validate(recordManualPaymentSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "payment.recordManual");
 
   const db = getFirestore();
   const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(data.jobId).get();

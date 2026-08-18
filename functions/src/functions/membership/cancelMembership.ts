@@ -7,6 +7,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelMembershipSchema } from "../../schemas/membership.js";
 
 export const cancelMembership = onCall({ region: "asia-south1" }, async (request) => {
@@ -14,6 +15,7 @@ export const cancelMembership = onCall({ region: "asia-south1" }, async (request
   assertRole(user, "admin", "superadmin");
 
   const data = validate(cancelMembershipSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "membership.cancel");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.memberships()).doc(data.membershipId);

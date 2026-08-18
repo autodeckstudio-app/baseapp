@@ -4,11 +4,13 @@ import type { Membership, MembershipUsage } from "@autodeck/core";
 import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getMembershipUsageSchema } from "../../schemas/membership.js";
 
 export const getMembershipUsage = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(getMembershipUsageSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "read.membershipUsage");
 
   const db = getFirestore();
   const membershipSnap = await db.collection(COLLECTIONS.memberships()).doc(data.membershipId).get();

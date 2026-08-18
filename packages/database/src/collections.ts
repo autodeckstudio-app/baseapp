@@ -29,6 +29,8 @@ export const COLLECTIONS = {
   invoiceCounters: () => "invoiceCounters",
   // paymentEvents/{providerEventId} — idempotency guard for webhook/event deduplication
   paymentEvents: () => "paymentEvents",
+  // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
+  rateLimits: () => "rateLimits",
 } as const;
 
 // Subcollection paths

@@ -8,11 +8,13 @@ import type { Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getMyMembershipsSchema } from "../../schemas/membership.js";
 
 export const getMyMemberships = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(getMyMembershipsSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "read.myMemberships");
 
   const isStudioOrAdmin = ["studio", "admin", "superadmin"].includes(user.claims.role);
   const customerId = isStudioOrAdmin ? (data.customerId ?? user.uid) : user.uid;

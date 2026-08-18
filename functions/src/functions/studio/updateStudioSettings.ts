@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateStudioSettingsSchema } from "../../schemas/studio.js";
 
 // Admin-only. Updates name/timezone/operatingHours/tax settings for an existing
@@ -15,6 +16,7 @@ export const updateStudioSettings = onCall({ region: "asia-south1" }, async (req
   assertRole(user, "admin", "superadmin");
 
   const data = validate(updateStudioSettingsSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "studio.updateSettings");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.studioConfig()).doc(data.studioId);

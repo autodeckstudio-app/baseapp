@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { advanceJobStatusSchema } from "../../schemas/job.js";
 import { buildWarranty } from "../../lib/warranty-builder.js";
 
@@ -13,6 +14,7 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(advanceJobStatusSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "job.advanceStatus");
 
   const db = getFirestore();
   const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(data.jobId).get();

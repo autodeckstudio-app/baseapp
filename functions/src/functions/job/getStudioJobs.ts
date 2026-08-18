@@ -4,6 +4,7 @@ import type { ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getStudioJobsSchema } from "../../schemas/job.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
 
@@ -11,6 +12,7 @@ export const getStudioJobs = onCall({ region: "asia-south1" }, async (request) =
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getStudioJobsSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "read.studioJobs");
 
   const db = getFirestore();
 

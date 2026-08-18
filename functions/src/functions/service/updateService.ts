@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateServiceSchema } from "../../schemas/service.js";
 import { assertValidMinorUnits } from "../../lib/pricing.js";
 
@@ -13,6 +14,7 @@ export const updateService = onCall({ region: "asia-south1" }, async (request) =
   assertRole(user, "admin", "superadmin");
 
   const data = validate(updateServiceSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "service.update");
   if (data.basePrice !== undefined) assertValidMinorUnits(data.basePrice, "basePrice");
   if (data.vehicleCategoryPricing !== undefined) {
     for (const rule of data.vehicleCategoryPricing) {

@@ -11,6 +11,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { respondToApprovalSchema } from "../../schemas/approval.js";
 
 export const respondToApproval = onCall({ region: "asia-south1" }, async (request) => {
@@ -18,6 +19,7 @@ export const respondToApproval = onCall({ region: "asia-south1" }, async (reques
   assertRole(user, "customer");
 
   const data = validate(respondToApprovalSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "approval.respond");
   const db = getFirestore();
   const approvalRef = db.collection(COLLECTIONS.approvals()).doc(data.approvalId);
 

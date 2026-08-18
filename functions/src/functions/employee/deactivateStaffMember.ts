@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deactivateStaffMemberSchema } from "../../schemas/employee.js";
 
 // Admin-only. Soft-deletes a staff member: disables the Firebase Auth account,
@@ -16,6 +17,7 @@ export const deactivateStaffMember = onCall({ region: "asia-south1" }, async (re
   assertRole(user, "admin", "superadmin");
 
   const data = validate(deactivateStaffMemberSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "employee.deactivate");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.employees()).doc(data.employeeId);

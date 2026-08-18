@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createWalkinJobSchema } from "../../schemas/job.js";
 import {
   buildOccupiedInterval,
@@ -19,6 +20,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(createWalkinJobSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "job.walkinCreate");
 
   const db = getFirestore();
   const now = new Date();

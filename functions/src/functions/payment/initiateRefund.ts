@@ -8,6 +8,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiateRefundSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
@@ -19,6 +20,7 @@ export const initiateRefund = onCall({ region: "asia-south1" }, async (request) 
   }
 
   const data = validate(initiateRefundSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "payment.refund");
 
   const db = getFirestore();
   const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(data.paymentId).get();

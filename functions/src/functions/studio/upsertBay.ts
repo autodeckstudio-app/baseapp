@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { upsertBaySchema } from "../../schemas/studio.js";
 
 // Admin-only. Creates a new bay (resource) or updates an existing one.
@@ -16,6 +17,7 @@ export const upsertBay = onCall({ region: "asia-south1" }, async (request) => {
   assertRole(user, "admin", "superadmin");
 
   const data = validate(upsertBaySchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "studio.upsertBay");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.studioConfig()).doc(data.studioId);

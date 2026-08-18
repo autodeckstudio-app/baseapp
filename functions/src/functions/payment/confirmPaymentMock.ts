@@ -12,6 +12,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmPaymentMockSchema } from "../../schemas/payment.js";
 import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
 import { buildInvoice } from "../../lib/invoice-builder.js";
@@ -33,6 +34,7 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
   }
 
   const data = validate(confirmPaymentMockSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "payment.confirmMock");
 
   const db = getFirestore();
   const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(data.paymentId).get();

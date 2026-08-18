@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiatePaymentSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
@@ -14,6 +15,7 @@ import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 export const initiatePayment = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(initiatePaymentSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "payment.initiate");
 
   const db = getFirestore();
   const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(data.jobId).get();

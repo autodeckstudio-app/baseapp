@@ -17,6 +17,7 @@ import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createBookingSchema } from "../../schemas/booking.js";
 import { calculatePrice, applyMembershipBenefit } from "../../lib/pricing.js";
 import {
@@ -29,6 +30,7 @@ import { localToUTC, utcToLocalDate, utcToLocalTime } from "../../lib/schedule.j
 export const createBooking = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(createBookingSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "booking.create");
 
   const db = getFirestore();
   const now = new Date();

@@ -13,12 +13,14 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { purchaseMembershipSchema } from "../../schemas/membership.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 
 export const purchaseMembership = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
 
   const data = validate(purchaseMembershipSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "membership.purchase");
 
   const db = getFirestore();
 

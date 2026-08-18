@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { addStaffMemberSchema } from "../../schemas/employee.js";
 
 // Admin-only. Provisions a new staff account: creates the Firebase Auth user,
@@ -21,6 +22,7 @@ export const addStaffMember = onCall({ region: "asia-south1" }, async (request) 
   assertRole(user, "admin", "superadmin");
 
   const data = validate(addStaffMemberSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "employee.add");
 
   if (data.role === "admin" && data.studioId !== null) {
     throw new HttpsError(

@@ -8,6 +8,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { voidInvoiceSchema } from "../../schemas/invoice.js";
 
 export const voidInvoice = onCall({ region: "asia-south1" }, async (request) => {
@@ -18,6 +19,7 @@ export const voidInvoice = onCall({ region: "asia-south1" }, async (request) => 
   }
 
   const data = validate(voidInvoiceSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "invoice.void");
 
   const db = getFirestore();
   const invoiceSnap = await db.collection(COLLECTIONS.invoices()).doc(data.invoiceId).get();

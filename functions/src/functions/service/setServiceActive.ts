@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { setServiceActiveSchema } from "../../schemas/service.js";
 
 export const setServiceActive = onCall({ region: "asia-south1" }, async (request) => {
@@ -12,6 +13,7 @@ export const setServiceActive = onCall({ region: "asia-south1" }, async (request
   assertRole(user, "admin", "superadmin");
 
   const data = validate(setServiceActiveSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "service.setActive");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.services()).doc(data.serviceId);

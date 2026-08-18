@@ -10,6 +10,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { rescheduleBookingSchema } from "../../schemas/booking.js";
 import { buildOccupiedInterval, hasConflict, type OccupiedInterval } from "../../lib/availability.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime } from "../../lib/schedule.js";
@@ -17,6 +18,7 @@ import { localToUTC, utcToLocalDate, utcToLocalTime } from "../../lib/schedule.j
 export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   const data = validate(rescheduleBookingSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "booking.reschedule");
 
   const db = getFirestore();
   const isCustomer = user.claims.role === "customer";

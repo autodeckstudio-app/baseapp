@@ -5,6 +5,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createMembershipPlanSchema } from "../../schemas/membership.js";
 import { assertValidMinorUnits } from "../../lib/pricing.js";
 
@@ -13,6 +14,7 @@ export const createMembershipPlan = onCall({ region: "asia-south1" }, async (req
   assertRole(user, "admin", "superadmin");
 
   const data = validate(createMembershipPlanSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "membership.planCreate");
   assertValidMinorUnits(data.priceInPaise, "priceInPaise");
 
   const db = getFirestore();
