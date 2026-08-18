@@ -80,7 +80,12 @@ async function seedStudio(studioId: string, tenantId: string) {
   await db.collection("studioConfig").doc(studioId).set(studioConfig);
 }
 
-async function seedService(serviceId: string, tenantId: string, warrantyLabel: string | null) {
+async function seedService(
+  serviceId: string,
+  tenantId: string,
+  warrantyLabel: string | null,
+  duration?: { value: number; unit: "days" | "months" | "years" | "lifetime" },
+) {
   const now = new Date().toISOString();
   const service: Service = {
     id: serviceId,
@@ -93,6 +98,8 @@ async function seedService(serviceId: string, tenantId: string, warrantyLabel: s
     currency: "INR",
     estimatedDurationMinutes: 60,
     warrantyLabel,
+    warrantyDurationValue: duration?.value ?? null,
+    warrantyDurationUnit: duration?.unit ?? null,
     vehicleCategoryPricing: [],
     requiredBayType: "protection",
     membershipWashEligible: false,
@@ -202,7 +209,7 @@ describe("Garage / Vehicle Ownership system", () => {
     expect(warrantySnap.exists).toBe(false);
   });
 
-  it("duplicate/retry: forcing a second DELIVERED transition never creates a second Warranty", async () => {
+  it("7. duplicate/retry: forcing a second DELIVERED transition never creates a second Warranty", async () => {
     const cust = uid("cust-retry");
     const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
     const booking = await bookOnce(cust, vehicle.id, ppfService);
@@ -223,9 +230,12 @@ describe("Garage / Vehicle Ownership system", () => {
     expect(allWarranties.docs[0]?.data().sealedAt).toBe((firstSnap.data() as Warranty).sealedAt);
   });
 
-  it("historical warranty survives a later catalogue change", async () => {
+  it("6. historical warranty (label AND duration) survives a later catalogue change", async () => {
     const cust = uid("cust-catalogue");
-    const serviceForThis = await seedService(uid("service-hist"), TENANT_A, "3-Year Ceramic Warranty");
+    const serviceForThis = await seedService(uid("service-hist"), TENANT_A, "3-Year Ceramic Warranty", {
+      value: 3,
+      unit: "years",
+    });
     const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
     const booking = await bookOnce(cust, vehicle.id, serviceForThis);
     const jobDoc = await jobForBooking(booking.id);
@@ -233,15 +243,48 @@ describe("Garage / Vehicle Ownership system", () => {
     await deliverJob(jobDoc.id, studioUid);
     const warrantyBefore = (await db.collection("warranties").doc(jobDoc.id).get()).data() as Warranty;
     expect(warrantyBefore.warrantyLabel).toBe("3-Year Ceramic Warranty");
+    const expectedEndDate = warrantyBefore.endDate;
+    expect(expectedEndDate).not.toBeNull();
 
     await updateService.run({
-      data: { serviceId: serviceForThis.id, warrantyLabel: "Rewritten Warranty Terms" },
+      data: {
+        serviceId: serviceForThis.id,
+        warrantyLabel: "Rewritten Warranty Terms",
+        warrantyDurationValue: 10,
+        warrantyDurationUnit: "years",
+      },
       auth: adminAuth(adminUid),
     } as never);
 
     const warrantyAfter = (await db.collection("warranties").doc(jobDoc.id).get()).data() as Warranty;
     expect(warrantyAfter.warrantyLabel).toBe("3-Year Ceramic Warranty");
     expect(warrantyAfter.warrantyLabel).not.toBe("Rewritten Warranty Terms");
+    expect(warrantyAfter.endDate).toBe(expectedEndDate);
+  });
+
+  it("8. a warranty issued before this fix (endDate null, unconfigured service) remains unchanged by an unrelated catalogue edit", async () => {
+    const cust = uid("cust-preexisting");
+    // Service left unconfigured on purpose — simulates a warranty issued
+    // under the pre-2D.1 model (endDate always null).
+    const serviceForThis = await seedService(uid("service-legacy"), TENANT_A, "Legacy Warranty Label");
+    const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
+    const booking = await bookOnce(cust, vehicle.id, serviceForThis);
+    const jobDoc = await jobForBooking(booking.id);
+
+    await deliverJob(jobDoc.id, studioUid);
+    const before = (await db.collection("warranties").doc(jobDoc.id).get()).data() as Warranty;
+    expect(before.endDate).toBeNull();
+
+    // An unrelated field edit on the same service must not retroactively
+    // compute or backfill an endDate on the already-issued warranty.
+    await updateService.run({
+      data: { serviceId: serviceForThis.id, description: "Updated description only" },
+      auth: adminAuth(adminUid),
+    } as never);
+
+    const after = (await db.collection("warranties").doc(jobDoc.id).get()).data() as Warranty;
+    expect(after.endDate).toBeNull();
+    expect(after.warrantyLabel).toBe("Legacy Warranty Label");
   });
 
   it("live protection verification: admin creates then verifies a protection", async () => {

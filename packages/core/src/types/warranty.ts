@@ -11,13 +11,12 @@ export interface Warranty {
   warrantyLabel: string; // SNAPSHOT — e.g. "5-Year PPF Film Warranty"
   coverageTerms: string; // SNAPSHOT — plain-text warranty terms, sealed at job completion
   startDate: string; // ISO date — job completion date
-  // Phase 2D decision: nullable. doc06's structured warrantyTemplate
-  // ({period, unit, description}) was never implemented — the actual Service
-  // catalogue only carries a free-text `warrantyLabel` with no machine-
-  // readable duration, so a numeric expiry cannot be honestly computed.
-  // null here means "see warrantyLabel/coverageTerms for the stated term" —
-  // not an invented computation. Revisit once Service gains a structured
-  // duration field.
+  // Phase 2D.1: computed once at issuance from Service.warrantyDurationValue
+  // /warrantyDurationUnit (see warranty-builder.ts). null means the service
+  // had no configured duration at seal time, OR unit was 'lifetime' — both
+  // are legitimate, never guessed. Warranties issued before Phase 2D.1 keep
+  // whatever endDate they were given (null, for all of them) — never
+  // backfilled.
   endDate: string | null; // ISO date
   installerEmployeeId: string | null;
   productBatchNumber: string | null;

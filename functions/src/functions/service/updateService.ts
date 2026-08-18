@@ -39,6 +39,8 @@ export const updateService = onCall({ region: "asia-south1" }, async (request) =
     if (data.currency !== undefined) updates["currency"] = data.currency;
     if (data.estimatedDurationMinutes !== undefined) updates["estimatedDurationMinutes"] = data.estimatedDurationMinutes;
     if (data.warrantyLabel !== undefined) updates["warrantyLabel"] = data.warrantyLabel;
+    if (data.warrantyDurationValue !== undefined) updates["warrantyDurationValue"] = data.warrantyDurationValue;
+    if (data.warrantyDurationUnit !== undefined) updates["warrantyDurationUnit"] = data.warrantyDurationUnit;
     if (data.vehicleCategoryPricing !== undefined) updates["vehicleCategoryPricing"] = data.vehicleCategoryPricing;
     if (data.requiredBayType !== undefined) updates["requiredBayType"] = data.requiredBayType;
     if (data.membershipWashEligible !== undefined) updates["membershipWashEligible"] = data.membershipWashEligible;

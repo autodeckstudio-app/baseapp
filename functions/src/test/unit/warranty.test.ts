@@ -55,6 +55,8 @@ const PPF_SERVICE: Service = {
   currency: "INR",
   estimatedDurationMinutes: 120,
   warrantyLabel: "5-Year PPF Film Warranty",
+  warrantyDurationValue: null,
+  warrantyDurationUnit: null,
   vehicleCategoryPricing: [],
   requiredBayType: "protection",
   membershipWashEligible: false,
@@ -97,10 +99,47 @@ describe("buildWarranty", () => {
     expect(walkinResult?.bookingId).toBeNull();
   });
 
-  it("derives startDate from sealedAt and leaves endDate null (no structured duration on Service)", () => {
+  it("derives startDate from sealedAt", () => {
     const result = buildWarranty({ job: BASE_JOB, service: PPF_SERVICE, sealedAt: "2026-01-03T10:00:00.000Z" });
     expect(result?.startDate).toBe("2026-01-03");
-    expect(result?.endDate).toBeNull();
+  });
+
+  describe("endDate computation from Service.warrantyDurationValue/Unit", () => {
+    it("1. days — adds the exact number of days", () => {
+      const service: Service = { ...PPF_SERVICE, warrantyDurationValue: 90, warrantyDurationUnit: "days" };
+      const result = buildWarranty({ job: BASE_JOB, service, sealedAt: "2026-01-03T10:00:00.000Z" });
+      expect(result?.endDate).toBe("2026-04-03");
+    });
+
+    it("2. months — adds calendar months (no fixed-day drift)", () => {
+      const service: Service = { ...PPF_SERVICE, warrantyDurationValue: 6, warrantyDurationUnit: "months" };
+      const result = buildWarranty({ job: BASE_JOB, service, sealedAt: "2026-01-03T10:00:00.000Z" });
+      expect(result?.endDate).toBe("2026-07-03");
+    });
+
+    it("3. years — adds calendar years, correctly spanning a leap year", () => {
+      const service: Service = { ...PPF_SERVICE, warrantyDurationValue: 5, warrantyDurationUnit: "years" };
+      const result = buildWarranty({ job: BASE_JOB, service, sealedAt: "2026-01-03T10:00:00.000Z" });
+      expect(result?.endDate).toBe("2031-01-03");
+    });
+
+    it("4. lifetime — always null, regardless of any configured value", () => {
+      const service: Service = { ...PPF_SERVICE, warrantyDurationValue: 99, warrantyDurationUnit: "lifetime" };
+      const result = buildWarranty({ job: BASE_JOB, service, sealedAt: "2026-01-03T10:00:00.000Z" });
+      expect(result?.endDate).toBeNull();
+    });
+
+    it("5. null/unconfigured — both fields null yields a null endDate, never guessed", () => {
+      const service: Service = { ...PPF_SERVICE, warrantyDurationValue: null, warrantyDurationUnit: null };
+      const result = buildWarranty({ job: BASE_JOB, service, sealedAt: "2026-01-03T10:00:00.000Z" });
+      expect(result?.endDate).toBeNull();
+    });
+
+    it("treats an inconsistent config (unit set, value null) as unconfigured rather than guessing", () => {
+      const service: Service = { ...PPF_SERVICE, warrantyDurationValue: null, warrantyDurationUnit: "years" };
+      const result = buildWarranty({ job: BASE_JOB, service, sealedAt: "2026-01-03T10:00:00.000Z" });
+      expect(result?.endDate).toBeNull();
+    });
   });
 
   it("leaves certificateUrl and qrVerificationToken null (no PDF service in this build)", () => {

@@ -7,6 +7,7 @@ export type {
   ServiceCategory,
   VehicleCategory,
   BayType,
+  WarrantyDurationUnit,
 } from "./service.js";
 export type { Booking, BookingStatus, PriceBreakdown } from "./booking.js";
 export type { ServiceJob, JobStatus, JobStatusHistoryEntry, ApprovalRequest } from "./job.js";

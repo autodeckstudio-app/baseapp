@@ -103,6 +103,8 @@ async function seedService(serviceId: string, tenantId: string) {
     currency: "INR",
     estimatedDurationMinutes: 30,
     warrantyLabel: null,
+    warrantyDurationValue: null,
+    warrantyDurationUnit: null,
     vehicleCategoryPricing: [],
     requiredBayType: "wash",
     membershipWashEligible: true,

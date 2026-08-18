@@ -20,6 +20,7 @@ const serviceCategoryEnum = z.enum([
 ]);
 
 const bayTypeEnum = z.enum(["wash", "protection", "general"]);
+const warrantyDurationUnitEnum = z.enum(["days", "months", "years", "lifetime"]);
 
 export const vehicleCategoryPricingSchema = z.object({
   vehicleCategory: vehicleCategoryEnum,
@@ -36,6 +37,10 @@ export const createServiceSchema = z.object({
   currency: z.string().length(3).optional(),
   estimatedDurationMinutes: z.number().int().min(1).max(1440),
   warrantyLabel: z.string().max(200).trim().nullable(),
+  // Optional: existing callers (e.g. the current admin catalogue form) don't
+  // send these yet — omitted means unconfigured (null), never guessed.
+  warrantyDurationValue: z.number().int().min(1).nullable().optional(),
+  warrantyDurationUnit: warrantyDurationUnitEnum.nullable().optional(),
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
@@ -52,6 +57,8 @@ export const updateServiceSchema = z.object({
   currency: z.string().length(3).optional(),
   estimatedDurationMinutes: z.number().int().min(1).max(1440).optional(),
   warrantyLabel: z.string().max(200).trim().nullable().optional(),
+  warrantyDurationValue: z.number().int().min(1).nullable().optional(),
+  warrantyDurationUnit: warrantyDurationUnitEnum.nullable().optional(),
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),

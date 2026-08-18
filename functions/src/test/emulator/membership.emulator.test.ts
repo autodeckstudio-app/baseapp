@@ -109,6 +109,8 @@ async function seedService(
     currency: "INR",
     estimatedDurationMinutes: 30,
     warrantyLabel: null,
+    warrantyDurationValue: null,
+    warrantyDurationUnit: null,
     vehicleCategoryPricing: [],
     requiredBayType: opts.requiredBayType,
     membershipWashEligible: opts.membershipWashEligible,

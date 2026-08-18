@@ -35,6 +35,8 @@ export const createService = onCall({ region: "asia-south1" }, async (request) =
     currency: data.currency ?? "INR",
     estimatedDurationMinutes: data.estimatedDurationMinutes,
     warrantyLabel: data.warrantyLabel,
+    warrantyDurationValue: data.warrantyDurationValue ?? null,
+    warrantyDurationUnit: data.warrantyDurationUnit ?? null,
     vehicleCategoryPricing,
     requiredBayType: data.requiredBayType ?? "general",
     membershipWashEligible: data.membershipWashEligible ?? false,
