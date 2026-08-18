@@ -25,10 +25,6 @@ export const confirmManualPaymentSchema = z.object({
   paymentId: z.string().min(1),
 });
 
-export const getPaymentStatusSchema = z.object({
-  jobId: z.string().min(1),
-});
-
 export const initiateRefundSchema = z.object({
   paymentId: z.string().min(1),
   reason: z.string().min(1).max(500),

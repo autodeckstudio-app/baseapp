@@ -43,14 +43,7 @@ export const rescheduleBookingSchema = z.object({
   idempotencyKey: z.string().min(1).max(128),
 });
 
-export const getMyBookingsSchema = z.object({
-  status: z
-    .enum(["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"])
-    .optional(),
-});
-
 export type GetAvailabilityInput = z.infer<typeof getAvailabilitySchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
 export type RescheduleBookingInput = z.infer<typeof rescheduleBookingSchema>;
-export type GetMyBookingsInput = z.infer<typeof getMyBookingsSchema>;

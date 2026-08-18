@@ -36,8 +36,11 @@ export const COLLECTIONS = {
 // Subcollection paths
 export const SUBCOLLECTIONS = {
   membershipUsage: (membershipId: string) => `memberships/${membershipId}/usage`,
+  // jobPhotos: deferred capability (Phase 3F/3H audit) — job.statusHistory[]
+  // is the embedded-array successor to the old jobStatusHistory subcollection
+  // design, which has been removed; jobPhotos has no superseding mechanism
+  // and is kept as the reserved path for that still-unbuilt capability.
   jobPhotos: (jobId: string) => `jobs/${jobId}/photos`,
-  jobStatusHistory: (jobId: string) => `jobs/${jobId}/statusHistory`,
   vehicleProtections: (vehicleId: string) => `vehicles/${vehicleId}/protections`,
 } as const;
 

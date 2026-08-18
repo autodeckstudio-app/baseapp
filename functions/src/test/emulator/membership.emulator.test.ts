@@ -276,6 +276,100 @@ describe("Membership system", () => {
     ).rejects.toThrow();
   });
 
+  it("17. lazy expiry (no scheduler run) — a stale-active membership past endDate still rejects a wash-credit booking (Phase 3H)", async () => {
+    const cust = uid("cust-lazy-wash");
+    await seedVehicle(uid("veh-lazy-wash"), TENANT_A, cust);
+    const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
+    const membership = await purchaseAndActivate(cust, planId, adminUid);
+
+    // Simulate time passing WITHOUT ever running expireStaleMemberships —
+    // there is no scheduler in production, so this is the realistic state:
+    // status is still "active" in storage, only endDate is stale.
+    await db.collection("memberships").doc(membership.id).update({ endDate: "2020-01-01" });
+    const staleSnap = await db.collection("memberships").doc(membership.id).get();
+    expect((staleSnap.data() as Membership).status).toBe("active"); // still stale-active in storage
+
+    await expect(
+      createBooking.run({
+        data: {
+          serviceId: washService.id,
+          vehicleId: veh.id,
+          vehicleCategory: "hatchback",
+          studioId: STUDIO_ID,
+          scheduledDate: nextDate(),
+          scheduledTime: "10:00",
+          idempotencyKey: uid("idem"),
+          membershipId: membership.id,
+        },
+        auth: customerAuth(cust),
+      } as never),
+    ).rejects.toThrow(/expired/i);
+  });
+
+  it("18. lazy expiry (no scheduler run) — a stale-active membership past endDate still rejects a discount booking (Phase 3H)", async () => {
+    const cust = uid("cust-lazy-discount");
+    await seedVehicle(uid("veh-lazy-discount"), TENANT_A, cust);
+    const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
+    const membership = await purchaseAndActivate(cust, planId, adminUid);
+    await db.collection("memberships").doc(membership.id).update({ endDate: "2020-01-01" });
+
+    // ppfService is not membershipWashEligible — this exercises the
+    // percent-discount path, not the wash-credit path, proving BOTH benefit
+    // types are blocked by the same endDate re-check.
+    await expect(
+      createBooking.run({
+        data: {
+          serviceId: ppfService.id,
+          vehicleId: veh.id,
+          vehicleCategory: "hatchback",
+          studioId: STUDIO_ID,
+          scheduledDate: nextDate(),
+          scheduledTime: "11:00",
+          idempotencyKey: uid("idem"),
+          membershipId: membership.id,
+        },
+        auth: customerAuth(cust),
+      } as never),
+    ).rejects.toThrow(/expired/i);
+  });
+
+  it("19. valid (non-expired) membership booking is unaffected by the lazy-expiry check", async () => {
+    const cust = uid("cust-lazy-valid");
+    await seedVehicle(uid("veh-lazy-valid"), TENANT_A, cust);
+    const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
+    const membership = await purchaseAndActivate(cust, planId, adminUid);
+
+    const result = (await createBooking.run({
+      data: {
+        serviceId: washService.id,
+        vehicleId: veh.id,
+        vehicleCategory: "hatchback",
+        studioId: STUDIO_ID,
+        scheduledDate: nextDate(),
+        scheduledTime: "12:00",
+        idempotencyKey: uid("idem"),
+        membershipId: membership.id,
+      },
+      auth: customerAuth(cust),
+    } as never)) as { booking: Booking };
+
+    expect(result.booking.membershipWashUsed).toBe(true);
+    expect(result.booking.totalAmount).toBe(0);
+  });
+
+  it("20. valid membership cancellation still works after the Phase 3H display-layer change", async () => {
+    const cust = uid("cust-lazy-cancel");
+    const membership = await purchaseAndActivate(cust, planId, adminUid);
+
+    await cancelMembership.run({
+      data: { membershipId: membership.id, reason: "Customer requested cancellation" },
+      auth: adminAuth(adminUid),
+    } as never);
+
+    const snap = await db.collection("memberships").doc(membership.id).get();
+    expect((snap.data() as Membership).status).toBe("cancelled");
+  });
+
   it("5. eligible service — wash-eligible booking consumes a wash credit, price is 0", async () => {
     const cust = uid("cust-eligible");
     await seedVehicle(uid("veh-eligible"), TENANT_A, cust);
@@ -648,5 +742,33 @@ describe("Membership system", () => {
       auth: customerAuth(cust),
     } as never)) as { memberships: Membership[] };
     expect(result.memberships.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("21. getMyMemberships reports a stale-active-past-endDate membership as 'expired' without mutating storage (Phase 3H)", async () => {
+    const cust = uid("cust-effective-status");
+    const membership = await purchaseAndActivate(cust, planId, adminUid);
+    await db.collection("memberships").doc(membership.id).update({ endDate: "2020-01-01" });
+
+    const result = (await getMyMemberships.run({
+      data: {},
+      auth: customerAuth(cust),
+    } as never)) as { memberships: Membership[] };
+    const returned = result.memberships.find((m) => m.id === membership.id);
+    expect(returned?.status).toBe("expired"); // corrected in the response...
+
+    const stored = await db.collection("memberships").doc(membership.id).get();
+    expect((stored.data() as Membership).status).toBe("active"); // ...but NOT written back to storage
+  });
+
+  it("22. getMyMemberships reports a valid (non-expired) membership as 'active', unaffected", async () => {
+    const cust = uid("cust-effective-status-valid");
+    const membership = await purchaseAndActivate(cust, planId, adminUid);
+
+    const result = (await getMyMemberships.run({
+      data: {},
+      auth: customerAuth(cust),
+    } as never)) as { memberships: Membership[] };
+    const returned = result.memberships.find((m) => m.id === membership.id);
+    expect(returned?.status).toBe("active");
   });
 });

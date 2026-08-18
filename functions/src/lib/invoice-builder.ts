@@ -86,6 +86,11 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     currency: pb.currency,
     status: paymentId ? "issued" : "draft",
     pdfUrl: null,
+    // Reserved for a future unauthenticated/shareable invoice link — no
+    // route or Cloud Function consumes this today (Phase 3H audit: kept as
+    // deferred infrastructure, not removed, since the authenticated
+    // customer/admin invoice views already satisfy the current requirement
+    // and dropping the field would touch invoice identity for no benefit).
     publicToken: randomUUID(),
     issuedAt: paymentId ? now : null,
     voidedAt: null,

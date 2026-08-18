@@ -16,6 +16,7 @@ import type {
   Notification,
   AuditLog,
 } from "@autodeck/core";
+import { getEffectiveMembershipStatus } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
 
@@ -113,7 +114,19 @@ export function listenToCustomerMemberships(
     where("customerId", "==", customerId),
     orderBy("createdAt", "desc"),
   );
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Membership)), onError);
+  // Display-only correction (Phase 3H): no scheduler keeps stored status
+  // current, so effective status is derived here rather than trusted as-is.
+  return onSnapshot(
+    q,
+    (snap) =>
+      onData(
+        snap.docs.map((d) => {
+          const membership = d.data() as Membership;
+          return { ...membership, status: getEffectiveMembershipStatus(membership) };
+        }),
+      ),
+    onError,
+  );
 }
 
 export function listenToCustomerPayments(

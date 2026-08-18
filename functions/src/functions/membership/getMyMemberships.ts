@@ -5,6 +5,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership } from "@autodeck/core";
+import { getEffectiveMembershipStatus } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -31,6 +32,12 @@ export const getMyMemberships = onCall({ region: "asia-south1" }, async (request
     .orderBy("createdAt", "desc")
     .get();
 
-  const memberships = snap.docs.map((doc) => doc.data() as Membership);
+  // Display-only correction — never mutates the stored document (see
+  // getEffectiveMembershipStatus doc comment; no scheduler exists to keep
+  // stored status current, so every read derives it here instead).
+  const memberships = snap.docs.map((doc) => {
+    const membership = doc.data() as Membership;
+    return { ...membership, status: getEffectiveMembershipStatus(membership) };
+  });
   return { memberships };
 });

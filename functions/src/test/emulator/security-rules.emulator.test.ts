@@ -615,6 +615,26 @@ describe("/invoices — client cannot write invoice total", () => {
     );
   });
 
+  it("Studio can read an invoice within their own tenant (Phase 3H)", async () => {
+    await seedInvoice("invoice-studio-read", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertSucceeds(studio.firestore().collection("invoices").doc("invoice-studio-read").get());
+  });
+
+  it("Admin can read an invoice within their own tenant (Phase 3H)", async () => {
+    await seedInvoice("invoice-admin-read", "uid-alice");
+    const admin = testEnv.authenticatedContext("uid-admin", {
+      role: "admin",
+      tenantId: FIRST_TENANT_ID,
+      studioId: null,
+    });
+    await assertSucceeds(admin.firestore().collection("invoices").doc("invoice-admin-read").get());
+  });
+
   it("Studio cannot write invoices directly", async () => {
     const studio = testEnv.authenticatedContext("uid-studio", {
       role: "studio",

@@ -155,8 +155,11 @@ service cloud.firestore {
 
     // ─── /invoices/{invoiceId} ──────────────────────────────────────────────
     match /invoices/{invoiceId} {
-      // Customer reads own invoice by document ID (app layer validates ownership)
-      // Unauthenticated public invoice view is handled via publicToken in app layer (not Firestore rules)
+      // Customer reads own invoice by document ID (app layer validates ownership).
+      // Invoice.publicToken is generated but has no consumer anywhere in the
+      // product (Phase 3H audit) — there is no unauthenticated/public invoice
+      // view, in this app layer or otherwise. All invoice access requires
+      // authentication and passes through the ownership/tenant check below.
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
