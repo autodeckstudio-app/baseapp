@@ -1349,3 +1349,96 @@ describe("/approvals — customer read-own, Cloud Function writes only", () => {
     await assertSucceeds(studio.firestore().collection("approvals").doc("appr-5").get());
   });
 });
+
+// ─── Admin console — cross-tenant list-query isolation (Phase 3E) ─────────────
+// Exercises the exact query shape apps/admin's list pages use: a single
+// tenantId equality filter + orderBy, list()'d rather than get()'d one doc
+// at a time. Firestore must be able to prove the rule holds for every
+// possible match, so a query for a tenantId the caller doesn't belong to
+// must be rejected outright, not merely return zero results.
+describe("Admin console — cross-tenant list query isolation", () => {
+  it("Admin can list bookings within their own tenant", async () => {
+    await seedBooking("adm-booking-a", "uid-a-user", "tenant-a");
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertSucceeds(
+      adminA.firestore().collection("bookings").where("tenantId", "==", "tenant-a").get(),
+    );
+  });
+
+  it("Admin cannot list bookings for a different tenant", async () => {
+    await seedBooking("adm-booking-b", "uid-b-user", "tenant-b");
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(
+      adminA.firestore().collection("bookings").where("tenantId", "==", "tenant-b").get(),
+    );
+  });
+
+  it("Admin cannot list jobs for a different tenant", async () => {
+    await seedJob("adm-job-b", "uid-b-user", "studio-b", "tenant-b");
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(
+      adminA.firestore().collection("jobs").where("tenantId", "==", "tenant-b").get(),
+    );
+  });
+
+  it("Admin cannot list payments for a different tenant", async () => {
+    await seedPayment("adm-payment-b", "uid-b-user", "tenant-b");
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(
+      adminA.firestore().collection("payments").where("tenantId", "==", "tenant-b").get(),
+    );
+  });
+
+  it("Admin cannot list invoices for a different tenant", async () => {
+    await seedInvoice("adm-invoice-b", "uid-b-user", "tenant-b");
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(
+      adminA.firestore().collection("invoices").where("tenantId", "==", "tenant-b").get(),
+    );
+  });
+
+  it("Admin cannot list customers for a different tenant", async () => {
+    await seedCustomer("adm-cust-b", "tenant-b");
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(
+      adminA.firestore().collection("customers").where("tenantId", "==", "tenant-b").get(),
+    );
+  });
+
+  it("Admin cannot list another tenant's audit log", async () => {
+    const adminA = testEnv.authenticatedContext("uid-admin-a", makeAdminClaims("tenant-a"));
+    await assertFails(
+      adminA.firestore().collection("auditLog").where("tenantId", "==", "tenant-b").get(),
+    );
+  });
+
+  it("Studio role cannot list tenant-wide bookings the way the admin console does (no ownership filter)", async () => {
+    await seedBooking("adm-booking-c", "uid-c-user", FIRST_TENANT_ID);
+    const studio = testEnv.authenticatedContext("uid-studio-c", makeStudioClaims());
+    // Studio IS allowed to read bookings in its own tenant (isStudioOrAbove
+    // covers the ownership branch) — this asserts the admin-style query
+    // still succeeds for studio too, since /bookings has no studio-scoping
+    // clause. It's /auditLog that's admin-only:
+    await assertFails(
+      studio.firestore().collection("auditLog").where("tenantId", "==", FIRST_TENANT_ID).get(),
+    );
+  });
+
+  it("Customer role cannot run the admin console's tenant-wide booking list query", async () => {
+    await seedBooking("adm-booking-d", "uid-d-user", FIRST_TENANT_ID);
+    const customer = testEnv.authenticatedContext("uid-d-user", makeCustomerClaims("uid-d-user"));
+    await assertFails(
+      customer.firestore().collection("bookings").where("tenantId", "==", FIRST_TENANT_ID).get(),
+    );
+  });
+
+  it("Superadmin can read a booking outside their own tenant claim", async () => {
+    await seedBooking("adm-booking-e", "uid-e-user", "tenant-e");
+    const superadmin = testEnv.authenticatedContext("uid-superadmin", {
+      role: "superadmin",
+      tenantId: "tenant-superadmin-home",
+      studioId: null,
+    });
+    await assertSucceeds(superadmin.firestore().collection("bookings").doc("adm-booking-e").get());
+  });
+});

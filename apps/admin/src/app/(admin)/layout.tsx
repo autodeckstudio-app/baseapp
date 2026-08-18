@@ -35,6 +35,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         <nav className="nav">
           <a href="/dashboard">Dashboard</a>
+          <a href="/bookings">Bookings</a>
+          <a href="/jobs">Jobs</a>
+          <a href="/customers">Customers</a>
+          <a href="/payments">Payments</a>
+          <a href="/invoices">Invoices</a>
+          <a href="/audit">Audit Log</a>
           <a href="/studio">Studio</a>
           <a href="/services">Services</a>
           <a href="/memberships">Memberships</a>
