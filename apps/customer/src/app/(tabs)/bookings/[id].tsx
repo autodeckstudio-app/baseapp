@@ -6,6 +6,7 @@ import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
 import {
   colors,
   spacing,
@@ -47,6 +48,34 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
   EXPIRED: "Expired",
 };
+
+const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
+  PENDING: "This booking is still awaiting studio confirmation.",
+  ACTIVE: "Your vehicle is already at the studio — contact the studio to change the schedule.",
+  COMPLETED: "This booking is already completed.",
+  CANCELLED: "This booking has been cancelled.",
+  EXPIRED: "This booking has expired.",
+};
+
+function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason: string | null } {
+  if (booking.status !== "CONFIRMED") {
+    return { eligible: false, reason: NON_RESCHEDULABLE_STATUS_REASONS[booking.status] ?? "This booking can't be rescheduled." };
+  }
+  if (booking.rescheduleCount >= MAX_CUSTOMER_RESCHEDULES) {
+    return {
+      eligible: false,
+      reason: `You've used all ${MAX_CUSTOMER_RESCHEDULES} reschedules for this booking. Contact the studio to change the time.`,
+    };
+  }
+  const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
+  if (hoursUntil < CANCELLATION_FREE_WINDOW_HOURS) {
+    return {
+      eligible: false,
+      reason: `Less than ${CANCELLATION_FREE_WINDOW_HOURS} hours before your appointment — contact the studio directly to reschedule.`,
+    };
+  }
+  return { eligible: true, reason: null };
+}
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -124,6 +153,9 @@ export default function BookingDetailScreen() {
 
   const canCancel = booking.status === "CONFIRMED" || booking.status === "PENDING";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
+  const showRescheduleSection = booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
+  const rescheduleEligibility = getRescheduleEligibility(booking);
+  const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
   const scheduledAt = new Date(booking.scheduledAt);
   const displayDate = scheduledAt.toLocaleDateString("en-IN", {
@@ -202,6 +234,32 @@ export default function BookingDetailScreen() {
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
         <PriceBreakdown breakdown={booking.priceBreakdown} />
       </View>
+
+      {showRescheduleSection && (
+        <View style={{ marginBottom: spacing.lg }}>
+          {rescheduleEligibility.eligible ? (
+            <>
+              {hasPendingApproval && (
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+                  Note: you have a pending approval on this job — rescheduling won't affect it.
+                </Text>
+              )}
+              {payment && payment.status !== "pending" && payment.status !== "completed" && (
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+                  Note: payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} — rescheduling won't change this.
+                </Text>
+              )}
+              <Button
+                label="Reschedule"
+                variant="secondary"
+                onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })}
+              />
+            </>
+          ) : (
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>{rescheduleEligibility.reason}</Text>
+          )}
+        </View>
+      )}
 
       {canCancel && (
         <Button label="Cancel Booking" onPress={handleCancel} loading={cancelling} variant="destructive" />
