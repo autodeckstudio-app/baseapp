@@ -44,6 +44,27 @@ export function listenToApprovalsForJob(
   );
 }
 
+// Studio-wide pending approvals — one listener for the whole Bay Board,
+// cross-referenced client-side by jobId, rather than a listener per job.
+export function listenToPendingApprovalsForStudio(
+  tenantId: string,
+  studioId: string,
+  onData: (approvals: ApprovalRequest[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.approvals()),
+    where("tenantId", "==", tenantId),
+    where("studioId", "==", studioId),
+    where("status", "==", "pending"),
+  );
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map((d) => d.data() as ApprovalRequest)),
+    onError,
+  );
+}
+
 type GetServiceCatalogueOutput = { services: Service[] };
 
 export async function getActiveServices(): Promise<Service[]> {

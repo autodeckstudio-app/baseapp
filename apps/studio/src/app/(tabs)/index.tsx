@@ -4,8 +4,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import { listenToJobsByDate } from "../../lib/studio-service";
 import type { ServiceJob } from "@autodeck/core";
-import { FIRST_STUDIO_ID } from "@autodeck/core";
-import { colors, spacing, typography, JobCard, EmptyState, LoadingState } from "@autodeck/ui";
+import { colors, spacing, typography, JobCard, Button, EmptyState, LoadingState } from "@autodeck/ui";
 
 function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -16,14 +15,13 @@ export default function TodaysJobsScreen() {
   const authState = useAuth();
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const authReady = authState.status === "ready";
+  const studioId = authState.status === "ready" ? authState.claims.studioId : null;
 
   useEffect(() => {
-    if (!authReady) return;
-    const today = todayIST();
+    if (!studioId) return undefined;
     const unsub = listenToJobsByDate(
-      FIRST_STUDIO_ID,
-      today,
+      studioId,
+      todayIST(),
       (data) => {
         setJobs(data);
         setLoading(false);
@@ -34,7 +32,7 @@ export default function TodaysJobsScreen() {
       },
     );
     return unsub;
-  }, [authReady]);
+  }, [studioId]);
 
   if (loading) return <LoadingState />;
 
@@ -47,9 +45,12 @@ export default function TodaysJobsScreen() {
       data={activeJobs}
       keyExtractor={(j) => j.id}
       ListHeaderComponent={
-        <Text style={{ ...typography.title, color: colors.textPrimary, marginBottom: spacing.md }}>
-          Today — {todayIST()} ({activeJobs.length} job{activeJobs.length !== 1 ? "s" : ""})
-        </Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
+          <Text style={{ ...typography.title, color: colors.textPrimary }}>
+            Today — {todayIST()} ({activeJobs.length} job{activeJobs.length !== 1 ? "s" : ""})
+          </Text>
+          <Button label="+ Walk-in" size="md" fullWidth={false} onPress={() => router.push("/(tabs)/walkin")} />
+        </View>
       }
       ListEmptyComponent={<EmptyState title="No active jobs today" fill={false} />}
       renderItem={({ item }) => <JobCard job={item} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />}

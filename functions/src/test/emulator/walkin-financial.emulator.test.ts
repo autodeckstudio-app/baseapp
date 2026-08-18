@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
-import type { StudioConfig, Service, Vehicle, ServiceJob, Payment, Invoice } from "@autodeck/core";
+import type { StudioConfig, Service, Vehicle, ServiceJob, Payment, Invoice, Customer } from "@autodeck/core";
 
 // confirmPaymentMock is gated to dev/emulator environments — this flag is
 // normally set by the real Functions emulator runtime; set it directly since
@@ -134,6 +134,23 @@ async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string)
   return vehicle;
 }
 
+async function seedCustomer(customerId: string, tenantId: string) {
+  const now = new Date().toISOString();
+  const customer: Customer = {
+    id: customerId,
+    tenantId,
+    authUid: customerId,
+    name: "Walk-in Test Customer",
+    phone: "+919876500000",
+    notificationPrefs: { push: true, quietMode: false },
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  await db.collection("customers").doc(customerId).set(customer);
+  return customer;
+}
+
 let seq = 0;
 function uid(prefix: string): string {
   seq += 1;
@@ -151,6 +168,7 @@ describe("Walk-in financial flow", () => {
     await seedStudio(STUDIO_ID, TENANT_A);
     service = await seedService(uid("svc"), TENANT_A, 40000);
     customerId = uid("cust");
+    await seedCustomer(customerId, TENANT_A);
     vehicle = await seedVehicle(uid("veh"), TENANT_A, customerId);
     studioUid = uid("studio-user");
     adminUid = uid("admin-user");

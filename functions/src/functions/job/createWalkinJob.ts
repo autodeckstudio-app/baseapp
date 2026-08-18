@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Service, StudioConfig, ServiceJob, Vehicle } from "@autodeck/core";
+import type { Service, StudioConfig, ServiceJob, Vehicle, Customer } from "@autodeck/core";
 import { TURNOVER_BUFFER_MINUTES } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -24,23 +24,36 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
   const now = new Date();
   const nowIso = now.toISOString();
 
-  const [serviceSnap, configSnap, vehicleSnap] = await Promise.all([
+  // Studio users are scoped to their own studio — matches the same check
+  // already enforced on advanceJobStatus/assignBay/createApproval.
+  if (user.claims.role === "studio" && user.claims.studioId !== data.studioId) {
+    throw new HttpsError("permission-denied", "Cannot create a walk-in job for a different studio.");
+  }
+
+  const [serviceSnap, configSnap, vehicleSnap, customerSnap] = await Promise.all([
     db.collection(COLLECTIONS.services()).doc(data.serviceId).get(),
     db.collection(COLLECTIONS.studioConfig()).doc(data.studioId).get(),
     db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId).get(),
+    db.collection(COLLECTIONS.customers()).doc(data.customerId).get(),
   ]);
 
   if (!serviceSnap.exists) throw new HttpsError("not-found", "Service not found.");
   if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
   if (!vehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
+  if (!customerSnap.exists) throw new HttpsError("not-found", "Customer not found.");
 
   const service = serviceSnap.data() as Service;
   const config = configSnap.data() as StudioConfig;
   const vehicle = vehicleSnap.data() as Vehicle;
+  const customer = customerSnap.data() as Customer;
 
   assertTenant(user, service.tenantId);
   assertTenant(user, config.tenantId);
   assertTenant(user, vehicle.tenantId);
+  assertTenant(user, customer.tenantId);
+  if (vehicle.ownerId !== data.customerId) {
+    throw new HttpsError("failed-precondition", "Vehicle does not belong to the given customer.");
+  }
 
   if (!service.active) {
     throw new HttpsError("failed-precondition", "Service is not currently available.");

@@ -24,6 +24,10 @@ export const createVehicleSchema = z.object({
   year: z.number().int().min(1980).max(new Date().getFullYear() + 1),
   color: z.string().min(1).max(50).trim(),
   category: vehicleCategorySchema.nullable().optional(),
+  // Studio/admin walk-in registration only — a customer can never set this
+  // (enforced in the handler, not just by convention); ignored for role
+  // 'customer', who always owns the vehicle they create.
+  ownerId: z.string().min(1).optional(),
 });
 
 export const updateVehicleSchema = z.object({

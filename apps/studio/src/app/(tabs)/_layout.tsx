@@ -8,12 +8,20 @@ export default function StudioTabsLayout() {
         options={{ title: "Today's Jobs", tabBarLabel: "Today" }}
       />
       <Tabs.Screen
+        name="bays"
+        options={{ title: "Bay Board", tabBarLabel: "Bays" }}
+      />
+      <Tabs.Screen
         name="calendar"
         options={{ title: "Calendar", tabBarLabel: "Calendar" }}
       />
       <Tabs.Screen
         name="jobs"
         options={{ href: null }} // sub-route, hidden from tab bar
+      />
+      <Tabs.Screen
+        name="walkin"
+        options={{ title: "New Walk-in", href: null }} // accessed via Bay Board, hidden from tab bar
       />
       <Tabs.Screen
         name="account"
