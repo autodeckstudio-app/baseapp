@@ -56,6 +56,10 @@ export default function NotificationsScreen() {
       router.push("/(tabs)/membership/current");
       return;
     }
+    if (n.entityType === "Approval" && n.entityId) {
+      router.push(`/(tabs)/approvals/${n.entityId}`);
+      return;
+    }
     if (n.entityType === "Invoice" && n.entityId) {
       const snap = await getDoc(doc(db, COLLECTIONS.invoices(), n.entityId));
       if (snap.exists()) {

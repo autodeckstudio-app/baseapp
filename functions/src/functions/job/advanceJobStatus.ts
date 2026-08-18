@@ -63,6 +63,23 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
     let warranty: ReturnType<typeof buildWarranty> = null;
     const warrantyRef = db.collection(COLLECTIONS.warranties()).doc(data.jobId);
     if (nextStatus === "DELIVERED") {
+      // A job cannot be delivered while additional work is still awaiting
+      // the customer's decision — Phase 3 requirement: prevent the studio
+      // from treating unauthorized additional work as complete.
+      const pendingApprovals = await tx.get(
+        db
+          .collection(COLLECTIONS.approvals())
+          .where("jobId", "==", data.jobId)
+          .where("status", "==", "pending")
+          .limit(1),
+      );
+      if (!pendingApprovals.empty) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This job has an approval awaiting the customer's decision. Resolve or cancel it before delivering.",
+        );
+      }
+
       const [serviceSnap, warrantySnap] = await Promise.all([
         tx.get(db.collection(COLLECTIONS.services()).doc(job.serviceId)),
         tx.get(warrantyRef),

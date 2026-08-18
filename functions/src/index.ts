@@ -64,6 +64,12 @@ export { addStaffMember } from "./functions/employee/addStaffMember.js";
 export { updateStaffRole } from "./functions/employee/updateStaffRole.js";
 export { deactivateStaffMember } from "./functions/employee/deactivateStaffMember.js";
 
+// ─── Approvals (Phase 3) ──────────────────────────────────────────────────────
+export { createApproval } from "./functions/approval/createApproval.js";
+export { respondToApproval } from "./functions/approval/respondToApproval.js";
+export { cancelApproval } from "./functions/approval/cancelApproval.js";
+export { expireStaleApprovals } from "./functions/approval/expireStaleApprovals.js";
+
 // ─── Protection (Phase 2D) ──────────────────────────────────────────────────
 export { createProtection } from "./functions/protection/createProtection.js";
 export { updateProtection } from "./functions/protection/updateProtection.js";

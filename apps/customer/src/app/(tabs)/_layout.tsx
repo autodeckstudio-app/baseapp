@@ -32,6 +32,10 @@ export default function TabsLayout() {
         options={{ title: "Notifications", href: null }} // accessed via Home bell icon, hidden from tab bar
       />
       <Tabs.Screen
+        name="approvals"
+        options={{ title: "Approval", href: null }} // accessed via notification tap, hidden from tab bar
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: "Profile", tabBarLabel: "Me" }}
       />

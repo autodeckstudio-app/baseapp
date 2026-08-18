@@ -18,6 +18,7 @@ import type {
   Invoice,
   Membership,
   Vehicle,
+  ApprovalRequest,
   NotificationType,
   NotificationEntityType,
 } from "@autodeck/core";
@@ -222,6 +223,52 @@ export async function buildNotification(
         body: `Your ${membership.tier} membership has expired.`,
         entityType: "Membership",
         entityId: membership.id,
+      };
+    }
+
+    case "approval.created": {
+      const approval = (await db.collection(COLLECTIONS.approvals()).doc(log.entityId).get()).data() as
+        | ApprovalRequest
+        | undefined;
+      if (!approval) return null;
+      const vehicle = await vehicleLabel(db, approval.vehicleId);
+      return {
+        userId: approval.customerId,
+        type: "approval_requested",
+        title: "Approval needed",
+        body: `Your ${vehicle} needs your approval: ${approval.serviceName} (+${formatPaise(approval.priceImpact)}).`,
+        entityType: "Approval",
+        entityId: approval.id,
+      };
+    }
+
+    case "approval.approved": {
+      const approval = (await db.collection(COLLECTIONS.approvals()).doc(log.entityId).get()).data() as
+        | ApprovalRequest
+        | undefined;
+      if (!approval) return null;
+      return {
+        userId: approval.customerId,
+        type: "approval_approved",
+        title: "Approval confirmed",
+        body: `You approved ${approval.serviceName} (+${formatPaise(approval.priceImpact)}). New total: ${formatPaise(approval.newTotal)}.`,
+        entityType: "Approval",
+        entityId: approval.id,
+      };
+    }
+
+    case "approval.rejected": {
+      const approval = (await db.collection(COLLECTIONS.approvals()).doc(log.entityId).get()).data() as
+        | ApprovalRequest
+        | undefined;
+      if (!approval) return null;
+      return {
+        userId: approval.customerId,
+        type: "approval_rejected",
+        title: "Approval declined",
+        body: `You declined ${approval.serviceName}. Original work continues as planned.`,
+        entityType: "Approval",
+        entityId: approval.id,
       };
     }
 

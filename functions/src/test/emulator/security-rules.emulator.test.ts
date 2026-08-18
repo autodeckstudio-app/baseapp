@@ -1250,3 +1250,102 @@ describe("Passport safety — cross-customer job access denied", () => {
     await assertFails(bob.firestore().collection("jobs").doc("job-passport-1").get());
   });
 });
+
+// ─── Approvals (Phase 3) ────────────────────────────────────────────────────
+
+async function seedApproval(
+  approvalId: string,
+  customerId: string,
+  tenantId = FIRST_TENANT_ID,
+  studioId = "studio-ahmedabad",
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("approvals").doc(approvalId).set({
+      id: approvalId,
+      tenantId,
+      studioId,
+      jobId: "job-1",
+      bookingId: "booking-1",
+      customerId,
+      vehicleId: "vehicle-1",
+      requestedBy: "staff-1",
+      reason: "Found an issue",
+      serviceId: "service-extra",
+      serviceName: "Extra Work",
+      quantity: 1,
+      unitPrice: 50000,
+      priceImpact: 50000,
+      timeImpactMinutes: 30,
+      originalAmount: 100000,
+      newTotal: 150000,
+      photos: [],
+      status: "pending",
+      respondedAt: null,
+      respondedBy: null,
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      createdAt: now,
+    });
+  });
+}
+
+describe("/approvals — customer read-own, Cloud Function writes only", () => {
+  it("Customer cannot create an approval directly", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice
+        .firestore()
+        .collection("approvals")
+        .doc("fake-1")
+        .set({
+          id: "fake-1",
+          tenantId: FIRST_TENANT_ID,
+          studioId: "studio-ahmedabad",
+          jobId: "job-1",
+          customerId: "uid-alice",
+          status: "approved", // self-approving on creation — must be denied
+          priceImpact: 0,
+        }),
+    );
+  });
+
+  it("Customer cannot alter an approval directly (e.g. self-approve via direct write)", async () => {
+    await seedApproval("appr-1", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("approvals").doc("appr-1").update({ status: "approved" }),
+    );
+  });
+
+  it("Customer can read their own approval", async () => {
+    await seedApproval("appr-2", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("approvals").doc("appr-2").get());
+  });
+
+  it("Cross-customer: Bob cannot read Alice's approval", async () => {
+    await seedApproval("appr-3", "uid-alice");
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertFails(bob.firestore().collection("approvals").doc("appr-3").get());
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B's approval", async () => {
+    await seedApproval("appr-4", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(tenantAUser.firestore().collection("approvals").doc("appr-4").get());
+  });
+
+  it("Studio can read an approval within their own tenant", async () => {
+    await seedApproval("appr-5", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertSucceeds(studio.firestore().collection("approvals").doc("appr-5").get());
+  });
+});

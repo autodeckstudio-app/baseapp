@@ -75,6 +75,9 @@ const STATUS_TONES: Record<string, StatusTone> = {
   // Protection
   verified: "success",
   unverified: "warning",
+  // Approval (pending/expired/cancelled reuse the tones above)
+  approved: "success",
+  rejected: "error",
 };
 
 export function statusTone(status: string): StatusTone {

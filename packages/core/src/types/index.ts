@@ -10,7 +10,13 @@ export type {
   WarrantyDurationUnit,
 } from "./service.js";
 export type { Booking, BookingStatus, PriceBreakdown } from "./booking.js";
-export type { ServiceJob, JobStatus, JobStatusHistoryEntry, ApprovalRequest } from "./job.js";
+export type {
+  ServiceJob,
+  JobStatus,
+  JobStatusHistoryEntry,
+  ApprovalRequest,
+  ApprovalStatus,
+} from "./job.js";
 export type {
   Payment,
   Invoice,

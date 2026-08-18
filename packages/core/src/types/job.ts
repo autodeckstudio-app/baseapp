@@ -49,21 +49,39 @@ export interface ServiceJob {
   sealedAt: string | null; // set on DELIVERED
 }
 
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled";
+
+// Mid-job additional-work approval (Phase 3). The additional work is always
+// an existing catalogue Service selected by studio/admin — never a
+// free-typed price — so unitPrice/priceImpact are always server-computed via
+// the same pricing engine used for bookings (calculatePrice), never trusted
+// from the client. originalAmount/newTotal are frozen at creation time so
+// the customer sees a coherent before/after even if other approvals resolve
+// in between. Approving increments ServiceJob.additionalWorkDelta/
+// totalAmount — the original Booking/Job priceBreakdown snapshot is never
+// rewritten (doc06 §6.4 Rule 1).
 export interface ApprovalRequest {
   id: string;
   tenantId: string;
   studioId: string;
   jobId: string;
+  bookingId: string | null; // SNAPSHOT — job's booking, if any (null for walk-ins)
   customerId: string;
-  requestedBy: string; // employeeId
-  reason: string;
-  proposedWork: string;
-  priceImpact: number; // paise — additional cost (can be 0)
-  timeImpact: number; // additional minutes
-  photos: string[]; // Storage URLs
-  status: "pending" | "approved" | "rejected" | "expired";
+  vehicleId: string; // SNAPSHOT — for display without re-reading the job
+  requestedBy: string; // uid of the studio/admin user who created it
+  reason: string; // free text — why this work is needed
+  serviceId: string; // the additional service, selected from the catalogue
+  serviceName: string; // SNAPSHOT
+  quantity: number; // >= 1
+  unitPrice: number; // paise — from the pricing engine, per unit
+  priceImpact: number; // paise — unitPrice * quantity
+  timeImpactMinutes: number; // estimatedDurationMinutes * quantity
+  originalAmount: number; // paise — job.totalAmount at request creation
+  newTotal: number; // paise — originalAmount + priceImpact
+  photos: string[]; // Storage URLs — unused in this build (no Storage/Blaze)
+  status: ApprovalStatus;
   respondedAt: string | null;
-  respondedBy: string | null; // customerId or adminId
-  expiresAt: string; // 24h from creation
+  respondedBy: string | null; // customerId (approve/reject) or studio/admin uid (cancel)
+  expiresAt: string; // APPROVAL_EXPIRY_HOURS from creation
   createdAt: string;
 }

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, cancelBooking } from "../../../lib/booking-service";
 import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
-import type { Booking, ServiceJob, Payment } from "@autodeck/core";
+import { listenToApprovalsForJob } from "../../../lib/approval-service";
+import type { Booking, ServiceJob, Payment, ApprovalRequest } from "@autodeck/core";
 import {
   colors,
   spacing,
@@ -16,6 +17,7 @@ import {
   PriceBreakdown,
   LoadingState,
   ErrorState,
+  formatPaise,
 } from "@autodeck/ui";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -55,6 +57,7 @@ export default function BookingDetailScreen() {
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [payingNow, setPayingNow] = useState(false);
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -74,6 +77,11 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     if (!job) return;
     return listenToPaymentForJob(job.id, job.tenantId, job.customerId, setPayment, () => undefined);
+  }, [job?.id]);
+
+  useEffect(() => {
+    if (!job) return;
+    return listenToApprovalsForJob(job.id, job.tenantId, job.customerId, setApprovals, () => undefined);
   }, [job?.id]);
 
   async function handlePayAtStudio() {
@@ -145,6 +153,30 @@ export default function BookingDetailScreen() {
           <Text style={{ ...typography.caption, color: colors.accentPressed }}>Studio status</Text>
           <Text style={{ ...typography.title, color: colors.accentPressed, marginTop: spacing.xxs }}>
             {JOB_STATUS_LABELS[job.status] ?? job.status}
+          </Text>
+        </View>
+      )}
+
+      {approvals
+        .filter((a) => a.status === "pending")
+        .map((a) => (
+          <TouchableOpacity
+            key={a.id}
+            onPress={() => router.push(`/(tabs)/approvals/${a.id}`)}
+            style={{ backgroundColor: colors.warningMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}
+          >
+            <Text style={{ ...typography.caption, color: colors.warning }}>Approval needed</Text>
+            <Text style={{ ...typography.title, color: colors.warning, marginTop: spacing.xxs }}>
+              {a.serviceName} (+{formatPaise(a.priceImpact)}) — tap to review
+            </Text>
+          </TouchableOpacity>
+        ))}
+
+      {job && job.additionalWorkDelta > 0 && (
+        <View style={{ backgroundColor: colors.successMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
+          <Text style={{ ...typography.caption, color: colors.success }}>Approved additional work</Text>
+          <Text style={{ ...typography.title, color: colors.success, marginTop: spacing.xxs }}>
+            +{formatPaise(job.additionalWorkDelta)} — current total {formatPaise(job.totalAmount)}
           </Text>
         </View>
       )}

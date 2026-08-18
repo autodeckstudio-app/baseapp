@@ -12,12 +12,15 @@ export type NotificationType =
   | "payment_failed"
   | "invoice_issued"
   | "membership_activated"
-  | "membership_expired";
+  | "membership_expired"
+  | "approval_requested"
+  | "approval_approved"
+  | "approval_rejected";
 
 // Entities the customer app can navigate to from a notification. Job/Payment
 // source events are resolved down to their owning Booking at write time
 // (the customer app has no standalone job or payment detail screen).
-export type NotificationEntityType = "Booking" | "Invoice" | "Membership";
+export type NotificationEntityType = "Booking" | "Invoice" | "Membership" | "Approval";
 
 export interface Notification {
   id: string; // == auditLogId — deterministic idempotency key (see spec)

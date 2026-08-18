@@ -11,7 +11,8 @@ import {
   listenToInvoiceForJob,
 } from "../../../lib/payment-service";
 import { getCustomerMembership } from "../../../lib/membership-service";
-import type { ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership } from "@autodeck/core";
+import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
+import type { ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import {
@@ -20,6 +21,7 @@ import {
   radius,
   typography,
   Button,
+  TextInput,
   StatusBadge,
   statusTone,
   LoadingState,
@@ -27,6 +29,14 @@ import {
   formatPaise,
   formatTime,
 } from "@autodeck/ui";
+
+const APPROVAL_STATUS_LABELS: Record<string, string> = {
+  pending: "Awaiting customer",
+  approved: "Approved",
+  rejected: "Declined",
+  expired: "Expired",
+  cancelled: "Cancelled",
+};
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Awaiting confirmation",
@@ -70,6 +80,13 @@ export default function JobDetailScreen() {
     washUsed: boolean;
     discountApplied: boolean;
   } | null>(null);
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [cancellingApprovalId, setCancellingApprovalId] = useState<string | null>(null);
+  const [showApprovalForm, setShowApprovalForm] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [approvalReason, setApprovalReason] = useState("");
+  const [creatingApproval, setCreatingApproval] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -130,6 +147,52 @@ export default function JobDetailScreen() {
       }
     })();
   }, [job?.id]);
+
+  // Live update: studio sees the customer's approve/reject decision the
+  // moment it happens, via the same real-time listener pattern as
+  // payment/invoice above (Phase 3 requirement — no separate polling).
+  useEffect(() => {
+    if (!job) {
+      setApprovals([]);
+      return undefined;
+    }
+    return listenToApprovalsForJob(job.id, job.tenantId, setApprovals, () => undefined);
+  }, [job?.id]);
+
+  async function handleCreateApproval() {
+    if (!job || !selectedServiceId || !approvalReason.trim()) return;
+    setCreatingApproval(true);
+    try {
+      await createApproval({ jobId: job.id, serviceId: selectedServiceId, reason: approvalReason.trim() });
+      setShowApprovalForm(false);
+      setSelectedServiceId(null);
+      setApprovalReason("");
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to request approval.");
+    } finally {
+      setCreatingApproval(false);
+    }
+  }
+
+  async function handleCancelApproval(approvalId: string) {
+    setCancellingApprovalId(approvalId);
+    try {
+      await cancelApproval(approvalId);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to cancel approval.");
+    } finally {
+      setCancellingApprovalId(null);
+    }
+  }
+
+  function openApprovalForm() {
+    setShowApprovalForm(true);
+    if (services.length === 0) {
+      void getActiveServices()
+        .then(setServices)
+        .catch((err: unknown) => Alert.alert("Error", err instanceof Error ? err.message : "Failed to load services."));
+    }
+  }
 
   async function handleRecordCashPayment() {
     const jobId = job?.id;
@@ -284,6 +347,105 @@ export default function JobDetailScreen() {
           </View>
         )}
       </Section>
+
+      <Text style={sectionTitle}>Approvals</Text>
+      {approvals.length === 0 && !showApprovalForm && (
+        <Section>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>No additional work requested.</Text>
+        </Section>
+      )}
+      {approvals.map((a) => (
+        <Section key={a.id}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
+                {a.serviceName}
+                {a.quantity > 1 ? ` ×${a.quantity}` : ""}
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>{a.reason}</Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
+                +{formatPaise(a.priceImpact)} · New total {formatPaise(a.newTotal)}
+              </Text>
+            </View>
+            <StatusBadge label={APPROVAL_STATUS_LABELS[a.status] ?? a.status} tone={statusTone(a.status)} />
+          </View>
+          {a.status === "pending" && (
+            <Button
+              label="Cancel request"
+              variant="ghost"
+              size="md"
+              loading={cancellingApprovalId === a.id}
+              onPress={() => void handleCancelApproval(a.id)}
+              style={{ marginTop: spacing.sm }}
+            />
+          )}
+        </Section>
+      ))}
+
+      {job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
+        <>
+          {!showApprovalForm ? (
+            <Button
+              label="Request Approval"
+              variant="secondary"
+              onPress={openApprovalForm}
+              style={{ marginBottom: spacing.lg }}
+            />
+          ) : (
+            <Section>
+              <Text style={{ ...typography.captionMedium, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                Additional service
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.sm }}>
+                {services.map((s) => {
+                  const selected = selectedServiceId === s.id;
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      onPress={() => setSelectedServiceId(s.id)}
+                      style={{
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        borderRadius: radius.md,
+                        borderWidth: 1,
+                        borderColor: selected ? colors.accent : colors.border,
+                        backgroundColor: selected ? colors.accentMuted : colors.surface,
+                      }}
+                    >
+                      <Text style={{ ...typography.caption, color: selected ? colors.accentPressed : colors.textPrimary }}>
+                        {s.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TextInput
+                label="Reason"
+                placeholder="What did you find?"
+                value={approvalReason}
+                onChangeText={setApprovalReason}
+                multiline
+              />
+              <Button
+                label="Send for approval"
+                onPress={() => void handleCreateApproval()}
+                loading={creatingApproval}
+                disabled={!selectedServiceId || !approvalReason.trim()}
+              />
+              <View style={{ height: spacing.sm }} />
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => {
+                  setShowApprovalForm(false);
+                  setSelectedServiceId(null);
+                  setApprovalReason("");
+                }}
+              />
+            </Section>
+          )}
+        </>
+      )}
 
       {canAdvance && (
         <Button label={advanceLabel} onPress={() => void handleAdvance()} loading={advancing} style={{ marginBottom: spacing.lg }} />
