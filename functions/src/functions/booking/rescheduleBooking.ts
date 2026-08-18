@@ -4,7 +4,7 @@ import type { Booking, StudioConfig, ServiceJob, Service } from "@autodeck/core"
 import {
   MAX_CUSTOMER_RESCHEDULES,
   CANCELLATION_FREE_WINDOW_HOURS,
-  TURNOVER_BUFFER_MINUTES,
+  MAX_SERVICE_SPAN_DAYS,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
@@ -13,7 +13,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { rescheduleBookingSchema } from "../../schemas/booking.js";
 import { buildOccupiedInterval, hasConflict, type OccupiedInterval } from "../../lib/availability.js";
-import { localToUTC, utcToLocalDate, utcToLocalTime } from "../../lib/schedule.js";
+import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
 export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -87,8 +87,14 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     throw new HttpsError("failed-precondition", "No bays available for this service type.");
   }
 
-  const newEstimatedEndAt = new Date(
-    newStart.getTime() + service.estimatedDurationMinutes * 60000,
+  // Authoritative, multi-day-aware completion instant — identical
+  // calculation to createBooking (single source of truth).
+  const newEstimatedEndAt = computeScheduleEnd(
+    newStart,
+    service.estimatedDurationMinutes,
+    config.operatingHours,
+    config.holidays,
+    config.timezone,
   );
   const now = new Date().toISOString();
 
@@ -101,7 +107,12 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   const jobDoc = jobsSnap.docs[0];
 
   const updatedBooking = await db.runTransaction(async (tx) => {
-    // Re-validate availability for the new slot inside the transaction
+    // Re-validate availability for the new slot inside the transaction.
+    // Widened to a MAX_SERVICE_SPAN_DAYS range so a multi-day job that
+    // started earlier but is still occupying the bay is still found (Phase
+    // 5 — multi-day booking).
+    const rangeStartDate = addDays(data.newDate, -MAX_SERVICE_SPAN_DAYS);
+    const rangeEndDate = addDays(data.newDate, MAX_SERVICE_SPAN_DAYS);
     const bayOccupancy = new Map<string, OccupiedInterval[]>();
     for (const bay of compatibleBays) {
       const jobsOnBay = await tx.get(
@@ -109,7 +120,8 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
           .collection(COLLECTIONS.jobs())
           .where("studioId", "==", booking.studioId)
           .where("bayId", "==", bay.id)
-          .where("scheduledDate", "==", data.newDate),
+          .where("scheduledDate", ">=", rangeStartDate)
+          .where("scheduledDate", "<=", rangeEndDate),
       );
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsOnBay.docs) {
@@ -126,7 +138,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     let minJobs = Infinity;
     for (const bay of compatibleBays) {
       const occupied = bayOccupancy.get(bay.id) ?? [];
-      if (!hasConflict(newStart, service.estimatedDurationMinutes, occupied)) {
+      if (!hasConflict(newStart, newEstimatedEndAt, occupied)) {
         if (occupied.length < minJobs) {
           minJobs = occupied.length;
           assignedBayId = bay.id;
@@ -159,10 +171,9 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
       tx.update(db.collection(COLLECTIONS.jobs()).doc(jobDoc.id), {
         scheduledAt: newStart.toISOString(),
         scheduledDate: data.newDate,
-        estimatedEndAt: new Date(
-          newStart.getTime() +
-            (service.estimatedDurationMinutes + TURNOVER_BUFFER_MINUTES) * 60000,
-        ).toISOString(),
+        // Buffer-free — same instant as the booking update above.
+        estimatedEndAt: newEstimatedEndAt.toISOString(),
+        estimatedEndDate: utcToLocalDate(newEstimatedEndAt, config.timezone),
         bayId: assignedBayId,
         statusHistory: [
           ...job.statusHistory,

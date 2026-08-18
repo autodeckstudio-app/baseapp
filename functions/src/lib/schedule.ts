@@ -1,5 +1,6 @@
 // Schedule and timezone utilities for the booking engine.
 // All slot times are expressed in studio-local time (Asia/Kolkata by default).
+import type { OperatingHours } from "@autodeck/core";
 
 // Returns the UTC offset in minutes for a given timezone at a specific UTC instant.
 // Uses Intl.DateTimeFormat.formatToParts for DST-safe offset computation.
@@ -86,4 +87,64 @@ export function getDayOfWeek(localDateStr: string): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
 // Returns true if the given local date string is a holiday.
 export function isHoliday(dateStr: string, holidays: string[]): boolean {
   return holidays.includes(dateStr);
+}
+
+// Walks forward from `startAt`, consuming `durationMinutes` of OPERATING-HOUR
+// time only — closed days and holidays are skipped entirely, never counted.
+// Mirrors AutoModz's documented multi-day model (doc04 §"Service catalogue":
+// "A PPF job requiring 2,880 minutes = 4 working days + 480 minutes into
+// day 5" — i.e. duration is consumed only during open hours, spread across
+// as many working days as needed).
+//
+// For a service that fits within its start day's remaining operating
+// window, this returns exactly startAt + durationMinutes — single-day
+// services are computed identically to before this function existed.
+//
+// The returned instant is also the correct "bay becomes free" boundary for
+// occupied-interval conflict checks: the bay is reserved continuously from
+// startAt through this instant, including any closed/holiday gaps in
+// between (the vehicle is physically present the whole time).
+export function computeScheduleEnd(
+  startAt: Date,
+  durationMinutes: number,
+  operatingHours: OperatingHours[],
+  holidays: string[],
+  timezone: string,
+): Date {
+  let remaining = durationMinutes;
+  let currentDate = utcToLocalDate(startAt, timezone);
+  let dayStartUTC = startAt;
+
+  // Guard bound — generous multiple of MAX_SERVICE_SPAN_DAYS worth of
+  // calendar days, so a studio with almost every day closed still resolves
+  // rather than looping indefinitely.
+  for (let guard = 0; guard < 400; guard++) {
+    const skip = isHoliday(currentDate, holidays);
+    const hours = operatingHours.find((h) => h.dayOfWeek === getDayOfWeek(currentDate));
+
+    if (!skip && hours && !hours.closed) {
+      const dayCloseUTC = localToUTC(currentDate, hours.close, timezone);
+      const availableMinutesToday = Math.max(0, (dayCloseUTC.getTime() - dayStartUTC.getTime()) / 60000);
+
+      if (remaining <= availableMinutesToday) {
+        return new Date(dayStartUTC.getTime() + remaining * 60000);
+      }
+      remaining -= availableMinutesToday;
+    }
+
+    currentDate = addDays(currentDate, 1);
+    const nextHours = operatingHours.find((h) => h.dayOfWeek === getDayOfWeek(currentDate));
+    dayStartUTC = localToUTC(currentDate, nextHours?.open ?? "00:00", timezone);
+  }
+
+  // No open operating day was found in the guard window — the studio has no
+  // usable weekly schedule configured (e.g. onboarding incomplete;
+  // operatingHours is empty/all-closed). Its online-booking availability
+  // engine is already non-functional in this state (computeAvailability
+  // skips every day with no/closed hours, always returning zero slots), so
+  // this is a pre-existing studio-configuration gap, not something this
+  // function should turn into an unhandled crash for an in-person walk-in or
+  // studio-initiated action. Fall back to naive continuous-time completion —
+  // exactly the pre-multi-day behavior — rather than throwing.
+  return new Date(startAt.getTime() + durationMinutes * 60000);
 }

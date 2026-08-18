@@ -163,7 +163,7 @@ describe("Slot conflict detection (double-booking prevention)", () => {
 
     // Second request also wants 09:00 IST — should detect conflict
     const secondStart = localToUTC(DATE, "09:00", IST);
-    expect(hasConflict(secondStart, 60, occupied)).toBe(true);
+    expect(hasConflict(secondStart, new Date(secondStart.getTime() + 60 * 60000), occupied)).toBe(true);
   });
 
   it("two requests for adjacent slots: no conflict with buffer respected", () => {
@@ -174,7 +174,7 @@ describe("Slot conflict detection (double-booking prevention)", () => {
 
     // Second request at 10:30 IST (next 30-min slot after buffer)
     const secondStart = localToUTC(DATE, "10:30", IST);
-    expect(hasConflict(secondStart, 60, occupied)).toBe(false);
+    expect(hasConflict(secondStart, new Date(secondStart.getTime() + 60 * 60000), occupied)).toBe(false);
   });
 
   it("walk-in at the same time as booked slot: detected as conflict", () => {
@@ -184,7 +184,7 @@ describe("Slot conflict detection (double-booking prevention)", () => {
 
     // Walk-in tries to use the same bay at 11:30 IST during the booked slot
     const walkinStart = localToUTC(DATE, "11:30", IST);
-    expect(hasConflict(walkinStart, 60, occupied)).toBe(true);
+    expect(hasConflict(walkinStart, new Date(walkinStart.getTime() + 60 * 60000), occupied)).toBe(true);
   });
 
   it("idempotency: same idempotency key should not create duplicate booking (simulated)", () => {
@@ -207,7 +207,7 @@ describe("Cancellation and reservation release", () => {
     const cancelledStart = localToUTC(DATE, "09:00", IST);
     const occupied: ReturnType<typeof buildOccupiedInterval>[] = [];
     // Slot should be free again
-    expect(hasConflict(cancelledStart, 60, occupied)).toBe(false);
+    expect(hasConflict(cancelledStart, new Date(cancelledStart.getTime() + 60 * 60000), occupied)).toBe(false);
   });
 
   it("concurrent walk-in on second bay: first bay still blocked", () => {
@@ -218,8 +218,8 @@ describe("Cancellation and reservation release", () => {
     const bay2Occupied: ReturnType<typeof buildOccupiedInterval>[] = [];
 
     const walkinStart = localToUTC(DATE, "10:00", IST);
-    expect(hasConflict(walkinStart, 60, bay1Occupied)).toBe(true);  // bay 1 taken
-    expect(hasConflict(walkinStart, 60, bay2Occupied)).toBe(false); // bay 2 free
+    expect(hasConflict(walkinStart, new Date(walkinStart.getTime() + 60 * 60000), bay1Occupied)).toBe(true);  // bay 1 taken
+    expect(hasConflict(walkinStart, new Date(walkinStart.getTime() + 60 * 60000), bay2Occupied)).toBe(false); // bay 2 free
   });
 
   it("slot overlapping from behind: job in progress blocks earlier start", () => {
@@ -230,7 +230,7 @@ describe("Cancellation and reservation release", () => {
 
     // New 60-min job starting 10:00 IST would end at 11:15 (incl buffer) → overlaps 10:30 job
     const candidateStart = localToUTC(DATE, "10:00", IST);
-    expect(hasConflict(candidateStart, 60, occupied)).toBe(true);
+    expect(hasConflict(candidateStart, new Date(candidateStart.getTime() + 60 * 60000), occupied)).toBe(true);
   });
 
   it("no conflict when cancellation releases the slot and a new booking takes it", () => {
@@ -238,11 +238,11 @@ describe("Cancellation and reservation release", () => {
     const slotStart = localToUTC(DATE, "14:00", IST);
     const slotEstEnd = new Date(slotStart.getTime() + 60 * 60000);
     const occupiedBefore = [buildOccupiedInterval(slotStart.toISOString(), slotEstEnd.toISOString())];
-    expect(hasConflict(slotStart, 60, occupiedBefore)).toBe(true);
+    expect(hasConflict(slotStart, new Date(slotStart.getTime() + 60 * 60000), occupiedBefore)).toBe(true);
 
     // After cancellation: slot is released (interval removed)
     const occupiedAfter: ReturnType<typeof buildOccupiedInterval>[] = [];
-    expect(hasConflict(slotStart, 60, occupiedAfter)).toBe(false);
+    expect(hasConflict(slotStart, new Date(slotStart.getTime() + 60 * 60000), occupiedAfter)).toBe(false);
   });
 });
 

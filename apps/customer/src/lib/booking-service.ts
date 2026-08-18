@@ -15,7 +15,8 @@ import type { Booking } from "@autodeck/core";
 export interface AvailableSlot {
   date: string;
   startTime: string;
-  endTime: string;
+  endTime: string; // local time-of-day on estimatedEndDate (may differ from `date` for multi-day slots)
+  estimatedEndDate: string; // "YYYY-MM-DD" — == date unless the service spans multiple days
   startAt: string;
   estimatedEndAt: string;
 }

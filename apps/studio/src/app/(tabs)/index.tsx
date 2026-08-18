@@ -55,7 +55,9 @@ export default function TodaysJobsScreen() {
         </View>
       }
       ListEmptyComponent={<EmptyState title="No active jobs today" fill={false} />}
-      renderItem={({ item }) => <JobCard job={item} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />}
+      renderItem={({ item }) => (
+        <JobCard job={item} viewDate={todayIST()} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+      )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
     />
   );

@@ -9,6 +9,13 @@ export const DEFAULT_TAX_DESCRIPTION = "GST 18%";
 export const SLOT_INTERVAL_MINUTES = 30;
 export const TURNOVER_BUFFER_MINUTES = 15;
 export const MAX_ADVANCE_BOOKING_DAYS = 30;
+// Upper bound on how many calendar days a single job/booking can span,
+// derived from the real catalogue's longest service (LLumar Valor PPF,
+// 4320 min ≈ 7.2 working days at a typical 600 min/day operating window)
+// with headroom. Used to bound multi-day-aware bay-occupancy range queries
+// so they stay index-friendly rather than scanning unbounded history/future
+// (Phase 5 — multi-day booking).
+export const MAX_SERVICE_SPAN_DAYS = 14;
 export const MAX_CUSTOMER_RESCHEDULES = 3;
 export const CANCELLATION_FREE_WINDOW_HOURS = 24;
 

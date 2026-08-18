@@ -10,10 +10,12 @@ import {
   getTZOffsetMinutes,
   localToUTC,
   utcToLocalDate,
+  utcToLocalTime,
   timeToMinutes,
   minutesToTime,
   getDayOfWeek,
   addDays,
+  computeScheduleEnd,
 } from "../../lib/schedule.js";
 import type { Bay, OperatingHours } from "@autodeck/core";
 
@@ -24,6 +26,16 @@ const BAYS: Bay[] = [
   { id: "bay-wash-1", tenantId: "t1", studioId: "s1", name: "Wash Bay 1", bayType: "wash", active: true },
   { id: "bay-wash-2", tenantId: "t1", studioId: "s1", name: "Wash Bay 2", bayType: "wash", active: true },
   { id: "bay-prot-1", tenantId: "t1", studioId: "s1", name: "Protection Bay 1", bayType: "protection", active: true },
+];
+
+const weeklyHours: OperatingHours[] = [
+  { dayOfWeek: 0, open: "09:00", close: "19:00", closed: true }, // Sunday closed
+  { dayOfWeek: 1, open: "09:00", close: "19:00", closed: false },
+  { dayOfWeek: 2, open: "09:00", close: "19:00", closed: false },
+  { dayOfWeek: 3, open: "09:00", close: "19:00", closed: false },
+  { dayOfWeek: 4, open: "09:00", close: "19:00", closed: false },
+  { dayOfWeek: 5, open: "09:00", close: "19:00", closed: false },
+  { dayOfWeek: 6, open: "09:00", close: "19:00", closed: false },
 ];
 
 // ─── Timezone utilities ───────────────────────────────────────────────────────
@@ -83,6 +95,91 @@ describe("timeToMinutes / minutesToTime", () => {
   it("converts 1140 to 19:00", () => expect(minutesToTime(1140)).toBe("19:00"));
 });
 
+// ─── computeScheduleEnd ───────────────────────────────────────────────────────
+
+describe("computeScheduleEnd", () => {
+  it("single-day-fit service ends at exactly startAt + duration (identical to naive addition)", () => {
+    const start = localToUTC(BASE_DATE, "09:00", IST); // Monday
+    const end = computeScheduleEnd(start, 90, weeklyHours, [], IST);
+    expect(end.getTime() - start.getTime()).toBe(90 * 60000);
+    expect(utcToLocalDate(end, IST)).toBe(BASE_DATE);
+    expect(utcToLocalTime(end, IST)).toBe("10:30");
+  });
+
+  it("mid-day start that fits the remainder of the day ends same-day", () => {
+    const start = localToUTC(BASE_DATE, "14:00", IST); // 5h to close (300 min)
+    const end = computeScheduleEnd(start, 200, weeklyHours, [], IST);
+    expect(utcToLocalDate(end, IST)).toBe(BASE_DATE);
+    expect(utcToLocalTime(end, IST)).toBe("17:20");
+  });
+
+  it("exact boundary fit: duration == remaining minutes in the day ends exactly at close", () => {
+    const start = localToUTC(BASE_DATE, "09:00", IST); // 600 min to close
+    const end = computeScheduleEnd(start, 600, weeklyHours, [], IST);
+    expect(utcToLocalDate(end, IST)).toBe(BASE_DATE);
+    expect(utcToLocalTime(end, IST)).toBe("19:00");
+  });
+
+  it("one minute past the boundary spills exactly one minute into the next open day", () => {
+    const start = localToUTC(BASE_DATE, "09:00", IST); // 600 min to close
+    const end = computeScheduleEnd(start, 601, weeklyHours, [], IST);
+    expect(utcToLocalDate(end, IST)).toBe(addDays(BASE_DATE, 1)); // Tuesday
+    expect(utcToLocalTime(end, IST)).toBe("09:01");
+  });
+
+  it("matches the documented AutoModz example exactly: 2880 min = 4 working days + 480 min into day 5", () => {
+    // doc04: "A PPF job requiring 2,880 minutes = 4 working days + 480 minutes
+    // into day 5" at a 600-min/day (09:00-19:00) operating window.
+    const start = localToUTC(BASE_DATE, "09:00", IST); // Monday
+    const end = computeScheduleEnd(start, 2880, weeklyHours, [], IST);
+    expect(utcToLocalDate(end, IST)).toBe(addDays(BASE_DATE, 4)); // Friday
+    expect(utcToLocalTime(end, IST)).toBe("17:00"); // 09:00 + 480 min
+  });
+
+  it("a 2-day service (700 min) rolls over exactly one day", () => {
+    const start = localToUTC(BASE_DATE, "09:00", IST);
+    const end = computeScheduleEnd(start, 700, weeklyHours, [], IST);
+    expect(utcToLocalDate(end, IST)).toBe(addDays(BASE_DATE, 1)); // Tuesday
+    expect(utcToLocalTime(end, IST)).toBe("10:40"); // 100 min remaining after Mon's 600
+  });
+
+  it("a 3-day service (1300 min) rolls over exactly two days", () => {
+    const start = localToUTC(BASE_DATE, "09:00", IST);
+    const end = computeScheduleEnd(start, 1300, weeklyHours, [], IST);
+    expect(utcToLocalDate(end, IST)).toBe(addDays(BASE_DATE, 2)); // Wednesday
+    expect(utcToLocalTime(end, IST)).toBe("10:40"); // 100 min remaining after Mon+Tue's 1200
+  });
+
+  it("skips a holiday that falls within the rollover span", () => {
+    const start = localToUTC(BASE_DATE, "09:00", IST); // Monday
+    const holiday = addDays(BASE_DATE, 1); // Tuesday
+    const end = computeScheduleEnd(start, 601, weeklyHours, [holiday], IST);
+    // Monday consumes 600, 1 min remains; Tuesday is a holiday and is
+    // skipped entirely (not counted, not landed on) — lands on Wednesday.
+    expect(utcToLocalDate(end, IST)).toBe(addDays(BASE_DATE, 2)); // Wednesday
+    expect(utcToLocalTime(end, IST)).toBe("09:01");
+  });
+
+  it("falls back to naive startAt + duration when no operating day is configured at all", () => {
+    // A studio with no operatingHours configured (onboarding incomplete) is
+    // already non-functional for online-booking availability — this must
+    // degrade gracefully rather than throw.
+    const start = localToUTC(BASE_DATE, "09:00", IST);
+    const end = computeScheduleEnd(start, 90, [], [], IST);
+    expect(end.getTime() - start.getTime()).toBe(90 * 60000);
+  });
+
+  it("skips a closed weekend day (Sunday) within the rollover span", () => {
+    const saturday = addDays(BASE_DATE, 5); // 2026-08-22, Saturday
+    const start = localToUTC(saturday, "09:00", IST);
+    const end = computeScheduleEnd(start, 601, weeklyHours, [], IST);
+    // Saturday consumes 600, 1 min remains; Sunday is closed and is skipped
+    // entirely — lands on the following Monday.
+    expect(utcToLocalDate(end, IST)).toBe(addDays(saturday, 2)); // Monday
+    expect(utcToLocalTime(end, IST)).toBe("09:01");
+  });
+});
+
 // ─── generateDaySlots ─────────────────────────────────────────────────────────
 
 describe("generateDaySlots", () => {
@@ -94,6 +191,8 @@ describe("generateDaySlots", () => {
       serviceDurationMinutes: 60,
       occupiedIntervals: [],
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
     // First slot at 09:00, last slot start: 19:00 - (60+15) = 18:45 → so last is 18:30 (multiple of 30)
     // Slots: 09:00, 09:30, 10:00, ..., 18:30 → (18:30 - 09:00) / 30 + 1 = (570/30)+1 = 20 slots
@@ -110,7 +209,7 @@ describe("generateDaySlots", () => {
     }
   });
 
-  it("returns empty array for a closed day", () => {
+  it("returns slots for a normal day", () => {
     const slots = generateDaySlots({
       date: BASE_DATE,
       openTime: "09:00",
@@ -118,18 +217,40 @@ describe("generateDaySlots", () => {
       serviceDurationMinutes: 60,
       occupiedIntervals: [],
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
-    // Closed day
+    expect(slots.length).toBeGreaterThan(0);
+  });
+
+  it("rolls a job into the next open day when today's own window is too small for it, instead of returning no slots", () => {
+    // Today's window (09:00-09:30) can't fit a 60-min job on its own — but
+    // per the multi-day model, the job should still be offered a start,
+    // completing on the next open day (same principle as a real multi-day
+    // PPF job that never fits within a single day at all).
     const closedSlots = generateDaySlots({
-      date: BASE_DATE,
+      date: BASE_DATE, // Monday
       openTime: "09:00",
       closeTime: "09:30", // window too small for 60+15 min
       serviceDurationMinutes: 60,
       occupiedIntervals: [],
       timezone: IST,
+      operatingHours: weeklyHours, // Tuesday: 09:00-19:00, plenty of room
+      holidays: [],
     });
-    expect(slots.length).toBeGreaterThan(0);
-    expect(closedSlots).toHaveLength(0);
+    expect(closedSlots).toHaveLength(1);
+    expect(closedSlots[0]?.startTime).toBe("09:00");
+    expect(closedSlots[0]?.date).toBe(BASE_DATE);
+    // computeScheduleEnd re-derives the day's real hours from `operatingHours`
+    // (Monday: 09:00-19:00 in the fixture), independent of this call's
+    // artificially-shrunk closeTime override — so the 60-min job actually
+    // finishes same-day at 10:00, not on a rolled-over day. This confirms
+    // generateDaySlots' gate uses its OWN openTime/closeTime for the
+    // same-day-fit decision, while computeScheduleEnd is always driven by the
+    // authoritative weekly schedule — the two must be passed consistently by
+    // real callers (computeAvailability always derives both from the same
+    // operatingHours entry).
+    expect(closedSlots[0]?.estimatedEndDate).toBe(BASE_DATE);
   });
 
   it("excludes slots that conflict with an existing job", () => {
@@ -145,6 +266,8 @@ describe("generateDaySlots", () => {
       serviceDurationMinutes: 60,
       occupiedIntervals: occupied,
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
 
     // 09:00, 09:30, 10:00 should conflict; 10:30 should be free (job+buffer ends at 10:15)
@@ -163,6 +286,8 @@ describe("generateDaySlots", () => {
       serviceDurationMinutes: 60,
       occupiedIntervals: [],
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
     // 09:00 IST = 03:30 UTC on 2026-08-17
     expect(slots[0]?.startAt).toBe("2026-08-17T03:30:00.000Z");
@@ -176,6 +301,8 @@ describe("generateDaySlots", () => {
       serviceDurationMinutes: 90,
       occupiedIntervals: [],
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
     const first = slots[0];
     if (!first) throw new Error("Expected at least one slot");
@@ -197,8 +324,54 @@ describe("generateDaySlots", () => {
       serviceDurationMinutes: 60,
       occupiedIntervals: occupied,
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
     expect(slots).toHaveLength(0);
+  });
+
+  it("offers multi-day rollover slots for a real PPF-scale duration (2880 min) that can't fit any single day", () => {
+    const slots = generateDaySlots({
+      date: BASE_DATE, // Monday
+      openTime: "09:00",
+      closeTime: "19:00",
+      serviceDurationMinutes: 2880,
+      occupiedIntervals: [],
+      timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
+    });
+    expect(slots.length).toBeGreaterThan(0);
+    const first = slots[0];
+    if (!first) throw new Error("Expected at least one slot");
+    expect(first.startTime).toBe("09:00");
+    expect(first.date).toBe(BASE_DATE);
+    // Matches the doc04 example: 4 working days + 480 min into day 5 (Friday 17:00)
+    expect(first.estimatedEndDate).toBe(addDays(BASE_DATE, 4));
+    expect(first.endTime).toBe("17:00");
+  });
+
+  it("multi-day candidates respect occupied intervals spanning into the rollover window", () => {
+    // Another job occupies the target bay from Wed 09:00 through Wed close —
+    // a Monday-start 2880-min job would roll through Wed and must be blocked.
+    const wednesday = addDays(BASE_DATE, 2);
+    const occupied: OccupiedInterval[] = [
+      {
+        startAt: localToUTC(wednesday, "09:00", IST),
+        endAt: localToUTC(wednesday, "19:00", IST),
+      },
+    ];
+    const slots = generateDaySlots({
+      date: BASE_DATE,
+      openTime: "09:00",
+      closeTime: "19:00",
+      serviceDurationMinutes: 2880,
+      occupiedIntervals: occupied,
+      timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
+    });
+    expect(slots.some((s) => s.startTime === "09:00" && s.date === BASE_DATE)).toBe(false);
   });
 });
 
@@ -207,16 +380,18 @@ describe("generateDaySlots", () => {
 describe("hasConflict", () => {
   it("detects exact overlap", () => {
     const start = new Date("2026-08-17T03:30:00Z"); // 09:00 IST
+    const rawEnd = new Date(start.getTime() + 60 * 60000); // 60-min service, buffer-free
     const jobStart = new Date("2026-08-17T03:30:00Z");
     const jobEnd = new Date("2026-08-17T04:30:00Z"); // includes buffer
-    expect(hasConflict(start, 60, [{ startAt: jobStart, endAt: jobEnd }])).toBe(true);
+    expect(hasConflict(start, rawEnd, [{ startAt: jobStart, endAt: jobEnd }])).toBe(true);
   });
 
   it("detects partial overlap at start", () => {
     const requestStart = new Date("2026-08-17T04:00:00Z"); // new job starts at 4am UTC
+    const rawEnd = new Date(requestStart.getTime() + 30 * 60000); // 30-min service
     const jobEnd = new Date("2026-08-17T04:15:00Z"); // existing job still blocked at 4:15 UTC
     expect(
-      hasConflict(requestStart, 30, [
+      hasConflict(requestStart, rawEnd, [
         { startAt: new Date("2026-08-17T03:00:00Z"), endAt: jobEnd },
       ]),
     ).toBe(true);
@@ -224,6 +399,7 @@ describe("hasConflict", () => {
 
   it("returns false for non-overlapping intervals", () => {
     const requestStart = new Date("2026-08-17T05:30:00Z"); // well after any job
+    const rawEnd = new Date(requestStart.getTime() + 30 * 60000); // 30-min service
     const occupied: OccupiedInterval[] = [
       {
         startAt: new Date("2026-08-17T03:30:00Z"),
@@ -231,7 +407,24 @@ describe("hasConflict", () => {
       },
     ];
     // New job at 5:30 UTC, 30 min service → conflicts if overlaps with end of 5:15 → 5:30 >= 5:15 → no conflict
-    expect(hasConflict(requestStart, 30, occupied)).toBe(false);
+    expect(hasConflict(requestStart, rawEnd, occupied)).toBe(false);
+  });
+
+  it("uses the true (already-computed) end, not a naive duration — a multi-day rawEndAt correctly extends the blocked window", () => {
+    // The candidate's raw service duration would naively suggest it ends
+    // well before this occupied interval starts, but its TRUE end (as would
+    // be computed by computeScheduleEnd for a multi-day service) lands
+    // inside it — hasConflict must trust the passed rawEndAt, not re-derive
+    // its own duration-based end.
+    const start = new Date("2026-08-17T03:30:00Z");
+    const trueMultiDayEnd = new Date("2026-08-21T03:30:00Z"); // 4 days later
+    const occupied: OccupiedInterval[] = [
+      {
+        startAt: new Date("2026-08-20T00:00:00Z"),
+        endAt: new Date("2026-08-20T06:00:00Z"),
+      },
+    ];
+    expect(hasConflict(start, trueMultiDayEnd, occupied)).toBe(true);
   });
 });
 
@@ -250,16 +443,6 @@ describe("buildOccupiedInterval", () => {
 // ─── computeAvailability ─────────────────────────────────────────────────────
 
 describe("computeAvailability", () => {
-  const weeklyHours: OperatingHours[] = [
-    { dayOfWeek: 0, open: "09:00", close: "19:00", closed: true }, // Sunday closed
-    { dayOfWeek: 1, open: "09:00", close: "19:00", closed: false },
-    { dayOfWeek: 2, open: "09:00", close: "19:00", closed: false },
-    { dayOfWeek: 3, open: "09:00", close: "19:00", closed: false },
-    { dayOfWeek: 4, open: "09:00", close: "19:00", closed: false },
-    { dayOfWeek: 5, open: "09:00", close: "19:00", closed: false },
-    { dayOfWeek: 6, open: "09:00", close: "19:00", closed: false },
-  ];
-
   it("returns slots across multiple days", () => {
     const slots = computeAvailability({
       startDate: BASE_DATE,
@@ -385,6 +568,8 @@ describe("Turnover buffer integration", () => {
       serviceDurationMinutes: 60,
       occupiedIntervals: occupied,
       timezone: IST,
+      operatingHours: weeklyHours,
+      holidays: [],
     });
 
     // With 30-min granularity, next available start after 10:15 IST is 10:30 IST

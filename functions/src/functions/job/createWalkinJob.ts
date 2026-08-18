@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob, Vehicle, Customer } from "@autodeck/core";
-import { TURNOVER_BUFFER_MINUTES } from "@autodeck/core";
+import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -13,7 +13,7 @@ import {
   hasConflict,
   type OccupiedInterval,
 } from "../../lib/availability.js";
-import { utcToLocalDate } from "../../lib/schedule.js";
+import { utcToLocalDate, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 import { calculatePrice } from "../../lib/pricing.js";
 
 export const createWalkinJob = onCall({ region: "asia-south1" }, async (request) => {
@@ -84,19 +84,34 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
   });
 
   const scheduledDate = utcToLocalDate(now, config.timezone);
-  const estimatedEndAt = new Date(
-    now.getTime() + (service.estimatedDurationMinutes + TURNOVER_BUFFER_MINUTES) * 60000,
+  // Authoritative, multi-day-aware completion instant — walk-ins aren't
+  // restricted to short services, so this must use the same calculation as
+  // createBooking/rescheduleBooking (single source of truth). Buffer-free —
+  // matches ServiceJob.estimatedEndAt's contract.
+  const estimatedEndAt = computeScheduleEnd(
+    now,
+    service.estimatedDurationMinutes,
+    config.operatingHours,
+    config.holidays,
+    config.timezone,
   );
+  const estimatedEndDate = utcToLocalDate(estimatedEndAt, config.timezone);
   const jobRef = db.collection(COLLECTIONS.jobs()).doc();
 
   await db.runTransaction(async (tx) => {
-    // Transactional bay check: ensure no active job is currently occupying this bay
+    // Transactional bay check: ensure no active job is currently occupying
+    // this bay. Widened to a MAX_SERVICE_SPAN_DAYS range so a multi-day job
+    // that started earlier but is still occupying the bay is still found
+    // (Phase 5 — multi-day booking).
+    const rangeStartDate = addDays(scheduledDate, -MAX_SERVICE_SPAN_DAYS);
+    const rangeEndDate = addDays(scheduledDate, MAX_SERVICE_SPAN_DAYS);
     const activeJobsSnap = await tx.get(
       db
         .collection(COLLECTIONS.jobs())
         .where("studioId", "==", data.studioId)
         .where("bayId", "==", data.bayId)
-        .where("scheduledDate", "==", scheduledDate),
+        .where("scheduledDate", ">=", rangeStartDate)
+        .where("scheduledDate", "<=", rangeEndDate),
     );
 
     const occupied: OccupiedInterval[] = [];
@@ -106,7 +121,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
       occupied.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
     }
 
-    if (hasConflict(now, service.estimatedDurationMinutes, occupied)) {
+    if (hasConflict(now, estimatedEndAt, occupied)) {
       throw new HttpsError(
         "resource-exhausted",
         "Bay is currently occupied. Please select a different bay.",
@@ -135,6 +150,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
       scheduledAt: nowIso,
       scheduledDate,
       estimatedEndAt: estimatedEndAt.toISOString(),
+      estimatedEndDate,
       estimatedDurationMinutes: service.estimatedDurationMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,

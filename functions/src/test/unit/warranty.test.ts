@@ -17,6 +17,7 @@ const BASE_JOB: ServiceJob = {
   scheduledAt: "2026-01-01T04:00:00.000Z",
   scheduledDate: "2026-01-01",
   estimatedEndAt: "2026-01-01T06:00:00.000Z",
+  estimatedEndDate: "2026-01-01",
   estimatedDurationMinutes: 120,
   studioNotes: null,
   additionalWorkDelta: 0,

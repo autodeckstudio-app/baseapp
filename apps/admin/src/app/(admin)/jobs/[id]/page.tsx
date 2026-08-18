@@ -126,7 +126,20 @@ export default function JobDetailPage() {
           <h3>Bay &amp; Schedule</h3>
           <div className="kv"><span>Bay</span><span>{job.bayId}</span></div>
           <div className="kv"><span>Scheduled</span><span>{formatDateTime(job.scheduledAt)}</span></div>
+          <div className="kv">
+            <span>Duration</span>
+            <span>
+              {job.estimatedDurationMinutes < 24 * 60
+                ? `~${job.estimatedDurationMinutes} min`
+                : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`}
+            </span>
+          </div>
           <div className="kv"><span>Est. end</span><span>{formatDateTime(job.estimatedEndAt)}</span></div>
+          {job.scheduledDate !== job.estimatedEndDate && (
+            <p style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              Multi-day job — bay reserved {job.scheduledDate} through {job.estimatedEndDate}.
+            </p>
+          )}
           <div className="kv"><span>Sealed</span><span>{job.sealedAt ? formatDateTime(job.sealedAt) : "—"}</span></div>
         </div>
 

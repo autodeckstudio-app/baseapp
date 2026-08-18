@@ -58,6 +58,14 @@ const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   EXPIRED: "This booking has expired.",
 };
 
+// Multi-day PPF services run into thousands of minutes — express as hours
+// once past a day (this is service-time, not calendar time; the
+// authoritative calendar span is shown separately via "Expected ready").
+function formatDuration(minutes: number): string {
+  if (minutes < 24 * 60) return `~${minutes} min`;
+  return `~${Math.round(minutes / 60)} hrs of service time`;
+}
+
 function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason: string | null } {
   if (booking.status !== "CONFIRMED") {
     return { eligible: false, reason: NON_RESCHEDULABLE_STATUS_REASONS[booking.status] ?? "This booking can't be rescheduled." };
@@ -177,6 +185,13 @@ export default function BookingDetailScreen() {
   });
   const displayTime = scheduledAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
 
+  const isMultiDay = booking.estimatedEndDate !== booking.scheduledDate;
+  const displayEndDate = new Date(`${booking.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
       <StatusBadge label={BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={statusTone(booking.status)} />
@@ -186,9 +201,19 @@ export default function BookingDetailScreen() {
 
       <Section>
         <Row label="Time" value={`${displayTime} IST`} />
-        <Row label="Duration" value={`~${booking.durationMinutes} min`} />
+        <Row label="Duration" value={formatDuration(booking.durationMinutes)} />
+        <Row label="Expected ready" value={`${displayEndDate}, ${booking.estimatedEndTime} IST`} />
         {booking.notes !== null && <Row label="Notes" value={booking.notes} />}
       </Section>
+
+      {isMultiDay && (
+        <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
+          <Text style={{ ...typography.bodyMedium, color: colors.accentPressed, marginBottom: spacing.xs }}>Multi-day service</Text>
+          <Text style={{ ...typography.caption, color: colors.accentPressed }}>
+            Your vehicle stays at the studio from {displayDate} through {displayEndDate}.
+          </Text>
+        </View>
+      )}
 
       {job && (
         <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>

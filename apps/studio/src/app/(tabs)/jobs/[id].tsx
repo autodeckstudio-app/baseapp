@@ -302,6 +302,21 @@ export default function JobDetailScreen() {
     hour12: true,
   });
 
+  const isMultiDay = job.scheduledDate !== job.estimatedEndDate;
+  const estimatedEndTime = new Date(job.estimatedEndAt).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const durationLabel =
+    job.estimatedDurationMinutes < 24 * 60
+      ? `~${job.estimatedDurationMinutes} min`
+      : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`;
+
   const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId) ?? [];
 
   return (
@@ -315,9 +330,19 @@ export default function JobDetailScreen() {
         <Row label="Bay" value={job.bayId} />
         <Row label="Service" value={job.serviceId} />
         <Row label="Scheduled" value={scheduledTime} />
-        <Row label="Duration" value={`~${job.estimatedDurationMinutes} min`} />
+        <Row label="Duration" value={durationLabel} />
+        <Row label="Expected ready" value={estimatedEndTime} />
         <Row label="Payment" value={job.paymentStatus} />
       </Section>
+
+      {isMultiDay && (
+        <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
+          <Text style={{ ...typography.bodyMedium, color: colors.accentPressed, marginBottom: spacing.xs }}>Multi-day job</Text>
+          <Text style={{ ...typography.caption, color: colors.accentPressed }}>
+            This job spans multiple days — the bay stays reserved from {job.scheduledDate} through {job.estimatedEndDate}.
+          </Text>
+        </View>
+      )}
 
       {bookingMembership && (
         <View

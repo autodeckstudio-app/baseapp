@@ -175,6 +175,8 @@ export default function BayBoardScreen() {
                       <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
                         {serviceNames[job.serviceId] ?? "Service"}
                         {job.isWalkIn ? " · Walk-in" : ""}
+                        {job.scheduledDate !== todayIST() ? ` · since ${job.scheduledDate}` : ""}
+                        {job.scheduledDate !== job.estimatedEndDate ? ` · until ${job.estimatedEndDate}` : ""}
                       </Text>
                     </View>
                     <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>

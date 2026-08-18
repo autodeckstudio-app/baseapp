@@ -8,7 +8,7 @@ import type { ServiceJob } from "@autodeck/core";
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
 import { FIRST_STUDIO_ID } from "@autodeck/core";
-import { colors, spacing, radius, typography, statusTone, StatusBadge, EmptyState, LoadingState, formatTime } from "@autodeck/ui";
+import { colors, spacing, radius, typography, EmptyState, LoadingState, JobCard } from "@autodeck/ui";
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00Z`);
@@ -104,21 +104,10 @@ export default function CalendarScreen() {
           data={jobs}
           keyExtractor={(j) => j.id}
           ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
-          renderItem={({ item }) => {
-            return (
-              <TouchableOpacity
-                style={{ flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm, gap: spacing.md }}
-                onPress={() => router.push(`/(tabs)/jobs/${item.id}`)}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{formatTime(item.scheduledAt)}</Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>Bay: {item.bayId}</Text>
-                </View>
-                <StatusBadge label={item.status.replace(/_/g, " ")} tone={statusTone(item.status)} />
-              </TouchableOpacity>
-            );
-          }}
-          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.divider }} />}
+          renderItem={({ item }) => (
+            <JobCard job={item} viewDate={selectedDate} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         />
       )}
     </View>

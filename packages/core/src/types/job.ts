@@ -30,7 +30,15 @@ export interface ServiceJob {
   statusHistory: JobStatusHistoryEntry[]; // append-only embedded array
   scheduledAt: string; // ISO UTC — booked start time or walk-in creation time
   scheduledDate: string; // "YYYY-MM-DD" in studio TZ — used for date-scoped queries
-  estimatedEndAt: string; // ISO UTC = scheduledAt + estimatedDurationMinutes
+  // ISO UTC — true service completion instant (buffer-free), computed via
+  // computeScheduleEnd from scheduledAt + estimatedDurationMinutes, walking
+  // forward across operating days only (multi-day-aware; equals the naive
+  // scheduledAt + estimatedDurationMinutes for any service that fits within
+  // its start day). The turnover buffer is applied only where occupancy
+  // intervals are built (buildOccupiedInterval), never baked in here — this
+  // keeps estimatedEndAt directly comparable to Booking.estimatedEndAt.
+  estimatedEndAt: string;
+  estimatedEndDate: string; // "YYYY-MM-DD" in studio TZ — == scheduledDate unless the job spans multiple days
   estimatedDurationMinutes: number; // snapshotted from service at job creation
   studioNotes: string | null;
   additionalWorkDelta: number; // paise — sum of approved ApprovalRequests

@@ -10,6 +10,17 @@ import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, PriceBreakdown, LoadingState, ListRow } from "@autodeck/ui";
 
+// Multi-day PPF services run into thousands of minutes — "~4320 min" is
+// meaningless to a customer. This is service-time (not calendar time — the
+// authoritative calendar span, which depends on operating hours/holidays, is
+// already shown via "Expected ready" below), so express it in hours once it
+// crosses a day rather than implying a calendar-day count.
+function formatDuration(minutes: number): string {
+  if (minutes < 24 * 60) return `~${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  return `~${hours} hrs of service time`;
+}
+
 export default function BookingConfirmScreen() {
   const params = useLocalSearchParams<{
     serviceId: string;
@@ -19,6 +30,8 @@ export default function BookingConfirmScreen() {
     scheduledTime: string;
     startAt: string;
     estimatedEndAt: string;
+    estimatedEndDate: string;
+    endTime: string;
   }>();
   const router = useRouter();
 
@@ -76,6 +89,13 @@ export default function BookingConfirmScreen() {
     params.scheduledDate &&
     new Date(`${params.scheduledDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
+  const isMultiDay = !!params.estimatedEndDate && params.estimatedEndDate !== params.scheduledDate;
+  const displayEndDate =
+    params.estimatedEndDate &&
+    new Date(`${params.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+
+  const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "—";
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
       <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>Confirm Booking</Text>
@@ -86,8 +106,21 @@ export default function BookingConfirmScreen() {
         <ListRow label="Reg." value={vehicle?.registrationNumber ?? "—"} />
         <ListRow label="Date" value={displayDate ?? "—"} />
         <ListRow label="Time" value={params.scheduledTime ? `${params.scheduledTime} IST` : "—"} />
-        <ListRow label="Duration" value={service ? `~${service.estimatedDurationMinutes} min` : "—"} />
+        <ListRow label="Duration" value={durationLabel} />
+        <ListRow
+          label="Expected ready"
+          value={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime} IST` : ""}` : "—"}
+        />
       </View>
+
+      {isMultiDay && (
+        <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
+          <Text style={{ ...typography.bodyMedium, color: colors.accentPressed, marginBottom: spacing.xs }}>Multi-day service</Text>
+          <Text style={{ ...typography.caption, color: colors.accentPressed }}>
+            This service takes longer than one day. Your vehicle will stay at the studio from {displayDate} through {displayEndDate}.
+          </Text>
+        </View>
+      )}
 
       {breakdown !== null && (
         <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>

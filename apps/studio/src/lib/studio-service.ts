@@ -11,6 +11,16 @@ import {
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, StudioConfig, Service } from "@autodeck/core";
+import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
+
+// Returns "YYYY-MM-DD" for N days after/before the given local date string.
+// Mirrors functions/src/lib/schedule.ts's addDays (kept separate — this is
+// client code, not a shared package).
+function addDaysLocal(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 type GetStudioJobsInput = { studioId: string; date?: string };
 type GetStudioJobsOutput = { jobs: ServiceJob[]; date: string };
@@ -86,6 +96,15 @@ export async function getStudioConfig(studioId: string): Promise<StudioConfig | 
 // Firestore rejects the list query outright unless tenantId is also
 // constrained by an equality filter it can verify statically — always the
 // calling studio user's own claims.tenantId (never a hardcoded constant).
+// Jobs visible "on" `date` are those SCHEDULED to start on or before it and
+// still running through it (estimatedEndDate >= date) — a same-day exact
+// match alone would silently drop an in-progress multi-day job (e.g. a PPF
+// job that started Monday, still occupying a bay on Wednesday) from Today's
+// Jobs / Calendar / Bay Board on any day after its start (Phase 5 —
+// multi-day booking). The query is widened to a bounded range and filtered
+// in-memory; reuses the existing (tenantId, studioId, scheduledDate,
+// scheduledAt) composite index — a range filter on the last equality field
+// needs no new index.
 export function listenToJobsByDate(
   tenantId: string,
   studioId: string,
@@ -93,17 +112,20 @@ export function listenToJobsByDate(
   onData: (jobs: ServiceJob[]) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
+  const rangeStart = addDaysLocal(date, -MAX_SERVICE_SPAN_DAYS);
   const q = query(
     collection(db, COLLECTIONS.jobs()),
     where("tenantId", "==", tenantId),
     where("studioId", "==", studioId),
-    where("scheduledDate", "==", date),
+    where("scheduledDate", ">=", rangeStart),
+    where("scheduledDate", "<=", date),
   );
   return onSnapshot(
     q,
     (snap) => {
       const jobs = snap.docs
         .map((d) => d.data() as ServiceJob)
+        .filter((j) => j.estimatedEndDate >= date)
         .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
       onData(jobs);
     },

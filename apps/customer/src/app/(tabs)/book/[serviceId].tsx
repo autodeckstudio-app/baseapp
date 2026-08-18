@@ -91,6 +91,8 @@ export default function BookServiceScreen() {
         scheduledTime: slot.startTime,
         startAt: slot.startAt,
         estimatedEndAt: slot.estimatedEndAt,
+        estimatedEndDate: slot.estimatedEndDate,
+        endTime: slot.endTime,
       },
     });
   }
@@ -159,21 +161,29 @@ export default function BookServiceScreen() {
               {new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
-              {daySlots.map((slot) => (
-                <TouchableOpacity
-                  key={slot.startAt}
-                  onPress={() => handleSelectSlot(slot)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.accent,
-                    borderRadius: radius.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                  }}
-                >
-                  <Text style={{ ...typography.bodyMedium, color: colors.accent }}>{slot.startTime}</Text>
-                </TouchableOpacity>
-              ))}
+              {daySlots.map((slot) => {
+                const isMultiDay = slot.estimatedEndDate !== slot.date;
+                return (
+                  <TouchableOpacity
+                    key={slot.startAt}
+                    onPress={() => handleSelectSlot(slot)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.accent,
+                      borderRadius: radius.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                    }}
+                  >
+                    <Text style={{ ...typography.bodyMedium, color: colors.accent }}>{slot.startTime}</Text>
+                    {isMultiDay && (
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                        Multi-day · ready {new Date(`${slot.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         ))

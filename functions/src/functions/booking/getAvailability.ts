@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob } from "@autodeck/core";
+import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -50,7 +51,12 @@ export const getAvailability = onCall({ region: "asia-south1" }, async (request)
     return { slots: [] };
   }
 
-  // Build the date range to query jobs for
+  // Build the date range to query jobs for. The lower bound is widened
+  // backward by MAX_SERVICE_SPAN_DAYS so that multi-day jobs which STARTED
+  // before data.startDate but are still running (occupying the bay) through
+  // the requested window are still found — a same-day-only query would
+  // silently miss them (Phase 5 — multi-day booking).
+  const queryStartDate = addDays(data.startDate, -MAX_SERVICE_SPAN_DAYS);
   const endDate = addDays(data.startDate, lookAheadDays);
 
   // Query all non-cancelled/delivered jobs for compatible bays in the date range
@@ -62,7 +68,7 @@ export const getAvailability = onCall({ region: "asia-south1" }, async (request)
         .collection(COLLECTIONS.jobs())
         .where("studioId", "==", data.studioId)
         .where("bayId", "==", bay.id)
-        .where("scheduledDate", ">=", data.startDate)
+        .where("scheduledDate", ">=", queryStartDate)
         .where("scheduledDate", "<=", endDate)
         .get();
 

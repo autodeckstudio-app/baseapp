@@ -10,8 +10,8 @@ import type {
   MembershipUsage,
 } from "@autodeck/core";
 import {
-  TURNOVER_BUFFER_MINUTES,
   MAX_ADVANCE_BOOKING_DAYS,
+  MAX_SERVICE_SPAN_DAYS,
 } from "@autodeck/core";
 import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
@@ -25,7 +25,7 @@ import {
   hasConflict,
   type OccupiedInterval,
 } from "../../lib/availability.js";
-import { localToUTC, utcToLocalDate, utcToLocalTime } from "../../lib/schedule.js";
+import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
 export const createBooking = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -120,8 +120,18 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     currency: config.currency,
   });
 
-  const estimatedEndAt = new Date(
-    requestedStart.getTime() + service.estimatedDurationMinutes * 60000,
+  // Authoritative, multi-day-aware completion instant — walks forward
+  // consuming operating-hours-only minutes, skipping closed/holiday days.
+  // Reduces to requestedStart + duration for any service that fits within
+  // its start day (Phase 5 — multi-day booking; single source of truth used
+  // by both booking and job records below, and re-derived identically by
+  // rescheduleBooking).
+  const estimatedEndAt = computeScheduleEnd(
+    requestedStart,
+    service.estimatedDurationMinutes,
+    config.operatingHours,
+    config.holidays,
+    config.timezone,
   );
   const nowIso = now.toISOString();
 
@@ -141,7 +151,12 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     }
 
     // Re-validate availability inside the transaction to prevent race conditions.
-    // Query all active jobs for compatible bays on the requested date.
+    // Query all active jobs for compatible bays across a MAX_SERVICE_SPAN_DAYS-
+    // wide window around the requested date — a same-day-only query would miss
+    // a multi-day job that started earlier but is still occupying the bay
+    // (Phase 5 — multi-day booking).
+    const rangeStartDate = addDays(data.scheduledDate, -MAX_SERVICE_SPAN_DAYS);
+    const rangeEndDate = addDays(data.scheduledDate, MAX_SERVICE_SPAN_DAYS);
     const bayOccupancy = new Map<string, OccupiedInterval[]>();
     for (const bay of compatibleBays) {
       const jobsSnap = await tx.get(
@@ -149,7 +164,8 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
           .collection(COLLECTIONS.jobs())
           .where("studioId", "==", data.studioId)
           .where("bayId", "==", bay.id)
-          .where("scheduledDate", "==", data.scheduledDate),
+          .where("scheduledDate", ">=", rangeStartDate)
+          .where("scheduledDate", "<=", rangeEndDate),
       );
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsSnap.docs) {
@@ -166,7 +182,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
 
     for (const bay of compatibleBays) {
       const occupied = bayOccupancy.get(bay.id) ?? [];
-      if (!hasConflict(requestedStart, service.estimatedDurationMinutes, occupied)) {
+      if (!hasConflict(requestedStart, estimatedEndAt, occupied)) {
         if (occupied.length < minJobs) {
           minJobs = occupied.length;
           assignedBayId = bay.id;
@@ -305,10 +321,11 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       ],
       scheduledAt: requestedStart.toISOString(),
       scheduledDate: data.scheduledDate,
-      estimatedEndAt: new Date(
-        requestedStart.getTime() +
-          (service.estimatedDurationMinutes + TURNOVER_BUFFER_MINUTES) * 60000,
-      ).toISOString(),
+      // Buffer-free — same instant as booking.estimatedEndAt above (single
+      // source of truth). The turnover buffer is applied only when building
+      // occupancy intervals (buildOccupiedInterval), never stored here.
+      estimatedEndAt: estimatedEndAt.toISOString(),
+      estimatedEndDate: utcToLocalDate(estimatedEndAt, config.timezone),
       estimatedDurationMinutes: service.estimatedDurationMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,
