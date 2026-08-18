@@ -64,6 +64,10 @@ export { addStaffMember } from "./functions/employee/addStaffMember.js";
 export { updateStaffRole } from "./functions/employee/updateStaffRole.js";
 export { deactivateStaffMember } from "./functions/employee/deactivateStaffMember.js";
 
+// ─── Protection (Phase 2D) ──────────────────────────────────────────────────
+export { createProtection } from "./functions/protection/createProtection.js";
+export { updateProtection } from "./functions/protection/updateProtection.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

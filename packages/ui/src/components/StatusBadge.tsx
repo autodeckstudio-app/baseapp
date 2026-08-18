@@ -72,6 +72,9 @@ const STATUS_TONES: Record<string, StatusTone> = {
   // Membership (lowercase; distinct from Booking's uppercase ACTIVE/EXPIRED)
   active: "success",
   expired: "neutral",
+  // Protection
+  verified: "success",
+  unverified: "warning",
 };
 
 export function statusTone(status: string): StatusTone {

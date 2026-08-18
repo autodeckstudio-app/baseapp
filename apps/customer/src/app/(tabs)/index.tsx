@@ -108,7 +108,7 @@ export default function HomeScreen() {
 
       <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)/vehicles")}
+          onPress={() => router.push("/(tabs)/garage")}
           style={{
             flex: 1,
             borderWidth: 1,
@@ -118,7 +118,7 @@ export default function HomeScreen() {
             alignItems: "center",
           }}
         >
-          <Text style={{ ...typography.captionMedium, color: colors.textPrimary }}>My Vehicles</Text>
+          <Text style={{ ...typography.captionMedium, color: colors.textPrimary }}>My Garage</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push("/(tabs)/bookings")}

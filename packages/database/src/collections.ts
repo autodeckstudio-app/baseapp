@@ -36,6 +36,7 @@ export const SUBCOLLECTIONS = {
   membershipUsage: (membershipId: string) => `memberships/${membershipId}/usage`,
   jobPhotos: (jobId: string) => `jobs/${jobId}/photos`,
   jobStatusHistory: (jobId: string) => `jobs/${jobId}/statusHistory`,
+  vehicleProtections: (vehicleId: string) => `vehicles/${vehicleId}/protections`,
 } as const;
 
 // Document paths

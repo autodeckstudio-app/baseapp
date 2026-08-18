@@ -46,7 +46,11 @@ export type AuditAction =
   | "invoice.created"
   | "invoice.issued"
   | "invoice.paid"
-  | "invoice.voided";
+  | "invoice.voided"
+  | "protection.created"
+  | "protection.updated"
+  | "protection.verified"
+  | "warranty.issued";
 
 export interface AuditLog {
   id: string;

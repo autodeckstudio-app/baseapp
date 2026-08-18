@@ -1,12 +1,13 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { ServiceJob } from "@autodeck/core";
+import type { ServiceJob, Service } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { advanceJobStatusSchema } from "../../schemas/job.js";
+import { buildWarranty } from "../../lib/warranty-builder.js";
 
 export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -52,6 +53,25 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
   };
 
   await db.runTransaction(async (tx) => {
+    // All reads before any writes. Warranty issuance is resolved here so the
+    // idempotency check (has a Warranty already been written for this job?)
+    // sees a fresh, transaction-consistent read — a concurrent/retried call
+    // that also reaches DELIVERED will be serialized by Firestore's
+    // transaction contention on the job document and, on retry, will see
+    // warrantySnap.exists === true and skip re-issuing (same guarantee as
+    // bay assignment — doc07 §7.5).
+    let warranty: ReturnType<typeof buildWarranty> = null;
+    const warrantyRef = db.collection(COLLECTIONS.warranties()).doc(data.jobId);
+    if (nextStatus === "DELIVERED") {
+      const [serviceSnap, warrantySnap] = await Promise.all([
+        tx.get(db.collection(COLLECTIONS.services()).doc(job.serviceId)),
+        tx.get(warrantyRef),
+      ]);
+      if (serviceSnap.exists && !warrantySnap.exists) {
+        warranty = buildWarranty({ job, service: serviceSnap.data() as Service, sealedAt: now });
+      }
+    }
+
     tx.update(db.collection(COLLECTIONS.jobs()).doc(data.jobId), {
       status: nextStatus,
       statusHistory: [...job.statusHistory, newHistoryEntry],
@@ -70,6 +90,18 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
       if (Object.keys(bookingUpdate).length > 1) {
         tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId), bookingUpdate);
       }
+    }
+
+    if (warranty) {
+      tx.set(warrantyRef, warranty);
+      writeAuditLog(tx, {
+        action: "warranty.issued",
+        entityType: "Warranty",
+        entityId: warranty.id,
+        user,
+        studioId: job.studioId,
+        after: { jobId: job.id, vehicleId: job.vehicleId, warrantyLabel: warranty.warrantyLabel },
+      });
     }
 
     writeAuditLog(tx, {

@@ -8,8 +8,8 @@ export default function TabsLayout() {
         options={{ title: "Home", tabBarLabel: "Home" }}
       />
       <Tabs.Screen
-        name="vehicles"
-        options={{ title: "My Cars", tabBarLabel: "Cars" }}
+        name="garage"
+        options={{ title: "Garage", tabBarLabel: "Garage" }}
       />
       <Tabs.Screen
         name="catalogue"

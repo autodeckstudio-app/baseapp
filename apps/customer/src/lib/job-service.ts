@@ -1,4 +1,4 @@
-import { collection, query, where, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob } from "@autodeck/core";
@@ -31,6 +31,33 @@ export function listenToJobForBooking(
   return onSnapshot(
     q,
     (snap) => onData(snap.empty ? null : (snap.docs.at(0)?.data() as ServiceJob | undefined) ?? null),
+    onError,
+  );
+}
+
+/**
+ * Real-time listener for all jobs against a single vehicle — the data source
+ * for the vehicle Passport/history view. Same equality-filter requirement as
+ * listenToJobForBooking (tenantId + customerId both filtered, not just
+ * vehicleId, to satisfy the /jobs rule statically).
+ */
+export function listenToJobsForVehicle(
+  vehicleId: string,
+  tenantId: string,
+  customerId: string,
+  onData: (jobs: ServiceJob[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.jobs()),
+    where("vehicleId", "==", vehicleId),
+    where("tenantId", "==", tenantId),
+    where("customerId", "==", customerId),
+    orderBy("createdAt", "desc"),
+  );
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map((d) => d.data() as ServiceJob)),
     onError,
   );
 }

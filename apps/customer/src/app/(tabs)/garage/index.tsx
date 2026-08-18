@@ -49,7 +49,7 @@ export default function VehiclesScreen() {
         renderItem={({ item }) => (
           <VehicleCard
             vehicle={item}
-            onPress={() => router.push({ pathname: "/(tabs)/vehicles/[id]", params: { id: item.id } })}
+            onPress={() => router.push({ pathname: "/(tabs)/garage/[id]", params: { id: item.id } })}
           />
         )}
         ListEmptyComponent={
@@ -57,7 +57,7 @@ export default function VehiclesScreen() {
         }
       />
       <View style={{ position: "absolute", left: spacing.lg, right: spacing.lg, bottom: spacing.lg }}>
-        <Button label="+ Add Vehicle" onPress={() => router.push("/(tabs)/vehicles/add")} style={{ borderRadius: radius.full }} />
+        <Button label="+ Add Vehicle" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: radius.full }} />
       </View>
     </View>
   );

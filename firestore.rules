@@ -93,6 +93,17 @@ service cloud.firestore {
                             && request.resource.data.diff(resource.data).affectedKeys()
                                 .hasOnly(['make', 'model', 'year', 'color', 'registrationNumber', 'photoUrl', 'odometer', 'updatedAt'])));
       allow delete: if false;
+
+      // ─── /vehicles/{vehicleId}/protections/{protectionId} ─────────────────
+      // Legal/financial protections (insurance/FastTag/PUC/RC/extended
+      // warranty) — Phase 2D. Admin/Cloud-Function-created and -verified
+      // only; customer is read-own-vehicle-only, no client write of any kind.
+      match /protections/{protectionId} {
+        allow read: if isAuthenticated()
+                    && (isSuperadmin() || ownTenant(resource.data))
+                    && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+        allow write: if false; // Cloud Function only
+      }
     }
 
     // ─── /bookings/{bookingId} ──────────────────────────────────────────────
@@ -160,7 +171,12 @@ service cloud.firestore {
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // System only, on job seal
-      allow update: if isAdminOrAbove() && ownTenant(resource.data);
+      // Phase 2D tightening: warranty terms are historical truth (doc06 §6.4
+      // Rule 3) — admin may only record an exceptional revocation, never
+      // rewrite the sealed terms themselves.
+      allow update: if isAdminOrAbove() && ownTenant(resource.data)
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['revokedAt', 'revokedReason']);
       allow delete: if false; // revokedAt field for exceptional cases
     }
 

@@ -1060,3 +1060,193 @@ describe("/notifications — customer read-own, mark-read only via Cloud Functio
     await assertFails(tenantAUser.firestore().collection("notifications").doc("notif-4").get());
   });
 });
+
+// ─── Garage / Ownership (Phase 2D) ─────────────────────────────────────────────
+
+async function seedProtection(
+  vehicleId: string,
+  protectionId: string,
+  customerId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx
+      .firestore()
+      .collection("vehicles")
+      .doc(vehicleId)
+      .collection("protections")
+      .doc(protectionId)
+      .set({
+        id: protectionId,
+        tenantId,
+        vehicleId,
+        customerId,
+        kind: "insurance",
+        provider: "Test Insurer",
+        policyNumber: "POL-1",
+        startDate: "2026-01-01",
+        expiryDate: "2027-01-01",
+        documentUrl: null,
+        status: "unverified",
+        verifiedBy: null,
+        verifiedAt: null,
+        notes: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+  });
+}
+
+async function seedWarranty(
+  warrantyId: string,
+  vehicleId: string,
+  customerId: string,
+  tenantId = FIRST_TENANT_ID,
+) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("warranties").doc(warrantyId).set({
+      id: warrantyId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      jobId: warrantyId,
+      bookingId: null,
+      customerId,
+      vehicleId,
+      serviceId: "service-1",
+      serviceName: "Gloss PPF",
+      warrantyLabel: "5-Year PPF Film Warranty",
+      coverageTerms: "5-Year PPF Film Warranty",
+      startDate: "2026-01-01",
+      endDate: null,
+      installerEmployeeId: null,
+      productBatchNumber: null,
+      certificateUrl: null,
+      qrVerificationToken: null,
+      sealedAt: now,
+      revokedAt: null,
+      revokedReason: null,
+    });
+  });
+}
+
+describe("/vehicles/{vehicleId}/protections — read-own, Cloud Function writes only", () => {
+  it("Customer owns the vehicle and can read it", async () => {
+    await seedVehicle("veh-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("vehicles").doc("veh-alice").get());
+  });
+
+  it("Customer can read their own vehicle's protection", async () => {
+    await seedProtection("veh-alice", "prot-1", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(
+      alice.firestore().collection("vehicles").doc("veh-alice").collection("protections").doc("prot-1").get(),
+    );
+  });
+
+  it("Customer cannot create a protection directly", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice
+        .firestore()
+        .collection("vehicles")
+        .doc("veh-alice")
+        .collection("protections")
+        .doc("fake-1")
+        .set({
+          id: "fake-1",
+          tenantId: FIRST_TENANT_ID,
+          vehicleId: "veh-alice",
+          customerId: "uid-alice",
+          kind: "insurance",
+          status: "verified",
+        }),
+    );
+  });
+
+  it("Customer cannot update (e.g. self-verify) a protection", async () => {
+    await seedProtection("veh-alice", "prot-2", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice
+        .firestore()
+        .collection("vehicles")
+        .doc("veh-alice")
+        .collection("protections")
+        .doc("prot-2")
+        .update({ status: "verified" }),
+    );
+  });
+
+  it("Cross-customer: Bob cannot read Alice's protection", async () => {
+    await seedProtection("veh-alice", "prot-3", "uid-alice");
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertFails(
+      bob.firestore().collection("vehicles").doc("veh-alice").collection("protections").doc("prot-3").get(),
+    );
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B's protection", async () => {
+    await seedProtection("veh-b", "prot-4", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(
+      tenantAUser.firestore().collection("vehicles").doc("veh-b").collection("protections").doc("prot-4").get(),
+    );
+  });
+});
+
+describe("/warranties — customer ownership and immutability", () => {
+  it("Customer can read their own vehicle's warranty", async () => {
+    await seedWarranty("warr-1", "veh-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("warranties").doc("warr-1").get());
+  });
+
+  it("Cross-customer: Bob cannot read Alice's warranty", async () => {
+    await seedWarranty("warr-2", "veh-alice", "uid-alice");
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertFails(bob.firestore().collection("warranties").doc("warr-2").get());
+  });
+
+  it("Admin cannot rewrite sealed warranty terms (only revokedAt/revokedReason are mutable)", async () => {
+    await seedWarranty("warr-3", "veh-alice", "uid-alice");
+    const admin = testEnv.authenticatedContext("uid-admin", {
+      role: "admin",
+      tenantId: FIRST_TENANT_ID,
+      studioId: null,
+    });
+    await assertFails(
+      admin.firestore().collection("warranties").doc("warr-3").update({ warrantyLabel: "Rewritten" }),
+    );
+  });
+
+  it("Admin can record an exceptional revocation", async () => {
+    await seedWarranty("warr-4", "veh-alice", "uid-alice");
+    const admin = testEnv.authenticatedContext("uid-admin", {
+      role: "admin",
+      tenantId: FIRST_TENANT_ID,
+      studioId: null,
+    });
+    await assertSucceeds(
+      admin
+        .firestore()
+        .collection("warranties")
+        .doc("warr-4")
+        .update({ revokedAt: new Date().toISOString(), revokedReason: "issued in error" }),
+    );
+  });
+});
+
+describe("Passport safety — cross-customer job access denied", () => {
+  it("Bob cannot read a job belonging to Alice's vehicle", async () => {
+    await seedJob("job-passport-1", "uid-alice", "studio-ahmedabad");
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertFails(bob.firestore().collection("jobs").doc("job-passport-1").get());
+  });
+});
