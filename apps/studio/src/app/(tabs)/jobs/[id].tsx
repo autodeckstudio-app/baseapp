@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studio-service";
@@ -12,7 +12,8 @@ import {
 } from "../../../lib/payment-service";
 import { getCustomerMembership } from "../../../lib/membership-service";
 import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
-import type { ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service } from "@autodeck/core";
+import { listenToInspection, startInspection } from "../../../lib/inspection-service";
+import type { ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import {
@@ -67,7 +68,10 @@ const ADVANCE_ACTION_LABELS: Record<string, string> = {
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [job, setJob] = useState<ServiceJob | null>(null);
+  const [inspection, setInspection] = useState<Inspection | null>(null);
+  const [startingInspection, setStartingInspection] = useState(false);
   const [config, setConfig] = useState<StudioConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
@@ -158,6 +162,27 @@ export default function JobDetailScreen() {
     }
     return listenToApprovalsForJob(job.id, job.tenantId, setApprovals, () => undefined);
   }, [job?.id]);
+
+  useEffect(() => {
+    if (!job) {
+      setInspection(null);
+      return undefined;
+    }
+    return listenToInspection(job.id, setInspection, () => undefined);
+  }, [job?.id]);
+
+  async function handleStartInspection() {
+    if (!job) return;
+    setStartingInspection(true);
+    try {
+      await startInspection(job.id);
+      router.push(`/(tabs)/jobs/inspection/${job.id}`);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to start inspection.");
+    } finally {
+      setStartingInspection(false);
+    }
+  }
 
   async function handleCreateApproval() {
     if (!job || !selectedServiceId || !approvalReason.trim()) return;
@@ -321,6 +346,24 @@ export default function JobDetailScreen() {
             <Text style={{ ...typography.caption, color: colors.textMuted }}>{formatTime(entry.changedAt)}</Text>
           </View>
         ))}
+      </Section>
+
+      <Text style={sectionTitle}>Inspection</Text>
+      <Section>
+        {inspection ? (
+          <>
+            <Row label="Status" value={inspection.status === "finalized" ? "Finalized" : "In progress"} />
+            <Button
+              label={inspection.status === "finalized" ? "View inspection" : "Continue inspection"}
+              variant="secondary"
+              onPress={() => router.push(`/(tabs)/jobs/inspection/${job.id}`)}
+            />
+          </>
+        ) : job.status === "CANCELLED" || job.status === "DELIVERED" ? (
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>No inspection was recorded for this job.</Text>
+        ) : (
+          <Button label="Start Inspection" onPress={() => void handleStartInspection()} loading={startingInspection} />
+        )}
       </Section>
 
       <Text style={sectionTitle}>Payment</Text>

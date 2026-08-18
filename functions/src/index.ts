@@ -72,6 +72,11 @@ export { expireStaleApprovals } from "./functions/approval/expireStaleApprovals.
 export { createProtection } from "./functions/protection/createProtection.js";
 export { updateProtection } from "./functions/protection/updateProtection.js";
 
+// ─── Inspection (Phase 4) ───────────────────────────────────────────────────
+export { startInspection } from "./functions/inspection/startInspection.js";
+export { updateInspection } from "./functions/inspection/updateInspection.js";
+export { finalizeInspection } from "./functions/inspection/finalizeInspection.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

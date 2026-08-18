@@ -5,7 +5,8 @@ import { getBookingById, cancelBooking } from "../../../lib/booking-service";
 import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
-import type { Booking, ServiceJob, Payment, ApprovalRequest } from "@autodeck/core";
+import { listenToInspection } from "../../../lib/inspection-service";
+import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
 import {
   colors,
@@ -87,6 +88,7 @@ export default function BookingDetailScreen() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [payingNow, setPayingNow] = useState(false);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [inspection, setInspection] = useState<Inspection | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -102,6 +104,14 @@ export default function BookingDetailScreen() {
     if (!id || !booking) return;
     return listenToJobForBooking(id, booking.tenantId, booking.customerId, setJob, () => undefined);
   }, [id, booking?.tenantId, booking?.customerId]);
+
+  useEffect(() => {
+    if (!job) {
+      setInspection(null);
+      return undefined;
+    }
+    return listenToInspection(job.id, setInspection, () => undefined);
+  }, [job?.id]);
 
   useEffect(() => {
     if (!job) return;
@@ -187,6 +197,15 @@ export default function BookingDetailScreen() {
             {JOB_STATUS_LABELS[job.status] ?? job.status}
           </Text>
         </View>
+      )}
+
+      {inspection?.status === "finalized" && job && (
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: "/(tabs)/bookings/inspection", params: { jobId: job.id } })}
+          style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border }}
+        >
+          <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>Inspection report available — tap to view</Text>
+        </TouchableOpacity>
       )}
 
       {approvals

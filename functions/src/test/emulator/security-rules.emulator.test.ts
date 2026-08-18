@@ -1503,3 +1503,107 @@ describe("Studio lookup — job history query shape", () => {
     );
   });
 });
+
+// ─── /inspections/{jobId} — read-own, Cloud-Function writes only (Phase 4) ────
+async function seedInspection(jobId: string, customerId: string, tenantId = FIRST_TENANT_ID) {
+  const now = new Date().toISOString();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("inspections").doc(jobId).set({
+      id: jobId,
+      tenantId,
+      studioId: "studio-ahmedabad",
+      jobId,
+      bookingId: null,
+      customerId,
+      vehicleId: "vehicle-1",
+      serviceId: "service-1",
+      serviceName: "Regular Wash",
+      serviceCategory: "washing",
+      status: "in_progress",
+      checklist: [],
+      overallNotes: null,
+      photos: [],
+      startedAt: now,
+      startedBy: "uid-studio",
+      finalizedAt: null,
+      finalizedBy: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+}
+
+describe("/inspections/{jobId} — read-own, Cloud Function writes only", () => {
+  it("Customer can read their own inspection", async () => {
+    await seedInspection("insp-alice", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertSucceeds(alice.firestore().collection("inspections").doc("insp-alice").get());
+  });
+
+  it("Customer cannot read another customer's inspection", async () => {
+    await seedInspection("insp-bob", "uid-bob");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("inspections").doc("insp-bob").get());
+  });
+
+  it("Studio can read an inspection within their own tenant", async () => {
+    await seedInspection("insp-studio-read", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertSucceeds(studio.firestore().collection("inspections").doc("insp-studio-read").get());
+  });
+
+  it("Admin can read an inspection within their own tenant", async () => {
+    await seedInspection("insp-admin-read", "uid-alice");
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims());
+    await assertSucceeds(admin.firestore().collection("inspections").doc("insp-admin-read").get());
+  });
+
+  it("Cross-tenant: tenant A customer cannot read tenant B's inspection", async () => {
+    await seedInspection("insp-tenant-b", "uid-b-user", "tenant-b");
+    const tenantAUser = testEnv.authenticatedContext("uid-a-user", {
+      role: "customer",
+      tenantId: "tenant-a",
+      studioId: null,
+    });
+    await assertFails(tenantAUser.firestore().collection("inspections").doc("insp-tenant-b").get());
+  });
+
+  it("Customer cannot create an inspection directly", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("inspections").doc("fake-insp").set({
+        id: "fake-insp",
+        tenantId: FIRST_TENANT_ID,
+        customerId: "uid-alice",
+        status: "finalized",
+      }),
+    );
+  });
+
+  it("Customer cannot alter a finalized inspection (e.g. self-editing a finding)", async () => {
+    await seedInspection("insp-tamper", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(
+      alice.firestore().collection("inspections").doc("insp-tamper").update({ status: "finalized" }),
+    );
+  });
+
+  it("Studio cannot write to /inspections directly (Cloud Function only)", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("inspections").doc("studio-insp").set({
+        id: "studio-insp",
+        tenantId: FIRST_TENANT_ID,
+        status: "in_progress",
+      }),
+    );
+  });
+});

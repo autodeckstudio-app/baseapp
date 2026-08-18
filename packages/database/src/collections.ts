@@ -15,6 +15,8 @@ export const COLLECTIONS = {
   payments: () => "payments",
   invoices: () => "invoices",
   warranties: () => "warranties",
+  // inspections/{jobId} — one per job (id == jobId), same pattern as warranties
+  inspections: () => "inspections",
   memberships: () => "memberships",
   membershipPlans: () => "membershipPlans",
   services: () => "services",

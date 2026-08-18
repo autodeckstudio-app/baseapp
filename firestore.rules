@@ -183,6 +183,18 @@ service cloud.firestore {
       allow delete: if false; // revokedAt field for exceptional cases
     }
 
+    // ─── /inspections/{jobId} ────────────────────────────────────────────────
+    // Phase 4: structured vehicle-condition inspection report, id == jobId.
+    // Customer is strictly read-own — can never write, even while a studio
+    // inspection is still in_progress. All writes are Cloud-Function-only
+    // (startInspection/updateInspection/finalizeInspection).
+    match /inspections/{jobId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
     // ─── /memberships/{membershipId} ────────────────────────────────────────
     match /memberships/{membershipId} {
       allow read: if isAuthenticated()

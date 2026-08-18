@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
-import type { ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod } from "@autodeck/core";
+import type { ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
-import { listenToJob, getWarrantyForJob, listenToAuditForEntity } from "../../../../lib/jobs-service";
+import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
 import { listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime } from "../../../../lib/format";
@@ -24,6 +24,7 @@ export default function JobDetailPage() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [warranty, setWarranty] = useState<Warranty | null>(null);
+  const [inspection, setInspection] = useState<Inspection | null>(null);
   const [audit, setAudit] = useState<AuditLog[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -47,12 +48,14 @@ export default function JobDetailPage() {
     const unsubPayment = listenToPaymentForJob(job.id, claims.tenantId, setPayment, (err) => setError(err.message));
     const unsubInvoice = listenToInvoiceForJob(job.id, claims.tenantId, setInvoice, (err) => setError(err.message));
     const unsubAudit = listenToAuditForEntity(claims.tenantId, "ServiceJob", job.id, setAudit, (err) => setError(err.message));
+    const unsubInspection = listenToInspectionForJob(job.id, setInspection, () => undefined);
     void getWarrantyForJob(job.id).then(setWarranty);
     return () => {
       unsubApprovals();
       unsubPayment();
       unsubInvoice();
       unsubAudit();
+      unsubInspection();
     };
   }, [job?.id, claims]);
 
@@ -230,6 +233,34 @@ export default function JobDetailPage() {
             <div className="kv"><span>{warranty.warrantyLabel}</span><span>{warranty.endDate ?? "No fixed term"}</span></div>
             <div className="kv"><span>Sealed</span><span>{formatDateTime(warranty.sealedAt)}</span></div>
             {warranty.revokedAt && <div className="kv"><span>Revoked</span><span>{warranty.revokedReason}</span></div>}
+          </div>
+        </>
+      )}
+
+      {inspection && (
+        <>
+          <h2>Inspection</h2>
+          <div className="detail-card" style={{ maxWidth: 560 }}>
+            <div className="kv"><span>Status</span><span><StatusBadge label={inspection.status === "finalized" ? "Finalized" : "In progress"} /></span></div>
+            {inspection.finalizedAt && <div className="kv"><span>Finalized</span><span>{formatDateTime(inspection.finalizedAt)}</span></div>}
+            {(["exterior", "glass", "interior", "service_specific"] as InspectionArea[]).map((area) => {
+              const items = inspection.checklist.filter((i) => i.area === area && i.rating);
+              if (items.length === 0) return null;
+              return (
+                <div key={area} style={{ marginTop: 8 }}>
+                  <strong style={{ fontSize: 12, textTransform: "capitalize" }}>{area.replace("_", " ")}</strong>
+                  {items.map((item) => (
+                    <div className="kv" key={item.key}><span>{item.label}</span><span>{item.rating}{item.notes ? ` — ${item.notes}` : ""}</span></div>
+                  ))}
+                </div>
+              );
+            })}
+            {inspection.overallNotes && (
+              <div style={{ marginTop: 8 }}>
+                <strong style={{ fontSize: 12 }}>Overall notes</strong>
+                <p style={{ fontSize: 13, margin: "4px 0 0" }}>{inspection.overallNotes}</p>
+              </div>
+            )}
           </div>
         </>
       )}

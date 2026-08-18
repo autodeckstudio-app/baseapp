@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:emulator": "vitest run --config vitest.emulator.config.ts",
     "seed:emulator": "tsx src/test/emulator/seed.ts",
+    "seed:catalogue": "tsx src/scripts/seed-catalogue.ts",
     "serve": "firebase emulators:start --only auth,firestore,functions,storage",
     "clean": "rm -rf lib"
   },

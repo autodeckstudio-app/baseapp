@@ -47,6 +47,9 @@ export type RateLimitAction =
   | "protection.create"
   | "protection.update"
   | "invoice.void"
+  | "inspection.start"
+  | "inspection.update"
+  | "inspection.finalize"
   | "read.availability"
   | "read.catalogue"
   | "read.calculatePrice"
@@ -109,6 +112,9 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "protection.create": { limit: 60, windowMs: 60_000 },
   "protection.update": { limit: 60, windowMs: 60_000 },
   "invoice.void": { limit: 30, windowMs: 60_000 },
+  "inspection.start": { limit: 30, windowMs: 60_000 },
+  "inspection.update": { limit: 120, windowMs: 60_000 }, // many small checklist edits per session
+  "inspection.finalize": { limit: 30, windowMs: 60_000 },
   "read.availability": { limit: 120, windowMs: 60_000 },
   "read.catalogue": { limit: 120, windowMs: 60_000 },
   "read.calculatePrice": { limit: 120, windowMs: 60_000 },

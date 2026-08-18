@@ -35,7 +35,15 @@ export const createServiceSchema = z.object({
   description: z.string().min(1).max(2000).trim(),
   basePrice: z.number().int().min(0, "Base price must be a non-negative integer (paise)"),
   currency: z.string().length(3).optional(),
-  estimatedDurationMinutes: z.number().int().min(1).max(1440),
+  // Cap raised from 1440 (1 day) to 20160 (2 weeks) in Phase 4: the real
+  // AutoModz PPF catalogue includes genuine multi-day jobs (up to 4320 min /
+  // 3 days — LLumar Valor). NOTE: raising this only makes the duration
+  // storable; the customer-facing availability/slot-generation engine
+  // (generateDaySlots in lib/availability.ts) still requires a job to fit
+  // within a single day's operating-hours window, so multi-day services
+  // currently show zero bookable slots online — see Phase 4 HANDOFF. Walk-in
+  // registration is unaffected (its bay-conflict check is duration-agnostic).
+  estimatedDurationMinutes: z.number().int().min(1).max(20160),
   warrantyLabel: z.string().max(200).trim().nullable(),
   // Optional: existing callers (e.g. the current admin catalogue form) don't
   // send these yet — omitted means unconfigured (null), never guessed.
@@ -55,7 +63,7 @@ export const updateServiceSchema = z.object({
   description: z.string().min(1).max(2000).trim().optional(),
   basePrice: z.number().int().min(0).optional(),
   currency: z.string().length(3).optional(),
-  estimatedDurationMinutes: z.number().int().min(1).max(1440).optional(),
+  estimatedDurationMinutes: z.number().int().min(1).max(20160).optional(),
   warrantyLabel: z.string().max(200).trim().nullable().optional(),
   warrantyDurationValue: z.number().int().min(1).nullable().optional(),
   warrantyDurationUnit: warrantyDurationUnitEnum.nullable().optional(),

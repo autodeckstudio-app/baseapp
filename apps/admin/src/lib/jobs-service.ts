@@ -3,7 +3,7 @@
 import { collection, query, where, orderBy, limit, doc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
-import type { ServiceJob, Warranty, AuditLog } from "@autodeck/core";
+import type { ServiceJob, Warranty, AuditLog, Inspection } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
 
@@ -39,6 +39,19 @@ export function listenToJob(
 export async function getWarrantyForJob(jobId: string): Promise<Warranty | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.warranties(), jobId));
   return snap.exists() ? (snap.data() as Warranty) : null;
+}
+
+// Inspection doc ID == jobId (same deterministic pattern as Warranty).
+export function listenToInspectionForJob(
+  jobId: string,
+  onData: (inspection: Inspection | null) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, COLLECTIONS.inspections(), jobId),
+    (snap) => onData(snap.exists() ? (snap.data() as Inspection) : null),
+    onError,
+  );
 }
 
 export function listenToAuditForEntity(
