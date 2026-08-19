@@ -404,10 +404,17 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
 
     expect(walkinResult.job.estimatedEndDate).not.toBe(walkinResult.job.scheduledDate);
 
-    // A booking for the same day, same (only) bay, must be rejected.
+    // A booking targeting the day after the walk-in started, same (only)
+    // bay, must be rejected — using "tomorrow" rather than the walk-in's own
+    // start date keeps this deterministic regardless of what wall-clock time
+    // the test happens to run at (booking "today" at a fixed clock time can
+    // itself already be in the past). A 2000-min job's occupied span is
+    // guaranteed to extend at least 2000 real minutes (33h20m) past its
+    // start, which always covers "tomorrow 09:00" (at most ~33h away even in
+    // the worst case where the walk-in started at midnight).
     const other = await freshVehicle();
     await expect(
-      makeBooking(other.customerId, service, other.vehicle, studio.id, walkinResult.job.scheduledDate),
+      makeBooking(other.customerId, service, other.vehicle, studio.id, addDays(walkinResult.job.scheduledDate, 1)),
     ).rejects.toThrow(/No bays available/);
   });
 

@@ -28,59 +28,75 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   await enforceRateLimit(subjectFrom(user), "payment.recordManual");
 
   const db = getFirestore();
-  const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(data.jobId).get();
-  if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
+  const jobRef = db.collection(COLLECTIONS.jobs()).doc(data.jobId);
 
-  const job = jobSnap.data() as ServiceJob;
-
-  if (job.tenantId !== user.claims.tenantId) {
+  // Fast-fail pre-check (cheap, avoids starting a transaction for an
+  // obviously-invalid request) — NOT the authoritative check, since
+  // paymentStatus is mutable and racy across concurrent calls. See the
+  // re-check inside the transaction below.
+  const preCheckSnap = await jobRef.get();
+  if (!preCheckSnap.exists) throw new HttpsError("not-found", "Job not found.");
+  const preCheckJob = preCheckSnap.data() as ServiceJob;
+  if (preCheckJob.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
-  }
-  if (job.paymentStatus === "paid") {
-    throw new HttpsError("already-exists", "This job has already been marked as paid.");
-  }
-  if (job.status === "CANCELLED") {
-    throw new HttpsError("failed-precondition", "Cannot record payment for a cancelled job.");
   }
 
   const now = new Date().toISOString();
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
   const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
 
-  // Amount ALWAYS from the job's server-computed snapshot — NEVER from client
-  const amount = job.totalAmount;
+  const result = await db.runTransaction(async (tx) => {
+    // Authoritative re-read inside the transaction — two concurrent calls
+    // for the same job (e.g. two staff members both tapping "Record
+    // payment") must not both pass the paymentStatus check and each create
+    // a separate Payment + Invoice for the same job.
+    const jobSnap = await tx.get(jobRef);
+    if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
+    const job = jobSnap.data() as ServiceJob;
 
-  const payment: Payment = {
-    id: paymentRef.id,
-    tenantId: job.tenantId,
-    studioId: job.studioId,
-    targetType: "job",
-    jobId: job.id,
-    bookingId: job.bookingId,
-    membershipId: null,
-    customerId: job.customerId,
-    amount,
-    currency: job.priceBreakdown.currency,
-    method: data.method,
-    status: "completed",
-    razorpayPaymentLinkId: null,
-    razorpayPaymentId: null,
-    razorpayOrderId: null,
-    razorpayRefundId: null,
-    refundAmount: null,
-    manualReference: data.manualReference ?? null,
-    recordedBy: user.uid,
-    invoiceId: invoiceRef.id,
-    providerEventId: null,
-    completedAt: now,
-    failedAt: null,
-    cancelledAt: null,
-    refundedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  };
+    if (job.tenantId !== user.claims.tenantId) {
+      throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    }
+    if (job.paymentStatus === "paid") {
+      throw new HttpsError("already-exists", "This job has already been marked as paid.");
+    }
+    if (job.status === "CANCELLED") {
+      throw new HttpsError("failed-precondition", "Cannot record payment for a cancelled job.");
+    }
 
-  await db.runTransaction(async (tx) => {
+    // Amount ALWAYS from the job's server-computed snapshot — NEVER from client
+    const amount = job.totalAmount;
+
+    const payment: Payment = {
+      id: paymentRef.id,
+      tenantId: job.tenantId,
+      studioId: job.studioId,
+      targetType: "job",
+      jobId: job.id,
+      bookingId: job.bookingId,
+      membershipId: null,
+      customerId: job.customerId,
+      amount,
+      currency: job.priceBreakdown.currency,
+      method: data.method,
+      status: "completed",
+      razorpayPaymentLinkId: null,
+      razorpayPaymentId: null,
+      razorpayOrderId: null,
+      razorpayRefundId: null,
+      refundAmount: null,
+      manualReference: data.manualReference ?? null,
+      recordedBy: user.uid,
+      invoiceId: invoiceRef.id,
+      providerEventId: null,
+      completedAt: now,
+      failedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
     const invoice = buildInvoice({
       invoiceId: invoiceRef.id,
@@ -98,7 +114,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
 
     tx.set(paymentRef, payment);
     tx.set(invoiceRef, invoice);
-    tx.update(db.collection(COLLECTIONS.jobs()).doc(job.id), {
+    tx.update(jobRef, {
       paymentStatus: "paid",
       updatedAt: now,
     });
@@ -125,7 +141,9 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       studioId: job.studioId,
       after: { invoiceNumber, total: invoice.total, status: "issued" },
     });
+
+    return { paymentId: paymentRef.id, invoiceId: invoiceRef.id };
   });
 
-  return { paymentId: paymentRef.id, invoiceId: invoiceRef.id };
+  return result;
 });

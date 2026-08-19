@@ -374,6 +374,36 @@ describe("Walk-in financial flow", () => {
     expect((invoiceSnap.data() as Invoice).total).toBe(job.priceBreakdown.total);
   });
 
+  it("7b. concurrent recordManualPayment calls on the same job: exactly one succeeds, no duplicate payment/invoice (Phase 5A security audit fix)", async () => {
+    const jobResult = await createWalkinJob.run({
+      data: {
+        serviceId: service.id,
+        vehicleId: vehicle.id,
+        vehicleCategory: "hatchback",
+        bayId: nextBay(),
+        customerId,
+        studioId: STUDIO_ID,
+      },
+      auth: studioAuth(studioUid),
+    } as never);
+    const job = jobResult.job as ServiceJob;
+
+    const results = await Promise.allSettled([
+      recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(studioUid) } as never),
+      recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(studioUid) } as never),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+
+    const paymentsSnap = await db.collection("payments").where("jobId", "==", job.id).get();
+    expect(paymentsSnap.docs).toHaveLength(1);
+    const invoicesSnap = await db.collection("invoices").where("jobId", "==", job.id).get();
+    expect(invoicesSnap.docs).toHaveLength(1);
+  });
+
   it("8. payment idempotency — confirming the same mock event twice does not double-process", async () => {
     const jobResult = await createWalkinJob.run({
       data: {

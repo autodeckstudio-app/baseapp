@@ -112,11 +112,13 @@ service cloud.firestore {
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // Cloud Function only
-      allow update: if isAuthenticated()
-                    && ownTenant(resource.data)
-                    && isStudioOrAbove()
-                    && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['priceBreakdown', 'totalAmount', 'membershipDiscountApplied', 'paymentStatus']);
+      // Cloud Function only (rescheduleBooking/cancelBooking/etc.) — no
+      // legitimate client caller exists (every app mutation already goes
+      // through a Cloud Function); a permissive rule here has no upside and
+      // was previously missing an ownStudio() check, allowing any
+      // studio/admin in the tenant to directly mutate another studio's
+      // booking (Phase 5A security audit finding).
+      allow update: if false;
       allow delete: if false;
     }
 
@@ -127,9 +129,14 @@ service cloud.firestore {
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // Cloud Function only
-      allow update: if isAuthenticated()
-                    && ownTenant(resource.data)
-                    && isStudioOrAbove();
+      // Cloud Function only (advanceJobStatus/assignBay/confirmManualPayment/
+      // etc.) — the previous rule had no ownStudio() check and no field
+      // restriction, letting any studio/admin in the tenant directly write
+      // ANY field (including totalAmount/paymentStatus/status) on ANY job in
+      // the tenant, including another studio's. No legitimate client caller
+      // exists — every real mutation already goes through a Cloud Function
+      // (Phase 5A security audit P0 finding).
+      allow update: if false;
       allow delete: if false; // Jobs are permanent records
     }
 

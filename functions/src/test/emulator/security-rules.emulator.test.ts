@@ -366,6 +366,37 @@ describe("/bookings — ownership and isolation", () => {
       studio.firestore().collection("bookings").doc("booking-studio-read").get(),
     );
   });
+
+  // Bookings are Cloud-Function-only for mutation (rescheduleBooking,
+  // cancelBooking, etc.) — no direct client write is ever legitimate, even
+  // from a studio/admin user in the correct tenant (Phase 5A security audit
+  // finding — the previous rule denylisted financial fields but otherwise
+  // permitted direct studio/admin writes with no ownStudio() check).
+  it("Studio in own tenant still cannot write to /bookings directly (Cloud Function only)", async () => {
+    await seedBooking("booking-studio-direct", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("bookings").doc("booking-studio-direct").update({
+        status: "CANCELLED",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Admin cannot write to /bookings directly, even in their own tenant (Cloud Function only)", async () => {
+    await seedBooking("booking-admin-direct", "uid-alice");
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims(FIRST_TENANT_ID));
+    await assertFails(
+      admin.firestore().collection("bookings").doc("booking-admin-direct").update({
+        status: "CANCELLED",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
 });
 
 // ─── Job rules ────────────────────────────────────────────────────────────────
@@ -407,16 +438,48 @@ describe("/jobs — customer cannot mutate, studio can", () => {
     );
   });
 
-  it("Studio can update a job in own tenant", async () => {
-    await seedJob("job-studio-advance", "uid-alice", "studio-ahmedabad");
+  // Jobs are Cloud-Function-only for mutation (advanceJobStatus, assignBay,
+  // confirmManualPayment, etc.) — no direct client write is ever legitimate,
+  // even from a studio user in the correct tenant/studio. This closes a
+  // previously-open rule that had no ownStudio() check and no field
+  // restriction (Phase 5A security audit P0 finding).
+  it("Studio in own tenant/studio still cannot write to /jobs directly (Cloud Function only)", async () => {
+    await seedJob("job-studio-direct", "uid-alice", "studio-ahmedabad");
     const studio = testEnv.authenticatedContext("uid-studio", {
       role: "studio",
       tenantId: FIRST_TENANT_ID,
       studioId: "studio-ahmedabad",
     });
-    await assertSucceeds(
-      studio.firestore().collection("jobs").doc("job-studio-advance").update({
+    await assertFails(
+      studio.firestore().collection("jobs").doc("job-studio-direct").update({
         status: "VEHICLE_RECEIVED",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Studio from a DIFFERENT studio in the same tenant cannot write to another studio's job", async () => {
+    await seedJob("job-cross-studio", "uid-alice", "studio-ahmedabad");
+    const otherStudioSameTenant = testEnv.authenticatedContext("uid-studio-2", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-b",
+    });
+    await assertFails(
+      otherStudioSameTenant.firestore().collection("jobs").doc("job-cross-studio").update({
+        totalAmount: 1,
+        paymentStatus: "paid",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Admin cannot write to /jobs directly, even in their own tenant (Cloud Function only)", async () => {
+    await seedJob("job-admin-direct", "uid-alice", "studio-ahmedabad");
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims(FIRST_TENANT_ID));
+    await assertFails(
+      admin.firestore().collection("jobs").doc("job-admin-direct").update({
+        status: "DELIVERED",
         updatedAt: new Date().toISOString(),
       }),
     );

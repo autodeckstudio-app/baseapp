@@ -54,7 +54,10 @@ export default function JobsPage() {
     const q = search.trim().toLowerCase();
     return jobs.filter((j) => {
       if (status && j.status !== status) return false;
-      if (when === "today" && j.scheduledDate !== today) return false;
+      // "Today" means active today, not merely started today — a multi-day
+      // job (e.g. a PPF service) started on an earlier date is still active
+      // on every day through its estimatedEndDate.
+      if (when === "today" && !(j.scheduledDate <= today && j.estimatedEndDate >= today)) return false;
       if (when === "upcoming" && j.scheduledDate <= today) return false;
       if (source === "booking" && j.isWalkIn) return false;
       if (source === "walkin" && !j.isWalkIn) return false;

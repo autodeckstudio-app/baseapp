@@ -61,9 +61,16 @@ export default function DashboardPage() {
     const failedPayments = payments.filter((p) => p.status === "failed");
     const unpaidCompletedJobs = jobs.filter((j) => j.status === "DELIVERED" && j.paymentStatus === "unpaid");
     const staleCutoff = Date.now() - 48 * 3600_000;
-    const staleJobs = jobs.filter(
-      (j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status) && new Date(j.updatedAt).getTime() < staleCutoff,
-    );
+    const staleJobs = jobs.filter((j) => {
+      if (!["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)) return false;
+      if (new Date(j.updatedAt).getTime() >= staleCutoff) return false;
+      // A multi-day job (e.g. a PPF service) is expected to sit unchanged
+      // for days while genuinely in progress — only flag it once it's run
+      // past its own estimated completion date, not merely because 48h
+      // passed without a status change.
+      if (j.scheduledDate !== j.estimatedEndDate) return j.estimatedEndDate < today;
+      return true;
+    });
     const soonExpiring = expiringMemberships.filter((m) => m.endDate && m.endDate <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
     return {
