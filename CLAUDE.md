@@ -38,6 +38,5 @@ The product should provide GoMechanic-level automotive service functionality whi
 
 ## Development principle
 
-Prefer a clean, scalable architecture over fast accumulation of UI features.
-
+Prefer a clean, scalable architecture over fast accumulation of UI featur
 When requirements conflict, identify the conflict and recommend the better system before implementing it.
