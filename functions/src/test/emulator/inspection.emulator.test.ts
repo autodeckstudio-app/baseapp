@@ -125,6 +125,7 @@ async function makeBookingAndJob(
   vehicle: Vehicle,
   studioId: string,
   tenantId = TENANT_A,
+  scheduledDate = nextDate(),
 ): Promise<{ booking: Booking; job: ServiceJob }> {
   const result = (await createBooking.run({
     data: {
@@ -132,7 +133,7 @@ async function makeBookingAndJob(
       vehicleId: vehicle.id,
       vehicleCategory: "hatchback",
       studioId,
-      scheduledDate: nextDate(),
+      scheduledDate,
       scheduledTime: "10:00",
       idempotencyKey: uid("idem"),
     },
@@ -146,10 +147,22 @@ async function makeBookingAndJob(
 
 // Each test gets its own customer+vehicle — booking.create is rate-limited
 // to 10/60s per customer, and this file's 11+ tests each create a booking.
-async function freshJob(service: Service, studioId: string, tenantId = TENANT_A): Promise<{ booking: Booking; job: ServiceJob; customerId: string }> {
+async function freshJob(
+  service: Service,
+  studioId: string,
+  tenantId = TENANT_A,
+  scheduledDate?: string,
+): Promise<{ booking: Booking; job: ServiceJob; customerId: string }> {
   const customerId = uid("cust");
   const vehicle = await seedVehicle(uid("veh"), tenantId, customerId);
-  const { booking, job } = await makeBookingAndJob(customerId, service, vehicle, studioId, tenantId);
+  const { booking, job } = await makeBookingAndJob(
+    customerId,
+    service,
+    vehicle,
+    studioId,
+    tenantId,
+    ...(scheduledDate !== undefined ? [scheduledDate] : []),
+  );
   return { booking, job, customerId };
 }
 
@@ -330,13 +343,27 @@ describe("Inspection workflow — start / update / finalize", () => {
     expect(result.alreadyFinalized).toBe(false);
   });
 
-  it("concurrent start attempts on the same job: exactly one succeeds", async () => {
-    const { job } = await freshJob(service, STUDIO_A);
-    const results = await Promise.allSettled([
-      startInspection.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-1"), STUDIO_A) } as never),
-      startInspection.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-2"), STUDIO_A) } as never),
-    ]);
-    const succeeded = results.filter((r) => r.status === "fulfilled");
-    expect(succeeded.length).toBe(1);
-  });
+  it("concurrent start attempts on the same job: exactly one succeeds (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+    // deterministic once fixed (startInspection uses tx.create() for the
+    // one-per-job invariant), but the loop guards against a future
+    // regression with far higher confidence than one pair. Each iteration
+    // uses its own fresh single-purpose studio so it's safe to reuse the
+    // SAME booking date instead of calling nextDate() per iteration (which
+    // draws from this file's shared, monotonic, 30-day-bounded counter and
+    // would exhaust it for other tests in this file).
+    const raceDate = nextDate();
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("insp-race-studio");
+      await seedStudio(raceStudioId, TENANT_A);
+      const { job } = await freshJob(service, raceStudioId, TENANT_A, raceDate);
+      const results = await Promise.allSettled([
+        startInspection.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-1"), raceStudioId) } as never),
+        startInspection.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-2"), raceStudioId) } as never),
+      ]);
+      const succeeded = results.filter((r) => r.status === "fulfilled");
+      expect(succeeded.length, `iteration ${i}`).toBe(1);
+    }
+  }, 180_000);
 });

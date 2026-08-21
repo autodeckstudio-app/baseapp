@@ -645,60 +645,79 @@ describe("Membership system", () => {
     expect((paymentSnap.data() as Payment).status).toBe("failed");
   });
 
-  it("12. concurrent booking race — only one of two simultaneous bookings consumes the last wash credit", async () => {
-    const cust = uid("cust-race");
-    const veh = await seedVehicle(uid("veh-race"), TENANT_A, cust);
-
-    // Custom 1-wash plan so the race is deterministic: exactly one of two
-    // concurrent bookings can win the last credit.
+  it("12. concurrent booking race — only one of two simultaneous bookings consumes the last wash credit (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) — this
+    // race is deterministic once fixed (both sides tx.get() the same
+    // membership document), but the loop guards against a future
+    // regression with far higher confidence than one pair. Custom 1-wash
+    // plan so each iteration's race is deterministic: exactly one of two
+    // concurrent bookings can win the last credit. Plan is created once;
+    // each iteration gets its own fresh customer/vehicle/membership so
+    // iterations never interfere with each other.
     const planResult = (await createMembershipPlan.run({
       data: { tier: "silver", name: "Race Plan", priceInPaise: 100000, includedWashes: 1, discountPercent: 10 },
       auth: adminAuth(adminUid),
     } as never)) as { plan: { id: string } };
-    const membership = await purchaseAndActivate(cust, planResult.plan.id, adminUid);
 
+    // Every iteration reuses the SAME date instead of calling nextDate()
+    // per iteration: nextDate() draws from a file-shared, monotonic,
+    // 30-day-bounded counter, and 20 calls here would exhaust it and break
+    // every other test in this file that runs afterward (Phase 5B P2-4
+    // rollout finding). Date reuse across iterations is safe because each
+    // iteration also gets its own fresh single-purpose studio below, so
+    // there is no cross-iteration bay-capacity contention.
     const raceDate = nextDate();
-    const [r1, r2] = await Promise.allSettled([
-      createBooking.run({
-        data: {
-          serviceId: washService.id,
-          vehicleId: veh.id,
-          vehicleCategory: "hatchback",
-          studioId: STUDIO_ID,
-          scheduledDate: raceDate,
-          scheduledTime: "09:00",
-          idempotencyKey: uid("idem-race-1"),
-          membershipId: membership.id,
-        },
-        auth: customerAuth(cust),
-      } as never),
-      createBooking.run({
-        data: {
-          serviceId: washService.id,
-          vehicleId: veh.id,
-          vehicleCategory: "hatchback",
-          studioId: STUDIO_ID,
-          scheduledDate: raceDate,
-          scheduledTime: "13:00",
-          idempotencyKey: uid("idem-race-2"),
-          membershipId: membership.id,
-        },
-        auth: customerAuth(cust),
-      } as never),
-    ]);
 
-    const bookings = [r1, r2]
-      .filter((r): r is PromiseFulfilledResult<{ booking: Booking }> => r.status === "fulfilled")
-      .map((r) => r.value.booking);
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("membership-race-studio");
+      await seedStudio(raceStudioId, TENANT_A, 2);
+      const cust = uid("cust-race");
+      const veh = await seedVehicle(uid("veh-race"), TENANT_A, cust);
+      const membership = await purchaseAndActivate(cust, planResult.plan.id, adminUid);
 
-    const washesConsumedByBookings = bookings.filter((b) => b.membershipWashUsed).length;
-    const membershipSnap = await db.collection("memberships").doc(membership.id).get();
-    const finalWashesUsed = (membershipSnap.data() as Membership).washesUsed;
+      const [r1, r2] = await Promise.allSettled([
+        createBooking.run({
+          data: {
+            serviceId: washService.id,
+            vehicleId: veh.id,
+            vehicleCategory: "hatchback",
+            studioId: raceStudioId,
+            scheduledDate: raceDate,
+            scheduledTime: "09:00",
+            idempotencyKey: uid("idem-race-1"),
+            membershipId: membership.id,
+          },
+          auth: customerAuth(cust),
+        } as never),
+        createBooking.run({
+          data: {
+            serviceId: washService.id,
+            vehicleId: veh.id,
+            vehicleCategory: "hatchback",
+            studioId: raceStudioId,
+            scheduledDate: raceDate,
+            scheduledTime: "13:00",
+            idempotencyKey: uid("idem-race-2"),
+            membershipId: membership.id,
+          },
+          auth: customerAuth(cust),
+        } as never),
+      ]);
 
-    // Exactly one wash was consumed — never two, never negative, never exceeding total.
-    expect(washesConsumedByBookings).toBe(1);
-    expect(finalWashesUsed).toBe(1);
-  });
+      const bookings = [r1, r2]
+        .filter((r): r is PromiseFulfilledResult<{ booking: Booking }> => r.status === "fulfilled")
+        .map((r) => r.value.booking);
+
+      const washesConsumedByBookings = bookings.filter((b) => b.membershipWashUsed).length;
+      const membershipSnap = await db.collection("memberships").doc(membership.id).get();
+      const finalWashesUsed = (membershipSnap.data() as Membership).washesUsed;
+
+      // Exactly one wash was consumed — never two, never negative, never exceeding total.
+      expect(washesConsumedByBookings, `iteration ${i}`).toBe(1);
+      expect(finalWashesUsed, `iteration ${i}`).toBe(1);
+    }
+  }, 180_000);
 
   it("13. cross-customer rejection — customer B cannot use customer A's membership", async () => {
     const custA = uid("cust-a-xcust");

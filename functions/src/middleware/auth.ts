@@ -79,3 +79,22 @@ export function assertTenant(user: AuthorizedUser, documentTenantId: string): vo
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
 }
+
+/**
+ * Asserts a studio-role caller belongs to the same studio as the document
+ * being accessed. Admin/superadmin are never studio-scoped (doc19's role
+ * model — admin has tenant-wide access) and always pass; customer
+ * authorization is a separate, ownership-based concern and is never checked
+ * here (Phase 5B P1-14 — centralizes the
+ * `user.claims.role === "studio" && user.claims.studioId !== doc.studioId`
+ * check already hand-rolled correctly in assignBay/getStudioJobs/
+ * createWalkinJob/advanceJobStatus/createApproval/cancelApproval/
+ * startInspection/updateInspection/finalizeInspection/confirmManualPayment
+ * — new studio-scoped callables should use this instead of re-deriving it).
+ */
+export function assertStudio(user: AuthorizedUser, documentStudioId: string, entityLabel = "Resource"): void {
+  if (user.claims.role !== "studio") return;
+  if (user.claims.studioId !== documentStudioId) {
+    throw new HttpsError("permission-denied", `${entityLabel} belongs to a different studio.`);
+  }
+}

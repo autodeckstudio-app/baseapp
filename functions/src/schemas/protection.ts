@@ -12,7 +12,7 @@ export const createProtectionSchema = z.object({
   startDate: dateStr.optional(),
   expiryDate: dateStr.optional(),
   notes: z.string().max(1000).optional(),
-});
+}).strict();
 
 export const updateProtectionSchema = z.object({
   vehicleId: z.string().min(1),
@@ -23,4 +23,4 @@ export const updateProtectionSchema = z.object({
   expiryDate: dateStr.optional(),
   notes: z.string().max(1000).optional(),
   status: protectionStatusEnum.optional(),
-});
+}).strict();

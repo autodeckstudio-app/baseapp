@@ -18,6 +18,7 @@ process.env["USE_PAYMENT_MOCK"] = "true";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
+import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { confirmManualPayment } from "../../functions/payment/confirmManualPayment.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
@@ -551,57 +552,65 @@ describe("initiateRefund — race safety and idempotency", () => {
     return payment;
   }
 
-  it("re-reads payment status inside the transaction: two concurrent refund calls on one payment — exactly one succeeds, provider is called exactly once", async () => {
-    const paymentId = uid("pay-refund-race");
-    await seedCompletedRazorpayPayment(paymentId);
+  it("re-reads payment status inside the transaction: two concurrent refund calls on one payment — exactly one succeeds, provider is called exactly once (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+    // deterministic once fixed (the refund claim doc is read+written inside
+    // one transaction), but the loop guards against a future regression
+    // with far higher confidence than one pair. Each iteration uses its own
+    // fresh payment so iterations never interfere with each other.
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const paymentId = uid("pay-refund-race");
+      await seedCompletedRazorpayPayment(paymentId);
 
-    const spy = vi.spyOn(getPaymentProvider(), "initiateRefund");
-    const before = spy.mock.calls.length;
+      const spy = vi.spyOn(getPaymentProvider(), "initiateRefund");
+      const before = spy.mock.calls.length;
 
-    const [r1, r2] = await Promise.allSettled([
-      initiateRefund.run({
-        data: { paymentId, reason: "race test A" },
-        auth: adminAuth(uid("admin-a"), REFUND_TENANT),
-      } as never),
-      initiateRefund.run({
-        data: { paymentId, reason: "race test B" },
-        auth: adminAuth(uid("admin-b"), REFUND_TENANT),
-      } as never),
-    ]);
+      const [r1, r2] = await Promise.allSettled([
+        initiateRefund.run({
+          data: { paymentId, reason: "race test A" },
+          auth: adminAuth(uid("admin-a"), REFUND_TENANT),
+        } as never),
+        initiateRefund.run({
+          data: { paymentId, reason: "race test B" },
+          auth: adminAuth(uid("admin-b"), REFUND_TENANT),
+        } as never),
+      ]);
 
-    const results = [r1, r2];
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r) => r.status === "rejected");
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect((rejected[0] as PromiseRejectedResult).reason.message).toMatch(
-      /already been initiated|already-exists|status 'refunded'/,
-    );
+      const results = [r1, r2];
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(fulfilled, `iteration ${i}`).toHaveLength(1);
+      expect(rejected, `iteration ${i}`).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason.message, `iteration ${i}`).toMatch(
+        /already been initiated|already-exists|status 'refunded'/,
+      );
 
-    // The defect this test reproduces: without the in-transaction re-check
-    // and deterministic idempotency key, BOTH calls would call the real
-    // provider (two live refunds for one payment). Assert it was called
-    // exactly once.
-    expect(spy.mock.calls.length - before).toBe(1);
+      // The defect this test reproduces: without the in-transaction
+      // re-check and deterministic idempotency key, BOTH calls would call
+      // the real provider (two live refunds for one payment). Assert it
+      // was called exactly once.
+      expect(spy.mock.calls.length - before, `iteration ${i}`).toBe(1);
 
-    const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
-    const payment = paymentSnap.data() as Payment;
-    expect(payment.status).toBe("refunded");
-    // Deterministic referenceId (no Date.now()) — proven by asserting the
-    // exact expected id rather than just "some string".
-    expect(payment.razorpayRefundId).toBe(`mock_rfnd_refund_${paymentId}`);
+      const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+      const payment = paymentSnap.data() as Payment;
+      expect(payment.status, `iteration ${i}`).toBe("refunded");
+      // Deterministic referenceId (no Date.now()) — proven by asserting the
+      // exact expected id rather than just "some string".
+      expect(payment.razorpayRefundId, `iteration ${i}`).toBe(`mock_rfnd_refund_${paymentId}`);
 
-    const auditSnap = await db
-      .collection(COLLECTIONS.auditLog())
-      .where("tenantId", "==", REFUND_TENANT)
-      .where("entityType", "==", "Payment")
-      .where("entityId", "==", paymentId)
-      .where("action", "==", "payment.refunded")
-      .get();
-    expect(auditSnap.docs).toHaveLength(1);
+      const auditSnap = await db
+        .collection(COLLECTIONS.auditLog())
+        .where("tenantId", "==", REFUND_TENANT)
+        .where("entityType", "==", "Payment")
+        .where("entityId", "==", paymentId)
+        .where("action", "==", "payment.refunded")
+        .get();
+      expect(auditSnap.docs, `iteration ${i}`).toHaveLength(1);
 
-    spy.mockRestore();
-  });
+      spy.mockRestore();
+    }
+  }, 180_000);
 
   it("happy path: a single refund call still completes correctly (transaction refactor preserves behavior)", async () => {
     const paymentId = uid("pay-refund-happy");
@@ -705,34 +714,67 @@ describe("initiatePayment — race safety", () => {
     vehicle = await seedVehicle(uid("veh-ip"), IP_TENANT, customerId);
   });
 
-  it("two concurrent initiatePayment calls for the same job result in exactly one payment", async () => {
-    const { job } = await makeBookingAndJob(customerId, service, vehicle, IP_STUDIO, IP_TENANT);
+  it("two concurrent initiatePayment calls for the same job result in exactly one payment (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+    // deterministic once fixed (the claim transaction re-checks via
+    // tx.get()), but the loop guards against a future regression with far
+    // higher confidence than one pair. Each iteration uses its own fresh
+    // customer/vehicle/studio/job: a fresh customer avoids tripping
+    // payment.initiate's 10/min rate limit across the 40 rapid calls this
+    // loop makes from one uid, and a fresh single-purpose studio lets every
+    // iteration safely reuse the SAME booking date instead of calling
+    // nextDate() per iteration (which draws from this file's shared,
+    // monotonic, 30-day-bounded counter and would exhaust it for other
+    // tests in this file).
+    const raceDate = nextDate();
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("ip-race-studio");
+      await seedStudio(raceStudioId, IP_TENANT);
+      const raceCustomerId = uid("ip-race-cust");
+      const raceVehicle = await seedVehicle(uid("ip-race-veh"), IP_TENANT, raceCustomerId);
+      const bookingResult = (await createBooking.run({
+        data: {
+          serviceId: service.id,
+          vehicleId: raceVehicle.id,
+          vehicleCategory: "hatchback",
+          studioId: raceStudioId,
+          scheduledDate: raceDate,
+          scheduledTime: "10:00",
+          idempotencyKey: uid("idem"),
+        },
+        auth: customerAuth(raceCustomerId, IP_TENANT),
+      } as never)) as { booking: Booking };
+      const jobsSnap = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", bookingResult.booking.id).get();
+      const job = jobsSnap.docs[0]?.data() as ServiceJob;
 
-    // The defect this test reproduces: the duplicate-payment check
-    // previously ran as a plain query outside any transaction and was never
-    // re-verified before the write — two concurrent calls could both
-    // observe "no existing payment" and each create a separate Payment doc
-    // for one job (double payment link / duplicate invoice risk).
-    const [r1, r2] = (await Promise.all([
-      initiatePayment.run({
-        data: { jobId: job.id, method: "cash" },
-        auth: customerAuth(customerId, IP_TENANT),
-      } as never),
-      initiatePayment.run({
-        data: { jobId: job.id, method: "cash" },
-        auth: customerAuth(customerId, IP_TENANT),
-      } as never),
-    ])) as [{ paymentId: string }, { paymentId: string }];
+      // The defect this test reproduces: the duplicate-payment check
+      // previously ran as a plain query outside any transaction and was
+      // never re-verified before the write — two concurrent calls could
+      // both observe "no existing payment" and each create a separate
+      // Payment doc for one job (double payment link / duplicate invoice
+      // risk).
+      const [r1, r2] = (await Promise.all([
+        initiatePayment.run({
+          data: { jobId: job.id, method: "cash" },
+          auth: customerAuth(raceCustomerId, IP_TENANT),
+        } as never),
+        initiatePayment.run({
+          data: { jobId: job.id, method: "cash" },
+          auth: customerAuth(raceCustomerId, IP_TENANT),
+        } as never),
+      ])) as [{ paymentId: string }, { paymentId: string }];
 
-    expect(r1.paymentId).toBe(r2.paymentId);
+      expect(r1.paymentId, `iteration ${i}`).toBe(r2.paymentId);
 
-    const paymentsSnap = await db
-      .collection(COLLECTIONS.payments())
-      .where("jobId", "==", job.id)
-      .where("status", "in", ["pending", "processing", "completed"])
-      .get();
-    expect(paymentsSnap.docs).toHaveLength(1);
-  });
+      const paymentsSnap = await db
+        .collection(COLLECTIONS.payments())
+        .where("jobId", "==", job.id)
+        .where("status", "in", ["pending", "processing", "completed"])
+        .get();
+      expect(paymentsSnap.docs, `iteration ${i}`).toHaveLength(1);
+    }
+  }, 180_000);
 
   it("razorpay_payment_link payments still work unchanged outside production (Phase 5B P1-10 regression)", async () => {
     const { job } = await makeBookingAndJob(customerId, service, vehicle, IP_STUDIO, IP_TENANT);
@@ -846,5 +888,123 @@ describe("confirmPaymentMock — terminal-state safety", () => {
         auth: studioAuth(uid("studio-cm-3"), CM_STUDIO, CM_TENANT),
       } as never),
     ).rejects.toThrow(/Cannot confirm payment for a cancelled job/);
+  });
+});
+
+// ─── Cross-studio authorization — Phase 5B P1-14 ────────────────────────────
+// STUDIO_A and STUDIO_B are both seeded in TENANT_A by the very first
+// describe block's beforeAll above (which runs first in this file), so they
+// are already available here.
+
+describe("Cross-studio authorization (Phase 5B P1-14)", () => {
+  let csService: Service;
+  let csVehicle: Vehicle;
+  let csCustomerId: string;
+
+  beforeAll(async () => {
+    csService = await seedService(uid("svc-cs"), TENANT_A);
+    csCustomerId = uid("cust-cs");
+    csVehicle = await seedVehicle(uid("veh-cs"), TENANT_A, csCustomerId);
+  });
+
+  it("initiatePayment: a Studio B employee cannot initiate payment for a Studio A job", async () => {
+    const { job } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    await expect(
+      initiatePayment.run({
+        data: { jobId: job.id, method: "cash" },
+        auth: studioAuth(uid("studio-b-user"), STUDIO_B),
+      } as never),
+    ).rejects.toThrow(/different studio/);
+  });
+
+  it("initiatePayment: admin (not studio-scoped) CAN initiate payment across studios — admin access is not weakened", async () => {
+    const { job } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    const result = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: adminAuth(uid("admin-cross-studio")),
+    } as never)) as { paymentId: string };
+    expect(result.paymentId).toBeTruthy();
+  });
+
+  it("recordManualPayment: a Studio B employee cannot record a cash payment for a Studio A job", async () => {
+    const { job } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    await expect(
+      recordManualPayment.run({
+        data: { jobId: job.id, method: "cash" },
+        auth: studioAuth(uid("studio-b-user-2"), STUDIO_B),
+      } as never),
+    ).rejects.toThrow(/different studio/);
+  });
+
+  it("confirmPaymentMock: a Studio B employee cannot confirm a payment belonging to a Studio A job", async () => {
+    const { job } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+    const initResult = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(csCustomerId),
+    } as never)) as { paymentId: string };
+
+    await expect(
+      confirmPaymentMock.run({
+        data: { paymentId: initResult.paymentId, mockResult: "success" },
+        auth: studioAuth(uid("studio-b-user-3"), STUDIO_B),
+      } as never),
+    ).rejects.toThrow(/different studio/);
+  });
+
+  it("cancelBooking: a Studio B employee cannot cancel a Studio A booking", async () => {
+    const { booking } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    await expect(
+      cancelBooking.run({
+        data: { bookingId: booking.id, reason: "cross-studio attempt" },
+        auth: studioAuth(uid("studio-b-user-4"), STUDIO_B),
+      } as never),
+    ).rejects.toThrow(/different studio/);
+
+    const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
+    expect((bookingSnap.data() as Booking).status).not.toBe("CANCELLED");
+  });
+
+  it("cancelBooking: admin (not studio-scoped) CAN cancel across studios — admin access is not weakened", async () => {
+    const { booking } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    const result = (await cancelBooking.run({
+      data: { bookingId: booking.id, reason: "admin cancels cross-studio" },
+      auth: adminAuth(uid("admin-cross-studio-2")),
+    } as never)) as { success: boolean };
+    expect(result.success).toBe(true);
+  });
+
+  it("rescheduleBooking: a Studio B employee cannot reschedule a Studio A booking", async () => {
+    const { booking } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+        auth: studioAuth(uid("studio-b-user-5"), STUDIO_B),
+      } as never),
+    ).rejects.toThrow(/different studio/);
+
+    const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
+    expect((bookingSnap.data() as Booking).rescheduleCount).toBe(0);
+  });
+
+  it("a Studio A employee (own studio) CAN act on a Studio A job/booking — the fix doesn't over-restrict", async () => {
+    const { job, booking } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
+
+    const paymentResult = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: studioAuth(uid("studio-a-user"), STUDIO_A),
+    } as never)) as { paymentId: string };
+    expect(paymentResult.paymentId).toBeTruthy();
+
+    const rescheduleResult = (await rescheduleBooking.run({
+      data: { bookingId: booking.id, newDate: nextDate(), newTime: "15:00", idempotencyKey: uid("idem") },
+      auth: studioAuth(uid("studio-a-user-2"), STUDIO_A),
+    } as never)) as { booking: Booking };
+    expect(rescheduleResult.booking.scheduledTime).toBe("15:00");
   });
 });

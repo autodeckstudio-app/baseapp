@@ -11,17 +11,17 @@ export const addStaffMemberSchema = z.object({
   phone: z.string().max(20).trim().optional(),
   role: staffRoleEnum,
   studioId: z.string().min(1).nullable(),
-});
+}).strict();
 
 export const updateStaffRoleSchema = z.object({
   employeeId: z.string().min(1),
   role: staffRoleEnum,
   studioId: z.string().min(1).nullable(),
-});
+}).strict();
 
 export const deactivateStaffMemberSchema = z.object({
   employeeId: z.string().min(1),
-});
+}).strict();
 
 export type AddStaffMemberInput = z.infer<typeof addStaffMemberSchema>;
 export type UpdateStaffRoleInput = z.infer<typeof updateStaffRoleSchema>;

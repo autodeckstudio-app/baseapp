@@ -17,7 +17,7 @@ export const getAvailabilitySchema = z.object({
   studioId: z.string().min(1),
   startDate: dateStr,
   lookAheadDays: z.number().int().min(1).max(30).optional(),
-});
+}).strict();
 
 export const createBookingSchema = z.object({
   serviceId: z.string().min(1),
@@ -29,19 +29,19 @@ export const createBookingSchema = z.object({
   idempotencyKey: z.string().min(1).max(128),
   notes: z.string().max(500).optional(),
   membershipId: z.string().min(1).optional(),
-});
+}).strict();
 
 export const cancelBookingSchema = z.object({
   bookingId: z.string().min(1),
   reason: z.string().min(1).max(500),
-});
+}).strict();
 
 export const rescheduleBookingSchema = z.object({
   bookingId: z.string().min(1),
   newDate: dateStr,
   newTime: timeStr,
   idempotencyKey: z.string().min(1).max(128),
-});
+}).strict();
 
 export type GetAvailabilityInput = z.infer<typeof getAvailabilitySchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;

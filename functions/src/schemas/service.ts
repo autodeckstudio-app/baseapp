@@ -26,7 +26,7 @@ export const vehicleCategoryPricingSchema = z.object({
   vehicleCategory: vehicleCategoryEnum,
   additionalPricePaise: z.number().int().min(0, "Price must be non-negative paise"),
   additionalMinutes: z.number().int().min(0),
-});
+}).strict();
 
 export const createServiceSchema = z.object({
   name: z.string().min(1).max(100).trim(),
@@ -53,7 +53,7 @@ export const createServiceSchema = z.object({
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
-});
+}).strict();
 
 export const updateServiceSchema = z.object({
   serviceId: z.string().min(1),
@@ -71,21 +71,21 @@ export const updateServiceSchema = z.object({
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
-});
+}).strict();
 
 export const setServiceActiveSchema = z.object({
   serviceId: z.string().min(1),
   active: z.boolean(),
-});
+}).strict();
 
 export const getServiceCatalogueSchema = z.object({
   category: serviceCategoryEnum.optional(),
-});
+}).strict();
 
 export const calculatePriceSchema = z.object({
   serviceId: z.string().min(1),
   vehicleCategory: vehicleCategoryEnum,
-});
+}).strict();
 
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;

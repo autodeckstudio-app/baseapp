@@ -7,7 +7,7 @@ import {
   MAX_SERVICE_SPAN_DAYS,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertTenant } from "../../middleware/auth.js";
+import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -39,6 +39,10 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   if (!isCustomer && !isStudioOrAbove) {
     throw new HttpsError("permission-denied", "Unauthorized.");
   }
+  // Phase 5B P1-14 fix — previously not checked at all here, letting a
+  // studio employee at Studio A reschedule a booking belonging to Studio B
+  // in the same tenant.
+  assertStudio(user, booking.studioId, "Booking");
 
   if (booking.status !== "CONFIRMED") {
     throw new HttpsError(

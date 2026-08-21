@@ -15,7 +15,7 @@ const operatingHoursSchema = z.object({
   open: z.string().regex(/^\d{2}:\d{2}$/, "open must be HH:mm"),
   close: z.string().regex(/^\d{2}:\d{2}$/, "close must be HH:mm"),
   closed: z.boolean(),
-});
+}).strict();
 
 export const updateStudioSettingsSchema = z.object({
   studioId: z.string().min(1),
@@ -24,18 +24,18 @@ export const updateStudioSettingsSchema = z.object({
   operatingHours: z.array(operatingHoursSchema).length(7).optional(),
   taxRatePercent: z.number().min(0).max(100).optional(),
   taxDescription: z.string().min(1).max(100).trim().optional(),
-});
+}).strict();
 
 export const addHolidaySchema = z.object({
   studioId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
   reason: z.string().max(200).trim().optional(),
-});
+}).strict();
 
 export const removeHolidaySchema = z.object({
   studioId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
-});
+}).strict();
 
 export const upsertBaySchema = z.object({
   studioId: z.string().min(1),
@@ -43,7 +43,7 @@ export const upsertBaySchema = z.object({
   name: z.string().min(1).max(100).trim(),
   bayType: bayTypeEnum,
   active: z.boolean(),
-});
+}).strict();
 
 export type UpdateStudioSettingsInput = z.infer<typeof updateStudioSettingsSchema>;
 export type AddHolidayInput = z.infer<typeof addHolidaySchema>;

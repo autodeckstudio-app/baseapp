@@ -17,23 +17,23 @@ export const createWalkinJobSchema = z.object({
   customerId: z.string().min(1),
   studioId: z.string().min(1),
   notes: z.string().max(500).optional(),
-});
+}).strict();
 
 export const advanceJobStatusSchema = z.object({
   jobId: z.string().min(1),
   notes: z.string().max(500).optional(),
-});
+}).strict();
 
 export const getStudioJobsSchema = z.object({
   studioId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
-});
+}).strict();
 
 export const assignBaySchema = z.object({
   jobId: z.string().min(1),
   bayId: z.string().min(1),
   reason: z.string().max(500).optional(),
-});
+}).strict();
 
 export type CreateWalkinJobInput = z.infer<typeof createWalkinJobSchema>;
 export type AdvanceJobStatusInput = z.infer<typeof advanceJobStatusSchema>;

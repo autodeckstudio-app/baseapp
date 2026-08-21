@@ -9,7 +9,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { ServiceJob, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser } from "../../middleware/auth.js";
+import { extractUser, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -40,6 +40,10 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   if (preCheckJob.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
+  // Phase 5B P1-14 fix — previously not checked at all here, letting a
+  // studio employee at Studio A record a cash payment for a job belonging
+  // to Studio B in the same tenant.
+  assertStudio(user, preCheckJob.studioId, "Job");
 
   const now = new Date().toISOString();
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
@@ -57,6 +61,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
     if (job.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
+    assertStudio(user, job.studioId, "Job");
     if (job.paymentStatus === "paid") {
       throw new HttpsError("already-exists", "This job has already been marked as paid.");
     }

@@ -138,14 +138,21 @@ async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string)
   return vehicle;
 }
 
-async function bookOnce(cust: string, vehicleId: string, service: Service, tenantId = TENANT_A, studioId = STUDIO_ID) {
+async function bookOnce(
+  cust: string,
+  vehicleId: string,
+  service: Service,
+  tenantId = TENANT_A,
+  studioId = STUDIO_ID,
+  scheduledDate = nextDate(),
+) {
   const result = (await createBooking.run({
     data: {
       serviceId: service.id,
       vehicleId,
       vehicleCategory: "sedan",
       studioId,
-      scheduledDate: nextDate(),
+      scheduledDate,
       scheduledTime: "10:00",
       idempotencyKey: uid("idem"),
     },
@@ -197,13 +204,25 @@ describe("Approval / additional-work workflow", () => {
     studioUid = uid("studio");
   });
 
-  async function setupInProgressJob(custPrefix: string) {
+  async function setupInProgressJob(
+    custPrefix: string,
+    studioId = STUDIO_ID,
+    scheduledDate?: string,
+    advancingStudioUid = studioUid,
+  ) {
     const cust = uid(custPrefix);
     const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
-    const booking = await bookOnce(cust, vehicle.id, originalService);
+    const booking = await bookOnce(
+      cust,
+      vehicle.id,
+      originalService,
+      TENANT_A,
+      studioId,
+      ...(scheduledDate !== undefined ? [scheduledDate] : []),
+    );
     const jobDoc = await jobForBooking(booking.id);
-    await advanceOnce(jobDoc.id, studioUid); // -> VEHICLE_RECEIVED
-    await advanceOnce(jobDoc.id, studioUid); // -> IN_PROGRESS
+    await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(advancingStudioUid, TENANT_A, studioId) } as never); // -> VEHICLE_RECEIVED
+    await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(advancingStudioUid, TENANT_A, studioId) } as never); // -> IN_PROGRESS
     return { cust, vehicle, booking, jobId: jobDoc.id };
   }
 
@@ -407,36 +426,56 @@ describe("Approval / additional-work workflow", () => {
       expect(jobAfter.totalAmount).toBe(jobBefore.totalAmount + approval.priceImpact); // exactly once
     });
 
-    it("approve + reject concurrently: exactly one decision wins, job total incremented at most once", async () => {
-      const { jobId, cust } = await setupInProgressJob("cust-race");
-      const jobBefore = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
-      const addSvc = await seedAdditionalService(uid("svc-add"), TENANT_A, "Extra", 70000);
-      const created = (await createApproval.run({
-        data: { jobId, serviceId: addSvc.id, reason: "x" },
-        auth: studioAuth(studioUid),
-      } as never)) as { approvalId: string };
+    it("approve + reject concurrently: exactly one decision wins, job total incremented at most once (Phase 5B P2-4 stress)", async () => {
+      // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+      // deterministic once fixed (both sides tx.get() the same approval
+      // document), but the loop guards against a future regression with far
+      // higher confidence than one pair. Each iteration uses its own fresh
+      // job/approval so iterations never interfere with each other.
+      //
+      // Each iteration uses its own fresh single-purpose studio: this lets
+      // every iteration safely reuse the SAME booking date instead of
+      // calling nextDate() per iteration (which draws from this file's
+      // shared, monotonic, 30-day-bounded counter and would exhaust it for
+      // other tests in this file), and a fresh studio-user uid per
+      // iteration avoids tripping approval.create's rate limit across the
+      // rapid calls this loop makes.
+      const raceDate = nextDate();
+      const iterations = 20;
+      for (let i = 0; i < iterations; i += 1) {
+        const raceStudioId = uid("appr-race-studio");
+        await seedStudio(raceStudioId, TENANT_A);
+        const raceStudioUid = uid("appr-race-studio-user");
+        const { jobId, cust } = await setupInProgressJob("cust-race", raceStudioId, raceDate, raceStudioUid);
+        const jobBefore = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
+        const addSvc = await seedAdditionalService(uid("svc-add"), TENANT_A, "Extra", 70000);
+        const created = (await createApproval.run({
+          data: { jobId, serviceId: addSvc.id, reason: "x" },
+          auth: studioAuth(raceStudioUid, TENANT_A, raceStudioId),
+        } as never)) as { approvalId: string };
 
-      const results = await Promise.allSettled([
-        respondToApproval.run({
-          data: { approvalId: created.approvalId, decision: "approved" },
-          auth: customerAuth(cust),
-        } as never),
-        respondToApproval.run({
-          data: { approvalId: created.approvalId, decision: "rejected" },
-          auth: customerAuth(cust),
-        } as never),
-      ]);
+        const results = await Promise.allSettled([
+          respondToApproval.run({
+            data: { approvalId: created.approvalId, decision: "approved" },
+            auth: customerAuth(cust),
+          } as never),
+          respondToApproval.run({
+            data: { approvalId: created.approvalId, decision: "rejected" },
+            auth: customerAuth(cust),
+          } as never),
+        ]);
 
-      const fulfilled = results.filter((r) => r.status === "fulfilled").length;
-      expect(fulfilled).toBe(1); // exactly one of the two calls succeeded
+        const fulfilled = results.filter((r) => r.status === "fulfilled").length;
+        expect(fulfilled, `iteration ${i}`).toBe(1); // exactly one of the two calls succeeded
 
-      const approval = (await db.collection("approvals").doc(created.approvalId).get()).data() as ApprovalRequest;
-      expect(["approved", "rejected"]).toContain(approval.status);
+        const approval = (await db.collection("approvals").doc(created.approvalId).get()).data() as ApprovalRequest;
+        expect(["approved", "rejected"], `iteration ${i}`).toContain(approval.status);
 
-      const jobAfter = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
-      const expectedDelta = approval.status === "approved" ? approval.priceImpact : 0;
-      expect(jobAfter.totalAmount).toBe(jobBefore.totalAmount + expectedDelta);
-    });
+        const jobAfter = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
+        const expectedDelta = approval.status === "approved" ? approval.priceImpact : 0;
+        expect(jobAfter.totalAmount, `iteration ${i}`).toBe(jobBefore.totalAmount + expectedDelta);
+      }
+    }, 180_000);
   });
 
   describe("cancel / expire", () => {

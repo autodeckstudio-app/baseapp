@@ -1735,3 +1735,69 @@ describe("/inspections/{jobId} — read-own, Cloud Function writes only", () => 
     );
   });
 });
+
+// ─── /bayLocks/{key} — server-only, no client access of any kind (Phase 5B P2-6) ─
+// Carries no meaningful data (see COLLECTIONS.bayLocks' doc comment) — the
+// rule is an unconditional `allow read, write: if false`, with NO role
+// exception at all, unlike almost every other collection in this file
+// (which exempt superadmin/admin). This suite explicitly proves that
+// blanket denial holds for every role, including admin/superadmin.
+
+describe("/bayLocks/{key} — server-only, no client access of any kind", () => {
+  it("Customer cannot read a bayLock document", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("bayLocks").doc("t__s__b1").get());
+  });
+
+  it("Customer cannot write a bayLock document", async () => {
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("bayLocks").doc("t__s__b1").set({ lastAssignedAt: "now" }));
+  });
+
+  it("Studio cannot read a bayLock document", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", makeStudioClaims());
+    await assertFails(studio.firestore().collection("bayLocks").doc("t__s__b1").get());
+  });
+
+  it("Studio cannot write a bayLock document", async () => {
+    const studio = testEnv.authenticatedContext("uid-studio", makeStudioClaims());
+    await assertFails(studio.firestore().collection("bayLocks").doc("t__s__b1").set({ lastAssignedAt: "now" }));
+  });
+
+  it("Admin cannot read a bayLock document — no exception for admin, unlike most collections", async () => {
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims());
+    await assertFails(admin.firestore().collection("bayLocks").doc("t__s__b1").get());
+  });
+
+  it("Admin cannot write a bayLock document", async () => {
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims());
+    await assertFails(admin.firestore().collection("bayLocks").doc("t__s__b1").set({ lastAssignedAt: "now" }));
+  });
+
+  it("Superadmin cannot read a bayLock document — no exception for superadmin either", async () => {
+    const superadmin = testEnv.authenticatedContext("uid-superadmin", {
+      role: "superadmin",
+      tenantId: "tenant-superadmin-home",
+      studioId: null,
+    });
+    await assertFails(superadmin.firestore().collection("bayLocks").doc("t__s__b1").get());
+  });
+
+  it("Superadmin cannot write a bayLock document", async () => {
+    const superadmin = testEnv.authenticatedContext("uid-superadmin", {
+      role: "superadmin",
+      tenantId: "tenant-superadmin-home",
+      studioId: null,
+    });
+    await assertFails(
+      superadmin.firestore().collection("bayLocks").doc("t__s__b1").set({ lastAssignedAt: "now" }),
+    );
+  });
+
+  it("Unauthenticated caller cannot read or write a bayLock document", async () => {
+    const anon = testEnv.unauthenticatedContext();
+    const anonDb = anon.firestore();
+    await assertFails(anonDb.collection("bayLocks").doc("t__s__b1").get());
+    await assertFails(anonDb.collection("bayLocks").doc("t__s__b1").set({ lastAssignedAt: "now" }));
+  });
+});

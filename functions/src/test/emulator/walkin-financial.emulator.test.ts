@@ -46,7 +46,9 @@ function adminAuth(authUid: string, tenantId = TENANT_A) {
 // never-before-occupied bay — a shared single bay would trip the real
 // bay-occupancy conflict check (jobs stay "occupied" until DELIVERED/
 // CANCELLED, and these tests don't advance job status).
-const BAY_COUNT = 30;
+// Phase 5B P2-4: bumped from 30 to accommodate test 7b's 20-iteration
+// concurrency stress loop (each iteration consumes one fresh bay).
+const BAY_COUNT = 55;
 
 async function seedStudio(studioId: string, tenantId: string) {
   const studioConfig: StudioConfig = {
@@ -374,35 +376,42 @@ describe("Walk-in financial flow", () => {
     expect((invoiceSnap.data() as Invoice).total).toBe(job.priceBreakdown.total);
   });
 
-  it("7b. concurrent recordManualPayment calls on the same job: exactly one succeeds, no duplicate payment/invoice (Phase 5A security audit fix)", async () => {
-    const jobResult = await createWalkinJob.run({
-      data: {
-        serviceId: service.id,
-        vehicleId: vehicle.id,
-        vehicleCategory: "hatchback",
-        bayId: nextBay(),
-        customerId,
-        studioId: STUDIO_ID,
-      },
-      auth: studioAuth(studioUid),
-    } as never);
-    const job = jobResult.job as ServiceJob;
+  it("7b. concurrent recordManualPayment calls on the same job: exactly one succeeds, no duplicate payment/invoice (Phase 5A security audit fix, Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+    // deterministic once fixed (the in-flight-payment check re-reads inside
+    // the transaction), but the loop guards against a future regression
+    // with far higher confidence than one pair.
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const jobResult = await createWalkinJob.run({
+        data: {
+          serviceId: service.id,
+          vehicleId: vehicle.id,
+          vehicleCategory: "hatchback",
+          bayId: nextBay(),
+          customerId,
+          studioId: STUDIO_ID,
+        },
+        auth: studioAuth(studioUid),
+      } as never);
+      const job = jobResult.job as ServiceJob;
 
-    const results = await Promise.allSettled([
-      recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(studioUid) } as never),
-      recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(studioUid) } as never),
-    ]);
+      const results = await Promise.allSettled([
+        recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(studioUid) } as never),
+        recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(studioUid) } as never),
+      ]);
 
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r) => r.status === "rejected");
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(fulfilled, `iteration ${i}`).toHaveLength(1);
+      expect(rejected, `iteration ${i}`).toHaveLength(1);
 
-    const paymentsSnap = await db.collection("payments").where("jobId", "==", job.id).get();
-    expect(paymentsSnap.docs).toHaveLength(1);
-    const invoicesSnap = await db.collection("invoices").where("jobId", "==", job.id).get();
-    expect(invoicesSnap.docs).toHaveLength(1);
-  });
+      const paymentsSnap = await db.collection("payments").where("jobId", "==", job.id).get();
+      expect(paymentsSnap.docs, `iteration ${i}`).toHaveLength(1);
+      const invoicesSnap = await db.collection("invoices").where("jobId", "==", job.id).get();
+      expect(invoicesSnap.docs, `iteration ${i}`).toHaveLength(1);
+    }
+  }, 180_000);
 
   it("8. payment idempotency — confirming the same mock event twice does not double-process", async () => {
     const jobResult = await createWalkinJob.run({

@@ -2,7 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { ServiceJob, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser } from "../../middleware/auth.js";
+import { extractUser, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -24,7 +24,11 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
 
   const job = jobSnap.data() as ServiceJob;
 
-  // Ownership: customer pays own job; studio/admin can initiate payment for any job
+  // Ownership: customer pays own job; studio/admin can initiate payment for
+  // any job within their own studio (Phase 5B P1-14 fix — a studio caller
+  // was previously never checked against job.studioId at all, letting a
+  // studio employee at Studio A initiate payment for a job belonging to
+  // Studio B in the same tenant).
   const isOwner = job.customerId === user.uid;
   const isStudioOrAdmin = ["studio", "admin", "superadmin"].includes(user.claims.role);
   if (!isOwner && !isStudioOrAdmin) {
@@ -33,6 +37,7 @@ export const initiatePayment = onCall({ region: "asia-south1" }, async (request)
   if (job.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
+  assertStudio(user, job.studioId, "Job");
   if (job.status === "CANCELLED") {
     throw new HttpsError("failed-precondition", "Cannot pay for a cancelled job.");
   }

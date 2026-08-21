@@ -333,23 +333,33 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
   // evidence the race is closed — this is exactly why it should be re-run
   // several times back-to-back when validating any future change here, not
   // trusted from one pass/fail result.
-  it("8. concurrent booking race: two simultaneous multi-day bookings for the same single bay — exactly one wins", async () => {
-    const studio = await seedStudio(uid("studio-race"), TENANT_A, 1);
-    const service = await seedService(uid("svc-race"), TENANT_A, 700);
-    const monday = nextMonday();
-    const a = await freshVehicle();
-    const b = await freshVehicle();
+  it("8. concurrent booking race: two simultaneous multi-day bookings for the same single bay — exactly one wins (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) — the
+    // bayLocks mitigation this relies on is documented (see
+    // COLLECTIONS.bayLocks' comment) to measurably reduce but NOT fully
+    // eliminate this race (~10-15% residual failure rate under adversarial
+    // stress), so a single-pair test has a real chance of passing even if
+    // the underlying protection regresses. Each iteration uses its own
+    // fresh single-bay studio so iterations never interfere with each other.
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const studio = await seedStudio(uid("studio-race"), TENANT_A, 1);
+      const service = await seedService(uid("svc-race"), TENANT_A, 700);
+      const monday = nextMonday();
+      const a = await freshVehicle();
+      const b = await freshVehicle();
 
-    const results = await Promise.allSettled([
-      makeBooking(a.customerId, service, a.vehicle, studio.id, monday),
-      makeBooking(b.customerId, service, b.vehicle, studio.id, monday),
-    ]);
+      const results = await Promise.allSettled([
+        makeBooking(a.customerId, service, a.vehicle, studio.id, monday),
+        makeBooking(b.customerId, service, b.vehicle, studio.id, monday),
+      ]);
 
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r) => r.status === "rejected");
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-  });
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(fulfilled, `iteration ${i}: expected exactly one winner`).toHaveLength(1);
+      expect(rejected, `iteration ${i}: expected exactly one loser`).toHaveLength(1);
+    }
+  }, 180_000);
 
   it("9. cancellation releases capacity: a cancelled multi-day booking's bay becomes bookable again", async () => {
     const studio = await seedStudio(uid("studio-cancel"), TENANT_A, 1);
@@ -514,51 +524,57 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     expect(booking.estimatedEndTime).toBe("10:40");
   });
 
-  it("16. concurrent multi-day walk-in race on the same single bay: exactly one succeeds", async () => {
-    const studio = await seedStudio(uid("studio-walkin-race"), TENANT_A, 1);
-    // Duration exceeds any conceivable single calendar day (see test #11's
-    // comment) so both walk-ins are guaranteed multi-day regardless of what
-    // wall-clock time this test runs at.
-    const service = await seedService(uid("svc-walkin-race"), TENANT_A, 2000);
-    const a = await freshVehicle();
-    const b = await freshVehicle();
-    await seedCustomer(a.customerId, TENANT_A);
-    await seedCustomer(b.customerId, TENANT_A);
+  it("16. concurrent multi-day walk-in race on the same single bay: exactly one succeeds (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) — same
+    // rationale as test #8: the bayLocks mitigation is documented as a
+    // measurable-but-incomplete reduction of this race, not a guarantee.
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const studio = await seedStudio(uid("studio-walkin-race"), TENANT_A, 1);
+      // Duration exceeds any conceivable single calendar day (see test #11's
+      // comment) so both walk-ins are guaranteed multi-day regardless of what
+      // wall-clock time this test runs at.
+      const service = await seedService(uid("svc-walkin-race"), TENANT_A, 2000);
+      const a = await freshVehicle();
+      const b = await freshVehicle();
+      await seedCustomer(a.customerId, TENANT_A);
+      await seedCustomer(b.customerId, TENANT_A);
 
-    const results = await Promise.allSettled([
-      createWalkinJob.run({
-        data: {
-          serviceId: service.id,
-          vehicleId: a.vehicle.id,
-          vehicleCategory: "suv",
-          bayId: studio.bays[0]?.id as string,
-          customerId: a.customerId,
-          studioId: studio.id,
-        },
-        auth: studioAuth(uid("emp-a"), TENANT_A, studio.id),
-      } as never),
-      createWalkinJob.run({
-        data: {
-          serviceId: service.id,
-          vehicleId: b.vehicle.id,
-          vehicleCategory: "suv",
-          bayId: studio.bays[0]?.id as string,
-          customerId: b.customerId,
-          studioId: studio.id,
-        },
-        auth: studioAuth(uid("emp-b"), TENANT_A, studio.id),
-      } as never),
-    ]);
+      const results = await Promise.allSettled([
+        createWalkinJob.run({
+          data: {
+            serviceId: service.id,
+            vehicleId: a.vehicle.id,
+            vehicleCategory: "suv",
+            bayId: studio.bays[0]?.id as string,
+            customerId: a.customerId,
+            studioId: studio.id,
+          },
+          auth: studioAuth(uid("emp-a"), TENANT_A, studio.id),
+        } as never),
+        createWalkinJob.run({
+          data: {
+            serviceId: service.id,
+            vehicleId: b.vehicle.id,
+            vehicleCategory: "suv",
+            bayId: studio.bays[0]?.id as string,
+            customerId: b.customerId,
+            studioId: studio.id,
+          },
+          auth: studioAuth(uid("emp-b"), TENANT_A, studio.id),
+        } as never),
+      ]);
 
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r) => r.status === "rejected");
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(fulfilled, `iteration ${i}: expected exactly one winner`).toHaveLength(1);
+      expect(rejected, `iteration ${i}: expected exactly one loser`).toHaveLength(1);
 
-    const jobsSnap = await db.collection("jobs").where("bayId", "==", studio.bays[0]?.id).get();
-    const activeJobs = jobsSnap.docs.filter((d) => (d.data() as ServiceJob).status !== "CANCELLED");
-    expect(activeJobs).toHaveLength(1);
-  });
+      const jobsSnap = await db.collection("jobs").where("bayId", "==", studio.bays[0]?.id).get();
+      const activeJobs = jobsSnap.docs.filter((d) => (d.data() as ServiceJob).status !== "CANCELLED");
+      expect(activeJobs, `iteration ${i}: bay must never be double-assigned`).toHaveLength(1);
+    }
+  }, 180_000);
 
   it("17. longest real AutoModz catalogue service (LLumar Valor PPF, 4320 min) schedules correctly end-to-end", async () => {
     // Uses the ACTUAL production catalogue seed data (not a synthetic

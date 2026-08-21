@@ -51,7 +51,10 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${seq}`;
 }
 
-const BAY_COUNT_PER_TYPE = 15;
+// Phase 5B P2-4: bumped from 15 to accommodate tests 9 and 17's 20-iteration
+// stress loops (each iteration consumes one fresh bay) alongside the file's
+// other static bay consumers.
+const BAY_COUNT_PER_TYPE = 40;
 
 async function seedGenerousStudio(studioId: string, tenantId: string) {
   const studioConfig: StudioConfig = {
@@ -404,63 +407,17 @@ describe("Walk-in registration + Bay Board (Phase 3B)", () => {
     ).rejects.toMatchObject({ code: "failed-precondition" });
   });
 
-  it("9. concurrent walk-in creation on the same bay: exactly one succeeds, the other gets a clear recoverable error", async () => {
-    const bayId = nextProtectionBay();
-    const results = await Promise.allSettled([
-      createWalkinJob.run({
-        data: {
-          serviceId: ppfService.id,
-          vehicleId: vehicle.id,
-          vehicleCategory: "suv",
-          bayId,
-          customerId: customer.id,
-          studioId: STUDIO_ID,
-        },
-        auth: studioAuth(studioUid),
-      } as never),
-      createWalkinJob.run({
-        data: {
-          serviceId: ppfService.id,
-          vehicleId: vehicle.id,
-          vehicleCategory: "suv",
-          bayId,
-          customerId: customer.id,
-          studioId: STUDIO_ID,
-        },
-        auth: studioAuth(studioUid),
-      } as never),
-    ]);
-
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-    expect(fulfilled.length).toBe(1);
-    expect(rejected.length).toBe(1);
-    expect((rejected[0]?.reason as { code?: string } | undefined)?.code).toBe("resource-exhausted");
-
-    // Bay Board query shows exactly one active job on this bay.
-    const occupants = await db.collection("jobs").where("studioId", "==", STUDIO_ID).where("bayId", "==", bayId).get();
-    const active = occupants.docs.filter((d) => !["DELIVERED", "CANCELLED"].includes((d.data() as ServiceJob).status));
-    expect(active.length).toBe(1);
-  });
-
-  it("9b. stress: repeated concurrent walk-in pairs never double-assign a bay (Phase 5B P1-1 regression)", async () => {
-    // 10 sequential iterations of a 2-way concurrent transaction (with
-    // maxAttempts:10 retry headroom each) legitimately takes longer than
-    // the suite's default 30s budget under emulator load — this is a
-    // deliberately slow stress test, not a hang.
-    // A single concurrent pair (test 9 above) has a real chance of passing
-    // even when the underlying race is present — Firestore's transaction
-    // conflict detection on a query read is not 100% reliable (see
-    // COLLECTIONS.bayLocks' doc comment). Before the Phase 5B fix,
-    // createWalkinJob had NO bayLocks mitigation at all (unlike
-    // createBooking), with an empirically measured ~50% double-assignment
-    // rate under this exact concurrent-pair pattern — so this loop would
-    // reliably have surfaced at least one double-booking across 10
-    // iterations. Run several independent bays to get a real signal instead
-    // of a single coin flip (6 iterations still gives only a ~1.5% chance of
-    // all passing by luck if the ~50% unmitigated failure rate were still
-    // present, while keeping runtime reasonable).
-    const iterations = 6;
+  it("9. concurrent walk-in creation on the same bay: exactly one succeeds, the other gets a clear recoverable error (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) — a
+    // single concurrent pair has a real chance of passing even when the
+    // underlying race is present: Firestore's transaction conflict
+    // detection on a query read is not 100% reliable (see
+    // COLLECTIONS.bayLocks' doc comment). Before the bayLocks mitigation
+    // (Phase 5B P1-1), createWalkinJob had no protection at all against
+    // this race, with an empirically measured ~50% double-assignment rate
+    // under this exact concurrent-pair pattern — this loop would reliably
+    // have surfaced it. Each iteration uses an independent fresh bay.
+    const iterations = 20;
     for (let i = 0; i < iterations; i += 1) {
       const bayId = nextProtectionBay();
       const results = await Promise.allSettled([
@@ -489,13 +446,20 @@ describe("Walk-in registration + Bay Board (Phase 3B)", () => {
       ]);
 
       const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
       expect(fulfilled.length, `iteration ${i}: expected exactly one winner`).toBe(1);
+      expect(rejected.length, `iteration ${i}: expected exactly one loser`).toBe(1);
+      expect(
+        (rejected[0]?.reason as { code?: string } | undefined)?.code,
+        `iteration ${i}: loser should get a clear recoverable error`,
+      ).toBe("resource-exhausted");
 
+      // Bay Board query shows exactly one active job on this bay.
       const occupants = await db.collection("jobs").where("studioId", "==", STUDIO_ID).where("bayId", "==", bayId).get();
       const active = occupants.docs.filter((d) => !["DELIVERED", "CANCELLED"].includes((d.data() as ServiceJob).status));
       expect(active.length, `iteration ${i}: bay must never be double-assigned`).toBe(1);
     }
-  }, 60_000);
+  }, 180_000);
 
   it("10. studio can register a vehicle on behalf of an existing customer (walk-in intake) — never owned by the studio employee", async () => {
     const result = (await createVehicle.run({
@@ -667,55 +631,55 @@ describe("Walk-in registration + Bay Board (Phase 3B)", () => {
     expect((occupantSnap.data() as ServiceJob).bayId).toBe(occupiedBayId);
   });
 
-  it("17. two concurrent advanceJobStatus calls on the same job never silently drop a statusHistory entry (Phase 5B P1-5 regression)", async () => {
-    const created = (await createWalkinJob.run({
-      data: {
-        serviceId: washService.id,
-        vehicleId: vehicle.id,
-        vehicleCategory: "suv",
-        bayId: nextWashBay(),
-        customerId: customer.id,
-        studioId: STUDIO_ID,
-      },
-      auth: studioAuth(studioUid),
-    } as never)) as { job: ServiceJob };
+  it("17. two concurrent advanceJobStatus calls on the same job never silently drop a statusHistory entry (Phase 5B P1-5 regression, P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4). Unlike
+    // the bay-race tests, this race is fully deterministic once fixed —
+    // both sides tx.get() the same job document, so Firestore's conflict
+    // detection is guaranteed, not probabilistic — but the loop still
+    // guards against a FUTURE regression (e.g. someone reintroducing a
+    // blind write) with much higher confidence than one pair.
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const created = (await createWalkinJob.run({
+        data: {
+          serviceId: washService.id,
+          vehicleId: vehicle.id,
+          vehicleCategory: "suv",
+          bayId: nextWashBay(),
+          customerId: customer.id,
+          studioId: STUDIO_ID,
+        },
+        auth: studioAuth(studioUid),
+      } as never)) as { job: ServiceJob };
 
-    const initialLength = created.job.statusHistory.length;
-    expect(created.job.status).toBe("VEHICLE_RECEIVED");
+      const initialLength = created.job.statusHistory.length;
+      expect(created.job.status, `iteration ${i}`).toBe("VEHICLE_RECEIVED");
 
-    // The defect this test reproduces: advanceJobStatus previously computed
-    // nextStatus/statusHistory from a pre-transaction read and performed a
-    // BLIND tx.update() with no tx.get() on the job document — so two
-    // concurrent calls never conflicted with each other, and whichever
-    // committed last silently overwrote the other's statusHistory entry
-    // with an array built from stale data. With the job now read via
-    // tx.get() inside the transaction, a second call whose read becomes
-    // stale is transparently retried by Firestore against fresh data
-    // instead — so each call that actually commits contributes exactly one
-    // new entry (VEHICLE_RECEIVED -> IN_PROGRESS -> QUALITY_CHECK), never
-    // losing the other's.
-    const results = await Promise.allSettled([
-      advanceJobStatus.run({ data: { jobId: created.job.id }, auth: studioAuth(uid("studio-a")) } as never),
-      advanceJobStatus.run({ data: { jobId: created.job.id }, auth: studioAuth(uid("studio-b")) } as never),
-    ]);
-    const fulfilledCount = results.filter((r) => r.status === "fulfilled").length;
-    expect(fulfilledCount).toBeGreaterThanOrEqual(1);
+      const results = await Promise.allSettled([
+        advanceJobStatus.run({ data: { jobId: created.job.id }, auth: studioAuth(uid("studio-a")) } as never),
+        advanceJobStatus.run({ data: { jobId: created.job.id }, auth: studioAuth(uid("studio-b")) } as never),
+      ]);
+      const fulfilledCount = results.filter((r) => r.status === "fulfilled").length;
+      expect(fulfilledCount, `iteration ${i}`).toBeGreaterThanOrEqual(1);
 
-    const finalSnap = await db.collection("jobs").doc(created.job.id).get();
-    const finalJob = finalSnap.data() as ServiceJob;
-    expect(finalJob.statusHistory.length).toBe(initialLength + fulfilledCount);
+      const finalSnap = await db.collection("jobs").doc(created.job.id).get();
+      const finalJob = finalSnap.data() as ServiceJob;
+      expect(finalJob.statusHistory.length, `iteration ${i}: no entry silently dropped`).toBe(
+        initialLength + fulfilledCount,
+      );
 
-    // Every audit log entry for this job's status advancement must be
-    // reflected in the final statusHistory — none silently dropped.
-    const auditSnap = await db
-      .collection(COLLECTIONS.auditLog())
-      .where("entityId", "==", created.job.id)
-      .where("action", "==", "job.status_advanced")
-      .get();
-    expect(auditSnap.docs.length).toBe(fulfilledCount);
-    const auditedStatuses = auditSnap.docs.map((d) => (d.data() as { after: { status: string } }).after.status);
-    for (const status of auditedStatuses) {
-      expect(finalJob.statusHistory.some((h) => h.status === status)).toBe(true);
+      // Every audit log entry for this job's status advancement must be
+      // reflected in the final statusHistory — none silently dropped.
+      const auditSnap = await db
+        .collection(COLLECTIONS.auditLog())
+        .where("entityId", "==", created.job.id)
+        .where("action", "==", "job.status_advanced")
+        .get();
+      expect(auditSnap.docs.length, `iteration ${i}`).toBe(fulfilledCount);
+      const auditedStatuses = auditSnap.docs.map((d) => (d.data() as { after: { status: string } }).after.status);
+      for (const status of auditedStatuses) {
+        expect(finalJob.statusHistory.some((h) => h.status === status), `iteration ${i}, status ${status}`).toBe(true);
+      }
     }
-  });
+  }, 180_000);
 });

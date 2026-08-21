@@ -49,18 +49,39 @@ export const updateStaffRole = onCall({ region: "asia-south1" }, async (request)
 
   const now = new Date().toISOString();
 
-  await db.runTransaction(async (tx) => {
-    tx.update(ref, { role: data.role, studioId: data.studioId, updatedAt: now });
-    writeAuditLog(tx, {
-      action: "employee.role_changed",
-      entityType: "Employee",
-      entityId: data.employeeId,
-      user,
-      studioId: data.studioId,
-      before: { role: existing.role, studioId: existing.studioId },
-      after: { role: data.role, studioId: data.studioId },
+  // Phase 5B P2-2 fix: if the Firestore write below fails after the claims
+  // write above already succeeded (transient error), Auth and Firestore
+  // would drift apart — exactly what this function's own header comment
+  // says it exists to prevent. Same compensating pattern as
+  // addStaffMember.ts's orphan fix (P1-6): on failure, roll the claims back
+  // to their pre-change values so Auth and Firestore stay consistent with
+  // each other (both showing the OLD role) instead of drifting. Unlike
+  // addStaffMember, reordering (Firestore first) isn't strictly safer here —
+  // it would just move the same drift risk to the other direction — so
+  // compensation is the right fix, not reordering.
+  try {
+    await db.runTransaction(async (tx) => {
+      tx.update(ref, { role: data.role, studioId: data.studioId, updatedAt: now });
+      writeAuditLog(tx, {
+        action: "employee.role_changed",
+        entityType: "Employee",
+        entityId: data.employeeId,
+        user,
+        studioId: data.studioId,
+        before: { role: existing.role, studioId: existing.studioId },
+        after: { role: data.role, studioId: data.studioId },
+      });
     });
-  });
+  } catch (err) {
+    await adminAuth
+      .setCustomUserClaims(existing.authUid, {
+        role: existing.role,
+        tenantId: existing.tenantId,
+        studioId: existing.studioId,
+      })
+      .catch(() => undefined);
+    throw err;
+  }
 
   return { employeeId: data.employeeId, role: data.role };
 });

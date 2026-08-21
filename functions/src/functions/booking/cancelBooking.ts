@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, ServiceJob, Membership } from "@autodeck/core";
 import { CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertTenant } from "../../middleware/auth.js";
+import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -35,6 +35,10 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
   if (!isCustomer && !isStudioOrAbove) {
     throw new HttpsError("permission-denied", "Unauthorized.");
   }
+  // Phase 5B P1-14 fix — previously not checked at all here, letting a
+  // studio employee at Studio A cancel a booking belonging to Studio B in
+  // the same tenant.
+  assertStudio(user, booking.studioId, "Booking");
 
   if (booking.status === "CANCELLED") {
     return { success: true, alreadyCancelled: true };

@@ -15,7 +15,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Payment, ServiceJob, Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser } from "../../middleware/auth.js";
+import { extractUser, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -51,6 +51,12 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
 
   if (payment.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+  }
+  // studioId is null for membership-purchase payments (not studio-scoped) —
+  // only enforce the boundary when the payment actually belongs to a studio
+  // (Phase 5B P1-14 fix — previously not checked at all here).
+  if (payment.studioId) {
+    assertStudio(user, payment.studioId, "Payment");
   }
 
   // Idempotency check comes BEFORE the terminal-state guard: a redelivered

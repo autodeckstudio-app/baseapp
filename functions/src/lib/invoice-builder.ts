@@ -67,6 +67,18 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
 
   const subtotal = lineItems.reduce((sum, li) => sum + li.total, 0);
 
+  // Membership benefit, if any (Phase 5B P1-9 fix — see Invoice.discount
+  // doc comment). pb.membershipDiscount is already computed against this
+  // same gross subtotal by applyMembershipBenefit(), so
+  // subtotal - discount + tax === total holds by construction.
+  const discount = pb.membershipDiscount ?? 0;
+  const discountDescription =
+    discount === 0
+      ? null
+      : pb.membershipDiscountPercent !== null
+        ? `Membership discount (${pb.membershipDiscountPercent}%)`
+        : "Membership wash credit";
+
   return {
     id: invoiceId,
     tenantId,
@@ -79,6 +91,8 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     invoiceNumber,
     lineItems,
     subtotal,
+    discount,
+    discountDescription,
     taxRatePercent: pb.taxRatePercent,
     taxDescription: pb.taxDescription,
     tax: pb.tax,

@@ -7,7 +7,7 @@
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import type { Service, ServiceJob, Employee, Invoice } from "@autodeck/core";
@@ -128,8 +128,10 @@ async function seedInvoice(invoiceId: string, tenantId: string, studioId: string
     vehicleId: uid("veh"),
     paymentId: status === "paid" ? uid("pay") : null,
     invoiceNumber: `INV-TEST-${invoiceId}`,
-    lineItems: [{ description: "Test Wash", quantity: 1, unitPrice: 47200, total: 47200 }],
+    lineItems: [{ description: "Test Wash", quantity: 1, unitPrice: 40000, total: 40000 }],
     subtotal: 40000,
+    discount: 0,
+    discountDescription: null,
     taxRatePercent: 18,
     taxDescription: "GST 18%",
     tax: 7200,
@@ -328,6 +330,53 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
     ).rejects.toThrow();
   });
 
+  it("Phase 5B P1-6 regression: a Firestore failure after Auth user creation deletes the orphaned Auth account, allowing a clean retry", async () => {
+    const email = `${uid("orphan")}@coverage-test.local`;
+
+    // Simulate a transient Firestore failure AFTER adminAuth.createUser()
+    // has already succeeded — the exact window that used to leave a
+    // permanent orphan (real Auth account, no Employee record, retry
+    // blocked forever by the duplicate-email check). enforceRateLimit()
+    // ALSO calls db.runTransaction() — and runs first — so a bare
+    // mockRejectedValueOnce would fail that call instead of the intended
+    // Employee-creation one, short-circuiting the whole function before
+    // adminAuth.createUser() ever runs and silently making this test a
+    // false positive (no orphan is ever created to clean up). Let the
+    // first call (rate limit) through for real, reject only the second.
+    const originalRunTransaction = db.runTransaction.bind(db);
+    const txSpy = vi
+      .spyOn(db, "runTransaction")
+      .mockImplementationOnce((...args: Parameters<typeof db.runTransaction>) => originalRunTransaction(...args))
+      .mockRejectedValueOnce(new Error("simulated Firestore failure"));
+
+    await expect(
+      addStaffMember.run({
+        data: { name: "Orphan Risk", email, password: "password123", role: "studio", studioId: STUDIO_A },
+        auth: adminAuth(uid("admin-orphan")),
+      } as never),
+    ).rejects.toThrow(/simulated Firestore failure/);
+
+    txSpy.mockRestore();
+
+    // The Auth account must NOT survive the failed attempt.
+    await expect(getAuth().getUserByEmail(email)).rejects.toThrow();
+
+    // No Employee record should exist for this email either.
+    const orphanSnap = await db.collection(COLLECTIONS.employees()).where("name", "==", "Orphan Risk").get();
+    expect(orphanSnap.empty).toBe(true);
+
+    // A genuine retry with the same email must now succeed cleanly — proof
+    // the compensating delete actually ran, not just that the call failed.
+    const retryResult = (await addStaffMember.run({
+      data: { name: "Orphan Risk Retry", email, password: "password123", role: "studio", studioId: STUDIO_A },
+      auth: adminAuth(uid("admin-orphan-retry")),
+    } as never)) as { employeeId: string };
+
+    const employeeSnap = await db.collection(COLLECTIONS.employees()).doc(retryResult.employeeId).get();
+    expect(employeeSnap.exists).toBe(true);
+    expect((employeeSnap.data() as Employee).name).toBe("Orphan Risk Retry");
+  });
+
   it("updateStaffRole changes role/studio and keeps Auth claims and Firestore record in sync", async () => {
     const employee = await seedEmployee(uid("emp"), TENANT_A, STUDIO_A, { role: "studio" });
 
@@ -366,6 +415,52 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
         auth: adminAuth(uid("admin")),
       } as never),
     ).rejects.toThrow(/terminated employee/);
+  });
+
+  it("Phase 5B P2-2 regression: a Firestore failure after the claims write rolls the claims back, avoiding permanent Auth/Firestore drift", async () => {
+    const employee = await seedEmployee(uid("emp"), TENANT_A, STUDIO_A, { role: "studio" });
+
+    // enforceRateLimit() ALSO calls db.runTransaction() and runs first — a
+    // bare mockRejectedValueOnce would fail that call instead of the
+    // intended role-change transaction, short-circuiting the function
+    // before setCustomUserClaims() ever runs and making this test a false
+    // positive. Let the first call (rate limit) through for real, reject
+    // only the second.
+    const originalRunTransaction = db.runTransaction.bind(db);
+    const txSpy = vi
+      .spyOn(db, "runTransaction")
+      .mockImplementationOnce((...args: Parameters<typeof db.runTransaction>) => originalRunTransaction(...args))
+      .mockRejectedValueOnce(new Error("simulated Firestore failure"));
+
+    await expect(
+      updateStaffRole.run({
+        data: { employeeId: employee.id, role: "studio", studioId: STUDIO_B },
+        auth: adminAuth(uid("admin-drift")),
+      } as never),
+    ).rejects.toThrow(/simulated Firestore failure/);
+
+    txSpy.mockRestore();
+
+    // Claims must be rolled back to the ORIGINAL studioId, not left at the
+    // new (drifted) value — this is the defect this test reproduces.
+    const { customClaims } = await getAuth().getUser(employee.authUid);
+    expect(customClaims?.["studioId"]).toBe(STUDIO_A);
+
+    // Firestore was never touched by the failed attempt either.
+    const employeeSnap = await db.collection(COLLECTIONS.employees()).doc(employee.id).get();
+    expect((employeeSnap.data() as Employee).studioId).toBe(STUDIO_A);
+
+    // A genuine retry now succeeds cleanly and both sides move together.
+    const retryResult = (await updateStaffRole.run({
+      data: { employeeId: employee.id, role: "studio", studioId: STUDIO_B },
+      auth: adminAuth(uid("admin-drift-retry")),
+    } as never)) as { role: string };
+    expect(retryResult.role).toBe("studio");
+
+    const { customClaims: retriedClaims } = await getAuth().getUser(employee.authUid);
+    expect(retriedClaims?.["studioId"]).toBe(STUDIO_B);
+    const retriedSnap = await db.collection(COLLECTIONS.employees()).doc(employee.id).get();
+    expect((retriedSnap.data() as Employee).studioId).toBe(STUDIO_B);
   });
 
   it("deactivateStaffMember disables the Auth account, revokes tokens, and marks the Employee terminated", async () => {
@@ -466,5 +561,87 @@ describe("voidInvoice", () => {
         auth: studioAuth(uid("staff"), STUDIO_A),
       } as never),
     ).rejects.toThrow(/Admin role required/);
+  });
+
+  it("Phase 5B P2-1 regression: two concurrent void calls on one invoice — exactly one succeeds, no lost update", async () => {
+    const invoice = await seedInvoice(uid("inv-race"), TENANT_A, STUDIO_A, "issued");
+
+    const [r1, r2] = await Promise.allSettled([
+      voidInvoice.run({
+        data: { invoiceId: invoice.id, reason: "reason A" },
+        auth: adminAuth(uid("admin-race-a")),
+      } as never),
+      voidInvoice.run({
+        data: { invoiceId: invoice.id, reason: "reason B" },
+        auth: adminAuth(uid("admin-race-b")),
+      } as never),
+    ]);
+
+    const fulfilled = [r1, r2].filter((r) => r.status === "fulfilled");
+    const rejected = [r1, r2].filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason.message).toMatch(/already void/);
+
+    // Exactly one audit entry — the defect this test reproduces: a blind
+    // (non-transactional-read) update let both concurrent calls commit,
+    // producing two "invoice.voided" entries for a single invoice.
+    const auditSnap = await db
+      .collection(COLLECTIONS.auditLog())
+      .where("entityId", "==", invoice.id)
+      .where("action", "==", "invoice.voided")
+      .get();
+    expect(auditSnap.docs).toHaveLength(1);
+  });
+
+  it("Phase 5B P2-3 regression: voiding an invoice does not touch job.paymentStatus (documented, intentional — refund is the separate path for that)", async () => {
+    const jobId = uid("job-void-scope");
+    await seedJob(jobId, TENANT_A, STUDIO_A, "2026-09-15");
+    await db.collection(COLLECTIONS.jobs()).doc(jobId).update({ paymentStatus: "unpaid" });
+
+    const invoiceId = uid("inv-void-scope");
+    const now = new Date().toISOString();
+    const invoice: Invoice = {
+      id: invoiceId,
+      tenantId: TENANT_A,
+      studioId: STUDIO_A,
+      jobId,
+      bookingId: null,
+      customerId: uid("cust"),
+      vehicleId: uid("veh"),
+      paymentId: null,
+      invoiceNumber: `INV-TEST-${invoiceId}`,
+      lineItems: [{ description: "Test Wash", quantity: 1, unitPrice: 40000, total: 40000 }],
+      subtotal: 40000,
+      discount: 0,
+      discountDescription: null,
+      taxRatePercent: 18,
+      taxDescription: "GST 18%",
+      tax: 7200,
+      total: 47200,
+      currency: "INR",
+      status: "issued",
+      pdfUrl: null,
+      publicToken: uid("token"),
+      issuedAt: now,
+      voidedAt: null,
+      voidedReason: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.collection(COLLECTIONS.invoices()).doc(invoiceId).set(invoice);
+
+    await voidInvoice.run({
+      data: { invoiceId, reason: "issued in error" },
+      auth: adminAuth(uid("admin-scope")),
+    } as never);
+
+    const invoiceSnap = await db.collection(COLLECTIONS.invoices()).doc(invoiceId).get();
+    expect((invoiceSnap.data() as Invoice).status).toBe("void");
+
+    // The documented, intentional scope of this function: only the Invoice
+    // document changes. job.paymentStatus is untouched.
+    const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(jobId).get();
+    expect((jobSnap.data() as ServiceJob).paymentStatus).toBe("unpaid");
   });
 });

@@ -129,40 +129,44 @@ describe("setupCustomerProfile", () => {
     ).rejects.toThrow(/Authentication required/);
   });
 
-  it("concurrent first-sign-in race for the same uid: exactly one create wins, no duplicate/corrupted profile", async () => {
-    const userUid = uid("race");
-    const phone = "+919876543213";
-    // This relies on a document-reference read+write inside a transaction
+  it("concurrent first-sign-in race for the same uid: exactly one create wins, no duplicate/corrupted profile (Phase 5B P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4). This
+    // relies on a document-reference read+write inside a transaction
     // (proven reliable, unlike the query-based races documented elsewhere
-    // this phase) — but transaction retries under real contention can take
-    // longer than the 5s default when the emulator is under heavier load
-    // (e.g. running as part of the full suite rather than in isolation).
-    await createAuthUser(userUid, phone);
-
-    const results = await Promise.all([
-      setupCustomerProfile.run({
-        data: { name: "Racer A" },
-        auth: phoneAuth(userUid, phone),
-      } as never),
-      setupCustomerProfile.run({
-        data: { name: "Racer B" },
-        auth: phoneAuth(userUid, phone),
-      } as never),
-    ]) as { customer: Customer; isNew: boolean }[];
-
-    // Both calls succeed (setupCustomerProfile is designed to be safe to
-    // call from a racing client — neither is expected to error), but they
-    // must agree on exactly one winning name — not two different customer
-    // records, not a corrupted merge.
-    const isNewCount = results.filter((r) => r.isNew).length;
-    expect(isNewCount).toBe(1);
-    expect(results[0]?.customer.name).toBe(results[1]?.customer.name);
-    expect(["Racer A", "Racer B"]).toContain(results[0]?.customer.name);
-
+    // this phase) — deterministic once fixed, but the loop guards against a
+    // future regression with far higher confidence than one pair. Each
+    // iteration uses its own fresh uid/phone so iterations never interfere.
     const db = getFirestore();
-    const snap = await db.collection("customers").doc(userUid).get();
-    expect(snap.data()?.name).toBe(results[0]?.customer.name);
-  }, 15000);
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const userUid = uid("race");
+      const phone = `+1555${Date.now().toString().slice(-7)}${i.toString().padStart(2, "0")}`;
+      await createAuthUser(userUid, phone);
+
+      const results = (await Promise.all([
+        setupCustomerProfile.run({
+          data: { name: "Racer A" },
+          auth: phoneAuth(userUid, phone),
+        } as never),
+        setupCustomerProfile.run({
+          data: { name: "Racer B" },
+          auth: phoneAuth(userUid, phone),
+        } as never),
+      ])) as { customer: Customer; isNew: boolean }[];
+
+      // Both calls succeed (setupCustomerProfile is designed to be safe to
+      // call from a racing client — neither is expected to error), but they
+      // must agree on exactly one winning name — not two different customer
+      // records, not a corrupted merge.
+      const isNewCount = results.filter((r) => r.isNew).length;
+      expect(isNewCount, `iteration ${i}`).toBe(1);
+      expect(results[0]?.customer.name, `iteration ${i}`).toBe(results[1]?.customer.name);
+      expect(["Racer A", "Racer B"], `iteration ${i}`).toContain(results[0]?.customer.name);
+
+      const snap = await db.collection("customers").doc(userUid).get();
+      expect(snap.data()?.name, `iteration ${i}`).toBe(results[0]?.customer.name);
+    }
+  }, 180_000);
 
   it("customer cannot set their own tenantId via direct Firestore write (enforced by rules, see security-rules.emulator.test.ts)", async () => {
     // setupCustomerProfileSchema doesn't even accept a tenantId field, and
@@ -170,14 +174,16 @@ describe("setupCustomerProfile", () => {
     // updatedAt) independently blocks it at the client-SDK layer too — the
     // full attack scenario is exercised in security-rules.emulator.test.ts.
     // This test just confirms the schema-level fact directly.
+    // Phase 5B P1-12: setupCustomerProfileSchema is now .strict(), so a
+    // smuggled tenantId field is explicitly REJECTED rather than silently
+    // stripped — an even stronger proof than the previous behavior (a
+    // client attempting this gets a clear 400, not a payload that quietly
+    // discards the field with no signal anything was wrong).
     const { setupCustomerProfileSchema } = await import("../../schemas/customer.js");
     const parsed = setupCustomerProfileSchema.safeParse({ name: "Attacker", tenantId: "attacker-tenant" });
-    expect(parsed.success).toBe(true);
-    // tenantId, even if smuggled into the payload, is simply not read by
-    // the schema/handler — it's stripped by Zod's default (non-passthrough)
-    // parsing, and the handler only ever uses the server constant.
-    if (parsed.success) {
-      expect((parsed.data as Record<string, unknown>)["tenantId"]).toBeUndefined();
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.some((issue) => issue.code === "unrecognized_keys")).toBe(true);
     }
   });
 });

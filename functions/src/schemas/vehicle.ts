@@ -28,7 +28,7 @@ export const createVehicleSchema = z.object({
   // (enforced in the handler, not just by convention); ignored for role
   // 'customer', who always owns the vehicle they create.
   ownerId: z.string().min(1).optional(),
-});
+}).strict();
 
 export const updateVehicleSchema = z.object({
   vehicleId: z.string().min(1),
@@ -43,11 +43,11 @@ export const updateVehicleSchema = z.object({
   color: z.string().min(1).max(50).trim().optional(),
   odometer: z.number().int().min(0).optional(),
   category: vehicleCategorySchema.nullable().optional(),
-});
+}).strict();
 
 export const archiveVehicleSchema = z.object({
   vehicleId: z.string().min(1),
-});
+}).strict();
 
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;

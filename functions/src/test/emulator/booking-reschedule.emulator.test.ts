@@ -26,8 +26,8 @@ const STUDIO_ID = "reschedule-studio";
 function customerAuth(authUid: string) {
   return { uid: authUid, token: { role: "customer", tenantId: TENANT_A, studioId: null }, rawToken: "test" };
 }
-function studioAuth(authUid: string) {
-  return { uid: authUid, token: { role: "studio", tenantId: TENANT_A, studioId: STUDIO_ID }, rawToken: "test" };
+function studioAuth(authUid: string, studioId = STUDIO_ID) {
+  return { uid: authUid, token: { role: "studio", tenantId: TENANT_A, studioId }, rawToken: "test" };
 }
 
 async function getJobForBooking(bookingId: string): Promise<ServiceJob> {
@@ -49,11 +49,11 @@ function nextDate(): string {
   return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
 }
 
-async function seedStudio(bayCount = 10) {
+async function seedStudio(bayCount = 10, studioId = STUDIO_ID) {
   const studioConfig: StudioConfig = {
-    id: STUDIO_ID,
+    id: studioId,
     tenantId: TENANT_A,
-    studioId: STUDIO_ID,
+    studioId,
     name: "Reschedule Test Studio",
     timezone: "Asia/Kolkata",
     currency: "INR",
@@ -66,16 +66,16 @@ async function seedStudio(bayCount = 10) {
     maxAdvanceBookingDays: 30,
     cancellationWindowHours: 24,
     bays: Array.from({ length: bayCount }, (_, i) => ({
-      id: `${STUDIO_ID}-wash-${i + 1}`,
+      id: `${studioId}-wash-${i + 1}`,
       tenantId: TENANT_A,
-      studioId: STUDIO_ID,
+      studioId,
       name: `Wash Bay ${i + 1}`,
       bayType: "wash" as const,
       active: true,
     })),
     updatedAt: new Date().toISOString(),
   };
-  await db.collection("studioConfig").doc(STUDIO_ID).set(studioConfig);
+  await db.collection("studioConfig").doc(studioId).set(studioConfig);
   return studioConfig;
 }
 
@@ -227,67 +227,124 @@ describe("Customer booking reschedule", () => {
     ).rejects.toThrow(/Cannot reschedule another customer's booking/);
   });
 
-  it("Phase 5B P1-3 regression: concurrent advanceJobStatus + cancelBooking never silently drops a statusHistory entry", async () => {
-    const booking = await makeBooking(customerId, service, vehicle);
-    const job = await getJobForBooking(booking.id);
-    expect(job.statusHistory.length).toBe(1); // just the initial PENDING_VEHICLE entry
+  it("Phase 5B P1-3 regression: concurrent advanceJobStatus + cancelBooking never silently drops a statusHistory entry (P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) —
+    // deterministic once fixed (both functions tx.get() the same job), but
+    // the loop guards against a future regression with far higher
+    // confidence than one pair. Each iteration uses its own fresh
+    // customer/vehicle/studio: a fresh customer avoids tripping
+    // booking.cancel's 10/min rate limit across 20 rapid calls from one
+    // uid, and a fresh single-purpose studio lets every iteration safely
+    // reuse the SAME booking date instead of calling nextDate() per
+    // iteration (which draws from this file's shared, monotonic,
+    // 30-day-bounded counter and would exhaust it for other tests).
+    const raceDate = nextDate();
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("p13-race-studio");
+      await seedStudio(2, raceStudioId);
+      const raceCustomerId = uid("p13-cust");
+      const raceVehicle = await seedVehicle(uid("p13-veh"), raceCustomerId);
+      const bookingResult = (await createBooking.run({
+        data: {
+          serviceId: service.id,
+          vehicleId: raceVehicle.id,
+          vehicleCategory: "hatchback",
+          studioId: raceStudioId,
+          scheduledDate: raceDate,
+          scheduledTime: "10:00",
+          idempotencyKey: uid("idem"),
+        },
+        auth: customerAuth(raceCustomerId),
+      } as never)) as { booking: Booking };
+      const booking = bookingResult.booking;
+      const job = await getJobForBooking(booking.id);
+      expect(job.statusHistory.length, `iteration ${i}`).toBe(1); // just the initial PENDING_VEHICLE entry
 
-    const [advanceResult] = await Promise.allSettled([
-      advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user")) } as never),
-      cancelBooking.run({ data: { bookingId: booking.id, reason: "race test" }, auth: customerAuth(customerId) } as never),
-    ]);
+      const [advanceResult] = await Promise.allSettled([
+        advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user"), raceStudioId) } as never),
+        cancelBooking.run(
+          { data: { bookingId: booking.id, reason: "race test" }, auth: customerAuth(raceCustomerId) } as never,
+        ),
+      ]);
 
-    const finalJob = await getJobForBooking(booking.id);
-    const finalBooking = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+      const finalJob = await getJobForBooking(booking.id);
+      const finalBooking = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
 
-    // cancelBooking unconditionally cancels the BOOKING regardless of the
-    // job's status — this must always hold.
-    expect(finalBooking.status).toBe("CANCELLED");
+      // cancelBooking unconditionally cancels the BOOKING regardless of the
+      // job's status — this must always hold.
+      expect(finalBooking.status, `iteration ${i}`).toBe("CANCELLED");
 
-    // The defect this test reproduces: cancelBooking used to read the job
-    // via a plain pre-transaction query, then blindly overwrite
-    // statusHistory with [...staleArray, CANCELLED] inside its transaction —
-    // silently dropping a concurrently-committed VEHICLE_RECEIVED entry if
-    // advanceJobStatus's transaction committed first. With both functions
-    // now reading the job via tx.get(), whichever commits second sees fresh
-    // data, so if advanceJobStatus succeeded, its entry must survive.
-    if (advanceResult.status === "fulfilled") {
-      expect(finalJob.statusHistory.some((h) => h.status === "VEHICLE_RECEIVED")).toBe(true);
+      // The defect this test reproduces: cancelBooking used to read the job
+      // via a plain pre-transaction query, then blindly overwrite
+      // statusHistory with [...staleArray, CANCELLED] inside its
+      // transaction — silently dropping a concurrently-committed
+      // VEHICLE_RECEIVED entry if advanceJobStatus's transaction committed
+      // first. With both functions now reading the job via tx.get(),
+      // whichever commits second sees fresh data, so if advanceJobStatus
+      // succeeded, its entry must survive.
+      if (advanceResult.status === "fulfilled") {
+        expect(finalJob.statusHistory.some((h) => h.status === "VEHICLE_RECEIVED"), `iteration ${i}`).toBe(true);
+      }
+      // Whatever the interleaving, no entry is ever lost: statusHistory
+      // must contain the CANCELLED transition once the job was actually
+      // cancelled (job status still in the cancellable window at the time
+      // of its fresh in-transaction read).
+      if (finalJob.status === "CANCELLED") {
+        expect(finalJob.statusHistory.some((h) => h.status === "CANCELLED"), `iteration ${i}`).toBe(true);
+      }
     }
-    // Whatever the interleaving, no entry is ever lost: statusHistory must
-    // contain the CANCELLED transition once the job was actually cancelled
-    // (job status still in the cancellable window at the time of its fresh
-    // in-transaction read).
-    if (finalJob.status === "CANCELLED") {
-      expect(finalJob.statusHistory.some((h) => h.status === "CANCELLED")).toBe(true);
+  }, 60_000);
+
+  it("Phase 5B P1-4 regression: concurrent advanceJobStatus + rescheduleBooking never silently drops a statusHistory entry (P2-4 stress)", async () => {
+    // Repeated stress iterations, not a single pair (Phase 5B P2-4) — same
+    // rationale as the P1-3 test above (fresh customer/vehicle/studio per
+    // iteration, two dates hoisted out of the loop and reused).
+    const raceDate = nextDate();
+    const rescheduleDate = nextDate();
+    const iterations = 20;
+    for (let i = 0; i < iterations; i += 1) {
+      const raceStudioId = uid("p14-race-studio");
+      await seedStudio(2, raceStudioId);
+      const raceCustomerId = uid("p14-cust");
+      const raceVehicle = await seedVehicle(uid("p14-veh"), raceCustomerId);
+      const bookingResult = (await createBooking.run({
+        data: {
+          serviceId: service.id,
+          vehicleId: raceVehicle.id,
+          vehicleCategory: "hatchback",
+          studioId: raceStudioId,
+          scheduledDate: raceDate,
+          scheduledTime: "10:00",
+          idempotencyKey: uid("idem"),
+        },
+        auth: customerAuth(raceCustomerId),
+      } as never)) as { booking: Booking };
+      const booking = bookingResult.booking;
+      const job = await getJobForBooking(booking.id);
+
+      const [advanceResult, rescheduleResult] = await Promise.allSettled([
+        advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-2"), raceStudioId) } as never),
+        rescheduleBooking.run(
+          {
+            data: { bookingId: booking.id, newDate: rescheduleDate, newTime: "14:00", idempotencyKey: uid("idem") },
+            auth: customerAuth(raceCustomerId),
+          } as never,
+        ),
+      ]);
+
+      const finalJob = await getJobForBooking(booking.id);
+
+      // The defect this test reproduces: rescheduleBooking used to read the
+      // job via a plain pre-transaction query, then blindly overwrite
+      // statusHistory with [...staleArray, rescheduleEntry] — silently
+      // dropping a concurrently-committed VEHICLE_RECEIVED entry.
+      if (advanceResult.status === "fulfilled") {
+        expect(finalJob.statusHistory.some((h) => h.status === "VEHICLE_RECEIVED"), `iteration ${i}`).toBe(true);
+      }
+      if (rescheduleResult.status === "fulfilled") {
+        expect(finalJob.statusHistory.some((h) => h.notes?.includes("Rescheduled to")), `iteration ${i}`).toBe(true);
+      }
     }
-  });
-
-  it("Phase 5B P1-4 regression: concurrent advanceJobStatus + rescheduleBooking never silently drops a statusHistory entry", async () => {
-    const booking = await makeBooking(customerId, service, vehicle);
-    const job = await getJobForBooking(booking.id);
-
-    const [advanceResult, rescheduleResult] = await Promise.allSettled([
-      advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user-2")) } as never),
-      rescheduleBooking.run(
-        {
-          data: { bookingId: booking.id, newDate: nextDate(), newTime: "14:00", idempotencyKey: uid("idem") },
-          auth: customerAuth(customerId),
-        } as never,
-      ),
-    ]);
-
-    const finalJob = await getJobForBooking(booking.id);
-
-    // The defect this test reproduces: rescheduleBooking used to read the
-    // job via a plain pre-transaction query, then blindly overwrite
-    // statusHistory with [...staleArray, rescheduleEntry] — silently
-    // dropping a concurrently-committed VEHICLE_RECEIVED entry.
-    if (advanceResult.status === "fulfilled") {
-      expect(finalJob.statusHistory.some((h) => h.status === "VEHICLE_RECEIVED")).toBe(true);
-    }
-    if (rescheduleResult.status === "fulfilled") {
-      expect(finalJob.statusHistory.some((h) => h.notes?.includes("Rescheduled to"))).toBe(true);
-    }
-  });
+  }, 60_000);
 });
