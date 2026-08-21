@@ -3,6 +3,7 @@
 // (monthly subscription — MEMBERSHIP_DURATION_DAYS). Terms become immutable
 // once active (doc06 Rule 7).
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership } from "@autodeck/core";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
@@ -13,7 +14,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { activateMembershipSchema } from "../../schemas/membership.js";
 
-export const activateMembership = onCall({ region: "asia-south1" }, async (request) => {
+export const activateMembership = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

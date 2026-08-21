@@ -6,12 +6,13 @@
 // booking time (createBooking rejects an active-but-past-endDate membership
 // regardless of whether this sweep has run yet).
 import { onCall } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole } from "../../middleware/auth.js";
 
-export const expireStaleMemberships = onCall({ region: "asia-south1" }, async (request) => {
+export const expireStaleMemberships = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

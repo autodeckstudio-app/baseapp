@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { MembershipPlan } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -8,7 +9,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { setMembershipPlanActiveSchema } from "../../schemas/membership.js";
 
-export const setMembershipPlanActive = onCall({ region: "asia-south1" }, async (request) => {
+export const setMembershipPlanActive = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

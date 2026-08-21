@@ -3,6 +3,7 @@
 // is no partial-refund model or separate refund Payment record in this schema.
 // In dev/emulator: mock provider is used. No live Razorpay refund API called.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Payment, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -13,7 +14,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiateRefundSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
-export const initiateRefund = onCall({ region: "asia-south1" }, async (request) => {
+export const initiateRefund = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["admin", "superadmin"].includes(user.claims.role)) {

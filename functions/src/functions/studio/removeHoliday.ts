@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import type { StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -8,7 +9,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { removeHolidaySchema } from "../../schemas/studio.js";
 
-export const removeHoliday = onCall({ region: "asia-south1" }, async (request) => {
+export const removeHoliday = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

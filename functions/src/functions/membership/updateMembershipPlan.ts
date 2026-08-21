@@ -1,6 +1,7 @@
 // Edits a MembershipPlan template. Never touches already-purchased Memberships —
 // their terms were snapshotted at purchase time (doc06 Rule 7 / membership.ts comment).
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { MembershipPlan } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -11,7 +12,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateMembershipPlanSchema } from "../../schemas/membership.js";
 import { assertValidMinorUnits } from "../../lib/pricing.js";
 
-export const updateMembershipPlan = onCall({ region: "asia-south1" }, async (request) => {
+export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

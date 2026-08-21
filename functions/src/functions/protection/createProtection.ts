@@ -4,6 +4,7 @@
 // Always created in 'unverified' status; verification is a separate,
 // explicitly audited step via updateProtection.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Protection, Vehicle } from "@autodeck/core";
 import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
@@ -13,7 +14,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createProtectionSchema } from "../../schemas/protection.js";
 
-export const createProtection = onCall({ region: "asia-south1" }, async (request) => {
+export const createProtection = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

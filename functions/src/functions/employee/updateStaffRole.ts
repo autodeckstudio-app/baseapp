@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import type { Employee } from "@autodeck/core";
@@ -11,7 +12,7 @@ import { updateStaffRoleSchema } from "../../schemas/employee.js";
 
 // Admin-only. Changes a staff member's role/studio scope. Custom claims and the
 // Employee record are updated together so they never drift out of sync.
-export const updateStaffRole = onCall({ region: "asia-south1" }, async (request) => {
+export const updateStaffRole = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

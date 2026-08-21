@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Bay, StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -12,7 +13,7 @@ import { upsertBaySchema } from "../../schemas/studio.js";
 // Bays live embedded in the StudioConfig document (no separate collection).
 // There is no delete — bays with historical job associations must remain
 // resolvable, so deactivation (active: false) is the only removal path.
-export const upsertBay = onCall({ region: "asia-south1" }, async (request) => {
+export const upsertBay = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

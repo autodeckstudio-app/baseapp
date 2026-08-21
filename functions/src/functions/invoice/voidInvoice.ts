@@ -15,6 +15,7 @@
 // to use standalone only for invoices that were never actually paid
 // (status is "paid" is explicitly rejected below).
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -24,7 +25,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { voidInvoiceSchema } from "../../schemas/invoice.js";
 
-export const voidInvoice = onCall({ region: "asia-south1" }, async (request) => {
+export const voidInvoice = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["admin", "superadmin"].includes(user.claims.role)) {

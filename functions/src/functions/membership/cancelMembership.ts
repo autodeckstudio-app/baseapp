@@ -1,6 +1,7 @@
 // Admin-only (doc08 §8.2: Studio "Cannot write: Membership terms, activation,
 // or cancellation"; Admin "Special powers: Activate or cancel memberships").
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -10,7 +11,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelMembershipSchema } from "../../schemas/membership.js";
 
-export const cancelMembership = onCall({ region: "asia-south1" }, async (request) => {
+export const cancelMembership = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

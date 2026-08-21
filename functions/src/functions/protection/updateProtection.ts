@@ -4,6 +4,7 @@
 // change audits as 'protection.updated'. tenantId, vehicleId, customerId,
 // and createdAt are never client-writable — not in the schema at all.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Protection } from "@autodeck/core";
 import { SUBCOLLECTIONS } from "@autodeck/database";
@@ -13,7 +14,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateProtectionSchema } from "../../schemas/protection.js";
 
-export const updateProtection = onCall({ region: "asia-south1" }, async (request) => {
+export const updateProtection = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

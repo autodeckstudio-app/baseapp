@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -11,7 +12,7 @@ import { updateStudioSettingsSchema } from "../../schemas/studio.js";
 // Admin-only. Updates name/timezone/operatingHours/tax settings for an existing
 // studio. Does NOT create studios — V1 is single-studio per tenant, seeded once.
 // Holidays and bays are mutated through their own dedicated functions.
-export const updateStudioSettings = onCall({ region: "asia-south1" }, async (request) => {
+export const updateStudioSettings = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

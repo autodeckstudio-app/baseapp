@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import type { Employee } from "@autodeck/core";
@@ -12,7 +13,7 @@ import { deactivateStaffMemberSchema } from "../../schemas/employee.js";
 // Admin-only. Soft-deletes a staff member: disables the Firebase Auth account,
 // revokes any live sessions, and marks the Employee record terminated.
 // Never a hard delete — historical job/audit references must stay resolvable.
-export const deactivateStaffMember = onCall({ region: "asia-south1" }, async (request) => {
+export const deactivateStaffMember = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 

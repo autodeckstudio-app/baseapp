@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import type { Employee } from "@autodeck/core";
@@ -17,7 +18,7 @@ import { addStaffMemberSchema } from "../../schemas/employee.js";
 //   'admin'  = tenant admin, full access within tenantId, NOT studio-scoped.
 //   'studio' = studio staff, scoped to a single studioId.
 // There is no separate "studio admin" role — do not invent one here.
-export const addStaffMember = onCall({ region: "asia-south1" }, async (request) => {
+export const addStaffMember = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
 
