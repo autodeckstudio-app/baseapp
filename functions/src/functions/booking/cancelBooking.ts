@@ -78,6 +78,29 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
       : null;
     const membershipSnap = membershipRef ? await tx.get(membershipRef) : null;
 
+    // Financial integrity guard: no refund/recharge model exists for
+    // cancelling a booking that already has a payment in flight or settled
+    // (same architectural boundary createApproval.ts already enforces for
+    // additional-work requests — see that file's comment). Without this,
+    // a job could be cancelled while paid/pending, then still get its
+    // payment manually confirmed afterward, invoicing cancelled work
+    // (Phase 6 hostile-audit finding).
+    const jobsForPaymentCheck = !jobsSnap.empty
+      ? await tx.get(
+          db
+            .collection(COLLECTIONS.payments())
+            .where("jobId", "==", jobsSnap.docs[0]?.id ?? "")
+            .where("status", "in", ["pending", "processing", "completed"])
+            .limit(1),
+        )
+      : null;
+    if (jobsForPaymentCheck && !jobsForPaymentCheck.empty) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Cannot cancel a booking once payment has been initiated or completed for its job. Contact the studio to resolve payment first.",
+      );
+    }
+
     tx.update(bookingRef, {
       status: "CANCELLED",
       cancelledAt: now,

@@ -32,8 +32,14 @@ export const purchaseMembership = onCall({ region: "asia-south1" }, async (reque
     throw new HttpsError("failed-precondition", "This membership plan is not currently available.");
   }
 
-  // At most one non-terminal membership per customer at a time.
-  const existingSnap = await db
+  // At most one non-terminal membership per customer at a time. Fast-fail
+  // pre-check (cheap, avoids the Razorpay provider call and a transaction
+  // for an obviously-invalid request) — NOT the authoritative check, since
+  // it's mutable/racy across concurrent calls. See the re-check inside the
+  // transaction below (Phase 7 hostile-audit finding — this was previously
+  // pre-transaction-only, letting two genuinely concurrent purchase calls
+  // both pass and each create a separate Membership + Payment).
+  const preCheckSnap = await db
     .collection(COLLECTIONS.memberships())
     .where("tenantId", "==", user.claims.tenantId)
     .where("customerId", "==", user.uid)
@@ -41,8 +47,8 @@ export const purchaseMembership = onCall({ region: "asia-south1" }, async (reque
     .limit(1)
     .get();
 
-  if (!existingSnap.empty) {
-    const existing = existingSnap.docs[0]?.data() as Membership;
+  if (!preCheckSnap.empty) {
+    const existing = preCheckSnap.docs[0]?.data() as Membership;
     if (existing.status === "active") {
       throw new HttpsError("already-exists", "You already have an active membership.");
     }
@@ -134,6 +140,24 @@ export const purchaseMembership = onCall({ region: "asia-south1" }, async (reque
   };
 
   await db.runTransaction(async (tx) => {
+    // Authoritative re-check inside the transaction — two concurrent
+    // purchase calls for the same customer must not both pass the
+    // pre-check above and each create a separate Membership + Payment.
+    const freshExistingSnap = await tx.get(
+      db
+        .collection(COLLECTIONS.memberships())
+        .where("tenantId", "==", user.claims.tenantId)
+        .where("customerId", "==", user.uid)
+        .where("status", "in", ["pending", "active"])
+        .limit(1),
+    );
+    if (!freshExistingSnap.empty) {
+      throw new HttpsError(
+        "already-exists",
+        "A membership purchase is already in progress or active for this customer.",
+      );
+    }
+
     tx.set(membershipRef, membership);
     tx.set(paymentRef, payment);
     writeAuditLog(tx, {

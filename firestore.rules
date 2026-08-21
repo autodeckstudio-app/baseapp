@@ -86,12 +86,18 @@ service cloud.firestore {
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.ownerId == request.auth.uid);
       allow create: if false; // Cloud Function only
-      allow update: if isAuthenticated()
-                    && ownTenant(resource.data)
-                    && (isStudioOrAbove()
-                        || (isCustomer() && resource.data.ownerId == request.auth.uid
-                            && request.resource.data.diff(resource.data).affectedKeys()
-                                .hasOnly(['make', 'model', 'year', 'color', 'registrationNumber', 'photoUrl', 'odometer', 'updatedAt'])));
+      // Cloud Function only (createVehicle/updateVehicle/archiveVehicle) —
+      // the previous isStudioOrAbove() branch had NO field restriction and
+      // NO ownStudio() check, letting any studio/admin/superadmin in the
+      // tenant hijack a vehicle's ownerId (reassign to any uid) or move it
+      // to a different tenant via a direct client write, bypassing Cloud
+      // Function schema validation, rate limiting, and audit logging
+      // entirely. The customer self-update branch had no legitimate caller
+      // either (updateVehicle.ts is the real path for customers too) — no
+      // direct client write of any kind is legitimate here (Phase 6 hostile
+      // audit P0 finding — same defect class as /jobs and /bookings, fixed
+      // in 5291c8e, missed here).
+      allow update: if false;
       allow delete: if false;
 
       // ─── /vehicles/{vehicleId}/protections/{protectionId} ─────────────────
@@ -294,6 +300,15 @@ service cloud.firestore {
     // (tenantId__uid__action), never client-supplied. No client access,
     // not even read, so callers cannot time bursts against their own counter.
     match /rateLimits/{key} {
+      allow read, write: if false;
+    }
+
+    // ─── /bayLocks/{key} ──────────────────────────────────────────────────────
+    // Server-only (Phase 7 hostile audit) — deterministic-document touch used
+    // solely to give Firestore's transaction conflict detection a reliable
+    // signal for bay-assignment races. Carries no meaningful data. No client
+    // access of any kind.
+    match /bayLocks/{key} {
       allow read, write: if false;
     }
 

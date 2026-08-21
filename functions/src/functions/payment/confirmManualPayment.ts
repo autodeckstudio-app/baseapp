@@ -81,6 +81,19 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
         `Cannot confirm a payment in status '${freshPayment.status}'.`,
       );
     }
+    // Guard against the job having moved out from under this payment since
+    // it was initiated — e.g. a different payment on the same job already
+    // completed (recordManualPayment now blocks creating a second in-flight
+    // payment, but this is defense-in-depth against that invariant ever
+    // being violated), or the job/booking was cancelled while this payment
+    // sat pending (Phase 6 hostile-audit finding — this check was previously
+    // entirely absent here).
+    if (job.paymentStatus === "paid") {
+      throw new HttpsError("already-exists", "This job has already been marked as paid.");
+    }
+    if (job.status === "CANCELLED") {
+      throw new HttpsError("failed-precondition", "Cannot confirm payment for a cancelled job.");
+    }
 
     const now = new Date().toISOString();
     const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();

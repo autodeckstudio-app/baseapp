@@ -197,6 +197,17 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       );
     }
 
+    // Read (not yet write) the deterministic bay-lock doc for the bay we're
+    // about to assign — see COLLECTIONS.bayLocks' doc comment for why this
+    // exists and its HONEST, tested limitation (measurably reduces but does
+    // NOT fully eliminate the bay-assignment race — see that comment and
+    // "8. concurrent booking race"'s test comment before assuming this is
+    // airtight). This read must happen before any writes (Firestore
+    // transaction rule: all reads before any writes) so it's placed here,
+    // with the corresponding write alongside the other writes below.
+    const bayLockRef = db.collection(COLLECTIONS.bayLocks()).doc(`${user.claims.tenantId}__${data.studioId}__${assignedBayId}`);
+    await tx.get(bayLockRef);
+
     // Membership benefit — re-validated against a FRESH read inside the
     // transaction (the race-safety guarantee: two concurrent bookings both
     // reading washesUsed and racing to consume the last credit will have one
@@ -346,6 +357,12 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       tenantId: user.claims.tenantId,
       createdAt: nowIso,
     });
+    // Write the bay lock read above — this is what actually forces Firestore
+    // to detect a conflict and retry a genuinely concurrent second caller
+    // that also read this same (pre-assignment) lock version for the same
+    // bay, so its retry re-evaluates occupancy against this job's now-
+    // committed data instead of stale empty data.
+    tx.set(bayLockRef, { lastAssignedAt: nowIso });
     writeAuditLog(tx, {
       action: "booking.created",
       entityType: "Booking",
@@ -363,7 +380,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     });
 
     return { booking };
-  });
+  }, { maxAttempts: 10 });
 
   return result;
 });

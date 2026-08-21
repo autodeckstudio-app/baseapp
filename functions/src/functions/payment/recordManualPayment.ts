@@ -64,6 +64,29 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       throw new HttpsError("failed-precondition", "Cannot record payment for a cancelled job.");
     }
 
+    // Block if ANOTHER payment is already in flight (or completed) for this
+    // job — job.paymentStatus alone is an insufficient guard, since
+    // initiatePayment creates a "pending" Payment without ever touching
+    // job.paymentStatus (which stays "unpaid" for the payment's entire
+    // pending window). Without this check, a customer's "pay at studio"
+    // request and a studio's manual cash recording could both succeed for
+    // the same job, producing two Payments and two Invoices (Phase 6
+    // hostile-audit finding). Mirrors the identical guard already used by
+    // initiatePayment.ts and createApproval.ts.
+    const inFlight = await tx.get(
+      db
+        .collection(COLLECTIONS.payments())
+        .where("jobId", "==", data.jobId)
+        .where("status", "in", ["pending", "processing", "completed"])
+        .limit(1),
+    );
+    if (!inFlight.empty) {
+      throw new HttpsError(
+        "already-exists",
+        "A payment already exists for this job. Confirm or check the existing payment instead of recording a new one.",
+      );
+    }
+
     // Amount ALWAYS from the job's server-computed snapshot — NEVER from client
     const amount = job.totalAmount;
 

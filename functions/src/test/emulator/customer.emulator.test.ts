@@ -15,7 +15,13 @@ import {
 } from "@firebase/rules-unit-testing";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import type { Customer } from "@autodeck/core";
 import { FIRST_TENANT_ID } from "@autodeck/core";
+import { setupCustomerProfile } from "../../functions/auth/setupCustomerProfile.js";
+
+function phoneAuth(uid: string, phone: string) {
+  return { uid, token: { phone_number: phone } };
+}
 
 let testEnv: RulesTestEnvironment;
 
@@ -31,64 +37,148 @@ afterAll(async () => {
 });
 
 describe("setupCustomerProfile", () => {
-  it("creates customer with tenantId set server-side", async () => {
+  let seq = 0;
+  function uid(prefix: string): string {
+    seq += 1;
+    return `scp-${prefix}-${Date.now()}-${seq}`;
+  }
+
+  // The real handler calls the Admin SDK (setCustomUserClaims/updateUser)
+  // against this uid after its transaction commits — that requires the uid
+  // to actually exist in the Auth Emulator, not just be a value inside a
+  // faked CallableRequest.auth object.
+  async function createAuthUser(userUid: string, phone: string): Promise<void> {
+    await getAuth().createUser({ uid: userUid, phoneNumber: phone });
+  }
+
+  it("first sign-in: creates a Customer with server-determined tenantId, sets claims and displayName", async () => {
     const adminAuth = getAuth();
     const db = getFirestore();
+    const userUid = uid("new");
+    const phone = "+919876543210";
+    await createAuthUser(userUid, phone);
 
-    // Create test user via Admin SDK (simulates phone OTP sign-in)
-    const user = await adminAuth.createUser({
-      phoneNumber: "+919876543210",
-    });
+    const result = (await setupCustomerProfile.run({
+      data: { name: "Real Handler Test" },
+      auth: phoneAuth(userUid, phone),
+    } as never)) as { customer: Customer; isNew: boolean; claimsUpdated: boolean };
 
-    // Simulate what the Cloud Function does (direct test)
-    const now = new Date().toISOString();
-    const customer = {
-      id: user.uid,
-      tenantId: FIRST_TENANT_ID,
-      authUid: user.uid,
-      name: "Test Customer",
-      phone: "+919876543210",
-      notificationPrefs: { push: true, quietMode: false },
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-    };
+    expect(result.isNew).toBe(true);
+    expect(result.customer.tenantId).toBe(FIRST_TENANT_ID);
+    expect(result.customer.name).toBe("Real Handler Test");
+    expect(result.customer.phone).toBe(phone);
+    expect(result.claimsUpdated).toBe(true);
 
-    await db.collection("customers").doc(user.uid).set(customer);
-
-    const snap = await db.collection("customers").doc(user.uid).get();
+    // Firestore doc actually exists, matches what was returned.
+    const snap = await db.collection("customers").doc(userUid).get();
     expect(snap.exists).toBe(true);
     expect(snap.data()?.tenantId).toBe(FIRST_TENANT_ID);
-    expect(snap.data()?.tenantId).not.toBe(undefined);
+    expect(snap.data()?.authUid).toBe(userUid);
 
-    // Cleanup
-    await adminAuth.deleteUser(user.uid);
-  });
-
-  it("custom claims set with correct role and tenantId", async () => {
-    const adminAuth = getAuth();
-
-    const user = await adminAuth.createUser({ phoneNumber: "+919876543211" });
-
-    await adminAuth.setCustomUserClaims(user.uid, {
-      role: "customer",
-      tenantId: FIRST_TENANT_ID,
-      studioId: null,
-    });
-
-    const { customClaims } = await adminAuth.getUser(user.uid);
+    // Custom claims were actually set on the Auth user by the real handler
+    // (not asserted separately/manually — this proves the CF's own
+    // adminAuth.setCustomUserClaims call ran), and displayName was set.
+    const { customClaims, displayName } = await adminAuth.getUser(userUid);
     expect(customClaims?.["role"]).toBe("customer");
     expect(customClaims?.["tenantId"]).toBe(FIRST_TENANT_ID);
     expect(customClaims?.["studioId"]).toBe(null);
-
-    await adminAuth.deleteUser(user.uid);
+    expect(displayName).toBe("Real Handler Test");
   });
 
-  it("customer cannot set their own tenantId via direct Firestore write", async () => {
-    // This is enforced by Firestore rules: customers can only update
-    // [name, notificationPrefs, updatedAt] — tenantId is not in the allowlist.
-    // The rule check is in security-rules.emulator.test.ts
-    expect(true).toBe(true); // Rules test covers this
+  it("rejects first sign-in with no name provided", async () => {
+    const userUid = uid("noname");
+    await expect(
+      setupCustomerProfile.run({
+        data: {},
+        auth: phoneAuth(userUid, "+919876543211"),
+      } as never),
+    ).rejects.toThrow(/Name is required/);
+
+    const db = getFirestore();
+    const snap = await db.collection("customers").doc(userUid).get();
+    expect(snap.exists).toBe(false);
+  });
+
+  it("idempotent: second call for an existing customer returns the existing profile unchanged, isNew=false", async () => {
+    const userUid = uid("repeat");
+    const phone = "+919876543212";
+    await createAuthUser(userUid, phone);
+
+    const first = (await setupCustomerProfile.run({
+      data: { name: "Original Name" },
+      auth: phoneAuth(userUid, phone),
+    } as never)) as { customer: Customer; isNew: boolean };
+    expect(first.isNew).toBe(true);
+
+    // Second sign-in — a returning customer's client calls this again on
+    // every login; must NOT create a duplicate or overwrite the name from
+    // whatever (if anything) the client happens to pass this time.
+    const second = (await setupCustomerProfile.run({
+      data: { name: "Attempted Overwrite" },
+      auth: phoneAuth(userUid, phone),
+    } as never)) as { customer: Customer; isNew: boolean };
+    expect(second.isNew).toBe(false);
+    expect(second.customer.name).toBe("Original Name");
+    expect(second.customer.id).toBe(first.customer.id);
+    expect(second.customer.createdAt).toBe(first.customer.createdAt);
+  });
+
+  it("rejects an unauthenticated call", async () => {
+    await expect(
+      setupCustomerProfile.run({ data: { name: "No Auth" }, auth: undefined } as never),
+    ).rejects.toThrow(/Authentication required/);
+  });
+
+  it("concurrent first-sign-in race for the same uid: exactly one create wins, no duplicate/corrupted profile", async () => {
+    const userUid = uid("race");
+    const phone = "+919876543213";
+    // This relies on a document-reference read+write inside a transaction
+    // (proven reliable, unlike the query-based races documented elsewhere
+    // this phase) — but transaction retries under real contention can take
+    // longer than the 5s default when the emulator is under heavier load
+    // (e.g. running as part of the full suite rather than in isolation).
+    await createAuthUser(userUid, phone);
+
+    const results = await Promise.all([
+      setupCustomerProfile.run({
+        data: { name: "Racer A" },
+        auth: phoneAuth(userUid, phone),
+      } as never),
+      setupCustomerProfile.run({
+        data: { name: "Racer B" },
+        auth: phoneAuth(userUid, phone),
+      } as never),
+    ]) as { customer: Customer; isNew: boolean }[];
+
+    // Both calls succeed (setupCustomerProfile is designed to be safe to
+    // call from a racing client — neither is expected to error), but they
+    // must agree on exactly one winning name — not two different customer
+    // records, not a corrupted merge.
+    const isNewCount = results.filter((r) => r.isNew).length;
+    expect(isNewCount).toBe(1);
+    expect(results[0]?.customer.name).toBe(results[1]?.customer.name);
+    expect(["Racer A", "Racer B"]).toContain(results[0]?.customer.name);
+
+    const db = getFirestore();
+    const snap = await db.collection("customers").doc(userUid).get();
+    expect(snap.data()?.name).toBe(results[0]?.customer.name);
+  }, 15000);
+
+  it("customer cannot set their own tenantId via direct Firestore write (enforced by rules, see security-rules.emulator.test.ts)", async () => {
+    // setupCustomerProfileSchema doesn't even accept a tenantId field, and
+    // the Firestore rule's update allowlist (name/notificationPrefs/
+    // updatedAt) independently blocks it at the client-SDK layer too — the
+    // full attack scenario is exercised in security-rules.emulator.test.ts.
+    // This test just confirms the schema-level fact directly.
+    const { setupCustomerProfileSchema } = await import("../../schemas/customer.js");
+    const parsed = setupCustomerProfileSchema.safeParse({ name: "Attacker", tenantId: "attacker-tenant" });
+    expect(parsed.success).toBe(true);
+    // tenantId, even if smuggled into the payload, is simply not read by
+    // the schema/handler — it's stripped by Zod's default (non-passthrough)
+    // parsing, and the handler only ever uses the server constant.
+    if (parsed.success) {
+      expect((parsed.data as Record<string, unknown>)["tenantId"]).toBeUndefined();
+    }
   });
 });
 

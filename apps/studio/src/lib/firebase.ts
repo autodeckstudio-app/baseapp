@@ -4,6 +4,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
+// In a real production (release) build, silently falling back to the dev
+// project ID would mean real jobs/payments land in "autodeck-dev" instead
+// of the actual production Firebase project, with no error or warning
+// anywhere — a genuine deploy-safety hole (Phase 6 hostile audit finding).
+// __DEV__ is false in a production RN/Expo bundle regardless of how the
+// build was invoked, so this check can't be bypassed by simply forgetting
+// to set NODE_ENV.
+if (!__DEV__ && !process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
+  throw new Error(
+    "EXPO_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build — refusing to silently fall back to the dev Firebase project.",
+  );
+}
+
 const firebaseConfig = {
   apiKey: process.env["EXPO_PUBLIC_FIREBASE_API_KEY"] ?? "demo-key",
   authDomain:

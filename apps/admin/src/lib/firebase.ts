@@ -5,6 +5,18 @@ import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence }
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
+// In a real production build (`next build`/`next start`, NODE_ENV set by
+// Next.js itself — not something this repo needs to configure), silently
+// falling back to the dev project ID would mean real admin actions land in
+// "autodeck-dev" instead of the actual production Firebase project, with no
+// error or warning anywhere — a genuine deploy-safety hole (Phase 6 hostile
+// audit finding).
+if (process.env.NODE_ENV === "production" && !process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"]) {
+  throw new Error(
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build — refusing to silently fall back to the dev Firebase project.",
+  );
+}
+
 const firebaseConfig = {
   apiKey: process.env["NEXT_PUBLIC_FIREBASE_API_KEY"] ?? "demo-key",
   authDomain: process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"] ?? "autodeck-dev.firebaseapp.com",

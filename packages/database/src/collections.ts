@@ -33,6 +33,23 @@ export const COLLECTIONS = {
   paymentEvents: () => "paymentEvents",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
   rateLimits: () => "rateLimits",
+  // bayLocks/{tenantId__studioId__bayId} — server-only deterministic-document
+  // touch used to give Firestore's transaction conflict detection a
+  // document-version-based signal for bay-assignment races. Firestore
+  // transactions do NOT reliably detect a "phantom" conflict from a QUERY
+  // whose result set changes due to a concurrent transaction's write
+  // (confirmed empirically, Phase 7 hostile audit) — reading and writing a
+  // query result alone is not sufficient to serialize two concurrent
+  // callers racing for the same bay. Reading+writing this specific document
+  // measurably reduces (empirically: ~50%→~10-15% failure rate under
+  // adversarial back-to-back stress testing) that race, but does NOT fully
+  // eliminate it — repeated stress-testing still shows occasional
+  // double-assignment. This is a KNOWN, OPEN, documented gap requiring a
+  // proper claim/lock document with a real lifecycle as follow-up work, not
+  // a complete fix. See createBooking.ts's usage and the corresponding test
+  // file comments for the full account. Never read directly for any other
+  // purpose — it carries no meaningful data, only a version.
+  bayLocks: () => "bayLocks",
 } as const;
 
 // Subcollection paths

@@ -15,6 +15,7 @@ import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, Payment, Invo
 import { COLLECTIONS } from "@autodeck/database";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
+import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { confirmManualPayment } from "../../functions/payment/confirmManualPayment.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
@@ -384,5 +385,116 @@ describe("confirmManualPayment — production cash payment completion", () => {
       auth: adminAuth(uid("admin-user")),
     } as never)) as { alreadyCompleted: boolean };
     expect(result.alreadyCompleted).toBe(false);
+  });
+
+  // ─── Phase 6 hostile-audit regression tests ──────────────────────────────
+  // Found by adversarial re-audit: confirmManualPayment/recordManualPayment
+  // never checked whether ANOTHER payment already existed for the same job
+  // (only checked the job's own paymentStatus, which initiatePayment never
+  // sets — it stays "unpaid" for a payment's entire pending window), and
+  // neither cancelBooking nor confirmManualPayment checked whether the job
+  // had already been cancelled out from under an in-flight payment.
+
+  // Each test below uses a FRESH customer+vehicle (not the shared
+  // beforeAll customer) — this describe block already runs ~16 createBooking
+  // calls against one customerId, and booking.create is rate-limited to
+  // 10/60s; reusing it here would exceed that budget and fail with an
+  // unrelated "Too many attempts" error.
+  async function freshCustomerAndVehicle(): Promise<{ customerId: string; vehicle: Vehicle }> {
+    const freshCustomerId = uid("cust-q");
+    const freshVehicle = await seedVehicle(uid("veh-q"), TENANT_A, freshCustomerId);
+    return { customerId: freshCustomerId, vehicle: freshVehicle };
+  }
+
+  it("Q: recordManualPayment cannot create a second payment while a customer-initiated one is already pending", async () => {
+    const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
+    const { job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
+
+    // Customer initiates a "pay at studio" payment — still pending.
+    await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never);
+
+    // job.paymentStatus is still "unpaid" at this point — recordManualPayment
+    // must not be fooled by that into creating a second payment.
+    await expect(
+      recordManualPayment.run({
+        data: { jobId: job.id, method: "cash" },
+        auth: studioAuth(uid("studio-user"), STUDIO_A),
+      } as never),
+    ).rejects.toThrow(/A payment already exists/);
+
+    const paymentsSnap = await db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).get();
+    expect(paymentsSnap.docs).toHaveLength(1);
+  });
+
+  it("R: confirmManualPayment cannot complete a payment for a job that a DIFFERENT payment already completed", async () => {
+    const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
+    const { job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
+
+    const initResult = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { paymentId: string };
+
+    // Studio directly records a cash payment instead of confirming the
+    // pending one (a real UI-reachable path: admin's job detail page shows
+    // both actions without one disabling the other). This is now blocked by
+    // Q's fix, but simulate the state directly to prove confirmManualPayment
+    // itself also refuses to complete once the job is already paid,
+    // independent of the recordManualPayment-level guard (defense in depth).
+    await db.collection(COLLECTIONS.jobs()).doc(job.id).update({ paymentStatus: "paid" });
+
+    await expect(
+      confirmManualPayment.run({
+        data: { paymentId: initResult.paymentId },
+        auth: studioAuth(uid("studio-user-2"), STUDIO_A),
+      } as never),
+    ).rejects.toThrow(/already been marked as paid/);
+  });
+
+  it("S: cancelBooking is rejected once a payment has been initiated for its job", async () => {
+    const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
+    const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
+
+    await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never);
+
+    await expect(
+      cancelBooking.run({
+        data: { bookingId: booking.id, reason: "test cancellation attempt" },
+        auth: customerAuth(freshCustomerId),
+      } as never),
+    ).rejects.toThrow(/Cannot cancel a booking once payment/);
+
+    const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
+    expect((bookingSnap.data() as Booking).status).toBe("CONFIRMED");
+  });
+
+  it("T: confirmManualPayment cannot complete payment for an already-cancelled job", async () => {
+    const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
+    const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
+
+    const initResult = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { paymentId: string };
+
+    // Cancel the job/booking directly (bypassing cancelBooking's now-fixed
+    // in-flight-payment guard) to prove confirmManualPayment itself also
+    // refuses a cancelled job, independent of that guard — defense in depth,
+    // matching recordManualPayment's existing job.status check.
+    await db.collection(COLLECTIONS.jobs()).doc(job.id).update({ status: "CANCELLED" });
+    await db.collection(COLLECTIONS.bookings()).doc(booking.id).update({ status: "CANCELLED" });
+
+    await expect(
+      confirmManualPayment.run({
+        data: { paymentId: initResult.paymentId },
+        auth: studioAuth(uid("studio-user-3"), STUDIO_A),
+      } as never),
+    ).rejects.toThrow(/Cannot confirm payment for a cancelled job/);
   });
 });

@@ -192,6 +192,71 @@ describe("/vehicles/{vehicleId} — ownership isolation", () => {
         .update({ color: "Red", updatedAt: new Date().toISOString() }),
     );
   });
+
+  // Vehicles are Cloud-Function-only for mutation (createVehicle/updateVehicle
+  // via the real updateVehicleSchema, which doesn't even accept ownerId/
+  // tenantId as fields) — no direct client write is ever legitimate, even
+  // from a studio/admin user in the correct tenant. The previous rule's
+  // isStudioOrAbove() branch had NO field restriction and NO ownStudio()
+  // check, letting any studio/admin/superadmin in the tenant hijack a
+  // vehicle's ownerId (reassign to any uid) or even move it to a different
+  // tenant, entirely bypassing Cloud Function schema validation, rate
+  // limiting, and audit logging (Phase 6 hostile audit P0 finding).
+  it("Studio in own tenant still cannot write to /vehicles directly (Cloud Function only)", async () => {
+    await seedVehicle("vehicle-studio-direct", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("vehicles").doc("vehicle-studio-direct").update({
+        color: "Red",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Studio cannot hijack vehicle ownership via direct write (ownerId reassignment)", async () => {
+    await seedVehicle("vehicle-hijack-owner", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("vehicles").doc("vehicle-hijack-owner").update({
+        ownerId: "uid-attacker",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Studio cannot move a vehicle to a different tenant via direct write", async () => {
+    await seedVehicle("vehicle-hijack-tenant", "uid-alice");
+    const studio = testEnv.authenticatedContext("uid-studio", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-ahmedabad",
+    });
+    await assertFails(
+      studio.firestore().collection("vehicles").doc("vehicle-hijack-tenant").update({
+        tenantId: "tenant-attacker",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it("Admin cannot write to /vehicles directly, even in their own tenant (Cloud Function only)", async () => {
+    await seedVehicle("vehicle-admin-direct", "uid-alice");
+    const admin = testEnv.authenticatedContext("uid-admin", makeAdminClaims(FIRST_TENANT_ID));
+    await assertFails(
+      admin.firestore().collection("vehicles").doc("vehicle-admin-direct").update({
+        color: "Blue",
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
 });
 
 // ─── Cross-tenant isolation ───────────────────────────────────────────────────
