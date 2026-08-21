@@ -81,5 +81,6 @@ export { finalizeInspection } from "./functions/inspection/finalizeInspection.js
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";
 
-// ─── Emulator smoke test ─────────────────────────────────────────────────────
+// ─── Admin-only smoke test (deployed in every environment, not emulator-only —
+// see functions/src/functions/health.ts) ───────────────────────────────────
 export { healthCheck } from "./functions/health.js";

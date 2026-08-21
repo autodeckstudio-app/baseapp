@@ -73,7 +73,10 @@ interface RateLimitConfig {
 // callable — see Phase 3D HANDOFF audit (LOW-tier: health, onAuditLogCreated
 // trigger, and the two zero-caller expireStale* ops functions are left
 // unlimited; unauthenticated requests are already rejected by extractUser
-// before any rate-limit code runs).
+// before any rate-limit code runs). Phase 5B P1-13 hardening review (Batch
+// 4) found health.ts's extractUser/assertRole check had gone missing
+// entirely — it was fixed there specifically to make this LOW-tier
+// assumption true again, not weakened.
 const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "auth.setupProfile": { limit: 10, windowMs: 60_000 },
   "booking.create": { limit: 10, windowMs: 60_000 },

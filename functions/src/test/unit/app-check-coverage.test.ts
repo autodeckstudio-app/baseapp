@@ -46,10 +46,13 @@ function listTsFilesRecursive(dir: string): string[] {
 }
 
 // Admin-only callables (verified via assertRole/role-array checks restricted
-// to "admin"/"superadmin", or — for health.ts — no auth check at all, which
-// makes App Check the only protection available). Only the admin web app
-// calls any of these, and the admin app gets a genuine free App Check
-// provider (ReCaptchaV3Provider) with no native/EAS blocker.
+// to "admin"/"superadmin" — health.ts included; a Batch 3 hardening review
+// found it had NO auth check at all despite its own comment and a Phase 3D
+// rate-limit-exemption comment both assuming it required authentication,
+// fixed in Batch 4 by adding the same assertRole check every other function
+// in this list already has). Only the admin web app calls any of these, and
+// the admin app gets a genuine free App Check provider (ReCaptchaV3Provider)
+// with no native/EAS blocker.
 const ENFORCED = [
   "approval/expireStaleApprovals.ts",
   "employee/addStaffMember.ts",
