@@ -61,18 +61,28 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
   const now = new Date().toISOString();
   const bookingRef = db.collection(COLLECTIONS.bookings()).doc(data.bookingId);
 
-  // Find the associated job
-  const jobsSnap = await db
-    .collection(COLLECTIONS.jobs())
-    .where("bookingId", "==", data.bookingId)
-    .limit(1)
-    .get();
-
   await db.runTransaction(async (tx) => {
-    // All reads before any writes. Restore the membership wash credit if one
-    // was consumed by this booking — doc07 §7.9 step 3. Discount-type usage
-    // is NOT reversed (docs are silent; treated as historical fact, matching
-    // the append-only MembershipUsage record, which has no reversal field).
+    // All reads before any writes. Find the associated job INSIDE the
+    // transaction (Phase 5B P1-3 fix) — this was previously a plain query
+    // fetched before the transaction started, then its stale snapshot's
+    // job.status and job.statusHistory were used both to decide
+    // cancel-eligibility and to build the new statusHistory array. A
+    // concurrent advanceJobStatus call landing between that outer read and
+    // this transaction's commit would have its transition silently
+    // overwritten (statusHistory is a full-array replace) and could let a
+    // job that has since moved out of the cancellable window get cancelled
+    // anyway, since the eligibility check ran against stale data. Fetching
+    // via tx.get() makes Firestore's transaction conflict detection cover
+    // this read, so a genuinely concurrent status change causes a retry
+    // against fresh data instead of a silent overwrite.
+    const jobsSnap = await tx.get(
+      db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1),
+    );
+
+    // Restore the membership wash credit if one was consumed by this
+    // booking — doc07 §7.9 step 3. Discount-type usage is NOT reversed
+    // (docs are silent; treated as historical fact, matching the
+    // append-only MembershipUsage record, which has no reversal field).
     const membershipRef = booking.membershipId
       ? db.collection(COLLECTIONS.memberships()).doc(booking.membershipId)
       : null;

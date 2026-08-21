@@ -1,5 +1,6 @@
 // Admin-only: initiates a refund on a completed payment.
-// Creates a new refund Payment record — does NOT mutate the original payment.
+// Mutates the original Payment record in place (status -> "refunded") — there
+// is no partial-refund model or separate refund Payment record in this schema.
 // In dev/emulator: mock provider is used. No live Razorpay refund API called.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -40,17 +41,59 @@ export const initiateRefund = onCall({ region: "asia-south1" }, async (request) 
 
   const now = new Date().toISOString();
 
-  // Call provider refund (mock in dev, real Razorpay in production)
+  // Refunds are single-shot per payment (this codebase has no partial-refund
+  // model — see the Payment type's single refundAmount/refundedAt fields).
+  // The provider refund call is a real external side effect (hits the live
+  // Razorpay API in production) that must never run twice for one payment,
+  // and it cannot safely live inside a Firestore transaction (transactions
+  // retry; an external API call must not). So exclusivity is claimed with a
+  // deterministic idempotency-event doc — the same pattern confirmPaymentMock.ts
+  // already uses — BEFORE the provider is called: only one concurrent caller
+  // can win this transaction, re-reading the payment fresh via tx.get() rather
+  // than trusting the pre-transaction `payment` read above (Phase 5B fix —
+  // previously payment.status was checked once, outside any transaction, and
+  // never re-verified, so two concurrent initiateRefund calls both passed the
+  // check and both issued real provider refunds).
+  const refundEventRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${data.paymentId}`);
+  await db.runTransaction(async (tx) => {
+    const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(data.paymentId));
+    if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
+    const freshPayment = freshSnap.data() as Payment;
+    if (freshPayment.status !== "completed") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Cannot refund a payment in status '${freshPayment.status}'.`,
+      );
+    }
+    const eventSnap = await tx.get(refundEventRef);
+    if (eventSnap.exists) {
+      throw new HttpsError("already-exists", "A refund has already been initiated for this payment.");
+    }
+    tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid });
+  });
+
+  // Call provider refund (mock in dev, real Razorpay in production) — exactly
+  // once, now that this call has exclusive claim on this payment's refund.
+  // Deterministic referenceId (no Date.now()) so a network-level retry of
+  // this exact call is idempotent at the provider too.
   let providerRefundId: string | null = null;
-  if (payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
-    const provider = getPaymentProvider();
-    const result = await provider.initiateRefund({
-      providerPaymentId: payment.razorpayPaymentId,
-      amount: payment.amount,
-      reason: data.reason,
-      referenceId: `refund_${data.paymentId}_${Date.now()}`,
-    });
-    providerRefundId = result.providerRefundId;
+  try {
+    if (payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
+      const provider = getPaymentProvider();
+      const result = await provider.initiateRefund({
+        providerPaymentId: payment.razorpayPaymentId,
+        amount: payment.amount,
+        reason: data.reason,
+        referenceId: `refund_${data.paymentId}`,
+      });
+      providerRefundId = result.providerRefundId;
+    }
+  } catch (err) {
+    // Provider call failed — release the claim so a genuine retry is
+    // possible instead of permanently blocking this payment on
+    // "already-exists" for a refund that never actually happened.
+    await refundEventRef.delete().catch(() => undefined);
+    throw err;
   }
 
   await db.runTransaction(async (tx) => {

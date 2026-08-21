@@ -99,6 +99,16 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
   const jobRef = db.collection(COLLECTIONS.jobs()).doc();
 
   await db.runTransaction(async (tx) => {
+    // Deterministic-document touch for the bay we're about to occupy — see
+    // COLLECTIONS.bayLocks' doc comment for why this exists and its HONEST,
+    // tested limitation (measurably reduces but does NOT fully eliminate the
+    // bay race). Same pattern as createBooking.ts (Phase 5B fix — this file
+    // previously had no mitigation at all for the identical race).
+    const bayLockRef = db
+      .collection(COLLECTIONS.bayLocks())
+      .doc(`${user.claims.tenantId}__${data.studioId}__${data.bayId}`);
+    await tx.get(bayLockRef);
+
     // Transactional bay check: ensure no active job is currently occupying
     // this bay. Widened to a MAX_SERVICE_SPAN_DAYS range so a multi-day job
     // that started earlier but is still occupying the bay is still found
@@ -164,6 +174,9 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
     };
 
     tx.set(jobRef, walkinJob);
+    // Write the bay lock read above — forces Firestore to detect a conflict
+    // and retry a genuinely concurrent second caller racing for this bay.
+    tx.set(bayLockRef, { lastAssignedAt: nowIso });
     writeAuditLog(tx, {
       action: "job.walkin_created",
       entityType: "ServiceJob",
@@ -179,7 +192,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
         totalAmount: priceBreakdown.total,
       },
     });
-  });
+  }, { maxAttempts: 10 });
 
   const created = await db.collection(COLLECTIONS.jobs()).doc(jobRef.id).get();
   return { job: created.data() as ServiceJob };

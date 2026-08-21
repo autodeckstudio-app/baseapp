@@ -14,6 +14,8 @@ import type {
   ProviderWebhookEvent,
 } from "./payment-provider.js";
 import { createHmac } from "node:crypto";
+import { isProductionProject } from "./environment.js";
+import { mockProvider } from "./mock-payment-provider.js";
 
 interface RazorpayPaymentLinkResponse {
   id: string;
@@ -148,10 +150,21 @@ export function getPaymentProvider(): PaymentProvider {
     !process.env["RAZORPAY_KEY_ID"];
 
   if (useMock) {
-    // Lazy import to avoid bundling mock in production
-    const { mockProvider } = require("./mock-payment-provider.js") as {
-      mockProvider: PaymentProvider;
-    };
+    // Phase 5B P1-10 fix: previously, a missing RAZORPAY_KEY_ID (or an
+    // accidentally-set USE_PAYMENT_MOCK/FUNCTIONS_EMULATOR) in the actual
+    // production project silently substituted the mock provider — real
+    // payment links would silently become fake mock-razorpay.local URLs
+    // with no error anywhere, breaking customer payment collection
+    // invisibly. Fail loudly instead: a missing production secret must be
+    // fixed, never silently worked around.
+    if (isProductionProject()) {
+      throw new Error(
+        "Refusing to use the mock payment provider in the production Firebase project " +
+          "(autodeck-prod). RAZORPAY_KEY_ID is missing, or USE_PAYMENT_MOCK/FUNCTIONS_EMULATOR " +
+          "is set in production configuration — fix the production secret/config instead of " +
+          "silently falling back to mock payments.",
+      );
+    }
     return mockProvider;
   }
 

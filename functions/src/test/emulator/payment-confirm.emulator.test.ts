@@ -9,16 +9,21 @@
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, Payment, Invoice, AuditLog } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+
+process.env["USE_PAYMENT_MOCK"] = "true";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { confirmManualPayment } from "../../functions/payment/confirmManualPayment.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
+import { initiateRefund } from "../../functions/payment/initiateRefund.js";
+import { confirmPaymentMock } from "../../functions/payment/confirmPaymentMock.js";
+import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
 const db = getFirestore();
 
@@ -494,6 +499,351 @@ describe("confirmManualPayment — production cash payment completion", () => {
       confirmManualPayment.run({
         data: { paymentId: initResult.paymentId },
         auth: studioAuth(uid("studio-user-3"), STUDIO_A),
+      } as never),
+    ).rejects.toThrow(/Cannot confirm payment for a cancelled job/);
+  });
+});
+
+// ─── initiateRefund — Phase 5B P0-2: in-transaction re-check + deterministic
+// idempotency key, so two concurrent refund calls on one payment can never
+// both issue a real provider refund. ────────────────────────────────────────
+
+describe("initiateRefund — race safety and idempotency", () => {
+  const REFUND_STUDIO = "pc-refund-studio";
+  const REFUND_TENANT = "pc-refund-tenant";
+
+  beforeAll(async () => {
+    await seedStudio(REFUND_STUDIO, REFUND_TENANT);
+  });
+
+  async function seedCompletedRazorpayPayment(paymentId: string): Promise<Payment> {
+    const now = new Date().toISOString();
+    const payment: Payment = {
+      id: paymentId,
+      tenantId: REFUND_TENANT,
+      studioId: REFUND_STUDIO,
+      targetType: "job",
+      jobId: null,
+      bookingId: null,
+      membershipId: null,
+      customerId: uid("cust"),
+      amount: 47200,
+      currency: "INR",
+      method: "razorpay_payment_link",
+      status: "completed",
+      razorpayPaymentLinkId: null,
+      razorpayPaymentId: "rzp_pay_test_123",
+      razorpayOrderId: null,
+      razorpayRefundId: null,
+      refundAmount: null,
+      manualReference: null,
+      recordedBy: null,
+      invoiceId: null,
+      providerEventId: null,
+      completedAt: now,
+      failedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.collection(COLLECTIONS.payments()).doc(paymentId).set(payment);
+    return payment;
+  }
+
+  it("re-reads payment status inside the transaction: two concurrent refund calls on one payment — exactly one succeeds, provider is called exactly once", async () => {
+    const paymentId = uid("pay-refund-race");
+    await seedCompletedRazorpayPayment(paymentId);
+
+    const spy = vi.spyOn(getPaymentProvider(), "initiateRefund");
+    const before = spy.mock.calls.length;
+
+    const [r1, r2] = await Promise.allSettled([
+      initiateRefund.run({
+        data: { paymentId, reason: "race test A" },
+        auth: adminAuth(uid("admin-a"), REFUND_TENANT),
+      } as never),
+      initiateRefund.run({
+        data: { paymentId, reason: "race test B" },
+        auth: adminAuth(uid("admin-b"), REFUND_TENANT),
+      } as never),
+    ]);
+
+    const results = [r1, r2];
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason.message).toMatch(
+      /already been initiated|already-exists|status 'refunded'/,
+    );
+
+    // The defect this test reproduces: without the in-transaction re-check
+    // and deterministic idempotency key, BOTH calls would call the real
+    // provider (two live refunds for one payment). Assert it was called
+    // exactly once.
+    expect(spy.mock.calls.length - before).toBe(1);
+
+    const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+    const payment = paymentSnap.data() as Payment;
+    expect(payment.status).toBe("refunded");
+    // Deterministic referenceId (no Date.now()) — proven by asserting the
+    // exact expected id rather than just "some string".
+    expect(payment.razorpayRefundId).toBe(`mock_rfnd_refund_${paymentId}`);
+
+    const auditSnap = await db
+      .collection(COLLECTIONS.auditLog())
+      .where("tenantId", "==", REFUND_TENANT)
+      .where("entityType", "==", "Payment")
+      .where("entityId", "==", paymentId)
+      .where("action", "==", "payment.refunded")
+      .get();
+    expect(auditSnap.docs).toHaveLength(1);
+
+    spy.mockRestore();
+  });
+
+  it("happy path: a single refund call still completes correctly (transaction refactor preserves behavior)", async () => {
+    const paymentId = uid("pay-refund-happy");
+    await seedCompletedRazorpayPayment(paymentId);
+
+    const result = (await initiateRefund.run({
+      data: { paymentId, reason: "customer requested" },
+      auth: adminAuth(uid("admin-happy"), REFUND_TENANT),
+    } as never)) as { paymentId: string; refunded: boolean; providerRefundId: string | null };
+
+    expect(result.refunded).toBe(true);
+    expect(result.providerRefundId).toBe(`mock_rfnd_refund_${paymentId}`);
+
+    const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+    const payment = paymentSnap.data() as Payment;
+    expect(payment.status).toBe("refunded");
+    expect(payment.refundAmount).toBe(payment.amount);
+    expect(payment.refundedAt).toBeTruthy();
+  });
+
+  it("rejects refunding a payment that is not completed", async () => {
+    const paymentId = uid("pay-refund-notcompleted");
+    await seedCompletedRazorpayPayment(paymentId);
+    await db.collection(COLLECTIONS.payments()).doc(paymentId).update({ status: "pending" });
+
+    await expect(
+      initiateRefund.run({
+        data: { paymentId, reason: "should fail" },
+        auth: adminAuth(uid("admin-reject"), REFUND_TENANT),
+      } as never),
+    ).rejects.toThrow(/Can only refund completed payments/);
+  });
+
+  it("rejects refunding an already-refunded payment (sequential retry)", async () => {
+    const paymentId = uid("pay-refund-twice");
+    await seedCompletedRazorpayPayment(paymentId);
+
+    await initiateRefund.run({
+      data: { paymentId, reason: "first refund" },
+      auth: adminAuth(uid("admin-first"), REFUND_TENANT),
+    } as never);
+
+    // The first call already flipped payment.status to "refunded" — a
+    // sequential (non-concurrent) second call is caught by the cheap
+    // fast-fail pre-check before it ever reaches the in-transaction claim
+    // logic (that logic's own message, "already been initiated"/"status
+    // 'refunded'", is what a genuinely concurrent second call sees instead
+    // — see the race test above).
+    await expect(
+      initiateRefund.run({
+        data: { paymentId, reason: "second refund attempt" },
+        auth: adminAuth(uid("admin-second"), REFUND_TENANT),
+      } as never),
+    ).rejects.toThrow(/Can only refund completed payments/);
+  });
+
+  it("releases the claim on provider failure so a genuine retry can succeed", async () => {
+    const paymentId = uid("pay-refund-retry");
+    await seedCompletedRazorpayPayment(paymentId);
+
+    const spy = vi.spyOn(getPaymentProvider(), "initiateRefund").mockRejectedValueOnce(new Error("provider down"));
+
+    await expect(
+      initiateRefund.run({
+        data: { paymentId, reason: "will fail" },
+        auth: adminAuth(uid("admin-fail"), REFUND_TENANT),
+      } as never),
+    ).rejects.toThrow(/provider down/);
+
+    // Payment must still be "completed" — the failed attempt must not have
+    // left it stuck in a half-refunded state.
+    const midSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+    expect((midSnap.data() as Payment).status).toBe("completed");
+
+    spy.mockRestore();
+
+    // Retry succeeds now that the claim was released.
+    const retryResult = (await initiateRefund.run({
+      data: { paymentId, reason: "retry after provider recovers" },
+      auth: adminAuth(uid("admin-retry"), REFUND_TENANT),
+    } as never)) as { refunded: boolean };
+    expect(retryResult.refunded).toBe(true);
+  });
+});
+
+// ─── initiatePayment — Phase 5B P1-7: in-transaction re-check so two
+// concurrent initiatePayment calls for the same job can never both create a
+// separate Payment. ─────────────────────────────────────────────────────────
+
+describe("initiatePayment — race safety", () => {
+  const IP_STUDIO = "pc-ip-studio";
+  const IP_TENANT = "pc-ip-tenant";
+  let service: Service;
+  let vehicle: Vehicle;
+  let customerId: string;
+
+  beforeAll(async () => {
+    await seedStudio(IP_STUDIO, IP_TENANT);
+    service = await seedService(uid("svc-ip"), IP_TENANT);
+    customerId = uid("cust-ip");
+    vehicle = await seedVehicle(uid("veh-ip"), IP_TENANT, customerId);
+  });
+
+  it("two concurrent initiatePayment calls for the same job result in exactly one payment", async () => {
+    const { job } = await makeBookingAndJob(customerId, service, vehicle, IP_STUDIO, IP_TENANT);
+
+    // The defect this test reproduces: the duplicate-payment check
+    // previously ran as a plain query outside any transaction and was never
+    // re-verified before the write — two concurrent calls could both
+    // observe "no existing payment" and each create a separate Payment doc
+    // for one job (double payment link / duplicate invoice risk).
+    const [r1, r2] = (await Promise.all([
+      initiatePayment.run({
+        data: { jobId: job.id, method: "cash" },
+        auth: customerAuth(customerId, IP_TENANT),
+      } as never),
+      initiatePayment.run({
+        data: { jobId: job.id, method: "cash" },
+        auth: customerAuth(customerId, IP_TENANT),
+      } as never),
+    ])) as [{ paymentId: string }, { paymentId: string }];
+
+    expect(r1.paymentId).toBe(r2.paymentId);
+
+    const paymentsSnap = await db
+      .collection(COLLECTIONS.payments())
+      .where("jobId", "==", job.id)
+      .where("status", "in", ["pending", "processing", "completed"])
+      .get();
+    expect(paymentsSnap.docs).toHaveLength(1);
+  });
+
+  it("razorpay_payment_link payments still work unchanged outside production (Phase 5B P1-10 regression)", async () => {
+    const { job } = await makeBookingAndJob(customerId, service, vehicle, IP_STUDIO, IP_TENANT);
+
+    const result = (await initiatePayment.run({
+      data: { jobId: job.id, method: "razorpay_payment_link" },
+      auth: customerAuth(customerId, IP_TENANT),
+    } as never)) as { paymentId: string; paymentUrl: string | null; status: string };
+
+    expect(result.status).toBe("pending");
+    expect(result.paymentUrl).toBeTruthy();
+
+    const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(result.paymentId).get();
+    expect((paymentSnap.data() as Payment).razorpayPaymentLinkId).toBeTruthy();
+  });
+});
+
+// ─── confirmPaymentMock — Phase 5B P1-8: terminal-state guard matching
+// confirmManualPayment.ts, so a duplicate payment reaching this success path
+// twice can never issue two invoices for one job. ──────────────────────────
+
+describe("confirmPaymentMock — terminal-state safety", () => {
+  const CM_STUDIO = "pc-cm-studio";
+  const CM_TENANT = "pc-cm-tenant";
+  let service: Service;
+  let vehicle: Vehicle;
+  let customerId: string;
+
+  beforeAll(async () => {
+    await seedStudio(CM_STUDIO, CM_TENANT);
+    service = await seedService(uid("svc-cm"), CM_TENANT);
+    customerId = uid("cust-cm");
+    vehicle = await seedVehicle(uid("veh-cm"), CM_TENANT, customerId);
+  });
+
+  async function seedPendingPayment(paymentId: string, jobId: string, amount: number): Promise<void> {
+    const now = new Date().toISOString();
+    const payment: Payment = {
+      id: paymentId,
+      tenantId: CM_TENANT,
+      studioId: CM_STUDIO,
+      targetType: "job",
+      jobId,
+      bookingId: null,
+      membershipId: null,
+      customerId,
+      amount,
+      currency: "INR",
+      method: "cash",
+      status: "pending",
+      razorpayPaymentLinkId: null,
+      razorpayPaymentId: null,
+      razorpayOrderId: null,
+      razorpayRefundId: null,
+      refundAmount: null,
+      manualReference: null,
+      recordedBy: null,
+      invoiceId: null,
+      providerEventId: null,
+      completedAt: null,
+      failedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.collection(COLLECTIONS.payments()).doc(paymentId).set(payment);
+  }
+
+  it("a second duplicate payment for an already-paid job is rejected instead of issuing a second invoice", async () => {
+    const { job } = await makeBookingAndJob(customerId, service, vehicle, CM_STUDIO, CM_TENANT);
+
+    // Two independent pending payments for the same job, seeded directly to
+    // isolate this test from initiatePayment's own dedupe fix (P1-7) — this
+    // reproduces the state a duplicate could reach by any other path (e.g.
+    // recordManualPayment racing initiatePayment before those functions'
+    // own guards existed, or a future webhook handler built on this file's
+    // shape).
+    const payment1Id = uid("pay-cm-1");
+    const payment2Id = uid("pay-cm-2");
+    await seedPendingPayment(payment1Id, job.id, job.totalAmount);
+    await seedPendingPayment(payment2Id, job.id, job.totalAmount);
+
+    const first = (await confirmPaymentMock.run({
+      data: { paymentId: payment1Id, mockResult: "success" },
+      auth: studioAuth(uid("studio-cm-1"), CM_STUDIO, CM_TENANT),
+    } as never)) as { idempotent: boolean };
+    expect(first.idempotent).toBe(false);
+
+    await expect(
+      confirmPaymentMock.run({
+        data: { paymentId: payment2Id, mockResult: "success" },
+        auth: studioAuth(uid("studio-cm-2"), CM_STUDIO, CM_TENANT),
+      } as never),
+    ).rejects.toThrow(/already been marked as paid/);
+
+    const invoicesSnap = await db.collection(COLLECTIONS.invoices()).where("jobId", "==", job.id).get();
+    expect(invoicesSnap.docs).toHaveLength(1);
+  });
+
+  it("rejects confirming a payment for an already-cancelled job", async () => {
+    const { job } = await makeBookingAndJob(customerId, service, vehicle, CM_STUDIO, CM_TENANT);
+    await db.collection(COLLECTIONS.jobs()).doc(job.id).update({ status: "CANCELLED" });
+
+    const paymentId = uid("pay-cm-cancelled");
+    await seedPendingPayment(paymentId, job.id, job.totalAmount);
+
+    await expect(
+      confirmPaymentMock.run({
+        data: { paymentId, mockResult: "success" },
+        auth: studioAuth(uid("studio-cm-3"), CM_STUDIO, CM_TENANT),
       } as never),
     ).rejects.toThrow(/Cannot confirm payment for a cancelled job/);
   });

@@ -98,15 +98,22 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   );
   const now = new Date().toISOString();
 
-  // Find the associated job
-  const jobsSnap = await db
-    .collection(COLLECTIONS.jobs())
-    .where("bookingId", "==", data.bookingId)
-    .limit(1)
-    .get();
-  const jobDoc = jobsSnap.docs[0];
-
   const updatedBooking = await db.runTransaction(async (tx) => {
+    // All reads before any writes. Find the associated job INSIDE the
+    // transaction (Phase 5B P1-4 fix) — this was previously a plain query
+    // fetched before the transaction started, then its stale snapshot's
+    // job.status/job.statusHistory were used to build the rescheduled job's
+    // new statusHistory entry. A concurrent advanceJobStatus call landing
+    // between that outer read and this transaction's commit would have its
+    // transition silently dropped (statusHistory is a full-array replace).
+    // Fetching via tx.get() makes Firestore's transaction conflict
+    // detection cover this read, so a genuinely concurrent status change
+    // causes a retry against fresh data instead of a silent overwrite.
+    const jobsSnap = await tx.get(
+      db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1),
+    );
+    const jobDoc = jobsSnap.docs[0];
+
     // Re-validate availability for the new slot inside the transaction.
     // Widened to a MAX_SERVICE_SPAN_DAYS range so a multi-day job that
     // started earlier but is still occupying the bay is still found (Phase
