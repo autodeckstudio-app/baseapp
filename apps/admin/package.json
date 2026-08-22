@@ -9,6 +9,7 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:emulator": "vitest run --config vitest.emulator.config.ts",
     "clean": "rm -rf .next dist"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "@autodeck/database": "workspace:*",
     "@autodeck/ui": "workspace:*",
     "firebase": "^10.14.1",
+    "firebase-admin": "^13.0.2",
     "next": "15.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
