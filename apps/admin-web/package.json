@@ -1,0 +1,22 @@
+{
+  "name": "@autodeck/admin-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "AutoDeck Owner/Admin + Studio Manager console (Next.js). No pages implemented yet — scaffold only.",
+  "scripts": {
+    "build": "echo \"admin-web build: not yet implemented\"",
+    "lint": "echo \"admin-web lint: not yet implemented\"",
+    "test": "echo \"admin-web test: not yet implemented\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@autodeck/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Typed client for calling the AutoDeck backend, shared by all four frontend apps. No client implemented yet — scaffold only.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "echo \"api-client lint: not yet implemented\"",
+    "test": "echo \"api-client test: not yet implemented\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@autodeck/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

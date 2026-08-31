@@ -1,0 +1,41 @@
+name: CI
+
+# Per the approved development workflow: required checks before merging any
+# PR into main.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # AutoDeck must remain completely isolated from AutoModz (approved
+      # design, §N / §8). This is a purely local scan of the checked-out
+      # repository — it never connects to any real Firebase/GCP project.
+      - name: Verify no AutoModz identifiers are present
+        run: |
+          if grep -riE "automodz" --exclude-dir=node_modules --exclude-dir=.git . ; then
+            echo "Found an AutoModz identifier — AutoDeck must remain completely isolated from AutoModz." >&2
+            exit 1
+          fi
+          echo "No AutoModz identifiers found."
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run lint
+      - run: pnpm run test

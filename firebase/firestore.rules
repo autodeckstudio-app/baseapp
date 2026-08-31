@@ -1,0 +1,133 @@
+// AutoDeck Firestore security rules — Phase 1 implementation, per the
+// approved technical design (§2.2) and Final Consolidated Design Checkpoint.
+//
+// Pattern, applied uniformly: reads are scoped by role or ownership; writes
+// to every operational collection are denied for every client, every role,
+// with NO exception — the backend (Admin SDK, which bypasses these rules
+// entirely) is the sole writer. This is deliberately thin: the backend
+// carries the real business logic (pricing, state transitions, sealed-visit
+// immutability, etc.), and these rules exist as a backstop, not the primary
+// control.
+//
+// jobTitle is never referenced anywhere in this file — only the verified
+// `role` custom claim gates anything.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function role() { return request.auth.token.role; }
+    function isStaffPlus() { return role() in ['staff', 'studio_manager', 'owner_admin']; }
+    function isManagerPlus() { return role() in ['studio_manager', 'owner_admin']; }
+
+    // ── Customers ─────────────────────────────────────────────────────
+    match /customers/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || request.auth.uid == id);
+      allow write: if false;
+    }
+
+    // ── Vehicles ──────────────────────────────────────────────────────
+    match /vehicles/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.ownerCustomerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Staff — role/claims are Admin-SDK-only, never client-writable ───
+    match /staff/{id} {
+      allow read: if isSignedIn() && isStaffPlus();
+      allow write: if false;
+    }
+
+    // ── Studio — single configuration document ───────────────────────
+    match /studio/{id} {
+      allow read: if isSignedIn() && isStaffPlus();
+      allow write: if false;
+    }
+
+    // ── Services (pricing catalogue) ─────────────────────────────────
+    match /services/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── Bookings — price/state are server-decided, never client-writable ─
+    match /bookings/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Visits — the "no write once sealed" guarantee is enforced by this
+    //    same blanket denial: there is no client write path at all, sealed
+    //    or not, for any role including Owner/Admin. The backend enforces
+    //    the sealed-immutability rule in its own logic; this is the
+    //    backstop that makes it impossible to bypass via direct access. ──
+    match /visits/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Approvals ─────────────────────────────────────────────────────
+    match /approvals/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Payments — the webhook path writes via the Admin SDK, never
+    //    through client rules ───────────────────────────────────────────
+    match /payments/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Refunds ───────────────────────────────────────────────────────
+    match /refunds/{id} {
+      allow read: if isSignedIn() && isStaffPlus();
+      allow write: if false;
+    }
+
+    // ── Package definitions (the sellable catalogue) ─────────────────
+    match /packageDefinitions/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── Customer packages — belong to the customer, never a vehicle ────
+    match /customerPackages/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Package usage — the atomic consume transaction runs via the
+    //    Admin SDK, never a client write ───────────────────────────────
+    match /packageUsage/{id} {
+      allow read: if isSignedIn() && (isStaffPlus() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ── Inventory (minimal V1) ────────────────────────────────────────
+    match /inventory/{id} {
+      allow read: if isSignedIn() && isStaffPlus();
+      allow write: if false;
+    }
+    match /inventoryUsage/{id} {
+      allow read: if isSignedIn() && isStaffPlus();
+      allow write: if false;
+    }
+
+    // ── Audit logs — append-only. No role, no exception, may ever
+    //    update or delete an entry. Client create is also denied: the
+    //    backend writes these via the Admin SDK as part of the same
+    //    operation as the action being logged. ──────────────────────────
+    match /auditLogs/{id} {
+      allow read: if isSignedIn() && isManagerPlus();
+      allow create, update, delete: if false;
+    }
+
+    // ── Notification tokens ───────────────────────────────────────────
+    match /notificationTokens/{id} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}

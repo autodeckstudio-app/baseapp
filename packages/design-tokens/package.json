@@ -1,0 +1,16 @@
+{
+  "name": "@autodeck/design-tokens",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Shared AutoDeck design tokens (colors, spacing, type scale) consumed by platform-appropriate component implementations per surface. Phase 0: structural placeholder values defined; real brand palette not yet decided.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "echo \"design-tokens lint: not yet implemented\"",
+    "test": "echo \"design-tokens test: not yet implemented\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
