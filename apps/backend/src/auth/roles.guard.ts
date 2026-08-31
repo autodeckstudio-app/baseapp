@@ -2,19 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { ROLES_KEY } from './roles.decorator';
-import type { PermissionRole } from './role.type';
-
-/**
- * A strict hierarchy, matching the approved capability matrix exactly:
- * everything Staff can do, Studio Manager can also do; everything Studio
- * Manager can do, Owner/Admin can also do. There is no case in the approved
- * design where a higher role is denied something a lower role is granted.
- */
-const ROLE_RANK: Record<PermissionRole, number> = {
-  staff: 0,
-  studio_manager: 1,
-  owner_admin: 2,
-};
+import { ROLE_RANK, type PermissionRole } from './role.type';
 
 /**
  * Enforces the minimum role declared via @Roles(). Reads ONLY the verified
