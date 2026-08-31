@@ -2,7 +2,7 @@
   "name": "@autodeck/customer",
   "version": "0.0.1",
   "private": true,
-  "main": "src/index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

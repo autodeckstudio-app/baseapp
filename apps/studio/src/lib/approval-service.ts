@@ -46,6 +46,12 @@ export function listenToApprovalsForJob(
 
 // Studio-wide pending approvals — one listener for the whole Bay Board,
 // cross-referenced client-side by jobId, rather than a listener per job.
+// No client-side lazy correction for past-expiry approvals here (unlike
+// respondToApproval, which re-checks on the customer's actual response
+// path) — this list is kept accurate instead by the daily
+// expireStaleApprovalsScheduled sweep flipping status server-side, so a
+// stale approval drops out of this query within at most ~24h even if no
+// customer ever responds to it.
 export function listenToPendingApprovalsForStudio(
   tenantId: string,
   studioId: string,

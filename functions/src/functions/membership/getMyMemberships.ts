@@ -33,8 +33,11 @@ export const getMyMemberships = onCall({ region: "asia-south1" }, async (request
     .get();
 
   // Display-only correction — never mutates the stored document (see
-  // getEffectiveMembershipStatus doc comment; no scheduler exists to keep
-  // stored status current, so every read derives it here instead).
+  // getEffectiveMembershipStatus doc comment). A daily scheduled sweep
+  // keeps the stored status itself reasonably fresh too (see
+  // expireStaleMembershipsScheduled.ts), but this stays in place as a
+  // read-time guarantee that's correct even within the sweep's up-to-24h
+  // staleness window, or if it hasn't run yet in a given environment.
   const memberships = snap.docs.map((doc) => {
     const membership = doc.data() as Membership;
     return { ...membership, status: getEffectiveMembershipStatus(membership) };

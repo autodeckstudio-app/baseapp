@@ -50,6 +50,7 @@ export { cancelMembership } from "./functions/membership/cancelMembership.js";
 export { getMyMemberships } from "./functions/membership/getMyMemberships.js";
 export { getMembershipUsage } from "./functions/membership/getMembershipUsage.js";
 export { expireStaleMemberships } from "./functions/membership/expireStaleMemberships.js";
+export { expireStaleMembershipsScheduled } from "./functions/membership/expireStaleMembershipsScheduled.js";
 
 // ─── Studio Settings (Admin) ────────────────────────────────────────────────
 export { updateStudioSettings } from "./functions/studio/updateStudioSettings.js";
@@ -67,6 +68,7 @@ export { createApproval } from "./functions/approval/createApproval.js";
 export { respondToApproval } from "./functions/approval/respondToApproval.js";
 export { cancelApproval } from "./functions/approval/cancelApproval.js";
 export { expireStaleApprovals } from "./functions/approval/expireStaleApprovals.js";
+export { expireStaleApprovalsScheduled } from "./functions/approval/expireStaleApprovalsScheduled.js";
 
 // ─── Protection (Phase 2D) ──────────────────────────────────────────────────
 export { createProtection } from "./functions/protection/createProtection.js";

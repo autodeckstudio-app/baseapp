@@ -114,8 +114,10 @@ export function listenToCustomerMemberships(
     where("customerId", "==", customerId),
     orderBy("createdAt", "desc"),
   );
-  // Display-only correction (Phase 3H): no scheduler keeps stored status
-  // current, so effective status is derived here rather than trusted as-is.
+  // Display-only correction (Phase 3H): a daily scheduler now keeps stored
+  // status reasonably fresh too (see expireStaleMembershipsScheduled.ts),
+  // but effective status is still derived here rather than trusted as-is —
+  // correct even within the sweep's up-to-24h staleness window.
   return onSnapshot(
     q,
     (snap) =>

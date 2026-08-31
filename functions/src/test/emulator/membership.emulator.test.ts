@@ -341,7 +341,9 @@ describe("Membership system", () => {
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
     // Simulate time passing WITHOUT ever running expireStaleMemberships —
-    // there is no scheduler in production, so this is the realistic state:
+    // realistic even with the Phase 5C daily scheduler in place (this
+    // membership can be within its up-to-24h staleness window, or the
+    // sweep function could simply not have run yet in a given environment):
     // status is still "active" in storage, only endDate is stale.
     await db.collection("memberships").doc(membership.id).update({ endDate: "2020-01-01" });
     const staleSnap = await db.collection("memberships").doc(membership.id).get();

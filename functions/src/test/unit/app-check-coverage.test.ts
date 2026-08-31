@@ -78,10 +78,17 @@ const ENFORCED = [
   "studio/upsertBay.ts",
 ].sort();
 
-// Not an onCall callable at all — a Firestore trigger (onDocumentCreated).
-// App Check has no meaning for background triggers; there is no client
-// request to attach a token to.
-const EXCLUDED_NON_CALLABLE = ["notification/onAuditLogCreated.ts"].sort();
+// Not an onCall callable at all — a Firestore trigger (onDocumentCreated)
+// or, as of Phase 5C Batch 1, a time-triggered onSchedule function. App
+// Check has no meaning for either: there is no client request to attach a
+// token to, and onSchedule functions have no public invocation endpoint at
+// all (unlike onCall/onRequest) — they cannot become publicly callable
+// regardless of App Check.
+const EXCLUDED_NON_CALLABLE = [
+  "approval/expireStaleApprovalsScheduled.ts",
+  "membership/expireStaleMembershipsScheduled.ts",
+  "notification/onAuditLogCreated.ts",
+].sort();
 
 // Reachable by the customer and/or studio Expo apps. Deliberately NOT
 // enforced yet: neither Expo app has a working App Check provider without a
