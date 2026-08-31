@@ -6,3 +6,5 @@ export * from './types';
 export * from './pricing';
 export * from './refundPolicy';
 export * from './stateMachine';
+export * from './packages';
+export * from './inventory';
