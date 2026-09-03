@@ -8,4 +8,6 @@ export * from './refundPolicy';
 export * from './stateMachine';
 export * from './packages';
 export * from './inventory';
+export * from './customer';
+export * from './vehicle';
 export * from './role';

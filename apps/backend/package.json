@@ -11,12 +11,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@autodeck/domain": "workspace:*",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^10.3.0",
     "@nestjs/platform-express": "^10.3.0",
     "firebase-admin": "^12.0.0",
     "nestjs-zod": "^3.0.0",
+    "razorpay": "^2.9.8",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "zod": "^3.22.0"

@@ -18,6 +18,19 @@ export const envSchema = z.object({
     }),
   FIRESTORE_EMULATOR_HOST: z.string().min(1, 'FIRESTORE_EMULATOR_HOST is required in Phase 1'),
   FIREBASE_AUTH_EMULATOR_HOST: z.string().min(1, 'FIREBASE_AUTH_EMULATOR_HOST is required in Phase 1'),
+  /**
+   * Phase 2J: Razorpay is the only payment provider. `RAZORPAY_KEY_ID`/
+   * `RAZORPAY_KEY_SECRET` authenticate outbound Orders/Refunds API calls;
+   * `RAZORPAY_WEBHOOK_SECRET` is used only to verify inbound webhook
+   * signatures (HMAC-SHA256 over the raw request body) — a completely
+   * separate secret from the API key pair. Fails closed like every other
+   * required var here: the app refuses to boot without all three. Real
+   * values are never committed; `.env.example` documents safe dummy
+   * placeholders for the emulator only.
+   */
+  RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
+  RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1, 'RAZORPAY_WEBHOOK_SECRET is required'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

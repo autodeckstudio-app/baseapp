@@ -49,4 +49,24 @@ export class AuditLogService {
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
   }
+
+  /**
+   * Same shape as `recordInBatch`, for the one case (Phase 2H's package-
+   * usage consumption) where the accompanying mutation itself needs a real
+   * Firestore `Transaction` rather than a `WriteBatch` — because it reads a
+   * contested counter (a customer package's `remainingQty`) and must
+   * prevent a concurrent double-spend, which only a transaction's
+   * optimistic-concurrency read-then-write guarantees, not a batch. Added
+   * in Phase 2H; every prior phase's mutations had no such contested-read
+   * requirement and used `recordInBatch` instead. Still append-only: only
+   * ever a `.set()` on a new document reference.
+   */
+  recordInTransaction(transaction: FirebaseFirestore.Transaction, entry: AuditLogEntry): void {
+    const firestore = this.app.firestore();
+    const ref = firestore.collection('auditLogs').doc();
+    transaction.set(ref, {
+      ...entry,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
 }
