@@ -4,8 +4,19 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-native",
-    "lib": ["ES2022", "DOM"],
-    "types": ["react"]
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "react",
+      "jest",
+      "node"
+    ],
+    "resolveJsonModule": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "app"
+  ]
 }

@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "AutoDeck",
+    "slug": "autodeck-customer",
+    "scheme": "autodeck-customer",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.autodeck.customer"
+    },
+    "android": {
+      "package": "com.autodeck.customer"
+    },
+    "plugins": ["expo-router"]
+  }
+}
