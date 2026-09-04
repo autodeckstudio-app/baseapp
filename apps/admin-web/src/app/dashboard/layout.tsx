@@ -1,23 +1,35 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../../auth/AuthProvider';
 import { canAccessAdminDashboard } from '../../auth/roleAccess';
-import { Button, LoadingState, Screen } from '../../ui/primitives';
+import { AdminShell, LoadingState, Screen } from '../../ui/primitives';
+
+const SECTIONS = [
+  { key: 'Overview', label: 'Overview', href: '/dashboard' },
+  { key: 'Bookings', label: 'Bookings', href: '/dashboard/bookings' },
+  { key: 'Customers', label: 'Customers', href: '/dashboard/customers' },
+  { key: 'Vehicles', label: 'Vehicles', href: '/dashboard/vehicles' },
+  { key: 'Services', label: 'Services', href: '/dashboard/services' },
+  { key: 'Packages', label: 'Packages', href: '/dashboard/packages' },
+  { key: 'Staff', label: 'Staff', href: '/dashboard/staff' },
+  { key: 'Payments', label: 'Payments', href: '/dashboard/payments' },
+  { key: 'Reports', label: 'Reports', href: '/dashboard/reports' },
+  { key: 'Settings', label: 'Settings', href: '/dashboard/settings' },
+];
 
 /**
- * The authenticated/authorized navigation boundary for the entire admin
- * dashboard: unauthenticated users, and authenticated users whose role
- * isn't Owner/Admin or Studio Manager (e.g. Staff), are redirected to
- * `/login` rather than ever seeing dashboard content — this is the UI-side
- * enforcement Phase 3A asks for. It grants no actual authority: every
- * backend call this dashboard ever makes is independently re-checked by
- * the backend's own `RolesGuard`, regardless of what this layout decides.
+ * SAME authorization boundary as before this pass — unauthenticated or
+ * insufficient-role sessions (e.g. Staff) redirect to `/login`, unchanged.
+ * Only the shell changed: a persistent sidebar + header replaces the
+ * previous single inline header, per the approved desktop-first
+ * requirement. `canAccessAdminDashboard` itself was not touched.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { session, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (session.status === 'unauthenticated') {
@@ -39,15 +51,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  const currentSection = SECTIONS.slice().reverse().find((s) => pathname.startsWith(s.href))?.key ?? 'Overview';
+
   return (
-    <Screen>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <strong>AutoDeck Admin</strong>
-        <Button variant="secondary" onClick={() => void signOut()}>
-          Log out
-        </Button>
-      </header>
+    <AdminShell sections={SECTIONS} currentSection={currentSection} onSignOut={() => void signOut()}>
       {children}
-    </Screen>
+    </AdminShell>
   );
 }

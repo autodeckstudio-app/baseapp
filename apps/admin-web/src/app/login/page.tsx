@@ -4,16 +4,8 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirebaseAuth } from '../../lib/firebase';
-import { Button, Card, ErrorState, Screen } from '../../ui/primitives';
+import { Button, Card, ErrorState, Field, Screen, ThemedText } from '../../ui/primitives';
 
-/**
- * Email/password sign-in — see the Phase 3A implementation summary for why
- * (Google Sign-In per the approved spec needs real OAuth credentials this
- * repository does not have and must never fabricate; this foundation is
- * built so swapping the sign-in method later touches only this file).
- * Firebase itself is the only authentication mechanism used — nothing
- * invented here.
- */
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,40 +29,26 @@ export default function LoginPage() {
 
   return (
     <Screen>
-      <Card>
-        <h1>AutoDeck Admin</h1>
-        <p>Sign in with your staff account.</p>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 12 }}>
-            <label htmlFor="email">Email</label>
-            <br />
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label htmlFor="password">Password</label>
-            <br />
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </div>
-          {error && <ErrorState message={error} />}
-          <Button type="submit" disabled={submitting}>
-            {submitting ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
-      </Card>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 360 }}>
+          <Card elevation="raised">
+            <ThemedText level="heading" style={{ marginBottom: 4 }}>
+              AutoDeck Admin
+            </ThemedText>
+            <ThemedText level="body" color="secondary" style={{ marginBottom: 20 }}>
+              Sign in with your Owner/Admin or Studio Manager account.
+            </ThemedText>
+            <form onSubmit={handleSubmit}>
+              <Field label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Field label="Password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              {error && <ErrorState message={error} />}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+          </Card>
+        </div>
+      </div>
     </Screen>
   );
 }

@@ -19,5 +19,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={session.status === 'authenticated' ? '/home' : '/login'} />;
+  return <Redirect href={session.status === 'authenticated' ? '/(tabs)/today' : '/login'} />;
 }
