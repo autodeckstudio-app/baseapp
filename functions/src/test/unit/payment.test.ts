@@ -25,7 +25,9 @@ describe("MockPaymentProvider", () => {
   });
 
   it("verifyWebhookSignature always returns true in mock", () => {
-    expect(provider.verifyWebhookSignature({ rawBody: "{}", signature: "anything" })).toBe(true);
+    expect(
+      provider.verifyWebhookSignature({ rawBody: "{}", signature: "anything" }),
+    ).toBe(true);
   });
 
   it("parseWebhookEvent parses success event", () => {
@@ -127,7 +129,7 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
 
   return {
     id: "booking-1",
-    tenantId: "automodz",
+    tenantId: "autodeck",
     studioId: "studio-ahmedabad",
     customerId: "customer-1",
     vehicleId: "vehicle-1",
@@ -167,7 +169,12 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
 // (still convenient for readable test data) onto that generic param shape.
 function invoiceParamsFromBooking(
   booking: Booking,
-  extra: { invoiceId: string; invoiceNumber: string; paymentId: string | null; serviceName: string },
+  extra: {
+    invoiceId: string;
+    invoiceNumber: string;
+    paymentId: string | null;
+    serviceName: string;
+  },
 ) {
   return {
     ...extra,
@@ -249,7 +256,8 @@ describe("buildInvoice", () => {
         serviceName: "Service",
       }),
     );
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
     expect(invoice.publicToken).toMatch(uuidRegex);
   });
 
@@ -261,8 +269,16 @@ describe("buildInvoice", () => {
       paymentId: null,
       serviceName: "Service",
     });
-    const inv1 = buildInvoice({ ...params, invoiceId: "inv-6", invoiceNumber: "INV-2026-00006" });
-    const inv2 = buildInvoice({ ...params, invoiceId: "inv-7", invoiceNumber: "INV-2026-00007" });
+    const inv1 = buildInvoice({
+      ...params,
+      invoiceId: "inv-6",
+      invoiceNumber: "INV-2026-00006",
+    });
+    const inv2 = buildInvoice({
+      ...params,
+      invoiceId: "inv-7",
+      invoiceNumber: "INV-2026-00007",
+    });
     expect(inv1.publicToken).not.toBe(inv2.publicToken);
   });
 
@@ -293,7 +309,9 @@ describe("buildInvoice", () => {
       }),
     );
     // Line items: main service + add-on
-    const addOnLine = invoice.lineItems.find((li) => li.description === "Ceramic Coat");
+    const addOnLine = invoice.lineItems.find(
+      (li) => li.description === "Ceramic Coat",
+    );
     expect(addOnLine).toBeDefined();
     expect(addOnLine?.total).toBe(100000);
   });
@@ -376,7 +394,12 @@ describe("Payment security invariants", () => {
   it("client cannot set paymentStatus on booking directly (rules enforce CF-only writes)", () => {
     // This is asserted by Firestore security rules (tested in emulator suite)
     // Firestore rule: bookings allow update: if isStudioOrAbove() && !affectedKeys.hasAny([...])
-    const protectedFields = ["priceBreakdown", "totalAmount", "membershipDiscountApplied", "paymentStatus"];
+    const protectedFields = [
+      "priceBreakdown",
+      "totalAmount",
+      "membershipDiscountApplied",
+      "paymentStatus",
+    ];
     expect(protectedFields).toContain("paymentStatus");
     expect(protectedFields).toContain("totalAmount");
   });

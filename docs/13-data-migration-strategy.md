@@ -1,20 +1,20 @@
 # 13 — Data Migration Strategy
 
 **Status:** Future planning. Migration is not a day-one requirement.  
-**Principle:** AutoModz and AutoDeck are separate products on separate Firebase projects. There is no live migration during development.
+**Principle:** legacy source app and AutoDeck are separate products on separate Firebase projects. There is no live migration during development.
 
 ---
 
 ## 13.1 Migration Philosophy
 
-AutoModz will continue to operate as a separate product throughout AutoDeck's development. The two products share nothing — separate Firebase projects, separate codebases, separate domains, separate App Store/Play Store listings (when AutoDeck ships).
+legacy source app will continue to operate as a separate product throughout AutoDeck's development. The two products share nothing — separate Firebase projects, separate codebases, separate domains, separate App Store/Play Store listings (when AutoDeck ships).
 
-Migration from AutoModz to AutoDeck is a future event that occurs when:
+Migration from legacy source app to AutoDeck is a future event that occurs when:
 1. AutoDeck reaches production readiness (all Phase 1-2 features shipped)
 2. A business decision is made to transition existing customers
-3. AutoModz is planned for sunset or continued as a separate PWA product
+3. legacy source app is planned for sunset or continued as a separate PWA product
 
-**Migration is not a blocker for AutoDeck development.** AutoDeck can launch to new customers without migrating AutoModz data.
+**Migration is not a blocker for AutoDeck development.** AutoDeck can launch to new customers without migrating legacy source app data.
 
 ---
 
@@ -39,20 +39,20 @@ Migration from AutoModz to AutoDeck is a future event that occurs when:
 | Completed jobs (`jobs`) | Status enum mapping; add required fields with defaults; fix customer linkage (plate string → customerId) |
 | Bookings (`bookings`) | Status mapping; snapshot priceBreakdown if not present |
 | Invoices (`invoices`) | Preserve for historical access; new format in AutoDeck |
-| Attendance/payroll | Carry current month only; historical data stays in AutoModz |
+| Attendance/payroll | Carry current month only; historical data stays in legacy source app |
 
 ### Do Not Migrate
 
 | Data | Reason |
 |---|---|
 | Firebase Auth UIDs | Cannot be migrated between Firebase projects. Re-auth on AutoDeck. |
-| Stripe payment data | AutoModz has no Stripe; AutoDeck starts fresh |
+| Stripe payment data | legacy source app has no Stripe; AutoDeck starts fresh |
 | walkinCustomers | Merge into unified `customers` collection |
 | FCM device tokens | Ephemeral; re-registered on first AutoDeck app launch |
 | Sessions and notifications | Ephemeral |
 | car marketplace listings | Only if AutoDeck includes car marketplace (currently deferred) |
-| referrals | Removed from AutoModz; not in AutoDeck Phase 1 |
-| Activity logs | AutoModz activity stays in AutoModz for reference |
+| referrals | Removed from legacy source app; not in AutoDeck Phase 1 |
+| Activity logs | legacy source app activity stays in legacy source app for reference |
 
 ---
 
@@ -60,9 +60,9 @@ Migration from AutoModz to AutoDeck is a future event that occurs when:
 
 ### Customer (users → customers)
 
-| AutoModz field | AutoDeck field | Notes |
+| legacy source app field | AutoDeck field | Notes |
 |---|---|---|
-| `uid` | `uid` (Firebase UID) | Different UID in new project; store old as `legacyAutoModzUid` |
+| `uid` | `uid` (Firebase UID) | Different UID in new project; store old as `legacySourceUid` |
 | `name` | `name` | Direct copy |
 | `email` | `email` | Direct copy |
 | `phone` | `phone` | Direct copy |
@@ -74,15 +74,15 @@ Migration from AutoModz to AutoDeck is a future event that occurs when:
 | `tags[]` | `tags[]` | Direct copy |
 | `welcomedAt` | `createdAt` | Rename |
 | — | `preferredLanguage` | Default 'en' |
-| — | `legacyAutoModzUid` | Source UID for cross-reference |
+| — | `legacySourceUid` | Source UID for cross-reference |
 
 ### Vehicle (subcollection → top-level)
 
-| AutoModz field | AutoDeck field | Notes |
+| legacy source app field | AutoDeck field | Notes |
 |---|---|---|
 | `id` | `id` | Keep same ID |
 | (subcollection path owner uid) | `customerId` | Resolved at migration time |
-| `name` | Derived: `{make} {model}` | AutoModz stored combined name string |
+| `name` | Derived: `{make} {model}` | legacy source app stored combined name string |
 | `registrationNumber` | `registrationNumber` | Direct copy; index |
 | `photo` | `primaryPhotoUrl` | Rename |
 | `photos[]` | `photos[]` | Direct copy |
@@ -92,21 +92,21 @@ Migration from AutoModz to AutoDeck is a future event that occurs when:
 | `odometer` | `odometer` | Direct copy |
 | — | `make` | Extract from name string |
 | — | `model` | Extract from name string |
-| — | `vin` | null (not in AutoModz) |
+| — | `vin` | null (not in legacy source app) |
 
 ### Membership (subscriptions → memberships)
 
-| AutoModz tier | AutoDeck tier | Washes | Discount |
+| legacy source app tier | AutoDeck tier | Washes | Discount |
 |---|---|---|---|
 | silver | silver | 4 (verify against actual record) | 10% |
 | gold | gold | 8 (verify — known washesTotal bug) | 15% |
 | platinum | platinum | 16 | 20% |
 
-**Critical:** Verify `washesUsed` accuracy before migration. AutoModz has a known `washesTotal` vs `washesIncluded` disagreement. Recalculate from job history before setting migrated `usedWashes`.
+**Critical:** Verify `washesUsed` accuracy before migration. legacy source app has a known `washesTotal` vs `washesIncluded` disagreement. Recalculate from job history before setting migrated `usedWashes`.
 
 ### Protection kinds mapping
 
-| AutoModz kind | AutoDeck kind |
+| legacy source app kind | AutoDeck kind |
 |---|---|
 | ppf | → warranty (type: ppf) |
 | ceramic | → warranty (type: ceramic) |
@@ -120,7 +120,7 @@ Migration from AutoModz to AutoDeck is a future event that occurs when:
 
 ### Job status mapping
 
-| AutoModz status | AutoDeck status |
+| legacy source app status | AutoDeck status |
 |---|---|
 | (no equivalent — walks in) | vehicle_received |
 | in_progress | in_progress |
@@ -133,14 +133,14 @@ Migration from AutoModz to AutoDeck is a future event that occurs when:
 
 ## 13.4 Migration Execution Plan
 
-### Phase M1: Export (Read-Only — AutoModz)
+### Phase M1: Export (Read-Only — legacy source app)
 
 ```bash
-# Export script — runs against AutoModz Firebase project
+# Export script — runs against legacy source app Firebase project
 # Uses Firebase Admin SDK with service account read access
 # Output: NDJSON files, one per collection
 
-node export.ts --project=automodz-prod --output=./migration/export/
+node export.ts --project=legacy-source-prod --output=./migration/export/
 ```
 
 Exports in order (respecting relationships):
@@ -161,20 +161,20 @@ Exports in order (respecting relationships):
 
 ### Phase M2: Transform (Local)
 
-Transform script maps AutoModz schema to AutoDeck schema:
+Transform script maps legacy source app schema to AutoDeck schema:
 ```bash
 node transform.ts --input=./migration/export/ --output=./migration/transformed/
 ```
 
 **Key transformations:**
-1. Customers: add `legacyAutoModzUid`, restructure `notificationPrefs`, set `preferredLanguage: 'en'`
+1. Customers: add `legacySourceUid`, restructure `notificationPrefs`, set `preferredLanguage: 'en'`
 2. Vehicles: promote to top-level, extract make/model, set `customerId` by ID
 3. Jobs: map status enum, add `studioId` field, fix customer linkage (plate → customerId where possible)
 4. Memberships: verify wash counts (recalculate from job history), map tier names
 5. Protections/warranties: split into `warranties` and `protections` per new schema
 6. Employees: map role names, set `studioId`
 
-**All transformed records tagged:** `{ migratedFromAutoModz: true, migratedAt: <ISO date> }`
+**All transformed records tagged:** `{ migratedFromLegacySource: true, migratedAt: <ISO date> }`
 
 ### Phase M3: Validate (Staging)
 
@@ -195,7 +195,7 @@ Fix any issues in transform script. Re-run on staging until clean.
 ### Phase M4: Production Import
 
 Coordinate with business:
-1. **Maintenance window:** notify customers 48h in advance; AutoModz takes no new bookings during window
+1. **Maintenance window:** notify customers 48h in advance; legacy source app takes no new bookings during window
 2. Run import against autodeck-prod
 3. Validate in production
 4. Open AutoDeck to existing customers
@@ -213,10 +213,10 @@ AutoDeck uses phone OTP. Existing customers cannot use their old Google Sign-In 
 
 No data loss — all records are keyed by phone number match, not Firebase UID.
 
-**Edge case: customer registered in AutoModz with a Google account that has no matching phone:**
+**Edge case: customer registered in legacy source app with a Google account that has no matching phone:**
 - Small percentage of customers
 - Support process: customer contacts studio → admin manually links account
-- Estimated: < 5% of customers (most AutoModz customers registered via Google which may not expose phone number)
+- Estimated: < 5% of customers (most legacy source app customers registered via Google which may not expose phone number)
 
 ---
 
@@ -227,7 +227,7 @@ No data loss — all records are keyed by phone number match, not Firebase UID.
 | Membership wash count wrong after migration | Medium | High | Recalculate from completed job history in transform step; verify on staging |
 | Customer can't find history (phone mismatch) | Low | Medium | Support process for manual linking; admin can link in admin web |
 | Photos inaccessible (Storage bucket different) | Low | High | Copy all Storage objects to AutoDeck bucket before migration; verify links |
-| AutoModz takes a booking during migration window | Medium | High | Coordinate maintenance window; disable booking creation in AutoModz during migration |
+| legacy source app takes a booking during migration window | Medium | High | Coordinate maintenance window; disable booking creation in legacy source app during migration |
 | Active warranty lost or corrupted | Low | Critical | Triple-check every warranty record; generate list pre-migration; verify post-migration |
 | Job-customer linkage broken (plate string join) | Medium | Medium | Best-effort match by plate; unmatched jobs stored as orphan with plate reference |
 | Firebase Admin SDK quota exceeded during import | Low | Medium | Batch imports in groups of 500; use exponential backoff |
@@ -244,14 +244,14 @@ For a customer base of under 200 active customers, manual data re-entry may be l
 2. Admin manually activates memberships for migrating customers in AutoDeck admin web
 3. Admin manually adds vehicle records for frequent customers
 4. Staff manually inputs active warranties (PPF, ceramic) for existing cars in service
-5. Historical booking data stays in AutoModz (which continues running as archive)
+5. Historical booking data stays in legacy source app (which continues running as archive)
 6. New bookings go to AutoDeck only
 
 **Advantages:**
 - No migration script to build or test
 - Clean start for AutoDeck data
 - No schema transformation risk
-- AutoModz continues as a read-only archive
+- legacy source app continues as a read-only archive
 
 **Disadvantages:**
 - Customer does not see their history in AutoDeck app immediately
@@ -262,23 +262,23 @@ For a customer base of under 200 active customers, manual data re-entry may be l
 
 ---
 
-## 13.7 AutoModz Sunset
+## 13.7 legacy source app Sunset
 
-AutoModz sunset is a business decision, not a technical one. The options:
+legacy source app sunset is a business decision, not a technical one. The options:
 
 **Option A: Full sunset**
-- AutoModz takes no new bookings after migration date
+- legacy source app takes no new bookings after migration date
 - Existing customers redirected to AutoDeck
-- AutoModz domain redirects to AutoDeck marketing site
-- AutoModz codebase archived
+- legacy source app domain redirects to AutoDeck marketing site
+- legacy source app codebase archived
 
 **Option B: Parallel operation**
-- AutoModz continues as the PWA product (potentially sold/licensed separately)
+- legacy source app continues as the PWA product (potentially sold/licensed separately)
 - AutoDeck is the new native product
 - No migration required — they serve different customer segments
 
-**Option C: AutoModz as the web/PWA companion**
+**Option C: legacy source app as the web/PWA companion**
 - AutoDeck is the native app
-- AutoModz is rebranded as autodeck.ae web interface (same Firebase project — this would require significant rearchitecting)
+- legacy source app is rebranded as autodeck.ae web interface (same Firebase project — this would require significant rearchitecting)
 
-**Recommendation:** Option A (full sunset to AutoDeck) for operational simplicity. Option B if the AutoModz PWA has separate commercial value. Decide this before investing in migration script work.
+**Recommendation:** Option A (full sunset to AutoDeck) for operational simplicity. Option B if the legacy source app PWA has separate commercial value. Decide this before investing in migration script work.

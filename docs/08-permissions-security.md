@@ -6,7 +6,7 @@ AutoDeck is built on a defense-in-depth model. No single layer is trusted in iso
 
 1. **Never trust the client for authorization.** Every mutation that matters is validated server-side inside a Cloud Function before touching Firestore. The client UI enforces UX constraints only; the server enforces business and security constraints.
 
-2. **Custom claims over document reads.** Firebase custom claims (`{ role: 'customer' | 'studio' | 'admin' }`) are embedded in the ID token and evaluated inside Firestore rules without a database round-trip. The AutoModz pattern of calling `get(users/{uid})` on every rule evaluation is explicitly rejected — it is slow, expensive, and fails when the document is temporarily unavailable.
+2. **Custom claims over document reads.** Firebase custom claims (`{ role: 'customer' | 'studio' | 'admin' }`) are embedded in the ID token and evaluated inside Firestore rules without a database round-trip. The legacy source app pattern of calling `get(users/{uid})` on every rule evaluation is explicitly rejected — it is slow, expensive, and fails when the document is temporarily unavailable.
 
 3. **Operational truth is server-owned.** Booking status, payment status, price, job status, bay assignment, warranty records, and inventory levels cannot be written by any client. They are written exclusively by Cloud Functions running under the service account.
 

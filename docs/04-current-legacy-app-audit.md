@@ -1,8 +1,8 @@
-# 04 — Current AutoModz PWA Technical Audit
+# 04 — Legacy Source App Technical Audit
 
 **AutoDeck OS Architecture Phase · August 2026**
 
-> Read-only technical audit of the AutoModz PWA at `/Users/king/Downloads/AutoModz`. This codebase is a reference, not a migration source. Nothing from this codebase is copied into AutoDeck without deliberate architectural decision.
+> Read-only technical audit of the legacy source app PWA from the retired application repository. This codebase is a reference, not a migration source. Nothing from this codebase is copied into AutoDeck without deliberate architectural decision.
 
 ---
 
@@ -244,7 +244,7 @@ Firebase Auth, Google Sign-In only. No phone OTP, no email/password, no Apple Si
 - This means every Firestore security rule that checks `isAdmin()` or `isEmployee()` must perform a `get()` call to read the user's document — an N+1 read pattern on every rule evaluation
 
 ### Admin bootstrap
-The owner's email address (`hello.automodz@gmail.com`) is hardcoded in `firestore.rules`. On first login, this user can self-assign the `admin` role. All subsequent admin grants must be performed by an existing admin via the employee management interface.
+The owner's email address (`hello.legacy-source@gmail.com`) is hardcoded in `firestore.rules`. On first login, this user can self-assign the `admin` role. All subsequent admin grants must be performed by an existing admin via the employee management interface.
 
 ### Role assignment flow
 - Admin role: only by bootstrap (owner email) or by existing admin in admin dashboard
@@ -517,7 +517,7 @@ At least one production subscription document shows `washesTotal: 16` for a Gold
 
 ## 4.8 Completion Status
 
-AutoModz's own completion checklist (`AUTOMODZ-COMPLETION.md`) estimates ~63% completion by weighted feature checklist. The following are confirmed as 0% implemented:
+legacy source app's own completion checklist (`LEGACY-COMPLETION.md`) estimates ~63% completion by weighted feature checklist. The following are confirmed as 0% implemented:
 
 | Feature | Status | Note |
 |---|---|---|
@@ -576,4 +576,4 @@ The concept of a customer-controlled notification suppression mode that override
 Allowing a visit summary or invoice to be shared via a token URL (no auth required) is a genuinely useful feature for customers who need to share service records with insurers, buyers, or employers. AutoDeck should implement this with constant-time token comparison and rate limiting.
 
 ### 10. Vehicle ownership consent log
-The concept of a customer consenting to their vehicle's service history being publicly visible (for resale transparency) is worth revisiting for AutoDeck. The implementation is basic in AutoModz but the concept — treating service history as a vehicle asset that can be publicly verified — is a genuine product differentiator.
+The concept of a customer consenting to their vehicle's service history being publicly visible (for resale transparency) is worth revisiting for AutoDeck. The implementation is basic in legacy source app but the concept — treating service history as a vehicle asset that can be publicly verified — is a genuine product differentiator.

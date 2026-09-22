@@ -1,6 +1,6 @@
 # 19 — Multi-Tenant SaaS Architecture
 
-**Concept:** AutoDeck is an automotive service operating system. AutoModz is the first tenant. Future studios/businesses can be added as tenants without rewriting the platform.
+**Concept:** AutoDeck is an automotive service operating system. legacy source app is the first tenant. Future studios/businesses can be added as tenants without rewriting the platform.
 
 **Not in V1 UI** — tenant management UI is deferred. But the data model and security rules must enforce tenant isolation from day one. Adding tenant isolation later requires a painful data migration.
 
@@ -9,7 +9,7 @@
 ## 19.1 Tenant Model
 
 ```
-Tenant                    (a business entity — e.g. "AutoModz Detailing")
+Tenant                    (a business entity — e.g. "legacy source app Detailing")
 └── Studio[]              (one or more physical locations)
     ├── Bay[]             (service bays per studio)
     ├── Employee[]        (staff at this studio)
@@ -25,7 +25,7 @@ Booking                   (belongs to Tenant + Studio)
     └── ApprovalRequest[]
 ```
 
-AutoModz is Tenant `automodz`. Future tenants get their own `tenantId`.
+legacy source app is Tenant `legacy-source`. Future tenants get their own `tenantId`.
 
 ---
 
@@ -50,8 +50,8 @@ Firebase Auth has a multi-tenancy feature (Firebase Auth Tenants), but it is com
 ### Tenant (/tenants/{tenantId})
 ```typescript
 {
-  id: string               // e.g. "automodz"
-  name: string             // "AutoModz Detailing"
+  id: string               // e.g. "autodeck"
+  name: string             // "legacy source app Detailing"
   contactEmail: string
   contactPhone: string
   plan: 'starter' | 'growth' | 'enterprise'  // future billing tier
@@ -107,8 +107,8 @@ Custom claim on each user token:
 ```json
 {
   "role": "customer" | "studio" | "admin" | "superadmin",
-  "tenantId": "automodz",
-  "studioId": "automodz-ahmedabad"   // optional — only for studio-scoped staff
+  "tenantId": "autodeck",
+  "studioId": "autodeck-ahmedabad"   // optional — only for studio-scoped staff
 }
 ```
 
@@ -218,7 +218,7 @@ Each tenant has their own service catalogue. A future second tenant (e.g., anoth
 
 ## 19.8 Customer Identity: Tenant-Scoped
 
-Customers belong to a tenant. A customer who books at AutoModz is an AutoModz customer. If they ever book at a different AutoDeck tenant, they would be a separate customer record for that tenant.
+Customers belong to a tenant. A customer who books at legacy source app is an legacy source app customer. If they ever book at a different AutoDeck tenant, they would be a separate customer record for that tenant.
 
 **In V1:** Single tenant only. Customer identity is simple.
 

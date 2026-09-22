@@ -3,7 +3,7 @@
 AutoDeck OS target architecture: Customer mobile + Studio mobile + Admin web, all backed by Firebase + Cloud Functions.
 
 **Launch market:** India (Ahmedabad, Gujarat). Currency: INR. Firebase region: `asia-south1` (Mumbai).  
-**Architecture model:** Multi-tenant SaaS. AutoModz is Tenant 1. tenantId on every document. See `docs/19-multitenant-saas-architecture.md`.  
+**Architecture model:** Multi-tenant SaaS. legacy source app is Tenant 1. tenantId on every document. See `docs/19-multitenant-saas-architecture.md`.  
 **Cost constraint:** No paid services without explicit approval. See cost classifications below and in `docs/18-india-market-and-payment-architecture.md`.
 
 ---
@@ -201,7 +201,7 @@ app/
 
 | Concern | Choice | Rationale |
 |---|---|---|
-| Framework | Next.js 15 (App Router) | Server Components enable zero-client-JS dashboards; familiar to AutoModz team |
+| Framework | Next.js 15 (App Router) | Server Components enable zero-client-JS dashboards; familiar to legacy source app team |
 | UI components | shadcn/ui + Tailwind CSS | Accessible primitives; unstyled by default; AutoDeck design tokens applied on top |
 | Server state | TanStack Query (client) + Server Components (server) | SC for initial data load; TQ for real-time polling and mutations |
 | Auth | Firebase Admin SDK (server-side session verification) | httpOnly cookies; never expose Firebase token to JavaScript |
@@ -628,7 +628,7 @@ GitHub Actions:
 | Factor | Flutter | React Native + Expo |
 |---|---|---|
 | Performance | Excellent (own renderer) | Very good (Hermes + New Architecture) |
-| Language | Dart (new language to learn) | TypeScript (already used in AutoModz) |
+| Language | Dart (new language to learn) | TypeScript (already used in legacy source app) |
 | Team ramp-up | 2–3 months for Dart | Minimal (same TS ecosystem) |
 | UI fidelity | Pixel-perfect cross-platform | Platform-native feel by default |
 | Expo ecosystem | N/A | Massive (managed workflow, EAS, OTA) |
@@ -648,7 +648,7 @@ GitHub Actions:
 | Complex queries | Weak (Firestore limitations) | Full SQL power |
 | Cost at scale | Can be expensive (Firestore reads) | Cheaper at high read volume |
 | Vendor lock-in | High | Low |
-| Team familiarity | High (AutoModz used Firebase) | Medium |
+| Team familiarity | High (legacy source app used Firebase) | Medium |
 | Verdict | Best for current scale | Preferred at GoMechanic scale |
 
 **Decision: Firebase + Cloud Functions hybrid.** Firebase Auth, Firestore for operational data, Cloud Functions for all business logic. BigQuery for reporting. Re-evaluate at 10,000+ daily active users.

@@ -56,7 +56,7 @@ The car is always the subject. Every screen should make the customer feel that t
 **Colour usage rules:**
 - Accent colour used sparingly: primary CTA buttons, active states, key data highlights
 - Never use accent colour for decorative purposes
-- Status colours must be consistent across every screen in every app (AutoModz's biggest design failure was status colours differing per screen)
+- Status colours must be consistent across every screen in every app (legacy source app's biggest design failure was status colours differing per screen)
 
 ---
 

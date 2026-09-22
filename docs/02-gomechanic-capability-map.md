@@ -102,9 +102,9 @@ GoMechanic operates 11+ service verticals across India. This is the full functio
 
 ### GoMechanic's detailing coverage and AutoDeck implications
 GoMechanic's detailing vertical is their newest growth area and most directly overlaps with AutoDeck's premium studio focus. Key observations:
-- PPF at GoMechanic uses 180-micron self-healing TPU film with 5-year warranty — comparable to AutoModz's LLumar and Garware brands
+- PPF at GoMechanic uses 180-micron self-healing TPU film with 5-year warranty — comparable to legacy source app's LLumar and Garware brands
 - Ceramic coating offered in graphene and standard variants
-- Anti-rust expanding — not a current AutoModz/AutoDeck focus
+- Anti-rust expanding — not a current legacy source app/AutoDeck focus
 - GoMechanic's detailing is volume-driven; AutoDeck's is quality-driven at higher ASP
 
 ---
@@ -152,7 +152,7 @@ GoMechanic's detailing vertical is their newest growth area and most directly ov
 
 ## 2.3 Membership Model — GoMechanic Miles
 
-GoMechanic Miles is a subscription membership (not a wash-count membership like AutoModz). Key features:
+GoMechanic Miles is a subscription membership (not a wash-count membership like legacy source app). Key features:
 
 - **Duration**: 12 months (hatchback/sedan) or 15 months (SUV/luxury)
 - **Core benefit**: Covers the 2 annual comprehensive services that a car needs — included in membership cost
@@ -165,7 +165,7 @@ GoMechanic Miles is a subscription membership (not a wash-count membership like 
 - **Loyalty mechanics**: Members get priority booking slots, faster response times
 
 ### AutoDeck membership model implications
-GoMechanic Miles bundles service inclusions (the periodic services themselves) with discounts. AutoModz uses a simpler wash-count model (fixed washes per month, percentage off premium services). AutoDeck should design membership that fits premium service context:
+GoMechanic Miles bundles service inclusions (the periodic services themselves) with discounts. legacy source app uses a simpler wash-count model (fixed washes per month, percentage off premium services). AutoDeck should design membership that fits premium service context:
 - Premium members get priority scheduling (not just price benefits)
 - Annual PPF inspection reminders that maintain warranty validity
 - Detailing package inclusions rather than open-ended service discounts

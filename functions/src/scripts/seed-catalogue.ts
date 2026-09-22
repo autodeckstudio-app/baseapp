@@ -1,7 +1,7 @@
 /**
- * Idempotent import of AutoDeck's real service catalogue, sourced verbatim
- * from docs/04-current-automodz-pwa-audit.md ("Service catalogue" section —
- * AutoModz's actual, currently-operating price list). No price, duration, or
+ * Idempotent import of AutoDeck's validated service catalogue, sourced
+ * from docs/04-current-legacy-app-audit.md ("Service catalogue" section —
+ * the studio's documented operational price list). No price, duration, or
  * warranty term in this file was invented; anything not documented there is
  * left null rather than guessed (see the "MISSING DATA" note below).
  *
@@ -28,7 +28,7 @@
  *   documented price is a single flat price, not a base + adjustment).
  *
  * ARCHITECTURE NOTE: the 6 PPF services have multi-day estimatedDurationMinutes
- * (2880–4320 min), which is genuine, documented AutoModz data (doc04: "A PPF
+ * (2880–4320 min), which is validated legacy studio data (doc04: "A PPF
  * job requiring 2,880 minutes = 4 working days..."). AutoDeck's current
  * getAvailability/generateDaySlots only schedules within a single day's
  * operating-hours window, so these 6 services will show zero bookable slots
@@ -38,7 +38,12 @@
  */
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Service, ServiceCategory, BayType, WarrantyDurationUnit } from "@autodeck/core";
+import type {
+  Service,
+  ServiceCategory,
+  BayType,
+  WarrantyDurationUnit,
+} from "@autodeck/core";
 import { FIRST_TENANT_ID } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
@@ -71,7 +76,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "LLumar Gloss",
     category: "ppf",
     brand: "LLumar",
-    description: "LLumar Gloss paint protection film — full-body coverage with a glossy finish.",
+    description:
+      "LLumar Gloss paint protection film — full-body coverage with a glossy finish.",
     basePrice: 145_000_00, // ₹1,45,000
     estimatedDurationMinutes: 2880,
     warrantyLabel: "5-Year PPF Film Warranty",
@@ -86,7 +92,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "LLumar Platinum",
     category: "ppf",
     brand: "LLumar",
-    description: "LLumar Platinum paint protection film — enhanced durability and clarity.",
+    description:
+      "LLumar Platinum paint protection film — enhanced durability and clarity.",
     basePrice: 205_000_00, // ₹2,05,000
     estimatedDurationMinutes: 3600,
     warrantyLabel: "10-Year PPF Film Warranty",
@@ -101,7 +108,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "LLumar Valor",
     category: "ppf",
     brand: "LLumar",
-    description: "LLumar Valor paint protection film — top-tier self-healing protection.",
+    description:
+      "LLumar Valor paint protection film — top-tier self-healing protection.",
     basePrice: 220_000_00, // ₹2,20,000
     estimatedDurationMinutes: 4320,
     warrantyLabel: "12-Year PPF Film Warranty",
@@ -131,7 +139,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "Garware Premium",
     category: "ppf",
     brand: "Garware",
-    description: "Garware Premium paint protection film with extended coverage.",
+    description:
+      "Garware Premium paint protection film with extended coverage.",
     basePrice: 105_000_00, // ₹1,05,000
     estimatedDurationMinutes: 2880,
     warrantyLabel: "8-Year PPF Film Warranty",
@@ -146,7 +155,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "Garware Platinum",
     category: "ppf",
     brand: "Garware",
-    description: "Garware Platinum paint protection film — the studio's longest-lasting PPF option.",
+    description:
+      "Garware Platinum paint protection film — the studio's longest-lasting PPF option.",
     basePrice: 145_000_00, // ₹1,45,000
     estimatedDurationMinutes: 3600,
     warrantyLabel: "Lifetime PPF Film Warranty",
@@ -164,7 +174,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "Kovalent Prolong",
     category: "ceramic",
     brand: "Kovalent",
-    description: "Kovalent Prolong ceramic coating for long-lasting gloss and protection.",
+    description:
+      "Kovalent Prolong ceramic coating for long-lasting gloss and protection.",
     basePrice: 10_000_00, // ₹10,000
     estimatedDurationMinutes: 480,
     warrantyLabel: null,
@@ -179,7 +190,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "Graphene Matrix",
     category: "ceramic",
     brand: null,
-    description: "Graphene-infused ceramic coating for enhanced hydrophobicity and durability.",
+    description:
+      "Graphene-infused ceramic coating for enhanced hydrophobicity and durability.",
     basePrice: 12_000_00, // ₹12,000
     estimatedDurationMinutes: 720,
     warrantyLabel: null,
@@ -194,7 +206,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     name: "Borophene",
     category: "ceramic",
     brand: null,
-    description: "Borophene ceramic coating — the studio's premium coating tier.",
+    description:
+      "Borophene ceramic coating — the studio's premium coating tier.",
     basePrice: 14_000_00, // ₹14,000
     estimatedDurationMinutes: 840,
     warrantyLabel: null,
@@ -386,7 +399,9 @@ export async function seedCatalogue(tenantId: string) {
     console.warn(`[seed-catalogue] created: ${entry.id} (${entry.name})`);
   }
 
-  console.warn(`[seed-catalogue] Done. ${created} created, ${skipped} already existed, ${CATALOGUE.length} total.`);
+  console.warn(
+    `[seed-catalogue] Done. ${created} created, ${skipped} already existed, ${CATALOGUE.length} total.`,
+  );
 }
 
 // Only auto-run when executed directly (`tsx seed-catalogue.ts`), not when

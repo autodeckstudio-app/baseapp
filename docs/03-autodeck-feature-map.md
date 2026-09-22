@@ -50,7 +50,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Not a registration wall — show value before asking for details
 - Welcome state should be clear: "Your AutoDeck is ready. Add your first car to get started."
 
-**vs AutoModz**: Google-only auth is a critical gap AutoDeck fixes. AutoModz has a welcome flow but its Google-only requirement excludes customers without Google accounts.
+**vs legacy source app**: Google-only auth is a critical gap AutoDeck fixes. legacy source app has a welcome flow but its Google-only requirement excludes customers without Google accounts.
 **vs GoMechanic**: GoMechanic uses phone OTP as default; this is the right model.
 
 ---
@@ -68,7 +68,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Multiple vehicles supported from day one
 - Add vehicle: manual entry (registration, make, model, year, colour, fuel type); lookup API optional in V2+
 
-**vs AutoModz**: AutoModz has vehicle profiles but no add/edit UI in production. The concept is right; the implementation is incomplete.
+**vs legacy source app**: legacy source app has vehicle profiles but no add/edit UI in production. The concept is right; the implementation is incomplete.
 
 ---
 
@@ -87,7 +87,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - **Photo gallery per service**: Before/after, coverage documentation, delivery photos
 - All records are permanent. Completed records cannot be modified.
 
-**vs AutoModz**: The `/chapter/[id]` vehicle chapter is 0% implemented. This is a rebuild from scratch.
+**vs legacy source app**: The `/chapter/[id]` vehicle chapter is 0% implemented. This is a rebuild from scratch.
 **vs GoMechanic**: GoMechanic shows a service list. AutoDeck must show a vehicle story.
 
 ---
@@ -105,7 +105,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Context-aware: if a vehicle already has PPF installed, show ceramic topper services that are compatible
 - Transparent about what is included and what is not
 
-**vs AutoModz**: AutoModz has a hardcoded catalogue. AutoDeck must allow admin management.
+**vs legacy source app**: legacy source app has a hardcoded catalogue. AutoDeck must allow admin management.
 **vs GoMechanic**: GoMechanic shows hundreds of services for a mass-market garage. AutoDeck shows a curated, premium selection.
 
 ---
@@ -129,7 +129,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Cancellation: customer may cancel free if >24h before slot; late cancellation policy TBD
 - Address is snapshotted at booking time — changing saved address does not modify past bookings
 
-**vs AutoModz**: AutoModz's booking creation UI has not been migrated to the new server-authoritative flow. Rebuild.
+**vs legacy source app**: legacy source app's booking creation UI has not been migrated to the new server-authoritative flow. Rebuild.
 **vs GoMechanic**: GoMechanic offers slot-based booking (fixed appointment blocks). AutoDeck may offer both fixed slots and flexible (drop-off when convenient, studio will fit in). Decide: this is an open question.
 
 ---
@@ -149,7 +149,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Mid-job updates: studio can push free-text updates that appear as messages in the tracking view
 - No polling — real-time via Firestore listeners
 
-**vs AutoModz**: AutoModz has this conceptually (the home state machine) but the photos and WhatsApp delivery are missing. Rebuild.
+**vs legacy source app**: legacy source app has this conceptually (the home state machine) but the photos and WhatsApp delivery are missing. Rebuild.
 **vs GoMechanic**: GoMechanic's tracking is generic. AutoDeck's tracking must surface human identity (technician name, studio manager contact).
 
 ---
@@ -169,7 +169,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - All approval decisions are recorded with timestamp and user ID — permanent audit record
 - Price after approved additions must be re-computed server-side
 
-**vs AutoModz**: AutoModz has this (`/approval/[id]` route, `approvals` collection). The concept and data model are correct. Rebuild in native app with improved notification delivery.
+**vs legacy source app**: legacy source app has this (`/approval/[id]` route, `approvals` collection). The concept and data model are correct. Rebuild in native app with improved notification delivery.
 **vs GoMechanic**: GoMechanic's Service Buddy handles this by phone/WhatsApp manually. AutoDeck formalises it as a structured in-app flow, which creates an audit trail and prevents disputes.
 
 ---
@@ -185,7 +185,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Any post-service issues reported within 48h are flagged as warranty claims, not new bookings
 - Customer receives a delivery summary push + WhatsApp with: service completed, total paid, warranty activated, certificate download link
 
-**vs AutoModz**: Not implemented beyond status change. Rebuild.
+**vs legacy source app**: Not implemented beyond status change. Rebuild.
 
 ---
 
@@ -202,7 +202,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Downloadable by customer at any time from Vehicle Passport
 - Resend to WhatsApp or Email on demand
 
-**vs AutoModz**: AutoModz has the terms-captured-at-seal principle but no certificate generation, no PDF, no QR verification. This is a rebuild.
+**vs legacy source app**: legacy source app has the terms-captured-at-seal principle but no certificate generation, no PDF, no QR verification. This is a rebuild.
 **vs GoMechanic and CarzSpa**: No competitor produces a verifiable digital warranty certificate. This is a genuine product differentiator in the Indian premium detailing market.
 
 ---
@@ -219,7 +219,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Downloadable as PDF ("Vehicle Service Report")
 - Publicly shareable with customer consent (opt-in, not opt-out) — a vehicle with a verified service history at a premium studio has genuine resale value
 
-**vs AutoModz**: AutoModz has the data model but the seal path has never run in production. Rebuild in Cloud Functions.
+**vs legacy source app**: legacy source app has the data model but the seal path has never run in production. Rebuild in Cloud Functions.
 
 ---
 
@@ -240,7 +240,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Renewal reminders 30 days before expiry
 - Allowances do not roll over (use them or lose them)
 
-**vs AutoModz**: AutoModz's Silver/Gold/Platinum model is the right concept. Rebuild with Razorpay UPI AutoPay billing (V2). INR pricing set by admin.
+**vs legacy source app**: legacy source app's Silver/Gold/Platinum model is the right concept. Rebuild with Razorpay UPI AutoPay billing (V2). INR pricing set by admin.
 **vs GoMechanic**: GoMechanic Miles bundles periodic service inclusions. AutoDeck's tiers should bundle detailing-specific inclusions.
 
 ---
@@ -259,7 +259,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Payment history accessible in-app
 - Receipts emailed automatically (Resend — FREE TIER)
 
-**vs AutoModz**: AutoModz has no payment gateway — everything is manual UPI. This is a critical replacement.
+**vs legacy source app**: legacy source app has no payment gateway — everything is manual UPI. This is a critical replacement.
 **vs GoMechanic**: GoMechanic has UPI/card/wallet; AutoDeck's V1 Payment Link approach matches how premium Indian studios already operate.
 
 ---
@@ -279,7 +279,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - **Quiet mode**: customer can suppress non-critical notifications (approval requests and vehicle ready always break through)
 - **Language preference**: English (V1); Hindi/Gujarati (V2+ optional)
 
-**vs AutoModz**: AutoModz has push (web only) and WhatsApp (to studio only). AutoDeck needs push + WhatsApp + email + SMS, all to the customer.
+**vs legacy source app**: legacy source app has push (web only) and WhatsApp (to studio only). AutoDeck needs push + WhatsApp + email + SMS, all to the customer.
 
 ---
 
@@ -297,7 +297,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Reviews are public-facing (on the AutoDeck website/marketing, not just internal)
 - Report mechanism for inappropriate content
 
-**vs AutoModz**: AutoModz has a ratings collection. Rebuild with proper verified-purchase gate and public display.
+**vs legacy source app**: legacy source app has a ratings collection. Rebuild with proper verified-purchase gate and public display.
 
 ---
 
@@ -313,7 +313,7 @@ AutoDeck serves customers spending ₹30,000–₹2,20,000+ per service. At this
 - Promotion history tracked (which customer used which code, when)
 - Stackability rules: promotions do not stack with membership discounts by default
 
-**vs AutoModz**: AutoModz removed promo codes. Re-introduce properly with server-side validation.
+**vs legacy source app**: legacy source app removed promo codes. Re-introduce properly with server-side validation.
 
 ---
 
@@ -556,7 +556,7 @@ The Admin Web App is a Next.js application accessed by the business owner and ma
 ## 3.5 Features AutoDeck Will NOT Build at Launch
 
 **Car marketplace (buy/sell)**
-AutoModz has a used car listing feature. This is a separate business. AutoDeck is a service platform, not a car marketplace. Remove.
+legacy source app has a used car listing feature. This is a separate business. AutoDeck is a service platform, not a car marketplace. Remove.
 
 **Insurance claims handling**
 GoMechanic offers insurance claim facilitation. This requires deep integration with India insurance providers and regulatory knowledge. Defer until a clear demand signal exists.
@@ -565,7 +565,7 @@ GoMechanic offers insurance claim facilitation. This requires deep integration w
 Pre-purchase inspections are a viable service category but require a different workflow (visiting the car's current location). Defer.
 
 **Referral programme**
-AutoModz has dead referral code. A referral programme is a growth tactic, not a product. Design it when growth phase begins.
+legacy source app has dead referral code. A referral programme is a growth tactic, not a product. Design it when growth phase begins.
 
 **Tyre & battery services**
 AutoDeck is a premium detailing and protection studio. Tyre fitting and battery replacement are mass-market commodities. These create operational complexity without margin. Remove.
