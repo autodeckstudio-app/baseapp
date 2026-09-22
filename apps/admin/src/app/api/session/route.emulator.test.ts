@@ -13,10 +13,19 @@
  */
 import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { adminAuth } from "../../../lib/firebase-admin";
-import { POST, GET, DELETE, SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from "./route";
+import { getAdminAuth } from "../../../lib/firebase-admin";
 
-const AUTH_EMULATOR_HOST = process.env["FIREBASE_AUTH_EMULATOR_HOST"] ?? "localhost:9099";
+const adminAuth = getAdminAuth();
+import {
+  POST,
+  GET,
+  DELETE,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_MS,
+} from "./route";
+
+const AUTH_EMULATOR_HOST =
+  process.env["FIREBASE_AUTH_EMULATOR_HOST"] ?? "localhost:9099";
 
 async function mintIdToken(uid: string): Promise<string> {
   const customToken = await adminAuth.createCustomToken(uid);
@@ -28,7 +37,10 @@ async function mintIdToken(uid: string): Promise<string> {
       body: JSON.stringify({ token: customToken, returnSecureToken: true }),
     },
   );
-  if (!res.ok) throw new Error(`custom token exchange failed: ${res.status} ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(
+      `custom token exchange failed: ${res.status} ${await res.text()}`,
+    );
   const data = (await res.json()) as { idToken: string };
   return data.idToken;
 }
@@ -39,7 +51,11 @@ async function createTestUser(
   tenantId = "session-tenant",
 ): Promise<{ uid: string; idToken: string }> {
   const uid = `session-${label}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  await adminAuth.createUser({ uid, email: `${uid}@example.test`, password: "password123" });
+  await adminAuth.createUser({
+    uid,
+    email: `${uid}@example.test`,
+    password: "password123",
+  });
   await adminAuth.setCustomUserClaims(uid, { role, tenantId, studioId: null });
   const idToken = await mintIdToken(uid);
   return { uid, idToken };
@@ -54,13 +70,20 @@ function postRequest(idToken: unknown): NextRequest {
 }
 
 function getRequest(cookieValue?: string): NextRequest {
-  const headers: HeadersInit = cookieValue ? { Cookie: `${SESSION_COOKIE_NAME}=${cookieValue}` } : {};
+  const headers: HeadersInit = cookieValue
+    ? { Cookie: `${SESSION_COOKIE_NAME}=${cookieValue}` }
+    : {};
   return new NextRequest("http://localhost:3000/api/session", { headers });
 }
 
 function deleteRequest(cookieValue?: string): NextRequest {
-  const headers: HeadersInit = cookieValue ? { Cookie: `${SESSION_COOKIE_NAME}=${cookieValue}` } : {};
-  return new NextRequest("http://localhost:3000/api/session", { method: "DELETE", headers });
+  const headers: HeadersInit = cookieValue
+    ? { Cookie: `${SESSION_COOKIE_NAME}=${cookieValue}` }
+    : {};
+  return new NextRequest("http://localhost:3000/api/session", {
+    method: "DELETE",
+    headers,
+  });
 }
 
 describe("POST /api/session", () => {
@@ -87,11 +110,17 @@ describe("POST /api/session", () => {
   });
 
   it("accepts an admin and sets a correctly-flagged httpOnly session cookie", async () => {
-    const { idToken } = await createTestUser("admin", "admin", "cookie-flags-tenant");
+    const { idToken } = await createTestUser(
+      "admin",
+      "admin",
+      "cookie-flags-tenant",
+    );
     const res = await POST(postRequest(idToken));
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as { claims: { role: string; tenantId: string } };
+    const body = (await res.json()) as {
+      claims: { role: string; tenantId: string };
+    };
     expect(body.claims.role).toBe("admin");
     expect(body.claims.tenantId).toBe("cookie-flags-tenant");
 
@@ -148,7 +177,11 @@ describe("DELETE /api/session — logout and revocation", () => {
   });
 
   it("revokes the session: a session cookie issued before logout stops working after it", async () => {
-    const { idToken } = await createTestUser("admin3", "admin", "revoke-tenant");
+    const { idToken } = await createTestUser(
+      "admin3",
+      "admin",
+      "revoke-tenant",
+    );
     const postRes = await POST(postRequest(idToken));
     const sessionCookie = postRes.cookies.get(SESSION_COOKIE_NAME)?.value;
     expect(sessionCookie).toBeTruthy();

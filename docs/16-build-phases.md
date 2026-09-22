@@ -1,8 +1,10 @@
 # 16 — Build Phases
 
 **Principle:** Infrastructure before features. Studio operations before customer app. Test before ship.  
-**Current date:** 2026-08-16  
-**Status:** Architecture phase complete. Phase 0 not yet started.
+**Original plan date:** 2026-08-16  
+**Status:** Historical build plan. Implementation is active and has moved beyond many unchecked items. See [21 - Current Implementation Status](21-current-implementation-status.md) for the current evidence-based view.
+
+> The checkboxes below are the original forecast, not a maintained completion tracker. Do not infer that an unchecked item is absent from the codebase.
 
 ---
 
@@ -67,6 +69,7 @@
 - [ ] GitHub Actions emulator startup integrated
 
 **Phase 0 Definition of Done:**
+
 - A developer can clone the repo, run `turbo dev`, and have all three apps running locally connected to the dev Firebase project
 - CI passes on a PR that changes a shared-types interface (surfaces type errors in all consumers)
 - All three apps can be deployed to staging via GitHub Actions without manual steps
@@ -153,6 +156,7 @@
 - [ ] Integration tests: admin-only operations (price override, employee role change)
 
 **Phase 1 Definition of Done:**
+
 - Customer: sign up → add vehicle → browse services → book → receive push + WhatsApp confirmation → view live status → receive "vehicle ready" notification → view invoice
 - Studio: view job queue → open job card → advance status → add photos → record payment → generate invoice
 - Admin: view dashboard → confirm booking → view customer 360 → manage service catalogue
@@ -327,36 +331,41 @@
 
 These features are explicitly deferred. They require separate business decisions or significant additional investment. Do not begin these until Phase 4 is live and feedback is collected.
 
-| Feature | Reason Deferred |
-|---|---|
-| Car marketplace (buy/sell) | Separate business model; not core to automotive service |
-| Insurance API integration | Requires insurance broker partnerships and regulatory compliance |
-| Real-time driver tracking (pickup/drop) | High complexity; driver app needed; meaningful only at scale |
-| Loyalty points system | Beyond membership; requires separate programme design |
-| Gift cards | Payment and redemption complexity |
-| Franchise / partner studio onboarding | Multi-tenancy at scale; requires operations team |
-| WhatsApp two-way chat | Significant product scope; customer support staffing required |
-| EV-specific services | Service catalogue addition; no infrastructure change needed — simple Phase 3+ |
-| Advanced AI scheduling (bay optimization) | Low value at single studio; relevant at 10+ bays |
+| Feature                                   | Reason Deferred                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| Car marketplace (buy/sell)                | Separate business model; not core to automotive service                       |
+| Insurance API integration                 | Requires insurance broker partnerships and regulatory compliance              |
+| Real-time driver tracking (pickup/drop)   | High complexity; driver app needed; meaningful only at scale                  |
+| Loyalty points system                     | Beyond membership; requires separate programme design                         |
+| Gift cards                                | Payment and redemption complexity                                             |
+| Franchise / partner studio onboarding     | Multi-tenancy at scale; requires operations team                              |
+| WhatsApp two-way chat                     | Significant product scope; customer support staffing required                 |
+| EV-specific services                      | Service catalogue addition; no infrastructure change needed — simple Phase 3+ |
+| Advanced AI scheduling (bay optimization) | Low value at single studio; relevant at 10+ bays                              |
 
 ---
 
 ## 16.7 Team Requirements by Phase
 
 ### Phase 0–1 (Foundation through Core Operations)
+
 - 1 Senior Full-Stack Engineer (React Native + Firebase + Node.js) — technical lead
 - 1 Mid Engineer (Next.js admin web + Cloud Functions)
 - Design: freelance/contract designer (Figma screens for customer app and studio app)
 - Total: 2 engineers + 1 designer
 
 ### Phase 2–3 (Payments through Premium Features)
+
 Add:
+
 - 1 Mid Mobile Engineer (Expo/React Native focus)
 - 1 QA Engineer (manual + Maestro E2E automation)
 - Total: 3 engineers + 1 QA + 1 designer
 
 ### Phase 4 (Scale & Launch)
+
 Add:
+
 - 1 Backend Engineer (Cloud Functions performance, monitoring, security)
 - Designer: full-time or dedicated senior contract
 - Total: 4 engineers + 1 QA + 1 designer
@@ -367,35 +376,37 @@ Add:
 
 ### Firebase (monthly, single studio, Phase 1 scale)
 
-| Service | Estimate |
-|---|---|
-| Firestore reads/writes | $30–80/month |
-| Cloud Functions invocations | $10–30/month |
-| Firebase Storage | $5–15/month |
-| FCM | Free |
-| Firebase Auth | Free (up to 10k MAU/month) |
-| **Total Firebase** | **$45–125/month** |
+| Service                     | Estimate                   |
+| --------------------------- | -------------------------- |
+| Firestore reads/writes      | $30–80/month               |
+| Cloud Functions invocations | $10–30/month               |
+| Firebase Storage            | $5–15/month                |
+| FCM                         | Free                       |
+| Firebase Auth               | Free (up to 10k MAU/month) |
+| **Total Firebase**          | **$45–125/month**          |
 
 ### External Services (monthly)
 
-| Service | Estimate |
-|---|---|
-| Razorpay | 2% + 18% GST per transaction (no monthly fee) — TRANSACTION FEE |
-| WhatsApp messages | ~₹0.115/utility message — USAGE COST |
-| Resend (email) | FREE TIER (3,000/month); paid beyond |
-| Firebase Crashlytics | FREE |
-| UptimeRobot | FREE TIER (50 monitors) |
-| EAS Build | FREE TIER (15 builds/month); $99/month beyond — REQUIRES APPROVAL |
-| Vercel (admin web) | FREE TIER (Hobby); $20/month Pro — REQUIRES APPROVAL |
-| **Total external (development)** | **₹0/month** |
-| **Total external (production)** | **Transaction fees only until traffic exceeds free tiers** |
+| Service                          | Estimate                                                          |
+| -------------------------------- | ----------------------------------------------------------------- |
+| Razorpay                         | 2% + 18% GST per transaction (no monthly fee) — TRANSACTION FEE   |
+| WhatsApp messages                | ~₹0.115/utility message — USAGE COST                              |
+| Resend (email)                   | FREE TIER (3,000/month); paid beyond                              |
+| Firebase Crashlytics             | FREE                                                              |
+| UptimeRobot                      | FREE TIER (50 monitors)                                           |
+| EAS Build                        | FREE TIER (15 builds/month); $99/month beyond — REQUIRES APPROVAL |
+| Vercel (admin web)               | FREE TIER (Hobby); $20/month Pro — REQUIRES APPROVAL              |
+| **Total external (development)** | **₹0/month**                                                      |
+| **Total external (production)**  | **Transaction fees only until traffic exceeds free tiers**        |
 
 ### Total Monthly (Phase 1–2 production)
+
 Approximately **$220–385/month** in infrastructure, excluding payment processing fees.
 
 At higher scale (Phase 4, 1000+ active customers):
+
 - Firestore: $150–400/month
-- Cloud Functions: $50–100/month  
+- Cloud Functions: $50–100/month
 - Total Firebase: ~$200–500/month
 - Total with external: ~$500–900/month
 

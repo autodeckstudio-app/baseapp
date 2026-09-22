@@ -16,7 +16,7 @@
 // Now page access is gated by an httpOnly, non-JS-readable, explicitly
 // expiring, server-verified, revocable session cookie instead.
 import { NextResponse, type NextRequest } from "next/server";
-import { adminAuth } from "../../../lib/firebase-admin";
+import { getAdminAuth } from "../../../lib/firebase-admin";
 import type { AutoDeckClaims } from "@autodeck/auth";
 
 export const SESSION_COOKIE_NAME = "__session";
@@ -31,14 +31,18 @@ export const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 // and must never reach admin business-configuration screens.
 const ADMIN_APP_ROLES = new Set(["admin", "superadmin"]);
 
-function extractClaims(decoded: Record<string, unknown>): AutoDeckClaims | null {
+function extractClaims(
+  decoded: Record<string, unknown>,
+): AutoDeckClaims | null {
   const role = typeof decoded["role"] === "string" ? decoded["role"] : null;
-  const tenantId = typeof decoded["tenantId"] === "string" ? decoded["tenantId"] : null;
+  const tenantId =
+    typeof decoded["tenantId"] === "string" ? decoded["tenantId"] : null;
   if (!role || !ADMIN_APP_ROLES.has(role) || !tenantId) return null;
   return {
     role: role as AutoDeckClaims["role"],
     tenantId,
-    studioId: typeof decoded["studioId"] === "string" ? decoded["studioId"] : null,
+    studioId:
+      typeof decoded["studioId"] === "string" ? decoded["studioId"] : null,
   };
 }
 
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   let decoded;
   try {
-    decoded = await adminAuth.verifyIdToken(idToken, true);
+    decoded = await getAdminAuth().verifyIdToken(idToken, true);
   } catch {
     return NextResponse.json({ error: "invalid-token" }, { status: 401 });
   }
@@ -97,9 +101,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   let sessionCookie: string;
   try {
-    sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: SESSION_MAX_AGE_MS });
+    sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
+      expiresIn: SESSION_MAX_AGE_MS,
+    });
   } catch {
-    return NextResponse.json({ error: "session-create-failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "session-create-failed" },
+      { status: 500 },
+    );
   }
 
   const response = NextResponse.json({ claims });
@@ -120,7 +129,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let decoded;
   try {
-    decoded = await adminAuth.verifySessionCookie(cookie, true);
+    decoded = await getAdminAuth().verifySessionCookie(cookie, true);
   } catch {
     return NextResponse.json({ error: "invalid-session" }, { status: 401 });
   }
@@ -148,6 +157,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   const cookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (cookie) {
     try {
+      const adminAuth = getAdminAuth();
       const decoded = await adminAuth.verifySessionCookie(cookie);
       await adminAuth.revokeRefreshTokens(decoded.uid);
     } catch {

@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rm -rf .expo dist"
   },
   "dependencies": {

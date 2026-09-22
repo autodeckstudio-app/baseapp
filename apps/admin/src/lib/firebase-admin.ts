@@ -5,7 +5,13 @@
 // client bundle. Do not import this from any "use client" component or any
 // module reachable from one: the service-account credential path below
 // must never reach browser JS.
-import { getApps, initializeApp, cert, applicationDefault, type App } from "firebase-admin/app";
+import {
+  getApps,
+  initializeApp,
+  cert,
+  applicationDefault,
+  type App,
+} from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 // Cloud Run and Cloud Functions Gen2 — and Firebase App Hosting, which
@@ -29,7 +35,9 @@ function initAdminApp(): App {
   // SDK auto-detects FIREBASE_AUTH_EMULATOR_HOST and talks to the emulator
   // without needing real credentials.
   if (process.env["FIREBASE_AUTH_EMULATOR_HOST"]) {
-    return initializeApp({ projectId: process.env["GCLOUD_PROJECT"] ?? "autodeck-dev" });
+    return initializeApp({
+      projectId: process.env["GCLOUD_PROJECT"] ?? "autodeck-dev",
+    });
   }
 
   // Real deployment. This app's hosting target is not yet decided (no
@@ -46,7 +54,9 @@ function initAdminApp(): App {
   //     account — no explicit credential needed there.
   const serviceAccountJson = process.env["FIREBASE_SERVICE_ACCOUNT_KEY"];
   if (serviceAccountJson) {
-    return initializeApp({ credential: cert(JSON.parse(serviceAccountJson) as object) });
+    return initializeApp({
+      credential: cert(JSON.parse(serviceAccountJson) as object),
+    });
   }
   if (isGcpNativeCompute()) {
     return initializeApp({ credential: applicationDefault() });
@@ -66,4 +76,13 @@ function initAdminApp(): App {
   );
 }
 
-export const adminAuth = getAuth(initAdminApp());
+// Resolve Admin Auth lazily. Importing this module happens during `next build`
+// while Next.js collects route metadata; credentials are a runtime concern and
+// must not be required merely to compile the admin application.
+//
+// Misconfigured non-GCP deployments still fail loudly on the first session
+// request, using initAdminApp()'s actionable error. GCP-native deployments and
+// the Auth emulator keep their existing credential paths.
+export function getAdminAuth() {
+  return getAuth(initAdminApp());
+}
