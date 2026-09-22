@@ -81,6 +81,9 @@ importers:
       '@autodeck/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@autodeck/experience':
+        specifier: workspace:*
+        version: link:../../packages/experience
       '@autodeck/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -267,6 +270,22 @@ importers:
         version: 2.1.9(@types/node@22.20.1)(lightningcss@1.27.0)(terser@5.50.0)
 
   packages/database:
+    dependencies:
+      '@autodeck/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@autodeck/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(lightningcss@1.27.0)(terser@5.50.0)
+
+  packages/experience:
     dependencies:
       '@autodeck/core':
         specifier: workspace:*

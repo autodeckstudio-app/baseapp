@@ -1,0 +1,5 @@
+{
+  "extends": "@autodeck/config/typescript/base",
+  "compilerOptions": { "outDir": "dist", "rootDir": "src" },
+  "include": ["src"]
+}

@@ -61,3 +61,10 @@ export function listenToJobsForVehicle(
     onError,
   );
 }
+
+
+/** Real-time customer job feed used by the vehicle-first Home projection. */
+export function listenToMyJobs(tenantId: string, customerId: string, onData: (jobs: ServiceJob[]) => void, onError: (err: Error) => void): Unsubscribe {
+  const q = query(collection(db, COLLECTIONS.jobs()), where("tenantId", "==", tenantId), where("customerId", "==", customerId), orderBy("updatedAt", "desc"));
+  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as ServiceJob)), onError);
+}

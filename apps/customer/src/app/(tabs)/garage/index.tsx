@@ -5,6 +5,7 @@ import type { Vehicle } from "@autodeck/core";
 import { colors, spacing, radius, VehicleCard, EmptyState, LoadingState, ErrorState, Button } from "@autodeck/ui";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { setActiveVehicleId } from "../../../lib/experience-preferences";
 
 export default function VehiclesScreen() {
   const auth = useAuth();
@@ -49,7 +50,7 @@ export default function VehiclesScreen() {
         renderItem={({ item }) => (
           <VehicleCard
             vehicle={item}
-            onPress={() => router.push({ pathname: "/(tabs)/garage/[id]", params: { id: item.id } })}
+            onPress={() => { if (auth.status === "ready") void setActiveVehicleId(auth.user.uid, item.id); router.push({ pathname: "/(tabs)/garage/[id]", params: { id: item.id } }); }}
           />
         )}
         ListEmptyComponent={

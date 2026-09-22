@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { projectVisitTimeline } from "@autodeck/experience";
 import {
   colors,
   spacing,
@@ -168,6 +169,7 @@ export default function VehicleDetailScreen() {
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
   const mostRecentJob = jobs[0] ?? null;
+  const visitTimeline = mostRecentJob ? projectVisitTimeline(mostRecentJob) : [];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -232,6 +234,26 @@ export default function VehicleDetailScreen() {
                 <Text style={{ ...typography.body, color: colors.textMuted }}>No service history yet</Text>
               )}
             </Section>
+
+            {mostRecentJob && mostRecentJob.status !== "DELIVERED" && (
+              <>
+                <Text style={sectionTitle}>Live Visit</Text>
+                <Section>
+                  {visitTimeline.map((step, index) => (
+                    <View key={step.status} style={{ flexDirection: "row", minHeight: 44 }}>
+                      <View style={{ width: 20, alignItems: "center" }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: step.state === "upcoming" ? colors.border : colors.accent }} />
+                        {index < visitTimeline.length - 1 && <View style={{ width: 1, flex: 1, backgroundColor: step.state === "reached" ? colors.accent : colors.border }} />}
+                      </View>
+                      <View style={{ flex: 1, paddingLeft: spacing.sm, paddingBottom: spacing.sm }}>
+                        <Text style={{ ...typography.bodyMedium, color: step.state === "upcoming" ? colors.textMuted : colors.textPrimary }}>{step.label}</Text>
+                        {step.changedAt && <Text style={{ ...typography.caption, color: colors.textMuted }}>{formatDateShort(step.changedAt)}</Text>}
+                      </View>
+                    </View>
+                  ))}
+                </Section>
+              </>
+            )}
 
             <Text style={sectionTitle}>Upcoming Booking</Text>
             <Section>
