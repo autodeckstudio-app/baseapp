@@ -1,0 +1,130 @@
+/*
+ * AutoDeck experience layer (web). Values come from CSS variables emitted by
+ * <ThemeStyle/> (packages/ui/src/theme). Classes are prefixed ad- and are
+ * opt-in, so existing screens are untouched until they migrate (M2+).
+ */
+
+/* ── Glass: lit top edge, blurred translucent fill, shadow beneath ── */
+.ad-glass {
+  position: relative;
+  background: var(--ad-glass-fallback);
+  border: 1px solid var(--ad-glass-edge);
+  box-shadow: inset 0 1px 0 var(--ad-glass-sheen);
+  color: var(--ad-text-primary);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ad-glass {
+    background: var(--ad-glass-fill);
+    backdrop-filter: var(--ad-glass-blur);
+    -webkit-backdrop-filter: var(--ad-glass-blur);
+  }
+  .ad-glass--lit { background: var(--ad-glass-fill-lit); }
+  .ad-glass--warm { background: var(--ad-glass-fill-warm); }
+  .ad-glass--cool { background: var(--ad-glass-fill-cool); }
+  .ad-glass-chrome {
+    background: var(--ad-glass-chrome);
+    backdrop-filter: var(--ad-glass-chrome-blur);
+    -webkit-backdrop-filter: var(--ad-glass-chrome-blur);
+  }
+}
+/* Reduced transparency: solid fill, keep edge and sheen. */
+@media (prefers-reduced-transparency: reduce) {
+  .ad-glass,
+  .ad-glass--lit,
+  .ad-glass--warm,
+  .ad-glass--cool,
+  .ad-glass-chrome {
+    background: var(--ad-glass-fallback);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+.ad-glass-chrome {
+  background: var(--ad-glass-fallback);
+  border-bottom: 1px solid var(--ad-glass-edge);
+}
+.ad-glass--raised { box-shadow: inset 0 1px 0 var(--ad-glass-sheen), var(--ad-shadow-raised); }
+.ad-glass--tone-accent { border-color: var(--ad-accent); }
+.ad-glass--tone-premium { border-color: var(--ad-premium); }
+.ad-glass--tone-danger { border-color: var(--ad-danger); }
+.ad-glass--tone-warning { border-color: var(--ad-warning); }
+/* Glass never sits on glass: a nested pane drops its own translucency. */
+.ad-glass .ad-glass {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* ── Ambient field ── */
+.ad-ambient-root {
+  position: relative;
+  min-height: 100vh;
+  background: var(--ad-canvas);
+  color: var(--ad-text-primary);
+  isolation: isolate;
+}
+.ad-ambient {
+  position: fixed;
+  inset: -6vmax;
+  z-index: -1;
+  background: var(--ad-ambient);
+  animation: ad-drift 32s var(--ad-ease) infinite alternate;
+  pointer-events: none;
+}
+.ad-ambient-content { position: relative; }
+@keyframes ad-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(6px, -6px, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ad-ambient { animation: none; }
+}
+
+/* ── Accent action ── */
+.ad-button {
+  min-height: var(--ad-hit);
+  padding: 0 var(--ad-space-gap);
+  border-radius: var(--ad-radius-pill);
+  border: 1px solid var(--ad-glass-edge);
+  background: var(--ad-glass-fallback);
+  color: var(--ad-text-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform var(--ad-dur-tick) var(--ad-ease), background var(--ad-dur-tick) var(--ad-ease);
+}
+.ad-button--primary {
+  background: var(--ad-accent-grad);
+  color: var(--ad-text-on-accent);
+  border-color: transparent;
+}
+.ad-button:focus-visible {
+  outline: 2px solid var(--ad-accent-strong);
+  outline-offset: 2px;
+}
+.ad-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ad-button:active:not(:disabled) { transform: scale(0.98); }
+
+/* ── Status chip (pill only for status) ── */
+.ad-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ad-space-hair);
+  padding: 2px var(--ad-space-breath);
+  border-radius: var(--ad-radius-pill);
+  border: 1px solid var(--ad-border-subtle);
+  font-size: 12px;
+  color: var(--ad-text-secondary);
+}
+.ad-chip--accent { color: var(--ad-accent); border-color: var(--ad-accent-haze); background: var(--ad-accent-haze); }
+.ad-chip--premium { color: var(--ad-premium); border-color: var(--ad-premium-haze); background: var(--ad-premium-haze); }
+.ad-chip--danger { color: var(--ad-danger); border-color: currentColor; }
+.ad-chip--inactive { color: var(--ad-inactive); }
+
+/* ── Type roles ── */
+.ad-display { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; font-size: 40px; line-height: 44px; letter-spacing: -0.8px; }
+.ad-title { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 24px; line-height: 30px; letter-spacing: -0.3px; }
+.ad-label { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 11px; line-height: 14px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
+.ad-data { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.ad-muted { color: var(--ad-text-secondary); }

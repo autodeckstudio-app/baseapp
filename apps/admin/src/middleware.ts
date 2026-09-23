@@ -22,8 +22,9 @@ export function middleware(request: NextRequest): NextResponse {
   return NextResponse.next();
 }
 
-// Excludes /login (must stay reachable to actually sign in), /api (session
+// Excludes /login (must stay reachable to actually sign in), /design (the
+// static theme reference - tokens and primitives only, no data), /api (session
 // exchange endpoints must stay reachable pre-cookie), and Next internals.
 export const config = {
-  matcher: ["/((?!login|api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!login|design|api|_next/static|_next/image|favicon.ico).*)"],
 };

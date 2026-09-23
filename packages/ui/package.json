@@ -6,7 +6,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./tokens": "./src/tokens/index.ts"
+    "./tokens": "./src/tokens/index.ts",
+    "./theme": "./src/theme/index.ts",
+    "./native": "./src/native/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -14,7 +16,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@autodeck/core": "workspace:*"
+    "@autodeck/core": "workspace:*",
+    "expo-blur": "~14.1.5"
   },
   "devDependencies": {
     "@autodeck/config": "workspace:*",
