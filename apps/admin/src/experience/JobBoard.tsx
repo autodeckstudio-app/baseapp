@@ -45,18 +45,18 @@ export function JobBoard({ jobs, loading, onOpen }: { jobs: BoardJob[]; loading?
             ) : (
               items.map((j) => (
                 <button key={j.id} type="button" className="ad-job" onClick={() => onOpen(j.id)}>
-                  <span className="ad-job-plate">{j.plate}</span>
+                  <span className="ad-job-top">
+                    <span className="ad-job-plate">{j.plate}</span>
+                    <StatusBadge label={j.payment} />
+                  </span>
                   <span className="ad-job-who">{j.customer}</span>
                   <span className="ad-job-what">
                     {j.service}
                     {j.bay ? ` · Bay ${j.bay}` : ""}
                   </span>
                   <span className="ad-job-foot">
-                    <span>
-                      {j.when}
-                      {j.walkIn ? " · Walk-in" : ""}
-                    </span>
-                    <StatusBadge label={j.payment} />
+                    <span>{j.when}</span>
+                    {j.walkIn && <span className="ad-chip">Walk-in</span>}
                   </span>
                 </button>
               ))
