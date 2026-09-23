@@ -288,7 +288,11 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       setError(
         code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request"
           ? null
-          : "Google sign-in failed. Please try again.",
+          : code === "auth/unauthorized-domain"
+            ? `Sign-in isn't enabled for ${window.location.hostname} yet. Add it under Firebase Authentication > Settings > Authorized domains.`
+            : code === "auth/operation-not-allowed"
+              ? "Google sign-in isn't turned on for this project yet."
+              : `Google sign-in failed (${code ?? "unknown error"}). Please try again.`,
       );
       setLoading(false);
       throw new Error("sign-in-failed");
