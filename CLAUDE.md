@@ -8,9 +8,9 @@ Repository and architecture setup only.
 
 Do not implement application features until the architecture, product specification, repository structure, environments, security model, and development workflow have been approved.
 
-## Existing AutoModz product
+## Existing legacy source app product
 
-The existing AutoModz PWA is a separate product and must remain untouched.
+The existing legacy source app PWA is a separate product and must remain untouched.
 
 It may be inspected later as a reference for existing business logic, services, pricing, workflows, and requirements.
 
@@ -27,12 +27,12 @@ The product should provide GoMechanic-level automotive service functionality whi
 - Native iOS and Android applications.
 - No PWA wrapper for the customer or studio applications.
 - Admin remains web-based.
-- Separate production infrastructure from the existing AutoModz PWA.
+- Separate production infrastructure from the existing legacy source app PWA.
 - Strong role-based permissions.
 - Operational data must be protected from unauthorized customer modification.
 - All important operational mutations must be auditable.
 - Do not copy GoMechanic's visual identity or implementation.
-- Do not preserve existing AutoModz features merely because they already exist.
+- Do not preserve existing legacy source app features merely because they already exist.
 - Every existing feature must eventually be classified as KEEP, MODIFY, REBUILD, REPLACE, or REMOVE.
 - Do not begin feature implementation before the architecture audit is complete.
 

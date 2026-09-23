@@ -95,7 +95,7 @@
 ### Phase 1b: Service Catalogue & Booking (Weeks 7–10)
 
 - [ ] Admin web: service catalogue management (add/edit/toggle services)
-- [ ] Seed service catalogue in dev + staging (PPF, ceramic, washing, coating from AutoModz)
+- [ ] Seed service catalogue in dev + staging (PPF, ceramic, washing, coating from legacy source app)
 - [ ] Customer app: service browser (category grid, service cards)
 - [ ] Customer app: service detail (description, scope selector, add-ons, price preview)
 - [ ] Customer app: availability slot picker (calls Cloud Function)

@@ -14,7 +14,7 @@
 **Context:**
 AutoDeck requires native iOS and Android applications for both customers and studio staff. The choice of mobile framework is the most consequential early technical decision — it determines hiring requirements, development velocity, performance characteristics, and long-term maintainability.
 
-The existing AutoModz team (and this codebase) is TypeScript-native. The admin web and Cloud Functions are Next.js/Node.js TypeScript. A framework that shares the same language reduces context switching and enables code sharing via monorepo packages.
+The existing legacy source app team (and this codebase) is TypeScript-native. The admin web and Cloud Functions are Next.js/Node.js TypeScript. A framework that shares the same language reduces context switching and enables code sharing via monorepo packages.
 
 **Decision:**
 React Native with Expo SDK (managed workflow initially, bare workflow available if needed). Expo Router for file-based navigation. EAS (Expo Application Services) for native builds, OTA updates, and App Store/Play Store submission.
@@ -46,10 +46,10 @@ React Native with Expo SDK (managed workflow initially, bare workflow available 
 **Date:** 2026-08-16
 
 **Context:**
-AutoDeck needs: authentication (with phone OTP), a real-time database (live job status tracking is a core feature), file storage (vehicle photos, warranty certificates), push notifications, and serverless compute. The team already has Firebase experience from AutoModz.
+AutoDeck needs: authentication (with phone OTP), a real-time database (live job status tracking is a core feature), file storage (vehicle photos, warranty certificates), push notifications, and serverless compute. The team already has Firebase experience from legacy source app.
 
 **Decision:**
-Firebase Auth + Firestore + Firebase Storage + Cloud Functions (Node.js 20) + Firebase Cloud Messaging (FCM). Three separate Firebase projects: `autodeck-dev`, `autodeck-staging`, `autodeck-prod`. Completely separate from AutoModz's Firebase project.
+Firebase Auth + Firestore + Firebase Storage + Cloud Functions (Node.js 20) + Firebase Cloud Messaging (FCM). Three separate Firebase projects: `autodeck-dev`, `autodeck-staging`, `autodeck-prod`. Completely separate from legacy source app's Firebase project.
 
 **Alternatives Considered:**
 
@@ -78,7 +78,7 @@ Firebase Auth + Firestore + Firebase Storage + Cloud Functions (Node.js 20) + Fi
 **Date:** 2026-08-16
 
 **Context:**
-AutoModz had well-designed Firestore security rules but no validation layer between the client and Firestore for API calls. The result: 37 API routes with zero rate limiting and zero schema validation. Silent data corruption on malformed input, and no defence against brute force or abuse.
+legacy source app had well-designed Firestore security rules but no validation layer between the client and Firestore for API calls. The result: 37 API routes with zero rate limiting and zero schema validation. Silent data corruption on malformed input, and no defence against brute force or abuse.
 
 Additionally, some business logic (booking bay assignment, membership wash deduction, pricing) must execute atomically and cannot be split across client and server.
 
@@ -91,7 +91,7 @@ Every Cloud Function must implement, in order: auth verification → role check 
 
 *Firestore security rules only (direct client writes):*
 - Pros: Lower latency; simpler architecture
-- Cons: Rules cannot enforce rate limiting, schema validation, complex business logic, or cross-document atomicity; AutoModz proved this is insufficient; client can attempt invalid operations that are expensive even when rejected
+- Cons: Rules cannot enforce rate limiting, schema validation, complex business logic, or cross-document atomicity; legacy source app proved this is insufficient; client can attempt invalid operations that are expensive even when rejected
 - Rejected
 
 *Custom REST API (separate server):*
@@ -113,7 +113,7 @@ Every Cloud Function must implement, in order: auth verification → role check 
 **Date:** 2026-08-16
 
 **Context:**
-AutoModz's Firestore security rules check the user's role by calling `get(resource.role from users/{uid})` on every rule evaluation. This means every document read triggers an additional Firestore read to check the user's role — doubling the read cost and adding latency to every security check.
+legacy source app's Firestore security rules check the user's role by calling `get(resource.role from users/{uid})` on every rule evaluation. This means every document read triggers an additional Firestore read to check the user's role — doubling the read cost and adding latency to every security check.
 
 AutoDeck needs a faster, more scalable role enforcement mechanism.
 
@@ -122,10 +122,10 @@ User roles are stored in Firebase custom claims: `{ role: 'customer' | 'studio' 
 
 **Alternatives Considered:**
 
-*Firestore document reads in rules (AutoModz approach):*
+*Firestore document reads in rules (legacy source app approach):*
 - Pros: Role always up-to-date; no cache delay
 - Cons: Every security rule evaluation triggers an extra Firestore read; doubles read costs; adds 20-50ms latency to every request
-- Rejected — explicit fix from AutoModz lesson
+- Rejected — explicit fix from legacy source app lesson
 
 *Separate authentication service (Auth0, Clerk):*
 - Pros: More sophisticated role and permission management
@@ -183,7 +183,7 @@ Turborepo monorepo with the following workspace structure:
 **Date:** 2026-08-16 (revised 2026-08-17)
 
 **Context:**
-AutoModz has no payment gateway — all payments are manual (cash/UPI at counter). AutoDeck needs a real payment gateway for the India market (Ahmedabad, Gujarat). The dominant payment methods in India are UPI, cards, and net banking. Membership recurring billing requires UPI AutoPay (NACH mandate), which is the India-standard recurring payment mechanism.
+legacy source app has no payment gateway — all payments are manual (cash/UPI at counter). AutoDeck needs a real payment gateway for the India market (Ahmedabad, Gujarat). The dominant payment methods in India are UPI, cards, and net banking. Membership recurring billing requires UPI AutoPay (NACH mandate), which is the India-standard recurring payment mechanism.
 
 **Cost classification:** TRANSACTION FEE only — 2% + 18% GST per transaction. No setup fee. No monthly subscription.
 
@@ -202,7 +202,7 @@ Razorpay as the primary payment gateway. V1 payment method: Razorpay Payment Lin
 - Cons: Weaker developer API; less suitable for B2B SaaS payment orchestration; Razorpay has better documentation and webhook reliability
 - Rejected
 
-*Manual UPI QR only (current AutoModz approach):*
+*Manual UPI QR only (current legacy source app approach):*
 - Pros: Zero integration cost
 - Cons: No automatic payment confirmation; studio must manually verify every payment; not scalable; no refund automation
 - Rejected — Razorpay Payment Links solve the same UX pattern but with full webhook confirmation
@@ -223,10 +223,10 @@ Razorpay as the primary payment gateway. V1 payment method: Razorpay Payment Lin
 **Date:** 2026-08-16
 
 **Context:**
-AutoModz appears to have used a single Firebase project across environments (or minimal environment separation). This creates risk: developer code can accidentally affect production data; test writes appear in production analytics; security rules changes tested in dev can affect prod.
+legacy source app appears to have used a single Firebase project across environments (or minimal environment separation). This creates risk: developer code can accidentally affect production data; test writes appear in production analytics; security rules changes tested in dev can affect prod.
 
 **Decision:**
-Three Firebase projects: `autodeck-dev`, `autodeck-staging`, `autodeck-prod`. These are completely separate from any AutoModz Firebase projects. No shared resources between AutoDeck and AutoModz.
+Three Firebase projects: `autodeck-dev`, `autodeck-staging`, `autodeck-prod`. These are completely separate from any legacy source app Firebase projects. No shared resources between AutoDeck and legacy source app.
 
 **Alternatives Considered:**
 
@@ -244,7 +244,7 @@ Three Firebase projects: `autodeck-dev`, `autodeck-staging`, `autodeck-prod`. Th
 - Three sets of credentials to manage (mitigated by EAS Secrets and Firebase environment config)
 - Firestore security rules must be deployed to all three projects (handled by GitHub Actions per-environment deploy)
 - Firebase Emulator replaces the dev project for most local development — dev project is for integration testing with real Firebase APIs
-- Completely isolated from AutoModz: no risk of AutoDeck code touching AutoModz data
+- Completely isolated from legacy source app: no risk of AutoDeck code touching legacy source app data
 
 ---
 
@@ -288,7 +288,7 @@ Firestore for all operational data (bookings, jobs, customers, vehicles, members
 **Date:** 2026-08-16
 
 **Context:**
-AutoModz uses Google Sign-In only. This is a mistake for the Indian market where phone-number identity is the dominant authentication pattern for automotive and service apps. Phone OTP eliminates friction for customers who do not use Google accounts, and is the standard approach for apps like GoMechanic, Zomato, Swiggy, and Ola.
+legacy source app uses Google Sign-In only. This is a mistake for the Indian market where phone-number identity is the dominant authentication pattern for automotive and service apps. Phone OTP eliminates friction for customers who do not use Google accounts, and is the standard approach for apps like GoMechanic, Zomato, Swiggy, and Ola.
 
 Apple Sign-In is only required by the App Store when an app offers third-party social login (Google, Facebook, etc.). If AutoDeck uses phone OTP exclusively in V1 — with no social login — Apple Sign-In is NOT required and adds unnecessary complexity.
 
@@ -299,7 +299,7 @@ By not offering social login in V1, Apple Sign-In is not required, avoiding appr
 
 **Alternatives Considered:**
 
-*Google Sign-In only (AutoModz approach):*
+*Google Sign-In only (legacy source app approach):*
 - Rejected — excludes non-Google users; phone is the universal identity for Indian service customers
 
 *Apple Sign-In as required secondary:*
@@ -312,7 +312,7 @@ By not offering social login in V1, Apple Sign-In is not required, avoiding appr
 - India country code (+91) pre-selected in phone number entry field
 - Firebase Auth handles OTP SMS delivery — no external SMS provider needed for authentication
 - First-time login: OTP → profile setup → done. No email required.
-- Customer re-authentication on AutoDeck (after migrating from AutoModz): phone number is the linking key — if the customer's phone number matches a migrated record, their history is linked automatically
+- Customer re-authentication on AutoDeck (after migrating from legacy source app): phone number is the linking key — if the customer's phone number matches a migrated record, their history is linked automatically
 - If Google/Apple social login is added in V2+, Apple Sign-In must be added at the same time (App Store requirement)
 
 ---
@@ -323,7 +323,7 @@ By not offering social login in V1, Apple Sign-In is not required, avoiding appr
 **Date:** 2026-08-16
 
 **Context:**
-AutoModz had the right architectural instinct ("terms captured at seal") but the seal path never ran in production. The risk: a customer's warranty record could theoretically change if an admin later edits the service catalogue. A customer with a 5-year PPF warranty should not see that warranty change to 3 years because the business changed its pricing.
+legacy source app had the right architectural instinct ("terms captured at seal") but the seal path never ran in production. The risk: a customer's warranty record could theoretically change if an admin later edits the service catalogue. A customer with a 5-year PPF warranty should not see that warranty change to 3 years because the business changed its pricing.
 
 This principle extends beyond warranties: price breakdowns in completed bookings, invoice line items, and job status histories are all historical facts that must not change.
 
@@ -364,7 +364,7 @@ Implementation: Firestore security rules `deny write` on these documents/fields 
 **Date:** 2026-08-17
 
 **Context:**
-AutoDeck is designed as an automotive service operating system, not a single-studio product. AutoModz is the first tenant. Future studios/businesses must be addable without data migration or platform rewrite.
+AutoDeck is designed as an automotive service operating system, not a single-studio product. legacy source app is the first tenant. Future studios/businesses must be addable without data migration or platform rewrite.
 
 **Decision:**
 Single Firestore database shared across all tenants. Every tenant-scoped document carries a `tenantId` field. Firestore security rules enforce `request.auth.token.tenantId === resource.data.tenantId`. Firebase custom claims carry `{ role, tenantId, studioId }`. Cloud Functions verify `tenantId` from the claim before every write — never from the request body.
@@ -397,10 +397,10 @@ Single Firestore database shared across all tenants. Every tenant-scoped documen
 **Date:** 2026-08-17
 
 **Context:**
-AutoDeck's first operational deployment is AutoModz Detailing in Ahmedabad, Gujarat, India. All V1 architecture decisions must be optimized for this context.
+AutoDeck's first operational deployment is legacy source app Detailing in Ahmedabad, Gujarat, India. All V1 architecture decisions must be optimized for this context.
 
 **Decision:**
-- **Currency:** INR (Indian Rupee) — configurable per tenant, INR is AutoModz default
+- **Currency:** INR (Indian Rupee) — configurable per tenant, INR is legacy source app default
 - **Timezone:** Asia/Kolkata (IST, UTC+5:30) — configurable per studio
 - **Phone country:** India +91 — pre-selected in phone entry UI
 - **Firebase region:** `asia-south1` (Mumbai) — lowest latency for India; decided at database creation, cannot change

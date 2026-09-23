@@ -307,7 +307,7 @@ type PriceBreakdown = {
 
 **Rules:**
 - Membership discount is exclusive with promotional codes (cannot stack)
-- Tax rate is configurable per tenant/studio — not hardcoded globally; 18% GST is the AutoModz V1 default
+- Tax rate is configurable per tenant/studio — not hardcoded globally; 18% GST is the legacy source app V1 default
 - `taxRatePercent` and `taxDescription` are snapshotted at booking creation; changing tax config later does not rewrite historical bookings
 - Pickup/drop fee: fixed per-booking fee (configurable in studio settings)
 - Price breakdown is snapshotted into the booking at creation — immutable thereafter

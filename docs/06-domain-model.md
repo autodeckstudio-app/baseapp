@@ -16,8 +16,8 @@ Definitive data dictionary for AutoDeck OS. All Firestore collection paths, fiel
 
 | Field | Type | Notes |
 |---|---|---|
-| id | string | e.g. "automodz" |
-| name | string | "AutoModz Detailing" |
+| id | string | e.g. "autodeck" |
+| name | string | "legacy source app Detailing" |
 | contactEmail | string | |
 | contactPhone | string | |
 | plan | 'starter' \| 'growth' \| 'enterprise' | Future SaaS billing tier |
@@ -26,7 +26,7 @@ Definitive data dictionary for AutoDeck OS. All Firestore collection paths, fiel
 
 **Access:** Read/write by superadmin only. Tenant admin reads their own record.
 
-AutoModz is the first tenant: `tenantId = "automodz"`.
+legacy source app is the first tenant: `tenantId = "autodeck"`.
 
 ---
 
@@ -272,7 +272,7 @@ interface Service {
   brand: string | null;            // e.g. "LLumar", "Kovalent"
   description: string;
   basePrice: number;               // minor currency units (paise for INR) — never decimal
-  currency: string;                // ISO 4217 — "INR" (tenant-configurable; AutoModz default)
+  currency: string;                // ISO 4217 — "INR" (tenant-configurable; legacy source app default)
   estimatedDurationMinutes: number;
   warrantyTemplate: {              // TEMPLATE ONLY — not copied verbatim to completed warranties
     period: number;

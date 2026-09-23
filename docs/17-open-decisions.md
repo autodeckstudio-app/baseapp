@@ -53,7 +53,7 @@ These are decisions that must be made before or during implementation. Each has 
 
 **Context:** Firestore region is fixed at database creation and cannot be changed. AutoDeck's launch market is Ahmedabad, Gujarat, India. `asia-south1` (Mumbai) provides the lowest latency for Indian users and is the correct choice.
 
-**Decision rationale:** India market → India region. AutoModz also uses `asia-south1`. No data residency reason to deviate.
+**Decision rationale:** India market → India region. legacy source app also uses `asia-south1`. No data residency reason to deviate.
 
 **Owner:** Technical lead  
 **Must decide by:** Decided. Implement at project creation.
@@ -87,7 +87,7 @@ These are decisions that must be made before or during implementation. Each has 
 1. React Native + Expo (TypeScript) — recommended
 2. Flutter (Dart)
 
-**Recommendation:** React Native + Expo. Primary reason: existing team is TypeScript-proficient from the AutoModz Next.js codebase. Expo SDK covers all required native capabilities (camera, notifications, location, secure storage). EAS gives production-grade build and OTA update pipeline.
+**Recommendation:** React Native + Expo. Primary reason: existing team is TypeScript-proficient from the legacy source app Next.js codebase. Expo SDK covers all required native capabilities (camera, notifications, location, secure storage). EAS gives production-grade build and OTA update pipeline.
 
 **Flutter is not a wrong choice** — it has excellent performance and more consistent cross-platform rendering. If the hired mobile engineer has deep Flutter experience and minimal React Native experience, Flutter is worth reconsidering.
 
@@ -164,7 +164,7 @@ These are decisions that must be made before or during implementation. Each has 
 3. Wati — ₹2,499/month — SUBSCRIPTION — REQUIRES APPROVAL
 4. Interakt — ₹2,499/month — SUBSCRIPTION — REQUIRES APPROVAL
 
-**Recommendation:** Meta Cloud API directly. At AutoModz's V1 volume (10-20 jobs/day), meta API is straightforward and has zero monthly fee. BSPs are not justified until messaging volume creates management overhead.
+**Recommendation:** Meta Cloud API directly. At legacy source app's V1 volume (10-20 jobs/day), meta API is straightforward and has zero monthly fee. BSPs are not justified until messaging volume creates management overhead.
 
 **Note:** Register message templates at least 6-8 weeks before launch regardless of provider choice — Meta approval takes time.
 
@@ -177,13 +177,13 @@ These are decisions that must be made before or during implementation. Each has 
 
 **Decision:** What are AutoDeck's membership tiers, prices in INR, names, and inclusions?
 
-**Context:** AutoModz has Silver/Gold/Platinum at ₹1,499–5,999/month. These will be the starting reference point for AutoDeck V1 membership pricing. The tier names, price points, wash inclusions, and discount percentages are business decisions. They affect the data model and booking engine.
+**Context:** legacy source app has Silver/Gold/Platinum at ₹1,499–5,999/month. These will be the starting reference point for AutoDeck V1 membership pricing. The tier names, price points, wash inclusions, and discount percentages are business decisions. They affect the data model and booking engine.
 
 **Inputs to consider:**
 - Current operating costs (wash service cost per session at the Ahmedabad studio)
 - Number of washes a customer realistically uses per month
 - Competitive pricing in Ahmedabad premium detailing market
-- AutoModz existing membership pricing (reference, not binding)
+- legacy source app existing membership pricing (reference, not binding)
 
 **Recommendation template (starting point for discussion):**
 | Tier | Price | Washes | Discount |
@@ -203,13 +203,13 @@ These numbers are illustrative. Business owner must set final pricing. Prices ar
 
 **Decision:** What services does AutoDeck launch with, at what INR prices?
 
-**Context:** AutoModz has INR-priced PPF, ceramic, washing, and coating services. AutoDeck V1 will be seeded with the same service catalogue (INR pricing) as AutoModz, adjusted to match the studio's current operational offerings and pricing.
+**Context:** legacy source app has INR-priced PPF, ceramic, washing, and coating services. AutoDeck V1 will be seeded with the same service catalogue (INR pricing) as legacy source app, adjusted to match the studio's current operational offerings and pricing.
 
 **Key questions:**
-- Which PPF brands will AutoDeck carry? (LLumar, Garware, XPEL, 3M — same as AutoModz or different?)
+- Which PPF brands will AutoDeck carry? (LLumar, Garware, XPEL, 3M — same as legacy source app or different?)
 - Which ceramic coating products? (Kovalent, Graphene Matrix, Borophene, Ceramic Pro, IGL?)
-- Will washing be offered at the same INR pricing as AutoModz from day one?
-- Are there services the studio wants to add that aren't in AutoModz?
+- Will washing be offered at the same INR pricing as legacy source app from day one?
+- Are there services the studio wants to add that aren't in legacy source app?
 
 **Note:** Service catalogue prices are mutable (admin can change them). But warranty templates attached to services are snapshotted at job completion — so pricing decisions affect future warranty records.
 
@@ -222,7 +222,7 @@ These numbers are illustrative. Business owner must set final pricing. Prices ar
 
 **Decision:** Will AutoDeck operate its own pickup/drop (employed/contracted drivers) or use a third-party logistics service?
 
-**Context:** AutoModz appears to do its own pickup/drop. At scale, this is operationally complex. Third-party logistics services could handle this but add integration complexity and cost.
+**Context:** legacy source app appears to do its own pickup/drop. At scale, this is operationally complex. Third-party logistics services could handle this but add integration complexity and cost.
 
 **Options:**
 1. Self-operated (studio staff or dedicated driver) — full control, complexity at scale
@@ -240,7 +240,7 @@ These numbers are illustrative. Business owner must set final pricing. Prices ar
 
 **Decision:** Does AutoDeck include a used car buy/sell marketplace?
 
-**Context:** AutoModz has a car marketplace feature (buy/sell listings, leads, sell requests). It's a separate business model from automotive service. GoMechanic does not have a marketplace. This feature adds significant scope and product complexity.
+**Context:** legacy source app has a car marketplace feature (buy/sell listings, leads, sell requests). It's a separate business model from automotive service. GoMechanic does not have a marketplace. This feature adds significant scope and product complexity.
 
 **Recommendation:** EXCLUDE from AutoDeck at launch. Focus the product on what it is: a premium automotive service platform. Car buying/selling is a separate market (OLX, Cars24, CarDekho — all dominant in India). AutoDeck cannot compete meaningfully here and it dilutes the product focus.
 
@@ -289,21 +289,21 @@ For AutoDeck membership at ~₹2,999/month, Apple's 30% cut = ~₹900/month per 
 
 ---
 
-## D-16: AutoModz Sunset Timeline
+## D-16: legacy source app Sunset Timeline
 
-**Decision:** When does AutoModz stop taking new bookings? When do existing customers migrate?
+**Decision:** When does legacy source app stop taking new bookings? When do existing customers migrate?
 
-**Context:** AutoModz is a separate product that should continue serving existing customers until AutoDeck is ready. The sunset timeline affects:
+**Context:** legacy source app is a separate product that should continue serving existing customers until AutoDeck is ready. The sunset timeline affects:
 - Migration script investment (build now vs later vs not at all)
 - Support burden (two products to operate simultaneously)
 - Customer communication
 
 **Options:**
-1. AutoModz sunsets when AutoDeck Phase 2 ships (aggressive — puts pressure on migration)
-2. AutoModz sunsets 6 months after AutoDeck public launch (conservative — gives customers time to migrate)
-3. AutoModz continues as a separate PWA product (no sunset — two products in parallel indefinitely)
+1. legacy source app sunsets when AutoDeck Phase 2 ships (aggressive — puts pressure on migration)
+2. legacy source app sunsets 6 months after AutoDeck public launch (conservative — gives customers time to migrate)
+3. legacy source app continues as a separate PWA product (no sunset — two products in parallel indefinitely)
 
-**Recommendation:** Option 2 if AutoDeck replaces AutoModz for the same customer base. Option 3 if AutoModz is eventually sold or licensed as a separate product.
+**Recommendation:** Option 2 if AutoDeck replaces legacy source app for the same customer base. Option 3 if legacy source app is eventually sold or licensed as a separate product.
 
 **Owner:** Business owner  
 **Must decide by:** Before Phase 3 (migration planning)

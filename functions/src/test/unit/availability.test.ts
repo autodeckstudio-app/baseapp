@@ -23,9 +23,30 @@ const IST = "Asia/Kolkata";
 const BASE_DATE = "2026-08-17"; // Monday
 
 const BAYS: Bay[] = [
-  { id: "bay-wash-1", tenantId: "t1", studioId: "s1", name: "Wash Bay 1", bayType: "wash", active: true },
-  { id: "bay-wash-2", tenantId: "t1", studioId: "s1", name: "Wash Bay 2", bayType: "wash", active: true },
-  { id: "bay-prot-1", tenantId: "t1", studioId: "s1", name: "Protection Bay 1", bayType: "protection", active: true },
+  {
+    id: "bay-wash-1",
+    tenantId: "t1",
+    studioId: "s1",
+    name: "Wash Bay 1",
+    bayType: "wash",
+    active: true,
+  },
+  {
+    id: "bay-wash-2",
+    tenantId: "t1",
+    studioId: "s1",
+    name: "Wash Bay 2",
+    bayType: "wash",
+    active: true,
+  },
+  {
+    id: "bay-prot-1",
+    tenantId: "t1",
+    studioId: "s1",
+    name: "Protection Bay 1",
+    bayType: "protection",
+    active: true,
+  },
 ];
 
 const weeklyHours: OperatingHours[] = [
@@ -127,7 +148,7 @@ describe("computeScheduleEnd", () => {
     expect(utcToLocalTime(end, IST)).toBe("09:01");
   });
 
-  it("matches the documented AutoModz example exactly: 2880 min = 4 working days + 480 min into day 5", () => {
+  it("matches the documented multi-day example exactly: 2880 min = 4 working days + 480 min into day 5", () => {
     // doc04: "A PPF job requiring 2,880 minutes = 4 working days + 480 minutes
     // into day 5" at a 600-min/day (09:00-19:00) operating window.
     const start = localToUTC(BASE_DATE, "09:00", IST); // Monday
@@ -257,7 +278,9 @@ describe("generateDaySlots", () => {
     // Existing job at 09:00–10:00 (with 15-min buffer → blocks until 10:15)
     const jobStart = localToUTC(BASE_DATE, "09:00", IST);
     const jobEnd = new Date(jobStart.getTime() + 60 * 60000); // ends at 10:00
-    const occupied: OccupiedInterval[] = [buildOccupiedInterval(jobStart.toISOString(), jobEnd.toISOString())];
+    const occupied: OccupiedInterval[] = [
+      buildOccupiedInterval(jobStart.toISOString(), jobEnd.toISOString()),
+    ];
 
     const slots = generateDaySlots({
       date: BASE_DATE,
@@ -371,7 +394,9 @@ describe("generateDaySlots", () => {
       operatingHours: weeklyHours,
       holidays: [],
     });
-    expect(slots.some((s) => s.startTime === "09:00" && s.date === BASE_DATE)).toBe(false);
+    expect(
+      slots.some((s) => s.startTime === "09:00" && s.date === BASE_DATE),
+    ).toBe(false);
   });
 });
 
@@ -383,7 +408,9 @@ describe("hasConflict", () => {
     const rawEnd = new Date(start.getTime() + 60 * 60000); // 60-min service, buffer-free
     const jobStart = new Date("2026-08-17T03:30:00Z");
     const jobEnd = new Date("2026-08-17T04:30:00Z"); // includes buffer
-    expect(hasConflict(start, rawEnd, [{ startAt: jobStart, endAt: jobEnd }])).toBe(true);
+    expect(
+      hasConflict(start, rawEnd, [{ startAt: jobStart, endAt: jobEnd }]),
+    ).toBe(true);
   });
 
   it("detects partial overlap at start", () => {
@@ -559,7 +586,9 @@ describe("Turnover buffer integration", () => {
     // Job at 09:00–10:00 IST → blocks until 10:15 IST
     const jobStart = localToUTC(BASE_DATE, "09:00", IST);
     const jobEstEnd = new Date(jobStart.getTime() + 60 * 60000);
-    const occupied: OccupiedInterval[] = [buildOccupiedInterval(jobStart.toISOString(), jobEstEnd.toISOString())];
+    const occupied: OccupiedInterval[] = [
+      buildOccupiedInterval(jobStart.toISOString(), jobEstEnd.toISOString()),
+    ];
 
     const slots = generateDaySlots({
       date: BASE_DATE,

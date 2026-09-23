@@ -4,11 +4,11 @@
 
 ---
 
-## 1.1 AutoModz PWA — Current State
+## 1.1 legacy source app PWA — Current State
 
 ### What the product is today
 
-AutoModz is a Next.js 15 (App Router) Progressive Web Application running on Vercel, backed by Firebase (Firestore + Auth + FCM), with images stored on Cloudinary. It is an India-market product with INR pricing. Authentication is Google Sign-In only — no phone OTP, no email/password. There is no payment gateway; all transactions are UPI or cash settled manually at the studio counter. The product is approximately 63% complete by weighted feature checklist.
+legacy source app is a Next.js 15 (App Router) Progressive Web Application running on Vercel, backed by Firebase (Firestore + Auth + FCM), with images stored on Cloudinary. It is an India-market product with INR pricing. Authentication is Google Sign-In only — no phone OTP, no email/password. There is no payment gateway; all transactions are UPI or cash settled manually at the studio counter. The product is approximately 63% complete by weighted feature checklist.
 
 The codebase is version 4.0.0 and represents a significant engineering investment. The domain model is principled. The security architecture is well-conceived. The data model is rich. But large portions are aspirational — designed, even coded — but never exercised in production.
 
@@ -92,11 +92,11 @@ The codebase is version 4.0.0 and represents a significant engineering investmen
 
 ## 1.2 Market Context
 
-### AutoModz today vs AutoDeck target
+### legacy source app today vs AutoDeck target
 
 > **AutoDeck launch market: India (Ahmedabad, Gujarat). Currency: INR. Timezone: Asia/Kolkata.**
 
-| Dimension | AutoModz today | AutoDeck must be |
+| Dimension | legacy source app today | AutoDeck must be |
 |---|---|---|
 | Authentication | Google only | Phone OTP primary (India standard); no social login in V1 |
 | Payment | Manual UPI, cash | Razorpay Payment Links (V1); UPI AutoPay for membership (V2) |
@@ -132,9 +132,9 @@ The product model (transparent pricing, live tracking, digital documentation, wa
 
 ## 1.3 The Gap
 
-### What AutoModz is vs what AutoDeck needs to be
+### What legacy source app is vs what AutoDeck needs to be
 
-| Dimension | AutoModz today | AutoDeck must be |
+| Dimension | legacy source app today | AutoDeck must be |
 |---|---|---|
 | Platform | PWA (web only) | Native iOS + Android + Web Admin |
 | Market | India | India — Ahmedabad, Gujarat (V1) |
@@ -155,18 +155,18 @@ The product model (transparent pricing, live tracking, digital documentation, wa
 
 ### Why a new product, not a migration
 
-AutoModz carries significant production data and an existing customer relationship. Migrating it would mean:
+legacy source app carries significant production data and an existing customer relationship. Migrating it would mean:
 - Maintaining backward compatibility with every existing Firestore document
 - Carrying forward the plate-string join problem
 - Inheriting the seal path debt
 - Building native mobile on top of Next.js API routes designed for web
 - Carrying forward the Google-only auth limitation
 
-The cleaner path is AutoDeck as a distinct product, sharing only architectural lessons (not code) from AutoModz. AutoModz can continue serving its current customers as a separate product. AutoDeck starts from a clean domain model informed by — but not constrained by — the AutoModz implementation.
+The cleaner path is AutoDeck as a distinct product, sharing only architectural lessons (not code) from legacy source app. legacy source app can continue serving its current customers as a separate product. AutoDeck starts from a clean domain model informed by — but not constrained by — the legacy source app implementation.
 
 ### What the PWA could continue as
 
-AutoModz PWA can continue to operate for India-market customers. It could be:
+legacy source app PWA can continue to operate for India-market customers. It could be:
 - Maintained as a separate product with a separate Firebase project
 - Eventually licensed or sold as a white-label PWA for automotive studios
 - Used as the reference implementation for AutoDeck's business logic (not code)
@@ -177,7 +177,7 @@ AutoModz PWA can continue to operate for India-market customers. It could be:
 
 | Feature | Classification | Rationale |
 |---|---|---|
-| **Authority model** (customer vs studio vs admin) | KEEP | The most valuable architectural insight from AutoModz. Replicate the principle; rebuild the implementation. |
+| **Authority model** (customer vs studio vs admin) | KEEP | The most valuable architectural insight from legacy source app. Replicate the principle; rebuild the implementation. |
 | **Booking engine** (bay allocation, transaction atomicity, idempotency) | REBUILD | The concept is correct. Rebuild in Cloud Functions with proper resource model, validated in production. |
 | **Bay allocation** (named bays, capacity, duration) | REBUILD | Extend to a proper resource model (bay types, concurrency rules, buffer logic). |
 | **State machine** (lifecycle, legal transitions) | REBUILD | Rebuild with a formal state chart library (XState or similar). Extend to cover studio app transitions. |
@@ -194,16 +194,16 @@ AutoModz PWA can continue to operate for India-market customers. It could be:
 | **Attendance/Payroll** | KEEP (concept) | Solid data model. Rebuild implementation in new stack. |
 | **Inventory** | MODIFY | Keep stock management. Add automated consumption from service completion. |
 | **Car marketplace (buy/sell)** | REMOVE | Out of scope for AutoDeck. Separate business entirely. |
-| **Referral programme** | DEFER | Dead code in AutoModz. May revisit for growth phase. |
+| **Referral programme** | DEFER | Dead code in legacy source app. May revisit for growth phase. |
 | **Kiosk/walk-in** | MODIFY | Replace PIN-based kiosk with studio app walk-in registration. Staff auth should be proper Firebase Auth, not PIN hash. |
 | **Cars buy-sell** | REMOVE | Separate business. |
-| **Analytics** | REPLACE | AutoModz has zero analytics. AutoDeck will wire PostHog or Firebase Analytics from day one. |
-| **Email/SMS** | REPLACE | AutoModz has neither. AutoDeck needs both (Resend/SendGrid for email; Twilio or WhatsApp for SMS/messaging). |
-| **Native app** | ADD (net new) | Not in AutoModz. Core AutoDeck requirement from day one. |
+| **Analytics** | REPLACE | legacy source app has zero analytics. AutoDeck will wire PostHog or Firebase Analytics from day one. |
+| **Email/SMS** | REPLACE | legacy source app has neither. AutoDeck needs both (Resend/SendGrid for email; Twilio or WhatsApp for SMS/messaging). |
+| **Native app** | ADD (net new) | Not in legacy source app. Core AutoDeck requirement from day one. |
 | **Public service history consent** | DEFER | Interesting concept (customer consents to public service history for resale value). Revisit after core product is stable. |
 | **Pricing engine (pure functions)** | KEEP | The architecture of isolating pricing as a pure server-side function is exactly right. Preserve this pattern. |
 | **Navigation resolver** | KEEP (pattern) | The pattern of resolving intents to hrefs/screens through a single resolver prevents URL coupling in renderers. Apply to deep link resolution in native app. |
 | **Quiet mode / notification preferences** | MODIFY | Keep the concept. Rebuild within the new notification architecture. |
 | **Public invoice (shareable token)** | KEEP | Clean feature. Rebuild with constant-time token comparison (fix timing side channel). |
-| **Ratings** | REBUILD | Basic in AutoModz. Rebuild with verified-purchase gate, response flow, aggregate display. |
+| **Ratings** | REBUILD | Basic in legacy source app. Rebuild with verified-purchase gate, response flow, aggregate display. |
 | **Estimates** | MODIFY | Keep. Extend with multi-item estimates, PDF export, customer acceptance flow. |

@@ -1,4 +1,4 @@
-export const FIRST_TENANT_ID = "automodz";
+export const FIRST_TENANT_ID = "autodeck";
 export const FIRST_STUDIO_ID = "studio-ahmedabad";
 
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";

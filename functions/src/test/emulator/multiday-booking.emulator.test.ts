@@ -13,7 +13,14 @@
  */
 import { describe, it, expect } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
-import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, Customer } from "@autodeck/core";
+import type {
+  StudioConfig,
+  Service,
+  Vehicle,
+  Booking,
+  ServiceJob,
+  Customer,
+} from "@autodeck/core";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
@@ -29,7 +36,10 @@ const TENANT_B = "multiday-tenant-b";
 const STUDIO_A = "multiday-studio-a";
 
 function customerAuth(authUid: string, tenantId = TENANT_A) {
-  return { uid: authUid, token: { role: "customer", tenantId, studioId: null } };
+  return {
+    uid: authUid,
+    token: { role: "customer", tenantId, studioId: null },
+  };
 }
 function studioAuth(authUid: string, tenantId = TENANT_A, studioId = STUDIO_A) {
   return { uid: authUid, token: { role: "studio", tenantId, studioId } };
@@ -115,7 +125,11 @@ async function seedStudio(
   return studioConfig;
 }
 
-async function seedService(serviceId: string, tenantId: string, estimatedDurationMinutes: number) {
+async function seedService(
+  serviceId: string,
+  tenantId: string,
+  estimatedDurationMinutes: number,
+) {
   const now = new Date().toISOString();
   const service: Service = {
     id: serviceId,
@@ -159,13 +173,18 @@ async function seedCustomer(customerId: string, tenantId: string) {
   return customer;
 }
 
-async function seedVehicle(vehicleId: string, ownerId: string, tenantId: string) {
+async function seedVehicle(
+  vehicleId: string,
+  ownerId: string,
+  tenantId: string,
+) {
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
     tenantId,
     ownerId,
-    registrationNumber: "GJ01MD" + vehicleId.slice(-4).toUpperCase().padStart(4, "0"),
+    registrationNumber:
+      "GJ01MD" + vehicleId.slice(-4).toUpperCase().padStart(4, "0"),
     make: "Toyota",
     model: "Fortuner",
     year: 2023,
@@ -217,13 +236,25 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const { customerId, vehicle } = await freshVehicle();
     const monday = nextMonday();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     expect(booking.scheduledDate).toBe(monday);
     expect(booking.estimatedEndDate).toBe(addDays(monday, 1)); // Tuesday
     expect(booking.estimatedEndTime).toBe("10:40"); // 100 min remaining after Monday's 600
 
-    const job = (await db.collection("jobs").where("bookingId", "==", booking.id).limit(1).get()).docs[0]?.data() as ServiceJob;
+    const job = (
+      await db
+        .collection("jobs")
+        .where("bookingId", "==", booking.id)
+        .limit(1)
+        .get()
+    ).docs[0]?.data() as ServiceJob;
     expect(job.estimatedEndDate).toBe(addDays(monday, 1));
     expect(job.scheduledDate).toBe(monday);
   });
@@ -234,7 +265,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const { customerId, vehicle } = await freshVehicle();
     const monday = nextMonday();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     expect(booking.estimatedEndDate).toBe(addDays(monday, 2)); // Wednesday
     expect(booking.estimatedEndTime).toBe("10:40");
@@ -246,7 +283,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const { customerId, vehicle } = await freshVehicle();
     const monday = nextMonday();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     expect(booking.estimatedEndDate).toBe(monday); // same day — NOT multi-day
     expect(booking.estimatedEndTime).toBe("19:00");
@@ -258,22 +301,42 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const monday = nextMonday();
 
     const first = await freshVehicle();
-    await makeBooking(first.customerId, service, first.vehicle, studio.id, monday);
+    await makeBooking(
+      first.customerId,
+      service,
+      first.vehicle,
+      studio.id,
+      monday,
+    );
 
     const second = await freshVehicle();
-    await expect(makeBooking(second.customerId, service, second.vehicle, studio.id, monday)).rejects.toThrow(
-      /No bays available/,
-    );
+    await expect(
+      makeBooking(
+        second.customerId,
+        service,
+        second.vehicle,
+        studio.id,
+        monday,
+      ),
+    ).rejects.toThrow(/No bays available/);
   });
 
   it("5. holiday crossing: a holiday inside the span is skipped, not counted or landed on", async () => {
     const monday = nextMonday();
     const tuesday = addDays(monday, 1);
-    const studio = await seedStudio(uid("studio-holiday"), TENANT_A, 3, [tuesday]);
+    const studio = await seedStudio(uid("studio-holiday"), TENANT_A, 3, [
+      tuesday,
+    ]);
     const service = await seedService(uid("svc-holiday"), TENANT_A, 700); // would naturally land on Tuesday
     const { customerId, vehicle } = await freshVehicle();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     // Monday consumes 600, 100 remain; Tuesday is a holiday and is skipped
     // entirely — lands on Wednesday instead.
@@ -287,7 +350,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const { customerId, vehicle } = await freshVehicle();
     const saturday = nextSaturday();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, saturday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      saturday,
+    );
 
     // Saturday consumes 600, 100 remain; Sunday is closed and skipped —
     // lands on the following Monday.
@@ -301,10 +370,21 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const monday = nextMonday();
 
     const first = await freshVehicle();
-    await makeBooking(first.customerId, service, first.vehicle, studio.id, monday);
+    await makeBooking(
+      first.customerId,
+      service,
+      first.vehicle,
+      studio.id,
+      monday,
+    );
 
     const availResult = (await getAvailability.run({
-      data: { serviceId: service.id, studioId: studio.id, startDate: monday, lookAheadDays: 4 },
+      data: {
+        serviceId: service.id,
+        studioId: studio.id,
+        startDate: monday,
+        lookAheadDays: 4,
+      },
       auth: customerAuth(first.customerId),
     } as never)) as { slots: { date: string; startTime: string }[] };
 
@@ -314,7 +394,9 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     // clears) — a later Tuesday start is legitimately free since it would
     // roll into Wednesday instead of conflicting with Monday's job.
     expect(availResult.slots.some((s) => s.date === monday)).toBe(false);
-    const tuesdaySlots = availResult.slots.filter((s) => s.date === addDays(monday, 1));
+    const tuesdaySlots = availResult.slots.filter(
+      (s) => s.date === addDays(monday, 1),
+    );
     for (const s of tuesdaySlots) {
       expect(s.startTime >= "11:00").toBe(true);
     }
@@ -356,8 +438,14 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
 
       const fulfilled = results.filter((r) => r.status === "fulfilled");
       const rejected = results.filter((r) => r.status === "rejected");
-      expect(fulfilled, `iteration ${i}: expected exactly one winner`).toHaveLength(1);
-      expect(rejected, `iteration ${i}: expected exactly one loser`).toHaveLength(1);
+      expect(
+        fulfilled,
+        `iteration ${i}: expected exactly one winner`,
+      ).toHaveLength(1);
+      expect(
+        rejected,
+        `iteration ${i}: expected exactly one loser`,
+      ).toHaveLength(1);
     }
   }, 180_000);
 
@@ -367,7 +455,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const monday = nextMonday();
 
     const first = await freshVehicle();
-    const { booking } = await makeBooking(first.customerId, service, first.vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      first.customerId,
+      service,
+      first.vehicle,
+      studio.id,
+      monday,
+    );
 
     await cancelBooking.run({
       data: { bookingId: booking.id, reason: "test cancellation" },
@@ -375,7 +469,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     } as never);
 
     const second = await freshVehicle();
-    const result = await makeBooking(second.customerId, service, second.vehicle, studio.id, monday);
+    const result = await makeBooking(
+      second.customerId,
+      service,
+      second.vehicle,
+      studio.id,
+      monday,
+    );
     expect(result.booking.bayId).toBe(booking.bayId);
   });
 
@@ -386,10 +486,21 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const newMonday = addDays(monday, 7); // a week later, still a Monday
 
     const { customerId, vehicle } = await freshVehicle();
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     const rescheduled = (await rescheduleBooking.run({
-      data: { bookingId: booking.id, newDate: newMonday, newTime: "09:00", idempotencyKey: uid("idem") },
+      data: {
+        bookingId: booking.id,
+        newDate: newMonday,
+        newTime: "09:00",
+        idempotencyKey: uid("idem"),
+      },
       auth: customerAuth(customerId),
     } as never)) as { booking: Booking };
 
@@ -398,7 +509,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
 
     // The original Monday slot is now free again.
     const other = await freshVehicle();
-    const again = await makeBooking(other.customerId, service, other.vehicle, studio.id, monday);
+    const again = await makeBooking(
+      other.customerId,
+      service,
+      other.vehicle,
+      studio.id,
+      monday,
+    );
     expect(again.booking.bayId).toBeTruthy();
   });
 
@@ -425,7 +542,9 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
       auth: studioAuth(uid("emp"), TENANT_A, studio.id),
     } as never)) as { job: ServiceJob };
 
-    expect(walkinResult.job.estimatedEndDate).not.toBe(walkinResult.job.scheduledDate);
+    expect(walkinResult.job.estimatedEndDate).not.toBe(
+      walkinResult.job.scheduledDate,
+    );
 
     // A booking targeting the day after the walk-in started, same (only)
     // bay, must be rejected — using "tomorrow" rather than the walk-in's own
@@ -437,7 +556,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     // the worst case where the walk-in started at midnight).
     const other = await freshVehicle();
     await expect(
-      makeBooking(other.customerId, service, other.vehicle, studio.id, addDays(walkinResult.job.scheduledDate, 1)),
+      makeBooking(
+        other.customerId,
+        service,
+        other.vehicle,
+        studio.id,
+        addDays(walkinResult.job.scheduledDate, 1),
+      ),
     ).rejects.toThrow(/No bays available/);
   });
 
@@ -449,11 +574,25 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const serviceB = await seedService(uid("svc-xtenant-b"), TENANT_B, 700);
 
     const tenantBParty = await freshVehicle(TENANT_B);
-    await makeBooking(tenantBParty.customerId, serviceB, tenantBParty.vehicle, studioB.id, monday, "09:00", TENANT_B);
+    await makeBooking(
+      tenantBParty.customerId,
+      serviceB,
+      tenantBParty.vehicle,
+      studioB.id,
+      monday,
+      "09:00",
+      TENANT_B,
+    );
 
     // Tenant A's studio has its own, separate bay — must be unaffected.
     const tenantAParty = await freshVehicle(TENANT_A);
-    const result = await makeBooking(tenantAParty.customerId, serviceA, tenantAParty.vehicle, studioA.id, monday);
+    const result = await makeBooking(
+      tenantAParty.customerId,
+      serviceA,
+      tenantAParty.vehicle,
+      studioA.id,
+      monday,
+    );
     expect(result.booking.bayId).toBeTruthy();
   });
 
@@ -465,10 +604,22 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const serviceC = await seedService(uid("svc-xstudio-c"), TENANT_A, 700);
 
     const partyC = await freshVehicle();
-    await makeBooking(partyC.customerId, serviceC, partyC.vehicle, studioC.id, monday);
+    await makeBooking(
+      partyC.customerId,
+      serviceC,
+      partyC.vehicle,
+      studioC.id,
+      monday,
+    );
 
     const partyA = await freshVehicle();
-    const result = await makeBooking(partyA.customerId, serviceA, partyA.vehicle, studioA.id, monday);
+    const result = await makeBooking(
+      partyA.customerId,
+      serviceA,
+      partyA.vehicle,
+      studioA.id,
+      monday,
+    );
     expect(result.booking.bayId).toBeTruthy();
   });
 
@@ -478,7 +629,13 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const { customerId, vehicle } = await freshVehicle();
     const monday = nextMonday();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
     const originalEndDate = booking.estimatedEndDate;
     const originalEndAt = booking.estimatedEndAt;
 
@@ -487,19 +644,33 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
       auth: adminAuth(uid("admin")),
     } as never);
 
-    const storedBooking = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+    const storedBooking = (
+      await db.collection("bookings").doc(booking.id).get()
+    ).data() as Booking;
     expect(storedBooking.estimatedEndDate).toBe(originalEndDate);
     expect(storedBooking.estimatedEndAt).toBe(originalEndAt);
     expect(storedBooking.durationMinutes).toBe(700);
 
-    const storedJob = (await db.collection("jobs").where("bookingId", "==", booking.id).limit(1).get()).docs[0]?.data() as ServiceJob;
+    const storedJob = (
+      await db
+        .collection("jobs")
+        .where("bookingId", "==", booking.id)
+        .limit(1)
+        .get()
+    ).docs[0]?.data() as ServiceJob;
     expect(storedJob.estimatedEndDate).toBe(originalEndDate);
     expect(storedJob.estimatedDurationMinutes).toBe(700);
 
     // A NEW booking made after the change uses the new (longer) duration.
     const other = await freshVehicle();
     const laterMonday = addDays(monday, 7);
-    const afterChange = await makeBooking(other.customerId, service, other.vehicle, studio.id, laterMonday);
+    const afterChange = await makeBooking(
+      other.customerId,
+      service,
+      other.vehicle,
+      studio.id,
+      laterMonday,
+    );
     expect(afterChange.booking.durationMinutes).toBe(4000);
     expect(afterChange.booking.estimatedEndDate).not.toBe(laterMonday);
   });
@@ -512,11 +683,21 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     const wednesday = addDays(monday, 2);
     const thursday = addDays(monday, 3);
     // 3 consecutive holidays right where the service would naturally land.
-    const studio = await seedStudio(uid("studio-consec-holiday"), TENANT_A, 3, [tuesday, wednesday, thursday]);
+    const studio = await seedStudio(uid("studio-consec-holiday"), TENANT_A, 3, [
+      tuesday,
+      wednesday,
+      thursday,
+    ]);
     const service = await seedService(uid("svc-consec-holiday"), TENANT_A, 700); // 2-day under normal conditions
     const { customerId, vehicle } = await freshVehicle();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     // Monday consumes 600, 100 remain; Tue/Wed/Thu are all holidays and are
     // all skipped entirely (none counted, none landed on) — lands on Friday.
@@ -567,25 +748,49 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
 
       const fulfilled = results.filter((r) => r.status === "fulfilled");
       const rejected = results.filter((r) => r.status === "rejected");
-      expect(fulfilled, `iteration ${i}: expected exactly one winner`).toHaveLength(1);
-      expect(rejected, `iteration ${i}: expected exactly one loser`).toHaveLength(1);
+      expect(
+        fulfilled,
+        `iteration ${i}: expected exactly one winner`,
+      ).toHaveLength(1);
+      expect(
+        rejected,
+        `iteration ${i}: expected exactly one loser`,
+      ).toHaveLength(1);
 
-      const jobsSnap = await db.collection("jobs").where("bayId", "==", studio.bays[0]?.id).get();
-      const activeJobs = jobsSnap.docs.filter((d) => (d.data() as ServiceJob).status !== "CANCELLED");
-      expect(activeJobs, `iteration ${i}: bay must never be double-assigned`).toHaveLength(1);
+      const jobsSnap = await db
+        .collection("jobs")
+        .where("bayId", "==", studio.bays[0]?.id)
+        .get();
+      const activeJobs = jobsSnap.docs.filter(
+        (d) => (d.data() as ServiceJob).status !== "CANCELLED",
+      );
+      expect(
+        activeJobs,
+        `iteration ${i}: bay must never be double-assigned`,
+      ).toHaveLength(1);
     }
   }, 180_000);
 
-  it("17. longest real AutoModz catalogue service (LLumar Valor PPF, 4320 min) schedules correctly end-to-end", async () => {
+  it("17. longest validated catalogue service (LLumar Valor PPF, 4320 min) schedules correctly end-to-end", async () => {
     // Uses the ACTUAL production catalogue seed data (not a synthetic
     // duration) — proves the real longest service in the system, not just a
     // representative test value, schedules correctly.
     const studio = await seedStudio(uid("studio-longest"), TENANT_A, 3);
-    const service = await seedService("cov-svc-llumar-valor-clone", TENANT_A, 4320);
+    const service = await seedService(
+      "cov-svc-llumar-valor-clone",
+      TENANT_A,
+      4320,
+    );
     const { customerId, vehicle } = await freshVehicle();
     const monday = nextMonday();
 
-    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday);
+    const { booking } = await makeBooking(
+      customerId,
+      service,
+      vehicle,
+      studio.id,
+      monday,
+    );
 
     // 4320 min at 600 min/day, Mon-Sat open/Sun closed: 6 full open days
     // (3600 min, Mon-Sat) + Sunday skipped + 1 full day (Mon+7, 600 min,

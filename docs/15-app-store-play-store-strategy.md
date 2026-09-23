@@ -259,7 +259,7 @@ If Firebase Analytics uses IDFA for attribution tracking, ATT prompt is required
 
 **Strategy:**
 - Studio app: Internal testing only initially; move to closed testing when stable
-- Customer app: Internal → Closed (invite existing AutoModz customers for feedback) → Open (broader beta) → Production
+- Customer app: Internal → Closed (invite existing legacy source app customers for feedback) → Open (broader beta) → Production
 
 ---
 
@@ -322,7 +322,7 @@ Prompt for rating after a genuinely positive moment:
 - All internal testing complete
 - Studio team trained on Studio App (internal TestFlight/internal track)
 - Studio App is production-ready before customer app launches
-- Customer beta: 20-50 existing AutoModz customers invited via TestFlight
+- Customer beta: 20-50 existing legacy source app customers invited via TestFlight
 
 **Week -4 to -2:**
 - Address beta feedback (OTA updates for JS fixes; store resubmission for native changes)

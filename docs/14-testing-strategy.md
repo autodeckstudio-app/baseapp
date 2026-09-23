@@ -2,7 +2,7 @@
 
 **Principle:** Test behaviour, not implementation. No mocked databases — use Firebase Emulator Suite for all integration tests.
 
-**Lesson from AutoModz:** The seal path (visits) had unit tests that passed but the feature never ran in production because it was never end-to-end tested against real Firestore behaviour. AutoDeck must test critical paths with real Firestore via the emulator, not mock objects.
+**Lesson from legacy source app:** The seal path (visits) had unit tests that passed but the feature never ran in production because it was never end-to-end tested against real Firestore behaviour. AutoDeck must test critical paths with real Firestore via the emulator, not mock objects.
 
 ---
 
@@ -369,9 +369,9 @@ steps:
 
 ---
 
-## 14.9 What AutoDeck Must Test That AutoModz Didn't
+## 14.9 What AutoDeck Must Test That legacy source app Didn't
 
-| Gap in AutoModz | AutoDeck Requirement |
+| Gap in legacy source app | AutoDeck Requirement |
 |---|---|
 | Seal path never ran in production | E2E test the complete job lifecycle from booking to warranty certificate |
 | No rate limiting on any endpoint | Integration test: verify 429 after rate limit threshold |

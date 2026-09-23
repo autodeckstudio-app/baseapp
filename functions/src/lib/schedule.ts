@@ -32,8 +32,16 @@ export function getTZOffsetMinutes(timezone: string, atUTC: Date): number {
 }
 
 // Converts a local date+time ("YYYY-MM-DD", "HH:mm") to a UTC Date.
-export function localToUTC(dateStr: string, timeStr: string, timezone: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number) as [number, number, number];
+export function localToUTC(
+  dateStr: string,
+  timeStr: string,
+  timezone: string,
+): Date {
+  const [year, month, day] = dateStr.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
   const [hour, minute] = timeStr.split(":").map(Number) as [number, number];
   // Treat local time as UTC initially, then correct for the offset.
   const approxUTC = new Date(Date.UTC(year, month - 1, day, hour, minute));
@@ -91,7 +99,7 @@ export function isHoliday(dateStr: string, holidays: string[]): boolean {
 
 // Walks forward from `startAt`, consuming `durationMinutes` of OPERATING-HOUR
 // time only — closed days and holidays are skipped entirely, never counted.
-// Mirrors AutoModz's documented multi-day model (doc04 §"Service catalogue":
+// Mirrors the retired system's documented multi-day model (doc04 §"Service catalogue":
 // "A PPF job requiring 2,880 minutes = 4 working days + 480 minutes into
 // day 5" — i.e. duration is consumed only during open hours, spread across
 // as many working days as needed).
@@ -120,11 +128,16 @@ export function computeScheduleEnd(
   // rather than looping indefinitely.
   for (let guard = 0; guard < 400; guard++) {
     const skip = isHoliday(currentDate, holidays);
-    const hours = operatingHours.find((h) => h.dayOfWeek === getDayOfWeek(currentDate));
+    const hours = operatingHours.find(
+      (h) => h.dayOfWeek === getDayOfWeek(currentDate),
+    );
 
     if (!skip && hours && !hours.closed) {
       const dayCloseUTC = localToUTC(currentDate, hours.close, timezone);
-      const availableMinutesToday = Math.max(0, (dayCloseUTC.getTime() - dayStartUTC.getTime()) / 60000);
+      const availableMinutesToday = Math.max(
+        0,
+        (dayCloseUTC.getTime() - dayStartUTC.getTime()) / 60000,
+      );
 
       if (remaining <= availableMinutesToday) {
         return new Date(dayStartUTC.getTime() + remaining * 60000);
@@ -133,7 +146,9 @@ export function computeScheduleEnd(
     }
 
     currentDate = addDays(currentDate, 1);
-    const nextHours = operatingHours.find((h) => h.dayOfWeek === getDayOfWeek(currentDate));
+    const nextHours = operatingHours.find(
+      (h) => h.dayOfWeek === getDayOfWeek(currentDate),
+    );
     dayStartUTC = localToUTC(currentDate, nextHours?.open ?? "00:00", timezone);
   }
 

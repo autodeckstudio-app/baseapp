@@ -336,7 +336,7 @@ app/
 
 - Grouped by: Today's bookings + Active walk-ins
 - Each row: customer name, vehicle, service, bay, scheduled time, status badge
-- Status colour coding: consistent across entire app (unlike AutoModz where status colours differed per screen)
+- Status colour coding: consistent across entire app (unlike legacy source app where status colours differed per screen)
 - Sort order: scheduled time ascending; completed jobs move to bottom
 - Pull-to-refresh; real-time Firestore listener for status changes
 

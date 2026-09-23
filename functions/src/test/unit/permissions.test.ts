@@ -14,7 +14,7 @@ function makeUser(overrides: Partial<AuthorizedUser> = {}): AuthorizedUser {
     email: null,
     claims: {
       role: "customer",
-      tenantId: "automodz",
+      tenantId: "autodeck",
       studioId: null,
     },
     ...overrides,
@@ -28,7 +28,9 @@ describe("requireRole", () => {
   });
 
   it("allows when one of multiple allowed roles matches", () => {
-    const user = makeUser({ claims: { role: "studio", tenantId: "automodz", studioId: "s1" } });
+    const user = makeUser({
+      claims: { role: "studio", tenantId: "autodeck", studioId: "s1" },
+    });
     expect(requireRole(user, "customer", "studio").allowed).toBe(true);
   });
 
@@ -45,7 +47,7 @@ describe("requireRole", () => {
 describe("requireSameTenant", () => {
   it("allows matching tenant", () => {
     const user = makeUser();
-    expect(requireSameTenant(user, "automodz").allowed).toBe(true);
+    expect(requireSameTenant(user, "autodeck").allowed).toBe(true);
   });
 
   it("denies mismatched tenant", () => {
@@ -68,21 +70,31 @@ describe("requireSameTenant", () => {
 describe("requireSameStudio", () => {
   it("allows studio user on their own studio", () => {
     const user = makeUser({
-      claims: { role: "studio", tenantId: "automodz", studioId: "studio-ahmedabad" },
+      claims: {
+        role: "studio",
+        tenantId: "autodeck",
+        studioId: "studio-ahmedabad",
+      },
     });
     expect(requireSameStudio(user, "studio-ahmedabad").allowed).toBe(true);
   });
 
   it("denies studio user on a different studio", () => {
     const user = makeUser({
-      claims: { role: "studio", tenantId: "automodz", studioId: "studio-ahmedabad" },
+      claims: {
+        role: "studio",
+        tenantId: "autodeck",
+        studioId: "studio-ahmedabad",
+      },
     });
     const result = requireSameStudio(user, "studio-surat");
     expect(result.allowed).toBe(false);
   });
 
   it("admin bypasses studio check", () => {
-    const user = makeUser({ claims: { role: "admin", tenantId: "automodz", studioId: null } });
+    const user = makeUser({
+      claims: { role: "admin", tenantId: "autodeck", studioId: null },
+    });
     expect(requireSameStudio(user, "any-studio").allowed).toBe(true);
   });
 
@@ -110,7 +122,10 @@ describe("requireOwnership", () => {
   });
 
   it("admin bypasses ownership check", () => {
-    const user = makeUser({ uid: "uid-admin", claims: { role: "admin", tenantId: "automodz", studioId: null } });
+    const user = makeUser({
+      uid: "uid-admin",
+      claims: { role: "admin", tenantId: "autodeck", studioId: null },
+    });
     expect(requireOwnership(user, "uid-anyone").allowed).toBe(true);
   });
 });
