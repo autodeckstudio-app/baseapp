@@ -1,0 +1,147 @@
+/*
+ * AutoDeck staff shell (M2). Everything under .ad-shell stands on the dark
+ * studio ground. The legacy light-theme variables are remapped here so screens
+ * not yet migrated read correctly on the ground; each screen then moves to
+ * the ad- primitives in its own milestone.
+ */
+.ad-shell {
+  --color-background: transparent;
+  --color-surface: var(--ad-glass-fallback);
+  --color-surface-sunken: rgba(255, 255, 255, 0.04);
+  --color-text-primary: var(--ad-text-primary);
+  --color-text-secondary: var(--ad-text-secondary);
+  --color-text-muted: var(--ad-text-tertiary);
+  --color-text-on-accent: var(--ad-text-on-accent);
+  --color-border: var(--ad-glass-edge);
+  --color-border-strong: var(--ad-border-strong);
+  --color-divider: var(--ad-border-subtle);
+  --color-accent: var(--ad-accent);
+  --color-accent-pressed: var(--ad-accent-strong);
+  --color-accent-muted: var(--ad-accent-haze);
+  --color-success: var(--ad-success);
+  --color-success-muted: var(--ad-premium-haze);
+  --color-warning: var(--ad-warning);
+  --color-warning-muted: var(--ad-accent-haze);
+  --color-error: var(--ad-danger);
+  --color-error-muted: rgba(226, 112, 90, 0.14);
+  font-family: var(--ad-font-body, "DM Sans", system-ui, sans-serif);
+  color: var(--ad-text-primary);
+}
+
+.ad-shell-frame {
+  display: grid;
+  grid-template-columns: var(--ad-sidebar) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.ad-side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ad-space-inset);
+  padding: var(--ad-space-inset) var(--ad-space-gap);
+  border-right: 1px solid var(--ad-glass-edge);
+  border-bottom: none;
+  overflow-y: auto;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ad-side {
+    background: var(--ad-glass-chrome);
+    backdrop-filter: var(--ad-glass-chrome-blur);
+    -webkit-backdrop-filter: var(--ad-glass-chrome-blur);
+  }
+}
+
+.ad-wordmark {
+  font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif);
+  font-weight: 300;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  color: var(--ad-text-primary);
+  text-decoration: none;
+  padding: 0 var(--ad-space-breath);
+}
+.ad-wordmark span { color: var(--ad-accent); }
+
+.ad-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.ad-nav-group .ad-label { padding: 0 var(--ad-space-breath) var(--ad-space-hair); }
+.ad-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--ad-space-line);
+  border-radius: var(--ad-radius-chip);
+  border: 1px solid transparent;
+  color: var(--ad-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background var(--ad-dur-tick) var(--ad-ease), color var(--ad-dur-tick) var(--ad-ease);
+}
+.ad-nav-link:hover { color: var(--ad-text-primary); background: rgba(255, 255, 255, 0.04); }
+.ad-nav-link:focus-visible { outline: 2px solid var(--ad-accent-strong); outline-offset: 1px; }
+.ad-nav-link[aria-current="page"] {
+  color: var(--ad-accent-strong);
+  background: var(--ad-accent-haze);
+  border-color: var(--ad-accent-haze);
+}
+
+.ad-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--ad-space-line); }
+.ad-side-foot .ad-who { padding: 0 var(--ad-space-breath); font-size: 13px; color: var(--ad-text-secondary); overflow-wrap: anywhere; }
+
+.ad-main {
+  padding: var(--ad-space-section) var(--ad-space-section) var(--ad-space-scene);
+  min-width: 0;
+}
+
+/* Legacy element styles, restated on the ground. */
+.ad-shell h1 {
+  font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif);
+  font-weight: 200;
+  font-size: 34px;
+  line-height: 40px;
+  letter-spacing: -0.6px;
+  color: var(--ad-text-primary);
+}
+.ad-shell h2, .ad-shell h3 { color: var(--ad-text-primary); }
+.ad-shell p { color: var(--ad-text-secondary); }
+.ad-shell .ad-main a:not([class]) { color: var(--ad-accent-strong); }
+.ad-shell table { border-radius: var(--ad-radius-card); }
+.ad-shell th { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-weight: 400; letter-spacing: 1.2px; color: var(--ad-text-tertiary); }
+.ad-shell td { color: var(--ad-text-primary); }
+.ad-shell button { border-radius: var(--ad-radius-pill); min-height: 36px; }
+.ad-shell button[type="submit"] { background: var(--ad-accent-grad); border-color: transparent; }
+.ad-shell button[type="submit"]:hover:not(:disabled) { background: var(--ad-accent-grad); filter: brightness(1.06); }
+.ad-shell input, .ad-shell select, .ad-shell textarea { background: rgba(255, 255, 255, 0.04); border-color: var(--ad-border-subtle); border-radius: var(--ad-radius-chip); }
+.ad-shell select option { background: var(--ad-surface); color: var(--ad-text-primary); }
+.ad-shell .detail-card, .ad-shell .stat-tile { border-radius: var(--ad-radius-card); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); }
+.ad-shell .stat-tile .value { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-weight: 400; }
+.ad-shell .detail-card h3, .ad-shell .stat-tile .label { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-weight: 400; letter-spacing: 1.4px; }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ad-shell .detail-card, .ad-shell .stat-tile, .ad-shell table {
+    background: var(--ad-glass-fill);
+    backdrop-filter: var(--ad-glass-blur);
+    -webkit-backdrop-filter: var(--ad-glass-blur);
+  }
+}
+.ad-shell .badge { border: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 30%, transparent); }
+
+/* Narrow screens: the sidebar becomes a top chrome bar. */
+@media (max-width: 860px) {
+  .ad-shell-frame { grid-template-columns: 1fr; }
+  .ad-side { position: sticky; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--ad-space-line); border-right: none; border-bottom: 1px solid var(--ad-glass-edge); z-index: 20; }
+  .ad-nav-group { flex-direction: row; flex-wrap: wrap; }
+  .ad-nav-group .ad-label { display: none; }
+  .ad-side-foot { margin-top: 0; margin-left: auto; flex-direction: row; align-items: center; }
+  .ad-main { padding: var(--ad-space-inset) var(--ad-space-gap) var(--ad-space-section); }
+}
+
+/* Sign-in */
+.ad-login { min-height: 100vh; display: grid; place-items: center; padding: var(--ad-space-inset); }
+.ad-login-card { width: 100%; max-width: 400px; }
+.ad-login .ad-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--ad-space-breath); font-size: 15px; font-weight: 600; cursor: pointer; }
+.ad-login input { width: 100%; min-height: var(--ad-hit); padding: 0 var(--ad-space-line); font-size: 18px; letter-spacing: 4px; color: var(--ad-text-primary); background: rgba(255,255,255,0.04); border: 1px solid var(--ad-border-subtle); border-radius: var(--ad-radius-chip); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); }
+.ad-login input:focus { outline: none; border-color: var(--ad-accent); }
+.ad-login .ad-alert { margin: var(--ad-space-line) 0 0; padding: var(--ad-space-breath) var(--ad-space-line); border-radius: var(--ad-radius-chip); border: 1px solid rgba(226,112,90,0.4); background: rgba(226,112,90,0.10); color: var(--ad-danger); font-size: 13px; }

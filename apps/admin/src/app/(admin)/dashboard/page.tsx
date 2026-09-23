@@ -8,7 +8,7 @@ import { listenToBookings } from "../../../lib/bookings-service";
 import { listenToJobs } from "../../../lib/jobs-service";
 import { listenToPayments } from "../../../lib/payments-service";
 import { listenToPendingApprovals, listenToExpiringMemberships } from "../../../lib/dashboard-service";
-import { colors, spacing, radius } from "@autodeck/ui/tokens";
+import { spacing, radius } from "@autodeck/ui/tokens";
 import { formatPaise, formatDate } from "../../../lib/format";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Membership } from "@autodeck/core";
 
@@ -108,34 +108,34 @@ export default function DashboardPage() {
       stats.unpaidCompletedJobs.length === 0 &&
       stats.staleJobs.length === 0 &&
       stats.soonExpiring.length === 0 ? (
-        <p style={{ color: colors.textMuted, fontSize: 13 }}>No operational alerts.</p>
+        <p style={{ color: "var(--color-text-muted)", fontSize: 13 }}>No operational alerts.</p>
       ) : (
         <div style={{ marginBottom: spacing.xl }}>
           {pendingApprovals.length > 0 && (
-            <div className="alert-banner" style={{ background: colors.warningMuted, color: colors.warning }}>
+            <div className="alert-banner" style={{ background: "var(--color-warning-muted)", color: "var(--color-warning)" }}>
               {pendingApprovals.length} approval{pendingApprovals.length === 1 ? "" : "s"} awaiting customer response.
             </div>
           )}
           {stats.failedPayments.length > 0 && (
-            <div className="alert-banner" style={{ background: colors.errorMuted, color: colors.error }}>
+            <div className="alert-banner" style={{ background: "var(--color-error-muted)", color: "var(--color-error)" }}>
               {stats.failedPayments.length} failed payment{stats.failedPayments.length === 1 ? "" : "s"}.{" "}
               <Link href="/payments">Review</Link>
             </div>
           )}
           {stats.unpaidCompletedJobs.length > 0 && (
-            <div className="alert-banner" style={{ background: colors.errorMuted, color: colors.error }}>
+            <div className="alert-banner" style={{ background: "var(--color-error-muted)", color: "var(--color-error)" }}>
               {stats.unpaidCompletedJobs.length} completed job{stats.unpaidCompletedJobs.length === 1 ? "" : "s"} still unpaid.{" "}
               <Link href="/jobs">Review</Link>
             </div>
           )}
           {stats.staleJobs.length > 0 && (
-            <div className="alert-banner" style={{ background: colors.warningMuted, color: colors.warning }}>
+            <div className="alert-banner" style={{ background: "var(--color-warning-muted)", color: "var(--color-warning)" }}>
               {stats.staleJobs.length} job{stats.staleJobs.length === 1 ? "" : "s"} unchanged for over 48 hours.{" "}
               <Link href="/jobs">Review</Link>
             </div>
           )}
           {stats.soonExpiring.length > 0 && (
-            <div className="alert-banner" style={{ background: colors.warningMuted, color: colors.warning }}>
+            <div className="alert-banner" style={{ background: "var(--color-warning-muted)", color: "var(--color-warning)" }}>
               {stats.soonExpiring.length} membership{stats.soonExpiring.length === 1 ? "" : "s"} expiring within 7 days.
             </div>
           )}
@@ -151,15 +151,15 @@ export default function DashboardPage() {
             style={{
               display: "block",
               padding: spacing.lg,
-              background: colors.surface,
-              border: `1px solid ${colors.border}`,
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
               borderRadius: radius.lg,
               textDecoration: "none",
-              color: colors.textPrimary,
+              color: "var(--color-text-primary)",
             }}
           >
             <div style={{ fontSize: 15, fontWeight: 600, marginBottom: spacing.xs }}>{s.label}</div>
-            <div style={{ fontSize: 13, color: colors.textMuted }}>{s.description}</div>
+            <div style={{ fontSize: 13, color: "var(--color-text-muted)" }}>{s.description}</div>
           </Link>
         ))}
       </div>

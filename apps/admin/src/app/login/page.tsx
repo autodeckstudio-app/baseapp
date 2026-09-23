@@ -4,13 +4,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminAuth, MFA_RECAPTCHA_CONTAINER_ID } from "../../lib/auth-context";
 import { homeFor } from "../../lib/staff-access";
-import { colors, spacing, radius } from "@autodeck/ui/tokens";
+import { Ambient } from "../../experience/Ambient";
+import { Glass } from "../../experience/Glass";
+import "../../experience/shell.css";
 
 // Google-only sign-in. The studio owner's account opens the full app; Gmail
 // addresses on the staff roster open the Studio floor; anyone else is told
-// to ask the owner to add them. Visual theme lands with the experience
-// migration (docs/22-experience-migration-spec.md); this page carries the
-// flow.
+// to ask the owner to add them. One glass pane on the studio ground.
 export default function LoginPage() {
   const { user, claims, loading, signIn, confirmMfaCode, mfaRequired, error } = useAdminAuth();
   const router = useRouter();
@@ -52,72 +52,73 @@ export default function LoginPage() {
   const message = localError ?? error;
 
   return (
-    <main
-      style={{
-        maxWidth: 380,
-        margin: "96px auto",
-        padding: spacing.xl,
-        background: colors.surface,
-        border: `1px solid ${colors.border}`,
-        borderRadius: radius.lg,
-      }}
-    >
-      <h1 style={{ marginBottom: spacing.xs }}>AutoDeck</h1>
-      {mfaRequired ? (
-        <>
-          <p style={{ marginTop: 0, marginBottom: spacing.xl }}>Enter the verification code sent to your phone.</p>
-          <form onSubmit={handleConfirmCode}>
-            <fieldset>
-              <label htmlFor="code">Verification code</label>
-              <br />
-              <input
-                id="code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                style={{ width: "100%" }}
-              />
-            </fieldset>
-            {message && <p className="error">{message}</p>}
-            <button type="submit" disabled={submitting} style={{ width: "100%" }}>
-              {submitting ? "Verifying…" : "Verify"}
-            </button>
-          </form>
-        </>
-      ) : (
-        <>
-          <p style={{ marginTop: 0, marginBottom: spacing.xl }}>
-            Studio and office sign-in. Use the Google account your studio added you with.
-          </p>
-          <button
-            type="button"
-            onClick={() => void handleGoogle()}
-            disabled={submitting || loading}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: spacing.sm,
-            }}
-          >
-            <GoogleMark />
-            {submitting ? "Opening Google…" : "Continue with Google"}
-          </button>
-          {message && (
-            <p className="error" role="alert" style={{ marginTop: spacing.md }}>
-              {message}
-            </p>
-          )}
-        </>
-      )}
-      {/* Invisible reCAPTCHA host for an MFA phone challenge on accounts
-          that enrolled one. Never visibly rendered. */}
-      <div id={MFA_RECAPTCHA_CONTAINER_ID} />
-    </main>
+    <div className="ad-shell">
+      <Ambient>
+        <main className="ad-login">
+          <Glass className="ad-login-card" pad="inset" round="pane" raised>
+            <p className="ad-label" style={{ margin: 0 }}>Studio · Office</p>
+            <h1 className="ad-display" style={{ margin: "var(--ad-space-breath) 0 var(--ad-space-line)" }}>
+              Auto<span style={{ color: "var(--ad-accent)" }}>Deck</span>
+            </h1>
+            {mfaRequired ? (
+              <form onSubmit={handleConfirmCode}>
+                <p className="ad-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
+                  Enter the verification code sent to your phone.
+                </p>
+                <label htmlFor="code" className="ad-label" style={{ display: "block", marginBottom: "var(--ad-space-breath)" }}>
+                  Verification code
+                </label>
+                <input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                />
+                {message && (
+                  <p className="ad-alert" role="alert">
+                    {message}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="ad-button ad-button--primary"
+                  disabled={submitting}
+                  style={{ marginTop: "var(--ad-space-gap)" }}
+                >
+                  {submitting ? "Verifying…" : "Verify"}
+                </button>
+              </form>
+            ) : (
+              <>
+                <p className="ad-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
+                  Studio and office sign-in. Use the Google account your studio added you with.
+                </p>
+                <button
+                  type="button"
+                  className="ad-button ad-button--primary"
+                  onClick={() => void handleGoogle()}
+                  disabled={submitting || loading}
+                >
+                  <GoogleMark />
+                  {submitting ? "Opening Google…" : "Continue with Google"}
+                </button>
+                {message && (
+                  <p className="ad-alert" role="alert">
+                    {message}
+                  </p>
+                )}
+              </>
+            )}
+            {/* Invisible reCAPTCHA host for an MFA phone challenge on accounts
+                that enrolled one. Never visibly rendered. */}
+            <div id={MFA_RECAPTCHA_CONTAINER_ID} />
+          </Glass>
+        </main>
+      </Ambient>
+    </div>
   );
 }
 

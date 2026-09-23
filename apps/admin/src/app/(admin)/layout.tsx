@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdminAuth } from "../../lib/auth-context";
 import { canSeeOffice, canVisit, homeFor } from "../../lib/staff-access";
-import { colors, spacing } from "@autodeck/ui/tokens";
+import { Ambient } from "../../experience/Ambient";
+import { StaffShell } from "../../experience/StaffShell";
+import "../../experience/shell.css";
 
 // Route protection for all /(admin) screens. One staff shell, two modes:
 //   STUDIO (bookings, job floor): studio staff and admins.
@@ -12,6 +14,7 @@ import { colors, spacing } from "@autodeck/ui/tokens";
 // Studio staff who reach an office route are sent back to the floor. This is
 // navigation; Firestore rules and the callables/API routes enforce the same
 // boundary server-side. See lib/staff-access.ts.
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, claims, loading, signOut } = useAdminAuth();
   const router = useRouter();
@@ -26,48 +29,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [loading, user, claims, pathname, router]);
 
-  if (loading) return <p style={{ padding: spacing.xl }}>Loading…</p>;
+  if (loading) {
+    return (
+      <div className="ad-shell">
+        <Ambient>
+          <p className="ad-label" style={{ padding: "var(--ad-space-section)" }} role="status">
+            Loading…
+          </p>
+        </Ambient>
+      </div>
+    );
+  }
   if (!user || !claims || !canVisit(claims.role, pathname)) return null;
   const office = canSeeOffice(claims.role);
+  const who = user.displayName || user.email || "Signed in";
 
   return (
-    <div>
-      <header
-        style={{
-          padding: `${spacing.md}px ${spacing.xl}px`,
-          borderBottom: `1px solid ${colors.border}`,
-          background: colors.surface,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <nav className="nav">
-          {office && <a href="/dashboard">Dashboard</a>}
-          <a href="/bookings">Bookings</a>
-          <a href="/jobs">Jobs</a>
-          {office && (
-            <>
-          <a href="/customers">Customers</a>
-          <a href="/payments">Payments</a>
-          <a href="/invoices">Invoices</a>
-          <a href="/audit">Audit Log</a>
-          <a href="/studio">Studio</a>
-          <a href="/services">Services</a>
-          <a href="/memberships">Memberships</a>
-          <a href="/vehicles">Vehicles</a>
-          <a href="/staff">Staff</a>
-            </>
-          )}
-        </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
-          <span style={{ fontSize: 13, color: colors.textMuted }}>
-            {claims.role} · tenant: {claims.tenantId}
-          </span>
-          <button onClick={() => void signOut()}>Sign out</button>
-        </div>
-      </header>
-      <main style={{ padding: spacing.xl }}>{children}</main>
-    </div>
+    <StaffShell
+      pathname={pathname}
+      office={office}
+      role={claims.role}
+      who={who}
+      home={homeFor(claims.role)}
+      onSignOut={() => void signOut()}
+    >
+      {children}
+    </StaffShell>
   );
 }
