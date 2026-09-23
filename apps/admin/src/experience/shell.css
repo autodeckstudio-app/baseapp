@@ -371,3 +371,19 @@
 .ad-plan-perks li { padding: 6px 0 6px 18px; position: relative; }
 .ad-plan-perks li::before { content: ""; position: absolute; left: 0; top: 13px; width: 8px; height: 8px; border-radius: 50%; background: var(--ad-premium); }
 .ad-page-head > .ad-button { align-self: flex-end; }
+
+/* ---- Services ---- */
+.ad-svc-group { margin-bottom: var(--ad-space-inset); }
+.ad-svc-group > .ad-label { margin: 0 0 var(--ad-space-breath); }
+.ad-svc { display: grid; grid-template-columns: minmax(0, 1fr) 140px auto; align-items: center; gap: var(--ad-space-gap); padding: 14px var(--ad-space-inset); border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-svc:last-child { border-bottom: none; }
+.ad-svc.is-hidden { opacity: 0.55; }
+.ad-svc-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ad-svc-price { display: flex; flex-direction: column; align-items: flex-end; }
+.ad-svc-price .ad-data { font-size: 16px; color: var(--ad-text-primary); }
+.ad-form-section { margin: var(--ad-space-inset) 0 var(--ad-space-line) !important; padding-top: var(--ad-space-line); border-top: 1px solid var(--ad-border-subtle); }
+.ad-size-rule { display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 6px; margin-bottom: 6px; }
+.ad-shell .ad-size-rule select, .ad-shell .ad-size-rule input { width: 100%; min-height: 38px; }
+.ad-shell .ad-form-row textarea { width: 100%; padding: 8px 12px; }
+.ad-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ad-text-secondary); margin: var(--ad-space-line) 0; }
+@media (max-width: 860px) { .ad-svc { grid-template-columns: 1fr; } .ad-svc-price { align-items: flex-start; } }
