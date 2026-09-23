@@ -168,7 +168,15 @@ legacy source app `CustomerChrome`, `BottomNavigation`, `Menu`, `RoomTransition`
 
 ### 5.2 Admin chrome
 
-Do not copy the immersive customer chrome into the operations console. Share brand tokens, status tones, typography and media treatment; retain dense desktop navigation, tables, filters and audit visibility.
+**Owner directive (23 Sep 2026):** the legacy source app is the UI/UX reference for the whole of AutoDeck, Admin included. Admin adopts the legacy design language and models its shell and screens on the legacy source's own admin and workspace screens, rebranded as AutoDeck. The brand boundary in section 1 still applies in full: no legacy name, wordmark, icon or copy ships.
+
+**Source:** `app/admin/layout.tsx`, `app/admin/*`, `components/workspace/*`, `components/system/Desk.tsx`, `design/*`.
+
+- **One staff shell, two operating modes.** Port the legacy shell model: **Studio** mode runs today's work (Studio Board, Schedule, Bookings, Attendance, Gallery, walk-in); **Office** mode runs the business (Dashboard, Customers, Memberships, Quotes, Papers, Invoices, Expenses, Daily Close, Inventory, Reports, Employees, Services/Settings). Grouped sidebar with the same group labels, a Studio/Office mode switch, and role-filtered items. Mobile-width admin uses the same drawer pattern as the legacy shell.
+- **Design language.** Same dark studio ground, single warm accent and its cool reflection, four state tones, glass panes over the ground, mono "data" face for numbers, plates and codes, and the legacy radius/elevation/spacing scales. Values come from `packages/experience` tokens (section 3), not re-derived per screen.
+- **Workspaces.** Job and booking detail follow `JobWorkspace`/`BookingWorkspace`: a primary work surface with `StudioDrawer`/`TechnicianDrawer` side drawers, `OpsTimeline`, `ApprovalSection`, `ScopeEditor`, `BayStrip` and `UpiSettlement`, rebuilt on AutoDeck services and Cloud Functions.
+- **Behaviour carried over.** Scroll position remembered per route within one workflow, keyboard-reachable navigation, primary actions in the accent button style, and quick search/add from the shell.
+- **Screens without an AutoDeck backend yet** (attendance, expenses, inventory, office dashboard, papers verification, daily close, gallery) are functionality gaps. Each needs AutoDeck domain types, rules and callables before its screen ships; no placeholder destinations, matching the legacy rule.
 
 ## 6. Personalization flow map
 
@@ -267,15 +275,16 @@ Canonical mapping must come from AutoDeck `JobStatus` and `statusHistory`. Show 
 
 ## 7. Admin experience adoption
 
-The admin app adopts shared semantic tokens and status language in stages:
+Admin is rebuilt to the legacy admin reference (section 5.2) in this order:
 
-1. Theme variables and typography roles.
-2. Status-tone map shared with mobile.
-3. Card/table/filter spacing and focus states.
-4. Vehicle photography in customer/vehicle detail only.
-5. Drawer/modal primitives for dense operations.
+1. `packages/experience` web tokens (CSS variables) for ground, ink, accent, state tones, typography roles, radius and elevation, shared with mobile.
+2. Staff shell: grouped sidebar, Studio/Office mode switch, role filtering, drawer on narrow widths, AutoDeck mark in place of the legacy mark.
+3. Shared web primitives mirroring `components/system`: Glass/Surface panes, Button tiers, StatusChip/Badge, Timeline, Desk/drawer, Modal, Toast, Skeleton, OfflineNote.
+4. Studio mode screens: Studio Board, Schedule, Bookings, walk-in, then job and booking workspaces with drawers.
+5. Office mode screens that already have AutoDeck backends: Customers, Memberships, Quotes, Invoices, Reports, Employees, Services.
+6. Office screens that need new backends (Attendance, Expenses, Inventory, Daily Close, Papers, Gallery, Office dashboard), each behind its own backend change.
 
-Do not add ambient motion, parallax, dials or glass backgrounds to finance, staff, settings or audit tables. Premium customer atmosphere and operational clarity are different expressions of one brand.
+Glass, glow and ambient treatment follow the legacy admin's own restraint: panes and accent light on chrome, cards and headers; tables, forms and money figures stay flat, high-contrast and scannable. Motion respects reduced-motion and never delays an operational action.
 
 ## 8. Backend additions required for the experience
 
@@ -320,10 +329,11 @@ Every new write is a callable or server route with auth, tenant and ownership ch
 - Add deep-link and claim-transition tests.
 - Run customer/staff journeys on iOS and Android before removing old shells.
 
-### P1-E - Admin alignment
+### P1-E - Admin rebuild to the legacy admin reference
 
-- Apply shared tokens and statuses to admin.
-- Keep operational density; add no immersive effects that reduce scan speed.
+- Ship the staff shell with Studio/Office modes and shared web tokens.
+- Rebuild Studio mode screens and job/booking workspaces to the legacy layouts.
+- Restyle existing Office screens; add missing Office modules only with their backends.
 
 ## 10. Acceptance gates
 
@@ -336,7 +346,7 @@ Every new write is a callable or server route with auth, tenant and ownership ch
 - Offline/stale UI states when the last confirmed server update occurred.
 - Live Visit status matches canonical backend history after reconnect.
 - Garage and vehicle detail cannot read another customer’s resource.
-- Admin retains keyboard navigation, visible focus and table scanability.
+- Admin matches the legacy admin shell, navigation groups and workspace layouts side by side, with AutoDeck branding only, and retains keyboard navigation, visible focus and table scanability.
 - One full staging journey passes on both mobile roles and admin web.
 
 ## 11. Explicit non-goals for this migration
