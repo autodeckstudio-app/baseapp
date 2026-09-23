@@ -46,7 +46,7 @@ export function MembershipsView(p: {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const active = p.plans.filter((x) => x.active);
   const problem = draft ? planProblem(draft) : null;
-  const sorted = [...p.plans].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || a.priceInPaise - b.priceInPaise);
+  const sorted = [...p.plans].sort((a, b) => Number(b.active) - Number(a.active) || TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || a.priceInPaise - b.priceInPaise);
 
   return (
     <div className="ad-page">
