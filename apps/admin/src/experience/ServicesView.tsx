@@ -125,6 +125,7 @@ export function ServicesView(p: {
               <label className="ad-form-row"><span>Time needed (min)</span><input inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
             </div>
             <p className="ad-note">Bigger cars can cost more and take longer. Add a rule per size; smaller cars pay the starting price.</p>
+            {draft.sizes.length > 0 && <div className="ad-size-rule ad-size-head"><span>Car size</span><span>Extra ₹</span><span>Extra min</span><span /></div>}
             {draft.sizes.map((r, i) => (
               <div key={i} className="ad-size-rule">
                 <select value={r.vehicleCategory} aria-label="Car size" onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, vehicleCategory: e.target.value as VehicleCategory } : x)) })}>
