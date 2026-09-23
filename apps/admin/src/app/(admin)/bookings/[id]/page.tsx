@@ -15,7 +15,8 @@ import {
   getService,
 } from "../../../../lib/bookings-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
-import { formatPaise, formatDateTime } from "../../../../lib/format";
+import { formatPaise, formatDateTime, formatDayLong, formatTime } from "../../../../lib/format";
+import { statusLabel } from "../../../../lib/status-label";
 
 export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,97 +63,125 @@ export default function BookingDetailPage() {
   }, [booking]);
 
   if (error) return <p className="error">{error}</p>;
-  if (booking === undefined) return <p>Loading…</p>;
-  if (booking === null) return <p>Booking not found.</p>;
+  if (booking === undefined) return <p className="ad-label" role="status">Loading…</p>;
+  if (booking === null) {
+    return (
+      <div className="ad-empty">
+        <p className="ad-title">Booking not found</p>
+        <p>It may have been removed, or the link is wrong.</p>
+      </div>
+    );
+  }
+
+  const car = vehicle ? `${vehicle.make} ${vehicle.model}` : "";
+  const pb = booking.priceBreakdown;
 
   return (
-    <div>
-      <button onClick={() => router.push("/bookings")}>&larr; Bookings</button>
-      <h1 style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        Booking {booking.id}
-        <StatusBadge label={booking.status} />
-      </h1>
+    <div className="ad-page">
+      <button type="button" className="ad-back" onClick={() => router.push("/bookings")}>‹ Bookings</button>
 
-      <div className="detail-grid">
-        <div className="detail-card">
-          <h3>Customer &amp; Vehicle</h3>
-          <div className="kv"><span>Customer</span><span>{customer?.name ?? booking.customerId}</span></div>
-          <div className="kv"><span>Phone</span><span>{customer?.phone ?? "—"}</span></div>
-          <div className="kv"><span>Vehicle</span><span>{vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : booking.vehicleId}</span></div>
-          <div className="kv"><span>Category</span><span>{booking.vehicleCategory}</span></div>
+      <header className="ad-hero">
+        <div>
+          <p className="ad-label">Booking · {formatDayLong(booking.scheduledDate)} at {formatTime(booking.scheduledAt)}</p>
+          <h1>{vehicle?.registrationNumber ?? "Vehicle"}</h1>
+          <p className="ad-hero-sub">{[service?.name, car, customer?.name].filter(Boolean).join(" · ")}</p>
         </div>
-
-        <div className="detail-card">
-          <h3>Service &amp; Slot</h3>
-          <div className="kv"><span>Service</span><span>{service?.name ?? booking.serviceId}</span></div>
-          <div className="kv"><span>Scheduled</span><span>{formatDateTime(booking.scheduledAt)}</span></div>
-          <div className="kv"><span>Duration</span><span>{booking.durationMinutes} min</span></div>
-          <div className="kv"><span>Bay</span><span>{booking.bayId}</span></div>
-          <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount}×</span></div>
+        <div className="ad-hero-side">
+          <StatusBadge label={booking.status} />
+          <span className="ad-hero-total">{formatPaise(booking.totalAmount)}</span>
+          <StatusBadge label={booking.paymentStatus} />
         </div>
+      </header>
 
-        <div className="detail-card">
-          <h3>Payment &amp; Membership</h3>
-          <div className="kv"><span>Payment status</span><span><StatusBadge label={booking.paymentStatus} /></span></div>
-          <div className="kv"><span>Total</span><span>{formatPaise(booking.totalAmount)}</span></div>
-          <div className="kv"><span>Membership applied</span><span>{booking.membershipDiscountApplied ? (booking.membershipWashUsed ? "Wash credit" : "Discount") : "No"}</span></div>
-          {payment && (
-            <div className="kv"><span>Payment record</span><span><StatusBadge label={payment.status} /> · {payment.method}</span></div>
+      <div className="ad-detail">
+        <div className="ad-detail-main">
+          <section className="ad-panel">
+            <span className="ad-label">Slot</span>
+            <div className="kv"><span>Date</span><span>{formatDayLong(booking.scheduledDate)}</span></div>
+            <div className="kv"><span>Time</span><span>{formatTime(booking.scheduledAt)} to {formatTime(booking.estimatedEndAt)}</span></div>
+            <div className="kv"><span>Length</span><span>{booking.durationMinutes} min</span></div>
+            <div className="kv"><span>Bay</span><span>{booking.bayId}</span></div>
+            {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
+          </section>
+
+          <section className="ad-panel">
+            <span className="ad-label">Price</span>
+            <div className="kv"><span>{service?.name ?? "Service"}</span><span className="ad-data">{formatPaise(pb.basePrice)}</span></div>
+            {pb.scopeAdjustment !== 0 && <div className="kv"><span>Size and scope</span><span className="ad-data">{formatPaise(pb.scopeAdjustment)}</span></div>}
+            {pb.membershipDiscount !== null && (
+              <div className="kv"><span>Membership</span><span className="ad-data" style={{ color: "var(--ad-premium)" }}>-{formatPaise(pb.membershipDiscount)}</span></div>
+            )}
+            <div className="kv"><span>Subtotal</span><span className="ad-data">{formatPaise(pb.subtotal)}</span></div>
+            <div className="kv"><span>{pb.taxDescription}</span><span className="ad-data">{formatPaise(pb.tax)}</span></div>
+            <div className="kv"><span>Total</span><span className="ad-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(pb.total)}</span></div>
+            {booking.membershipDiscountApplied && (
+              <p className="ad-note">{booking.membershipWashUsed ? "Paid with a membership wash credit." : "Membership discount applied."}</p>
+            )}
+          </section>
+
+          {approvals.length > 0 && (
+            <section className="ad-panel">
+              <span className="ad-label">Extra work approvals</span>
+              <table>
+                <thead><tr><th>Work</th><th>Status</th><th style={{ textAlign: "right" }}>Price</th><th>Asked</th></tr></thead>
+                <tbody>
+                  {approvals.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.serviceName}</td>
+                      <td><StatusBadge label={a.status} /></td>
+                      <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(a.priceImpact)}</td>
+                      <td>{formatDateTime(a.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
           )}
         </div>
 
-        <div className="detail-card">
-          <h3>Job &amp; Invoice</h3>
-          {job ? (
-            <>
-              <div className="kv"><span>Job status</span><span><StatusBadge label={job.status} /></span></div>
-              <div className="kv"><span>Additional work</span><span>{formatPaise(job.additionalWorkDelta)}</span></div>
-              <button onClick={() => router.push(`/jobs/${job.id}`)}>Open job</button>
-            </>
-          ) : (
-            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 13 }}>No job created yet.</p>
-          )}
-          {invoice && (
-            <div style={{ marginTop: 8 }}>
-              <div className="kv"><span>Invoice</span><span><StatusBadge label={invoice.status} /> {invoice.invoiceNumber}</span></div>
-              <button onClick={() => router.push(`/invoices/${invoice.id}`)}>Open invoice</button>
-            </div>
-          )}
-        </div>
+        <aside className="ad-detail-side">
+          <section className="ad-panel">
+            <span className="ad-label">Car and owner</span>
+            <div className="kv"><span>Customer</span><span>{customer?.name ?? "—"}</span></div>
+            <div className="kv"><span>Phone</span><span>{customer?.phone ? <a href={`tel:${customer.phone}`}>{customer.phone}</a> : "—"}</span></div>
+            <div className="kv"><span>Vehicle</span><span>{car || "—"}</span></div>
+            <div className="kv"><span>Plate</span><span className="ad-data">{vehicle?.registrationNumber ?? "—"}</span></div>
+            <div className="kv"><span>Category</span><span>{statusLabel(booking.vehicleCategory)}</span></div>
+          </section>
+
+          <section className="ad-panel">
+            <span className="ad-label">In the studio</span>
+            {job ? (
+              <>
+                <div className="kv"><span>Job</span><span><StatusBadge label={job.status} /></span></div>
+                {job.additionalWorkDelta !== 0 && <div className="kv"><span>Extra work</span><span className="ad-data">{formatPaise(job.additionalWorkDelta)}</span></div>}
+                <div className="ad-panel-actions">
+                  <button type="button" className="ad-button ad-button--primary" onClick={() => router.push(`/jobs/${job.id}`)}>Open job</button>
+                </div>
+              </>
+            ) : (
+              <p className="ad-note" style={{ marginTop: 0 }}>The job opens when the car is checked in.</p>
+            )}
+          </section>
+
+          <section className="ad-panel">
+            <span className="ad-label">Payment</span>
+            {payment ? (
+              <div className="kv"><span>{statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
+            ) : (
+              <p className="ad-note" style={{ marginTop: 0 }}>No payment started yet.</p>
+            )}
+            {invoice && (
+              <>
+                <div className="kv"><span>Invoice {invoice.invoiceNumber}</span><span><StatusBadge label={invoice.status} /></span></div>
+                <div className="ad-panel-actions">
+                  <button type="button" className="ad-button" onClick={() => router.push(`/invoices/${invoice.id}`)}>Open invoice</button>
+                </div>
+              </>
+            )}
+          </section>
+        </aside>
       </div>
-
-      <h2>Price breakdown</h2>
-      <div className="detail-card" style={{ maxWidth: 420 }}>
-        <div className="kv"><span>Base price</span><span>{formatPaise(booking.priceBreakdown.basePrice)}</span></div>
-        <div className="kv"><span>Scope adjustment</span><span>{formatPaise(booking.priceBreakdown.scopeAdjustment)}</span></div>
-        {booking.priceBreakdown.membershipDiscount !== null && (
-          <div className="kv"><span>Membership discount</span><span>-{formatPaise(booking.priceBreakdown.membershipDiscount)}</span></div>
-        )}
-        <div className="kv"><span>Subtotal</span><span>{formatPaise(booking.priceBreakdown.subtotal)}</span></div>
-        <div className="kv"><span>{booking.priceBreakdown.taxDescription}</span><span>{formatPaise(booking.priceBreakdown.tax)}</span></div>
-        <div className="kv"><span><strong>Total</strong></span><span><strong>{formatPaise(booking.priceBreakdown.total)}</strong></span></div>
-      </div>
-
-      {approvals.length > 0 && (
-        <>
-          <h2>Approvals</h2>
-          <table>
-            <thead>
-              <tr><th>Service</th><th>Status</th><th>Price impact</th><th>Requested</th></tr>
-            </thead>
-            <tbody>
-              {approvals.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.serviceName}</td>
-                  <td><StatusBadge label={a.status} /></td>
-                  <td>{formatPaise(a.priceImpact)}</td>
-                  <td>{formatDateTime(a.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
     </div>
   );
 }
