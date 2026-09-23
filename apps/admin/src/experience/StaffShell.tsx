@@ -19,7 +19,7 @@ export const OFFICE_LINKS = [
   { href: "/invoices", label: "Invoices" },
   { href: "/memberships", label: "Memberships" },
   { href: "/services", label: "Services" },
-  { href: "/staff", label: "Staff" },
+  { href: "/staff", label: "Team" },
   { href: "/studio", label: "Studio" },
   { href: "/audit", label: "Audit log" },
 ] as const;
