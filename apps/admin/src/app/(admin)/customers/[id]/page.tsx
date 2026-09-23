@@ -17,8 +17,7 @@ import {
   getWarrantiesForVehicles,
   getProtectionsForVehicles,
 } from "../../../../lib/customers-service";
-import { StatusBadge } from "../../../../components/StatusBadge";
-import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format";
+import { CustomerView } from "../../../../experience/CustomerView";
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,179 +64,15 @@ export default function CustomerDetailPage() {
     void getProtectionsForVehicles(vehicleIds).then(setProtections);
   }, [id, claims, vehicles]);
 
-  if (error) return <p className="error">{error}</p>;
-  if (customer === undefined) return <p>Loading…</p>;
-  if (customer === null) return <p>Customer not found.</p>;
+  if (error) return <div className="ad-panel ad-empty" role="alert"><p className="ad-title">Couldn&apos;t load this customer</p><p>{error}</p></div>;
+  if (customer === undefined) return <div className="ad-page"><div className="ad-skel" style={{ height: 140, marginBottom: 16 }} /><div className="ad-skel" style={{ height: 320 }} /></div>;
+  if (customer === null) return <div className="ad-panel ad-empty"><p className="ad-title">Customer not found</p><p>They may have been merged or removed.</p></div>;
 
   return (
-    <div>
-      <button onClick={() => router.push("/customers")}>&larr; Customers</button>
-      <h1>{customer.name}</h1>
-      <p>{customer.phone} · joined {formatDate(customer.createdAt)}</p>
-
-      <h2>Vehicles ({vehicles.length})</h2>
-      {vehicles.length === 0 ? <p>No vehicles on file.</p> : (
-        <table>
-          <thead><tr><th>Vehicle</th><th>Registration</th><th>Category</th></tr></thead>
-          <tbody>
-            {vehicles.map((v) => (
-              <tr key={v.id}>
-                <td>{v.year} {v.make} {v.model}</td>
-                <td>{v.registrationNumber}</td>
-                <td>{v.category ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Bookings ({bookings.length})</h2>
-      {bookings.length === 0 ? <p>No bookings.</p> : (
-        <table>
-          <thead><tr><th>Scheduled</th><th>Status</th><th>Amount</th></tr></thead>
-          <tbody>
-            {bookings.map((b) => (
-              <tr key={b.id} className="row-link" onClick={() => router.push(`/bookings/${b.id}`)}>
-                <td>{formatDateTime(b.scheduledAt)}</td>
-                <td><StatusBadge label={b.status} /></td>
-                <td>{formatPaise(b.totalAmount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Jobs ({jobs.length})</h2>
-      {jobs.length === 0 ? <p>No jobs.</p> : (
-        <table>
-          <thead><tr><th>Scheduled</th><th>Status</th><th>Total</th></tr></thead>
-          <tbody>
-            {jobs.map((j) => (
-              <tr key={j.id} className="row-link" onClick={() => router.push(`/jobs/${j.id}`)}>
-                <td>{formatDateTime(j.scheduledAt)}</td>
-                <td><StatusBadge label={j.status} /></td>
-                <td>{formatPaise(j.totalAmount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Memberships ({memberships.length})</h2>
-      {memberships.length === 0 ? <p>No memberships.</p> : (
-        <table>
-          <thead><tr><th>Tier</th><th>Status</th><th>Washes</th><th>Valid until</th></tr></thead>
-          <tbody>
-            {memberships.map((m) => (
-              <tr key={m.id}>
-                <td>{m.tier}</td>
-                <td><StatusBadge label={m.status} /></td>
-                <td>{m.washesUsed}/{m.washesTotal}</td>
-                <td>{formatDate(m.endDate)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Payments ({payments.length})</h2>
-      {payments.length === 0 ? <p>No payments.</p> : (
-        <table>
-          <thead><tr><th>Date</th><th>Status</th><th>Method</th><th>Amount</th></tr></thead>
-          <tbody>
-            {payments.map((p) => (
-              <tr key={p.id}>
-                <td>{formatDateTime(p.createdAt)}</td>
-                <td><StatusBadge label={p.status} /></td>
-                <td>{p.method}</td>
-                <td>{formatPaise(p.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Invoices ({invoices.length})</h2>
-      {invoices.length === 0 ? <p>No invoices.</p> : (
-        <table>
-          <thead><tr><th>Number</th><th>Status</th><th>Total</th></tr></thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id} className="row-link" onClick={() => router.push(`/invoices/${inv.id}`)}>
-                <td>{inv.invoiceNumber}</td>
-                <td><StatusBadge label={inv.status} /></td>
-                <td>{formatPaise(inv.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Warranties ({warranties.length})</h2>
-      {warranties.length === 0 ? <p>No warranties.</p> : (
-        <table>
-          <thead><tr><th>Service</th><th>Ends</th><th>Sealed</th></tr></thead>
-          <tbody>
-            {warranties.map((w) => (
-              <tr key={w.id}>
-                <td>{w.warrantyLabel}</td>
-                <td>{w.endDate ?? "No fixed term"}</td>
-                <td>{formatDateTime(w.sealedAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Protections ({protections.length})</h2>
-      {protections.length === 0 ? <p>No protections on file.</p> : (
-        <table>
-          <thead><tr><th>Kind</th><th>Provider</th><th>Status</th><th>Expiry</th></tr></thead>
-          <tbody>
-            {protections.map((p) => (
-              <tr key={p.id}>
-                <td>{p.kind}</td>
-                <td>{p.provider ?? "—"}</td>
-                <td><StatusBadge label={p.status} /></td>
-                <td>{p.expiryDate ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Notifications ({notifications.length})</h2>
-      {notifications.length === 0 ? <p>No notifications.</p> : (
-        <table>
-          <thead><tr><th>Type</th><th>Body</th><th>Sent</th><th>Read</th></tr></thead>
-          <tbody>
-            {notifications.map((n) => (
-              <tr key={n.id}>
-                <td>{n.type}</td>
-                <td>{n.body}</td>
-                <td>{formatDateTime(n.createdAt)}</td>
-                <td>{n.readAt ? "Yes" : "No"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>Audit history</h2>
-      {audit.length === 0 ? <p>No audit entries for this customer profile.</p> : (
-        <table>
-          <thead><tr><th>Action</th><th>By</th><th>When</th></tr></thead>
-          <tbody>
-            {audit.map((a) => (
-              <tr key={a.id}>
-                <td>{a.action}</td>
-                <td>{a.performedByRole}</td>
-                <td>{formatDateTime(a.createdAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    <CustomerView
+      d={{ customer, vehicles, bookings, jobs, memberships, payments, invoices, notifications, audit, warranties, protections }}
+      onBack={() => router.push("/customers")}
+      onOpen={(href) => router.push(href)}
+    />
   );
 }

@@ -409,3 +409,15 @@
 .ad-bay-add { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; margin-top: 12px; }
 .ad-shell .ad-bay-add input, .ad-shell .ad-bay-add select { width: 100%; min-height: 36px; }
 .ad-shell .ad-inline-form input[type="date"] { min-height: 36px; }
+
+/* ---- Customer ---- */
+.ad-shell .ad-crow { display: flex; align-items: center; gap: var(--ad-space-line); width: 100%; min-height: 48px; padding: 8px 0; border: none; border-bottom: 1px solid var(--ad-border-subtle); border-radius: 0; background: transparent; text-align: left; font-weight: 400; font-size: 14px; color: var(--ad-text-primary); }
+.ad-shell .ad-crow:last-child { border-bottom: none; }
+.ad-shell .ad-crow.is-link { cursor: pointer; }
+.ad-shell .ad-crow.is-link:hover:not(:disabled) { background: rgba(255,255,255,0.03); }
+.ad-crow > span:first-child { flex: 1; }
+.ad-car { padding: 12px 0; border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-car:last-child { border-bottom: none; }
+.ad-car-head { display: flex; flex-direction: column; gap: 2px; }
+.ad-meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 6px 0; }
+.ad-meter span { display: block; height: 100%; background: var(--ad-premium); }
