@@ -26,6 +26,7 @@ export const COLLECTIONS = {
   expenses: () => "expenses",
   inventoryItems: () => "inventoryItems",
   inventoryTxns: () => "inventoryTxns",
+  papers: () => "papers",
   studioConfig: () => "studioConfig",
   inventory: () => "inventory",
   auditLog: () => "auditLog",

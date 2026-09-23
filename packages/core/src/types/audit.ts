@@ -67,7 +67,10 @@ export type AuditAction =
   | "expense.deleted"
   | "inventory.itemCreated"
   | "inventory.itemUpdated"
-  | "inventory.txnRecorded";
+  | "inventory.txnRecorded"
+  | "paper.submitted"
+  | "paper.reviewed"
+  | "paper.updated";
 
 export interface AuditLog {
   id: string;

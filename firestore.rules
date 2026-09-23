@@ -346,6 +346,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── /papers/{paperId} ──────────────────────────────────────────────────
+    // Studio staff read their tenant's papers; the vehicle owner reads their
+    // own via denormalized customerId. Function-only writes.
+    match /papers/{paperId} {
+      allow read: if isStudioOrAbove() && ownTenant(resource.data)
+                  || (isAuthenticated() && ownTenant(resource.data)
+                      && request.auth.uid == resource.data.customerId);
+      allow write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

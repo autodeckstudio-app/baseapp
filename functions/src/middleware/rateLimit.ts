@@ -56,6 +56,10 @@ export type RateLimitAction =
   | "inventory.update"
   | "inventory.txn"
   | "inventory.read"
+  | "paper.submit"
+  | "paper.review"
+  | "paper.update"
+  | "paper.read"
   | "vehicle.create"
   | "vehicle.update"
   | "vehicle.archive"
@@ -137,6 +141,10 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "inventory.update": { limit: 30, windowMs: 60_000 },
   "inventory.txn": { limit: 60, windowMs: 60_000 },
   "inventory.read": { limit: 120, windowMs: 60_000 },
+  "paper.submit": { limit: 30, windowMs: 60_000 },
+  "paper.review": { limit: 30, windowMs: 60_000 },
+  "paper.update": { limit: 30, windowMs: 60_000 },
+  "paper.read": { limit: 120, windowMs: 60_000 },
   "employee.updateRole": { limit: 60, windowMs: 60_000 },
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },

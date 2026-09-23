@@ -102,6 +102,12 @@ export { recordInventoryTxn } from "./functions/inventory/recordInventoryTxn.js"
 export { listInventoryItems } from "./functions/inventory/listInventoryItems.js";
 export { listInventoryTxns } from "./functions/inventory/listInventoryTxns.js";
 
+// ─── Papers verification (M6 Automodz Office) ──────────────────────────────
+export { submitPaper } from "./functions/papers/submitPaper.js";
+export { reviewPaper } from "./functions/papers/reviewPaper.js";
+export { updatePaper } from "./functions/papers/updatePaper.js";
+export { listPapers } from "./functions/papers/listPapers.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";
