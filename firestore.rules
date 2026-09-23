@@ -312,6 +312,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ─── /attendance/{recordId} ─────────────────────────────────────────────
+    // Studio staff read their tenant's attendance records; an employee can
+    // read their own record via the denormalized employeeAuthUid field. All
+    // writes go through Cloud Functions (check-in/out, breaks, admin mark).
+    match /attendance/{recordId} {
+      allow read: if isStudioOrAbove() && ownTenant(resource.data)
+                  || (isAuthenticated() && ownTenant(resource.data)
+                      && request.auth.uid == resource.data.employeeAuthUid);
+      allow write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

@@ -27,6 +27,7 @@ export type {
   InvoiceStatus,
 } from "./payment.js";
 export type { Bay, OperatingHours, StudioConfig, Employee } from "./studio.js";
+export type { AttendanceStatus, AttendanceBreak, AttendanceRecord } from "./attendance.js";
 export type {
   Membership,
   MembershipPlan,

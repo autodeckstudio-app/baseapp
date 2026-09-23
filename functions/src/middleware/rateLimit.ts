@@ -42,6 +42,12 @@ export type RateLimitAction =
   | "employee.add"
   | "employee.updateRole"
   | "employee.deactivate"
+  | "attendance.checkIn"
+  | "attendance.checkOut"
+  | "attendance.break"
+  | "attendance.mark"
+  | "attendance.readStudio"
+  | "attendance.readEmployee"
   | "vehicle.create"
   | "vehicle.update"
   | "vehicle.archive"
@@ -109,6 +115,12 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "studio.addHoliday": { limit: 60, windowMs: 60_000 },
   "studio.removeHoliday": { limit: 60, windowMs: 60_000 },
   "employee.add": { limit: 30, windowMs: 60_000 },
+  "attendance.checkIn": { limit: 30, windowMs: 60_000 },
+  "attendance.checkOut": { limit: 30, windowMs: 60_000 },
+  "attendance.break": { limit: 60, windowMs: 60_000 },
+  "attendance.mark": { limit: 60, windowMs: 60_000 },
+  "attendance.readStudio": { limit: 120, windowMs: 60_000 },
+  "attendance.readEmployee": { limit: 120, windowMs: 60_000 },
   "employee.updateRole": { limit: 60, windowMs: 60_000 },
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },

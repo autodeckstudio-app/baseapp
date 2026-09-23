@@ -80,6 +80,15 @@ export { startInspection } from "./functions/inspection/startInspection.js";
 export { updateInspection } from "./functions/inspection/updateInspection.js";
 export { finalizeInspection } from "./functions/inspection/finalizeInspection.js";
 
+// ─── Attendance (M6 Automodz Office) ────────────────────────────────────────
+export { checkInAttendance } from "./functions/attendance/checkInAttendance.js";
+export { checkOutAttendance } from "./functions/attendance/checkOutAttendance.js";
+export { startAttendanceBreak } from "./functions/attendance/startAttendanceBreak.js";
+export { endAttendanceBreak } from "./functions/attendance/endAttendanceBreak.js";
+export { getStudioAttendance } from "./functions/attendance/getStudioAttendance.js";
+export { getEmployeeAttendance } from "./functions/attendance/getEmployeeAttendance.js";
+export { markAttendance } from "./functions/attendance/markAttendance.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

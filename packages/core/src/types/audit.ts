@@ -56,7 +56,12 @@ export type AuditAction =
   | "warranty.issued"
   | "inspection.started"
   | "inspection.updated"
-  | "inspection.finalized";
+  | "inspection.finalized"
+  | "attendance.checked_in"
+  | "attendance.checked_out"
+  | "attendance.break_started"
+  | "attendance.break_ended"
+  | "attendance.marked";
 
 export interface AuditLog {
   id: string;
