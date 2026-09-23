@@ -41,3 +41,16 @@ export function statusLabel(value: string | null | undefined): string {
   const words = value.replace(/[_-]+/g, " ").trim().toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+const METHODS: Record<string, string> = {
+  cash: "Cash",
+  upi_manual: "UPI",
+  bank_transfer: "Bank transfer",
+  razorpay_payment_link: "Online",
+};
+
+// How the customer paid, in counter words.
+export function methodLabel(value: string | null | undefined): string {
+  if (!value) return "—";
+  return METHODS[value] ?? statusLabel(value);
+}
