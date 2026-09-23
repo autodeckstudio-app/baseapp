@@ -1,19 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View } from "react-native";
 import type { Membership } from "@autodeck/core";
+import { space } from "@autodeck/ui/theme";
+import { Chip, Kicker, Loading, Notice, Pane, Row, Screen } from "../../../ui/kit";
 import { getMyMemberships } from "../../../lib/membership-service";
-import {
-  colors,
-  spacing,
-  typography,
-  Card,
-  StatusBadge,
-  statusTone,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  formatDateShort,
-} from "@autodeck/ui";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function MembershipHistoryScreen() {
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -36,30 +30,32 @@ export default function MembershipHistoryScreen() {
     void load();
   }, [load]);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (loading) return <Loading label="Opening history" />;
+  if (error) return <Screen><Notice title="Could not load history" body={error} /></Screen>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FlatList
-        data={memberships}
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        ListEmptyComponent={<EmptyState title="No memberships yet" fill={false} />}
-        renderItem={({ item }) => (
-          <Card flat>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, textTransform: "capitalize" }}>{item.tier}</Text>
-              <StatusBadge label={item.status} tone={statusTone(item.status)} />
-            </View>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-              {item.startDate ? formatDateShort(item.startDate) : "Not started"}
-              {item.endDate ? ` – ${formatDateShort(item.endDate)}` : ""}
-            </Text>
-          </Card>
-        )}
-      />
-    </View>
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">Membership</Kicker>
+        </View>
+      }
+    >
+      {memberships.length === 0 ? (
+        <Notice title="No memberships yet" body="Plans you join will appear here." />
+      ) : (
+        <Pane pad="gap">
+          {memberships.map((m, i) => (
+            <Row
+              key={m.id}
+              title={m.tier}
+              detail={`${m.startDate ? formatDate(m.startDate) : "Not started"}${m.endDate ? ` - ${formatDate(m.endDate)}` : ""}`}
+              trailing={<Chip label={m.status} tone={m.status === "active" ? "premium" : "neutral"} />}
+              last={i === memberships.length - 1}
+            />
+          ))}
+        </Pane>
+      )}
+    </Screen>
   );
 }

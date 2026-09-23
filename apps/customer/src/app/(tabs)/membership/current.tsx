@@ -1,23 +1,14 @@
-import { View, Text, ScrollView } from "react-native";
+import { View } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "expo-router";
 import type { Membership } from "@autodeck/core";
+import { space } from "@autodeck/ui/theme";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 import { getMyMemberships } from "../../../lib/membership-service";
-import {
-  colors,
-  spacing,
-  radius,
-  typography,
-  Button,
-  StatusBadge,
-  statusTone,
-  ListRow,
-  Divider,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  formatDateShort,
-} from "@autodeck/ui";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function CurrentMembershipScreen() {
   const router = useRouter();
@@ -42,57 +33,49 @@ export default function CurrentMembershipScreen() {
     void load();
   }, [load]);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (loading) return <Loading label="Opening your membership" />;
+  if (error) return <Screen><Notice title="Could not load membership" body={error} /></Screen>;
   if (!membership) {
     return (
-      <EmptyState
-        title="No active membership"
-        message="Join a plan to start saving on your services."
-        actionLabel="Browse Plans"
-        onAction={() => router.push("/(tabs)/membership")}
-      />
+      <Screen>
+        <Notice
+          title="No active membership"
+          body="Join a plan to start saving on your services."
+          action={<Button label="Browse plans" onPress={() => router.push("/(tabs)/membership")} />}
+        />
+      </Screen>
     );
   }
 
   const washesRemaining = Math.max(0, membership.washesTotal - membership.washesUsed);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
-        <Text style={{ ...typography.heading, color: colors.textPrimary, textTransform: "capitalize" }}>{membership.tier}</Text>
-        <StatusBadge label={membership.status} tone={statusTone(membership.status)} />
-      </View>
-
-      {membership.status === "pending" && (
-        <View style={{ backgroundColor: colors.warningMuted, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.caption, color: colors.warning }}>
-            Awaiting payment confirmation from the studio.
-          </Text>
+    <Screen
+      header={
+        <View style={{ gap: space.breath }}>
+          <Kicker tone="accent">Your membership</Kicker>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.inset }}>
+            <T role="title" style={{ textTransform: "capitalize" }}>{membership.tier}</T>
+            <Chip label={membership.status} tone={membership.status === "active" ? "premium" : "neutral"} />
+          </View>
         </View>
-      )}
+      }
+    >
+      {membership.status === "pending" ? (
+        <Notice title="Almost there" body="Awaiting payment confirmation from the studio." />
+      ) : null}
 
-      <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-        <ListRow label="Washes remaining" value={`${washesRemaining} / ${membership.washesTotal}`} />
-        <Divider spacingY="xs" />
-        <ListRow label="Discount on other services" value={`${membership.discountPercent}%`} />
-        {membership.startDate && (
-          <>
-            <Divider spacingY="xs" />
-            <ListRow label="Started" value={formatDateShort(membership.startDate)} />
-          </>
-        )}
-        {membership.endDate && (
-          <>
-            <Divider spacingY="xs" />
-            <ListRow label="Renews / Expires" value={formatDateShort(membership.endDate)} />
-          </>
-        )}
+      <Pane pad="gap">
+        <Row title="Washes remaining" detail={`${washesRemaining} / ${membership.washesTotal}`} />
+        <Row title="Discount on other services" detail={`${membership.discountPercent}%`} />
+        {membership.startDate ? <Row title="Started" detail={formatDate(membership.startDate)} /> : null}
+        {membership.endDate ? <Row title="Renews / expires" detail={formatDate(membership.endDate)} last /> : <Row title="" detail="" last />}
+      </Pane>
+
+      <View style={{ gap: space.breath }}>
+        <Button label="View usage" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
+        <Button label="Membership history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
       </View>
-
-      <Button label="View Usage" onPress={() => router.push("/(tabs)/membership/usage")} variant="secondary" />
-      <View style={{ height: spacing.sm }} />
-      <Button label="Membership History" onPress={() => router.push("/(tabs)/membership/history")} variant="ghost" />
-    </ScrollView>
+    </Screen>
   );
 }

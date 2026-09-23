@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Alert } from "react-native";
+import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { MembershipPlan } from "@autodeck/core";
+import { space } from "@autodeck/ui/theme";
+import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { db } from "../../../lib/firebase";
 import { purchaseMembership, generateIdempotencyKey } from "../../../lib/membership-service";
-import { colors, spacing, radius, typography, Button, ListRow, LoadingState, formatPaise } from "@autodeck/ui";
 
 export default function PurchaseMembershipScreen() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
@@ -14,6 +15,8 @@ export default function PurchaseMembershipScreen() {
   const [plan, setPlan] = useState<MembershipPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   useEffect(() => {
@@ -23,7 +26,7 @@ export default function PurchaseMembershipScreen() {
         if (snap.exists()) setPlan(snap.data() as MembershipPlan);
       })
       .catch((err: unknown) => {
-        Alert.alert("Error", err instanceof Error ? err.message : "Could not load plan.");
+        setError(err instanceof Error ? err.message : "Could not load plan.");
       })
       .finally(() => setLoading(false));
   }, [planId]);
@@ -31,41 +34,57 @@ export default function PurchaseMembershipScreen() {
   async function handlePurchase() {
     if (!plan) return;
     setPurchasing(true);
+    setError(null);
     try {
       await purchaseMembership(plan.id, "razorpay_payment_link", idempotencyKey);
-      Alert.alert(
-        "Request received",
-        "Your membership will be activated once payment is confirmed by the studio.",
-      );
-      router.replace("/(tabs)/membership");
+      setDone(true);
     } catch (err) {
-      Alert.alert("Purchase failed", err instanceof Error ? err.message : "Please try again.");
+      setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
       setPurchasing(false);
     }
   }
 
-  if (loading) return <LoadingState />;
-  if (!plan) return null;
+  if (loading) return <Loading label="Preparing checkout" />;
+  if (!plan) return <Screen>{error ? <Notice title="Could not load plan" body={error} /> : null}</Screen>;
+
+  if (done) {
+    return (
+      <Screen>
+        <Notice
+          title="Request received"
+          body="Your membership will be activated once payment is confirmed by the studio."
+          action={<Button label="Back to membership" onPress={() => router.replace("/(tabs)/membership")} />}
+        />
+      </Screen>
+    );
+  }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>Confirm Purchase</Text>
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">Confirm purchase</Kicker>
+          <T role="title">{plan.name}</T>
+        </View>
+      }
+    >
+      <Pane pad="gap">
+        <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
+        <Row title="Discount" detail={`${plan.discountPercent}%`} />
+        <Row title="Price" detail={`${rupees(plan.priceInPaise)} / month`} last />
+      </Pane>
 
-      <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-        <ListRow label="Plan" value={plan.name} />
-        <ListRow label="Included washes" value={`${plan.includedWashes} / month`} />
-        <ListRow label="Discount" value={`${plan.discountPercent}%`} />
-        <ListRow label="Price" value={`${formatPaise(plan.priceInPaise)} / month`} />
-      </View>
-
-      <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginBottom: spacing.xl }}>
+      <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         Payment is confirmed by the studio before your membership is activated.
-      </Text>
+      </T>
 
-      <Button label="Confirm & Pay" onPress={() => void handlePurchase()} loading={purchasing} />
-      <View style={{ height: spacing.sm }} />
-      <Button label="Go back" onPress={() => router.back()} variant="ghost" />
-    </ScrollView>
+      {error ? <Notice title="Purchase failed" body={error} /> : null}
+
+      <View style={{ gap: space.breath }}>
+        <Button label="Confirm & pay" busy={purchasing} onPress={() => void handlePurchase()} />
+        <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+      </View>
+    </Screen>
   );
 }

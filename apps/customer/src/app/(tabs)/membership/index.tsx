@@ -1,20 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
+import { space } from "@autodeck/ui/theme";
+import { Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { getMembershipPlans, getMyMemberships } from "../../../lib/membership-service";
-import {
-  colors,
-  spacing,
-  typography,
-  StatusBadge,
-  statusTone,
-  Card,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  formatPaise,
-} from "@autodeck/ui";
 
 export default function MembershipScreen() {
   const router = useRouter();
@@ -41,53 +31,61 @@ export default function MembershipScreen() {
     void load();
   }, [load]);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (loading) return <Loading label="Opening membership" />;
+  if (error) {
+    return (
+      <Screen>
+        <Notice
+          title="Could not load membership"
+          body={error}
+          action={<Chip label="Try again" tone="accent" />}
+        />
+      </Screen>
+    );
+  }
+
+  const otherPlans = current ? plans : plans;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {current && (
-        <Card
-          onPress={() => router.push("/(tabs)/membership/current")}
-          style={{ margin: spacing.lg, marginBottom: spacing.sm }}
-        >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <View>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Your Membership</Text>
-              <Text style={{ ...typography.title, color: colors.textPrimary, marginTop: spacing.xxs, textTransform: "capitalize" }}>
-                {current.tier}
-              </Text>
-            </View>
-            <StatusBadge label={current.status} tone={statusTone(current.status)} />
-          </View>
-        </Card>
-      )}
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">Membership</Kicker>
+          <T role="title">Plans that pay for themselves</T>
+        </View>
+      }
+    >
+      {current ? (
+        <Pane pad="gap">
+          <Row
+            title={current.tier}
+            detail="Your membership"
+            trailing={<Chip label={current.status} tone={current.status === "active" ? "premium" : "neutral"} />}
+            onPress={() => router.push("/(tabs)/membership/current")}
+            last
+          />
+        </Pane>
+      ) : null}
 
-      <FlatList
-        data={plans}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={{ padding: spacing.lg, paddingTop: current ? spacing.sm : spacing.lg, flexGrow: 1 }}
-        ListHeaderComponent={
-          <Text style={{ ...typography.title, color: colors.textPrimary, marginBottom: spacing.md }}>
-            {current ? "Other Plans" : "Membership Plans"}
-          </Text>
-        }
-        ListEmptyComponent={<EmptyState title="No plans available" message="Check back soon." fill={false} />}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        renderItem={({ item }) => (
-          <Card onPress={() => router.push(`/(tabs)/membership/${item.id}`)}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View>
-                <Text style={{ ...typography.title, color: colors.textPrimary }}>{item.name}</Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-                  {item.includedWashes} washes · {item.discountPercent}% off other services
-                </Text>
-              </View>
-              <Text style={{ ...typography.price, color: colors.accent }}>{formatPaise(item.priceInPaise)}</Text>
-            </View>
-          </Card>
+      <View style={{ gap: space.line }}>
+        <Kicker>{current ? "Other plans" : "Choose a plan"}</Kicker>
+        {otherPlans.length === 0 ? (
+          <Notice title="No plans available" body="Check back soon." />
+        ) : (
+          <Pane pad="gap">
+            {otherPlans.map((p, i) => (
+              <Row
+                key={p.id}
+                title={p.name}
+                detail={`${p.includedWashes} washes · ${p.discountPercent}% off other services`}
+                trailing={<T role="label" tone="accent">{rupees(p.priceInPaise)}</T>}
+                onPress={() => router.push(`/(tabs)/membership/${p.id}`)}
+                last={i === otherPlans.length - 1}
+              />
+            ))}
+          </Pane>
         )}
-      />
-    </View>
+      </View>
+    </Screen>
   );
 }

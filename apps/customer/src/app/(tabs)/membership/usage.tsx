@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View } from "react-native";
 import type { MembershipUsage } from "@autodeck/core";
+import { space } from "@autodeck/ui/theme";
+import { Kicker, Loading, Notice, Pane, Row, Screen, rupees } from "../../../ui/kit";
 import { getMyMemberships, getMembershipUsage } from "../../../lib/membership-service";
-import { colors, spacing, typography, Card, EmptyState, ErrorState, LoadingState, formatPaise, formatDateShort } from "@autodeck/ui";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function MembershipUsageScreen() {
   const [usage, setUsage] = useState<MembershipUsage[]>([]);
@@ -31,31 +36,32 @@ export default function MembershipUsageScreen() {
     void load();
   }, [load]);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (loading) return <Loading label="Opening usage" />;
+  if (error) return <Screen><Notice title="Could not load usage" body={error} /></Screen>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FlatList
-        data={usage}
-        keyExtractor={(u) => u.id}
-        contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        ListEmptyComponent={<EmptyState title="No usage yet" message="Book a wash or service to see it here." fill={false} />}
-        renderItem={({ item }) => (
-          <Card flat>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, textTransform: "capitalize" }}>
-                {item.usageType === "wash" ? "Wash credit used" : "Discount applied"}
-              </Text>
-              <Text style={{ ...typography.bodyMedium, color: colors.accent }}>{formatPaise(item.valueRedeemed)}</Text>
-            </View>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-              {formatDateShort(item.usedAt)}
-            </Text>
-          </Card>
-        )}
-      />
-    </View>
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">Membership usage</Kicker>
+        </View>
+      }
+    >
+      {usage.length === 0 ? (
+        <Notice title="No usage yet" body="Book a wash or service to see it here." />
+      ) : (
+        <Pane pad="gap">
+          {usage.map((u, i) => (
+            <Row
+              key={u.id}
+              title={u.usageType === "wash" ? "Wash credit used" : "Discount applied"}
+              detail={formatDate(u.usedAt)}
+              trailing={rupees(u.valueRedeemed)}
+              last={i === usage.length - 1}
+            />
+          ))}
+        </Pane>
+      )}
+    </Screen>
   );
 }
