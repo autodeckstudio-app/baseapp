@@ -7,6 +7,8 @@ import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToJobs } from "../../../lib/jobs-service";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { formatPaise, formatDateTime } from "../../../lib/format";
+import { JobBoard, type BoardJob } from "../../../experience/JobBoard";
+import { statusLabel } from "../../../lib/status-label";
 import { useLabels } from "../../../lib/use-labels";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Customer, Vehicle, Service } from "@autodeck/core";
@@ -25,7 +27,8 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [status, setStatus] = useState<JobStatus | "">("");
-  const [when, setWhen] = useState<"" | "today" | "upcoming">("");
+  const [when, setWhen] = useState<"" | "today" | "upcoming">("today");
+  const [view, setView] = useState<"board" | "list">("board");
   const [source, setSource] = useState<"" | "booking" | "walkin">("");
   const [search, setSearch] = useState("");
 
@@ -56,8 +59,10 @@ export default function JobsPage() {
       if (status && j.status !== status) return false;
       // "Today" means active today, not merely started today — a multi-day
       // job (e.g. a PPF service) started on an earlier date is still active
-      // on every day through its estimatedEndDate.
-      if (when === "today" && !(j.scheduledDate <= today && j.estimatedEndDate >= today)) return false;
+      // on every day through its estimatedEndDate. A car still in the studio
+      // past its estimate stays on today's floor until delivered.
+      const carriedOver = j.scheduledDate <= today && j.status !== "DELIVERED" && j.status !== "CANCELLED";
+      if (when === "today" && !(carriedOver || (j.scheduledDate <= today && j.estimatedEndDate >= today))) return false;
       if (when === "upcoming" && j.scheduledDate <= today) return false;
       if (source === "booking" && j.isWalkIn) return false;
       if (source === "walkin" && !j.isWalkIn) return false;
@@ -74,62 +79,101 @@ export default function JobsPage() {
 
   if (error) return <p className="error">{error}</p>;
 
-  return (
-    <div>
-      <h1>Jobs</h1>
+  const activeToday = jobs.filter((j) => j.scheduledDate <= today && j.estimatedEndDate >= today);
+  const inStudio = activeToday.filter((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)).length;
+  const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
+  const awaiting = activeToday.filter((j) => j.status === "PENDING_VEHICLE").length;
 
-      <div className="filter-bar">
-        <select value={status} onChange={(e) => setStatus(e.target.value as JobStatus | "")}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
+  const toBoard = (j: ServiceJob): BoardJob => ({
+    id: j.id,
+    status: j.status,
+    plate: vehicleRegs[j.vehicleId] ?? "—",
+    customer: customerNames[j.customerId] ?? "Customer",
+    service: serviceNames[j.serviceId] ?? "Service",
+    bay: j.bayId ? j.bayId.replace(/^bay[-_]?/i, "") : undefined,
+    when: formatDateTime(j.scheduledAt),
+    walkIn: j.isWalkIn,
+    payment: j.paymentStatus,
+  });
+  const open = (id: string) => router.push(`/jobs/${id}`);
+
+  return (
+    <div className="ad-page">
+      <header className="ad-page-head">
+        <div>
+          <p className="ad-label">Studio floor</p>
+          <h1>Jobs</h1>
+        </div>
+        <div className="ad-kpis" aria-label="Today at a glance">
+          <div><span className="ad-kpi-v">{awaiting}</span><span className="ad-label">Arriving today</span></div>
+          <div><span className="ad-kpi-v ad-kpi-v--accent">{inStudio}</span><span className="ad-label">In the studio</span></div>
+          <div><span className="ad-kpi-v ad-kpi-v--premium">{ready}</span><span className="ad-label">Ready for pickup</span></div>
+        </div>
+      </header>
+
+      <div className="ad-toolbar">
+        <div className="ad-seg" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}>Board</button>
+          <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>List</button>
+        </div>
+        <div className="ad-seg" role="group" aria-label="Date">
+          <button type="button" aria-pressed={when === "today"} onClick={() => setWhen("today")}>Today</button>
+          <button type="button" aria-pressed={when === "upcoming"} onClick={() => setWhen("upcoming")}>Upcoming</button>
+          <button type="button" aria-pressed={when === ""} onClick={() => setWhen("")}>All</button>
+        </div>
+        <select aria-label="Source" value={source} onChange={(e) => setSource(e.target.value as typeof source)}>
+          <option value="">Bookings and walk-ins</option>
+          <option value="booking">Bookings only</option>
+          <option value="walkin">Walk-ins only</option>
         </select>
-        <select value={when} onChange={(e) => setWhen(e.target.value as typeof when)}>
-          <option value="">Any date</option>
-          <option value="today">Today</option>
-          <option value="upcoming">Upcoming</option>
-        </select>
-        <select value={source} onChange={(e) => setSource(e.target.value as typeof source)}>
-          <option value="">Booking + walk-in</option>
-          <option value="booking">Booking only</option>
-          <option value="walkin">Walk-in only</option>
-        </select>
-        <input placeholder="Search customer / vehicle / job ID" value={search} onChange={(e) => setSearch(e.target.value)} style={{ minWidth: 260 }} />
-        <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{filtered.length} of {jobs.length}</span>
+        {view === "list" && (
+          <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as JobStatus | "")}>
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{statusLabel(s)}</option>
+            ))}
+          </select>
+        )}
+        <input className="ad-search" type="search" aria-label="Search" placeholder="Search plate, customer or job" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <span className="ad-count">{filtered.length} of {jobs.length}</span>
       </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <JobBoard jobs={[]} loading onOpen={open} />
+      ) : jobs.length === 0 ? (
+        <div className="ad-empty">
+          <p className="ad-title">No jobs yet</p>
+          <p>Jobs appear here as bookings are confirmed and walk-ins are checked in.</p>
+        </div>
+      ) : view === "board" ? (
+        <JobBoard jobs={filtered.map(toBoard)} onOpen={open} />
       ) : filtered.length === 0 ? (
-        <p>No jobs match these filters.</p>
+        <div className="ad-empty"><p className="ad-title">No matches</p><p>Try another date, source or search.</p></div>
       ) : (
         <table>
           <thead>
             <tr>
               <th>Scheduled</th>
               <th>Status</th>
-              <th>Source</th>
-              <th>Customer</th>
               <th>Vehicle</th>
+              <th>Customer</th>
               <th>Service</th>
               <th>Bay</th>
               <th>Payment</th>
-              <th>Total</th>
+              <th style={{ textAlign: "right" }}>Total</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((j) => (
-              <tr key={j.id} className="row-link" onClick={() => router.push(`/jobs/${j.id}`)}>
-                <td>{formatDateTime(j.scheduledAt)}</td>
+              <tr key={j.id} className="row-link" onClick={() => open(j.id)}>
+                <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ad-muted"> · Walk-in</span> : null}</td>
                 <td><StatusBadge label={j.status} /></td>
-                <td>{j.isWalkIn ? "Walk-in" : "Booking"}</td>
-                <td>{customerNames[j.customerId] ?? j.customerId}</td>
-                <td>{vehicleRegs[j.vehicleId] ?? j.vehicleId}</td>
-                <td>{serviceNames[j.serviceId] ?? j.serviceId}</td>
+                <td className="ad-data">{vehicleRegs[j.vehicleId] ?? "—"}</td>
+                <td>{customerNames[j.customerId] ?? "—"}</td>
+                <td>{serviceNames[j.serviceId] ?? "—"}</td>
                 <td>{j.bayId}</td>
                 <td><StatusBadge label={j.paymentStatus} /></td>
-                <td>{formatPaise(j.totalAmount)}</td>
+                <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>
               </tr>
             ))}
           </tbody>
