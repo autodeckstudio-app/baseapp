@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { setupCustomerProfile, refreshAuthToken } from "../../lib/auth-service";
+import { setupCustomerProfile, refreshAuthToken, auth } from "../../lib/auth-service";
 import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
 
 export default function SetupScreen() {
-  const [name, setName] = useState("");
+  // Google gives us a name; the customer can correct it.
+  const [name, setName] = useState(auth.currentUser?.displayName ?? "");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 

@@ -1,25 +1,34 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAdminAuth } from "../../lib/auth-context";
+import { canSeeOffice, canVisit, homeFor } from "../../lib/staff-access";
 import { colors, spacing } from "@autodeck/ui/tokens";
 
-// Route protection for all /(admin) screens: role-gated to 'admin' | 'superadmin'.
-// There is no 'studio' access here — studio staff operate through the Studio App,
-// not the admin business-configuration screens (docs/03-autodeck-feature-map.md).
+// Route protection for all /(admin) screens. One staff shell, two modes:
+//   STUDIO (bookings, job floor): studio staff and admins.
+//   OFFICE (money, catalogue, customers, staff, settings): admins only.
+// Studio staff who reach an office route are sent back to the floor. This is
+// navigation; Firestore rules and the callables/API routes enforce the same
+// boundary server-side. See lib/staff-access.ts.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, claims, loading, signOut } = useAdminAuth();
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
 
   useEffect(() => {
-    if (!loading && (!user || !claims)) {
+    if (loading) return;
+    if (!user || !claims) {
       router.replace("/login");
+    } else if (!canVisit(claims.role, pathname)) {
+      router.replace(homeFor(claims.role));
     }
-  }, [loading, user, claims, router]);
+  }, [loading, user, claims, pathname, router]);
 
   if (loading) return <p style={{ padding: spacing.xl }}>Loading…</p>;
-  if (!user || !claims) return null;
+  if (!user || !claims || !canVisit(claims.role, pathname)) return null;
+  const office = canSeeOffice(claims.role);
 
   return (
     <div>
@@ -34,9 +43,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }}
       >
         <nav className="nav">
-          <a href="/dashboard">Dashboard</a>
+          {office && <a href="/dashboard">Dashboard</a>}
           <a href="/bookings">Bookings</a>
           <a href="/jobs">Jobs</a>
+          {office && (
+            <>
           <a href="/customers">Customers</a>
           <a href="/payments">Payments</a>
           <a href="/invoices">Invoices</a>
@@ -46,6 +57,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <a href="/memberships">Memberships</a>
           <a href="/vehicles">Vehicles</a>
           <a href="/staff">Staff</a>
+            </>
+          )}
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
           <span style={{ fontSize: 13, color: colors.textMuted }}>

@@ -2,7 +2,8 @@ export type UserRole = "customer" | "studio" | "admin" | "superadmin";
 
 /**
  * Firebase custom claims — embedded in the ID token.
- * Set only by Cloud Functions via Admin SDK. Never from client.
+ * Set only server-side with the Admin SDK (Cloud Functions, or the admin
+ * app's Route Handlers). Never from client.
  */
 export interface AutoDeckClaims {
   role: UserRole;

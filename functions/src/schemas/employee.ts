@@ -6,8 +6,9 @@ const staffRoleEnum = z.enum(["studio", "admin"]);
 
 export const addStaffMemberSchema = z.object({
   name: z.string().min(2).max(100).trim(),
-  email: z.string().email().trim(),
-  password: z.string().min(8).max(128),
+  // The Google account the person will sign in with. No password is ever
+  // created: access comes from matching this verified email at sign-in.
+  email: z.string().email().trim().toLowerCase(),
   phone: z.string().max(20).trim().optional(),
   role: staffRoleEnum,
   studioId: z.string().min(1).nullable(),

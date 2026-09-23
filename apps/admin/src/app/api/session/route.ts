@@ -17,34 +17,19 @@
 // expiring, server-verified, revocable session cookie instead.
 import { NextResponse, type NextRequest } from "next/server";
 import { getAdminAuth } from "../../../lib/firebase-admin";
-import type { AutoDeckClaims } from "@autodeck/auth";
+import { SESSION_COOKIE_NAME, extractClaims } from "../../../lib/server-session";
 
-export const SESSION_COOKIE_NAME = "__session";
+export { SESSION_COOKIE_NAME };
+
 // 12 hours: short enough for a financial-operations admin tool, long enough
 // not to force re-login mid-shift. Within Firebase's allowed [5min, 2weeks]
 // createSessionCookie range.
 export const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
-// Roles permitted to use the admin app — mirrors auth-context.tsx's
-// ADMIN_APP_ROLES exactly. There is no separate "studio admin" role (see
-// docs/19-multitenant-saas-architecture.md); 'studio' is operational staff
-// and must never reach admin business-configuration screens.
-const ADMIN_APP_ROLES = new Set(["admin", "superadmin"]);
-
-function extractClaims(
-  decoded: Record<string, unknown>,
-): AutoDeckClaims | null {
-  const role = typeof decoded["role"] === "string" ? decoded["role"] : null;
-  const tenantId =
-    typeof decoded["tenantId"] === "string" ? decoded["tenantId"] : null;
-  if (!role || !ADMIN_APP_ROLES.has(role) || !tenantId) return null;
-  return {
-    role: role as AutoDeckClaims["role"],
-    tenantId,
-    studioId:
-      typeof decoded["studioId"] === "string" ? decoded["studioId"] : null,
-  };
-}
+// Role gate lives in lib/server-session.ts (ADMIN_APP_ROLES / extractClaims):
+// admin + superadmin get the full app; studio staff get a session that the
+// (admin) layout confines to the Studio floor, and every office API route
+// still requires admin.
 
 function setSessionCookie(response: NextResponse, sessionCookie: string): void {
   response.cookies.set({
@@ -71,7 +56,7 @@ function clearSessionCookie(response: NextResponse): void {
 }
 
 // Exchanges a fresh Firebase ID token (just obtained via the client SDK's
-// signInWithEmailAndPassword) for an httpOnly session cookie. Rejects
+// Google sign-in, after /api/auth/resolve-claims) for an httpOnly session cookie. Rejects
 // non-admin roles server-side — previously this check only existed
 // client-side in auth-context.tsx, trivially bypassable by anyone able to
 // run JS against the page.
@@ -92,6 +77,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     decoded = await getAdminAuth().verifyIdToken(idToken, true);
   } catch {
     return NextResponse.json({ error: "invalid-token" }, { status: 401 });
+  }
+  // Same requirement as the role resolver: no staff session on an
+  // unverified email.
+  if (decoded.email_verified !== true) {
+    return NextResponse.json({ error: "email-not-verified" }, { status: 403 });
   }
 
   const claims = extractClaims(decoded);

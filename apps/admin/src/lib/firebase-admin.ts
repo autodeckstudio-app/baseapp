@@ -13,6 +13,7 @@ import {
   type App,
 } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
 // Cloud Run and Cloud Functions Gen2 — and Firebase App Hosting, which
 // deploys on Cloud Run under the hood — set K_SERVICE automatically as part
@@ -85,4 +86,8 @@ function initAdminApp(): App {
 // the Auth emulator keep their existing credential paths.
 export function getAdminAuth() {
   return getAuth(initAdminApp());
+}
+
+export function getAdminDb() {
+  return getFirestore(initAdminApp());
 }

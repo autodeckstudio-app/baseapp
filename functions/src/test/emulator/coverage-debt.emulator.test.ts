@@ -266,23 +266,38 @@ describe("getStudioJobs", () => {
 // ─── addStaffMember / updateStaffRole / deactivateStaffMember ──────────────
 
 describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMember)", () => {
-  it("admin creates a studio-scoped staff member: real Auth user + Employee record + claims", async () => {
+  it("admin adds a studio-scoped roster entry by Google email, without creating an account", async () => {
     const adminUid = uid("admin");
     const email = `${uid("newstaff")}@coverage-test.local`;
 
     const result = (await addStaffMember.run({
-      data: { name: "New Studio Staff", email, password: "password123", role: "studio", studioId: STUDIO_A },
+      data: { name: "New Studio Staff", email, role: "studio", studioId: STUDIO_A },
       auth: adminAuth(adminUid),
     } as never)) as { employeeId: string };
 
     const employeeSnap = await db.collection(COLLECTIONS.employees()).doc(result.employeeId).get();
     const employee = employeeSnap.data() as Employee;
     expect(employee.tenantId).toBe(TENANT_A); // server-derived from caller, not client input
+    expect(employee.email).toBe(email.toLowerCase());
     expect(employee.role).toBe("studio");
     expect(employee.studioId).toBe(STUDIO_A);
     expect(employee.active).toBe(true);
+    expect(employee.authUid).toBe(""); // linked by the resolver at first Google sign-in
 
-    const { customClaims } = await getAuth().getUser(result.employeeId);
+    await expect(getAuth().getUserByEmail(email)).rejects.toThrow();
+  });
+
+  it("links and promotes an existing verified account with the roster email", async () => {
+    const email = `${uid("existing")}@coverage-test.local`;
+    const account = await getAuth().createUser({ email, emailVerified: true });
+    const result = (await addStaffMember.run({
+      data: { name: "Existing Customer", email, role: "studio", studioId: STUDIO_A },
+      auth: adminAuth(uid("admin")),
+    } as never)) as { employeeId: string };
+
+    const employee = (await db.collection(COLLECTIONS.employees()).doc(result.employeeId).get()).data() as Employee;
+    expect(employee.authUid).toBe(account.uid);
+    const { customClaims } = await getAuth().getUser(account.uid);
     expect(customClaims?.["role"]).toBe("studio");
     expect(customClaims?.["tenantId"]).toBe(TENANT_A);
     expect(customClaims?.["studioId"]).toBe(STUDIO_A);
@@ -291,7 +306,7 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
   it("rejects role='admin' with a non-null studioId", async () => {
     await expect(
       addStaffMember.run({
-        data: { name: "Bad Admin", email: `${uid("bad")}@coverage-test.local`, password: "password123", role: "admin", studioId: STUDIO_A },
+        data: { name: "Bad Admin", email: `${uid("bad")}@coverage-test.local`, role: "admin", studioId: STUDIO_A },
         auth: adminAuth(uid("admin")),
       } as never),
     ).rejects.toThrow(/not studio-scoped/);
@@ -300,7 +315,7 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
   it("rejects role='studio' with a null studioId", async () => {
     await expect(
       addStaffMember.run({
-        data: { name: "Bad Studio", email: `${uid("bad")}@coverage-test.local`, password: "password123", role: "studio", studioId: null },
+        data: { name: "Bad Studio", email: `${uid("bad")}@coverage-test.local`, role: "studio", studioId: null },
         auth: adminAuth(uid("admin")),
       } as never),
     ).rejects.toThrow(/require a studioId/);
@@ -309,34 +324,33 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
   it("rejects a duplicate email", async () => {
     const email = `${uid("dup")}@coverage-test.local`;
     await addStaffMember.run({
-      data: { name: "First", email, password: "password123", role: "studio", studioId: STUDIO_A },
+      data: { name: "First", email, role: "studio", studioId: STUDIO_A },
       auth: adminAuth(uid("admin")),
     } as never);
 
     await expect(
       addStaffMember.run({
-        data: { name: "Second", email, password: "password123", role: "studio", studioId: STUDIO_A },
+        data: { name: "Second", email, role: "studio", studioId: STUDIO_A },
         auth: adminAuth(uid("admin")),
       } as never),
-    ).rejects.toThrow(/already exists/);
+    ).rejects.toThrow(/already on the staff roster/);
   });
 
   it("studio-role caller is rejected (admin-only)", async () => {
     await expect(
       addStaffMember.run({
-        data: { name: "X", email: `${uid("x")}@coverage-test.local`, password: "password123", role: "studio", studioId: STUDIO_A },
+        data: { name: "X", email: `${uid("x")}@coverage-test.local`, role: "studio", studioId: STUDIO_A },
         auth: studioAuth(uid("staff"), STUDIO_A),
       } as never),
     ).rejects.toThrow();
   });
 
-  it("Phase 5B P1-6 regression: a Firestore failure after Auth user creation deletes the orphaned Auth account, allowing a clean retry", async () => {
+  it("Phase 5B P1-6 regression: a failed roster write leaves no Auth account or Employee record, and a retry succeeds", async () => {
     const email = `${uid("orphan")}@coverage-test.local`;
 
-    // Simulate a transient Firestore failure AFTER adminAuth.createUser()
-    // has already succeeded — the exact window that used to leave a
-    // permanent orphan (real Auth account, no Employee record, retry
-    // blocked forever by the duplicate-email check). enforceRateLimit()
+    // Google sign-in: addStaffMember no longer creates Auth accounts, so the
+    // old orphan window is gone. Keep the guard that a failed Employee write
+    // leaves nothing behind and does not block a retry. enforceRateLimit()
     // ALSO calls db.runTransaction() — and runs first — so a bare
     // mockRejectedValueOnce would fail that call instead of the intended
     // Employee-creation one, short-circuiting the whole function before
@@ -351,7 +365,7 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
 
     await expect(
       addStaffMember.run({
-        data: { name: "Orphan Risk", email, password: "password123", role: "studio", studioId: STUDIO_A },
+        data: { name: "Orphan Risk", email, role: "studio", studioId: STUDIO_A },
         auth: adminAuth(uid("admin-orphan")),
       } as never),
     ).rejects.toThrow(/simulated Firestore failure/);
@@ -365,10 +379,9 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
     const orphanSnap = await db.collection(COLLECTIONS.employees()).where("name", "==", "Orphan Risk").get();
     expect(orphanSnap.empty).toBe(true);
 
-    // A genuine retry with the same email must now succeed cleanly — proof
-    // the compensating delete actually ran, not just that the call failed.
+    // A genuine retry with the same email must succeed cleanly.
     const retryResult = (await addStaffMember.run({
-      data: { name: "Orphan Risk Retry", email, password: "password123", role: "studio", studioId: STUDIO_A },
+      data: { name: "Orphan Risk Retry", email, role: "studio", studioId: STUDIO_A },
       auth: adminAuth(uid("admin-orphan-retry")),
     } as never)) as { employeeId: string };
 
@@ -463,7 +476,7 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
     expect((retriedSnap.data() as Employee).studioId).toBe(STUDIO_B);
   });
 
-  it("deactivateStaffMember disables the Auth account, revokes tokens, and marks the Employee terminated", async () => {
+  it("deactivateStaffMember demotes the account to customer, revokes tokens, and marks the Employee terminated", async () => {
     const employee = await seedEmployee(uid("emp"), TENANT_A, STUDIO_A, { role: "studio" });
 
     const result = (await deactivateStaffMember.run({
@@ -479,7 +492,10 @@ describe("Staff management (addStaffMember / updateStaffRole / deactivateStaffMe
     expect(updated.terminatedAt).not.toBeNull();
 
     const authUser = await getAuth().getUser(employee.authUid);
-    expect(authUser.disabled).toBe(true);
+    expect(authUser.disabled).toBe(false); // keeps their customer history
+    expect(authUser.customClaims?.["role"]).toBe("customer");
+    expect(authUser.customClaims?.["studioId"]).toBeNull();
+    expect(new Date(authUser.tokensValidAfterTime ?? 0).getTime()).toBeGreaterThan(0);
   });
 
   it("deactivateStaffMember is idempotent — calling twice returns alreadyTerminated:true, doesn't error", async () => {

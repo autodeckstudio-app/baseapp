@@ -17,7 +17,7 @@ type AuthState =
  *   loading → authenticated_no_claims (signed in, profile not set up yet)
  *   loading → ready (signed in + claims set)
  *
- * After phone OTP sign-in, the app calls setupCustomerProfile + refreshAuthToken,
+ * After Google sign-in, the app calls setupCustomerProfile + refreshAuthToken,
  * which causes onAuthStateChanged to fire again with updated claims.
  */
 export function useAuth(): AuthState {

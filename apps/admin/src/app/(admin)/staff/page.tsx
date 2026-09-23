@@ -15,7 +15,6 @@ export default function StaffPage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [role, setRole] = useState<"studio" | "admin">("studio");
   const [studioScoped, setStudioScoped] = useState(true);
 
@@ -42,17 +41,15 @@ export default function StaffPage() {
       await addStaffMember({
         name,
         email,
-        password,
         role,
         studioId: role === "studio" && studioScoped ? FIRST_STUDIO_ID : null,
       });
-      setStatus(`Staff member created. Share the temporary password (${password}) securely.`);
+      setStatus(`Added. ${name} can now sign in with Google using ${email}.`);
       setName("");
       setEmail("");
-      setPassword("");
       await refresh();
-    } catch {
-      setError("Failed to add staff member. Email may already be in use.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add staff member.");
     }
   }
 
@@ -100,7 +97,18 @@ export default function StaffPage() {
           <tbody>
             {staff.map((emp) => (
               <tr key={emp.id}>
-                <td>{emp.name}</td>
+                <td>
+                  {emp.name}
+                  {emp.email && (
+                    <>
+                      <br />
+                      <small>
+                        {emp.email}
+                        {emp.authUid ? "" : " · not signed in yet"}
+                      </small>
+                    </>
+                  )}
+                </td>
                 <td>
                   <select
                     value={emp.role}
@@ -132,16 +140,9 @@ export default function StaffPage() {
       </fieldset>
       <fieldset>
         <label>
-          Email
+          Google email (the Gmail they sign in with)
           <br />
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-      </fieldset>
-      <fieldset>
-        <label>
-          Temporary password
-          <br />
-          <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
       </fieldset>
       <fieldset>
@@ -165,7 +166,7 @@ export default function StaffPage() {
           </label>
         )}
       </fieldset>
-      <button onClick={() => void handleAdd()} disabled={!name || !email || password.length < 8}>
+      <button onClick={() => void handleAdd()} disabled={!name || !email}>
         Add staff member
       </button>
     </div>

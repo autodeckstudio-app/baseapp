@@ -4,6 +4,7 @@ initializeApp();
 
 // ─── Auth / Customer ─────────────────────────────────────────────────────────
 export { setupCustomerProfile } from "./functions/auth/setupCustomerProfile.js";
+export { resolveClaims } from "./functions/auth/resolveClaims.js";
 
 // ─── Vehicle ─────────────────────────────────────────────────────────────────
 export { createVehicle } from "./functions/vehicle/createVehicle.js";

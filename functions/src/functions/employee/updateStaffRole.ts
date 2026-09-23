@@ -42,11 +42,16 @@ export const updateStaffRole = onCall({ region: "asia-south1", enforceAppCheck: 
   }
 
   const adminAuth = getAuth();
-  await adminAuth.setCustomUserClaims(existing.authUid, {
-    role: data.role,
-    tenantId: existing.tenantId,
-    studioId: data.studioId,
-  });
+  // Roster entries whose person has not signed in yet have no account to
+  // update; the resolver reads the new role from the roster at first sign-in.
+  const linked = existing.authUid !== "";
+  if (linked) {
+    await adminAuth.setCustomUserClaims(existing.authUid, {
+      role: data.role,
+      tenantId: existing.tenantId,
+      studioId: data.studioId,
+    });
+  }
 
   const now = new Date().toISOString();
 
@@ -74,6 +79,7 @@ export const updateStaffRole = onCall({ region: "asia-south1", enforceAppCheck: 
       });
     });
   } catch (err) {
+    if (!linked) throw err;
     await adminAuth
       .setCustomUserClaims(existing.authUid, {
         role: existing.role,
