@@ -338,3 +338,4 @@
 .ad-shell .ad-choice-opt[aria-pressed="true"] { border-color: var(--ad-accent); background: var(--ad-accent-haze); }
 .ad-choice-title { font-size: 14px; font-weight: 600; color: var(--ad-text-primary); }
 .ad-form-row > span:first-child { font-size: 13px; color: var(--ad-text-secondary); }
+.ad-shell .ad-toolbar > select, .ad-shell .ad-toolbar > input[type="date"] { flex: 0 0 auto !important; width: auto !important; min-width: 0; display: inline-block; min-height: 38px; }

@@ -63,7 +63,7 @@ function PlateLookup({ onLookup }: { onLookup: (plate: string) => void }) {
   const [plate, setPlate] = useState("");
   return (
     <form className="ad-inline-form" onSubmit={(e) => { e.preventDefault(); onLookup(plate); }}>
-      <input className="ad-search ad-search--plate" placeholder="Find by number plate" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
+      <input className="ad-search ad-search--plate" placeholder="Number plate" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
       <button type="submit" className="ad-button" disabled={plate.trim().length < 4}>Find</button>
     </form>
   );
