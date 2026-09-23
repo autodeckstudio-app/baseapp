@@ -1,26 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import {
-  colors,
-  spacing,
-  radius,
-  typography,
-  TextInput,
-  Button,
-  ListRow,
-  Divider,
-  Tabs,
-  StatusBadge,
-  statusTone,
-  EmptyState,
-  LoadingState,
-  ErrorState,
-  formatDateShort,
-} from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle } from "../../../lib/vehicle-service";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
@@ -41,18 +27,22 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-function Section({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md }}>
-      {children}
-    </View>
-  );
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "overview", label: "Overview" },
+  { key: "passport", label: "Passport" },
+  { key: "protection", label: "Protection" },
+  { key: "warranty", label: "Warranty" },
+];
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const auth = useAuth();
+  const { colors } = useExperienceTheme();
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +50,8 @@ export default function VehicleDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ make: "", model: "", color: "", odometer: "" });
   const [tab, setTab] = useState<TabKey>("overview");
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
@@ -126,6 +118,7 @@ export default function VehicleDetailScreen() {
   async function handleSave() {
     if (!id) return;
     setSaving(true);
+    setActionError(null);
     try {
       const odometerNum = form.odometer ? parseInt(form.odometer, 10) : null;
       await updateVehicle({
@@ -137,241 +130,221 @@ export default function VehicleDetailScreen() {
       });
       setEditing(false);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to update.");
+      setActionError(err instanceof Error ? err.message : "Failed to update.");
     } finally {
       setSaving(false);
     }
   }
 
-  function handleArchive() {
-    Alert.alert("Remove Vehicle", "Remove this vehicle from your garage?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: async () => {
-          if (!id) return;
-          try {
-            await archiveVehicle(id);
-            router.back();
-          } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to remove.");
-          }
-        },
-      },
-    ]);
+  async function handleArchiveConfirmed() {
+    if (!id) return;
+    setActionError(null);
+    try {
+      await archiveVehicle(id);
+      router.back();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to remove.");
+    }
   }
 
-  if (loading) return <LoadingState />;
-  if (!vehicle) return <ErrorState title="Vehicle not found" />;
+  if (loading) return <Loading label="Opening the room" />;
+  if (!vehicle) return <Screen><Notice title="Vehicle not found" body="It may have been removed from your garage." /></Screen>;
 
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
   const mostRecentJob = jobs[0] ?? null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ padding: spacing.xl, paddingBottom: spacing.md }}>
-        <Text style={{ ...typography.caption, color: colors.textMuted, letterSpacing: 1 }}>{vehicle.registrationNumber}</Text>
-        <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.md }}>
-          {vehicle.year} {vehicle.make} {vehicle.model}
-        </Text>
-        <Tabs
-          items={[
-            { key: "overview", label: "Overview" },
-            { key: "passport", label: "Passport" },
-            { key: "protection", label: "Protection" },
-            { key: "warranty", label: "Warranty" },
-          ]}
-          selectedKey={tab}
-          onSelect={(k) => setTab(k as TabKey)}
-        />
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl }}>
-        {tab === "overview" && (
-          <>
-            <View style={{ flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md }}>
-              <View style={{ flex: 1 }}>
-                <Section>
-                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Protection</Text>
+    <Screen
+      header={
+        <View style={{ gap: space.breath }}>
+          <View style={{ gap: space.hair }}>
+            <Kicker tone="accent">Vehicle room</Kicker>
+            <T role="title">{vehicle.year} {vehicle.make} {vehicle.model}</T>
+            <Plate value={vehicle.registrationNumber} />
+          </View>
+          <View style={{ flexDirection: "row", gap: space.inset }}>
+            {TABS.map((t) => {
+              const selected = tab === t.key;
+              return (
+                <Pressable
+                  key={t.key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => setTab(t.key)}
+                  style={{ paddingVertical: space.breath, borderBottomWidth: 2, borderBottomColor: selected ? colors.accent : "transparent" }}
+                >
+                  <T role="label" tone={selected ? "accent" : "tertiary"}>{t.label}</T>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      }
+    >
+      {tab === "overview" ? (
+        <>
+          <View style={{ flexDirection: "row", gap: space.line }}>
+            <View style={{ flex: 1 }}>
+              <Pane pad="inset">
+                <View style={{ gap: space.hair }}>
+                  <Kicker>Protection</Kicker>
                   {verifiedProtections.length > 0 ? (
-                    <StatusBadge label={`${verifiedProtections.length} verified`} tone="success" />
+                    <Chip label={`${verifiedProtections.length} verified`} tone="premium" />
                   ) : (
-                    <Text style={{ ...typography.captionMedium, color: colors.textMuted }}>None on file</Text>
+                    <T role="caption" tone="tertiary">None on file</T>
                   )}
-                </Section>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Section>
-                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Warranty</Text>
+                </View>
+              </Pane>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Pane pad="inset">
+                <View style={{ gap: space.hair }}>
+                  <Kicker>Warranty</Kicker>
                   {activeWarranties.length > 0 ? (
-                    <StatusBadge label={`${activeWarranties.length} active`} tone="success" />
+                    <Chip label={`${activeWarranties.length} active`} tone="premium" />
                   ) : (
-                    <Text style={{ ...typography.captionMedium, color: colors.textMuted }}>None active</Text>
+                    <T role="caption" tone="tertiary">None active</T>
                   )}
-                </Section>
+                </View>
+              </Pane>
+            </View>
+          </View>
+
+          <View style={{ gap: space.line }}>
+            <Kicker>Recent service</Kicker>
+            <Pane pad="gap">
+              {mostRecentJob ? (
+                <Row
+                  title={serviceNames[mostRecentJob.serviceId] ?? "Service"}
+                  detail={formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt)}
+                  trailing={<Chip label={mostRecentJob.status.replace(/_/g, " ")} />}
+                  last
+                />
+              ) : (
+                <T tone="tertiary">No service history yet</T>
+              )}
+            </Pane>
+          </View>
+
+          <View style={{ gap: space.line }}>
+            <Kicker>Upcoming booking</Kicker>
+            <Pane pad="gap">
+              {upcomingBooking ? (
+                <>
+                  <Row
+                    title={`${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`}
+                    onPress={() => router.push(`/(tabs)/bookings/${upcomingBooking.id}`)}
+                    last
+                  />
+                  {upcomingBooking.membershipDiscountApplied ? (
+                    <T role="caption" tone="accent">Membership benefit applies to this booking</T>
+                  ) : null}
+                </>
+              ) : (
+                <T tone="tertiary">No upcoming booking</T>
+              )}
+            </Pane>
+          </View>
+
+          {editing ? (
+            <View style={{ gap: space.line }}>
+              <Field label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
+              <Field label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
+              <Field label="Colour" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
+              <Field label="Odometer (km)" value={form.odometer} onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))} keyboardType="numeric" />
+              <View style={{ gap: space.breath }}>
+                <Button label="Save changes" busy={saving} onPress={() => void handleSave()} />
+                <Button label="Cancel" kind="quiet" onPress={() => setEditing(false)} />
               </View>
             </View>
+          ) : (
+            <Pane pad="gap">
+              <Row title="Colour" detail={vehicle.color} />
+              {vehicle.odometer !== null ? (
+                <Row title="Odometer" detail={`${vehicle.odometer?.toLocaleString("en-IN")} km`} last />
+              ) : <Row title="" detail="" last />}
+            </Pane>
+          )}
 
-            <Text style={sectionTitle}>Recent Service</Text>
-            <Section>
-              {mostRecentJob ? (
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View>
-                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                      {serviceNames[mostRecentJob.serviceId] ?? "Service"}
-                    </Text>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-                      {formatDateShort(mostRecentJob.sealedAt ?? mostRecentJob.createdAt)}
-                    </Text>
-                  </View>
-                  <StatusBadge label={mostRecentJob.status.replace(/_/g, " ")} tone={statusTone(mostRecentJob.status)} />
-                </View>
-              ) : (
-                <Text style={{ ...typography.body, color: colors.textMuted }}>No service history yet</Text>
-              )}
-            </Section>
+          {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
 
-            <Text style={sectionTitle}>Upcoming Booking</Text>
-            <Section>
-              {upcomingBooking ? (
-                <View>
-                  <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                    {formatDateShort(upcomingBooking.scheduledDate)} at {upcomingBooking.scheduledTime}
-                  </Text>
-                  {upcomingBooking.membershipDiscountApplied && (
-                    <Text style={{ ...typography.caption, color: colors.accent, marginTop: spacing.xs }}>
-                      Membership benefit applies to this booking
-                    </Text>
-                  )}
-                </View>
-              ) : (
-                <Text style={{ ...typography.body, color: colors.textMuted }}>No upcoming booking</Text>
-              )}
-            </Section>
-
-            {editing ? (
-              <Section>
-                <TextInput label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
-                <TextInput label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
-                <TextInput label="Color" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
-                <TextInput
-                  label="Odometer (km)"
-                  value={form.odometer}
-                  onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))}
-                  keyboardType="numeric"
+          {!editing ? (
+            <View style={{ gap: space.breath }}>
+              <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />
+              {confirmingArchive ? (
+                <Notice
+                  title="Remove from your garage?"
+                  body="Service history stays on record."
+                  action={
+                    <View style={{ gap: space.breath }}>
+                      <Button label="Yes, remove" kind="danger" onPress={() => void handleArchiveConfirmed()} />
+                      <Button label="Keep it" kind="quiet" onPress={() => setConfirmingArchive(false)} />
+                    </View>
+                  }
                 />
-                <Button label="Save Changes" onPress={() => void handleSave()} loading={saving} />
-                <View style={{ height: spacing.sm }} />
-                <Button label="Cancel" onPress={() => setEditing(false)} variant="ghost" />
-              </Section>
-            ) : (
-              <Section>
-                <ListRow label="Color" value={vehicle.color} />
-                {vehicle.odometer !== null && (
-                  <>
-                    <Divider />
-                    <ListRow label="Odometer" value={`${vehicle.odometer?.toLocaleString("en-IN")} km`} />
-                  </>
-                )}
-              </Section>
-            )}
+              ) : (
+                <Button label="Remove from garage" kind="danger" onPress={() => setConfirmingArchive(true)} />
+              )}
+            </View>
+          ) : null}
+        </>
+      ) : null}
 
-            {!editing && (
-              <>
-                <Button label="Edit Vehicle" onPress={() => setEditing(true)} variant="secondary" />
-                <View style={{ height: spacing.sm }} />
-                <Button label="Remove from Garage" onPress={handleArchive} variant="destructive" />
-              </>
-            )}
-          </>
-        )}
+      {tab === "passport" ? (
+        jobs.length === 0 ? (
+          <Notice title="No service history yet" body="Completed services for this car will appear here." />
+        ) : (
+          <Pane pad="gap">
+            {jobs.map((job, i) => (
+              <Row
+                key={job.id}
+                title={serviceNames[job.serviceId] ?? "Service"}
+                detail={formatDate(job.sealedAt ?? job.createdAt)}
+                trailing={<Chip label={job.status.replace(/_/g, " ")} />}
+                onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
+                last={i === jobs.length - 1}
+              />
+            ))}
+          </Pane>
+        )
+      ) : null}
 
-        {tab === "passport" && (
-          <>
-            {jobs.length === 0 ? (
-              <EmptyState title="No service history yet" message="Completed services for this vehicle will appear here." fill={false} />
-            ) : (
-              jobs.map((job) => {
-                const row = (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                        {serviceNames[job.serviceId] ?? "Service"}
-                      </Text>
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-                        {formatDateShort(job.sealedAt ?? job.createdAt)}
-                      </Text>
-                    </View>
-                    <StatusBadge label={job.status.replace(/_/g, " ")} tone={statusTone(job.status)} />
-                  </View>
-                );
-                return job.bookingId ? (
-                  <TouchableOpacity key={job.id} onPress={() => router.push(`/(tabs)/bookings/${job.bookingId}`)}>
-                    <Section>{row}</Section>
-                  </TouchableOpacity>
-                ) : (
-                  <Section key={job.id}>{row}</Section>
-                );
-              })
-            )}
-          </>
-        )}
+      {tab === "protection" ? (
+        protections.length === 0 ? (
+          <Notice title="No protections on file" body="Insurance, FastTag, PUC and RC records verified by the studio will appear here." />
+        ) : (
+          <Pane pad="gap">
+            {protections.map((p, i) => (
+              <Row
+                key={p.id}
+                title={PROTECTION_KIND_LABELS[p.kind] ?? p.kind}
+                detail={[p.provider, p.expiryDate !== null ? `Expires ${formatDate(p.expiryDate)}` : null].filter(Boolean).join(" · ") || undefined}
+                trailing={<Chip label={p.status} tone={p.status === "verified" ? "premium" : "neutral"} />}
+                last={i === protections.length - 1}
+              />
+            ))}
+          </Pane>
+        )
+      ) : null}
 
-        {tab === "protection" && (
-          <>
-            {protections.length === 0 ? (
-              <EmptyState title="No protections on file" message="Insurance, FastTag, PUC, and RC records verified by the studio will appear here." fill={false} />
-            ) : (
-              protections.map((p) => (
-                <Section key={p.id}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                        {PROTECTION_KIND_LABELS[p.kind] ?? p.kind}
-                      </Text>
-                      {p.provider !== null && (
-                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>{p.provider}</Text>
-                      )}
-                      {p.expiryDate !== null && (
-                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-                          Expires {formatDateShort(p.expiryDate)}
-                        </Text>
-                      )}
-                    </View>
-                    <StatusBadge label={p.status} tone={statusTone(p.status)} />
-                  </View>
-                </Section>
-              ))
-            )}
-          </>
-        )}
-
-        {tab === "warranty" && (
-          <>
-            {warranties.length === 0 ? (
-              <EmptyState title="No warranties yet" message="Warranties are issued automatically when an eligible service is completed." fill={false} />
-            ) : (
-              warranties.map((w) => (
-                <Section key={w.id}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{w.warrantyLabel}</Text>
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-                        {w.serviceName} · Issued {formatDateShort(w.startDate)}
-                      </Text>
-                    </View>
-                    <StatusBadge label={w.revokedAt ? "Revoked" : "Active"} tone={w.revokedAt ? "error" : "success"} />
-                  </View>
-                </Section>
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
-    </View>
+      {tab === "warranty" ? (
+        warranties.length === 0 ? (
+          <Notice title="No warranties yet" body="Warranties are issued automatically when an eligible service is completed." />
+        ) : (
+          <Pane pad="gap">
+            {warranties.map((w, i) => (
+              <Row
+                key={w.id}
+                title={w.warrantyLabel}
+                detail={`${w.serviceName} · Issued ${formatDate(w.startDate)}`}
+                trailing={<Chip label={w.revokedAt ? "Revoked" : "Active"} tone={w.revokedAt ? "danger" : "premium"} />}
+                last={i === warranties.length - 1}
+              />
+            ))}
+          </Pane>
+        )
+      ) : null}
+    </Screen>
   );
 }
-
-const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBottom: spacing.sm } as const;
