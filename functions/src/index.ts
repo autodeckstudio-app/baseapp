@@ -95,6 +95,13 @@ export { updateExpense } from "./functions/expense/updateExpense.js";
 export { deleteExpense } from "./functions/expense/deleteExpense.js";
 export { listExpenses } from "./functions/expense/listExpenses.js";
 
+// ─── Inventory (M6 Automodz Office) ─────────────────────────────────────────
+export { addInventoryItem } from "./functions/inventory/addInventoryItem.js";
+export { updateInventoryItem } from "./functions/inventory/updateInventoryItem.js";
+export { recordInventoryTxn } from "./functions/inventory/recordInventoryTxn.js";
+export { listInventoryItems } from "./functions/inventory/listInventoryItems.js";
+export { listInventoryTxns } from "./functions/inventory/listInventoryTxns.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

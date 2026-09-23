@@ -331,6 +331,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── /inventoryItems/{itemId} ───────────────────────────────────────────
+    // Studio staff read their tenant's items. Writes are function-only:
+    // quantities change only inside recordInventoryTxn's transaction.
+    match /inventoryItems/{itemId} {
+      allow read: if isStudioOrAbove() && ownTenant(resource.data);
+      allow write: if false;
+    }
+
+    // ─── /inventoryTxns/{txnId} ─────────────────────────────────────────────
+    // Studio staff read their tenant's stock movement log. Function-only writes.
+    match /inventoryTxns/{txnId} {
+      allow read: if isStudioOrAbove() && ownTenant(resource.data);
+      allow write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

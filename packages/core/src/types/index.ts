@@ -47,3 +47,4 @@ export type {
   InspectionChecklistItem,
 } from "./inspection.js";
 export * from "./expense.js";
+export * from "./inventory.js";
