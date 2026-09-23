@@ -32,7 +32,7 @@ export function draftFromService(s: Service): ServiceDraft {
     name: s.name,
     category: s.category,
     brand: s.brand ?? "",
-    description: s.description,
+    description: s.description ?? "",
     priceRupees: String(s.basePrice / 100),
     minutes: String(s.estimatedDurationMinutes),
     warrantyLabel: s.warrantyLabel ?? "",
