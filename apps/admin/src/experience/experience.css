@@ -128,3 +128,17 @@
 .ad-label { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 11px; line-height: 14px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
 .ad-data { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-variant-numeric: tabular-nums; }
 .ad-muted { color: var(--ad-text-secondary); }
+
+/* Inside the experience layer, legacy element styles (globals.css sets a
+   light-theme grey on p/h1) must not leak in: text takes its role colour. */
+.ad-ambient-root p,
+.ad-ambient-root h1,
+.ad-ambient-root h2,
+.ad-ambient-root h3,
+.ad-glass p { color: inherit; }
+.ad-display,
+.ad-title { color: var(--ad-text-primary); }
+.ad-ambient-root .ad-muted,
+.ad-glass .ad-muted { color: var(--ad-text-secondary); }
+.ad-ambient-root .ad-label,
+.ad-glass .ad-label { color: var(--ad-text-tertiary); }
