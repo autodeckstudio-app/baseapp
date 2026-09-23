@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -11,7 +11,9 @@ import { COLLECTIONS } from "@autodeck/database";
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
 import { FIRST_STUDIO_ID } from "@autodeck/core";
-import { colors, spacing, radius, typography, LoadingState, EmptyState } from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -34,6 +36,9 @@ export default function BookServiceScreen() {
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const { colors } = useExperienceTheme();
 
   useEffect(() => {
     if (!serviceId || auth.status !== "ready") return;
@@ -57,8 +62,8 @@ export default function BookServiceScreen() {
           setSelectedVehicle(vList[0]);
           if (vList[0].category) setSelectedCategory(vList[0].category);
         }
-      } catch (err) {
-        Alert.alert("Error", err instanceof Error ? err.message : "Could not load data.");
+      } catch {
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -68,19 +73,15 @@ export default function BookServiceScreen() {
   useEffect(() => {
     if (!serviceId || !service) return;
     setSlotsLoading(true);
+    setSlotsError(false);
     void getAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7)
       .then(setSlots)
-      .catch((err: unknown) => {
-        Alert.alert("Slots error", err instanceof Error ? err.message : "Could not load slots.");
-      })
+      .catch(() => setSlotsError(true))
       .finally(() => setSlotsLoading(false));
   }, [serviceId, service]);
 
   function handleSelectSlot(slot: AvailableSlot) {
-    if (!selectedVehicle || !serviceId) {
-      Alert.alert("Select vehicle", "Please select a vehicle before booking.");
-      return;
-    }
+    if (!selectedVehicle || !serviceId) return;
     router.push({
       pathname: "/(tabs)/book/confirm",
       params: {
@@ -97,115 +98,100 @@ export default function BookServiceScreen() {
     });
   }
 
-  if (loading) return <LoadingState />;
-  if (!service) return <EmptyState title="Service not found" />;
+  if (loading) return <Loading label="Finding times" />;
+  if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." /></Screen>;
+  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
-    if (!acc[slot.date]) acc[slot.date] = [];
-    (acc[slot.date] as AvailableSlot[]).push(slot);
+    (acc[slot.date] ??= []).push(slot);
     return acc;
   }, {});
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>Book {service.name}</Text>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T></View>}>
+      <View style={{ gap: space.line }}>
+        <Kicker>1 · Car</Kicker>
+        {vehicles.length === 0 ? (
+          <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
+        ) : (
+          <Pane pad="gap">
+            {vehicles.map((v, i) => {
+              const selected = selectedVehicle?.id === v.id;
+              return (
+                <Row
+                  key={v.id}
+                  title={`${v.make} ${v.model}`}
+                  detail={<Plate value={v.registrationNumber} />}
+                  trailing={selected ? <Chip label="Selected" tone="accent" /> : null}
+                  onPress={() => {
+                    setSelectedVehicle(v);
+                    if (v.category) setSelectedCategory(v.category);
+                  }}
+                  last={i === vehicles.length - 1}
+                />
+              );
+            })}
+          </Pane>
+        )}
+      </View>
 
-      <Text style={sectionTitle}>Select Vehicle</Text>
-      {vehicles.length === 0 ? (
-        <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
-          No vehicles found. Add a vehicle in the Cars tab first.
-        </Text>
-      ) : (
-        <View style={{ gap: spacing.xs, marginBottom: spacing.lg }}>
-          {vehicles.map((v) => {
-            const selected = selectedVehicle?.id === v.id;
+      <View style={{ gap: space.line }}>
+        <Kicker>2 · Size</Kicker>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+          {VEHICLE_CATEGORIES.map(({ value, label }) => {
+            const selected = selectedCategory === value;
             return (
-              <TouchableOpacity
-                key={v.id}
-                onPress={() => {
-                  setSelectedVehicle(v);
-                  if (v.category) setSelectedCategory(v.category);
-                }}
-                style={[chipStyle, selected && chipSelectedStyle]}
+              <Pressable
+                key={value}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => setSelectedCategory(value)}
+                style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
               >
-                <Text style={{ ...typography.body, color: selected ? colors.textOnAccent : colors.textPrimary }}>
-                  {v.make} {v.model} · {v.registrationNumber}
-                </Text>
-              </TouchableOpacity>
+                <T role="caption" tone={selected ? "accent" : "secondary"}>{label}</T>
+              </Pressable>
             );
           })}
         </View>
-      )}
-
-      <Text style={sectionTitle}>Vehicle Type</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.lg }}>
-        {VEHICLE_CATEGORIES.map(({ value, label }) => {
-          const selected = selectedCategory === value;
-          return (
-            <TouchableOpacity key={value} onPress={() => setSelectedCategory(value)} style={[pillStyle, selected && pillSelectedStyle]}>
-              <Text style={{ ...typography.caption, color: selected ? colors.accentPressed : colors.textSecondary }}>{label}</Text>
-            </TouchableOpacity>
-          );
-        })}
       </View>
 
-      <Text style={sectionTitle}>Available Times</Text>
-      {slotsLoading ? (
-        <LoadingState fill={false} />
-      ) : Object.keys(slotsByDate).length === 0 ? (
-        <Text style={{ ...typography.caption, color: colors.textMuted }}>No slots available in the next 7 days.</Text>
-      ) : (
-        Object.entries(slotsByDate).map(([date, daySlots]) => (
-          <View key={date} style={{ marginBottom: spacing.lg }}>
-            <Text style={{ ...typography.captionMedium, color: colors.textSecondary, marginBottom: spacing.sm }}>
-              {new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}
-            </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
-              {daySlots.map((slot) => {
-                const isMultiDay = slot.estimatedEndDate !== slot.date;
-                return (
-                  <TouchableOpacity
-                    key={slot.startAt}
-                    onPress={() => handleSelectSlot(slot)}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: colors.accent,
-                      borderRadius: radius.md,
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                    }}
-                  >
-                    <Text style={{ ...typography.bodyMedium, color: colors.accent }}>{slot.startTime}</Text>
-                    {isMultiDay && (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                        Multi-day · ready {new Date(`${slot.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ))
-      )}
-    </ScrollView>
+      <View style={{ gap: space.line }}>
+        <Kicker>3 · Time</Kicker>
+        {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." /> : null}
+        {slotsLoading ? (
+          <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
+        ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (
+          <Notice title="Fully booked this week" body="No free times in the next 7 days. Try again tomorrow or call the studio." />
+        ) : (
+          Object.entries(slotsByDate).map(([date, daySlots]) => (
+            <Pane key={date} pad="gap">
+              <View style={{ gap: space.line }}>
+                <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+                  {daySlots.map((slot) => {
+                    const multiDay = slot.estimatedEndDate !== slot.date;
+                    return (
+                      <Pressable
+                        key={slot.startAt}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Book ${slot.startTime}`}
+                        disabled={!selectedVehicle}
+                        onPress={() => handleSelectSlot(slot)}
+                        style={({ pressed }) => ({ borderRadius: 12, borderWidth: 1, borderColor: colors.accent, paddingHorizontal: 14, paddingVertical: 10, opacity: !selectedVehicle ? 0.4 : pressed ? 0.7 : 1, minWidth: 76, alignItems: "center" })}
+                      >
+                        <T role="data" tone="accent">{slot.startTime}</T>
+                        {multiDay ? (
+                          <T role="caption" tone="tertiary">ready {new Date(`${slot.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</T>
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </Pane>
+          ))
+        )}
+      </View>
+    </Screen>
   );
 }
-
-const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBottom: spacing.sm } as const;
-const chipStyle = {
-  borderWidth: 1,
-  borderColor: colors.border,
-  borderRadius: radius.md,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm + 2,
-} as const;
-const chipSelectedStyle = { backgroundColor: colors.textPrimary, borderColor: colors.textPrimary } as const;
-const pillStyle = {
-  borderWidth: 1,
-  borderColor: colors.border,
-  borderRadius: radius.full,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.xs,
-} as const;
-const pillSelectedStyle = { backgroundColor: colors.accentMuted, borderColor: colors.accent } as const;
