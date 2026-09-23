@@ -194,3 +194,9 @@
 .ad-empty .ad-title { margin: 0 0 var(--ad-space-breath); }
 .ad-empty p { margin: 0; }
 @media (max-width: 860px) { .ad-kpis { gap: var(--ad-space-inset); } .ad-board { grid-template-columns: repeat(5, 260px); } }
+.ad-shell .ad-toolbar select { flex: 0 0 auto; width: auto; }
+.ad-shell .ad-toolbar .ad-search { flex: 1 1 240px; width: auto; max-width: 340px; }
+.ad-job-plate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.ad-job-foot > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-board { grid-template-columns: repeat(5, minmax(172px, 1fr)); gap: var(--ad-space-line); }
+@media (max-width: 1400px) { .ad-main { padding: var(--ad-space-inset) var(--ad-space-inset) var(--ad-space-section); } }
