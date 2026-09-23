@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Service, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { colors, spacing, radius, typography, Button, PriceBreakdown, LoadingState, ErrorState } from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 
@@ -20,11 +22,14 @@ const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors } = useExperienceTheme();
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -32,8 +37,8 @@ export default function ServiceDetailScreen() {
       try {
         const snap = await getDoc(doc(db, COLLECTIONS.services(), id));
         if (snap.exists()) setService(snap.data() as Service);
-      } catch (err) {
-        Alert.alert("Error", err instanceof Error ? err.message : "Could not load service.");
+      } catch {
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -43,84 +48,76 @@ export default function ServiceDetailScreen() {
   useEffect(() => {
     if (!id || !service) return;
     setPriceLoading(true);
+    setPriceError(false);
     void calculateServicePrice(id, selectedCategory)
       .then(({ breakdown }) => setPriceBreakdown(breakdown))
-      .catch((err: unknown) => {
-        Alert.alert("Price error", err instanceof Error ? err.message : "Could not get price.");
-      })
+      .catch(() => setPriceError(true))
       .finally(() => setPriceLoading(false));
   }, [id, service, selectedCategory]);
 
-  if (loading) return <LoadingState />;
-  if (!service) return <ErrorState title="Service not found" />;
+  if (loading) return <Loading label="Opening the menu" />;
+  if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." /></Screen>;
+  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text style={{ ...typography.label, color: colors.textMuted }}>{service.category.toUpperCase()}</Text>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginTop: spacing.xxs }}>{service.name}</Text>
-      {service.brand !== null && (
-        <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xxs }}>{service.brand}</Text>
-      )}
-      <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, lineHeight: 22 }}>
-        {service.description}
-      </Text>
-
-      {service.warrantyLabel !== null && (
-        <View
-          style={{
-            backgroundColor: colors.successMuted,
-            borderRadius: radius.sm,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs,
-            alignSelf: "flex-start",
-            marginTop: spacing.md,
-          }}
-        >
-          <Text style={{ ...typography.caption, color: colors.success }}>{service.warrantyLabel}</Text>
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">{service.category}</Kicker>
+          <T role="title">{service.name}</T>
+          {service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
         </View>
-      )}
+      }
+    >
+      <T tone="secondary">{service.description}</T>
 
-      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.md }}>
-        Duration: ~{service.estimatedDurationMinutes} min
-      </Text>
-
-      <Text style={{ ...typography.title, color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.md }}>
-        Price for your vehicle
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.lg }}>
-        {VEHICLE_CATEGORIES.map(({ value, label }) => {
-          const selected = selectedCategory === value;
-          return (
-            <TouchableOpacity
-              key={value}
-              onPress={() => setSelectedCategory(value)}
-              style={{
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.xs + 2,
-                borderRadius: radius.full,
-                borderWidth: 1,
-                borderColor: selected ? colors.accent : colors.border,
-                backgroundColor: selected ? colors.accentMuted : colors.surface,
-              }}
-            >
-              <Text style={{ ...typography.caption, color: selected ? colors.accentPressed : colors.textSecondary }}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath, alignItems: "center" }}>
+        {service.warrantyLabel !== null ? <Chip label={service.warrantyLabel} tone="premium" /> : null}
+        <T role="caption" tone="tertiary">~{service.estimatedDurationMinutes} min</T>
       </View>
 
-      {priceLoading ? (
-        <LoadingState fill={false} />
-      ) : priceBreakdown !== null ? (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg }}>
-          <PriceBreakdown breakdown={priceBreakdown} />
+      <View style={{ gap: space.line }}>
+        <Kicker>Price for your car</Kicker>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+          {VEHICLE_CATEGORIES.map(({ value, label }) => {
+            const selected = selectedCategory === value;
+            return (
+              <Pressable
+                key={value}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => setSelectedCategory(value)}
+                style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
+              >
+                <T role="caption" tone={selected ? "accent" : "secondary"}>{label}</T>
+              </Pressable>
+            );
+          })}
         </View>
-      ) : null}
 
-      <View style={{ height: spacing.xl }} />
-      <Button label="Book This Service" onPress={() => router.push(`/(tabs)/book/${id}`)} />
-    </ScrollView>
+        {priceLoading ? (
+          <T role="caption" tone="tertiary">Working out the price...</T>
+        ) : priceError ? (
+          <Notice title="Can't get the price" body="Check your connection and try again." />
+        ) : priceBreakdown !== null ? (
+          <Pane pad="gap">
+            <Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
+            {priceBreakdown.scopeAdjustment > 0 ? (
+              <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(priceBreakdown.scopeAdjustment)}</T>} />
+            ) : null}
+            {priceBreakdown.addOns.map((addOn) => (
+              <Row key={addOn.id} title={addOn.name} trailing={<T role="data">{rupees(addOn.price)}</T>} />
+            ))}
+            {priceBreakdown.membershipDiscount !== null && priceBreakdown.membershipDiscount > 0 ? (
+              <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(priceBreakdown.membershipDiscount)}</T>} />
+            ) : null}
+            <Row title={priceBreakdown.taxDescription} trailing={<T role="data">{rupees(priceBreakdown.tax)}</T>} />
+            <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(priceBreakdown.total)}</T>} last />
+          </Pane>
+        ) : null}
+      </View>
+
+      <Button label="Book this service" onPress={() => router.push(`/(tabs)/book/${id}`)} />
+    </Screen>
   );
 }

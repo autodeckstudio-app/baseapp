@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
-import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
-import { Text } from "react-native";
+import { space } from "@autodeck/ui/theme";
+import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { createVehicle } from "../../../lib/vehicle-service";
 
 type FormState = {
@@ -22,11 +22,11 @@ type FieldDef = {
 };
 
 const FIELDS: FieldDef[] = [
-  { key: "registrationNumber", label: "Registration Number", placeholder: "GJ01AB1234", autoCapitalize: "characters" },
+  { key: "registrationNumber", label: "Registration number", placeholder: "GJ01AB1234", autoCapitalize: "characters" },
   { key: "make", label: "Make", placeholder: "Maruti Suzuki", autoCapitalize: "words" },
   { key: "model", label: "Model", placeholder: "Swift", autoCapitalize: "words" },
   { key: "year", label: "Year", placeholder: "2022", keyboardType: "numeric" },
-  { key: "color", label: "Color", placeholder: "White", autoCapitalize: "words" },
+  { key: "color", label: "Colour", placeholder: "White", autoCapitalize: "words" },
 ];
 
 export default function AddVehicleScreen() {
@@ -39,6 +39,7 @@ export default function AddVehicleScreen() {
     color: "",
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function update(field: keyof FormState, value: string) {
     setForm((prev: FormState) => ({ ...prev, [field]: value }));
@@ -47,11 +48,12 @@ export default function AddVehicleScreen() {
   async function handleAdd() {
     const yearNum = parseInt(form.year, 10);
     if (isNaN(yearNum) || yearNum < 1980) {
-      Alert.alert("Invalid year", "Enter a valid year (e.g. 2020).");
+      setError("Enter a valid year (e.g. 2020).");
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       await createVehicle({
         registrationNumber: form.registrationNumber.toUpperCase(),
@@ -62,31 +64,33 @@ export default function AddVehicleScreen() {
       });
       router.back();
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to add vehicle.");
+      setError(err instanceof Error ? err.message : "Failed to add vehicle.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
-        <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xl }}>Add a Vehicle</Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Garage</Kicker><T role="title">Add a car</T></View>}>
+        <View style={{ gap: space.line }}>
+          {FIELDS.map(({ key, label, placeholder, autoCapitalize = "sentences", keyboardType = "default" }) => (
+            <Field
+              key={key}
+              label={label}
+              placeholder={placeholder}
+              value={form[key]}
+              onChangeText={(v: string) => update(key, v)}
+              autoCapitalize={autoCapitalize}
+              keyboardType={keyboardType}
+            />
+          ))}
+        </View>
 
-        {FIELDS.map(({ key, label, placeholder, autoCapitalize = "sentences", keyboardType = "default" }) => (
-          <TextInput
-            key={key}
-            label={label}
-            placeholder={placeholder}
-            value={form[key]}
-            onChangeText={(v: string) => update(key, v)}
-            autoCapitalize={autoCapitalize}
-            keyboardType={keyboardType}
-          />
-        ))}
+        {error ? <Notice title="Can't add this car" body={error} /> : null}
 
-        <Button label="Add Vehicle" onPress={() => void handleAdd()} loading={loading} />
-      </ScrollView>
+        <Button label="Add car" busy={loading} onPress={() => void handleAdd()} />
+      </Screen>
     </KeyboardAvoidingView>
   );
 }

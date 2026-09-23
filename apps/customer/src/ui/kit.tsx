@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
   type StyleProp,
   type TextStyle,
@@ -243,6 +244,55 @@ export function Notice({ title, body, action }: { title: string; body?: string; 
         {action ? <View style={{ marginTop: space.breath }}>{action}</View> : null}
       </View>
     </Pane>
+  );
+}
+
+/** Themed text input on the glass kit: label above, data-safe styling. */
+export function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  autoCapitalize = "sentences",
+  keyboardType = "default",
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  keyboardType?: "default" | "numeric" | "email-address" | "phone-pad";
+  multiline?: boolean;
+}) {
+  const { colors } = useExperienceTheme();
+  return (
+    <View style={{ gap: space.hair }}>
+      <T role="label" tone="tertiary">{label}</T>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        style={[
+          textStyle("body"),
+          {
+            color: colors.textPrimary,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            borderRadius: radius.chip,
+            paddingHorizontal: space.line,
+            paddingVertical: 12,
+            minHeight: multiline ? 96 : undefined,
+            textAlignVertical: multiline ? "top" : "auto",
+          },
+        ]}
+      />
+    </View>
   );
 }
 
