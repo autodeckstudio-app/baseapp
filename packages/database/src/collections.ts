@@ -28,6 +28,7 @@ export const COLLECTIONS = {
   inventoryTxns: () => "inventoryTxns",
   papers: () => "papers",
   dailyClosings: () => "dailyClosings",
+  gallery: () => "gallery",
   studioConfig: () => "studioConfig",
   inventory: () => "inventory",
   auditLog: () => "auditLog",

@@ -72,7 +72,10 @@ export type AuditAction =
   | "paper.reviewed"
   | "paper.updated"
   | "dailyClose.performed"
-  | "dailyClose.reclosed";
+  | "dailyClose.reclosed"
+  | "gallery.imageAdded"
+  | "gallery.imageUpdated"
+  | "gallery.imageDeleted";
 
 export interface AuditLog {
   id: string;

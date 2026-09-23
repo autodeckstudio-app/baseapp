@@ -363,6 +363,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── /gallery/{imageId} ─────────────────────────────────────────────────
+    // Public marketing media (matches the legacy gallery's public-read
+    // model): anyone can read ACTIVE images; unpublished ones require staff.
+    // Function-only writes. Documents contain no customer data.
+    match /gallery/{imageId} {
+      allow read: if resource.data.active == true
+                  || (isStudioOrAbove() && ownTenant(resource.data));
+      allow write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

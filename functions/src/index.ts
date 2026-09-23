@@ -112,6 +112,12 @@ export { listPapers } from "./functions/papers/listPapers.js";
 export { performDailyClose } from "./functions/dailyclose/performDailyClose.js";
 export { getDailyClose } from "./functions/dailyclose/getDailyClose.js";
 
+// ─── Gallery (M6 Automodz Office) ──────────────────────────────────────────
+export { addGalleryImage } from "./functions/gallery/addGalleryImage.js";
+export { updateGalleryImage } from "./functions/gallery/updateGalleryImage.js";
+export { deleteGalleryImage } from "./functions/gallery/deleteGalleryImage.js";
+export { listGalleryImages } from "./functions/gallery/listGalleryImages.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";
