@@ -13,9 +13,9 @@ export default function DashboardPreview() {
         today={studioToday()}
         now={new Date()}
         revenueToday={2874900}
-        tiles={{ bookings: 7, active: 5, delivered: 3, walkins: 2 }}
+        tiles={{ bookings: 7, active: 5, delivered: 3, walkins: 2, staffPresent: 4 }}
         floor={{ arriving: 2, working: 4, ready: 1, delivered: 3 }}
-        counts={{ failedPayments: 1, unpaidDelivered: 1, pendingApprovals: 2, staleJobs: 0, pendingPayments: 1, expiringMemberships: 3 }}
+        counts={{ failedPayments: 1, unpaidDelivered: 1, pendingApprovals: 2, staleJobs: 0, pendingPayments: 1, expiringMemberships: 3, lowStock: 2, pendingPapers: 1 }}
         onOpen={() => {}}
       />
     </StaffShell>

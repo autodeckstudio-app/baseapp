@@ -24,9 +24,9 @@ export interface DashboardViewProps {
   today: string;
   now: Date;
   revenueToday: number;
-  tiles: { bookings: number; active: number; delivered: number; walkins: number };
+  tiles: { bookings: number; active: number; delivered: number; walkins: number; staffPresent: number };
   floor: { arriving: number; working: number; ready: number; delivered: number };
-  counts: { failedPayments: number; unpaidDelivered: number; pendingApprovals: number; staleJobs: number; pendingPayments: number; expiringMemberships: number };
+  counts: { failedPayments: number; unpaidDelivered: number; pendingApprovals: number; staleJobs: number; pendingPayments: number; expiringMemberships: number; lowStock: number; pendingPapers: number };
   onOpen: (href: string) => void;
 }
 
@@ -39,6 +39,8 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
   if (counts.staleJobs) alerts.push({ tone: "warning", text: `${n(counts.staleJobs, "job hasn't", "jobs haven't")} moved in over 48 hours`, href: "/jobs", action: "Check" });
   if (counts.pendingPayments) alerts.push({ tone: "warning", text: `${n(counts.pendingPayments, "payment is", "payments are")} waiting for confirmation`, href: "/payments", action: "Confirm" });
   if (counts.expiringMemberships) alerts.push({ tone: "warning", text: `${n(counts.expiringMemberships, "membership ends", "memberships end")} within 7 days`, href: "/memberships", action: "View" });
+  if (counts.lowStock) alerts.push({ tone: "warning", text: `${n(counts.lowStock, "item is", "items are")} at or below low-stock`, href: "/inventory", action: "Restock" });
+  if (counts.pendingPapers) alerts.push({ tone: "warning", text: `${n(counts.pendingPapers, "document is", "documents are")} waiting for verification`, href: "/papers", action: "Review" });
 
   return (
     <div className="ad-page">
@@ -58,6 +60,7 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
         <Tile value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
         <Tile value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
         <Tile value={tiles.walkins} label="Walk-ins today" onClick={() => onOpen("/jobs")} />
+        <Tile value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
       </div>
 
       <div className="ad-detail" style={{ marginTop: "var(--ad-space-inset)" }}>

@@ -3,7 +3,7 @@
 import { collection, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
-import type { ApprovalRequest, Membership } from "@autodeck/core";
+import type { ApprovalRequest, AttendanceRecord, InventoryItem, Membership, PaperVerification } from "@autodeck/core";
 
 // Reuses the existing tenantId+status(+expiresAt) approvals index as a prefix
 // match (equality-only query, no orderBy) — no new index required. No
@@ -40,4 +40,69 @@ export function listenToExpiringMemberships(
     limit(20),
   );
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Membership)), onError);
+}
+
+/** Staff marked present/half-day at one studio today (Kolkata date). */
+export function listenToTodayAttendance(
+  tenantId: string,
+  studioId: string,
+  date: string,
+  onData: (presentCount: number) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.attendance()),
+    where("tenantId", "==", tenantId),
+    where("studioId", "==", studioId),
+    where("date", "==", date),
+  );
+  return onSnapshot(
+    q,
+    (snap) =>
+      onData(
+        snap.docs
+          .map((d) => d.data() as AttendanceRecord)
+          .filter((r) => r.status === "PRESENT" || r.status === "HALF_DAY").length,
+      ),
+    onError,
+  );
+}
+
+/** Active items at or below their low-stock threshold. */
+export function listenToLowStock(
+  tenantId: string,
+  studioId: string,
+  onData: (count: number) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.inventoryItems()),
+    where("tenantId", "==", tenantId),
+    where("studioId", "==", studioId),
+    where("active", "==", true),
+  );
+  return onSnapshot(
+    q,
+    (snap) =>
+      onData(
+        snap.docs.map((d) => d.data() as InventoryItem).filter((i) => i.stockQty <= i.lowStockThreshold).length,
+      ),
+    onError,
+  );
+}
+
+/** Papers awaiting office verification. */
+export function listenToPendingPapers(
+  tenantId: string,
+  studioId: string,
+  onData: (count: number) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.papers()),
+    where("tenantId", "==", tenantId),
+    where("studioId", "==", studioId),
+    where("status", "==", "PENDING"),
+  );
+  return onSnapshot(q, (snap) => onData(snap.size), onError);
 }

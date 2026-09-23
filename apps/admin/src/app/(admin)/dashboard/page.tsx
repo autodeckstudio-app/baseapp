@@ -6,9 +6,10 @@ import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToBookings } from "../../../lib/bookings-service";
 import { listenToJobs } from "../../../lib/jobs-service";
 import { listenToPayments } from "../../../lib/payments-service";
-import { listenToPendingApprovals, listenToExpiringMemberships } from "../../../lib/dashboard-service";
+import { listenToPendingApprovals, listenToExpiringMemberships, listenToTodayAttendance, listenToLowStock, listenToPendingPapers } from "../../../lib/dashboard-service";
 import { studioToday } from "../../../lib/format";
 import { DashboardView } from "../../../experience/DashboardView";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Membership } from "@autodeck/core";
 
 export default function DashboardPage() {
@@ -20,6 +21,9 @@ export default function DashboardPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [expiringMemberships, setExpiringMemberships] = useState<Membership[]>([]);
+  const [staffPresent, setStaffPresent] = useState(0);
+  const [lowStock, setLowStock] = useState(0);
+  const [pendingPapers, setPendingPapers] = useState(0);
 
   useEffect(() => {
     if (!claims) return undefined;
@@ -88,7 +92,7 @@ export default function DashboardPage() {
       today={today}
       now={new Date()}
       revenueToday={stats.revenueToday}
-      tiles={{ bookings: stats.todaysBookingsCount, active: stats.activeJobsCount, delivered: stats.completedTodayCount, walkins: stats.walkinsTodayCount }}
+      tiles={{ bookings: stats.todaysBookingsCount, active: stats.activeJobsCount, delivered: stats.completedTodayCount, walkins: stats.walkinsTodayCount, staffPresent }}
       floor={stats.floor}
       counts={{
         failedPayments: stats.failedPayments.length,
@@ -97,6 +101,8 @@ export default function DashboardPage() {
         staleJobs: stats.staleJobs.length,
         pendingPayments: stats.pendingPayments.length,
         expiringMemberships: stats.soonExpiring.length,
+        lowStock,
+        pendingPapers,
       }}
       onOpen={(href) => router.push(href)}
     />
