@@ -339,3 +339,18 @@
 .ad-choice-title { font-size: 14px; font-weight: 600; color: var(--ad-text-primary); }
 .ad-form-row > span:first-child { font-size: 13px; color: var(--ad-text-secondary); }
 .ad-shell .ad-toolbar > select, .ad-shell .ad-toolbar > input[type="date"] { flex: 0 0 auto !important; width: auto !important; min-width: 0; display: inline-block; min-height: 38px; }
+
+/* ---- Vehicles ---- */
+.ad-plate-row { display: flex; gap: var(--ad-space-line); align-items: center; }
+.ad-shell .ad-plate-input { flex: 1 1 auto; max-width: 420px; min-height: 52px; padding: 0 var(--ad-space-gap); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 22px; letter-spacing: 3px; }
+.ad-shell .ad-plate-row .ad-button { min-height: 52px; padding: 0 var(--ad-space-inset); }
+.ad-papers { list-style: none; margin: 0; padding: 0; }
+.ad-paper { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--ad-space-line); padding: 14px 0; border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-paper:last-child { border-bottom: none; }
+.ad-paper-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ad-shell .ad-paper select { width: auto; min-height: 34px; padding: 0 10px; }
+.ad-expiry { font-size: 12px; margin-top: 4px; }
+.ad-expiry--ok { color: var(--ad-premium); }
+.ad-expiry--warning { color: var(--ad-warning); }
+.ad-expiry--danger { color: var(--ad-danger); }
+.ad-form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ad-space-line); }
