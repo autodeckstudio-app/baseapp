@@ -1,30 +1,47 @@
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import type { Booking } from "@autodeck/core";
+import type { Booking, ServiceJob, Vehicle } from "@autodeck/core";
+import { projectCustomerHome } from "@autodeck/experience";
 import { colors, spacing, radius, typography, Button, IconButton, LoadingState, formatDateShort } from "@autodeck/ui";
 import { getMyBookings } from "../../lib/booking-service";
+import { listenToMyVehicles } from "../../lib/vehicle-service";
+import { listenToMyJobs } from "../../lib/job-service";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { useAuth } from "../../hooks/useAuth";
+import { getActiveVehicleId } from "../../lib/experience-preferences";
 
 export default function HomeScreen() {
   const auth = useAuth();
   const router = useRouter();
   const [nextBooking, setNextBooking] = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loadingBooking, setLoadingBooking] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (auth.status !== "ready") return;
     getMyBookings(auth.user.uid, auth.claims.tenantId)
-      .then((bookings) => {
-        const upcoming = bookings
+      .then((allBookings) => {
+        const upcoming = allBookings
           .filter((b) => b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE")
           .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+        setBookings(allBookings);
         setNextBooking(upcoming[0] ?? null);
       })
       .catch(() => setNextBooking(null))
       .finally(() => setLoadingBooking(false));
+  }, [auth.status]);
+
+  useEffect(() => {
+    if (auth.status !== "ready") return;
+    void getActiveVehicleId(auth.user.uid).then(setSelectedVehicleId).catch(() => undefined);
+    const stopVehicles = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, setVehicles, () => undefined);
+    const stopJobs = listenToMyJobs(auth.claims.tenantId, auth.user.uid, setJobs, () => undefined);
+    return () => { stopVehicles(); stopJobs(); };
   }, [auth.status]);
 
   useEffect(() => {
@@ -41,6 +58,8 @@ export default function HomeScreen() {
     return <LoadingState />;
   }
 
+  const home = projectCustomerHome({ displayName: auth.user.displayName, vehicles, selectedVehicleId, bookings, jobs });
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: spacing.md }}>
@@ -49,7 +68,7 @@ export default function HomeScreen() {
             Hi{auth.user.displayName ? `, ${auth.user.displayName.split(" ")[0]}` : ""}
           </Text>
           <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xxs, marginBottom: spacing.xl }}>
-            What would you like to get done today?
+            {home.statement}
           </Text>
         </View>
         <View>
@@ -80,6 +99,12 @@ export default function HomeScreen() {
           )}
         </View>
       </View>
+
+      {home.activeVehicle && (
+        <Text style={{ ...typography.captionMedium, color: colors.textSecondary, marginBottom: spacing.sm }}>
+          {home.activeVehicle.registrationNumber} · {home.detail}
+        </Text>
+      )}
 
       {loadingBooking ? (
         <LoadingState fill={false} />
