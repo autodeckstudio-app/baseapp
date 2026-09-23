@@ -17,3 +17,11 @@ describe("daysLeft", () => {
   it("is negative when expired", () => expect(daysLeft("2026-09-20", "2026-09-24")).toBe(-4));
   it("is zero on the day", () => expect(daysLeft("2026-09-24", "2026-09-24")).toBe(0));
 });
+
+import { hoursProblem } from "./StudioView";
+describe("hoursProblem", () => {
+  const day = (open: string, close: string, closed = false) => ({ dayOfWeek: 1 as const, open, close, closed });
+  it("accepts a normal day", () => expect(hoursProblem([day("09:00", "19:00")])).toBeNull());
+  it("flags close before open", () => expect(hoursProblem([day("19:00", "09:00")])).toMatch(/closes before/));
+  it("ignores closed days", () => expect(hoursProblem([day("", "", true)])).toBeNull());
+});

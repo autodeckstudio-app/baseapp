@@ -387,3 +387,25 @@
 .ad-shell .ad-form-row textarea { width: 100%; padding: 8px 12px; }
 .ad-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ad-text-secondary); margin: var(--ad-space-line) 0; }
 @media (max-width: 860px) { .ad-svc { grid-template-columns: 1fr; } .ad-svc-price { align-items: flex-start; } }
+
+/* ---- Studio ---- */
+.ad-hours { list-style: none; margin: 0; padding: 0; }
+.ad-hours li { display: grid; grid-template-columns: 120px 110px 1fr; align-items: center; gap: var(--ad-space-line); padding: 10px 0; border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-hours li:last-child { border-bottom: none; }
+.ad-hours li.is-closed .ad-hours-day { color: var(--ad-text-tertiary); }
+.ad-hours-day { font-size: 15px; color: var(--ad-text-primary); }
+.ad-hours-times { display: inline-flex; align-items: center; gap: 8px; }
+.ad-shell .ad-hours-times input { width: 130px; min-height: 36px; }
+.ad-switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ad-text-secondary); cursor: pointer; }
+.ad-switch input { appearance: none; width: 34px; height: 20px; border-radius: 10px; background: rgba(255,255,255,0.12); position: relative; cursor: pointer; transition: background var(--ad-dur-tick) var(--ad-ease); padding: 0 !important; border: none !important; min-height: 0 !important; }
+.ad-switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ad-text-secondary); transition: transform var(--ad-dur-tick) var(--ad-ease); }
+.ad-switch input:checked { background: var(--ad-accent); }
+.ad-switch input:checked::after { transform: translateX(14px); background: var(--ad-text-on-accent); }
+.ad-chips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ad-chip--removable { display: inline-flex; align-items: center; gap: 6px; }
+.ad-shell .ad-chip--removable button { min-height: 0; width: 18px; height: 18px; padding: 0; border: none; background: transparent; color: var(--ad-text-tertiary); font-size: 14px; line-height: 1; }
+.ad-bay { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: var(--ad-space-line); padding: 10px 0; border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-bay.is-past { opacity: 0.6; }
+.ad-bay-add { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; margin-top: 12px; }
+.ad-shell .ad-bay-add input, .ad-shell .ad-bay-add select { width: 100%; min-height: 36px; }
+.ad-shell .ad-inline-form input[type="date"] { min-height: 36px; }
