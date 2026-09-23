@@ -1,48 +1,40 @@
-import { View, Text, Alert } from "react-native";
+// You: account, membership, notifications, sign out.
+import { useState } from "react";
+import { View } from "react-native";
+import { useRouter } from "expo-router";
+import { space } from "@autodeck/ui/theme";
 import { signOut } from "../../lib/auth-service";
 import { useAuth } from "../../hooks/useAuth";
-import { colors, spacing, radius, typography, Avatar, Button, LoadingState } from "@autodeck/ui";
+import { Button, Kicker, Loading, Pane, Row, Screen, T } from "../../ui/kit";
 
-export default function ProfileScreen() {
+export default function YouScreen() {
   const auth = useAuth();
-
-  async function handleSignOut() {
-    Alert.alert("Sign Out", "Sign out of AutoDeck?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          await signOut();
-        },
-      },
-    ]);
-  }
-
-  if (auth.status !== "ready") return <LoadingState />;
-
-  const displayName = auth.user.displayName ?? "Customer";
+  const router = useRouter();
+  const [confirm, setConfirm] = useState(false);
+  if (auth.status !== "ready") return <Loading />;
+  const name = auth.user.displayName ?? "AutoDeck member";
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.xl }}>
-      <View
-        style={{
-          alignItems: "center",
-          backgroundColor: colors.surface,
-          borderRadius: radius.lg,
-          paddingVertical: spacing.xxl,
-          marginTop: spacing.lg,
-          marginBottom: spacing.xl,
-        }}
-      >
-        <Avatar name={displayName} size={72} />
-        <Text style={{ ...typography.heading, color: colors.textPrimary, marginTop: spacing.md }}>{displayName}</Text>
-        {auth.user.phoneNumber !== null && (
-          <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.xxs }}>{auth.user.phoneNumber}</Text>
-        )}
-      </View>
-
-      <Button label="Sign Out" onPress={() => void handleSignOut()} variant="destructive" />
-    </View>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">You</Kicker><T role="title">{name}</T>{auth.user.email ? <T role="caption" tone="tertiary">{auth.user.email}</T> : null}</View>}>
+      <Pane pad="gap">
+        <Row title="Membership" detail="Plans, washes left, history" onPress={() => router.push("/(tabs)/membership")} />
+        <Row title="Notifications" detail="Updates from the studio" onPress={() => router.push("/(tabs)/notifications")} />
+        <Row title="Services and prices" detail="The full menu" onPress={() => router.push("/(tabs)/catalogue")} last />
+      </Pane>
+      <Pane pad="gap">
+        <Row title="Signed in with Google" detail="AutoDeck never stores a password for you." last />
+      </Pane>
+      {confirm ? (
+        <View style={{ gap: space.breath }}>
+          <T tone="secondary">Sign out of AutoDeck on this device?</T>
+          <View style={{ flexDirection: "row", gap: space.breath }}>
+            <Button kind="danger" label="Sign out" onPress={() => void signOut()} style={{ flex: 1 }} />
+            <Button kind="quiet" label="Cancel" onPress={() => setConfirm(false)} style={{ flex: 1 }} />
+          </View>
+        </View>
+      ) : (
+        <Button kind="quiet" label="Sign out" onPress={() => setConfirm(true)} />
+      )}
+    </Screen>
   );
 }

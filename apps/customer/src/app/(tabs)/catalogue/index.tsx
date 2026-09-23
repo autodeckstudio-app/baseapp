@@ -1,50 +1,68 @@
-import { useState, useEffect, useCallback } from "react";
-import { View, FlatList } from "react-native";
+// Services: the menu, grouped by kind, priced from the smallest car.
+import { useCallback, useEffect, useState } from "react";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Service } from "@autodeck/core";
-import { colors, spacing, ServiceCard, EmptyState, LoadingState, ErrorState } from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+
+const GROUP: Record<string, string> = {
+  washing: "Wash and care",
+  ceramic: "Ceramic",
+  coating: "Coatings",
+  ppf: "Paint protection film",
+  tinting: "Window film",
+  inspection: "Inspection",
+  other: "More",
+};
+const ORDER = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection", "other"];
+
+function duration(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = min / 60;
+  return h >= 8 ? `${Math.round(h / 8)} day${h >= 16 ? "s" : ""}` : `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
+}
 
 export default function CatalogueScreen() {
   const router = useRouter();
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[] | null>(null);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setError(false);
     try {
-      const data = await getServiceCatalogue();
-      setServices(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load services.");
-    } finally {
-      setLoading(false);
+      setServices(await getServiceCatalogue());
+    } catch {
+      setError(true);
     }
   }, []);
+  useEffect(() => void load(), [load]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
+  if (!services && !error) return <Loading label="Loading the menu" />;
+  const groups = ORDER.map((g) => [g, (services ?? []).filter((s) => s.category === g)] as const).filter(([, xs]) => xs.length > 0);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FlatList
-        data={services}
-        keyExtractor={(s) => s.id}
-        contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
-        onRefresh={() => void load()}
-        refreshing={loading}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        renderItem={({ item }) => (
-          <ServiceCard service={item} onPress={() => router.push(`/(tabs)/catalogue/${item.id}`)} />
-        )}
-        ListEmptyComponent={<EmptyState title="No services available" message="Please check back later." fill={false} />}
-      />
-    </View>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Services</Kicker><T role="title">What does your car need?</T></View>}>
+      {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
+      {!error && groups.length === 0 ? <Notice title="The menu is being updated" body="Please check back shortly." /> : null}
+      {groups.map(([g, xs]) => (
+        <View key={g} style={{ gap: space.line }}>
+          <Kicker>{GROUP[g] ?? g}</Kicker>
+          <Pane pad="gap">
+            {xs.map((s, i) => (
+              <Row
+                key={s.id}
+                title={s.name}
+                detail={duration(s.estimatedDurationMinutes)}
+                trailing={<T role="data" tone="accent">from {rupees(s.basePrice)}</T>}
+                onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}
+                last={i === xs.length - 1}
+              />
+            ))}
+          </Pane>
+        </View>
+      ))}
+    </Screen>
   );
 }
