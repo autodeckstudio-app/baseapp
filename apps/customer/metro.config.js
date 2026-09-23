@@ -26,4 +26,17 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
 };
 
+
+// Monorepo: force a single react / react-dom / react-native copy in the bundle.
+// Nested workspace installs otherwise let Metro resolve an older react
+// (e.g. react 18's jsx-runtime) alongside the app's react 19, which crashes
+// at runtime with React error #525 (element from an older React rendered).
+const path = require("path");
+config.resolver.extraNodeModules = {
+  ...(config.resolver.extraNodeModules ?? {}),
+  react: path.resolve(__dirname, "node_modules", "react"),
+  "react-dom": path.resolve(__dirname, "node_modules", "react-dom"),
+  "react-native": path.resolve(__dirname, "node_modules", "react-native"),
+};
+
 module.exports = config;
