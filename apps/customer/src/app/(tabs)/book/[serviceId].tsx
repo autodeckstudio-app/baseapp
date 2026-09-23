@@ -128,7 +128,7 @@ export default function BookServiceScreen() {
                 }}
                 style={[chipStyle, selected && chipSelectedStyle]}
               >
-                <Text style={{ ...typography.body, color: selected ? colors.white : colors.textPrimary }}>
+                <Text style={{ ...typography.body, color: selected ? colors.textOnAccent : colors.textPrimary }}>
                   {v.make} {v.model} · {v.registrationNumber}
                 </Text>
               </TouchableOpacity>

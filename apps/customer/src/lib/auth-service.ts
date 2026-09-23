@@ -15,6 +15,7 @@
 import {
   GoogleAuthProvider,
   signInWithCredential,
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   connectAuthEmulator,
@@ -59,6 +60,17 @@ export function googleSignInConfigured(): boolean {
 }
 
 export { useEmulator };
+
+/**
+ * Web build: Firebase's own Google popup. The page's host must be one of the
+ * Firebase project's authorized domains (the preview host is).
+ */
+export async function signInWithGooglePopup(): Promise<User> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const result = await signInWithPopup(auth, provider);
+  return result.user;
+}
 
 /** Exchanges a Google ID token from the native flow for a Firebase session. */
 export async function signInWithGoogleIdToken(idToken: string): Promise<User> {

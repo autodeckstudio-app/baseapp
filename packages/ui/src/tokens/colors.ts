@@ -1,47 +1,49 @@
-// AutoDeck colour tokens — premium automotive technology, not a generic SaaS
-// palette. Foundation is white / graphite / charcoal / soft grey; orange is
-// a restrained accent reserved for primary actions, important status,
-// selected states, and price emphasis — never used to flood the UI.
+// AutoDeck colour tokens — dark studio ground with one warm amber light.
+// Amber is reserved for primary actions, the active state and price
+// emphasis - never used to flood the UI.
 //
 // Pure values only (no react-native/DOM imports) so this file is safe to
 // import from any app, including the web admin.
 export const colors = {
+  // Mobile components share the experience palette (theme/colors.ts): the
+  // dark studio ground, amber light and champagne reflection. Kept under the
+  // legacy role names so every existing screen picks it up.
   // Surfaces
-  background: "#F6F6F7", // page/app background — soft grey
-  surface: "#FFFFFF", // card/row background — white, sits on top of background
-  surfaceElevated: "#FFFFFF", // modal/sheet background — white, stronger elevation
-  surfaceSunken: "#EFEFF1", // recessed areas (e.g. input backgrounds)
+  background: "#08090A", // the room: cool near-black
+  surface: "#15161A", // flat pane for rows/cards (glass is the raised one)
+  surfaceElevated: "#1E2024", // sheets, modals
+  surfaceSunken: "#0E0F12", // inputs, recessed wells
 
   // Text
-  textPrimary: "#1C1C1E", // charcoal — headings, primary content
-  textSecondary: "#48484C", // graphite — secondary content
-  textMuted: "#8A8A8E", // soft grey — captions, placeholders, disabled
-  textOnAccent: "#FFFFFF", // text/icons on top of the accent colour
+  textPrimary: "#EDEBE7",
+  textSecondary: "#ADACA9",
+  textMuted: "#91918F",
+  textOnAccent: "#100C06",
 
   // Structure
-  border: "#E2E2E5",
-  borderStrong: "#C9C9CD",
-  divider: "#EBEBED",
+  border: "rgba(255,255,255,0.08)",
+  borderStrong: "rgba(245,246,247,0.22)",
+  divider: "rgba(255,255,255,0.06)",
 
-  // Accent — restrained orange
-  accent: "#D2571F",
-  accentPressed: "#AE481A",
-  accentMuted: "#FBE6D9", // tint for selected-state backgrounds, chips
+  // Accent — amber, one warm light
+  accent: "#E0A45C",
+  accentPressed: "#C98A40",
+  accentMuted: "rgba(224,164,92,0.14)",
 
   // Status
-  success: "#1F8A5F",
-  successMuted: "#E1F3EA",
-  warning: "#B87A12",
-  warningMuted: "#FBF0DD",
-  error: "#C6392C",
-  errorMuted: "#FBE6E3",
-  info: "#2F6FB0",
-  infoMuted: "#E4EFF8",
+  success: "#E8D9BE", // champagne: done, verified
+  successMuted: "rgba(232,217,190,0.12)",
+  warning: "#E0A45C",
+  warningMuted: "rgba(224,164,92,0.14)",
+  error: "#E2705A",
+  errorMuted: "rgba(226,112,90,0.14)",
+  info: "#8FB3D9",
+  infoMuted: "rgba(143,179,217,0.12)",
 
   // Fixed
   white: "#FFFFFF",
   black: "#000000",
-  overlay: "rgba(20, 20, 22, 0.5)", // modal/sheet backdrop
+  overlay: "rgba(4, 5, 6, 0.64)", // modal/sheet backdrop
 } as const;
 
 export type ColorToken = keyof typeof colors;
