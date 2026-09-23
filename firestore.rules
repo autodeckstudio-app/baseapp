@@ -356,6 +356,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── /dailyClosings/{closeId} ───────────────────────────────────────────
+    // Studio staff read their tenant's close records. Function-only writes.
+    match /dailyClosings/{closeId} {
+      allow read: if isStudioOrAbove() && ownTenant(resource.data);
+      allow write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

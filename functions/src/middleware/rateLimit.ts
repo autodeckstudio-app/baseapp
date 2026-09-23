@@ -60,6 +60,8 @@ export type RateLimitAction =
   | "paper.review"
   | "paper.update"
   | "paper.read"
+  | "dailyClose.perform"
+  | "dailyClose.read"
   | "vehicle.create"
   | "vehicle.update"
   | "vehicle.archive"
@@ -145,6 +147,8 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "paper.review": { limit: 30, windowMs: 60_000 },
   "paper.update": { limit: 30, windowMs: 60_000 },
   "paper.read": { limit: 120, windowMs: 60_000 },
+  "dailyClose.perform": { limit: 30, windowMs: 60_000 },
+  "dailyClose.read": { limit: 120, windowMs: 60_000 },
   "employee.updateRole": { limit: 60, windowMs: 60_000 },
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },

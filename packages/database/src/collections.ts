@@ -27,6 +27,7 @@ export const COLLECTIONS = {
   inventoryItems: () => "inventoryItems",
   inventoryTxns: () => "inventoryTxns",
   papers: () => "papers",
+  dailyClosings: () => "dailyClosings",
   studioConfig: () => "studioConfig",
   inventory: () => "inventory",
   auditLog: () => "auditLog",

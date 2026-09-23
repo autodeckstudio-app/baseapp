@@ -108,6 +108,10 @@ export { reviewPaper } from "./functions/papers/reviewPaper.js";
 export { updatePaper } from "./functions/papers/updatePaper.js";
 export { listPapers } from "./functions/papers/listPapers.js";
 
+// ─── Daily Close (M6 Automodz Office) ──────────────────────────────────────
+export { performDailyClose } from "./functions/dailyclose/performDailyClose.js";
+export { getDailyClose } from "./functions/dailyclose/getDailyClose.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

@@ -70,7 +70,9 @@ export type AuditAction =
   | "inventory.txnRecorded"
   | "paper.submitted"
   | "paper.reviewed"
-  | "paper.updated";
+  | "paper.updated"
+  | "dailyClose.performed"
+  | "dailyClose.reclosed";
 
 export interface AuditLog {
   id: string;

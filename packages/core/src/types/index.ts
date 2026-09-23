@@ -49,3 +49,4 @@ export type {
 export * from "./expense.js";
 export * from "./inventory.js";
 export * from "./paper.js";
+export * from "./dailyClose.js";
