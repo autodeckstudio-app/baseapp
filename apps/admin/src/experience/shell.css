@@ -200,3 +200,5 @@
 .ad-job-foot > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ad-board { grid-template-columns: repeat(5, minmax(172px, 1fr)); gap: var(--ad-space-line); }
 @media (max-width: 1400px) { .ad-main { padding: var(--ad-space-inset) var(--ad-space-inset) var(--ad-space-section); } }
+.ad-job-foot { flex-wrap: wrap; row-gap: 4px; }
+.ad-job-foot > span:first-child { overflow: visible; text-overflow: clip; }
