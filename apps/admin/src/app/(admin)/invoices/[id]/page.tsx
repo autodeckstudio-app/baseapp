@@ -10,6 +10,8 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../../../lib/firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import { InvoiceView } from "../../../../experience/InvoiceView";
+import { getStudioConfig } from "../../../../lib/studio-service";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +25,11 @@ export default function InvoiceDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [voiding, setVoiding] = useState(false);
+  const [studioName, setStudioName] = useState("AutoDeck");
+
+  useEffect(() => {
+    void getStudioConfig(FIRST_STUDIO_ID).then((c) => { if (c?.name) setStudioName(c.name); }).catch(() => undefined);
+  }, []);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,7 +71,7 @@ export default function InvoiceDetailPage() {
       customer={customer}
       vehicle={vehicle}
       payment={payment}
-      studioName="AutoDeck"
+      studioName={studioName}
       message={status}
       voiding={voiding}
       onVoid={(r) => void handleVoid(r)}

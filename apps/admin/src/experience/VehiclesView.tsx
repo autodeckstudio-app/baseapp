@@ -5,7 +5,6 @@
 import { useState } from "react";
 import type { Vehicle, Protection, ProtectionKind, ProtectionStatus } from "@autodeck/core";
 import { PageHead } from "./Office";
-import { StatusBadge } from "../components/StatusBadge";
 import { formatDate } from "../lib/format";
 
 export const KIND_LABEL: Record<ProtectionKind, string> = {
@@ -99,7 +98,6 @@ export function VehiclesView(p: {
                           <span className="ad-sub">{[x.provider, x.policyNumber].filter(Boolean).join(" · ") || "No provider details"}</span>
                           <Expiry date={x.expiryDate} today={p.today} />
                         </div>
-                        <StatusBadge label={x.status} />
                         <select value={x.status} onChange={(e) => p.onStatus(x, e.target.value as ProtectionStatus)} aria-label={`Status of ${KIND_LABEL[x.kind]}`}>
                           <option value="unverified">Not checked</option>
                           <option value="verified">Checked</option>
