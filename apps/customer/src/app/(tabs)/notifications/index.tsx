@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { colors, spacing, radius, typography, EmptyState, ErrorState, LoadingState, formatDateShort, formatTime } from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
 import { useAuth } from "../../../hooks/useAuth";
@@ -15,9 +17,15 @@ interface InvoiceRef {
   customerId: string;
 }
 
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
+}
+
 export default function NotificationsScreen() {
   const auth = useAuth();
   const router = useRouter();
+  const { colors } = useExperienceTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,50 +80,40 @@ export default function NotificationsScreen() {
     }
   }
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (loading) return <Loading label="Checking for updates" />;
+  if (error) {
+    return (
+      <Screen>
+        <Notice title="Can't load notifications" body={error} action={<Button label="Retry" onPress={() => load()} />} />
+      </Screen>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FlatList
-        data={notifications}
-        keyExtractor={(n) => n.id}
-        contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        ListEmptyComponent={<EmptyState title="No notifications yet" message="Updates about your bookings and services will show up here." fill={false} />}
-        renderItem={({ item }) => {
-          const unread = item.readAt === null;
-          return (
-            <TouchableOpacity
-              onPress={() => void handlePress(item)}
-              style={{
-                flexDirection: "row",
-                gap: spacing.sm,
-                backgroundColor: unread ? colors.accentMuted : colors.surface,
-                borderRadius: radius.lg,
-                padding: spacing.lg,
-              }}
-            >
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: radius.full,
-                  backgroundColor: unread ? colors.accent : "transparent",
-                  marginTop: 6,
-                }}
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Updates</Kicker><T role="title">Notifications</T></View>}>
+      {notifications.length === 0 ? (
+        <Notice title="No notifications yet" body="Updates about your bookings and services will show up here." />
+      ) : (
+        <Pane pad="gap">
+          {notifications.map((item, i) => {
+            const unread = item.readAt === null;
+            return (
+              <Row
+                key={item.id}
+                title={
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.breath }}>
+                    {unread ? <View style={{ width: 7, height: 7, borderRadius: 9999, backgroundColor: colors.accent }} /> : null}
+                    <T role="bodyStrong">{item.title}</T>
+                  </View>
+                }
+                detail={`${item.body} — ${formatWhen(item.createdAt)}`}
+                onPress={() => void handlePress(item)}
+                last={i === notifications.length - 1}
               />
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{item.title}</Text>
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xxs }}>{item.body}</Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                  {formatDateShort(item.createdAt)} · {formatTime(item.createdAt)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-      />
-    </View>
+            );
+          })}
+        </Pane>
+      )}
+    </Screen>
   );
 }
