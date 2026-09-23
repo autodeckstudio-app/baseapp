@@ -323,6 +323,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── /expenses/{expenseId} ──────────────────────────────────────────────
+    // Studio staff read their tenant's expense records. All writes go through
+    // Cloud Functions (admin-only create/update/delete).
+    match /expenses/{expenseId} {
+      allow read: if isStudioOrAbove() && ownTenant(resource.data);
+      allow write: if false;
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

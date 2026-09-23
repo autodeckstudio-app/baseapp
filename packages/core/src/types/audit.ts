@@ -61,7 +61,10 @@ export type AuditAction =
   | "attendance.checked_out"
   | "attendance.break_started"
   | "attendance.break_ended"
-  | "attendance.marked";
+  | "attendance.marked"
+  | "expense.created"
+  | "expense.updated"
+  | "expense.deleted";
 
 export interface AuditLog {
   id: string;

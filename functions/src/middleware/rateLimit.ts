@@ -48,6 +48,10 @@ export type RateLimitAction =
   | "attendance.mark"
   | "attendance.readStudio"
   | "attendance.readEmployee"
+  | "expense.create"
+  | "expense.update"
+  | "expense.delete"
+  | "expense.read"
   | "vehicle.create"
   | "vehicle.update"
   | "vehicle.archive"
@@ -121,6 +125,10 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "attendance.mark": { limit: 60, windowMs: 60_000 },
   "attendance.readStudio": { limit: 120, windowMs: 60_000 },
   "attendance.readEmployee": { limit: 120, windowMs: 60_000 },
+  "expense.create": { limit: 30, windowMs: 60_000 },
+  "expense.update": { limit: 30, windowMs: 60_000 },
+  "expense.delete": { limit: 30, windowMs: 60_000 },
+  "expense.read": { limit: 120, windowMs: 60_000 },
   "employee.updateRole": { limit: 60, windowMs: 60_000 },
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },

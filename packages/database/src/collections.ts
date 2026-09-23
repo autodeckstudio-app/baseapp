@@ -23,6 +23,7 @@ export const COLLECTIONS = {
   serviceScopes: () => "serviceScopes",
   employees: () => "employees",
   attendance: () => "attendance",
+  expenses: () => "expenses",
   studioConfig: () => "studioConfig",
   inventory: () => "inventory",
   auditLog: () => "auditLog",

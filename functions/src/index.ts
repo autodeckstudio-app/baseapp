@@ -89,6 +89,12 @@ export { getStudioAttendance } from "./functions/attendance/getStudioAttendance.
 export { getEmployeeAttendance } from "./functions/attendance/getEmployeeAttendance.js";
 export { markAttendance } from "./functions/attendance/markAttendance.js";
 
+// ─── Expenses (M6 Automodz Office) ─────────────────────────────────────────
+export { createExpense } from "./functions/expense/createExpense.js";
+export { updateExpense } from "./functions/expense/updateExpense.js";
+export { deleteExpense } from "./functions/expense/deleteExpense.js";
+export { listExpenses } from "./functions/expense/listExpenses.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

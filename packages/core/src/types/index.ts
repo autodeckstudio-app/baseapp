@@ -46,3 +46,4 @@ export type {
   InspectionRating,
   InspectionChecklistItem,
 } from "./inspection.js";
+export * from "./expense.js";
