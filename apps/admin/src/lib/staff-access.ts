@@ -11,7 +11,7 @@ import type { UserRole } from "@autodeck/auth";
 export const STUDIO_HOME = "/jobs";
 export const OFFICE_HOME = "/dashboard";
 
-export const STUDIO_PATHS = ["/jobs", "/bookings"] as const;
+export const STUDIO_PATHS = ["/jobs", "/bookings", "/attendance", "/gallery"] as const;
 
 export function isStudioPath(pathname: string): boolean {
   return STUDIO_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

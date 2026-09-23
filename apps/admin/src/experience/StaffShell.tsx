@@ -9,6 +9,8 @@ import "./shell.css";
 export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },
   { href: "/jobs", label: "Jobs" },
+  { href: "/attendance", label: "Attendance" },
+  { href: "/gallery", label: "Gallery" },
 ] as const;
 
 export const OFFICE_LINKS = [
@@ -17,6 +19,11 @@ export const OFFICE_LINKS = [
   { href: "/vehicles", label: "Vehicles" },
   { href: "/payments", label: "Payments" },
   { href: "/invoices", label: "Invoices" },
+  { href: "/papers", label: "Papers" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/daily-close", label: "Daily Close" },
+  { href: "/inventory", label: "Inventory" },
+  { href: "/reports", label: "Reports" },
   { href: "/memberships", label: "Memberships" },
   { href: "/services", label: "Services" },
   { href: "/staff", label: "Team" },
