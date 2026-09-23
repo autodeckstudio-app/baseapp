@@ -27,7 +27,7 @@ export function Modal({ visible, onClose, children }: ModalProps) {
                 ...elevation.modal,
               }}
             >
-              {children}
+              {children as any}
             </View>
           </TouchableWithoutFeedback>
         </View>

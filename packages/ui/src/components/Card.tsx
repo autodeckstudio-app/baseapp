@@ -25,10 +25,10 @@ export function Card({ children, onPress, padding = "lg", style, flat = false }:
   if (onPress) {
     return (
       <TouchableOpacity accessibilityRole="button" onPress={onPress} activeOpacity={0.85} style={[base, style]}>
-        {children}
+        {children as any}
       </TouchableOpacity>
     );
   }
 
-  return <View style={[base, style]}>{children}</View>;
+  return <View style={[base, style]}>{children as any}</View>;
 }

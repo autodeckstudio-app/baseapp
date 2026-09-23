@@ -28,5 +28,10 @@
     "apps/*",
     "packages/*",
     "functions"
-  ]
+  ],
+  "pnpm": {
+    "overrides": {
+      "@types/react": "~19.0.14"
+    }
+  }
 }
