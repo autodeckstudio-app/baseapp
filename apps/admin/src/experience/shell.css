@@ -444,3 +444,4 @@
   .ad-invoice *, .ad-invoice p { color: #111 !important; }
 }
 .ad-hero h1.ad-hero-name { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; letter-spacing: -0.6px; }
+.ad-invoice-totals { min-width: 280px; } .ad-invoice-totals .kv { gap: var(--ad-space-gap); }
