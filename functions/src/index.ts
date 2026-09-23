@@ -118,6 +118,10 @@ export { updateGalleryImage } from "./functions/gallery/updateGalleryImage.js";
 export { deleteGalleryImage } from "./functions/gallery/deleteGalleryImage.js";
 export { listGalleryImages } from "./functions/gallery/listGalleryImages.js";
 
+// ─── Office dashboard & reports (M6 Automodz Office) ───────────────────────
+export { getOfficeDashboard } from "./functions/office/getOfficeDashboard.js";
+export { getOfficeReport } from "./functions/office/getOfficeReport.js";
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
 export { markNotificationRead } from "./functions/notification/markNotificationRead.js";

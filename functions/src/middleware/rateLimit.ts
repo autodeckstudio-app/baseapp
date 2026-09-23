@@ -66,6 +66,8 @@ export type RateLimitAction =
   | "gallery.update"
   | "gallery.delete"
   | "gallery.read"
+  | "office.dashboard"
+  | "office.report"
   | "vehicle.create"
   | "vehicle.update"
   | "vehicle.archive"
@@ -157,6 +159,8 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "gallery.update": { limit: 30, windowMs: 60_000 },
   "gallery.delete": { limit: 30, windowMs: 60_000 },
   "gallery.read": { limit: 120, windowMs: 60_000 },
+  "office.dashboard": { limit: 120, windowMs: 60_000 },
+  "office.report": { limit: 60, windowMs: 60_000 },
   "employee.updateRole": { limit: 60, windowMs: 60_000 },
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },
