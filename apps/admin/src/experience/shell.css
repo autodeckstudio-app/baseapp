@@ -145,3 +145,7 @@
 .ad-login input { width: 100%; min-height: var(--ad-hit); padding: 0 var(--ad-space-line); font-size: 18px; letter-spacing: 4px; color: var(--ad-text-primary); background: rgba(255,255,255,0.04); border: 1px solid var(--ad-border-subtle); border-radius: var(--ad-radius-chip); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); }
 .ad-login input:focus { outline: none; border-color: var(--ad-accent); }
 .ad-login .ad-alert { margin: var(--ad-space-line) 0 0; padding: var(--ad-space-breath) var(--ad-space-line); border-radius: var(--ad-radius-chip); border: 1px solid rgba(226,112,90,0.4); background: rgba(226,112,90,0.10); color: var(--ad-danger); font-size: 13px; }
+
+/* Native controls and scrollbars follow the dark ground. */
+.ad-shell, .ad-shell * { color-scheme: dark; }
+.ad-shell .filter-bar > * { flex: 0 1 auto; width: auto; }
