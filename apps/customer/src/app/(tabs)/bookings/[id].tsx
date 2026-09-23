@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, cancelBooking } from "../../../lib/booking-service";
 import { listenToJobForBooking } from "../../../lib/job-service";
@@ -8,19 +8,8 @@ import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
-import {
-  colors,
-  spacing,
-  radius,
-  typography,
-  Button,
-  StatusBadge,
-  statusTone,
-  PriceBreakdown,
-  LoadingState,
-  ErrorState,
-  formatPaise,
-} from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
   PENDING_VEHICLE: "Awaiting vehicle drop-off",
@@ -48,6 +37,15 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
   EXPIRED: "Expired",
+};
+
+const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "danger"> = {
+  PENDING: "neutral",
+  CONFIRMED: "accent",
+  ACTIVE: "accent",
+  COMPLETED: "premium",
+  CANCELLED: "danger",
+  EXPIRED: "danger",
 };
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
@@ -92,6 +90,9 @@ export default function BookingDetailScreen() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [payRequested, setPayRequested] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [payingNow, setPayingNow] = useState(false);
@@ -102,9 +103,7 @@ export default function BookingDetailScreen() {
     if (!id) return;
     void getBookingById(id)
       .then(setBooking)
-      .catch((err: unknown) => {
-        Alert.alert("Error", err instanceof Error ? err.message : "Could not load booking.");
-      })
+      .catch(() => setBooking(null))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -134,40 +133,34 @@ export default function BookingDetailScreen() {
   async function handlePayAtStudio() {
     if (!job) return;
     setPayingNow(true);
+    setActionError(null);
     try {
       await initiatePayment(job.id, "cash");
-      Alert.alert("Payment requested", "Pay the studio team in person — your status will update once confirmed.");
+      setPayRequested(true);
     } catch (err) {
-      Alert.alert("Couldn't start payment", err instanceof Error ? err.message : "Please try again.");
+      setActionError(err instanceof Error ? err.message : "Couldn't start payment. Please try again.");
     } finally {
       setPayingNow(false);
     }
   }
 
-  function handleCancel() {
+  async function handleCancelConfirmed() {
     if (!booking || !id) return;
-    Alert.alert("Cancel Booking", "Are you sure you want to cancel this booking?", [
-      { text: "Keep It", style: "cancel" },
-      {
-        text: "Cancel Booking",
-        style: "destructive",
-        onPress: async () => {
-          setCancelling(true);
-          try {
-            await cancelBooking(id, "Cancelled by customer");
-            setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
-          } catch (err) {
-            Alert.alert("Cannot cancel", err instanceof Error ? err.message : "Cancellation failed.");
-          } finally {
-            setCancelling(false);
-          }
-        },
-      },
-    ]);
+    setCancelling(true);
+    setActionError(null);
+    try {
+      await cancelBooking(id, "Cancelled by customer");
+      setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
+      setConfirmingCancel(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Cancellation failed.");
+    } finally {
+      setCancelling(false);
+    }
   }
 
-  if (loading) return <LoadingState />;
-  if (!booking) return <ErrorState title="Booking not found" />;
+  if (loading) return <Loading label="Opening your booking" />;
+  if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
   const canCancel = booking.status === "CONFIRMED" || booking.status === "PENDING";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
@@ -193,140 +186,147 @@ export default function BookingDetailScreen() {
   });
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <StatusBadge label={BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={statusTone(booking.status)} />
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginTop: spacing.sm, marginBottom: spacing.lg }}>
-        {displayDate}
-      </Text>
-
-      <Section>
-        <Row label="Time" value={`${displayTime} IST`} />
-        <Row label="Duration" value={formatDuration(booking.durationMinutes)} />
-        <Row label="Expected ready" value={`${displayEndDate}, ${booking.estimatedEndTime} IST`} />
-        {booking.notes !== null && <Row label="Notes" value={booking.notes} />}
-      </Section>
-
-      {isMultiDay && (
-        <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.bodyMedium, color: colors.accentPressed, marginBottom: spacing.xs }}>Multi-day service</Text>
-          <Text style={{ ...typography.caption, color: colors.accentPressed }}>
-            Your vehicle stays at the studio from {displayDate} through {displayEndDate}.
-          </Text>
+    <Screen
+      header={
+        <View style={{ gap: space.breath }}>
+          <Chip label={BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={BOOKING_CHIP_TONE[booking.status] ?? "neutral"} />
+          <T role="title">{displayDate}</T>
         </View>
-      )}
+      }
+    >
+      <Pane pad="gap">
+        <Row title="Time" detail={`${displayTime} IST`} />
+        <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
+        <Row title="Expected ready" detail={`${displayEndDate}, ${booking.estimatedEndTime} IST`} />
+        {booking.notes !== null ? <Row title="Notes" detail={booking.notes} last /> : <Row title="" detail="" last />}
+      </Pane>
 
-      {job && (
-        <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.caption, color: colors.accentPressed }}>Studio status</Text>
-          <Text style={{ ...typography.title, color: colors.accentPressed, marginTop: spacing.xxs }}>
-            {JOB_STATUS_LABELS[job.status] ?? job.status}
-          </Text>
-        </View>
-      )}
+      {isMultiDay ? (
+        <Notice title="Multi-day service" body={`Your car stays at the studio from ${displayDate} through ${displayEndDate}.`} />
+      ) : null}
 
-      {inspection?.status === "finalized" && job && (
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: "/(tabs)/bookings/inspection", params: { jobId: job.id } })}
-          style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border }}
-        >
-          <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>Inspection report available — tap to view</Text>
-        </TouchableOpacity>
-      )}
+      {job ? (
+        <Pane pad="inset">
+          <View style={{ gap: space.hair }}>
+            <Kicker tone="accent">Studio status</Kicker>
+            <T role="heading">{JOB_STATUS_LABELS[job.status] ?? job.status}</T>
+          </View>
+        </Pane>
+      ) : null}
+
+      {inspection?.status === "finalized" && job ? (
+        <Pane pad="inset">
+          <Row
+            title="Inspection report"
+            detail="Ready to view"
+            onPress={() => router.push({ pathname: "/(tabs)/bookings/inspection", params: { jobId: job.id } })}
+            last
+          />
+        </Pane>
+      ) : null}
 
       {approvals
         .filter((a) => a.status === "pending")
         .map((a) => (
-          <TouchableOpacity
+          <Notice
             key={a.id}
-            onPress={() => router.push(`/(tabs)/approvals/${a.id}`)}
-            style={{ backgroundColor: colors.warningMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}
-          >
-            <Text style={{ ...typography.caption, color: colors.warning }}>Approval needed</Text>
-            <Text style={{ ...typography.title, color: colors.warning, marginTop: spacing.xxs }}>
-              {a.serviceName} (+{formatPaise(a.priceImpact)}) — tap to review
-            </Text>
-          </TouchableOpacity>
+            title="Approval needed"
+            body={`${a.serviceName} (+${rupees(a.priceImpact)})`}
+            action={<Button label="Review" onPress={() => router.push(`/(tabs)/approvals/${a.id}`)} />}
+          />
         ))}
 
-      {job && job.additionalWorkDelta > 0 && (
-        <View style={{ backgroundColor: colors.successMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.caption, color: colors.success }}>Approved additional work</Text>
-          <Text style={{ ...typography.title, color: colors.success, marginTop: spacing.xxs }}>
-            +{formatPaise(job.additionalWorkDelta)} — current total {formatPaise(job.totalAmount)}
-          </Text>
-        </View>
-      )}
+      {job && job.additionalWorkDelta > 0 ? (
+        <Pane pad="inset">
+          <View style={{ gap: space.hair }}>
+            <Kicker tone="premium">Approved additional work</Kicker>
+            <T role="heading">+{rupees(job.additionalWorkDelta)}</T>
+            <T role="caption" tone="secondary">Current total {rupees(job.totalAmount)}</T>
+          </View>
+        </Pane>
+      ) : null}
 
-      <Text style={sectionTitle}>Payment</Text>
-      <Section>
-        <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
-        {payment?.invoiceId && job && (
-          <Button
-            label="View invoice"
-            variant="ghost"
-            size="md"
-            fullWidth={false}
-            onPress={() => router.push({ pathname: "/(tabs)/bookings/invoice", params: { jobId: job.id, tenantId: job.tenantId, customerId: job.customerId } })}
-          />
-        )}
-        {canPay && !payment && job && (
-          <Button label="Pay at studio" onPress={() => void handlePayAtStudio()} loading={payingNow} size="md" />
-        )}
-      </Section>
-
-      <Text style={sectionTitle}>Price Breakdown</Text>
-      <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-        <PriceBreakdown breakdown={booking.priceBreakdown} />
+      <View style={{ gap: space.line }}>
+        <Kicker>Payment</Kicker>
+        <Pane pad="gap">
+          <Row title="Status" detail={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} last />
+          {payment?.invoiceId && job ? (
+            <View style={{ marginTop: space.line }}>
+              <Button
+                label="View invoice"
+                kind="quiet"
+                onPress={() => router.push({ pathname: "/(tabs)/bookings/invoice", params: { jobId: job.id, tenantId: job.tenantId, customerId: job.customerId } })}
+              />
+            </View>
+          ) : null}
+          {canPay && !payment && job ? (
+            <View style={{ marginTop: space.line }}>
+              {payRequested ? (
+                <T role="caption" tone="secondary">Pay the studio team in person — your status will update once confirmed.</T>
+              ) : (
+                <Button label="Pay at studio" busy={payingNow} onPress={() => void handlePayAtStudio()} />
+              )}
+            </View>
+          ) : null}
+        </Pane>
       </View>
 
-      {showRescheduleSection && (
-        <View style={{ marginBottom: spacing.lg }}>
-          {rescheduleEligibility.eligible ? (
-            <>
-              {hasPendingApproval && (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
-                  Note: you have a pending approval on this job — rescheduling won't affect it.
-                </Text>
-              )}
-              {payment && payment.status !== "pending" && payment.status !== "completed" && (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
-                  Note: payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} — rescheduling won't change this.
-                </Text>
-              )}
-              <Button
-                label="Reschedule"
-                variant="secondary"
-                onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })}
-              />
-            </>
-          ) : (
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>{rescheduleEligibility.reason}</Text>
-          )}
-        </View>
-      )}
+      <View style={{ gap: space.line }}>
+        <Kicker>Price</Kicker>
+        <Pane pad="gap">
+          <Row title="Base" trailing={<T role="data">{rupees(booking.priceBreakdown.basePrice)}</T>} />
+          {booking.priceBreakdown.scopeAdjustment > 0 ? (
+            <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(booking.priceBreakdown.scopeAdjustment)}</T>} />
+          ) : null}
+          {booking.priceBreakdown.addOns.map((addOn) => (
+            <Row key={addOn.id} title={addOn.name} trailing={<T role="data">{rupees(addOn.price)}</T>} />
+          ))}
+          {booking.priceBreakdown.membershipDiscount !== null && booking.priceBreakdown.membershipDiscount > 0 ? (
+            <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(booking.priceBreakdown.membershipDiscount)}</T>} />
+          ) : null}
+          <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} />
+          <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} last />
+        </Pane>
+      </View>
 
-      {canCancel && (
-        <Button label="Cancel Booking" onPress={handleCancel} loading={cancelling} variant="destructive" />
-      )}
-    </ScrollView>
-  );
-}
+      {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
 
-const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBottom: spacing.sm, marginTop: spacing.sm } as const;
+      {showRescheduleSection ? (
+        rescheduleEligibility.eligible ? (
+          <View style={{ gap: space.breath }}>
+            {hasPendingApproval ? (
+              <T role="caption" tone="tertiary">You have a pending approval on this job — rescheduling won't affect it.</T>
+            ) : null}
+            {payment && payment.status !== "pending" && payment.status !== "completed" ? (
+              <T role="caption" tone="tertiary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} — rescheduling won't change this.</T>
+            ) : null}
+            <Button
+              label="Reschedule"
+              kind="quiet"
+              onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })}
+            />
+          </View>
+        ) : (
+          <T role="caption" tone="tertiary">{rescheduleEligibility.reason}</T>
+        )
+      ) : null}
 
-function Section({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm }}>
-      {children}
-    </View>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Text style={{ ...typography.body, color: colors.textMuted }}>{label}</Text>
-      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, maxWidth: "60%", textAlign: "right" }}>{value}</Text>
-    </View>
+      {canCancel ? (
+        confirmingCancel ? (
+          <Notice
+            title="Cancel this booking?"
+            body="This can't be undone."
+            action={
+              <View style={{ gap: space.breath }}>
+                <Button label="Yes, cancel booking" kind="danger" busy={cancelling} onPress={() => void handleCancelConfirmed()} />
+                <Button label="Keep it" kind="quiet" onPress={() => setConfirmingCancel(false)} />
+              </View>
+            }
+          />
+        ) : (
+          <Button label="Cancel booking" kind="danger" onPress={() => setConfirmingCancel(true)} />
+        )
+      ) : null}
+    </Screen>
   );
 }
