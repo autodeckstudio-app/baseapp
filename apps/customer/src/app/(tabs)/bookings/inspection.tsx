@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { Inspection, InspectionArea } from "@autodeck/core";
 import { listenToInspection } from "../../../lib/inspection-service";
-import { colors, spacing, radius, typography, Button, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
+import { space } from "@autodeck/ui/theme";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 
 const AREA_LABELS: Record<InspectionArea, string> = {
   exterior: "Exterior",
   glass: "Glass",
   interior: "Interior",
-  service_specific: "Service-Specific",
+  service_specific: "Service-specific",
 };
 
 const RATING_LABELS: Record<string, string> = {
@@ -18,6 +19,13 @@ const RATING_LABELS: Record<string, string> = {
   poor: "Poor",
   not_applicable: "N/A",
 };
+
+function ratingTone(rating: string): "neutral" | "accent" | "premium" | "danger" {
+  if (rating === "good") return "premium";
+  if (rating === "fair") return "accent";
+  if (rating === "poor") return "danger";
+  return "neutral";
+}
 
 export default function InspectionScreen() {
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
@@ -31,69 +39,68 @@ export default function InspectionScreen() {
   }, [jobId]);
 
   if (error) {
-    return <ErrorState title="Couldn't load the inspection" message={error} onRetry={() => router.back()} />;
+    return (
+      <Screen>
+        <Notice title="Couldn't load the inspection" body={error} action={<Button label="Go back" onPress={() => router.back()} />} />
+      </Screen>
+    );
   }
-  if (inspection === undefined) return <LoadingState />;
+  if (inspection === undefined) return <Loading label="Opening the report" />;
   if (inspection === null || inspection.status !== "finalized") {
     return (
-      <ErrorState
-        title="No inspection report yet"
-        message="The studio hasn't finalized an inspection report for this job yet."
-        onRetry={() => router.back()}
-      />
+      <Screen>
+        <Notice
+          title="No inspection report yet"
+          body="The studio hasn't finalized an inspection report for this job yet."
+          action={<Button label="Go back" onPress={() => router.back()} />}
+        />
+      </Screen>
     );
   }
 
   const areas: InspectionArea[] = ["exterior", "glass", "interior", "service_specific"];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs }}>Inspection Report</Text>
-      <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xl }}>{inspection.serviceName}</Text>
-
+    <Screen
+      header={
+        <View style={{ gap: space.hair }}>
+          <Kicker tone="accent">Inspection</Kicker>
+          <T role="title">Inspection report</T>
+          <T role="caption" tone="secondary">{inspection.serviceName}</T>
+        </View>
+      }
+    >
       {areas.map((area) => {
         const items = inspection.checklist.filter((i) => i.area === area);
         if (items.length === 0) return null;
         return (
-          <View key={area} style={{ marginBottom: spacing.lg }}>
-            <Text style={sectionTitle}>{AREA_LABELS[area]}</Text>
-            <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm }}>
-              {items.map((item) => (
-                <View key={item.key} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <View style={{ flex: 1, marginRight: spacing.sm }}>
-                    <Text style={{ ...typography.body, color: colors.textPrimary }}>{item.label}</Text>
-                    {item.notes && (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>{item.notes}</Text>
-                    )}
-                  </View>
-                  {item.rating && <StatusBadge label={RATING_LABELS[item.rating] ?? item.rating} tone={ratingTone(item.rating)} />}
-                </View>
+          <View key={area} style={{ gap: space.line }}>
+            <Kicker>{AREA_LABELS[area]}</Kicker>
+            <Pane pad="gap">
+              {items.map((item, idx) => (
+                <Row
+                  key={item.key}
+                  title={item.label}
+                  detail={item.notes ?? undefined}
+                  trailing={item.rating ? <Chip label={RATING_LABELS[item.rating] ?? item.rating} tone={ratingTone(item.rating)} /> : null}
+                  last={idx === items.length - 1}
+                />
               ))}
-            </View>
+            </Pane>
           </View>
         );
       })}
 
-      {inspection.overallNotes && (
-        <>
-          <Text style={sectionTitle}>Overall Notes</Text>
-          <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
-            <Text style={{ ...typography.body, color: colors.textPrimary }}>{inspection.overallNotes}</Text>
-          </View>
-        </>
-      )}
+      {inspection.overallNotes ? (
+        <View style={{ gap: space.line }}>
+          <Kicker>Overall notes</Kicker>
+          <Pane pad="inset">
+            <T>{inspection.overallNotes}</T>
+          </Pane>
+        </View>
+      ) : null}
 
-      <View style={{ height: spacing.xl }} />
-      <Button label="Go back" onPress={() => router.back()} variant="ghost" />
-    </ScrollView>
+      <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+    </Screen>
   );
 }
-
-function ratingTone(rating: string): "success" | "warning" | "error" | "neutral" {
-  if (rating === "good") return "success";
-  if (rating === "fair") return "warning";
-  if (rating === "poor") return "error";
-  return "neutral";
-}
-
-const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBottom: spacing.sm } as const;
