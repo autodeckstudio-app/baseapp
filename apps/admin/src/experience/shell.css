@@ -422,3 +422,24 @@
 .ad-meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 6px 0; }
 .ad-meter span { display: block; height: 100%; background: var(--ad-premium); }
 .ad-size-head span { font-size: 12px; color: var(--ad-text-tertiary); }
+
+/* ---- Invoice ---- */
+.ad-invoice-head { display: flex; justify-content: space-between; gap: var(--ad-space-gap); padding-bottom: var(--ad-space-gap); border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-invoice-brand { margin: 0; font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 26px; color: var(--ad-text-primary) !important; }
+.ad-invoice-brand span { color: var(--ad-accent); }
+.ad-invoice-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--ad-space-gap); padding: var(--ad-space-gap) 0; border-bottom: 1px solid var(--ad-border-subtle); }
+.ad-invoice-meta p { margin: 4px 0 2px; color: var(--ad-text-primary) !important; font-size: 15px; }
+.ad-invoice-lines { padding: var(--ad-space-line) 0; }
+.ad-invoice-line { display: grid; grid-template-columns: minmax(0, 1fr) 50px 110px 120px; gap: var(--ad-space-line); padding: 10px 0; border-bottom: 1px solid var(--ad-border-subtle); font-size: 14px; color: var(--ad-text-primary); }
+.ad-invoice-line > span:not(:first-child) { text-align: right; }
+.ad-invoice-line.is-head span { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
+.ad-invoice-totals { margin-left: auto; max-width: 320px; }
+.ad-invoice-grand { border-top: 1px solid var(--ad-border-strong); margin-top: 6px; padding-top: 12px !important; font-size: 18px !important; color: var(--ad-text-primary); }
+.ad-invoice-grand span:last-child { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-size: 24px; font-weight: 300; }
+@media print {
+  .ad-side, .ad-noprint { display: none !important; }
+  .ad-shell-frame { display: block !important; }
+  .ad-detail { display: block !important; }
+  .ad-invoice { background: #fff !important; color: #111 !important; border: none !important; box-shadow: none !important; }
+  .ad-invoice *, .ad-invoice p { color: #111 !important; }
+}
