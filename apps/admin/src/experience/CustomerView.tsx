@@ -47,7 +47,7 @@ export function CustomerView({ d, onBack, onOpen }: { d: CustomerData; onBack: (
       <div className="ad-hero">
         <div>
           <p className="ad-label">Customer since {formatDate(d.customer.createdAt)}</p>
-          <h1 style={{ fontFamily: "var(--ad-font-display)", fontWeight: 200, letterSpacing: "-0.6px" }}>{d.customer.name || "Unnamed customer"}</h1>
+          <h1 className="ad-hero-name">{d.customer.name || "Unnamed customer"}</h1>
           <p className="ad-hero-sub">{d.customer.phone ? <a href={`tel:${d.customer.phone}`} style={{ color: "var(--ad-accent-strong)" }}>{d.customer.phone}</a> : "No phone"}{activeMember ? ` · ${statusLabel(activeMember.tier)} member` : ""}</p>
         </div>
         <div className="ad-kpis">
@@ -78,7 +78,7 @@ export function CustomerView({ d, onBack, onOpen }: { d: CustomerData; onBack: (
                   <div key={v.id} className="ad-car">
                     <div className="ad-car-head">
                       <span className="ad-job-plate" style={{ fontSize: 18 }}>{v.registrationNumber}</span>
-                      <span className="ad-sub">{[v.year, v.make, v.model].filter(Boolean).join(" ")}{v.category ? ` · ${statusLabel(v.category)}` : ""}</span>
+                      <span className="ad-sub">{[v.year, v.make, v.model].filter(Boolean).join(" ")}{v.category ? ` · ${v.category === "suv" ? "SUV" : statusLabel(v.category)}` : ""}</span>
                     </div>
                     {papers.length > 0 && (
                       <ul className="ad-chips-list" style={{ marginTop: 8 }}>
