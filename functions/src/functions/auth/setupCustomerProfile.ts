@@ -9,9 +9,11 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit } from "../../middleware/rateLimit.js";
 import { setupCustomerProfileSchema } from "../../schemas/customer.js";
+import { resolveClaims } from "../../lib/roleResolver.js";
 
 /**
- * Creates or restores a customer profile after phone OTP sign-in.
+ * Creates or restores a customer profile after sign-in (Google, or phone OTP
+ * in the emulator).
  *
  * Tenant association is determined server-side only (FIRST_TENANT_ID for V1).
  * Custom claims (role, tenantId) are set here — client cannot influence them.
@@ -45,8 +47,10 @@ export const setupCustomerProfile = onCall(
         return { customer: existing, isNew: false };
       }
 
-      // First sign-in — name required
-      if (!data.name) {
+      // First sign-in — name required (Google supplies one)
+      const tokenName = typeof request.auth?.token["name"] === "string" ? String(request.auth.token["name"]).trim() : "";
+      const name = data.name ?? (tokenName.length >= 2 ? tokenName.slice(0, 100) : undefined);
+      if (!name) {
         throw new HttpsError("invalid-argument", "Name is required for new customers.");
       }
 
@@ -55,7 +59,7 @@ export const setupCustomerProfile = onCall(
         id: uid,
         tenantId,
         authUid: uid,
-        name: data.name,
+        name,
         phone: phone ?? "",
         notificationPrefs: { push: true, quietMode: false },
         createdAt: now,
@@ -79,18 +83,17 @@ export const setupCustomerProfile = onCall(
         entityId: uid,
         user: tempUser,
         studioId: null,
-        after: { id: uid, tenantId, name: data.name, phone },
+        after: { id: uid, tenantId, name, phone },
       });
 
       return { customer, isNew: true };
     });
 
-    // Set custom claims after transaction commits (cannot be inside transaction)
-    await adminAuth.setCustomUserClaims(uid, {
-      role: "customer",
-      tenantId,
-      studioId: null,
-    });
+    // Set claims after the transaction commits (cannot be inside it). Uses
+    // the shared role resolver rather than a flat "customer" so a studio
+    // owner or roster staff member who also books through the customer app
+    // is never demoted by it.
+    await resolveClaims(adminAuth, db, { ...(request.auth?.token as Record<string, unknown>), uid });
 
     // Phone-OTP sign-in never sets the Firebase Auth displayName on its own —
     // set it here on first setup so the client (Home greeting, Profile) has

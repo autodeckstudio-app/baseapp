@@ -49,14 +49,15 @@ async function createTestUser(
   label: string,
   role: string,
   tenantId = "session-tenant",
+  opts: { studioId?: string | null; emailVerified?: boolean } = {},
 ): Promise<{ uid: string; idToken: string }> {
   const uid = `session-${label}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   await adminAuth.createUser({
     uid,
     email: `${uid}@example.test`,
-    password: "password123",
+    emailVerified: opts.emailVerified ?? true,
   });
-  await adminAuth.setCustomUserClaims(uid, { role, tenantId, studioId: null });
+  await adminAuth.setCustomUserClaims(uid, { role, tenantId, studioId: opts.studioId ?? null });
   const idToken = await mintIdToken(uid);
   return { uid, idToken };
 }
@@ -103,8 +104,23 @@ describe("POST /api/session", () => {
     expect(res.status).toBe(403);
   });
 
-  it("rejects a valid token belonging to a studio-role user", async () => {
+  it("rejects a studio-role token with no studioId (malformed staff claims)", async () => {
     const { idToken } = await createTestUser("studio", "studio");
+    const res = await POST(postRequest(idToken));
+    expect(res.status).toBe(403);
+  });
+
+  it("accepts studio staff scoped to a studio (Studio floor only; layout gates the rest)", async () => {
+    const { idToken } = await createTestUser("studio-ok", "studio", "session-tenant", { studioId: "studio-a" });
+    const res = await POST(postRequest(idToken));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { claims: { role: string; studioId: string | null } };
+    expect(body.claims.role).toBe("studio");
+    expect(body.claims.studioId).toBe("studio-a");
+  });
+
+  it("rejects an admin token whose email is not verified", async () => {
+    const { idToken } = await createTestUser("unverified", "admin", "session-tenant", { emailVerified: false });
     const res = await POST(postRequest(idToken));
     expect(res.status).toBe(403);
   });

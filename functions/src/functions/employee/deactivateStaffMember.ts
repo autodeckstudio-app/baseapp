@@ -10,7 +10,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deactivateStaffMemberSchema } from "../../schemas/employee.js";
 
-// Admin-only. Soft-deletes a staff member: disables the Firebase Auth account,
+// Admin-only. Soft-deletes a staff member: demotes their account to customer,
 // revokes any live sessions, and marks the Employee record terminated.
 // Never a hard delete — historical job/audit references must stay resolvable.
 export const deactivateStaffMember = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
@@ -32,9 +32,22 @@ export const deactivateStaffMember = onCall({ region: "asia-south1", enforceAppC
     return { employeeId: data.employeeId, alreadyTerminated: true };
   }
 
+  // Demote, don't disable. Staff sign in with their own Google account,
+  // which may also be how they book as a customer. Deactivation drops the
+  // account to customer claims and kills live sessions, so staff access
+  // ends immediately (the admin session cookie is verified with
+  // checkRevoked) while the person keeps their customer history. The role
+  // resolver also re-checks the roster at every sign-in, so an inactive
+  // entry can never grant staff claims again.
   const adminAuth = getAuth();
-  await adminAuth.updateUser(existing.authUid, { disabled: true });
-  await adminAuth.revokeRefreshTokens(existing.authUid);
+  if (existing.authUid) {
+    await adminAuth.setCustomUserClaims(existing.authUid, {
+      role: "customer",
+      tenantId: existing.tenantId,
+      studioId: null,
+    });
+    await adminAuth.revokeRefreshTokens(existing.authUid);
+  }
 
   const now = new Date().toISOString();
 

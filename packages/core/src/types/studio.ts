@@ -39,7 +39,12 @@ export interface Employee {
   id: string;
   tenantId: string;
   studioId: string | null; // null for tenant admins (not studio-scoped)
+  // Firebase uid of the staff member's Google account. Empty until the
+  // person first signs in with the roster email and the role resolver links it.
   authUid: string;
+  // Google account email the roster matches on at sign-in (lower-cased).
+  // Optional only for records created before Google sign-in.
+  email?: string;
   name: string;
   phone: string;
   role: "studio" | "admin";

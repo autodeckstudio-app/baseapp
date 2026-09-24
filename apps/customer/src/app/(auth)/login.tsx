@@ -1,69 +1,101 @@
-import { useState } from "react";
-import { View, Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import { useRouter } from "expo-router";
-import type { ConfirmationResult } from "firebase/auth";
-import { sendPhoneOtp } from "../../lib/auth-service";
+import { useEffect, useState } from "react";
+import { View, Text, Alert } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+import {
+  devGoogleSignIn,
+  googleClientIds,
+  googleSignInConfigured,
+  signInWithGoogleIdToken,
+  useEmulator,
+} from "../../lib/auth-service";
 import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
 
-// Store the confirmation result between screens
-// In a full implementation, use a Context or router params
-let pendingConfirmation: ConfirmationResult | null = null;
-export function getPendingConfirmation(): ConfirmationResult | null {
-  return pendingConfirmation;
-}
-export function clearPendingConfirmation(): void {
-  pendingConfirmation = null;
-}
+// Lets the auth browser session hand its result back to the app.
+WebBrowser.maybeCompleteAuthSession();
 
+// Google-only customer sign-in. After Firebase has the user, the root layout
+// routes to /(auth)/setup (profile + claims) or straight into the app.
 export default function LoginScreen() {
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone.replace(/\s/g, "")}`;
-
-  async function handleSendOtp() {
-    if (formattedPhone.length < 13) {
-      Alert.alert("Invalid number", "Enter a 10-digit India mobile number.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      pendingConfirmation = await sendPhoneOtp(formattedPhone);
-      router.push({ pathname: "/(auth)/verify", params: { phone: formattedPhone } });
-    } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to send OTP.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View style={{ flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background }}>
       <Text style={{ ...typography.display, color: colors.textPrimary, marginBottom: spacing.xs }}>AutoDeck</Text>
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl }}>
-        Enter your India mobile number
+        Book, track and pay for your car's care.
       </Text>
+      {googleSignInConfigured() ? <GoogleButton /> : null}
+      {useEmulator ? <DevSignIn /> : null}
+      {!googleSignInConfigured() && !useEmulator ? (
+        <Text style={{ ...typography.body, color: colors.textMuted }}>
+          Sign-in isn't set up in this build yet.
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
-      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, marginBottom: spacing.xl }}>
-        <Text style={{ ...typography.title, color: colors.textSecondary, paddingBottom: 14 }}>+91</Text>
-        <View style={{ flex: 1 }}>
-          <TextInput
-            placeholder="98765 43210"
-            keyboardType="phone-pad"
-            maxLength={10}
-            value={phone}
-            onChangeText={setPhone}
-            autoFocus
-          />
-        </View>
-      </View>
+function GoogleButton() {
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    ...googleClientIds(),
+    selectAccount: true,
+  });
+  const [loading, setLoading] = useState(false);
 
-      <Button label="Send OTP" onPress={() => void handleSendOtp()} loading={loading} />
-    </KeyboardAvoidingView>
+  useEffect(() => {
+    if (response?.type !== "success") {
+      if (response) setLoading(false);
+      return;
+    }
+    const idToken = response.params["id_token"];
+    if (!idToken) {
+      setLoading(false);
+      Alert.alert("Sign-in failed", "Google didn't return a sign-in token. Please try again.");
+      return;
+    }
+    signInWithGoogleIdToken(idToken)
+      .catch((err: unknown) => {
+        Alert.alert("Sign-in failed", err instanceof Error ? err.message : "Please try again.");
+      })
+      .finally(() => setLoading(false));
+  }, [response]);
+
+  return (
+    <Button
+      label="Continue with Google"
+      loading={loading}
+      disabled={!request}
+      onPress={() => {
+        setLoading(true);
+        void promptAsync();
+      }}
+    />
+  );
+}
+
+// Emulator-only: sign in as any Google account without real client IDs.
+function DevSignIn() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  return (
+    <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
+      <Text style={{ ...typography.caption, color: colors.textMuted }}>Emulator dev sign-in</Text>
+      <TextInput
+        placeholder="someone@gmail.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <Button
+        label="Dev sign-in"
+        loading={loading}
+        onPress={() => {
+          setLoading(true);
+          devGoogleSignIn(email.trim().toLowerCase(), email.split("@")[0] ?? "Dev User")
+            .catch((err: unknown) => Alert.alert("Dev sign-in failed", err instanceof Error ? err.message : String(err)))
+            .finally(() => setLoading(false));
+        }}
+      />
+    </View>
   );
 }

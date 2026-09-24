@@ -11,6 +11,7 @@ import { COLLECTIONS } from "@autodeck/database";
  */
 export type RateLimitAction =
   | "auth.setupProfile"
+  | "auth.resolveClaims"
   | "booking.create"
   | "booking.cancel"
   | "booking.reschedule"
@@ -79,6 +80,7 @@ interface RateLimitConfig {
 // assumption true again, not weakened.
 const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "auth.setupProfile": { limit: 10, windowMs: 60_000 },
+  "auth.resolveClaims": { limit: 20, windowMs: 60_000 },
   "booking.create": { limit: 10, windowMs: 60_000 },
   "booking.cancel": { limit: 10, windowMs: 60_000 },
   "booking.reschedule": { limit: 10, windowMs: 60_000 },
