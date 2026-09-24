@@ -5,11 +5,20 @@ const config = getDefaultConfig(__dirname);
 
 // Firebase's React Native auth build (dist/rn/index.js) exports
 // getReactNativePersistence for persistent AsyncStorage-backed auth state.
-// Metro needs the "react-native" condition/field to pick that build over
-// the browser build, which omits getReactNativePersistence.
+// Native bundles pick that build via the per-platform condition below and the
+// "react-native" main field; the browser build omits getReactNativePersistence.
 config.resolver.resolverMainFields = ["react-native", "browser", "main"];
 config.resolver.unstable_enablePackageExports = true;
-config.resolver.unstable_conditionNames = ["react-native", "require", "default"];
+// Web bundles must resolve @firebase/auth's BROWSER build (popup/redirect
+// resolver lives only there); the react-native condition must apply to native
+// platforms only, per-platform, exactly like Expo's default config. A global
+// conditionNames list poisons web bundles with the RN auth build and breaks
+// Google popup sign-in on web entirely.
+config.resolver.unstable_conditionsByPlatform = {
+  ...(config.resolver.unstable_conditionsByPlatform ?? {}),
+  ios: ["react-native"],
+  android: ["react-native"],
+};
 
 // Workspace packages use NodeNext-style "./x.js" specifiers that point at
 // .ts sources. Retry a failed relative ".js" import without the extension.
