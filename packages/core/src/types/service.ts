@@ -55,6 +55,8 @@ export interface Service {
   vehicleCategoryPricing: VehicleCategoryPricing[]; // inline array; max 6 entries
   requiredBayType: BayType;
   membershipWashEligible: boolean;
+  // true = no fixed price; booking is created as a quote request and the studio sets the price.
+  priceOnRequest?: boolean;
   active: boolean;
   displayOrder: number; // ascending; lower = shown first
   createdAt: string; // ISO timestamp

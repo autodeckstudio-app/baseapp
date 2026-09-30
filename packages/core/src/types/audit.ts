@@ -7,6 +7,8 @@ export type AuditAction =
   | "booking.created"
   | "booking.confirmed"
   | "booking.cancelled"
+  | "booking.quoted"
+  | "booking.quote_approved"
   | "job.status_advanced"
   | "job.sealed"
   | "payment.recorded"

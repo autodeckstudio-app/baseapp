@@ -52,6 +52,7 @@ export const createServiceSchema = z.object({
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
+  priceOnRequest: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
 }).strict();
 
@@ -70,6 +71,7 @@ export const updateServiceSchema = z.object({
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
+  priceOnRequest: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
 }).strict();
 

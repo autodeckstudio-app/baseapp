@@ -28,8 +28,13 @@ export interface PriceBreakdown {
   currency: string; // ISO 4217; snapshotted
 }
 
+export type QuoteStatus = "requested" | "quoted" | "approved";
+
 export interface Booking {
   id: string;
+  // Set only for price-on-request services. requested -> quoted (studio sets price) -> approved (customer).
+  quoteStatus?: QuoteStatus;
+  priceOnRequest?: boolean;
   tenantId: string;
   studioId: string;
   customerId: string;

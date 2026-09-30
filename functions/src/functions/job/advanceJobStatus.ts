@@ -60,6 +60,15 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
     if (!freshJobSnap.exists) throw new HttpsError("not-found", "Job not found.");
     const freshJob = freshJobSnap.data() as ServiceJob;
 
+    // Price-on-request bookings: no work starts until the customer approves the quote.
+    if (freshJob.status === "PENDING_VEHICLE" && freshJob.bookingId) {
+      const bk = await tx.get(db.collection(COLLECTIONS.bookings()).doc(freshJob.bookingId));
+      const q = (bk.data() as { priceOnRequest?: boolean; quoteStatus?: string } | undefined);
+      if (q?.priceOnRequest === true && q.quoteStatus !== "approved") {
+        throw new HttpsError("failed-precondition", "Waiting for the customer to approve the quote.");
+      }
+    }
+
     const validTransitions = JOB_STATUS_TRANSITIONS[freshJob.status] ?? [];
     if (validTransitions.length === 0) {
       throw new HttpsError(

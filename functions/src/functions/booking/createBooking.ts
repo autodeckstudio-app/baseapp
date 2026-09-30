@@ -295,6 +295,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       bayId: assignedBayId,
       assignedEmployeeId: null,
       status: "CONFIRMED",
+      ...(service.priceOnRequest === true ? { priceOnRequest: true, quoteStatus: "requested" as const } : {}),
       priceBreakdown: finalBreakdown,
       totalAmount: finalBreakdown.total,
       membershipId: data.membershipId ?? null,

@@ -44,6 +44,7 @@ export const createService = onCall({ region: "asia-south1", enforceAppCheck: sh
     requiredBayType: data.requiredBayType ?? "general",
     membershipWashEligible: data.membershipWashEligible ?? false,
     active: true,
+    priceOnRequest: data.priceOnRequest ?? false,
     displayOrder: data.displayOrder ?? 0,
     createdAt: now,
     updatedAt: now,

@@ -69,6 +69,8 @@ export { deactivateStaffMember } from "./functions/employee/deactivateStaffMembe
 // ─── Approvals (Phase 3) ──────────────────────────────────────────────────────
 export { createApproval } from "./functions/approval/createApproval.js";
 export { respondToApproval } from "./functions/approval/respondToApproval.js";
+export { setBookingQuote } from "./functions/booking/setBookingQuote.js";
+export { respondToBookingQuote } from "./functions/booking/respondToBookingQuote.js";
 export { cancelApproval } from "./functions/approval/cancelApproval.js";
 export { expireStaleApprovals } from "./functions/approval/expireStaleApprovals.js";
 export { expireStaleApprovalsScheduled } from "./functions/approval/expireStaleApprovalsScheduled.js";
