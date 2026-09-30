@@ -14,6 +14,7 @@ import {
   getVehicle,
   getService,
 } from "../../../../lib/bookings-service";
+import { setBookingQuote } from "../../../../lib/bookings-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatDayLong, formatTime } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
@@ -32,6 +33,21 @@ export default function BookingDetailPage() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [service, setService] = useState<Service | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [quoteRupees, setQuoteRupees] = useState("");
+  const [quoteBusy, setQuoteBusy] = useState(false);
+  async function submitQuote() {
+    if (!booking) return;
+    const n = Math.round(Number(quoteRupees) * 100);
+    if (!Number.isFinite(n) || n < 100) { setError("Enter the quote in rupees, at least 1."); return; }
+    setQuoteBusy(true);
+    try {
+      await setBookingQuote(booking.id, n);
+      setError(null);
+      window.location.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the quote.");
+    } finally { setQuoteBusy(false); }
+  }
 
   useEffect(() => {
     if (!id) return undefined;
@@ -103,6 +119,20 @@ export default function BookingDetailPage() {
             <div className="kv"><span>Bay</span><span>{booking.bayId}</span></div>
             {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
           </section>
+
+          {booking.priceOnRequest === true && (
+            <section className="ad-panel">
+              <span className="ad-label">Quote</span>
+              <div className="kv"><span>{service?.brand ? `${service.brand} · ` : ""}{service?.name ?? "Product"}</span><span>{booking.quoteStatus === "approved" ? "Customer approved" : booking.quoteStatus === "quoted" ? "Waiting for customer" : "Needs a price"}</span></div>
+              {booking.quoteStatus !== "approved" && (
+                <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+                  <input className="ad-input" inputMode="decimal" placeholder="Price in rupees, before tax" value={quoteRupees} onChange={(e) => setQuoteRupees(e.target.value)} />
+                  <button type="button" className="ad-button ad-button--primary" disabled={quoteBusy} onClick={() => void submitQuote()}>{booking.quoteStatus === "quoted" ? "Update quote" : "Send quote"}</button>
+                </div>
+              )}
+              <p className="ad-note">Work cannot start until the customer approves the quote.</p>
+            </section>
+          )}
 
           <section className="ad-panel">
             <span className="ad-label">Price</span>

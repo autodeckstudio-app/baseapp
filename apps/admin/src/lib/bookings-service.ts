@@ -117,3 +117,9 @@ export async function getService(serviceId: string): Promise<Service | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.services(), serviceId));
   return snap.exists() ? (snap.data() as Service) : null;
 }
+
+export async function setBookingQuote(bookingId: string, basePricePaise: number): Promise<void> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  await httpsCallable<{ bookingId: string; basePricePaise: number }, { bookingId: string }>(functions, "setBookingQuote")({ bookingId, basePricePaise });
+}
