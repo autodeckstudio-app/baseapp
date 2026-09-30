@@ -85,7 +85,7 @@ export default function CatalogueScreen() {
   const sections = useMemo(() => {
     const m = new Map<string, Entry[]>();
     const catOf = (k: BrandItem["kind"]) => (k === "PPF" ? "ppf" : "ceramic");
-    const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || a.basePrice - b.basePrice);
+    const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice);
     const label = (cat: string, name: string) => (active === "all" ? `${GROUP[cat] ?? "More"} · ${name}` : name);
     for (const sv of ranked) {
       const inferred = BRANDS.find((b) => b.items.some((it) => sv.name.toLowerCase().includes(it.name.toLowerCase())))?.name;
