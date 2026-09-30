@@ -1,12 +1,13 @@
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { Image, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
 import { useAuth } from "../../../hooks/useAuth";
 import { getMyBookings } from "../../../lib/booking-service";
+import { sceneImagery } from "../../../lib/imagery";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
@@ -63,7 +64,14 @@ export default function BookingsScreen() {
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {upcoming.length > 0 ? <View style={{ gap: space.line }}><Kicker>Coming up</Kicker>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 ? (
-        <Notice title="Nothing booked" body="Pick a service and a time. The studio confirms it." action={<Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />} />
+        <Pane pad="none" round="hero">
+          <Image source={sceneImagery.heroHome} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+          <View style={{ padding: space.inset, gap: space.breath }}>
+            <T role="heading">Nothing booked</T>
+            <T tone="secondary">Pick a service and a time. The studio confirms it.</T>
+            <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+          </View>
+        </Pane>
       ) : null}
       {past.length > 0 ? <View style={{ gap: space.line }}><Kicker>History</Kicker>{list(past)}</View> : null}
     </Screen>

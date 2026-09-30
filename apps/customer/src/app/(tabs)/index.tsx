@@ -1,7 +1,7 @@
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel, type ProtectionAttention } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -9,6 +9,7 @@ import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
+import { sceneImagery, vehicleImagery } from "../../lib/imagery";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../ui/kit";
 
@@ -103,8 +104,13 @@ export default function HomeScreen() {
     <Screen header={header}>
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
-      <Pane pad="inset" round="hero" fill={m.heroState === "empty" || m.heroState === "idle" ? "base" : "warm"} {...(m.heroState === "awaitingApproval" ? { tone: "accent" as const } : {})}>
-        <View style={{ gap: space.line }}>
+      <Pane pad="none" round="hero" fill={m.heroState === "empty" || m.heroState === "idle" ? "base" : "warm"} {...(m.heroState === "awaitingApproval" ? { tone: "accent" as const } : {})}>
+        <Image
+          source={car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome}
+          style={{ width: "100%", aspectRatio: 21 / 9 }}
+          resizeMode="cover"
+        />
+        <View style={{ padding: space.inset, gap: space.line }}>
           <Kicker tone="accent">{copy.kicker}</Kicker>
           {car ? (
             <View style={{ gap: space.breath }}>

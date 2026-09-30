@@ -1,13 +1,14 @@
 // Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
+import { sceneImagery } from "../../../lib/imagery";
 import { Button, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
@@ -63,7 +64,13 @@ export default function GarageScreen() {
           </Pane>
         </Pressable>
       ) : !error ? (
-        <Notice title="No cars yet" body="Add your car once. Bookings, bills and papers attach to it from then on." />
+        <Pane pad="none" round="hero">
+          <Image source={sceneImagery.heroAlt} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+          <View style={{ padding: space.inset, gap: space.breath }}>
+            <T role="heading">No cars yet</T>
+            <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
+          </View>
+        </Pane>
       ) : null}
       {rest.length > 0 ? (
         <Pane pad="gap">
