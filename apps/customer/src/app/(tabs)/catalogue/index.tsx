@@ -6,7 +6,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -92,18 +92,6 @@ export default function CatalogueScreen() {
       const k = label(sv.category, sv.brand ?? inferred ?? subGroup(sv));
       m.set(k, [...(m.get(k) ?? []), { svc: sv }]);
     }
-    const t = q.trim().toLowerCase();
-    for (const b of BRANDS) {
-      for (const it of b.items) {
-        const cat = catOf(it.kind);
-        if (active !== "all" && active !== cat) continue;
-        if (t && !`${b.name} ${it.name}`.toLowerCase().includes(t)) continue;
-        const k = label(cat, b.name);
-        const have = (m.get(k) ?? []).some((e) => e.svc && e.svc.name.toLowerCase().replace(`${b.name.toLowerCase()} `, "") === it.name.toLowerCase().replace(/ ppf$/, ""));
-        if (have) continue;
-        m.set(k, [...(m.get(k) ?? []), { item: it }]);
-      }
-    }
     return [...m.entries()];
   }, [shown, active, q]);
 
@@ -164,7 +152,7 @@ export default function CatalogueScreen() {
                   detail={<T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>}
                   trailing={
                     <View style={{ alignItems: "flex-end", gap: 2 }}>
-                      <T role="bodyStrong" tone="accent">{rupees(e.svc.basePrice)}</T>
+                      <T role="bodyStrong" tone="accent">{priceLabel(e.svc)}</T>
                       {e.svc.warrantyLabel ? <Chip label={e.svc.warrantyLabel} tone="premium" /> : null}
                     </View>
                   }

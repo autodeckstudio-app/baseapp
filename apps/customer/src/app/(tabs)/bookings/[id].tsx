@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getBookingById, cancelBooking } from "../../../lib/booking-service";
+import { getBookingById, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
@@ -170,6 +170,20 @@ export default function BookingDetailScreen() {
     }
   }
 
+  const [quoteBusy, setQuoteBusy] = useState(false);
+  async function handleApproveQuote() {
+    if (!id) return;
+    setQuoteBusy(true);
+    try {
+      await approveBookingQuote(id);
+      setBooking((prev) => (prev ? { ...prev, quoteStatus: "approved" } : prev));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Could not approve the quote.");
+    } finally {
+      setQuoteBusy(false);
+    }
+  }
+
   async function handleCancelConfirmed() {
     if (!booking || !id) return;
     setCancelling(true);
@@ -325,6 +339,16 @@ export default function BookingDetailScreen() {
 
       <View style={{ gap: space.line }}>
         <Kicker>Price</Kicker>
+        {booking.priceOnRequest === true && booking.quoteStatus === "requested" ? (
+          <Pane pad="gap"><Row title="Quote requested" detail={<T role="caption" tone="secondary">The studio will set the price for your car. You approve it before any work starts.</T>} last /></Pane>
+        ) : null}
+        {booking.priceOnRequest === true && booking.quoteStatus === "quoted" ? (
+          <Pane pad="gap">
+            <Row title="Studio quote" detail={<T role="caption" tone="secondary">Approve to let the studio start work.</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
+            <View style={{ marginTop: space.line }}><Button label="Approve quote" busy={quoteBusy} onPress={() => void handleApproveQuote()} /></View>
+          </Pane>
+        ) : null}
+        {booking.priceOnRequest === true && booking.quoteStatus === "requested" ? null : (
         <Pane pad="gap">
           <Row title="Base" trailing={<T role="data">{rupees(booking.priceBreakdown.basePrice)}</T>} />
           {booking.priceBreakdown.scopeAdjustment > 0 ? (
@@ -339,6 +363,7 @@ export default function BookingDetailScreen() {
           <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} />
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} last />
         </Pane>
+        )}
       </View>
 
       {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}

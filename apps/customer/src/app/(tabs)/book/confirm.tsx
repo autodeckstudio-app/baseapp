@@ -125,7 +125,7 @@ export default function BookingConfirmScreen() {
   const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "—";
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Step 6 of 6 · Confirm</Kicker><T role="title">Review booking</T>{breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Step 6 of 6 · Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
       <Pane pad="gap">
         <Row title="Service" detail={service?.name ?? "—"} />
         <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "—"} />
@@ -146,7 +146,7 @@ export default function BookingConfirmScreen() {
         />
       ) : null}
 
-      {breakdown !== null ? <PricePane breakdown={breakdown} /> : null}
+      {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : breakdown !== null ? <PricePane breakdown={breakdown} /> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         Payment is collected at the studio. Price may vary based on final work.
@@ -155,7 +155,7 @@ export default function BookingConfirmScreen() {
       {bookError ? <Notice title="Booking failed" body={bookError} /> : null}
 
       <View style={{ gap: space.breath }}>
-        <Button label="Confirm booking" busy={booking} onPress={() => void handleConfirm()} />
+        <Button label={service?.priceOnRequest === true ? "Request quote and book" : "Confirm booking"} busy={booking} onPress={() => void handleConfirm()} />
         <Button label="Go back" kind="quiet" onPress={() => router.back()} />
       </View>
     </Screen>

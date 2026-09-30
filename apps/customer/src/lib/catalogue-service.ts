@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
+import { rupees } from "../ui/kit";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 export async function getServiceCatalogue(category?: ServiceCategory): Promise<Service[]> {
@@ -38,4 +39,8 @@ export async function calculateServicePrice(
   >(functions, "calculateServicePrice");
   const result = await fn({ serviceId, vehicleCategory });
   return result.data;
+}
+
+export function priceLabel(s: { priceOnRequest?: boolean; basePrice: number }): string {
+  return s.priceOnRequest === true ? "Quote on request" : rupees(s.basePrice);
 }

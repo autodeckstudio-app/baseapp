@@ -12,7 +12,7 @@ import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { serviceImagery } from "../../../lib/imagery";
 import { COPY_IS_DRAFT, FAQS, showcaseFor } from "../../../lib/showcase";
-import { applyBrandWarranty, getServiceCatalogue } from "../../../lib/catalogue-service";
+import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -166,7 +166,9 @@ export default function ServiceDetailScreen() {
             })}
           </View>
 
-          {priceLoading ? (
+          {service.priceOnRequest === true ? (
+            <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">The studio confirms the price for your car. You approve it before any work starts.</T>} last /></Pane>
+          ) : priceLoading ? (
             <T role="caption" tone="tertiary">Working out the price...</T>
           ) : priceError ? (
             <Notice title="Can't get the price" body="Check your connection and try again." />
@@ -197,7 +199,7 @@ export default function ServiceDetailScreen() {
                   key={x.id}
                   title={x.id === service.id ? `${x.name} (you're here)` : x.name}
                   detail={<T role="caption" tone="tertiary">{[x.brand, x.warrantyLabel].filter(Boolean).join(" · ") || "No warranty listed"}</T>}
-                  trailing={<T role="bodyStrong" tone={x.id === service.id ? "accent" : "secondary"}>{rupees(x.basePrice)}</T>}
+                  trailing={<T role="bodyStrong" tone={x.id === service.id ? "accent" : "secondary"}>{priceLabel(x)}</T>}
                   onPress={x.id === service.id ? undefined : () => router.replace(`/(tabs)/catalogue/${x.id}`)}
                   last={i === siblings.length - 1}
                 />
@@ -240,10 +242,10 @@ export default function ServiceDetailScreen() {
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">From</T>
-            <T role="heading">{rupees(service.basePrice)}</T>
+            <T role="heading">{priceLabel(service)}</T>
           </View>
           <View style={{ flex: 1.4 }}>
-            <Button label="Book this service" onPress={() => router.push(`/(tabs)/book/${id}`)} />
+            <Button label={service.priceOnRequest === true ? "Request a quote" : "Book this service"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
           </View>
         </View>
       </View>

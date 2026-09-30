@@ -116,7 +116,7 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{total !== null ? <T role="caption" tone="accent">Total {rupees(total)} incl. tax</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="caption" tone="accent">Total {rupees(total)} incl. tax</T> : null}</View>}>
       <View style={{ gap: space.line }}>
         <Kicker>Step 3 of 6 · Your car</Kicker>
         {vehicles.length === 0 ? (

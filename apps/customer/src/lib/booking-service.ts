@@ -126,3 +126,8 @@ export function generateIdempotencyKey(): string {
 export function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
+
+export async function approveBookingQuote(bookingId: string): Promise<void> {
+  const fn = httpsCallable<{ bookingId: string }, { bookingId: string }>(functions, "respondToBookingQuote");
+  await fn({ bookingId });
+}
