@@ -1,7 +1,7 @@
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import type { Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
@@ -46,9 +46,12 @@ export default function BookingsScreen() {
     }
   }, [auth]);
 
-  useEffect(() => {
-    if (auth.status === "ready") void load();
-  }, [auth.status, load]);
+  // Tabs stay mounted: reload every time the screen gains focus so a fresh booking shows up.
+  useFocusEffect(
+    useCallback(() => {
+      if (auth.status === "ready") void load();
+    }, [auth.status, load]),
+  );
 
   if (!bookings && !error) return <Loading label="Loading bookings" />;
   const all = bookings ?? [];
