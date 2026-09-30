@@ -105,7 +105,7 @@ export default function ServiceDetailScreen() {
         </View>
 
         <T role="heading">{sc.tagline || service.description}</T>
-        {sc.tagline ? <T tone="secondary">{service.description}</T> : null}
+        {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description}</T> : null}
 
         {sc.included.length > 0 ? (
           <View style={{ gap: space.breath }}>
