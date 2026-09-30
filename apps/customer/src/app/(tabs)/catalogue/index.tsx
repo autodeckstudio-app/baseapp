@@ -1,6 +1,9 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
+import { BRAND_NOTE, showcaseFor } from "../../../lib/showcase";
+import { serviceImagery } from "../../../lib/imagery";
+import { HeroImage } from "../../../ui/kit";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -56,6 +59,7 @@ export default function CatalogueScreen() {
   const [error, setError] = useState(false);
   const [active, setActive] = useState<string>("all");
   const [q, setQ] = useState("");
+  const [brand, setBrand] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(false);
@@ -75,8 +79,8 @@ export default function CatalogueScreen() {
   const cats = ORDER.filter((c) => all.some((x) => x.category === c));
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return all.filter((x) => (active === "all" || x.category === active) && (!t || `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)));
-  }, [all, active, q]);
+    return all.filter((x) => (active === "all" || x.category === active) && (!brand || x.brand === brand) && (!t || `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)));
+  }, [all, active, q, brand]);
   const sections = useMemo(() => {
     const m = new Map<string, Service[]>();
     const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || a.basePrice - b.basePrice);
@@ -86,6 +90,10 @@ export default function CatalogueScreen() {
     }
     return [...m.entries()];
   }, [shown, active]);
+
+  const picks = all.filter((x) => showcaseFor(x).studioPick);
+  const brands = [...new Set(all.map((x) => x.brand).filter((b): b is string => !!b))];
+  const showcase = active === "all" && !q.trim() && !brand;
 
   const chip = (key: string, label: string) => {
     const on = active === key;
@@ -129,6 +137,42 @@ export default function CatalogueScreen() {
         <View style={{ gap: space.line }}>
           <Skeleton height={18} width="40%" />
           <Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} />
+        </View>
+      ) : null}
+      {services && showcase && picks.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          <Kicker tone="accent">Studio picks</Kicker>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.line }}>
+            {picks.map((s) => (
+              <Pressable key={s.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)} style={{ width: 260, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, overflow: "hidden" }}>
+                <HeroImage source={serviceImagery[s.category] ?? serviceImagery.other} aspect={16 / 9} />
+                <View style={{ padding: space.line, gap: 4 }}>
+                  <T role="bodyStrong">{s.name}</T>
+                  <T role="caption" tone="secondary" numberOfLines={2}>{showcaseFor(s).tagline}</T>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>
+                    {s.warrantyLabel ? <Chip label={s.warrantyLabel} tone="premium" /> : null}
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+      {services && brands.length > 0 && !q.trim() ? (
+        <View style={{ gap: space.breath }}>
+          <Kicker>Brands</Kicker>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
+            {brands.map((b) => {
+              const on = brand === b;
+              return (
+                <Pressable key={b} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setBrand(on ? null : b)} style={{ borderRadius: 16, borderWidth: 1, borderColor: on ? colors.accent : colors.borderSubtle, backgroundColor: on ? colors.accentHaze : "transparent", paddingHorizontal: 16, paddingVertical: 10, minWidth: 110 }}>
+                  <T role="bodyStrong" tone={on ? "accent" : "primary"}>{b}</T>
+                  {BRAND_NOTE[b] ? <T role="caption" tone="tertiary">{BRAND_NOTE[b]}</T> : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
       ) : null}
       {services && sections.length === 0 ? <Notice title="Nothing matches" body="Try another word or pick All." /> : null}
