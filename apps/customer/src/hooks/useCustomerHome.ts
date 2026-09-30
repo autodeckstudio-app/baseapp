@@ -53,7 +53,13 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
 
   useEffect(() => {
     if (!uid || !tenantId) return;
-    const fail = () => setError("We couldn't reach AutoDeck. Showing what we have.");
+    const fail = () => {
+    setError("We couldn't reach AutoDeck. Showing what we have.");
+    // Never leave vehicles null on a listener error: a null model keeps the
+    // Home on the loading spinner forever. Empty data + the error caption is
+    // always better than a silent hang.
+    setVehicles((v) => v ?? []);
+  };
     const subs = [
       listenToMyVehicles(uid, tenantId, setVehicles, fail),
       listenToMyJobs(tenantId, uid, setJobs, fail),
