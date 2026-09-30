@@ -40,6 +40,7 @@ export default function AddVehicleScreen() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
 
   function pickPhoto(file: { blob: Blob; type: string } | null) {
@@ -77,7 +78,10 @@ export default function AddVehicleScreen() {
         try {
           await uploadVehiclePhoto(vehicle.id, photo.blob, photo.contentType);
         } catch {
-          setError("The car is added, but the photo didn't upload. You can add it from the car's page.");
+          // Stay on this screen so the message is actually seen.
+          setPhotoFailed(true);
+          setError("Your car is saved, but the photo could not be uploaded right now. Tap Done to continue without it.");
+          return;
         }
       }
       router.back();
@@ -121,9 +125,9 @@ export default function AddVehicleScreen() {
           </View>
         ) : null}
 
-        {error ? <Notice title="Can't add this car" body={error} /> : null}
+        {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}
 
-        <Button label="Add car" busy={loading} onPress={() => void handleAdd()} />
+        {photoFailed ? <Button label="Done" onPress={() => router.back()} /> : <Button label="Add car" busy={loading} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

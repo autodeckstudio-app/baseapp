@@ -5,7 +5,7 @@ import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { listenToMyVehicles, resolveVehiclePhotoUrl } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { sceneImagery } from "../../../lib/imagery";
@@ -18,6 +18,14 @@ export default function GarageScreen() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [error, setError] = useState(false);
+  const [leadPhoto, setLeadPhoto] = useState<string | null>(null);
+  const leadPath = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]?.photoUrl ?? null;
+  useEffect(() => {
+    let alive = true;
+    setLeadPhoto(null);
+    if (leadPath) void resolveVehiclePhotoUrl(leadPath).then((u) => { if (alive) setLeadPhoto(u); }).catch(() => {});
+    return () => { alive = false; };
+  }, [leadPath]);
 
   useEffect(() => {
     if (auth.status !== "ready") return;
@@ -51,8 +59,9 @@ export default function GarageScreen() {
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." /> : null}
       {lead ? (
         <Pressable onPress={() => open(lead)} accessibilityRole="button" accessibilityLabel={`${lead.make} ${lead.model}`}>
-          <Pane pad="inset" round="hero" fill="warm">
-            <View style={{ gap: space.line }}>
+          <Pane pad="none" round="hero" fill="warm">
+            {leadPhoto ? <HeroImage source={{ uri: leadPhoto }} /> : null}
+            <View style={{ gap: space.line, padding: space.inset }}>
               <Kicker tone="accent">{list.length > 1 ? "Most recent" : "Your car"}</Kicker>
               <T role="display" numberOfLines={1}>{lead.make} {lead.model}</T>
               <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center", flexWrap: "wrap" }}>
