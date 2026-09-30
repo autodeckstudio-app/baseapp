@@ -379,16 +379,6 @@
         {
           "fieldPath": "bookingId",
           "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "jobs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "bookingId",
-          "order": "ASCENDING"
         },
         {
           "fieldPath": "tenantId",
