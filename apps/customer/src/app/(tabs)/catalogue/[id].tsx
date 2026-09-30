@@ -12,7 +12,7 @@ import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { serviceImagery } from "../../../lib/imagery";
 import { COPY_IS_DRAFT, FAQS, showcaseFor } from "../../../lib/showcase";
-import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import { applyBrandWarranty, getServiceCatalogue } from "../../../lib/catalogue-service";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -43,7 +43,7 @@ export default function ServiceDetailScreen() {
     void (async () => {
       try {
         const snap = await getDoc(doc(db, COLLECTIONS.services(), id));
-        if (snap.exists()) setService(snap.data() as Service);
+        if (snap.exists()) setService(applyBrandWarranty(snap.data() as Service));
       } catch {
         setLoadError(true);
       } finally {
