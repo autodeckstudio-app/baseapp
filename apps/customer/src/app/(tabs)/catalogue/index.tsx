@@ -149,10 +149,8 @@ export default function CatalogueScreen() {
                 <View style={{ padding: space.line, gap: 4 }}>
                   <T role="bodyStrong">{s.name}</T>
                   <T role="caption" tone="secondary" numberOfLines={2}>{showcaseFor(s).tagline}</T>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>
-                    {s.warrantyLabel ? <Chip label={s.warrantyLabel} tone="premium" /> : null}
-                  </View>
+                  <T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>
+                  {s.warrantyLabel ? <View style={{ flexDirection: "row" }}><Chip label={s.warrantyLabel} tone="premium" /></View> : null}
                 </View>
               </Pressable>
             ))}
