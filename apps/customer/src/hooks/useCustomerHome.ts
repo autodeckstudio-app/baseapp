@@ -1,6 +1,6 @@
 // Live inputs for the customer Home, ranked by the pure projectCustomerHome.
 // Every listener is scoped to the signed-in customer; the rules enforce it.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   projectCustomerHome,
@@ -46,6 +46,7 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   const [preferred, setPreferred] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const delivered = useRef(false);
 
   useEffect(() => {
     void AsyncStorage.getItem(ACTIVE_KEY).then(setPreferred);
@@ -56,7 +57,9 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   // error caption instead of spinning forever.
   useEffect(() => {
     if (!uid || !tenantId) return;
+    delivered.current = false;
     const t = setTimeout(() => {
+      if (delivered.current) return;
       setError((e) => e ?? "This is taking longer than usual. Check your connection and refresh.");
       setVehicles((v) => v ?? []);
     }, 8000);
@@ -76,7 +79,7 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     setVehicles((v) => v ?? []);
   };
     const subs = [
-      listenToMyVehicles(uid, tenantId, setVehicles, failFor("cars")),
+      listenToMyVehicles(uid, tenantId, (v) => { delivered.current = true; setError(null); setVehicles(v); }, failFor("cars")),
       listenToMyJobs(tenantId, uid, setJobs, failFor("visits")),
       listenToMyPendingApprovals(tenantId, uid, setApprovals, failFor("approvals")),
       listenToMyIssuedInvoices(tenantId, uid, setInvoices, failFor("bills")),
