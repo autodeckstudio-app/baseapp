@@ -1,7 +1,8 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
-import { BRAND_NOTE, showcaseFor } from "../../../lib/showcase";
+import { BRANDS } from "../../../lib/brands";
+import { showcaseFor } from "../../../lib/showcase";
 import { serviceImagery } from "../../../lib/imagery";
 import { HeroImage } from "../../../ui/kit";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -59,7 +60,7 @@ export default function CatalogueScreen() {
   const [error, setError] = useState(false);
   const [active, setActive] = useState<string>("all");
   const [q, setQ] = useState("");
-  const [brand, setBrand] = useState<string | null>(null);
+  const brand: string | null = null;
 
   const load = useCallback(async () => {
     setError(false);
@@ -92,7 +93,7 @@ export default function CatalogueScreen() {
   }, [shown, active]);
 
   const picks = all.filter((x) => showcaseFor(x).studioPick);
-  const brands = [...new Set(all.map((x) => x.brand).filter((b): b is string => !!b))];
+  const brands = BRANDS;
   const showcase = active === "all" && !q.trim() && !brand;
 
   const chip = (key: string, label: string) => {
@@ -161,15 +162,12 @@ export default function CatalogueScreen() {
         <View style={{ gap: space.breath }}>
           <Kicker>Brands</Kicker>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
-            {brands.map((b) => {
-              const on = brand === b;
-              return (
-                <Pressable key={b} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setBrand(on ? null : b)} style={{ borderRadius: 16, borderWidth: 1, borderColor: on ? colors.accent : colors.borderSubtle, backgroundColor: on ? colors.accentHaze : "transparent", paddingHorizontal: 16, paddingVertical: 10, minWidth: 110 }}>
-                  <T role="bodyStrong" tone={on ? "accent" : "primary"}>{b}</T>
-                  {BRAND_NOTE[b] ? <T role="caption" tone="tertiary">{BRAND_NOTE[b]}</T> : null}
-                </Pressable>
-              );
-            })}
+            {brands.map((b) => (
+              <Pressable key={b.name} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/brands?b=${encodeURIComponent(b.name)}`)} style={{ borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 16, paddingVertical: 10, minWidth: 110 }}>
+                <T role="bodyStrong">{b.name}</T>
+                <T role="caption" tone="tertiary">{b.blurb.split(" and ")[0]}</T>
+              </Pressable>
+            ))}
           </ScrollView>
         </View>
       ) : null}
