@@ -262,11 +262,13 @@ export function HeroImage({ source, aspect = 21 / 9 }: { source: ImageSourceProp
   }, [progress]);
   const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [motion.heroSettle.scale, 1] });
   return (
-    <Animated.Image
-      source={source}
-      resizeMode="cover"
-      style={{ width: "100%", aspectRatio: aspect, ...(still ? {} : { opacity: progress, transform: [{ scale }] }) }}
-    />
+    <View style={{ width: "100%", aspectRatio: aspect, overflow: "hidden" }}>
+      <Animated.Image
+        source={source}
+        resizeMode="cover"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", ...(still ? {} : { opacity: progress, transform: [{ scale }] }) }}
+      />
+    </View>
   );
 }
 
