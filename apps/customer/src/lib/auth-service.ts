@@ -18,6 +18,7 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
+  onIdTokenChanged as firebaseOnIdTokenChanged,
   connectAuthEmulator,
   type User,
   type Unsubscribe,
@@ -126,6 +127,17 @@ export async function signOut(): Promise<void> {
 
 export function onAuthStateChanged(callback: (user: User | null) => void): Unsubscribe {
   return firebaseOnAuthStateChanged(auth, callback);
+}
+
+/**
+ * Fires on sign-in, sign-out, AND every ID-token refresh — unlike
+ * onAuthStateChanged, which does not fire when getIdToken(true) picks up new
+ * custom claims. Auth guards that read claims must subscribe to this,
+ * otherwise a user whose claims were just set server-side (e.g. by
+ * setupCustomerProfile) stays stuck on the pre-claims screen.
+ */
+export function onIdTokenChanged(callback: (user: User | null) => void): Unsubscribe {
+  return firebaseOnIdTokenChanged(auth, callback);
 }
 
 export { auth };
