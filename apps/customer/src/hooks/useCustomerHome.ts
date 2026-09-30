@@ -51,6 +51,18 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     void AsyncStorage.getItem(ACTIVE_KEY).then(setPreferred);
   }, [tick]);
 
+  // Watchdog: if no listener has delivered within 8s (e.g. the watch stream
+  // never establishes on a flaky network), stop waiting and render with the
+  // error caption instead of spinning forever.
+  useEffect(() => {
+    if (!uid || !tenantId) return;
+    const t = setTimeout(() => {
+      setError((e) => e ?? "This is taking longer than usual. Check your connection and refresh.");
+      setVehicles((v) => v ?? []);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [uid, tenantId, tick]);
+
   useEffect(() => {
     if (!uid || !tenantId) return;
     const fail = () => {
