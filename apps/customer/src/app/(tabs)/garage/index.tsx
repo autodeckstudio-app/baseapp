@@ -23,6 +23,20 @@ export default function GarageScreen() {
     return listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
   }, [auth.status]);
 
+  // Watchdog: if the vehicles stream never delivers (no data, no error),
+  // show the connection notice instead of spinning forever.
+  useEffect(() => {
+    if (auth.status !== "ready") return;
+    const t = setTimeout(() => {
+      setVehicles((v) => {
+        if (v !== null) return v;
+        setError(true);
+        return v;
+      });
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [auth.status]);
+
   if (!vehicles && !error) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
     void setActiveVehicle(v.id);
