@@ -1,10 +1,7 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
-import { BRANDS } from "../../../lib/brands";
-import { showcaseFor } from "../../../lib/showcase";
-import { serviceImagery } from "../../../lib/imagery";
-import { HeroImage } from "../../../ui/kit";
+import { BRANDS, type BrandItem } from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -82,19 +79,32 @@ export default function CatalogueScreen() {
     const t = q.trim().toLowerCase();
     return all.filter((x) => (active === "all" || x.category === active) && (!brand || x.brand === brand) && (!t || `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)));
   }, [all, active, q, brand]);
+  // One pattern for every category: brand (or sub-group) > product cards. Studio services carry a real
+  // price; brand-catalogue products (sourced from the brand's site) say "ask the studio".
+  type Entry = { svc?: Service; item?: BrandItem };
   const sections = useMemo(() => {
-    const m = new Map<string, Service[]>();
+    const m = new Map<string, Entry[]>();
+    const catOf = (k: BrandItem["kind"]) => (k === "PPF" ? "ppf" : "ceramic");
     const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || a.basePrice - b.basePrice);
-    for (const s of ranked) {
-      const k = active === "all" ? `${GROUP[s.category] ?? "More"} · ${subGroup(s)}` : subGroup(s);
-      m.set(k, [...(m.get(k) ?? []), s]);
+    const label = (cat: string, name: string) => (active === "all" ? `${GROUP[cat] ?? "More"} · ${name}` : name);
+    for (const sv of ranked) {
+      const k = label(sv.category, sv.brand ?? subGroup(sv));
+      m.set(k, [...(m.get(k) ?? []), { svc: sv }]);
+    }
+    const t = q.trim().toLowerCase();
+    for (const b of BRANDS) {
+      for (const it of b.items) {
+        const cat = catOf(it.kind);
+        if (active !== "all" && active !== cat) continue;
+        if (t && !`${b.name} ${it.name}`.toLowerCase().includes(t)) continue;
+        const k = label(cat, b.name);
+        const have = (m.get(k) ?? []).some((e) => e.svc && e.svc.name.toLowerCase().includes(it.name.toLowerCase().replace(/ ppf$/, "")));
+        if (have) continue;
+        m.set(k, [...(m.get(k) ?? []), { item: it }]);
+      }
     }
     return [...m.entries()];
-  }, [shown, active]);
-
-  const picks = all.filter((x) => showcaseFor(x).studioPick);
-  const brands = BRANDS;
-  const showcase = active === "all" && !q.trim() && !brand;
+  }, [shown, active, q]);
 
   const chip = (key: string, label: string) => {
     const on = active === key;
@@ -140,60 +150,40 @@ export default function CatalogueScreen() {
           <Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} />
         </View>
       ) : null}
-      {services && showcase && picks.length > 0 ? (
-        <View style={{ gap: space.breath }}>
-          <Kicker tone="accent">Studio picks</Kicker>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.line }}>
-            {picks.map((s) => (
-              <Pressable key={s.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)} style={{ width: 260, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, overflow: "hidden" }}>
-                <HeroImage source={serviceImagery[s.category] ?? serviceImagery.other} aspect={16 / 9} />
-                <View style={{ padding: space.line, gap: 4 }}>
-                  <T role="bodyStrong">{s.name}</T>
-                  <T role="caption" tone="secondary" numberOfLines={2}>{showcaseFor(s).tagline}</T>
-                  <T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>
-                  {s.warrantyLabel ? <View style={{ flexDirection: "row" }}><Chip label={s.warrantyLabel} tone="premium" /></View> : null}
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
-      {services && brands.length > 0 && !q.trim() ? (
-        <View style={{ gap: space.breath }}>
-          <Kicker>Brands</Kicker>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
-            {brands.map((b) => (
-              <Pressable key={b.name} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/brands?b=${encodeURIComponent(b.name)}`)} style={{ borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 16, paddingVertical: 10, minWidth: 110 }}>
-                <T role="bodyStrong">{b.name}</T>
-                <T role="caption" tone="tertiary">{b.blurb.split(" and ")[0]}</T>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
       {services && sections.length === 0 ? <Notice title="Nothing matches" body="Try another word or pick All." /> : null}
       {sections.map(([title, xs]) => (
         <View key={title} style={{ gap: space.breath }}>
           <Kicker>{title}</Kicker>
           <Pane pad="gap">
-            {xs.map((s, i) => (
-              <Row
-                key={s.id}
-                title={s.name}
-                detail={<T role="caption" tone="tertiary">{[duration(s.estimatedDurationMinutes), s.brand].filter(Boolean).join(" · ")}</T>}
-                trailing={
-                  <View style={{ alignItems: "flex-end", gap: 2 }}>
-                    <T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>
-                    {s.warrantyLabel ? <Chip label={s.warrantyLabel} tone="premium" /> : null}
-                  </View>
-                }
-                onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}
-                last={i === xs.length - 1}
-              />
-            ))}
+            {xs.map((e, i) =>
+              e.svc ? (
+                <Row
+                  key={e.svc.id}
+                  title={e.svc.name}
+                  detail={<T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>}
+                  trailing={
+                    <View style={{ alignItems: "flex-end", gap: 2 }}>
+                      <T role="bodyStrong" tone="accent">{rupees(e.svc.basePrice)}</T>
+                      {e.svc.warrantyLabel ? <Chip label={e.svc.warrantyLabel} tone="premium" /> : null}
+                    </View>
+                  }
+                  onPress={() => router.push(`/(tabs)/catalogue/${e.svc!.id}`)}
+                  last={i === xs.length - 1}
+                />
+              ) : (
+                <Row
+                  key={`${title}-${e.item!.name}`}
+                  title={e.item!.name}
+                  detail={<T role="caption" tone="tertiary">{[e.item!.note, "Ask the studio"].filter(Boolean).join(" · ")}</T>}
+                  trailing={e.item!.warranty ? <Chip label={e.item!.warranty.split(" (")[0] ?? e.item!.warranty} tone="premium" /> : <T role="caption" tone="tertiary">Ask the studio</T>}
+                  last={i === xs.length - 1}
+                />
+              ),
+            )}
           </Pane>
         </View>
       ))}
+      <T role="caption" tone="tertiary">Brand products and warranty as stated on each brand's website. Draft, pending studio review.</T>
     </Screen>
   );
 }
