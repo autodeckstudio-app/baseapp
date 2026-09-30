@@ -1,9 +1,9 @@
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "expo-router";
 import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 import { getMyMemberships } from "../../../lib/membership-service";
 import { sceneImagery } from "../../../lib/imagery";
 
@@ -67,7 +67,7 @@ export default function CurrentMembershipScreen() {
       ) : null}
 
       <Pane pad="none" round="hero" fill="cool" tone="premium">
-        <Image source={sceneImagery.membership} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+        <HeroImage source={sceneImagery.membership} />
         <View style={{ padding: space.inset, gap: space.breath }}>
           <T role="display">{washesRemaining}</T>
           <T tone="secondary">of {membership.washesTotal} washes left this cycle · {membership.discountPercent}% off everything else</T>

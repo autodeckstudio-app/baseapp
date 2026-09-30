@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import type { MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { sceneImagery } from "../../../lib/imagery";
 
@@ -48,7 +48,7 @@ export default function PlanDetailScreen() {
       }
     >
       <Pane pad="none" round="hero" fill="cool" tone="premium">
-        <Image source={sceneImagery.membership} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+        <HeroImage source={sceneImagery.membership} />
       </Pane>
 
       <Pane pad="gap">

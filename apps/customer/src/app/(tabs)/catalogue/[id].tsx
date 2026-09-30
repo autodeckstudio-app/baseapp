@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Image, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Service, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { serviceImagery } from "../../../lib/imagery";
@@ -71,7 +71,7 @@ export default function ServiceDetailScreen() {
       }
     >
       <Pane pad="none">
-        <Image source={serviceImagery[service.category] ?? serviceImagery.other} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+        <HeroImage source={serviceImagery[service.category] ?? serviceImagery.other} />
       </Pane>
 
       <T tone="secondary">{service.description}</T>

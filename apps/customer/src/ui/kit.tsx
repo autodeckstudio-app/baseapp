@@ -1,10 +1,11 @@
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
-  Image,
+  Animated,
+  Easing,
   Platform,
   Pressable,
   ScrollView,
@@ -17,7 +18,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Ambient, Glass, type GlassProps, useExperienceTheme } from "@autodeck/ui/native";
-import { fontFamily, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+import { fontFamily, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Outfit, system-ui, sans-serif", default: "System" }) ?? "System",
@@ -213,6 +214,35 @@ export function Row({
 }
 
 
+
+/** Photographic banner with the theme's hero-settle motion: one quiet
+ *  scale-and-fade as it lands. Reduced-motion users get the still frame. */
+export function HeroImage({ source, aspect = 21 / 9 }: { source: ImageSourcePropType; aspect?: number }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    const mm = (globalThis as { matchMedia?: (q: string) => { matches: boolean } }).matchMedia;
+    if (Platform.OS === "web" && mm?.("(prefers-reduced-motion: reduce)").matches) {
+      setStill(true);
+      return;
+    }
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: motion.duration.scene,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [progress]);
+  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [motion.heroSettle.scale, 1] });
+  return (
+    <Animated.Image
+      source={source}
+      resizeMode="cover"
+      style={{ width: "100%", aspectRatio: aspect, ...(still ? {} : { opacity: progress, transform: [{ scale }] }) }}
+    />
+  );
+}
+
 /** Card with a photographic banner over a glass body - the rich catalogue/list unit. */
 export function PhotoCard({
   image,
@@ -233,7 +263,7 @@ export function PhotoCard({
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
     >
       <Pane pad="none">
-        <Image source={image} style={{ width: "100%", aspectRatio: imageAspect }} resizeMode="cover" />
+        <HeroImage source={image} aspect={imageAspect} />
         <View style={{ padding: space.gap, gap: space.breath }}>{children}</View>
       </Pane>
     </Pressable>

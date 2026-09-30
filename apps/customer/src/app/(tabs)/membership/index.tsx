@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Image, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { getMembershipPlans, getMyMemberships } from "../../../lib/membership-service";
 import { sceneImagery } from "../../../lib/imagery";
 
@@ -57,7 +57,7 @@ export default function MembershipScreen() {
       }
     >
       <Pane pad="none" round="hero" fill="cool" tone="premium">
-        <Image source={sceneImagery.membership} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+        <HeroImage source={sceneImagery.membership} />
         <View style={{ padding: space.inset, gap: space.breath }}>
           <T role="heading">The {current ? "club" : "AutoDeck club"}</T>
           <T tone="secondary">Regular washes, a standing discount, and a car that always looks done.</T>

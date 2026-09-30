@@ -1,6 +1,6 @@
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
@@ -8,7 +8,7 @@ import { space } from "@autodeck/ui/theme";
 import { useAuth } from "../../../hooks/useAuth";
 import { getMyBookings } from "../../../lib/booking-service";
 import { sceneImagery } from "../../../lib/imagery";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
   PENDING: { label: "Awaiting confirm", tone: "accent" },
@@ -65,7 +65,7 @@ export default function BookingsScreen() {
       {upcoming.length > 0 ? <View style={{ gap: space.line }}><Kicker>Coming up</Kicker>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 ? (
         <Pane pad="none" round="hero">
-          <Image source={sceneImagery.heroHome} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+          <HeroImage source={sceneImagery.heroHome} />
           <View style={{ padding: space.inset, gap: space.breath }}>
             <T role="heading">Nothing booked</T>
             <T tone="secondary">Pick a service and a time. The studio confirms it.</T>

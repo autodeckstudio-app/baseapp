@@ -1,7 +1,7 @@
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
-import { Image, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel, type ProtectionAttention } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -11,7 +11,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, vehicleImagery } from "../../lib/imagery";
 import { listenToMyNotifications } from "../../lib/notification-service";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../ui/kit";
 
 const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: string }> = {
   empty: { kicker: "Welcome", line: "Add your car to book care, track visits and keep its papers in one place." },
@@ -105,11 +105,7 @@ export default function HomeScreen() {
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
       <Pane pad="none" round="hero" fill={m.heroState === "empty" || m.heroState === "idle" ? "base" : "warm"} {...(m.heroState === "awaitingApproval" ? { tone: "accent" as const } : {})}>
-        <Image
-          source={car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome}
-          style={{ width: "100%", aspectRatio: 21 / 9 }}
-          resizeMode="cover"
-        />
+        <HeroImage source={car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
         <View style={{ padding: space.inset, gap: space.line }}>
           <Kicker tone="accent">{copy.kicker}</Kicker>
           {car ? (
