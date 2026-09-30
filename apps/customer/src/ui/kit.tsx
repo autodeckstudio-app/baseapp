@@ -100,10 +100,13 @@ export function Screen({
   children,
   scroll = true,
   header,
+  top,
 }: {
   children: ReactNode;
   scroll?: boolean;
   header?: ReactNode;
+  /** Pinned above the scroll area (sticky chips, search). */
+  top?: ReactNode;
 }) {
   const body = (
     <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, paddingBottom: 120, gap: space.inset }}>
@@ -114,6 +117,7 @@ export function Screen({
   );
   return (
     <Ambient>
+      {top ? <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, gap: space.line, zIndex: 2 }}>{top}</View> : null}
       {scroll ? <ScrollView contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );
@@ -387,3 +391,18 @@ export function Field({
 
 export const rupees = (paise: number): string =>
   `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: paise % 100 === 0 ? 0 : 2 })}`;
+
+/** Pulsing placeholder block for loading states. */
+export function Skeleton({ height = 56, width = "100%" }: { height?: number; width?: number | `${number}%` }) {
+  const { colors } = useExperienceTheme();
+  const v = useRef(new Animated.Value(0.35)).current;
+  useEffect(() => {
+    const a = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 0.8, duration: 700, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0.35, duration: 700, useNativeDriver: true }),
+    ]));
+    a.start();
+    return () => a.stop();
+  }, [v]);
+  return <Animated.View style={{ height, width, borderRadius: 14, backgroundColor: colors.borderSubtle, opacity: v }} />;
+}

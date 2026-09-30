@@ -13,7 +13,8 @@ import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
+import { calculateServicePrice } from "../../../lib/catalogue-service";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -38,7 +39,14 @@ export default function BookServiceScreen() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
   const { colors } = useExperienceTheme();
+
+  useEffect(() => {
+    if (!serviceId) return;
+    setTotal(null);
+    void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => setTotal(breakdown.total)).catch(() => setTotal(null));
+  }, [serviceId, selectedCategory]);
 
   useEffect(() => {
     if (!serviceId || auth.status !== "ready") return;
@@ -108,9 +116,9 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T></View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{total !== null ? <T role="caption" tone="accent">Total {rupees(total)} incl. tax</T> : null}</View>}>
       <View style={{ gap: space.line }}>
-        <Kicker>1 · Car</Kicker>
+        <Kicker>Step 3 of 6 · Your car</Kicker>
         {vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : (
@@ -136,7 +144,7 @@ export default function BookServiceScreen() {
       </View>
 
       <View style={{ gap: space.line }}>
-        <Kicker>2 · Size</Kicker>
+        <Kicker>Step 3 of 6 · Size</Kicker>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
           {VEHICLE_CATEGORIES.map(({ value, label }) => {
             const selected = selectedCategory === value;
@@ -156,7 +164,7 @@ export default function BookServiceScreen() {
       </View>
 
       <View style={{ gap: space.line }}>
-        <Kicker>3 · Time</Kicker>
+        <Kicker>Step 5 of 6 · Pick a time</Kicker>
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." /> : null}
         {slotsLoading ? (
           <T role="caption" tone="tertiary">Checking the studio's calendar...</T>

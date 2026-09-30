@@ -1,33 +1,46 @@
-// Services: the menu, grouped by kind, priced from the smallest car.
-import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+// Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
-import { serviceImagery } from "../../../lib/imagery";
-import { Button, Chip, Kicker, Loading, Notice, PhotoCard, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
   washing: "Wash and care",
   ceramic: "Ceramic",
   coating: "Coatings",
-  ppf: "Paint protection film",
+  ppf: "Paint film",
   tinting: "Window film",
   inspection: "Inspection",
   other: "More",
 };
 const ORDER = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection", "other"];
+// Old "?need=" deep links map onto a category chip.
+const NEED_TO_CAT: Record<string, string> = { wash: "washing", shine: "coating", ceramic: "ceramic", ppf: "ppf", tint: "tinting", check: "inspection" };
 
-// Step 1 of the journey: what the car needs, in plain words. Each need maps to data categories.
-const NEEDS: Array<{ key: string; title: string; line: string; cats: string[]; img: string }> = [
-  { key: "wash", title: "Wash and clean", line: "Keep it fresh inside and out", cats: ["washing"], img: "washing" },
-  { key: "shine", title: "Shine and protect", line: "Polish and coatings for lasting gloss", cats: ["coating", "other"], img: "coating" },
-  { key: "ceramic", title: "Ceramic coating", line: "Hard, glossy protection for years", cats: ["ceramic"], img: "ceramic" },
-  { key: "ppf", title: "Paint protection film", line: "Invisible armour against chips and scratches", cats: ["ppf"], img: "ppf" },
-  { key: "tint", title: "Window tint", line: "Heat and glare control", cats: ["tinting"], img: "tinting" },
-  { key: "check", title: "Not sure? Check my car", line: "We look it over and advise", cats: ["inspection"], img: "inspection" },
-];
+/** Second level: derived from the service itself (name, warranty) so new services slot in without a schema change. */
+function subGroup(s: Service): string {
+  const n = s.name.toLowerCase();
+  switch (s.category) {
+    case "washing":
+      if (/interior|dry clean|spa|upholster|cabin|seat/.test(n)) return "Interior and detail";
+      if (/wash|foam|exterior/.test(n)) return "Exterior wash";
+      return "Finishing touches";
+    case "ppf":
+      if (/full|body|complete/.test(n)) return "Full body";
+      if (/front|hood|bumper|bonnet|partial|fender/.test(n)) return "Front and partial";
+      return "Other coverage";
+    case "ceramic":
+    case "coating":
+      if (s.warrantyLabel) return `${s.warrantyLabel} protection`;
+      return s.category === "ceramic" ? "Ceramic packages" : "Polish and coat";
+    default:
+      return GROUP[s.category] ?? "More";
+  }
+}
 
 function duration(min: number): string {
   if (min < 60) return `${min} min`;
@@ -37,10 +50,12 @@ function duration(min: number): string {
 
 export default function CatalogueScreen() {
   const router = useRouter();
-  const { need } = useLocalSearchParams<{ need?: string }>();
-  const chosen = NEEDS.find((n) => n.key === need) ?? null;
+  const { colors } = useExperienceTheme();
+  const { need, cat } = useLocalSearchParams<{ need?: string; cat?: string }>();
   const [services, setServices] = useState<Service[] | null>(null);
   const [error, setError] = useState(false);
+  const [active, setActive] = useState<string>("all");
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
     setError(false);
@@ -51,49 +66,92 @@ export default function CatalogueScreen() {
     }
   }, []);
   useEffect(() => void load(), [load]);
+  useEffect(() => {
+    const c = cat ?? (need ? NEED_TO_CAT[need] : undefined);
+    if (c) setActive(c);
+  }, [need, cat]);
 
-  if (!services && !error) return <Loading label="Loading the menu" />;
   const all = services ?? [];
-  const from = (n: (typeof NEEDS)[number]) => all.filter((x) => n.cats.includes(x.category));
+  const cats = ORDER.filter((c) => all.some((x) => x.category === c));
+  const shown = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return all.filter((x) => (active === "all" || x.category === active) && (!t || `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)));
+  }, [all, active, q]);
+  const sections = useMemo(() => {
+    const m = new Map<string, Service[]>();
+    for (const s of shown) {
+      const k = active === "all" ? `${GROUP[s.category] ?? "More"} · ${subGroup(s)}` : subGroup(s);
+      m.set(k, [...(m.get(k) ?? []), s]);
+    }
+    return [...m.entries()];
+  }, [shown, active]);
 
-  if (!chosen) {
+  const chip = (key: string, label: string) => {
+    const on = active === key;
     return (
-      <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Step 1 of 4</Kicker><T role="title">What does your car need?</T></View>}>
-        {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
-        {NEEDS.map((n) => {
-          const xs = from(n);
-          if (!error && xs.length === 0) return null;
-          const min = xs.length ? Math.min(...xs.map((x) => x.basePrice)) : null;
-          return (
-            <PhotoCard key={n.key} image={serviceImagery[n.img as keyof typeof serviceImagery] ?? serviceImagery.other} onPress={() => router.push({ pathname: "/(tabs)/catalogue", params: { need: n.key } })}>
-              <View style={{ gap: space.hair }}>
-                <T role="heading">{n.title}</T>
-                <T role="caption" tone="tertiary">{n.line}</T>
-              </View>
-              {min !== null ? <T role="bodyStrong" tone="accent">from {rupees(min)}</T> : null}
-            </PhotoCard>
-          );
-        })}
-      </Screen>
+      <Pressable
+        key={key}
+        accessibilityRole="button"
+        accessibilityState={{ selected: on }}
+        onPress={() => setActive(key)}
+        style={{ borderRadius: 9999, borderWidth: 1, borderColor: on ? colors.accent : colors.borderSubtle, backgroundColor: on ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
+      >
+        <T role="caption" tone={on ? "accent" : "secondary"}>{label}</T>
+      </Pressable>
     );
-  }
+  };
 
-  const xs = from(chosen);
+  const top = (
+    <View style={{ gap: space.line }}>
+      <View style={{ gap: space.hair }}>
+        <Kicker tone="accent">Services</Kicker>
+        <T role="title">What does your car need?</T>
+      </View>
+      <TextInput
+        value={q}
+        onChangeText={setQ}
+        placeholder="Search washes, ceramic, PPF..."
+        placeholderTextColor={colors.textTertiary}
+        style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 14, paddingVertical: 10, color: colors.textPrimary, fontSize: 15 }}
+      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
+        {chip("all", "All")}
+        {cats.map((c) => chip(c, GROUP[c] ?? c))}
+      </ScrollView>
+    </View>
+  );
+
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Step 2 of 4 · {chosen.title}</Kicker><T role="title">Pick a package</T></View>}>
-      <Button kind="quiet" label="‹ Change what I need" onPress={() => router.replace("/(tabs)/catalogue")} />
-      {xs.length === 0 ? <Notice title="Nothing here yet" body="Pick another need, or check back soon." /> : null}
-      {xs.map((s) => (
-        <PhotoCard key={s.id} image={serviceImagery[s.category] ?? serviceImagery.other} onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}>
-          <View style={{ gap: space.hair }}>
-            <T role="heading">{s.name}</T>
-            <T role="caption" tone="tertiary">{[s.brand, duration(s.estimatedDurationMinutes)].filter(Boolean).join(" · ")}</T>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
-            {s.warrantyLabel !== null ? <Chip label={s.warrantyLabel} tone="premium" /> : <View />}
-            <T role="bodyStrong" tone="accent">from {rupees(s.basePrice)}</T>
-          </View>
-        </PhotoCard>
+    <Screen top={top}>
+      {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
+      {!services && !error ? (
+        <View style={{ gap: space.line }}>
+          <Skeleton height={18} width="40%" />
+          <Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} />
+        </View>
+      ) : null}
+      {services && sections.length === 0 ? <Notice title="Nothing matches" body="Try another word or pick All." /> : null}
+      {sections.map(([title, xs]) => (
+        <View key={title} style={{ gap: space.breath }}>
+          <Kicker>{title}</Kicker>
+          <Pane pad="gap">
+            {xs.map((s, i) => (
+              <Row
+                key={s.id}
+                title={s.name}
+                detail={<T role="caption" tone="tertiary">{[duration(s.estimatedDurationMinutes), s.brand].filter(Boolean).join(" · ")}</T>}
+                trailing={
+                  <View style={{ alignItems: "flex-end", gap: 2 }}>
+                    <T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>
+                    {s.warrantyLabel ? <Chip label={s.warrantyLabel} tone="premium" /> : null}
+                  </View>
+                }
+                onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}
+                last={i === xs.length - 1}
+              />
+            ))}
+          </Pane>
+        </View>
       ))}
     </Screen>
   );
