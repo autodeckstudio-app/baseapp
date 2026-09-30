@@ -1,12 +1,13 @@
-// Customer tabs: Home, Garage, Bookings, You (spec §5.1). Services,
-// membership, notifications and approvals are nested routes, not tabs.
+// Customer tabs: Home, Services, Bookings, Garage, You. One tab per
+// journey: book (Services), track and pay (Bookings), car and papers (Garage).
+// Membership, notifications and approvals are nested routes with a back bar.
 import { Tabs } from "expo-router";
 import { Platform, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { textStyle } from "../../ui/kit";
 
-const GLYPH: Record<string, string> = { index: "◐", garage: "▭", bookings: "◷", profile: "◯" };
+const GLYPH: Record<string, string> = { index: "◐", catalogue: "✦", bookings: "◷", garage: "▭", profile: "◯" };
 
 export default function TabsLayout() {
   const { colors, glass } = useExperienceTheme();
@@ -36,10 +37,10 @@ export default function TabsLayout() {
       })}
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="garage" options={{ title: "Garage" }} />
+      <Tabs.Screen name="catalogue" options={{ title: "Services" }} />
       <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />
+      <Tabs.Screen name="garage" options={{ title: "Garage" }} />
       <Tabs.Screen name="profile" options={{ title: "You" }} />
-      <Tabs.Screen name="catalogue" options={{ href: null }} />
       <Tabs.Screen name="membership" options={{ href: null }} />
       <Tabs.Screen name="book" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />

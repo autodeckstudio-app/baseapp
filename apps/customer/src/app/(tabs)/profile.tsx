@@ -18,8 +18,7 @@ export default function YouScreen() {
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">You</Kicker><T role="title">{name}</T>{auth.user.email ? <T role="caption" tone="tertiary">{auth.user.email}</T> : null}</View>}>
       <Pane pad="gap">
         <Row title="Membership" detail="Plans, washes left, history" onPress={() => router.push("/(tabs)/membership")} />
-        <Row title="Notifications" detail="Updates from the studio" onPress={() => router.push("/(tabs)/notifications")} />
-        <Row title="Services and prices" detail="The full menu" onPress={() => router.push("/(tabs)/catalogue")} last />
+        <Row title="Notifications" detail="Updates from the studio" onPress={() => router.push("/(tabs)/notifications")} last />
       </Pane>
       <Pane pad="gap">
         <Row title="Signed in with Google" detail="AutoDeck never stores a password for you." last />

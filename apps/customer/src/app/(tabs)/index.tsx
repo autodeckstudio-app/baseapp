@@ -149,9 +149,25 @@ export default function HomeScreen() {
         </View>
       </Pane>
 
-      {car && m.primaryAction.kind !== "book" ? (
-        <Button kind="quiet" label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
-      ) : null}
+      <View style={{ flexDirection: "row", gap: space.line }}>
+        {([
+          ["Book", "✦", "/(tabs)/catalogue"],
+          ["Track", "◷", "/(tabs)/bookings"],
+          ["Garage", "▭", "/(tabs)/garage"],
+          ["Club", "◆", "/(tabs)/membership"],
+        ] as const).map(([label, glyph, href]) => (
+          <Pressable
+            key={label}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            onPress={() => router.push(href)}
+            style={{ flex: 1, alignItems: "center", gap: 6, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle }}
+          >
+            <T tone="accent">{glyph}</T>
+            <T role="label" tone="secondary">{label}</T>
+          </Pressable>
+        ))}
+      </View>
 
       {m.protections.length > 0 ? (
         <View style={{ gap: space.line }}>

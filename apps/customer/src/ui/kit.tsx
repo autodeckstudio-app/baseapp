@@ -17,6 +17,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { useRouter, useSegments } from "expo-router";
 import { Ambient, Glass, type GlassProps, useExperienceTheme } from "@autodeck/ui/native";
 import { fontFamily, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
@@ -70,6 +71,31 @@ export function T({
 }
 
 /** Full screen: ambient ground, scrolling column capped at reading width. */
+// Sub-screens (anything deeper than a tab root, plus membership and
+// notifications which live under You) get a quiet back control so no screen
+// is a dead end. Falls back to the parent tab when there is no history.
+const SUB_ROOTS: Record<string, string> = { membership: "/(tabs)/profile", notifications: "/(tabs)" };
+function BackBar() {
+  const router = useRouter();
+  const segs = useSegments() as string[];
+  const { colors } = useExperienceTheme();
+  const root = segs[1] ?? "";
+  const deep = segs.length >= 3 && !(segs[2] === "index");
+  const fallback = SUB_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
+  if (segs[0] !== "(tabs)" || !(deep || root in SUB_ROOTS)) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+      onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback as never))}
+      style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, height: 36, paddingRight: 12 }}
+    >
+      <Text style={{ color: colors.textSecondary, fontSize: 20, marginTop: -2 }}>‹</Text>
+      <T role="label" tone="secondary">Back</T>
+    </Pressable>
+  );
+}
+
 export function Screen({
   children,
   scroll = true,
@@ -81,6 +107,7 @@ export function Screen({
 }) {
   const body = (
     <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, paddingBottom: 120, gap: space.inset }}>
+      <BackBar />
       {header}
       {children}
     </View>
