@@ -277,7 +277,7 @@ export function PhotoCard({
   image,
   children,
   onPress,
-  imageAspect = 16 / 9,
+  imageAspect = 2.4,
 }: {
   image: ImageSourcePropType;
   children: ReactNode;
