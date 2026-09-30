@@ -1,7 +1,8 @@
 import { getApps, initializeApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 
@@ -41,7 +42,10 @@ export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
 
-export const db = getFirestore(app);
+// Web (Safari/iOS especially): the default WebChannel streaming transport can
+// stall or be cut by proxies, which surfaces as every live listener erroring.
+// Long polling is slower to start but reliable; native keeps the default.
+export const db = initializeFirestore(app, Platform.OS === "web" ? { experimentalForceLongPolling: true } : {});
 export const functions = getFunctions(app, "asia-south1");
 export const storage = getStorage(app);
 
