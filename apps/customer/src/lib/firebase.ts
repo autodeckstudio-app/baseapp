@@ -3,6 +3,7 @@ import { initializeAuth, getReactNativePersistence } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 // metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
 // the "react-native" package-exports condition so Metro picks @firebase/auth's RN build
@@ -42,6 +43,7 @@ export const auth = initializeAuth(app, {
 
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "asia-south1");
+export const storage = getStorage(app);
 
 export const useEmulator = process.env["USE_FIREBASE_EMULATOR"] === "true";
 

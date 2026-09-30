@@ -7,7 +7,8 @@ import {
   type QuerySnapshot,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { db, functions } from "./firebase";
+import { getDownloadURL, ref as storageRef } from "firebase/storage";
+import { db, functions, storage } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle } from "@autodeck/core";
 
@@ -27,6 +28,7 @@ type UpdateVehicleInput = {
   year?: number;
   color?: string;
   odometer?: number;
+  photoUrl?: string | null;
 };
 
 export async function createVehicle(input: CreateVehicleInput): Promise<Vehicle> {
@@ -80,4 +82,27 @@ export function listenToMyVehicles(
     },
     onError,
   );
+}
+
+/**
+ * Uploads a cover photo for a vehicle the customer owns, end to end:
+ * callable-issued signed PUT URL (object metadata ownerId is stamped by the
+ * signature), direct upload to Storage, then photoUrl on the vehicle doc.
+ * Returns the storage object path.
+ */
+export async function uploadVehiclePhoto(vehicleId: string, blob: Blob, contentType: string): Promise<string> {
+  const fn = httpsCallable<
+    { vehicleId: string; contentType: string },
+    { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
+  >(functions, "issueVehiclePhotoUploadUrl");
+  const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType })).data;
+  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
+  if (!res.ok) throw new Error(`Photo upload failed (${res.status}).`);
+  await updateVehicle({ vehicleId, photoUrl: path });
+  return path;
+}
+
+/** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
+export async function resolveVehiclePhotoUrl(path: string): Promise<string> {
+  return getDownloadURL(storageRef(storage, path));
 }

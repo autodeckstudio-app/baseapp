@@ -5,6 +5,7 @@ import { getApps, initializeApp } from "firebase/app";
 import { browserLocalPersistence, initializeAuth, browserPopupRedirectResolver } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 if (!__DEV__ && !process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
   throw new Error(
@@ -29,4 +30,5 @@ export const auth = initializeAuth(app, {
 });
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "asia-south1");
+export const storage = getStorage(app);
 export const useEmulator = false;

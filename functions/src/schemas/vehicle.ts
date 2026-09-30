@@ -43,6 +43,13 @@ export const updateVehicleSchema = z.object({
   color: z.string().min(1).max(50).trim().optional(),
   odometer: z.number().int().min(0).optional(),
   category: vehicleCategorySchema.nullable().optional(),
+  // Storage object path for the car's photo (set after upload completes).
+  photoUrl: z.string().min(1).max(500).nullable().optional(),
+}).strict();
+
+export const issueVehiclePhotoUploadUrlSchema = z.object({
+  vehicleId: z.string().min(1),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
 }).strict();
 
 export const archiveVehicleSchema = z.object({
@@ -52,3 +59,4 @@ export const archiveVehicleSchema = z.object({
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
 export type ArchiveVehicleInput = z.infer<typeof archiveVehicleSchema>;
+export type IssueVehiclePhotoUploadUrlInput = z.infer<typeof issueVehiclePhotoUploadUrlSchema>;

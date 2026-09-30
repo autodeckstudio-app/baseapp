@@ -10,6 +10,7 @@ export { resolveClaims } from "./functions/auth/resolveClaims.js";
 export { createVehicle } from "./functions/vehicle/createVehicle.js";
 export { updateVehicle } from "./functions/vehicle/updateVehicle.js";
 export { archiveVehicle } from "./functions/vehicle/archiveVehicle.js";
+export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhotoUploadUrl.js";
 
 // ─── Service Catalogue ───────────────────────────────────────────────────────
 export { getServiceCatalogue } from "./functions/service/getServiceCatalogue.js";

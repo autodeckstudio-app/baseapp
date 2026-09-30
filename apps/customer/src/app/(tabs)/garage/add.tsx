@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
-import { createVehicle } from "../../../lib/vehicle-service";
+import { createVehicle, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
   registrationNumber: string;
@@ -40,6 +40,17 @@ export default function AddVehicleScreen() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
+
+  function pickPhoto(file: { blob: Blob; type: string } | null) {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Photos work as JPEG, PNG or WebP.");
+      return;
+    }
+    setError(null);
+    setPhoto({ blob: file.blob, contentType: file.type, previewUrl: URL.createObjectURL(file.blob) });
+  }
 
   function update(field: keyof FormState, value: string) {
     setForm((prev: FormState) => ({ ...prev, [field]: value }));
@@ -55,13 +66,20 @@ export default function AddVehicleScreen() {
     setLoading(true);
     setError(null);
     try {
-      await createVehicle({
+      const vehicle = await createVehicle({
         registrationNumber: form.registrationNumber.toUpperCase(),
         make: form.make.trim(),
         model: form.model.trim(),
         year: yearNum,
         color: form.color.trim(),
       });
+      if (photo) {
+        try {
+          await uploadVehiclePhoto(vehicle.id, photo.blob, photo.contentType);
+        } catch {
+          setError("The car is added, but the photo didn't upload. You can add it from the car's page.");
+        }
+      }
       router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add vehicle.");
@@ -86,6 +104,22 @@ export default function AddVehicleScreen() {
             />
           ))}
         </View>
+
+        {Platform.OS === "web" ? (
+          <View style={{ gap: space.hair }}>
+            <Kicker>Photo (optional)</Kicker>
+            {createElement("input", {
+              type: "file",
+              accept: "image/jpeg,image/png,image/webp",
+              onChange: (e: { target: { files: unknown } }) => {
+                const files = e.target.files as { item: (i: number) => { blob?: Blob; type?: string } | null } | null;
+                const f = files?.item(0) ?? null;
+                pickPhoto(f ? { blob: f as unknown as Blob, type: f.type ?? "" } : null);
+              },
+            })}
+            {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
+          </View>
+        ) : null}
 
         {error ? <Notice title="Can't add this car" body={error} /> : null}
 

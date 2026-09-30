@@ -10,6 +10,7 @@ import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, vehicleImagery } from "../../lib/imagery";
+import { resolveVehiclePhotoUrl } from "../../lib/vehicle-service";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../ui/kit";
 
@@ -53,6 +54,19 @@ export default function HomeScreen() {
     if (!ready) return;
     return listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => setUnread(n.filter((x) => x.readAt === null).length), () => undefined);
   }, [ready]);
+
+  const [carPhoto, setCarPhoto] = useState<string | null>(null);
+  const photoPath = ready ? home.model?.activeVehicle?.photoUrl ?? null : null;
+  useEffect(() => {
+    let alive = true;
+    setCarPhoto(null);
+    if (photoPath) {
+      void resolveVehiclePhotoUrl(photoPath)
+        .then((u) => { if (alive) setCarPhoto(u); })
+        .catch(() => undefined);
+    }
+    return () => { alive = false; };
+  }, [photoPath]);
 
   if (!ready || !home.model) return <Loading label="Opening your garage" />;
   const m = home.model;
@@ -105,7 +119,7 @@ export default function HomeScreen() {
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
       <Pane pad="none" round="hero" fill={m.heroState === "empty" || m.heroState === "idle" ? "base" : "warm"} {...(m.heroState === "awaitingApproval" ? { tone: "accent" as const } : {})}>
-        <HeroImage source={car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
+        <HeroImage source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
         <View style={{ padding: space.inset, gap: space.line }}>
           <Kicker tone="accent">{copy.kicker}</Kicker>
           {car ? (
