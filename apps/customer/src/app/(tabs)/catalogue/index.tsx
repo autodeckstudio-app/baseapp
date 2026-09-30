@@ -5,7 +5,8 @@ import { useRouter } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { serviceImagery } from "../../../lib/imagery";
+import { Button, Chip, Kicker, Loading, Notice, PhotoCard, Screen, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
   washing: "Wash and care",
@@ -49,18 +50,20 @@ export default function CatalogueScreen() {
       {groups.map(([g, xs]) => (
         <View key={g} style={{ gap: space.line }}>
           <Kicker>{GROUP[g] ?? g}</Kicker>
-          <Pane pad="gap">
-            {xs.map((s, i) => (
-              <Row
-                key={s.id}
-                title={s.name}
-                detail={duration(s.estimatedDurationMinutes)}
-                trailing={<T role="data" tone="accent">from {rupees(s.basePrice)}</T>}
-                onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}
-                last={i === xs.length - 1}
-              />
-            ))}
-          </Pane>
+          {xs.map((s) => (
+            <PhotoCard key={s.id} image={serviceImagery[s.category] ?? serviceImagery.other} onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}>
+              <View style={{ gap: space.hair }}>
+                <T role="heading">{s.name}</T>
+                <T role="caption" tone="tertiary">
+                  {[s.brand, duration(s.estimatedDurationMinutes)].filter(Boolean).join(" · ")}
+                </T>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
+                {s.warrantyLabel !== null ? <Chip label={s.warrantyLabel} tone="premium" /> : <View />}
+                <T role="bodyStrong" tone="accent">from {rupees(s.basePrice)}</T>
+              </View>
+            </PhotoCard>
+          ))}
         </View>
       ))}
     </Screen>

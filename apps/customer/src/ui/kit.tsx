@@ -4,12 +4,14 @@
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
+  type ImageSourcePropType,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -206,6 +208,34 @@ export function Row({
       </View>
       {trailing}
       {onPress ? <T tone="tertiary">›</T> : null}
+    </Pressable>
+  );
+}
+
+
+/** Card with a photographic banner over a glass body - the rich catalogue/list unit. */
+export function PhotoCard({
+  image,
+  children,
+  onPress,
+  imageAspect = 16 / 9,
+}: {
+  image: ImageSourcePropType;
+  children: ReactNode;
+  onPress?: (() => void) | undefined;
+  imageAspect?: number;
+}) {
+  return (
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+    >
+      <Pane pad="none">
+        <Image source={image} style={{ width: "100%", aspectRatio: imageAspect }} resizeMode="cover" />
+        <View style={{ padding: space.gap, gap: space.breath }}>{children}</View>
+      </Pane>
     </Pressable>
   );
 }

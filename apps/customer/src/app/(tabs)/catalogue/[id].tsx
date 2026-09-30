@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Service, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
@@ -9,6 +9,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
+import { serviceImagery } from "../../../lib/imagery";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -69,6 +70,10 @@ export default function ServiceDetailScreen() {
         </View>
       }
     >
+      <Pane pad="none">
+        <Image source={serviceImagery[service.category] ?? serviceImagery.other} style={{ width: "100%", aspectRatio: 21 / 9 }} resizeMode="cover" />
+      </Pane>
+
       <T tone="secondary">{service.description}</T>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath, alignItems: "center" }}>
