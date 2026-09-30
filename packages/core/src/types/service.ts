@@ -57,6 +57,9 @@ export interface Service {
   membershipWashEligible: boolean;
   // true = no fixed price; booking is created as a quote request and the studio sets the price.
   priceOnRequest?: boolean;
+  // Where the price came from (market source/range). Set when a price is market-derived rather than the studio's own.
+  priceBasis?: string;
+  priceBasisAt?: string;
   active: boolean;
   displayOrder: number; // ascending; lower = shown first
   createdAt: string; // ISO timestamp

@@ -9,4 +9,5 @@ sed -i '/workspace:\*/d' functions/package.json
 firebase deploy --only functions:createBooking,functions:createService,functions:updateService,functions:advanceJobStatus,functions:setBookingQuote,functions:respondToBookingQuote --project autodeck-studio --non-interactive
 git checkout -- functions/package.json
 (cd functions && node src/scripts/seed-brand-products.cjs)
+(cd functions && node src/scripts/set-brand-prices.cjs)
 echo FINISHED
