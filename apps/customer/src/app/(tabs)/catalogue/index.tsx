@@ -175,8 +175,9 @@ export default function CatalogueScreen() {
                 <Row
                   key={`${title}-${e.item!.name}`}
                   title={e.item!.name}
-                  detail={<T role="caption" tone="tertiary">{[e.item!.note, "Ask the studio"].filter(Boolean).join(" · ")}</T>}
+                  detail={e.item!.note ? <T role="caption" tone="tertiary">{e.item!.note}</T> : undefined}
                   trailing={e.item!.warranty ? <Chip label={e.item!.warranty.split(" (")[0] ?? e.item!.warranty} tone="premium" /> : <T role="caption" tone="tertiary">Ask the studio</T>}
+                  onPress={() => router.push(`/(tabs)/catalogue/brands?b=${encodeURIComponent(title.split(" · ").pop() ?? "")}&n=${encodeURIComponent(e.item!.name)}`)}
                   last={i === xs.length - 1}
                 />
               ),

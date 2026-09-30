@@ -1,75 +1,38 @@
-// Brand range page: what each brand makes, with warranty only where the brand states it.
-import { useEffect, useState } from "react";
+// Brand product page: same layout family as the service page. Sourced facts only; price is "ask the studio".
 import { View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import type { Service } from "@autodeck/core";
+import { useLocalSearchParams } from "expo-router";
 import { space } from "@autodeck/ui/theme";
-import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { BRANDS } from "../../../lib/brands";
-import { Chip, Kicker, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { serviceImagery } from "../../../lib/imagery";
+import { Chip, HeroImage, Kicker, Pane, Row, Screen, T } from "../../../ui/kit";
 
-export default function BrandScreen() {
-  const { b } = useLocalSearchParams<{ b?: string }>();
-  const router = useRouter();
-  const [services, setServices] = useState<Service[]>([]);
-  const brand = BRANDS.find((x) => x.name.toLowerCase() === (b ?? "").toLowerCase());
-  useEffect(() => {
-    void getServiceCatalogue().then(setServices).catch(() => undefined);
-  }, []);
-  if (!brand) return <Screen><T role="title">Brand not found</T></Screen>;
-  const mine = services.filter((s) => s.brand?.toLowerCase() === brand.name.toLowerCase());
-  const kinds = ["PPF", "Coating", "Other"] as const;
+export default function BrandProduct() {
+  const { b, n } = useLocalSearchParams<{ b?: string; n?: string }>();
+  const brand = BRANDS.find((x) => x.name === b);
+  const item = brand?.items.find((x) => x.name === n);
+  if (!brand || !item) return <Screen><T role="title">Product not found</T></Screen>;
+  const img = item.kind === "PPF" ? serviceImagery.ppf : serviceImagery.ceramic;
   return (
     <Screen
       header={
         <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">Brand</Kicker>
-          <T role="title">{brand.name}</T>
-          <T role="caption" tone="secondary">{brand.blurb}</T>
+          <Kicker tone="accent">{item.kind === "PPF" ? "Paint protection film" : item.kind === "Coating" ? "Coating" : "Range"}</Kicker>
+          <T role="title">{item.name}</T>
+          <T role="caption" tone="secondary">{brand.name}</T>
         </View>
       }
     >
-      {mine.length > 0 ? (
-        <View style={{ gap: space.breath }}>
-          <Kicker>Book at the studio</Kicker>
-          <Pane pad="gap">
-            {mine.map((s, i) => (
-              <Row
-                key={s.id}
-                title={s.name}
-                detail={s.warrantyLabel ?? undefined}
-                trailing={<T role="bodyStrong" tone="accent">{rupees(s.basePrice)}</T>}
-                onPress={() => router.push(`/(tabs)/catalogue/${s.id}`)}
-                last={i === mine.length - 1}
-              />
-            ))}
-          </Pane>
-        </View>
-      ) : null}
-      {kinds.map((k) => {
-        const xs = brand.items.filter((i) => i.kind === k);
-        if (xs.length === 0) return null;
-        return (
-          <View key={k} style={{ gap: space.breath }}>
-            <Kicker>{k === "PPF" ? "Paint protection film" : k === "Coating" ? "Coatings" : "More from the range"}</Kicker>
-            <Pane pad="gap">
-              {xs.map((x, i) => (
-                <Row
-                  key={x.name}
-                  title={x.name}
-                  detail={<View style={{ gap: 4 }}>
-                    {x.note ? <T role="caption" tone="secondary">{x.note}</T> : null}
-                    <T role="caption" tone="tertiary">Price: ask the studio</T>
-                  </View>}
-                  trailing={x.warranty ? <Chip label={x.warranty.split(" (")[0] ?? x.warranty} tone="premium" /> : undefined}
-                  last={i === xs.length - 1}
-                />
-              ))}
-            </Pane>
-          </View>
-        );
-      })}
-      <T role="caption" tone="tertiary">Range and warranty as stated by the brand ({brand.source}). Which items the studio fits, and the final terms, are confirmed by the studio. Draft, pending studio review.</T>
+      <HeroImage source={img} aspect={16 / 9} />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+        {item.warranty ? <Chip label={item.warranty.split(" (")[0] ?? item.warranty} tone="premium" /> : null}
+        <Chip label={brand.name} tone="neutral" />
+      </View>
+      <Pane pad="gap">
+        {item.note ? <Row title="About" detail={<T role="caption" tone="secondary">{item.note}</T>} /> : null}
+        {item.warranty ? <Row title="Warranty" detail={<T role="caption" tone="secondary">{item.warranty}. As stated by the brand.</T>} /> : <Row title="Warranty" detail={<T role="caption" tone="secondary">Not listed. Ask the studio.</T>} />}
+        <Row title="Price" detail={<T role="caption" tone="secondary">Ask the studio</T>} last />
+      </Pane>
+      <T role="caption" tone="tertiary">Source: {brand.source}. Stock image for layout only. Draft, pending studio review.</T>
     </Screen>
   );
 }
