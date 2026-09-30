@@ -88,7 +88,8 @@ export default function CatalogueScreen() {
     const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || a.basePrice - b.basePrice);
     const label = (cat: string, name: string) => (active === "all" ? `${GROUP[cat] ?? "More"} · ${name}` : name);
     for (const sv of ranked) {
-      const k = label(sv.category, sv.brand ?? subGroup(sv));
+      const inferred = BRANDS.find((b) => b.items.some((it) => sv.name.toLowerCase().includes(it.name.toLowerCase())))?.name;
+      const k = label(sv.category, sv.brand ?? inferred ?? subGroup(sv));
       m.set(k, [...(m.get(k) ?? []), { svc: sv }]);
     }
     const t = q.trim().toLowerCase();
