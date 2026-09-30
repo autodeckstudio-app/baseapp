@@ -12,7 +12,7 @@ import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, vehicleImagery } from "../../lib/imagery";
 import { resolveVehiclePhotoUrl } from "../../lib/vehicle-service";
 import { listenToMyNotifications } from "../../lib/notification-service";
-import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
 const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: string }> = {
   empty: { kicker: "Welcome", line: "Add your car to book care, track visits and keep its papers in one place." },
@@ -68,7 +68,16 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [photoPath]);
 
-  if (!ready || !home.model) return <Loading label="Opening your garage" />;
+  if (!ready || !home.model) {
+    return (
+      <Screen>
+        <Skeleton height={28} width="55%" />
+        <Skeleton height={300} />
+        <Skeleton height={64} />
+        <Skeleton height={96} />
+      </Screen>
+    );
+  }
   const m = home.model;
   const copy = HERO_COPY[m.heroState];
   const car = m.activeVehicle;
@@ -186,6 +195,21 @@ export default function HomeScreen() {
             ))}
           </Pane>
         </View>
+      ) : null}
+
+      {!m.membership ? (
+        <Pressable onPress={() => router.push("/(tabs)/membership")}>
+          <Pane pad="inset" fill="cool" tone="premium">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
+              <View style={{ flex: 1, gap: space.hair }}>
+                <Kicker tone="premium">Club</Kicker>
+                <T role="heading">Washes included, care for less</T>
+                <T role="caption" tone="tertiary">See membership plans</T>
+              </View>
+              <T tone="accent">›</T>
+            </View>
+          </Pane>
+        </Pressable>
       ) : null}
 
       {m.membership ? (
