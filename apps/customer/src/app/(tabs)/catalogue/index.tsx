@@ -32,7 +32,7 @@ function subGroup(s: Service): string {
     case "ppf":
       if (/full|body|complete/.test(n)) return "Full body";
       if (/front|hood|bumper|bonnet|partial|fender/.test(n)) return "Front and partial";
-      return "Other coverage";
+      return s.brand ? `${s.brand} films` : "Film packages";
     case "ceramic":
     case "coating":
       if (s.warrantyLabel) return `${s.warrantyLabel} protection`;
@@ -79,7 +79,8 @@ export default function CatalogueScreen() {
   }, [all, active, q]);
   const sections = useMemo(() => {
     const m = new Map<string, Service[]>();
-    for (const s of shown) {
+    const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || a.basePrice - b.basePrice);
+    for (const s of ranked) {
       const k = active === "all" ? `${GROUP[s.category] ?? "More"} · ${subGroup(s)}` : subGroup(s);
       m.set(k, [...(m.get(k) ?? []), s]);
     }
