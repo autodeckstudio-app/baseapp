@@ -6,6 +6,9 @@ import type { Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
 import { useAuth } from "../../../hooks/useAuth";
+import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import type { Service, Vehicle } from "@autodeck/core";
 import { getMyBookings } from "../../../lib/booking-service";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
@@ -24,6 +27,14 @@ export default function BookingsScreen() {
   const auth = useAuth();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState(false);
+  const [cars, setCars] = useState<Record<string, Vehicle>>({});
+  const [svcs, setSvcs] = useState<Record<string, Service>>({});
+  useEffect(() => {
+    if (auth.status !== "ready") return;
+    const un = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
+    getServiceCatalogue().then((l) => setSvcs(Object.fromEntries(l.map((x) => [x.id, x])))).catch(() => {});
+    return un;
+  }, [auth]);
 
   const load = useCallback(async () => {
     if (auth.status !== "ready") return;
@@ -49,8 +60,8 @@ export default function BookingsScreen() {
       {items.map((b, i) => (
         <Row
           key={b.id}
-          title={`${formatDateShort(b.scheduledDate)} · ${b.scheduledTime}`}
-          detail={<T role="data" tone="tertiary">{rupees(b.totalAmount)}</T>}
+          title={svcs[b.serviceId]?.name ?? "Service"}
+          detail={<T role="data" tone="tertiary">{`${formatDateShort(b.scheduledDate)} · ${b.scheduledTime} · ${cars[b.vehicleId] ? `${cars[b.vehicleId]!.make} ${cars[b.vehicleId]!.model}` : "Car"} · ${rupees(b.totalAmount)}`}</T>}
           trailing={<Chip label={STATUS[b.status].label} tone={STATUS[b.status].tone} />}
           onPress={() => router.push(`/(tabs)/bookings/${b.id}`)}
           last={i === items.length - 1}
