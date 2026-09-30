@@ -1,6 +1,6 @@
 // QA helper: drives the quote flow on a test booking via the deployed callables using synthetic test identities.
 const admin = require("firebase-admin");
-admin.initializeApp({ projectId: "autodeck-studio" });
+admin.initializeApp({ projectId: "autodeck-studio", serviceAccountId: "24903853329-compute@developer.gserviceaccount.com" });
 const K = "AIzaSyABYNBxwC7rhZhCMlid9xlVJrKrnLPPsRg", BID = process.argv[2], CUST = "rrmMIWEY4WNXFY4TXCzvnlxi6g53";
 async function idt(uid, claims) {
   const t = await admin.auth().createCustomToken(uid, claims);
