@@ -194,6 +194,10 @@ export default function BookingDetailScreen() {
         </View>
       }
     >
+      {booking.status === "COMPLETED" || booking.status === "CANCELLED" ? (
+        <Button label="Book again" onPress={() => router.push(`/(tabs)/book/${booking.serviceId}`)} />
+      ) : null}
+
       <Pane pad="gap">
         <Row title="Time" detail={`${displayTime} IST`} />
         <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
