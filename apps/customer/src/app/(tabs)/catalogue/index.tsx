@@ -99,7 +99,7 @@ export default function CatalogueScreen() {
         if (active !== "all" && active !== cat) continue;
         if (t && !`${b.name} ${it.name}`.toLowerCase().includes(t)) continue;
         const k = label(cat, b.name);
-        const have = (m.get(k) ?? []).some((e) => e.svc && e.svc.name.toLowerCase().includes(it.name.toLowerCase().replace(/ ppf$/, "")));
+        const have = (m.get(k) ?? []).some((e) => e.svc && e.svc.name.toLowerCase().replace(`${b.name.toLowerCase()} `, "") === it.name.toLowerCase().replace(/ ppf$/, ""));
         if (have) continue;
         m.set(k, [...(m.get(k) ?? []), { item: it }]);
       }
