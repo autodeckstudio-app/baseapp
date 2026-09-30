@@ -325,7 +325,7 @@ export default function BookingDetailScreen() {
               />
             </View>
           ) : null}
-          {canPay && !payment && job ? (
+          {canPay && !payment && job && !(booking.priceOnRequest === true && booking.quoteStatus !== "approved") ? (
             <View style={{ marginTop: space.line }}>
               {payRequested ? (
                 <T role="caption" tone="secondary">Pay the studio team in person — your status will update once confirmed.</T>
