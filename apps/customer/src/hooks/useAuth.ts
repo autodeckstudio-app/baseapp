@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
-import { onAuthStateChanged } from "../lib/auth-service";
+import { onIdTokenChanged } from "../lib/auth-service";
 
 type AuthState =
   | { status: "loading" }
@@ -18,13 +18,13 @@ type AuthState =
  *   loading → ready (signed in + claims set)
  *
  * After Google sign-in, the app calls setupCustomerProfile + refreshAuthToken,
- * which causes onAuthStateChanged to fire again with updated claims.
+ * which fires onIdTokenChanged again with updated claims.
  */
 export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(async (user) => {
+    const unsubscribe = onIdTokenChanged(async (user) => {
       if (!user) {
         setState({ status: "unauthenticated" });
         return;
