@@ -283,6 +283,14 @@ service cloud.firestore {
       allow write: if false; // Cloud Function only
     }
 
+    // ─── /reviews/{bookingId} ───────────────────────────────────────────────
+    match /reviews/{bookingId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow write: if false; // Cloud Function only (submitReview)
+    }
+
     // ─── /invoiceCounters/{tenantId} ────────────────────────────────────────
     // Atomic invoice number counters — Admin SDK only; no client access
     match /invoiceCounters/{tenantId} {

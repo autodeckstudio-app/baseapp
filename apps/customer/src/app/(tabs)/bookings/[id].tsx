@@ -5,11 +5,13 @@ import { getBookingById, cancelBooking } from "../../../lib/booking-service";
 import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
+import { getReview, submitReview } from "../../../lib/review-service";
+import { Pressable } from "react-native";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
   PENDING_VEHICLE: "Awaiting vehicle drop-off",
@@ -98,6 +100,30 @@ export default function BookingDetailScreen() {
   const [payingNow, setPayingNow] = useState(false);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [inspection, setInspection] = useState<Inspection | null>(null);
+  const [stars, setStars] = useState(0);
+  const [note, setNote] = useState("");
+  const [rated, setRated] = useState(false);
+  const [rateBusy, setRateBusy] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id || booking?.status !== "COMPLETED") return;
+    void getReview(id).then((r) => { if (r) { setStars(r.rating); setNote(r.comment); setRated(true); } }).catch(() => undefined);
+  }, [id, booking?.status]);
+
+  async function handleRate() {
+    if (!id || stars < 1) return;
+    setRateBusy(true);
+    setRateError(null);
+    try {
+      await submitReview(id, stars, note);
+      setRated(true);
+    } catch {
+      setRateError("Couldn't save your rating. Try again.");
+    } finally {
+      setRateBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -194,6 +220,28 @@ export default function BookingDetailScreen() {
         </View>
       }
     >
+      {booking.status === "COMPLETED" ? (
+        <Pane pad="inset">
+          <View style={{ gap: space.line }}>
+            <T role="heading">{rated ? "Thanks for rating" : "How was your visit?"}</T>
+            <View style={{ flexDirection: "row", gap: space.breath }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} accessibilityRole="button" accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`} onPress={() => { setStars(n); setRated(false); }}>
+                  <T role="display" tone={n <= stars ? "accent" : "tertiary"}>{n <= stars ? "★" : "☆"}</T>
+                </Pressable>
+              ))}
+            </View>
+            {stars > 0 && !rated ? (
+              <View style={{ gap: space.breath }}>
+                <Field label="Anything to add? (optional)" value={note} onChangeText={setNote} placeholder="What went well, or what could be better" />
+                {rateError ? <T role="caption" tone="accent">{rateError}</T> : null}
+                <Button label="Send rating" busy={rateBusy} onPress={() => void handleRate()} />
+              </View>
+            ) : null}
+          </View>
+        </Pane>
+      ) : null}
+
       {booking.status === "COMPLETED" || booking.status === "CANCELLED" ? (
         <Button label="Book again" onPress={() => router.push(`/(tabs)/book/${booking.serviceId}`)} />
       ) : null}

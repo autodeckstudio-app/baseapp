@@ -39,6 +39,7 @@ export type RateLimitAction =
   | "studio.upsertBay"
   | "studio.addHoliday"
   | "vehicle.photoUpload"
+  | "booking.review"
   | "studio.removeHoliday"
   | "employee.add"
   | "employee.updateRole"
@@ -129,6 +130,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "membership.planUpdate": { limit: 60, windowMs: 60_000 },
   "membership.planSetActive": { limit: 60, windowMs: 60_000 },
   "vehicle.photoUpload": { limit: 20, windowMs: 60_000 },
+  "booking.review": { limit: 10, windowMs: 60_000 },
   "service.create": { limit: 60, windowMs: 60_000 },
   "service.update": { limit: 60, windowMs: 60_000 },
   "service.setActive": { limit: 60, windowMs: 60_000 },

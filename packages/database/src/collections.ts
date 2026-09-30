@@ -33,6 +33,8 @@ export const COLLECTIONS = {
   inventory: () => "inventory",
   auditLog: () => "auditLog",
   notifications: () => "notifications",
+  // reviews/{bookingId} — one customer rating per completed booking (Cloud Function write only)
+  reviews: () => "reviews",
   bookingIntents: () => "bookingIntents",
   // invoiceCounters/{tenantId} — atomic invoice number counter (Admin SDK only)
   invoiceCounters: () => "invoiceCounters",
