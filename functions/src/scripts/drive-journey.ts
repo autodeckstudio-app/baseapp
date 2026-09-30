@@ -38,8 +38,13 @@ if (!API_KEY) {
   process.exit(1);
 }
 
+// createCustomToken needs a service-account signer: with end-user ADC (e.g.
+// Cloud Shell) the SDK would otherwise try to sign as the gcloud user and fail
+// with "Gaia id not found". Pass the project's App Engine default SA; the
+// caller's identity needs iam.serviceAccountTokenCreator on it (Owner does).
+const SA_EMAIL = process.env["SA_EMAIL"];
 if (!getApps().length) {
-  initializeApp();
+  initializeApp(SA_EMAIL ? { serviceAccountId: SA_EMAIL } : {});
 }
 const auth = getAuth();
 const db = getFirestore();
