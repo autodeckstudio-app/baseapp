@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
-import { Pressable, View } from "react-native";
+import { useState, useEffect, createElement } from "react";
+import { Platform, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
@@ -12,6 +13,7 @@ import { updateVehicle, archiveVehicle } from "../../../lib/vehicle-service";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { listenToVehicleProtections } from "../../../lib/protection-service";
 import { listenToVehicleWarranties } from "../../../lib/warranty-service";
+import { listenToVehiclePapers, submitMyPaper, daysUntil, type MyPaper } from "../../../lib/paper-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
@@ -30,7 +32,7 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "passport", label: "Passport" },
-  { key: "protection", label: "Protection" },
+  { key: "protection", label: "Documents" },
   { key: "warranty", label: "Warranty" },
 ];
 
@@ -57,6 +59,12 @@ export default function VehicleDetailScreen() {
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
   const [protections, setProtections] = useState<Protection[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
+  const [papers, setPapers] = useState<MyPaper[]>([]);
+  const [docForm, setDocForm] = useState({ kind: "INSURANCE" as MyPaper["kind"], reference: "", expiresOn: "" });
+  const [docPhoto, setDocPhoto] = useState<{ blob: Blob; contentType: string } | null>(null);
+  const [docOpen, setDocOpen] = useState(false);
+  const [docBusy, setDocBusy] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
@@ -87,6 +95,36 @@ export default function VehicleDetailScreen() {
     if (!id || auth.status !== "ready") return undefined;
     return listenToVehicleProtections(id, auth.claims.tenantId, auth.user.uid, setProtections, () => undefined);
   }, [id, auth.status]);
+
+  useEffect(() => {
+    if (!id || auth.status !== "ready") return undefined;
+    return listenToVehiclePapers(id, auth.claims.tenantId, auth.user.uid, setPapers, () => undefined);
+  }, [id, auth.status]);
+
+  async function handleAddDoc() {
+    if (!id) return;
+    setDocError(null);
+    if (!docForm.reference.trim()) { setDocError("Enter the document or policy number."); return; }
+    if (docForm.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(docForm.expiresOn)) { setDocError("Use the expiry date as YYYY-MM-DD."); return; }
+    setDocBusy(true);
+    try {
+      await submitMyPaper({
+        studioId: FIRST_STUDIO_ID,
+        vehicleId: id,
+        kind: docForm.kind,
+        reference: docForm.reference.trim(),
+        ...(docForm.expiresOn ? { expiresOn: docForm.expiresOn } : {}),
+        photo: docPhoto,
+      });
+      setDocForm({ kind: "INSURANCE", reference: "", expiresOn: "" });
+      setDocPhoto(null);
+      setDocOpen(false);
+    } catch (e) {
+      setDocError(e instanceof Error ? e.message : "Could not add the document.");
+    } finally {
+      setDocBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!id || auth.status !== "ready") return undefined;
@@ -311,21 +349,70 @@ export default function VehicleDetailScreen() {
       ) : null}
 
       {tab === "protection" ? (
-        protections.length === 0 ? (
-          <Notice title="No protections on file" body="Insurance, FastTag, PUC and RC records verified by the studio will appear here." />
-        ) : (
-          <Pane pad="gap">
-            {protections.map((p, i) => (
-              <Row
-                key={p.id}
-                title={PROTECTION_KIND_LABELS[p.kind] ?? p.kind}
-                detail={[p.provider, p.expiryDate !== null ? `Expires ${formatDate(p.expiryDate)}` : null].filter(Boolean).join(" · ") || undefined}
-                trailing={<Chip label={p.status} tone={p.status === "verified" ? "premium" : "neutral"} />}
-                last={i === protections.length - 1}
-              />
-            ))}
-          </Pane>
-        )
+        <>
+          {papers.length === 0 && protections.length === 0 ? (
+            <Notice title="No documents yet" body="Add your RC, insurance, PUC or FASTag. The studio checks each one and marks it verified." />
+          ) : (
+            <Pane pad="gap">
+              {papers.map((p, i) => {
+                const left = daysUntil(p.expiresOn);
+                const expiry = left === null ? null : left < 0 ? "Expired" : left === 0 ? "Expires today" : `${left} day${left === 1 ? "" : "s"} left`;
+                return (
+                  <Row
+                    key={p.id}
+                    title={PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind}
+                    detail={[p.reference, expiry].filter(Boolean).join(" · ")}
+                    trailing={<Chip label={p.status === "VERIFIED" ? "Verified" : p.status === "REJECTED" ? "Rejected" : "Pending"} tone={p.status === "VERIFIED" ? "premium" : "neutral"} />}
+                    last={i === papers.length - 1 && protections.length === 0}
+                  />
+                );
+              })}
+              {protections.map((p, i) => (
+                <Row
+                  key={p.id}
+                  title={PROTECTION_KIND_LABELS[p.kind] ?? p.kind}
+                  detail={[p.provider, p.expiryDate !== null ? `Expires ${formatDate(p.expiryDate)}` : null].filter(Boolean).join(" · ") || undefined}
+                  trailing={<Chip label={p.status} tone={p.status === "verified" ? "premium" : "neutral"} />}
+                  last={i === protections.length - 1}
+                />
+              ))}
+            </Pane>
+          )}
+          {docOpen ? (
+            <View style={{ gap: space.breath }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.hair }}>
+                {(["RC", "INSURANCE", "PUC", "FASTAG", "OTHER"] as const).map((k) => (
+                  <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: docForm.kind === k }} onPress={() => setDocForm((f) => ({ ...f, kind: k }))}>
+                    <Chip label={k === "FASTAG" ? "FASTag" : k === "OTHER" ? "Other" : k === "RC" ? "RC" : k === "PUC" ? "PUC" : "Insurance"} tone={docForm.kind === k ? "premium" : "neutral"} />
+                  </Pressable>
+                ))}
+              </View>
+              <Field label="Document or policy number" value={docForm.reference} onChangeText={(v: string) => setDocForm((f) => ({ ...f, reference: v }))} />
+              <Field label="Expiry date (YYYY-MM-DD, optional)" value={docForm.expiresOn} onChangeText={(v: string) => setDocForm((f) => ({ ...f, expiresOn: v }))} />
+              {Platform.OS === "web" ? (
+                <View style={{ gap: space.hair }}>
+                  <Kicker>Photo or scan (optional)</Kicker>
+                  {createElement("input", {
+                    type: "file",
+                    accept: "image/jpeg,image/png,image/webp",
+                    onChange: (e: { target: { files: unknown } }) => {
+                      const files = e.target.files as { item: (i: number) => { type?: string } | null } | null;
+                      const f = files?.item(0) ?? null;
+                      if (f && f.type && ["image/jpeg", "image/png", "image/webp"].includes(f.type)) setDocPhoto({ blob: f as unknown as Blob, contentType: f.type });
+                      else setDocPhoto(null);
+                    },
+                  })}
+                  {docPhoto ? <T role="caption" tone="tertiary">Photo ready.</T> : null}
+                </View>
+              ) : null}
+              {docError ? <Notice title="Can't add this document" body={docError} /> : null}
+              <Button label="Submit for verification" busy={docBusy} onPress={() => void handleAddDoc()} />
+              <Button label="Cancel" kind="quiet" onPress={() => { setDocOpen(false); setDocError(null); }} />
+            </View>
+          ) : (
+            <Button label="Add a document" onPress={() => setDocOpen(true)} />
+          )}
+        </>
       ) : null}
 
       {tab === "warranty" ? (

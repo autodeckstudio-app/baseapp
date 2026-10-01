@@ -34,3 +34,13 @@ export const listPapersSchema = z.object({
   vehicleId: z.string().min(1).optional(),
   status: z.enum(["PENDING", "VERIFIED", "REJECTED"]).optional(),
 }).strict();
+
+export const submitMyPaperSchema = z.object({
+  studioId: z.string().min(1),
+  vehicleId: z.string().min(1),
+  kind,
+  reference: z.string().min(1).max(120),
+  issuedOn: dateString.optional(),
+  expiresOn: dateString.optional(),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
+}).strict();
