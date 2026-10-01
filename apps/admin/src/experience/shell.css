@@ -475,7 +475,7 @@
   .ad-side .ad-wordmark { order: 1; }
   .ad-side .ad-side-foot { order: 2; margin: 0; padding: 0; border: 0; }
   .ad-side .ad-who { display: none; }
-  .ad-side .ad-nav-group { order: 3; display: flex; flex-direction: row; gap: 4px; overflow-x: auto; flex: 1 1 100%; max-width: 100%; scrollbar-width: none; padding: 2px 0; }
+  .ad-side .ad-nav-group { order: 3; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px; overflow-x: auto; flex: 1 1 100%; max-width: 100%; scrollbar-width: none; padding: 2px 0; }
   .ad-side .ad-nav-group::-webkit-scrollbar { display: none; }
   .ad-side .ad-nav-group .ad-label { display: none; }
   .ad-side .ad-nav-link { white-space: nowrap; flex: none; padding: 8px 14px; }
