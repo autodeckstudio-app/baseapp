@@ -4,8 +4,8 @@ import { Image, Pressable, ScrollView, TextInput, View } from "react-native";
 import { BRANDS, type BrandItem } from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
-import { space } from "@autodeck/ui/theme";
-import { useExperienceTheme } from "@autodeck/ui/native";
+import { space, type IconName } from "@autodeck/ui/theme";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { serviceImagery } from "../../../lib/imagery";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
@@ -44,7 +44,7 @@ function subGroup(s: Service): string {
   }
 }
 
-const ICON: Record<string, string> = { washing: "🫧", ceramic: "✨", coating: "🛡️", ppf: "🎞️", tinting: "🪟", inspection: "🔍", other: "🔧" };
+const ICON: Record<string, IconName> = { washing: "wash", ceramic: "ceramic", coating: "coating", ppf: "ppf", tinting: "tint", inspection: "inspect", other: "tools" };
 const BLURB: Record<string, string> = {
   washing: "Quick, safe cleans",
   ceramic: "Deep gloss that lasts",
@@ -163,7 +163,7 @@ export default function CatalogueScreen() {
                 return (
                   <Pressable key={c} accessibilityRole="button" onPress={() => setActive(c)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.accentHaze, padding: space.line, gap: 6, opacity: pressed ? 0.7 : 1 })}>
                     <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface }}>
-                      <T role="title">{ICON[c] ?? "🔧"}</T>
+                      <Icon name={ICON[c] ?? "tools"} color={colors.accent} size={22} />
                     </View>
                     <T role="bodyStrong">{GROUP[c] ?? c}</T>
                     <T role="caption" tone="tertiary">{BLURB[c] ?? ""}</T>

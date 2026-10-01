@@ -7,14 +7,14 @@ function requestTo(path: string, cookieHeader?: string): NextRequest {
   return new NextRequest(new URL(path, "http://localhost:3000"), { headers });
 }
 
-describe("middleware — session cookie presence gate", () => {
+describe("middleware - session cookie presence gate", () => {
   it("redirects to /login when no session cookie is present", () => {
     const res = middleware(requestTo("/dashboard"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("http://localhost:3000/login");
   });
 
-  it("passes through when a session cookie is present (does not verify it — that's /api/session's job)", () => {
+  it("passes through when a session cookie is present (does not verify it - that's /api/session's job)", () => {
     const res = middleware(requestTo("/dashboard", "__session=some-opaque-value"));
     // NextResponse.next() carries no redirect location and a middleware
     // "pass-through" marker header rather than a 3xx status.

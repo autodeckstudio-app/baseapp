@@ -1,5 +1,5 @@
 // Expo/Metro exposes process.env for EXPO_PUBLIC_* and USE_FIREBASE_EMULATOR variables.
-// TypeScript doesn't know about process in React Native — declare it here.
+// TypeScript doesn't know about process in React Native - declare it here.
 declare const process: {
   readonly env: {
     readonly EXPO_PUBLIC_FIREBASE_API_KEY?: string;

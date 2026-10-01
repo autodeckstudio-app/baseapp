@@ -4,7 +4,7 @@ import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ApprovalRequest } from "@autodeck/core";
 
-// Filters by jobId + tenantId + customerId — the /approvals rule requires
+// Filters by jobId + tenantId + customerId - the /approvals rule requires
 // ownTenant(resource.data) unconditionally and customerId==uid for the
 // customer branch, so the list query needs both constrained by equality
 // filters it can verify statically.

@@ -1,17 +1,17 @@
 // Phase 5B P1-15: server session-cookie exchange. Route Handlers run in the
 // Node.js runtime by default (unlike middleware, which defaults to Edge and
-// cannot load firebase-admin — see ../../../middleware.ts), so this is
+// cannot load firebase-admin - see ../../../middleware.ts), so this is
 // where the actual cryptographic verification of the admin session lives.
 //
 // This does NOT replace or weaken the existing callable/Firestore-rules
 // authorization model: the Firebase ID token the browser's Firebase Auth
 // SDK holds is still what authenticates every direct Firestore read and
-// every httpsCallable invocation — Firebase provides no alternative for
+// every httpsCallable invocation - Firebase provides no alternative for
 // those (a session cookie is not something Firestore rules or Cloud
 // Functions understand). What changes is what gates the admin APP/PAGES
 // being reachable at all: previously that was purely a client-side check
 // of the Firebase Auth SDK's local (IndexedDB-backed) auth state, which is
-// UI-only — nothing stopped a script from reaching the app shell or, more
+// UI-only - nothing stopped a script from reaching the app shell or, more
 // importantly, nothing revoked that "logged in" client state server-side.
 // Now page access is gated by an httpOnly, non-JS-readable, explicitly
 // expiring, server-verified, revocable session cookie instead.
@@ -57,7 +57,7 @@ function clearSessionCookie(response: NextResponse): void {
 
 // Exchanges a fresh Firebase ID token (just obtained via the client SDK's
 // Google sign-in, after /api/auth/resolve-claims) for an httpOnly session cookie. Rejects
-// non-admin roles server-side — previously this check only existed
+// non-admin roles server-side - previously this check only existed
 // client-side in auth-context.tsx, trivially bypassable by anyone able to
 // run JS against the page.
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return response;
 }
 
-// Authoritative session check — called by AdminAuthProvider on mount and
+// Authoritative session check - called by AdminAuthProvider on mount and
 // whenever the client SDK's auth state changes. Verifies the httpOnly
 // cookie's signature, expiry, AND revocation status (checkRevoked: true),
 // so a logged-out-elsewhere or admin-revoked session actually stops
@@ -133,11 +133,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 // Logout: revokes the account's refresh tokens server-side (so the session
-// cookie — and any other outstanding session cookie/ID-token-refresh for
-// this uid — stops verifying under checkRevoked:true) and clears the
+// cookie - and any other outstanding session cookie/ID-token-refresh for
+// this uid - stops verifying under checkRevoked:true) and clears the
 // cookie. Note this cannot instantly invalidate an already-issued Firebase
 // ID token still held by the browser's Firebase Auth SDK before its natural
-// ~1 hour expiry — that is a documented characteristic of Firebase's token
+// ~1 hour expiry - that is a documented characteristic of Firebase's token
 // model (ID tokens are verified by signature, not a revocation list, unless
 // the verifier explicitly opts into checkRevoked), not a gap introduced
 // here. The client is expected to also call firebaseSignOut(auth)
@@ -151,7 +151,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       const decoded = await adminAuth.verifySessionCookie(cookie);
       await adminAuth.revokeRefreshTokens(decoded.uid);
     } catch {
-      // Already invalid/expired — nothing to revoke, still clear the cookie.
+      // Already invalid/expired - nothing to revoke, still clear the cookie.
     }
   }
 

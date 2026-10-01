@@ -33,7 +33,7 @@ function parseStudio(role: StaffRole, v: unknown): string | null {
   const studioId = v === null || v === undefined ? null : typeof v === "string" && v.trim() ? v.trim() : undefined;
   if (studioId === undefined) throw new StaffError(400, "invalid-argument", "studioId must be a string or null.");
   if (role === "admin" && studioId !== null) {
-    throw new StaffError(400, "invalid-argument", "Tenant admins are not studio-scoped — studioId must be null for role 'admin'.");
+    throw new StaffError(400, "invalid-argument", "Tenant admins are not studio-scoped - studioId must be null for role 'admin'.");
   }
   if (role === "studio" && studioId === null) {
     throw new StaffError(400, "invalid-argument", "Studio staff require a studioId.");

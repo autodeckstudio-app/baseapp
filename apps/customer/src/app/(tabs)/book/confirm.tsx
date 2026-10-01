@@ -11,8 +11,8 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
-// Multi-day PPF services run into thousands of minutes — "~4320 min" is
-// meaningless to a customer. This is service-time (not calendar time — the
+// Multi-day PPF services run into thousands of minutes - "~4320 min" is
+// meaningless to a customer. This is service-time (not calendar time - the
 // authoritative calendar span, which depends on operating hours/holidays, is
 // already shown via "Expected ready" below), so express it in hours once it
 // crosses a day rather than implying a calendar-day count.
@@ -122,19 +122,19 @@ export default function BookingConfirmScreen() {
     params.estimatedEndDate &&
     new Date(`${params.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
-  const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "—";
+  const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "-";
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Step 6 of 6 · Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
       <Pane pad="gap">
-        <Row title="Service" detail={service?.name ?? "—"} />
-        <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "—"} />
-        <Row title="Date" detail={displayDate ?? "—"} />
-        <Row title="Time" detail={params.scheduledTime ? `${params.scheduledTime} IST` : "—"} />
+        <Row title="Service" detail={service?.name ?? "-"} />
+        <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
+        <Row title="Date" detail={displayDate ?? "-"} />
+        <Row title="Time" detail={params.scheduledTime ? `${params.scheduledTime} IST` : "-"} />
         <Row title="Duration" detail={durationLabel} />
         <Row
           title="Expected ready"
-          detail={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime} IST` : ""}` : "—"}
+          detail={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime} IST` : ""}` : "-"}
           last
         />
       </Pane>

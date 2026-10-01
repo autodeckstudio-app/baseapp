@@ -8,7 +8,7 @@ import type { Invoice } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
 
-/** Live, tenant-wide invoice feed — newest first. Customer/vehicle/job/booking/
+/** Live, tenant-wide invoice feed - newest first. Customer/vehicle/job/booking/
  * status filters are applied client-side. */
 export function listenToInvoices(
   tenantId: string,
@@ -40,7 +40,7 @@ type VoidInvoiceInput = { invoiceId: string; reason: string };
 type VoidInvoiceOutput = { invoiceId: string; voided: boolean };
 
 // Admin-only. The Cloud Function itself refuses to void a "paid" invoice
-// (refund the payment first) — this wrapper does not duplicate that rule,
+// (refund the payment first) - this wrapper does not duplicate that rule,
 // it only surfaces whatever error the server returns.
 export async function voidInvoice(invoiceId: string, reason: string): Promise<VoidInvoiceOutput> {
   const fn = httpsCallable<VoidInvoiceInput, VoidInvoiceOutput>(functions, "voidInvoice");

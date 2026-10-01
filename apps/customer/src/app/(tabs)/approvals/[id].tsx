@@ -11,7 +11,7 @@ import { db } from "../../../lib/firebase";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Waiting for your decision",
-  approved: "Approved — authorized to proceed",
+  approved: "Approved - authorized to proceed",
   rejected: "Declined",
   expired: "This request expired",
   cancelled: "Cancelled by the studio",
@@ -106,7 +106,7 @@ export default function ApprovalDetailScreen() {
       }
     >
       <Pane pad="gap">
-        <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model}` : "—"} />
+        <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model}` : "-"} />
         <Row title="Additional service" detail={approval.serviceName} />
         <Row title="Reason" detail={approval.reason} />
         <Row title="Requested" detail={formatWhen(approval.createdAt)} last />

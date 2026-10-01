@@ -7,7 +7,7 @@ import type { ServiceJob, Warranty, AuditLog, Inspection } from "@autodeck/core"
 
 const LIST_LIMIT = 300;
 
-/** Live, tenant-wide job feed — newest first. Status/bay/studio/walk-in/customer
+/** Live, tenant-wide job feed - newest first. Status/bay/studio/walk-in/customer
  * filters are applied client-side (see bookings-service for the same rationale). */
 export function listenToJobs(
   tenantId: string,
@@ -35,7 +35,7 @@ export function listenToJob(
   );
 }
 
-// Warranty doc ID == jobId (deterministic, one warranty per job) — direct get, no query.
+// Warranty doc ID == jobId (deterministic, one warranty per job) - direct get, no query.
 export async function getWarrantyForJob(jobId: string): Promise<Warranty | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.warranties(), jobId));
   return snap.exists() ? (snap.data() as Warranty) : null;

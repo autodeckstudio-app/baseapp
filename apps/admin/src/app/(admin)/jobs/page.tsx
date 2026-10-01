@@ -57,7 +57,7 @@ export default function JobsPage() {
     const q = search.trim().toLowerCase();
     return jobs.filter((j) => {
       if (status && j.status !== status) return false;
-      // "Today" means active today, not merely started today — a multi-day
+      // "Today" means active today, not merely started today - a multi-day
       // job (e.g. a PPF service) started on an earlier date is still active
       // on every day through its estimatedEndDate. A car still in the studio
       // past its estimate stays on today's floor until delivered.
@@ -87,7 +87,7 @@ export default function JobsPage() {
   const toBoard = (j: ServiceJob): BoardJob => ({
     id: j.id,
     status: j.status,
-    plate: vehicleRegs[j.vehicleId] ?? "—",
+    plate: vehicleRegs[j.vehicleId] ?? "-",
     customer: customerNames[j.customerId] ?? "Customer",
     service: serviceNames[j.serviceId] ?? "Service",
     bay: j.bayId ? j.bayId.replace(/^bay[-_]?/i, "") : undefined,
@@ -168,9 +168,9 @@ export default function JobsPage() {
               <tr key={j.id} className="row-link" onClick={() => open(j.id)}>
                 <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ad-muted"> · Walk-in</span> : null}</td>
                 <td><StatusBadge label={j.status} /></td>
-                <td className="ad-data">{vehicleRegs[j.vehicleId] ?? "—"}</td>
-                <td>{customerNames[j.customerId] ?? "—"}</td>
-                <td>{serviceNames[j.serviceId] ?? "—"}</td>
+                <td className="ad-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>
+                <td>{customerNames[j.customerId] ?? "-"}</td>
+                <td>{serviceNames[j.serviceId] ?? "-"}</td>
                 <td>{j.bayId}</td>
                 <td><StatusBadge label={j.paymentStatus} /></td>
                 <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>

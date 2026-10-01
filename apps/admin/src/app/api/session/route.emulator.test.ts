@@ -1,7 +1,7 @@
 /**
  * Phase 5B P1-15 regression coverage for the session-cookie exchange.
  * Run with: pnpm test:emulator (requires the Auth Emulator at localhost:9099
- * — see ../../../../test/emulator-setup.ts).
+ * - see ../../../../test/emulator-setup.ts).
  *
  * Getting a real, emulator-verifiable Firebase ID token in a Node test (no
  * browser) uses the same technique Firebase's own docs recommend for
@@ -143,13 +143,13 @@ describe("POST /api/session", () => {
     const cookie = res.cookies.get(SESSION_COOKIE_NAME);
     expect(cookie).toBeDefined();
     // httpOnly is what makes "session cannot be read by client JavaScript"
-    // true — document.cookie never exposes httpOnly cookies to page JS.
+    // true - document.cookie never exposes httpOnly cookies to page JS.
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.sameSite).toBe("strict");
     expect(cookie?.path).toBe("/");
     expect(cookie?.maxAge).toBe(Math.floor(SESSION_MAX_AGE_MS / 1000));
     // `secure` is intentionally NODE_ENV-conditional (see route.ts) so it
-    // isn't asserted here — this suite runs with NODE_ENV=test, not
+    // isn't asserted here - this suite runs with NODE_ENV=test, not
     // "production", by design (matches the rest of this codebase's
     // production-only guards, e.g. apps/admin/src/lib/firebase.ts).
   });
@@ -167,7 +167,7 @@ describe("GET /api/session", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects a tampered/invalid cookie value (stands in for expired — same verification-failure path)", async () => {
+  it("rejects a tampered/invalid cookie value (stands in for expired - same verification-failure path)", async () => {
     const res = await GET(getRequest("this-is-not-a-valid-session-cookie"));
     expect(res.status).toBe(401);
   });
@@ -185,7 +185,7 @@ describe("GET /api/session", () => {
   });
 });
 
-describe("DELETE /api/session — logout and revocation", () => {
+describe("DELETE /api/session - logout and revocation", () => {
   it("clears the cookie even when none was present", async () => {
     const res = await DELETE(deleteRequest());
     expect(res.status).toBe(200);
@@ -206,7 +206,7 @@ describe("DELETE /api/session — logout and revocation", () => {
     expect(preLogout.status).toBe(200);
 
     // revokeRefreshTokens' validSince cutoff is truncated to whole seconds,
-    // and checkRevoked's comparison is a strict `iat < validSince` — a
+    // and checkRevoked's comparison is a strict `iat < validSince` - a
     // token minted in the same wall-clock second as the revocation can
     // legitimately slip through (documented Firebase behavior, not a gap
     // in this implementation). A real login-then-logout is never this
@@ -218,7 +218,7 @@ describe("DELETE /api/session — logout and revocation", () => {
     expect(deleteRes.status).toBe(200);
     expect(deleteRes.cookies.get(SESSION_COOKIE_NAME)?.value).toBe("");
 
-    // The old cookie must now fail GET's checkRevoked:true verification —
+    // The old cookie must now fail GET's checkRevoked:true verification -
     // "revoked sessions must stop working" requirement.
     const postLogout = await GET(getRequest(sessionCookie));
     expect(postLogout.status).toBe(401);

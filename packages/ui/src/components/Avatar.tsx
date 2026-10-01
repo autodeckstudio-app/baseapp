@@ -15,7 +15,7 @@ function initialsOf(name: string): string {
   return (first + last).toUpperCase();
 }
 
-/** Initials-based avatar — no photo storage/dependency needed for V1. */
+/** Initials-based avatar - no photo storage/dependency needed for V1. */
 export function Avatar({ name, size = 40 }: AvatarProps) {
   return (
     <View

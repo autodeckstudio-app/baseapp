@@ -10,6 +10,6 @@ describe("statusLabel", () => {
     expect(statusLabel("SOME_NEW_STATE")).toBe("Some new state");
   });
   it("handles empty values", () => {
-    expect(statusLabel(undefined)).toBe("—");
+    expect(statusLabel(undefined)).toBe("-");
   });
 });

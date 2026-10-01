@@ -43,7 +43,7 @@ export function InvoiceView(p: {
           </header>
           <div className="ad-invoice-meta">
             <div><span className="ad-label">Billed to</span><p>{p.customer?.name ?? "Customer"}</p><span className="ad-sub">{p.customer?.phone}</span></div>
-            <div><span className="ad-label">Car</span><p className="ad-data">{p.vehicle?.registrationNumber ?? "—"}</p><span className="ad-sub">{[p.vehicle?.make, p.vehicle?.model].filter(Boolean).join(" ")}</span></div>
+            <div><span className="ad-label">Car</span><p className="ad-data">{p.vehicle?.registrationNumber ?? "-"}</p><span className="ad-sub">{[p.vehicle?.make, p.vehicle?.model].filter(Boolean).join(" ")}</span></div>
             <div><span className="ad-label">Issued</span><p>{formatDateTime(inv.issuedAt)}</p></div>
           </div>
           <div className="ad-invoice-lines" role="table">

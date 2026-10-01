@@ -1,7 +1,7 @@
 "use client";
 
 // Expenses: studio operating costs by month. Feeds Daily Close and Reports,
-// so entries here move real numbers — deletes ask twice.
+// so entries here move real numbers - deletes ask twice.
 import { useState } from "react";
 import type { Expense, ExpenseCategory, ExpensePaidVia } from "@autodeck/core";
 import { PageHead } from "./Office";

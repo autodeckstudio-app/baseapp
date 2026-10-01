@@ -78,7 +78,7 @@ export default function BookingsPage() {
     id: b.id,
     time: formatTime(b.scheduledAt),
     endTime: b.estimatedEndDate === b.scheduledDate ? formatTime(b.estimatedEndAt) : undefined,
-    plate: vehicleRegs[b.vehicleId] ?? "—",
+    plate: vehicleRegs[b.vehicleId] ?? "-",
     customer: customerNames[b.customerId] ?? "Customer",
     service: serviceNames[b.serviceId] ?? "Service",
     bay: b.bayId ? b.bayId.replace(/^bay[-_]?/i, "") : undefined,
@@ -156,9 +156,9 @@ export default function BookingsPage() {
               <tr key={b.id} className="row-link" onClick={() => open(b.id)}>
                 <td>{formatDateTime(b.scheduledAt)}</td>
                 <td><StatusBadge label={b.status} /></td>
-                <td className="ad-data">{vehicleRegs[b.vehicleId] ?? "—"}</td>
-                <td>{customerNames[b.customerId] ?? "—"}</td>
-                <td>{serviceNames[b.serviceId] ?? "—"}</td>
+                <td className="ad-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
+                <td>{customerNames[b.customerId] ?? "-"}</td>
+                <td>{serviceNames[b.serviceId] ?? "-"}</td>
                 <td>{b.bayId}</td>
                 <td><StatusBadge label={b.paymentStatus} /></td>
                 <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>

@@ -8,7 +8,7 @@ import { db } from "./firebase";
  * Resolves a set of document IDs in a given collection to a display label,
  * caching results across re-renders. Used to turn raw customerId/vehicleId/
  * serviceId references into readable names on dense admin tables without a
- * dedicated Cloud Function — these are simple get()s the admin role is
+ * dedicated Cloud Function - these are simple get()s the admin role is
  * already allowed to make directly.
  */
 export function useLabels(collectionName: string, ids: string[], extract: (data: unknown) => string) {

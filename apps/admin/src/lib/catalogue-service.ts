@@ -22,7 +22,7 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
   return result.data.services;
 }
 
-// Reuses the server-side pricing engine — the admin app never computes prices itself.
+// Reuses the server-side pricing engine - the admin app never computes prices itself.
 export async function calculateServicePrice(
   serviceId: string,
   vehicleCategory: VehicleCategory,

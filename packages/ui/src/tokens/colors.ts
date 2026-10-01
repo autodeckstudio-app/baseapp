@@ -1,4 +1,4 @@
-// AutoDeck colour tokens — dark studio ground with one warm amber light.
+// AutoDeck colour tokens - dark studio ground with one warm amber light.
 // Amber is reserved for primary actions, the active state and price
 // emphasis - never used to flood the UI.
 //
@@ -25,7 +25,7 @@ export const colors = {
   borderStrong: "rgba(245,246,247,0.22)",
   divider: "rgba(255,255,255,0.06)",
 
-  // Accent — amber, one warm light
+  // Accent - amber, one warm light
   accent: "#E0A45C",
   accentPressed: "#C98A40",
   accentMuted: "rgba(224,164,92,0.14)",

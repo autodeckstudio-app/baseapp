@@ -217,10 +217,10 @@ export default function JobDetailPage() {
         <aside className="ad-detail-side">
           <section className="ad-panel">
             <span className="ad-label">Car and owner</span>
-            <div className="kv"><span>Customer</span><span>{customer?.name ?? "—"}</span></div>
+            <div className="kv"><span>Customer</span><span>{customer?.name ?? "-"}</span></div>
             {customer?.phone && <div className="kv"><span>Phone</span><span><a href={`tel:${customer.phone}`}>{customer.phone}</a></span></div>}
-            <div className="kv"><span>Vehicle</span><span>{car || "—"}</span></div>
-            <div className="kv"><span>Plate</span><span className="ad-data">{vehicle?.registrationNumber ?? "—"}</span></div>
+            <div className="kv"><span>Vehicle</span><span>{car || "-"}</span></div>
+            <div className="kv"><span>Plate</span><span className="ad-data">{vehicle?.registrationNumber ?? "-"}</span></div>
             <div className="ad-panel-actions">
               {job.bookingId && <button type="button" className="ad-button" onClick={() => router.push(`/bookings/${job.bookingId}`)}>Open booking</button>}
             </div>

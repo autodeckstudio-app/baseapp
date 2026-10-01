@@ -7,7 +7,7 @@ import type { AuditLog } from "@autodeck/core";
 
 const LIST_LIMIT = 500;
 
-/** Live, tenant-wide audit feed — newest first, append-only by construction
+/** Live, tenant-wide audit feed - newest first, append-only by construction
  * (the /auditLog rule denies all client writes). Actor/action/entity/date
  * filters are applied client-side. */
 export function listenToAuditLog(

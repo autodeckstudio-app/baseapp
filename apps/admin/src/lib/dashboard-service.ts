@@ -6,9 +6,9 @@ import { COLLECTIONS } from "@autodeck/database";
 import type { ApprovalRequest, AttendanceRecord, InventoryItem, Membership, PaperVerification } from "@autodeck/core";
 
 // Reuses the existing tenantId+status(+expiresAt) approvals index as a prefix
-// match (equality-only query, no orderBy) — no new index required. No
+// match (equality-only query, no orderBy) - no new index required. No
 // client-side lazy correction for past-expiry approvals (see the identical
-// note in apps/studio/src/lib/approval-service.ts) — kept accurate instead
+// note in apps/studio/src/lib/approval-service.ts) - kept accurate instead
 // by the daily expireStaleApprovalsScheduled sweep.
 export function listenToPendingApprovals(
   tenantId: string,
@@ -23,9 +23,9 @@ export function listenToPendingApprovals(
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as ApprovalRequest)), onError);
 }
 
-// Soonest-expiring active memberships — reuses the existing
+// Soonest-expiring active memberships - reuses the existing
 // tenantId+status+endDate index exactly. Raw stored status, no read-time
-// correction (unlike getMyMemberships' getEffectiveMembershipStatus) —
+// correction (unlike getMyMemberships' getEffectiveMembershipStatus) -
 // kept accurate instead by the daily expireStaleMembershipsScheduled sweep.
 export function listenToExpiringMemberships(
   tenantId: string,

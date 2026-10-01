@@ -66,7 +66,7 @@ export function DailyCloseView(p: {
             <section className="ad-panel">
               <span className="ad-label">Closed · {formatDateTime(p.close.closedAt)}{p.close.closeCount > 1 ? ` · closed ${p.close.closeCount} times` : ""}</span>
               <p className="ad-note">
-                Counted {formatPaise(p.close.countedCashPaise)} against expected {formatPaise(p.close.expectedCashPaise)} — variance{" "}
+                Counted {formatPaise(p.close.countedCashPaise)} against expected {formatPaise(p.close.expectedCashPaise)} - variance{" "}
                 <strong className={p.close.variancePaise === 0 ? "ad-success" : "ad-danger"}>{formatPaise(p.close.variancePaise)}</strong>.
                 {p.close.notes ? ` Note: ${p.close.notes}` : ""}
               </p>

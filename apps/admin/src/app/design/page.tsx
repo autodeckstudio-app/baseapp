@@ -37,7 +37,7 @@ export default function DesignPage() {
           <Glass round="pane" pad="inset" fill="warm" tone="accent">
             <p className="ad-label">Glass · warm (active)</p>
             <p className="ad-title" style={{ margin: "var(--ad-space-breath) 0" }}>In the studio</p>
-            <span className="ad-chip ad-chip--accent">● Live · polishing</span>
+            <span className="ad-chip ad-chip--accent">Live, polishing</span>
           </Glass>
           <Glass round="pane" pad="inset" fill="cool">
             <p className="ad-label">Glass · cool (premium)</p>

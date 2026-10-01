@@ -1,6 +1,6 @@
 "use client";
 
-// Reports: the monthly Office view — revenue by method and day, expenses by
+// Reports: the monthly Office view - revenue by method and day, expenses by
 // category, job throughput. Same server-side sources as Daily Close, so the
 // numbers always agree.
 import type { OfficeReport } from "../lib/office-service";

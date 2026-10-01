@@ -11,6 +11,7 @@ import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -27,7 +28,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Awaiting confirmation at studio",
   processing: "Processing",
   completed: "Paid",
-  failed: "Payment failed — please try again",
+  failed: "Payment failed - please try again",
   cancelled: "Payment cancelled",
   refunded: "Refunded",
 };
@@ -52,13 +53,13 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
-  ACTIVE: "Your vehicle is already at the studio — contact the studio to change the schedule.",
+  ACTIVE: "Your vehicle is already at the studio - contact the studio to change the schedule.",
   COMPLETED: "This booking is already completed.",
   CANCELLED: "This booking has been cancelled.",
   EXPIRED: "This booking has expired.",
 };
 
-// Multi-day PPF services run into thousands of minutes — express as hours
+// Multi-day PPF services run into thousands of minutes - express as hours
 // once past a day (this is service-time, not calendar time; the
 // authoritative calendar span is shown separately via "Expected ready").
 function formatDuration(minutes: number): string {
@@ -80,7 +81,7 @@ function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason
   if (hoursUntil < CANCELLATION_FREE_WINDOW_HOURS) {
     return {
       eligible: false,
-      reason: `Less than ${CANCELLATION_FREE_WINDOW_HOURS} hours before your appointment — contact the studio directly to reschedule.`,
+      reason: `Less than ${CANCELLATION_FREE_WINDOW_HOURS} hours before your appointment - contact the studio directly to reschedule.`,
     };
   }
   return { eligible: true, reason: null };
@@ -100,6 +101,7 @@ export default function BookingDetailScreen() {
   const [payingNow, setPayingNow] = useState(false);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [inspection, setInspection] = useState<Inspection | null>(null);
+  const { colors } = useExperienceTheme();
   const [stars, setStars] = useState(0);
   const [note, setNote] = useState("");
   const [rated, setRated] = useState(false);
@@ -241,7 +243,7 @@ export default function BookingDetailScreen() {
             <View style={{ flexDirection: "row", gap: space.breath }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <Pressable key={n} accessibilityRole="button" accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`} onPress={() => { setStars(n); setRated(false); }}>
-                  <T role="display" tone={n <= stars ? "accent" : "tertiary"}>{n <= stars ? "★" : "☆"}</T>
+                  <Icon name="star" color={n <= stars ? colors.accent : colors.textTertiary} size={32} filled={n <= stars} />
                 </Pressable>
               ))}
             </View>
@@ -328,7 +330,7 @@ export default function BookingDetailScreen() {
           {canPay && !payment && job && !(booking.priceOnRequest === true && booking.quoteStatus !== "approved") ? (
             <View style={{ marginTop: space.line }}>
               {payRequested ? (
-                <T role="caption" tone="secondary">Pay the studio team in person — your status will update once confirmed.</T>
+                <T role="caption" tone="secondary">Pay the studio team in person - your status will update once confirmed.</T>
               ) : (
                 <Button label="Pay at studio" busy={payingNow} onPress={() => void handlePayAtStudio()} />
               )}
@@ -372,10 +374,10 @@ export default function BookingDetailScreen() {
         rescheduleEligibility.eligible ? (
           <View style={{ gap: space.breath }}>
             {hasPendingApproval ? (
-              <T role="caption" tone="tertiary">You have a pending approval on this job — rescheduling won't affect it.</T>
+              <T role="caption" tone="tertiary">You have a pending approval on this job - rescheduling won't affect it.</T>
             ) : null}
             {payment && payment.status !== "pending" && payment.status !== "completed" ? (
-              <T role="caption" tone="tertiary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} — rescheduling won't change this.</T>
+              <T role="caption" tone="tertiary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} - rescheduling won't change this.</T>
             ) : null}
             <Button
               label="Reschedule"

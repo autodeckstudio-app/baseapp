@@ -7,11 +7,11 @@ import type { Payment, PaymentMethod } from "@autodeck/core";
 type InitiatePaymentInput = { jobId: string; method: PaymentMethod };
 type InitiatePaymentOutput = { paymentId: string; paymentUrl: string | null; status: string };
 
-// Keyed by jobId — the payable operational job — so this works identically
+// Keyed by jobId - the payable operational job - so this works identically
 // whether the job came from a booking or a walk-in. Development uses
-// MockPaymentProvider — no real Razorpay charge occurs. Payment only becomes
+// MockPaymentProvider - no real Razorpay charge occurs. Payment only becomes
 // "completed" once studio/admin confirms it (confirmManualPayment /
-// recordManualPayment) — the customer app never has access to a function
+// recordManualPayment) - the customer app never has access to a function
 // that can mark its own payment successful.
 export async function initiatePayment(jobId: string, method: PaymentMethod): Promise<InitiatePaymentOutput> {
   const fn = httpsCallable<InitiatePaymentInput, InitiatePaymentOutput>(functions, "initiatePayment");

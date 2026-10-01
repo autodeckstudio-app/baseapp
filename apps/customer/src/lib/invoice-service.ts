@@ -20,7 +20,7 @@ export function listenToInvoice(
 }
 
 /**
- * Real-time listener for the invoice linked to a job (there is at most one) —
+ * Real-time listener for the invoice linked to a job (there is at most one) -
  * works identically for a booking-sourced job or a walk-in job.
  *
  * Filters by tenantId and customerId as well as jobId: Firestore rejects a

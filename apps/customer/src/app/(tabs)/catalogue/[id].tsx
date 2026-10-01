@@ -5,8 +5,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Service, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { space } from "@autodeck/ui/theme";
-import { useExperienceTheme } from "@autodeck/ui/native";
+import { space, type IconName } from "@autodeck/ui/theme";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
@@ -126,7 +126,7 @@ export default function ServiceDetailScreen() {
             {H("What's included")}
             <Pane pad="gap">
               {sc.included.map((x, i) => (
-                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><T role="bodyStrong" tone="accent">✓</T><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.included.length - 1} />
+                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="check" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.included.length - 1} />
               ))}
             </Pane>
           </View>
@@ -137,7 +137,7 @@ export default function ServiceDetailScreen() {
             {H("Why people choose it")}
             <Pane pad="gap">
               {sc.benefits.map((x, i) => (
-                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><T role="bodyStrong" tone="premium">✦</T><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
+                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="ceramic" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
               ))}
             </Pane>
           </View>

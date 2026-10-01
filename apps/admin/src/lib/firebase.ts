@@ -7,27 +7,27 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 // In a real production build (`next build`/`next start`, NODE_ENV set by
-// Next.js itself — not something this repo needs to configure), silently
+// Next.js itself - not something this repo needs to configure), silently
 // falling back to the dev project ID would mean real admin actions land in
 // "autodeck-dev" instead of the actual production Firebase project, with no
-// error or warning anywhere — a genuine deploy-safety hole (Phase 6 hostile
+// error or warning anywhere - a genuine deploy-safety hole (Phase 6 hostile
 // audit finding).
 if (process.env.NODE_ENV === "production" && !process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"]) {
   throw new Error(
-    "NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build — refusing to silently fall back to the dev Firebase project.",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build - refusing to silently fall back to the dev Firebase project.",
   );
 }
 
-// Phase 5B P1-13: admin is the highest-privilege client — every admin-only
+// Phase 5B P1-13: admin is the highest-privilege client - every admin-only
 // Cloud Function callable now enforces Firebase App Check server-side (see
 // functions/src/lib/environment.ts's shouldEnforceAppCheck()). A production
 // build with no reCAPTCHA site key configured would silently ship an admin
-// app that can never successfully call any admin-only callable — same
+// app that can never successfully call any admin-only callable - same
 // deploy-safety class as the project-id guard above, so it fails the same
 // way: loudly, at boot, instead of as a confusing runtime App Check error.
 if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
   throw new Error(
-    "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set in a production build — every admin-only Cloud Function enforces App Check, so this build could never successfully call one.",
+    "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set in a production build - every admin-only Cloud Function enforces App Check, so this build could never successfully call one.",
   );
 }
 
@@ -61,12 +61,12 @@ if (useEmulator) {
   void setPersistence(auth, browserLocalPersistence);
 }
 
-// App Check must be initialized in the browser only — ReCaptchaEnterpriseProvider
+// App Check must be initialized in the browser only - ReCaptchaEnterpriseProvider
 // touches `window`/`document` directly and this "use client" module can
 // still be evaluated once on the server during SSR. Skipped entirely under
 // the emulator: the Cloud Functions emulator has a known bug where it
 // cannot itself verify App Check tokens, so shouldEnforceAppCheck() already
-// disables server-side enforcement whenever FUNCTIONS_EMULATOR=true —
+// disables server-side enforcement whenever FUNCTIONS_EMULATOR=true -
 // initializing App Check here too would just add a real network call to
 // Google's reCAPTCHA service for no benefit and require a site key for pure
 // local/emulator development.
@@ -80,7 +80,7 @@ if (typeof window !== "undefined" && !useEmulator) {
   }
   // else: a production build already threw above. A non-production,
   // non-emulator run with no site key (e.g. `next dev` pointed at a real
-  // deployed project) is left uninitialized on purpose — admin callables
+  // deployed project) is left uninitialized on purpose - admin callables
   // will fail loudly with a genuine App Check error returned by the
   // server, rather than this file silently pretending to be protected.
 }

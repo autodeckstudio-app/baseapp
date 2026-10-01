@@ -11,7 +11,7 @@ export interface ListRowProps {
   destructive?: boolean;
 }
 
-/** A single label/value row — for settings lists, price breakdowns, key/value details. */
+/** A single label/value row - for settings lists, price breakdowns, key/value details. */
 export function ListRow({ label, value, onPress, showChevron = false, destructive = false }: ListRowProps) {
   const content = (
     <View

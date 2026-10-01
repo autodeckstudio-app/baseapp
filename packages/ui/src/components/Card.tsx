@@ -13,7 +13,7 @@ export interface CardProps {
   flat?: boolean;
 }
 
-/** Base surface for grouped content — the foundation for the domain cards below. */
+/** Base surface for grouped content - the foundation for the domain cards below. */
 export function Card({ children, onPress, padding = "lg", style, flat = false }: CardProps) {
   const base: ViewStyle = {
     backgroundColor: colors.surface,

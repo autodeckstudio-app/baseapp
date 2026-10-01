@@ -12,7 +12,7 @@ export interface PriceBreakdownProps {
   baseLabel?: string;
 }
 
-/** Renders an immutable price snapshot — always from a server-computed
+/** Renders an immutable price snapshot - always from a server-computed
  * PriceBreakdown, never recalculated on the client. */
 export function PriceBreakdown({ breakdown: pb, baseLabel = "Base price" }: PriceBreakdownProps) {
   return (

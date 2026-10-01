@@ -112,7 +112,7 @@ export async function setupCustomerProfile(name?: string): Promise<{
 /**
  * Force-refreshes the ID token (custom claims: role, tenantId) AND reloads
  * the user profile (displayName) so both are current after
- * setupCustomerProfile sets them server-side — a getIdToken(true) alone only
+ * setupCustomerProfile sets them server-side - a getIdToken(true) alone only
  * refreshes the token, not cached profile fields like displayName.
  * Must be called after setupCustomerProfile succeeds.
  */
@@ -130,7 +130,7 @@ export function onAuthStateChanged(callback: (user: User | null) => void): Unsub
 }
 
 /**
- * Fires on sign-in, sign-out, AND every ID-token refresh — unlike
+ * Fires on sign-in, sign-out, AND every ID-token refresh - unlike
  * onAuthStateChanged, which does not fire when getIdToken(true) picks up new
  * custom claims. Auth guards that read claims must subscribe to this,
  * otherwise a user whose claims were just set server-side (e.g. by

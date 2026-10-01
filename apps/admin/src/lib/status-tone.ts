@@ -1,6 +1,6 @@
 // Local copy of @autodeck/ui's status→tone map (that package's StatusBadge
 // imports react-native at module scope, which cannot be pulled into the
-// Next.js web bundle — see format.ts for the same rationale). Keep in sync
+// Next.js web bundle - see format.ts for the same rationale). Keep in sync
 // with packages/ui/src/components/StatusBadge.tsx.
 export type StatusTone = "neutral" | "accent" | "success" | "warning" | "error";
 

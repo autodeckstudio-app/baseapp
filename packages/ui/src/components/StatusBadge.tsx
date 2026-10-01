@@ -39,7 +39,7 @@ export function StatusBadge({ label, tone = "neutral" }: StatusBadgeProps) {
 // Centralised status → tone mapping so every screen renders the same
 // domain status with the same colour, without each screen re-deriving it.
 // Keys cover BookingStatus, JobStatus, PaymentStatus, InvoiceStatus, and
-// MembershipStatus —
+// MembershipStatus -
 // unioned into one map is safe because overlapping names (e.g. "CANCELLED")
 // share the same intended tone across domains.
 const STATUS_TONES: Record<string, StatusTone> = {

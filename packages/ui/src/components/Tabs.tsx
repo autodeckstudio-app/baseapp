@@ -15,7 +15,7 @@ export interface TabsProps {
   onSelect: (key: string) => void;
 }
 
-/** In-page segmented control — for filtering/switching views within a
+/** In-page segmented control - for filtering/switching views within a
  * screen. Not a replacement for the app's tab-bar navigation. */
 export function Tabs({ items, selectedKey, onSelect }: TabsProps) {
   return (

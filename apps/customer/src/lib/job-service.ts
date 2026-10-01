@@ -12,7 +12,7 @@ import type { ServiceJob } from "@autodeck/core";
  * rule checks is constrained by an equality filter the rules engine can
  * verify statically. The /jobs rule requires ownTenant(resource.data) (needs
  * tenantId) unconditionally, and resource.data.customerId == uid for the
- * customer-role branch — so both must be filtered here even though
+ * customer-role branch - so both must be filtered here even though
  * bookingId alone would already identify a unique document.
  */
 export function listenToJobForBooking(
@@ -36,7 +36,7 @@ export function listenToJobForBooking(
 }
 
 /**
- * Real-time listener for all jobs against a single vehicle — the data source
+ * Real-time listener for all jobs against a single vehicle - the data source
  * for the vehicle Passport/history view. Same equality-filter requirement as
  * listenToJobForBooking (tenantId + customerId both filtered, not just
  * vehicleId, to satisfy the /jobs rule statically).

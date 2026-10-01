@@ -21,7 +21,7 @@ import { getEffectiveMembershipStatus } from "@autodeck/core";
 const LIST_LIMIT = 300;
 
 /** Live, tenant-wide customer feed. Phone/name/registration-number search is
- * applied client-side (registration-number search cross-references vehicles —
+ * applied client-side (registration-number search cross-references vehicles -
  * see searchVehicleOwner below). */
 export function listenToCustomers(
   tenantId: string,
@@ -116,7 +116,7 @@ export function listenToCustomerMemberships(
   );
   // Display-only correction (Phase 3H): a daily scheduler now keeps stored
   // status reasonably fresh too (see expireStaleMembershipsScheduled.ts),
-  // but effective status is still derived here rather than trusted as-is —
+  // but effective status is still derived here rather than trusted as-is -
   // correct even within the sweep's up-to-24h staleness window.
   return onSnapshot(
     q,
@@ -179,7 +179,7 @@ export function listenToCustomerNotifications(
 
 // Customer-entity audit trail only (customer.created / customer.profile_updated).
 // Booking/job/payment audit history is visible from those entities' own detail
-// pages — aggregating everything here would need one query per related
+// pages - aggregating everything here would need one query per related
 // entity, which does not scale with a customer's history size.
 export function listenToCustomerAudit(
   customerId: string,

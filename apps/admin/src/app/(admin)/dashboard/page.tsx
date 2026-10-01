@@ -57,7 +57,7 @@ export default function DashboardPage() {
       if (!["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)) return false;
       if (new Date(j.updatedAt).getTime() >= staleCutoff) return false;
       // A multi-day job (e.g. a PPF service) is expected to sit unchanged
-      // for days while genuinely in progress — only flag it once it's run
+      // for days while genuinely in progress - only flag it once it's run
       // past its own estimated completion date, not merely because 48h
       // passed without a status change.
       if (j.scheduledDate !== j.estimatedEndDate) return j.estimatedEndDate < today;

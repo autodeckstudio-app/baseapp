@@ -35,7 +35,7 @@ const LABELS: Record<string, string> = {
 };
 
 export function statusLabel(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const known = LABELS[value];
   if (known) return known;
   const words = value.replace(/[_-]+/g, " ").trim().toLowerCase();
@@ -51,6 +51,6 @@ const METHODS: Record<string, string> = {
 
 // How the customer paid, in counter words.
 export function methodLabel(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "-";
   return METHODS[value] ?? statusLabel(value);
 }

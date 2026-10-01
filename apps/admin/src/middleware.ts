@@ -1,13 +1,13 @@
 // Phase 5B P1-15: first line of defense for admin page access. Next.js
 // middleware defaults to the Edge runtime, which cannot load firebase-admin
-// (Node-only APIs / gRPC bindings) — so this can only check that a session
+// (Node-only APIs / gRPC bindings) - so this can only check that a session
 // cookie is PRESENT, not cryptographically verify its signature, expiry, or
 // revocation status. Real verification happens in /api/session's GET
 // handler (Node.js runtime), which AdminAuthProvider calls as the
-// authoritative check on every mount — see src/lib/auth-context.tsx.
+// authoritative check on every mount - see src/lib/auth-context.tsx.
 //
 // This still closes a real gap: previously there was no server-side gating
-// of any kind — every /(admin) page was a "use client" component that
+// of any kind - every /(admin) page was a "use client" component that
 // rendered blank/redirected only after React hydrated and Firebase Auth's
 // client SDK resolved its local state. A request with no session cookie at
 // all is now redirected before any page code runs.

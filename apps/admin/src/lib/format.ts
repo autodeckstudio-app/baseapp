@@ -1,6 +1,6 @@
 // Presentation-only formatting helpers, local to the admin web app.
 // Not imported from @autodeck/ui (RN components there would pull
-// react-native into the Next.js bundle) — kept intentionally tiny and
+// react-native into the Next.js bundle) - kept intentionally tiny and
 // duplicated rather than shared, per apps/customer|studio's format.ts.
 
 export function formatPaise(paise: number): string {
@@ -8,7 +8,7 @@ export function formatPaise(paise: number): string {
 }
 
 export function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "numeric",
@@ -21,7 +21,7 @@ export function formatDateTime(iso: string | null): string {
 }
 
 export function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const value = iso.length === 10 ? `${iso}T12:00:00Z` : iso;
   return new Date(value).toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -33,7 +33,7 @@ export function formatDate(iso: string | null): string {
 
 /** "10:30 am" in studio time. */
 export function formatTime(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso)
     .toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true })
     .replace(/\s?(AM|PM)$/i, (m) => ` ${m.trim().toLowerCase()}`);

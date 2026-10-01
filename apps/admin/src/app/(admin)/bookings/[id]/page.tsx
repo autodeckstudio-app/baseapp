@@ -172,10 +172,10 @@ export default function BookingDetailPage() {
         <aside className="ad-detail-side">
           <section className="ad-panel">
             <span className="ad-label">Car and owner</span>
-            <div className="kv"><span>Customer</span><span>{customer?.name ?? "—"}</span></div>
-            <div className="kv"><span>Phone</span><span>{customer?.phone ? <a href={`tel:${customer.phone}`}>{customer.phone}</a> : "—"}</span></div>
-            <div className="kv"><span>Vehicle</span><span>{car || "—"}</span></div>
-            <div className="kv"><span>Plate</span><span className="ad-data">{vehicle?.registrationNumber ?? "—"}</span></div>
+            <div className="kv"><span>Customer</span><span>{customer?.name ?? "-"}</span></div>
+            <div className="kv"><span>Phone</span><span>{customer?.phone ? <a href={`tel:${customer.phone}`}>{customer.phone}</a> : "-"}</span></div>
+            <div className="kv"><span>Vehicle</span><span>{car || "-"}</span></div>
+            <div className="kv"><span>Plate</span><span className="ad-data">{vehicle?.registrationNumber ?? "-"}</span></div>
             <div className="kv"><span>Category</span><span>{statusLabel(booking.vehicleCategory)}</span></div>
           </section>
 

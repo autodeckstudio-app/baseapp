@@ -8,7 +8,7 @@ import type { Payment } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
 
-/** Live, tenant-wide payment feed — newest first. Customer/vehicle/job/booking/
+/** Live, tenant-wide payment feed - newest first. Customer/vehicle/job/booking/
  * status/method filters are applied client-side. */
 export function listenToPayments(
   tenantId: string,
@@ -30,7 +30,7 @@ type InitiateRefundOutput = { paymentId: string; refunded: boolean; providerRefu
 // Admin-only, server-validated: only a "completed" payment can be refunded,
 // the full amount is always taken from the original payment (never client
 // input), and the linked invoice/job/booking are synced atomically inside
-// initiateRefund itself — this is a thin wrapper only.
+// initiateRefund itself - this is a thin wrapper only.
 export async function refundPayment(paymentId: string, reason: string): Promise<InitiateRefundOutput> {
   const fn = httpsCallable<InitiateRefundInput, InitiateRefundOutput>(functions, "initiateRefund");
   const result = await fn({ paymentId, reason });

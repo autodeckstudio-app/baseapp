@@ -22,7 +22,7 @@ export interface JobCardProps {
   job: ServiceJob;
   onPress?: () => void;
   // The date this card is being shown under (e.g. the Calendar's selected
-  // day) — when it differs from job.scheduledDate, the job started on an
+  // day) - when it differs from job.scheduledDate, the job started on an
   // earlier day and is still running (a multi-day service), so the card
   // shows "started {date}" instead of a same-day start time.
   viewDate?: string;

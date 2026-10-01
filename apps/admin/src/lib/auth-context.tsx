@@ -61,7 +61,7 @@ function errorCode(err: unknown): string | undefined {
 
 // Phase 5B P1-15: DOM element id the invisible reCAPTCHA verifier attaches
 // to during an MFA challenge. Must exist in the DOM before confirmMfaCode's
-// underlying verifyPhoneNumber call — see login/page.tsx's hidden div.
+// underlying verifyPhoneNumber call - see login/page.tsx's hidden div.
 export const MFA_RECAPTCHA_CONTAINER_ID = "admin-mfa-recaptcha-container";
 
 interface AdminAuthState {
@@ -141,7 +141,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     if (returningFromRedirect) signingInRef.current = true;
     // Reactive updates only (token refresh, sign-out in another tab). The
     // AUTHORITATIVE answer to "is this session still valid" is the httpOnly
-    // session cookie, verified server-side — not whether the client SDK
+    // session cookie, verified server-side - not whether the client SDK
     // still has a locally-cached Firebase Auth user (that's just a cache;
     // it has no way to know the cookie was revoked or never established).
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -157,7 +157,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       const sessionClaims = await fetchSessionClaims();
       if (!sessionClaims) {
         // Client SDK still thinks it's signed in but the server session is
-        // absent/expired/revoked — bring the two back into agreement
+        // absent/expired/revoked - bring the two back into agreement
         // instead of leaving a dangling client-only session that can still
         // read Firestore directly.
         setUser(null);
@@ -279,7 +279,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       return "signed-in";
     } catch (err) {
       // establishServerSession already set a precise error + cleared state
-      // for this case — don't overwrite it with the generic message below.
+      // for this case - don't overwrite it with the generic message below.
       signingInRef.current = false;
       if (err instanceof Error && err.message === "not-admin") throw err;
       if (isMultiFactorRequiredError(err)) return handleMfaError(err);

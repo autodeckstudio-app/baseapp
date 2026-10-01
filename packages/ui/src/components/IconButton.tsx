@@ -3,7 +3,7 @@ import { colors } from "../tokens/colors.js";
 import { radius } from "../tokens/radius.js";
 
 export interface IconButtonProps {
-  /** A single glyph/symbol, e.g. "×", "‹", "⋯" — this system uses typographic
+  /** A single glyph/symbol, e.g. "×", "‹", "⋯" - this system uses typographic
    * glyphs instead of an icon-font dependency. */
   glyph: string;
   onPress: () => void;
@@ -14,7 +14,7 @@ export interface IconButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Small tappable icon control — always at least a 44pt touch target. */
+/** Small tappable icon control - always at least a 44pt touch target. */
 export function IconButton({
   glyph,
   onPress,

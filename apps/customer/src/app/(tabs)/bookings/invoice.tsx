@@ -79,7 +79,7 @@ export default function InvoiceScreen() {
       ) : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        Issued {invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+        Issued {invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "-"}
       </T>
 
       <Button label="Go back" kind="quiet" onPress={() => router.back()} />

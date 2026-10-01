@@ -3,7 +3,7 @@ import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Inspection } from "@autodeck/core";
 
-// Doc ID == jobId — direct get, no query needed (same pattern as warranties).
+// Doc ID == jobId - direct get, no query needed (same pattern as warranties).
 // Read-only for the customer app; Firestore rules already restrict to the
 // inspection's own customerId, and the UI only ever shows finalized reports.
 export function listenToInspection(

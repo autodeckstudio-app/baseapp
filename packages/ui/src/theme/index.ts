@@ -15,3 +15,4 @@ export {
 export { space, layout, radius, depth, fontFamily, type, motion, cubicBezier, type TypeRole } from "./scale.js";
 export { contrastRatio } from "./contrast.js";
 export { themeVariables, scaleVariables, themeStylesheet } from "./css.js";
+export * from "./icons.js";

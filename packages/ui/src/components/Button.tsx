@@ -30,7 +30,7 @@ const SIZE_STYLES: Record<ButtonSize, { paddingVertical: number; paddingHorizont
   lg: { paddingVertical: spacing.md + 2, paddingHorizontal: spacing.xl, fontSize: typography.title.fontSize },
 };
 
-/** Primary action control. Use `variant="primary"` sparingly — one per screen. */
+/** Primary action control. Use `variant="primary"` sparingly - one per screen. */
 export function Button({
   label,
   onPress,

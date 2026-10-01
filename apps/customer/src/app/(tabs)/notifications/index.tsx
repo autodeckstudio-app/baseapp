@@ -106,7 +106,7 @@ export default function NotificationsScreen() {
                     <T role="bodyStrong">{item.title}</T>
                   </View>
                 }
-                detail={`${item.body} — ${formatWhen(item.createdAt)}`}
+                detail={`${item.body} - ${formatWhen(item.createdAt)}`}
                 onPress={() => void handlePress(item)}
                 last={i === notifications.length - 1}
               />

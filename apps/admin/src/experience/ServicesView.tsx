@@ -1,4 +1,6 @@
 "use client";
+import { Icon } from "./Icon";
+import type { IconName } from "@autodeck/ui/theme";
 
 // Services and pricing: the menu customers book from. Grouped by kind, each
 // row shows starting price, time and warranty; the editor opens in a drawer.
@@ -9,7 +11,7 @@ import { formatPaise } from "../lib/format";
 import { EMPTY_SERVICE, draftFromService, toServicePayload, type ServiceDraft, type ServicePayload } from "./services-draft";
 
 export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash", ceramic: "Ceramic", ppf: "PPF", coating: "Coating", tinting: "Tint", inspection: "Inspection", other: "Other" };
-const CATEGORY_ICON: Record<ServiceCategory, string> = { washing: "🫧", ceramic: "✨", ppf: "🎞️", coating: "🛡️", tinting: "🪟", inspection: "🔍", other: "🔧" };
+const CATEGORY_ICON: Record<ServiceCategory, IconName> = { washing: "wash", ceramic: "ceramic", ppf: "ppf", coating: "coating", tinting: "tint", inspection: "inspect", other: "tools" };
 const CATEGORIES = Object.keys(CATEGORY_NAME) as ServiceCategory[];
 const SIZE_NAME: Record<VehicleCategory, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", luxury: "Luxury", commercial: "Commercial", van: "Van" };
 const SIZES = Object.keys(SIZE_NAME) as VehicleCategory[];
@@ -72,11 +74,11 @@ export function ServicesView(p: {
       ) : (
         groups.map((g) => (
           <section key={g} className="ad-svc-group">
-            <p className="ad-label">{CATEGORY_ICON[g]} {CATEGORY_NAME[g]} · {rows.filter((s) => s.category === g).length}</p>
+            <p className="ad-label"><Icon name={CATEGORY_ICON[g]} size={14} /> {CATEGORY_NAME[g]} · {rows.filter((s) => s.category === g).length}</p>
             <div className="ad-list">
               {rows.filter((s) => s.category === g).map((s) => (
                 <div key={s.id} className={`ad-svc${s.active ? "" : " is-hidden"}`}>
-                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(242,122,26,0.12)", flex: "none" }}>{CATEGORY_ICON[s.category]}</span>
+                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(242,122,26,0.12)", flex: "none" }}><Icon name={CATEGORY_ICON[s.category]} size={18} /></span>
                   <div className="ad-svc-main">
                     <span className="ad-person-name">{s.name}{s.brand ? <span className="ad-sub" style={{ display: "inline" }}> · {s.brand}</span> : null}</span>
                     <span className="ad-sub">

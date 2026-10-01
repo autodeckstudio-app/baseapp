@@ -4,7 +4,7 @@
 // OFFICE = run the business: money, catalogue, customers, staff, settings.
 // Admins see both. Studio staff see only Studio routes; anything else sends
 // them back to the Studio floor. Firestore rules and every callable/API
-// route keep their own server-side checks — this is navigation, not the
+// route keep their own server-side checks - this is navigation, not the
 // security boundary.
 import type { UserRole } from "@autodeck/auth";
 

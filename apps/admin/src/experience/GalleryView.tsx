@@ -114,7 +114,7 @@ export function GalleryView(p: {
                 >
                   Publish image
                 </button>
-                <p className="ad-note">Published images are publicly readable — customers can see them.</p>
+                <p className="ad-note">Published images are publicly readable - customers can see them.</p>
               </div>
             </section>
           </div>

@@ -1,4 +1,6 @@
 "use client";
+import { Icon } from "./Icon";
+import type { IconName } from "@autodeck/ui/theme";
 
 // Office dashboard: a calm morning brief. What needs a person, what is on
 // the floor, what came in. Presentational only; the page feeds it counts.
@@ -56,11 +58,11 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
       </header>
 
       <div className="ad-tiles">
-        <Tile icon="📅" featured value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
-        <Tile icon="🔧" value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
-        <Tile icon="✅" value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
-        <Tile icon="🚗" value={tiles.walkins} label="Walk-ins today" onClick={() => onOpen("/jobs")} />
-        <Tile icon="👥" value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
+        <Tile icon="calendar" featured value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
+        <Tile icon="wrench" value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
+        <Tile icon="check" value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
+        <Tile icon="car" value={tiles.walkins} label="Walk-ins today" onClick={() => onOpen("/jobs")} />
+        <Tile icon="users" value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
       </div>
 
       <div className="ad-detail" style={{ marginTop: "var(--ad-space-inset)" }}>
@@ -140,10 +142,10 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
   );
 }
 
-function Tile({ value, label, tone, icon, featured, onClick }: { value: number | string; label: string; tone?: "accent" | "premium"; icon?: string; featured?: boolean; onClick: () => void }) {
+function Tile({ value, label, tone, icon, featured, onClick }: { value: number | string; label: string; tone?: "accent" | "premium"; icon?: IconName; featured?: boolean; onClick: () => void }) {
   return (
     <button type="button" className={`ad-tile${featured ? " ad-tile--featured" : ""}`} onClick={onClick}>
-      {icon ? <span className="ad-tile-ico" aria-hidden="true">{icon}</span> : null}
+      {icon ? <span className="ad-tile-ico" aria-hidden="true"><Icon name={icon} size={20} /></span> : null}
       <span className={`ad-kpi-v${tone ? ` ad-kpi-v--${tone}` : ""}`}>{value}</span>
       <span className="ad-label">{label}</span>
     </button>

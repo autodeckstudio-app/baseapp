@@ -7,7 +7,7 @@ import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Customer, 
 
 const LIST_LIMIT = 300;
 
-/** Live, tenant-wide booking feed — newest scheduled slot first. Filters beyond
+/** Live, tenant-wide booking feed - newest scheduled slot first. Filters beyond
  * tenantId (status/service/studio/customer/vehicle search) are applied client-side
  * to avoid a combinatorial explosion of composite indexes for a bounded admin list. */
 export function listenToBookings(

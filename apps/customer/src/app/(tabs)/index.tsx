@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel, type ProtectionAttention } from "@autodeck/core";
-import { ExperienceThemeProvider, useExperienceTheme } from "@autodeck/ui/native";
+import { ExperienceThemeProvider, Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -140,7 +140,7 @@ export default function HomeScreen() {
         onPress={() => router.push("/(tabs)/notifications")}
         style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: "center", justifyContent: "center" }}
       >
-        <T tone="secondary">◔</T>
+        <Icon name="bell" color={colors.textSecondary} size={22} />
         {unread > 0 ? (
           <View style={{ position: "absolute", top: 8, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent }} />
         ) : null}
@@ -152,7 +152,7 @@ export default function HomeScreen() {
     <Screen header={header}>
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
-      <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#F3E6F5", backgroundImage: "linear-gradient(160deg, #C9D0F5 0%, #F6DCE6 55%, #FFD9B8 100%)", shadowColor: "#7A6FD0", shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 }}>
+      <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#F3E6F5", ...({ backgroundImage: "linear-gradient(160deg, #C9D0F5 0%, #F6DCE6 55%, #FFD9B8 100%)" } as object), shadowColor: "#7A6FD0", shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 }}>
         <ExperienceThemeProvider name="light">
         <HeroImage source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
         <View style={{ padding: space.inset, gap: space.line }}>
@@ -190,10 +190,10 @@ export default function HomeScreen() {
 
       <View style={{ flexDirection: "row", gap: space.line }}>
         {([
-          ["Book", "✨", "/(tabs)/catalogue"],
-          ["Track", "📍", "/(tabs)/bookings"],
-          ["Garage", "🚗", "/(tabs)/garage"],
-          ["Club", "💎", "/(tabs)/membership"],
+          ["Book", "services", "/(tabs)/catalogue"],
+          ["Track", "pin", "/(tabs)/bookings"],
+          ["Garage", "garage", "/(tabs)/garage"],
+          ["Club", "club", "/(tabs)/membership"],
         ] as const).map(([label, glyph, href]) => (
           <Pressable
             key={label}
@@ -203,7 +203,7 @@ export default function HomeScreen() {
             style={{ flex: 1, alignItems: "center", gap: 6, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle }}
           >
             <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
-              <T role="title">{glyph}</T>
+              <Icon name={glyph} color={colors.accent} size={22} />
             </View>
             <T role="label" tone="secondary">{label}</T>
           </Pressable>

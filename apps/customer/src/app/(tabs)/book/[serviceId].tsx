@@ -7,7 +7,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { getAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-// V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
+// V1 is explicitly single-studio-per-tenant (seeded once) - FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
 import { FIRST_STUDIO_ID } from "@autodeck/core";

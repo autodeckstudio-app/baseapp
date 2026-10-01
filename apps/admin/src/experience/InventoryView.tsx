@@ -1,7 +1,7 @@
 "use client";
 
 // Inventory: consumables and materials with live stock. Every quantity
-// change is a recorded movement — staff log usage/purchases, Office can
+// change is a recorded movement - staff log usage/purchases, Office can
 // true-up with an adjustment.
 import { useState } from "react";
 import type { InventoryCategory, InventoryItem, InventoryTxn, InventoryTxnType, InventoryUnit } from "@autodeck/core";

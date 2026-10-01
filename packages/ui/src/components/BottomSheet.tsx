@@ -12,7 +12,7 @@ export interface BottomSheetProps {
 
 /** Slide-up sheet for actions/forms too tall for a centered Modal
  * (e.g. slot pickers, filters). Uses the platform's native slide
- * transition — no gesture/animation library needed. */
+ * transition - no gesture/animation library needed. */
 export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
   return (
     <RNModal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
