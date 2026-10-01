@@ -495,3 +495,11 @@
 .ad-bar-l { font-size: 11px; color: var(--ad-text-secondary); }
 .ad-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .ad-sidenav, .ad-side, nav.ad-nav { scrollbar-width: thin; scrollbar-color: rgba(244,245,251,0.25) transparent; }
+
+/* ---- Layout fixes: stacked side forms and amount rows ---- */
+.ad-shell .ad-form-section { display: flex; flex-direction: column; gap: var(--ad-space-line); }
+.ad-shell .ad-form-section input, .ad-shell .ad-form-section select, .ad-shell .ad-form-section textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; min-height: 40px; }
+.ad-shell .ad-form-pair > * { min-width: 0; }
+.ad-shell .ad-form-section .ad-button { align-self: flex-start; }
+.ad-shell .ad-list-row:has(> .ad-slot-main):not([style]) { grid-template-columns: minmax(0, 1fr) auto; }
+.ad-shell .ad-list-row .ad-slot-amt { justify-self: end; }
