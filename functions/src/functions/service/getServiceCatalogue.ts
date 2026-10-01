@@ -28,7 +28,14 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" }, async (requ
   }
 
   const snap = await query.get();
-  const services = snap.docs.map((doc) => doc.data() as Service);
+  const isAdmin = user.claims.role === "admin" || user.claims.role === "superadmin";
+  const services = snap.docs.map((doc) => {
+    const svc = doc.data() as Service;
+    if (isAdmin) return svc;
+    // Sources and pricing basis are admin-only; customers only learn whether a price is an estimate.
+    const { internalNotes: _n, priceBasis, priceBasisAt: _a, ...rest } = svc;
+    return { ...rest, priceEstimate: /estimate/i.test(priceBasis ?? "") } as Service;
+  });
 
   return { services };
 });

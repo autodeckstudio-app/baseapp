@@ -122,6 +122,7 @@ export function ServicesView(p: {
               <label className="ad-form-row"><span>Brand (optional)</span><input value={draft.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Gyeon" /></label>
             </div>
             <label className="ad-form-row"><span>Description (shown to customers)</span><textarea rows={3} value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
+            {draft.internalNotes ? <label className="ad-form-row"><span>Internal notes (admin only, customers never see this)</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}
 
             <p className="ad-label ad-form-section">Price and time</p>
             <div className="ad-form-pair">

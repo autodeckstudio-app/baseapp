@@ -58,6 +58,10 @@ export interface Service {
   // true = no fixed price; booking is created as a quote request and the studio sets the price.
   priceOnRequest?: boolean;
   // Where the price came from (market source/range). Set when a price is market-derived rather than the studio's own.
+  // Admin-only notes (sources, original wording). Stripped from non-admin catalogue reads.
+  internalNotes?: string;
+  // Derived for non-admin reads: true when the price is a labelled estimate.
+  priceEstimate?: boolean;
   priceBasis?: string;
   priceBasisAt?: string;
   active: boolean;

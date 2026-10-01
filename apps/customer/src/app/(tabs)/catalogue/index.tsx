@@ -236,7 +236,6 @@ export default function CatalogueScreen() {
           </Pane>
         </View>
       ))}
-      <T role="caption" tone="tertiary">Brand products and warranty as stated on each brand's website. Draft, pending studio review.</T>
     </Screen>
   );
 }

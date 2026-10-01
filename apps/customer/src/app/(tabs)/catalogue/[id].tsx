@@ -119,7 +119,7 @@ export default function ServiceDetailScreen() {
 
         <T role="heading">{sc.tagline || service.description}</T>
         {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description}</T> : null}
-        {service.priceBasis ? <T role="caption" tone="tertiary">{(/estimate/i.test(service.priceBasis) ? "Ahmedabad-market estimate. " : "Ahmedabad-market price. ") + service.priceBasis}</T> : null}
+        {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
         {sc.included.length > 0 ? (
           <View style={{ gap: space.breath }}>

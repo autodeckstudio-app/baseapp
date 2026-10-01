@@ -10,6 +10,7 @@ export interface ServiceDraft {
   category: ServiceCategory;
   brand: string;
   description: string;
+  internalNotes: string;
   priceRupees: string;
   minutes: string;
   warrantyLabel: string;
@@ -22,7 +23,7 @@ export interface ServiceDraft {
 }
 
 export const EMPTY_SERVICE: ServiceDraft = {
-  serviceId: null, name: "", category: "washing", brand: "", description: "", priceRupees: "", minutes: "60",
+  serviceId: null, name: "", category: "washing", brand: "", description: "", internalNotes: "", priceRupees: "", minutes: "60",
   warrantyLabel: "", warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [],
 };
 
@@ -33,6 +34,7 @@ export function draftFromService(s: Service): ServiceDraft {
     category: s.category,
     brand: s.brand ?? "",
     description: s.description ?? "",
+    internalNotes: s.internalNotes ?? "",
     priceRupees: String(s.basePrice / 100),
     minutes: String(s.estimatedDurationMinutes),
     warrantyLabel: s.warrantyLabel ?? "",
