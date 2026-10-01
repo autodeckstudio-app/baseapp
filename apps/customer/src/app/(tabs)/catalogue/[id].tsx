@@ -259,7 +259,7 @@ export default function ServiceDetailScreen() {
             <T role="heading">{priceLabel(service)}</T>
           </View>
           <View style={{ flex: 1.4 }}>
-            <Button label={service.priceOnRequest === true ? "Request a quote" : "Book this service"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
+            <Button label={service.priceOnRequest === true ? "Request a quote" : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
           </View>
         </View>
       </View>
