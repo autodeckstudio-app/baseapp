@@ -489,3 +489,5 @@
 .ad-bar-fill { width: 100%; max-width: 36px; border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, #F27A1A, #C2540A); }
 .ad-bar-v { font-size: 12px; font-weight: 600; color: var(--ad-text-primary); }
 .ad-bar-l { font-size: 11px; color: var(--ad-text-secondary); }
+.ad-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.ad-sidenav, .ad-side, nav.ad-nav { scrollbar-width: thin; scrollbar-color: rgba(244,245,251,0.25) transparent; }
