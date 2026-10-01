@@ -10,6 +10,8 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
+import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { useAuth } from "../../../hooks/useAuth";
 import { serviceImagery } from "../../../lib/imagery";
 import { COPY_IS_DRAFT, FAQS, showcaseFor } from "../../../lib/showcase";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
@@ -30,13 +32,24 @@ export default function ServiceDetailScreen() {
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const auth = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
+  const [pickedSize, setPickedSize] = useState(false);
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState(false);
   const [siblings, setSiblings] = useState<Service[]>([]);
   const [after, setAfter] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Default the price chip to the size of the customer's first saved car (until they pick one).
+  useEffect(() => {
+    if (auth.status !== "ready" || pickedSize) return;
+    return listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => {
+      const first = vs[0];
+      if (first && !pickedSize) setSelectedCategory(first.category as VehicleCategory);
+    }, () => undefined);
+  }, [auth.status, pickedSize]);
 
   useEffect(() => {
     if (!id) return;
@@ -157,7 +170,7 @@ export default function ServiceDetailScreen() {
                   key={value}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  onPress={() => setSelectedCategory(value)}
+                  onPress={() => { setPickedSize(true); setSelectedCategory(value); }}
                   style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
                 >
                   <T role="caption" tone={selected ? "accent" : "secondary"}>{label}</T>
