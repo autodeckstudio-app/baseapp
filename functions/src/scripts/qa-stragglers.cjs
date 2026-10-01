@@ -8,9 +8,13 @@ async function idt(uid, claims) {
   return (await r.json()).idToken;
 }
 async function appCheck() {
-  const ct = await admin.appCheck().createToken(APP);
-  const r = await fetch(`https://firebaseappcheck.googleapis.com/v1/projects/autodeck-studio/apps/${APP}:exchangeCustomToken`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customToken: ct.token }) });
-  const j = await r.json(); return j.token;
+  // Test-only: registers a one-off App Check debug token for the web app (revert: delete it in Firebase console > App Check > Apps > Manage debug tokens) and exchanges it.
+  const gt = process.env.TOKEN, base = `https://firebaseappcheck.googleapis.com/v1/projects/autodeck-studio/apps/${APP}`;
+  const dbg = require("crypto").randomUUID();
+  const c = await fetch(base + "/debugTokens", { method: "POST", headers: { Authorization: "Bearer " + gt, "Content-Type": "application/json", "x-goog-user-project": "autodeck-studio" }, body: JSON.stringify({ displayName: "instinct-qa-temp", token: dbg }) });
+  console.log("debugToken create", c.status, (await c.text()).slice(0, 160));
+  const r = await fetch(base + ":exchangeDebugToken", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-user-project": "autodeck-studio" }, body: JSON.stringify({ debugToken: dbg }) });
+  const j = await r.json(); if (!j.token) console.log("exchange", r.status, JSON.stringify(j).slice(0, 200)); return j.token;
 }
 let AC;
 async function call(name, tok, data) {
