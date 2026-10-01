@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel, type ProtectionAttention } from "@autodeck/core";
-import { useExperienceTheme } from "@autodeck/ui/native";
+import { ExperienceThemeProvider, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -152,7 +152,8 @@ export default function HomeScreen() {
     <Screen header={header}>
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
-      <Pane pad="none" round="hero" fill={m.heroState === "empty" || m.heroState === "idle" ? "base" : "warm"} {...(m.heroState === "awaitingApproval" ? { tone: "accent" as const } : {})}>
+      <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: colors.ink, shadowColor: "#0B1033", shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 }}>
+        <ExperienceThemeProvider name="dark">
         <HeroImage source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
         <View style={{ padding: space.inset, gap: space.line }}>
           <Kicker tone="accent">{copy.kicker}</Kicker>
@@ -184,7 +185,8 @@ export default function HomeScreen() {
 
           <Button label={m.primaryAction.label} onPress={act} testID="home-primary" />
         </View>
-      </Pane>
+              </ExperienceThemeProvider>
+      </View>
 
       <View style={{ flexDirection: "row", gap: space.line }}>
         {([

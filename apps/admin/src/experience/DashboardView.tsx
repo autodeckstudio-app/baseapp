@@ -56,11 +56,11 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
       </header>
 
       <div className="ad-tiles">
-        <Tile value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
-        <Tile value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
-        <Tile value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
-        <Tile value={tiles.walkins} label="Walk-ins today" onClick={() => onOpen("/jobs")} />
-        <Tile value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
+        <Tile icon="📅" featured value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
+        <Tile icon="🔧" value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
+        <Tile icon="✅" value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
+        <Tile icon="🚗" value={tiles.walkins} label="Walk-ins today" onClick={() => onOpen("/jobs")} />
+        <Tile icon="👥" value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
       </div>
 
       <div className="ad-detail" style={{ marginTop: "var(--ad-space-inset)" }}>
@@ -104,6 +104,18 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
         <aside className="ad-detail-side">
           <section className="ad-panel">
             <span className="ad-label">On the floor now</span>
+            <div className="ad-bars" role="img" aria-label={`Arriving ${floor.arriving}, working ${floor.working}, ready ${floor.ready}, delivered ${floor.delivered}`}>
+              {([["Arriving", floor.arriving], ["Working", floor.working], ["Ready", floor.ready], ["Done", floor.delivered]] as const).map(([l, v]) => {
+                const max = Math.max(1, floor.arriving, floor.working, floor.ready, floor.delivered);
+                return (
+                  <div key={l} className="ad-bar">
+                    <span className="ad-bar-v">{v}</span>
+                    <span className="ad-bar-fill" style={{ height: `${Math.max(6, (v / max) * 100)}%` }} />
+                    <span className="ad-bar-l">{l}</span>
+                  </div>
+                );
+              })}
+            </div>
             <div className="kv"><span>Arriving today</span><span className="ad-data">{floor.arriving}</span></div>
             <div className="kv"><span>Being worked on</span><span className="ad-data" style={{ color: "var(--ad-accent)" }}>{floor.working}</span></div>
             <div className="kv"><span>Ready for pickup</span><span className="ad-data" style={{ color: "var(--ad-premium)" }}>{floor.ready}</span></div>
@@ -128,9 +140,10 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
   );
 }
 
-function Tile({ value, label, tone, onClick }: { value: number | string; label: string; tone?: "accent" | "premium"; onClick: () => void }) {
+function Tile({ value, label, tone, icon, featured, onClick }: { value: number | string; label: string; tone?: "accent" | "premium"; icon?: string; featured?: boolean; onClick: () => void }) {
   return (
-    <button type="button" className="ad-tile" onClick={onClick}>
+    <button type="button" className={`ad-tile${featured ? " ad-tile--featured" : ""}`} onClick={onClick}>
+      {icon ? <span className="ad-tile-ico" aria-hidden="true">{icon}</span> : null}
       <span className={`ad-kpi-v${tone ? ` ad-kpi-v--${tone}` : ""}`}>{value}</span>
       <span className="ad-label">{label}</span>
     </button>
