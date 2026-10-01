@@ -4,7 +4,7 @@ import { getApps, initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 // In a real production build (`next build`/`next start`, NODE_ENV set by
 // Next.js itself — not something this repo needs to configure), silently
@@ -61,7 +61,7 @@ if (useEmulator) {
   void setPersistence(auth, browserLocalPersistence);
 }
 
-// App Check must be initialized in the browser only — ReCaptchaV3Provider
+// App Check must be initialized in the browser only — ReCaptchaEnterpriseProvider
 // touches `window`/`document` directly and this "use client" module can
 // still be evaluated once on the server during SSR. Skipped entirely under
 // the emulator: the Cloud Functions emulator has a known bug where it
@@ -74,7 +74,7 @@ if (typeof window !== "undefined" && !useEmulator) {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   if (siteKey) {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(siteKey),
+      provider: new ReCaptchaEnterpriseProvider(siteKey),
       isTokenAutoRefreshEnabled: true,
     });
   }
