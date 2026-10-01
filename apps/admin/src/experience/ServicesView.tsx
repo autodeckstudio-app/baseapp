@@ -9,6 +9,7 @@ import { formatPaise } from "../lib/format";
 import { EMPTY_SERVICE, draftFromService, toServicePayload, type ServiceDraft, type ServicePayload } from "./services-draft";
 
 export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash", ceramic: "Ceramic", ppf: "PPF", coating: "Coating", tinting: "Tint", inspection: "Inspection", other: "Other" };
+const CATEGORY_ICON: Record<ServiceCategory, string> = { washing: "🫧", ceramic: "✨", ppf: "🎞️", coating: "🛡️", tinting: "🪟", inspection: "🔍", other: "🔧" };
 const CATEGORIES = Object.keys(CATEGORY_NAME) as ServiceCategory[];
 const SIZE_NAME: Record<VehicleCategory, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", luxury: "Luxury", commercial: "Commercial", van: "Van" };
 const SIZES = Object.keys(SIZE_NAME) as VehicleCategory[];
@@ -71,10 +72,11 @@ export function ServicesView(p: {
       ) : (
         groups.map((g) => (
           <section key={g} className="ad-svc-group">
-            <p className="ad-label">{CATEGORY_NAME[g]}</p>
+            <p className="ad-label">{CATEGORY_ICON[g]} {CATEGORY_NAME[g]} · {rows.filter((s) => s.category === g).length}</p>
             <div className="ad-list">
               {rows.filter((s) => s.category === g).map((s) => (
                 <div key={s.id} className={`ad-svc${s.active ? "" : " is-hidden"}`}>
+                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.06)", flex: "none", marginRight: 12 }}>{CATEGORY_ICON[s.category]}</span>
                   <div className="ad-svc-main">
                     <span className="ad-person-name">{s.name}{s.brand ? <span className="ad-sub" style={{ display: "inline" }}> · {s.brand}</span> : null}</span>
                     <span className="ad-sub">
