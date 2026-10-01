@@ -47,7 +47,7 @@ export default function PapersPage() {
       for (let i = 0; i < missing.length; i += 10) {
         const chunk = missing.slice(i, i + 10);
         const snap = await getDocs(
-          query(collection(db, COLLECTIONS.vehicles()), where(documentId(), "in", chunk)),
+          query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", claims.tenantId), where(documentId(), "in", chunk)),
         );
         for (const d of snap.docs) found.set(d.id, d.data() as Vehicle);
       }
