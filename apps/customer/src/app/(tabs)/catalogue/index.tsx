@@ -1,12 +1,13 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, TextInput, View } from "react-native";
 import { BRANDS, type BrandItem } from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
+import { serviceImagery } from "../../../lib/imagery";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -42,6 +43,17 @@ function subGroup(s: Service): string {
       return GROUP[s.category] ?? "More";
   }
 }
+
+const ICON: Record<string, string> = { washing: "🫧", ceramic: "✨", coating: "🛡️", ppf: "🎞️", tinting: "🪟", inspection: "🔍", other: "🔧" };
+const BLURB: Record<string, string> = {
+  washing: "Quick, safe cleans",
+  ceramic: "Deep gloss that lasts",
+  coating: "Shine and easy upkeep",
+  ppf: "Stone-chip armour",
+  tinting: "Heat and privacy",
+  inspection: "Know before you fix",
+  other: "Extras",
+};
 
 function duration(min: number): string {
   if (min < 60) return `${min} min`;
@@ -140,25 +152,76 @@ export default function CatalogueScreen() {
         </View>
       ) : null}
       {services && sections.length === 0 ? <Notice title="Nothing matches" body="Try another word or pick All." /> : null}
+      {services && active === "all" && !q.trim() ? (
+        <View style={{ gap: space.inset }}>
+          <View style={{ gap: space.breath }}>
+            <Kicker>Browse by need</Kicker>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+              {cats.map((c) => {
+                const xs = all.filter((x) => x.category === c);
+                const low = Math.min(...xs.map((x) => x.basePrice));
+                return (
+                  <Pressable key={c} accessibilityRole="button" onPress={() => setActive(c)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.accentHaze, padding: space.line, gap: 6, opacity: pressed ? 0.7 : 1 })}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                      <T role="title">{ICON[c] ?? "🔧"}</T>
+                    </View>
+                    <T role="bodyStrong">{GROUP[c] ?? c}</T>
+                    <T role="caption" tone="tertiary">{BLURB[c] ?? ""}</T>
+                    <T role="caption" tone="accent">{`${xs.length} options · from ${rupees(low)}`}</T>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+          <View style={{ gap: space.breath }}>
+            <Kicker tone="premium">Top picks</Kicker>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
+              {cats.map((c) => {
+                const xs = all.filter((x) => x.category === c).sort((a, b) => Number(!!b.warrantyLabel) - Number(!!a.warrantyLabel) || a.basePrice - b.basePrice);
+                const sv = xs[0];
+                if (!sv) return null;
+                return (
+                  <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 220, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
+                    <Image source={serviceImagery[sv.category] ?? serviceImagery.other} style={{ width: "100%", height: 110 }} resizeMode="cover" />
+                    <View style={{ padding: space.line, gap: 4 }}>
+                      <T role="bodyStrong" numberOfLines={1}>{sv.name}</T>
+                      <T role="caption" tone="tertiary">{[duration(sv.estimatedDurationMinutes), sv.brand].filter(Boolean).join(" · ")}</T>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <T role="bodyStrong" tone="accent">{priceLabel(sv)}</T>
+                        {sv.warrantyLabel ? <Chip label={sv.warrantyLabel} tone="premium" /> : null}
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+          <Kicker>All services</Kicker>
+        </View>
+      ) : null}
       {sections.map(([title, xs]) => (
         <View key={title} style={{ gap: space.breath }}>
           <Kicker>{title}</Kicker>
           <Pane pad="gap">
             {xs.map((e, i) =>
               e.svc ? (
-                <Row
+                <Pressable
                   key={e.svc.id}
-                  title={e.svc.name}
-                  detail={<T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>}
-                  trailing={
-                    <View style={{ alignItems: "flex-end", gap: 2 }}>
-                      <T role="bodyStrong" tone="accent">{priceLabel(e.svc)}</T>
-                      {e.svc.warrantyLabel ? <Chip label={e.svc.warrantyLabel} tone="premium" /> : null}
-                    </View>
-                  }
+                  accessibilityRole="button"
                   onPress={() => router.push(`/(tabs)/catalogue/${e.svc!.id}`)}
-                  last={i === xs.length - 1}
-                />
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.line, paddingVertical: space.breath, borderBottomWidth: i === xs.length - 1 ? 0 : 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}
+                >
+                  <Image source={serviceImagery[e.svc.category] ?? serviceImagery.other} style={{ width: 64, height: 64, borderRadius: 14 }} resizeMode="cover" />
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <T role="bodyStrong" numberOfLines={2}>{e.svc.name}</T>
+                    <T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>
+                    {e.svc.warrantyLabel ? <View style={{ alignSelf: "flex-start" }}><Chip label={e.svc.warrantyLabel} tone="premium" /></View> : null}
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 2 }}>
+                    <T role="caption" tone="tertiary">from</T>
+                    <T role="bodyStrong" tone="accent">{priceLabel(e.svc)}</T>
+                  </View>
+                </Pressable>
               ) : (
                 <Row
                   key={`${title}-${e.item!.name}`}
