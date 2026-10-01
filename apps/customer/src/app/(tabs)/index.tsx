@@ -33,6 +33,31 @@ const JOB_STAGE: Record<string, string> = {
   DELIVERED: "Delivered",
 };
 
+const STAGES = ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"] as const;
+const STAGE_SHORT = ["Booked", "Checked in", "Working", "Final check", "Ready", "Done"];
+
+function StatusRail({ status }: { status: string }) {
+  const { colors } = useExperienceTheme();
+  const at = Math.max(0, STAGES.indexOf(status as (typeof STAGES)[number]));
+  return (
+    <View style={{ gap: 6 }}>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {STAGES.map((st, i) => (
+          <View key={st} style={{ flex: i === STAGES.length - 1 ? 0 : 1, flexDirection: "row", alignItems: "center" }}>
+            <View style={{ width: i === at ? 16 : 10, height: i === at ? 16 : 10, borderRadius: 8, backgroundColor: i <= at ? colors.accent : "transparent", borderWidth: 1, borderColor: i <= at ? colors.accent : colors.borderSubtle }} />
+            {i < STAGES.length - 1 ? <View style={{ flex: 1, height: 2, backgroundColor: i < at ? colors.accent : colors.borderSubtle }} /> : null}
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        {STAGE_SHORT.map((l, i) => (
+          <T key={l} role="caption" tone={i === at ? "accent" : "tertiary"} style={{ fontSize: 10 }}>{l}</T>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const PAPER: Record<ProtectionAttention["kind"], string> = {
   insurance: "Insurance",
   fasttag: "FASTag",
@@ -149,7 +174,10 @@ export default function HomeScreen() {
           ) : m.dueInvoice ? (
             <Row title={m.dueInvoice.invoiceNumber} detail="Issued" trailing={<T role="data">{rupees(m.dueInvoice.total)}</T>} last />
           ) : m.liveJob ? (
-            <Row title={JOB_STAGE[m.liveJob.status] ?? "In the studio"} detail={`Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`} last />
+            <View style={{ gap: space.line }}>
+              <Row title={JOB_STAGE[m.liveJob.status] ?? "In the studio"} detail={`Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`} last />
+              <StatusRail status={m.liveJob.status} />
+            </View>
           ) : m.upcomingBooking ? (
             <Row title={`${formatDateShort(m.upcomingBooking.scheduledDate)} · ${m.upcomingBooking.scheduledTime}`} detail={m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed"} last />
           ) : null}
@@ -160,10 +188,10 @@ export default function HomeScreen() {
 
       <View style={{ flexDirection: "row", gap: space.line }}>
         {([
-          ["Book", "✦", "/(tabs)/catalogue"],
-          ["Track", "◷", "/(tabs)/bookings"],
-          ["Garage", "▭", "/(tabs)/garage"],
-          ["Club", "◆", "/(tabs)/membership"],
+          ["Book", "✨", "/(tabs)/catalogue"],
+          ["Track", "📍", "/(tabs)/bookings"],
+          ["Garage", "🚗", "/(tabs)/garage"],
+          ["Club", "💎", "/(tabs)/membership"],
         ] as const).map(([label, glyph, href]) => (
           <Pressable
             key={label}
@@ -172,7 +200,9 @@ export default function HomeScreen() {
             onPress={() => router.push(href)}
             style={{ flex: 1, alignItems: "center", gap: 6, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle }}
           >
-            <T tone="accent">{glyph}</T>
+            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
+              <T role="title">{glyph}</T>
+            </View>
             <T role="label" tone="secondary">{label}</T>
           </Pressable>
         ))}
