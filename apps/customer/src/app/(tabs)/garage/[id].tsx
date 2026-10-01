@@ -191,6 +191,21 @@ export default function VehicleDetailScreen() {
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
   const mostRecentJob = jobs[0] ?? null;
+  const reminders: string[] = [];
+  for (const p of papers) {
+    const left = daysUntil(p.expiresOn);
+    const name = PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind;
+    if (left !== null && left < 0) reminders.push(`${name} expired. Upload the renewed copy in Documents.`);
+    else if (left !== null && left <= 30) reminders.push(`${name} expires in ${left} day${left === 1 ? "" : "s"}.`);
+  }
+  for (const w of activeWarranties) {
+    const left = daysUntil(w.endDate);
+    if (left !== null && left >= 0 && left <= 60) reminders.push(`${w.warrantyLabel} ends in ${left} day${left === 1 ? "" : "s"}.`);
+  }
+  if (mostRecentJob && upcomingBooking === null) {
+    const since = Math.floor((Date.now() - new Date(mostRecentJob.sealedAt ?? mostRecentJob.createdAt).getTime()) / 86400000);
+    if (since >= 45) reminders.push(`Last service was ${since} days ago. Time for a wash or check-up.`);
+  }
 
   return (
     <Screen
@@ -222,6 +237,16 @@ export default function VehicleDetailScreen() {
     >
       {tab === "overview" ? (
         <>
+          {reminders.length > 0 ? (
+            <Pane pad="inset">
+              <View style={{ gap: space.breath }}>
+                <Kicker tone="accent">Reminders</Kicker>
+                {reminders.map((r) => (
+                  <T key={r} role="body">{r}</T>
+                ))}
+              </View>
+            </Pane>
+          ) : null}
           <View style={{ flexDirection: "row", gap: space.line }}>
             <View style={{ flex: 1 }}>
               <Pane pad="inset">
@@ -419,17 +444,31 @@ export default function VehicleDetailScreen() {
         warranties.length === 0 ? (
           <Notice title="No warranties yet" body="Warranties are issued automatically when an eligible service is completed." />
         ) : (
-          <Pane pad="gap">
-            {warranties.map((w, i) => (
-              <Row
-                key={w.id}
-                title={w.warrantyLabel}
-                detail={`${w.serviceName} · Issued ${formatDate(w.startDate)}`}
-                trailing={<Chip label={w.revokedAt ? "Revoked" : "Active"} tone={w.revokedAt ? "danger" : "premium"} />}
-                last={i === warranties.length - 1}
-              />
-            ))}
-          </Pane>
+          <View style={{ gap: space.breath }}>
+            {warranties.map((w) => {
+              const left = daysUntil(w.endDate);
+              const state = w.revokedAt ? "Revoked" : w.endDate === null ? "Lifetime" : left !== null && left < 0 ? "Expired" : "Active";
+              const countdown = w.revokedAt || w.endDate === null ? null : left === null ? null : left < 0 ? `Ended ${formatDate(w.endDate)}` : left === 0 ? "Ends today" : left <= 60 ? `${left} day${left === 1 ? "" : "s"} left` : `${Math.floor(left / 30)} months left`;
+              return (
+                <Pane key={w.id} pad="inset">
+                  <View style={{ gap: space.breath }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space.breath }}>
+                      <View style={{ flex: 1, gap: space.hair }}>
+                        <Kicker tone="accent">Warranty certificate</Kicker>
+                        <T role="heading">{w.warrantyLabel}</T>
+                        <T role="caption" tone="secondary">{w.serviceName}</T>
+                      </View>
+                      <Chip label={state} tone={state === "Active" || state === "Lifetime" ? "premium" : state === "Revoked" ? "danger" : "neutral"} />
+                    </View>
+                    <Row title="Vehicle" detail={`${vehicle.year} ${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}`} />
+                    <Row title="Starts" detail={formatDate(w.startDate)} />
+                    <Row title="Valid until" detail={w.endDate ? formatDate(w.endDate) : "Lifetime"} trailing={countdown ? <Chip label={countdown} /> : undefined} last={!w.coverageTerms} />
+                    {w.coverageTerms ? <T role="caption" tone="secondary">{w.coverageTerms}</T> : null}
+                  </View>
+                </Pane>
+              );
+            })}
+          </View>
         )
       ) : null}
     </Screen>
