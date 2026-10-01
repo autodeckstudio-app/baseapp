@@ -11,7 +11,9 @@ import type {
   PriceSnapshot,
   WarrantyDurationUnit,
 } from "@autodeck/core";
-import { functions } from "./firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import { db, functions } from "./firebase";
 
 export async function getServiceCatalogue(category?: ServiceCategory): Promise<Service[]> {
   const fn = httpsCallable<{ category?: ServiceCategory }, { services: Service[] }>(
@@ -20,6 +22,17 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
   );
   const result = await fn(category !== undefined ? { category } : {});
   return result.data.services;
+}
+
+// The callable returns active services only. Hidden ones are read directly so the
+// owner can bring them back (Firestore rules allow tenant-scoped reads).
+export async function getServicesIncludingHidden(): Promise<Service[]> {
+  const active = await getServiceCatalogue();
+  const tenantId = active[0]?.tenantId;
+  if (!tenantId) return active;
+  const snap = await getDocs(query(collection(db, COLLECTIONS.services()), where("tenantId", "==", tenantId), where("active", "==", false)));
+  const hidden = snap.docs.map((d) => d.data() as Service);
+  return [...active, ...hidden];
 }
 
 // Reuses the server-side pricing engine - the admin app never computes prices itself.

@@ -5,7 +5,7 @@ import type { Service } from "@autodeck/core";
 import { ServicesView } from "../../../experience/ServicesView";
 import type { ServicePayload } from "../../../experience/services-draft";
 import {
-  getServiceCatalogue,
+  getServicesIncludingHidden,
   createService,
   updateService,
   setServiceActive,
@@ -21,7 +21,7 @@ export default function ServiceCataloguePage() {
   async function refresh() {
     setLoading(true);
     try {
-      const list = await getServiceCatalogue();
+      const list = await getServicesIncludingHidden();
       list.sort((a, b) => a.displayOrder - b.displayOrder);
       setServices(list);
     } catch {
