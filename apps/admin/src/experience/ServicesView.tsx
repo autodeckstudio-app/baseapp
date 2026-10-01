@@ -76,7 +76,7 @@ export function ServicesView(p: {
             <div className="ad-list">
               {rows.filter((s) => s.category === g).map((s) => (
                 <div key={s.id} className={`ad-svc${s.active ? "" : " is-hidden"}`}>
-                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(11,16,51,0.06)", flex: "none", marginRight: 12 }}>{CATEGORY_ICON[s.category]}</span>
+                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(11,16,51,0.06)", flex: "none" }}>{CATEGORY_ICON[s.category]}</span>
                   <div className="ad-svc-main">
                     <span className="ad-person-name">{s.name}{s.brand ? <span className="ad-sub" style={{ display: "inline" }}> · {s.brand}</span> : null}</span>
                     <span className="ad-sub">
