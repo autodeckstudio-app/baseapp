@@ -16,10 +16,10 @@ async function call(name, tok, data) {
   const find = async () => (await col.get()).docs.find((d) => d.id === BID);
   let d = await find(); const b = d.data(); console.log("BEFORE", b.quoteStatus, b.priceOnRequest, b.status, b.tenantId);
   const adm = await idt("qa-admin-quote", { role: "admin", tenantId: b.tenantId, studioId: b.studioId });
-  console.log(await call("setbookingquote", adm, { bookingId: BID, basePricePaise: 700000 }));
+  console.log(await call("setBookingQuote", adm, { bookingId: BID, basePricePaise: 700000 }));
   d = await find(); console.log("AFTER QUOTE", d.data().quoteStatus, d.data().basePrice ?? d.data().totalPrice ?? JSON.stringify(d.data().priceBreakdown || "").slice(0, 120));
   const cu = await idt(CUST, { role: "customer", tenantId: b.tenantId });
-  console.log(await call("respondtobookingquote", cu, { bookingId: BID }));
+  console.log(await call("respondToBookingQuote", cu, { bookingId: BID }));
   d = await find(); console.log("AFTER APPROVE", d.data().quoteStatus);
   console.log("QA DONE");
 })().catch((e) => { console.error("ERR", e.message); process.exit(1); });
