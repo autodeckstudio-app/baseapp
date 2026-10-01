@@ -56,7 +56,7 @@ export const glass: Record<ThemeName, GlassRecipe> = {
   light: {
     fill: "linear-gradient(160deg, #FFFFFF, rgba(255,255,255,0.86))",
     fillLit: "linear-gradient(160deg, #FFFFFF, #FFFFFF)",
-    fillWarm: "linear-gradient(160deg, rgba(242,122,26,0.16), rgba(255,255,255,0.92))",
+    fillWarm: "linear-gradient(160deg, rgba(242,122,26,0.07), rgba(255,255,255,0.92))",
     fillCool: "linear-gradient(160deg, rgba(120,132,220,0.14), rgba(255,255,255,0.92))",
     fallbackFill: "rgba(255,255,255,0.96)",
     chromeFill: "rgba(11,16,51,0.94)",
