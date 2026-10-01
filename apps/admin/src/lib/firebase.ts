@@ -25,7 +25,7 @@ if (process.env.NODE_ENV === "production" && !process.env["NEXT_PUBLIC_FIREBASE_
 // app that can never successfully call any admin-only callable — same
 // deploy-safety class as the project-id guard above, so it fails the same
 // way: loudly, at boot, instead of as a confusing runtime App Check error.
-if (process.env.NODE_ENV === "production" && !process.env["NEXT_PUBLIC_RECAPTCHA_SITE_KEY"]) {
+if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
   throw new Error(
     "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set in a production build — every admin-only Cloud Function enforces App Check, so this build could never successfully call one.",
   );
@@ -71,7 +71,7 @@ if (useEmulator) {
 // Google's reCAPTCHA service for no benefit and require a site key for pure
 // local/emulator development.
 if (typeof window !== "undefined" && !useEmulator) {
-  const siteKey = process.env["NEXT_PUBLIC_RECAPTCHA_SITE_KEY"];
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   if (siteKey) {
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(siteKey),
