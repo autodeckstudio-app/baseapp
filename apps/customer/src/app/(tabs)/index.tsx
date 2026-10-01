@@ -188,31 +188,9 @@ export default function HomeScreen() {
               </ExperienceThemeProvider>
       </View>
 
-      <View style={{ flexDirection: "row", gap: space.line }}>
-        {([
-          ["Book", "services", "/(tabs)/catalogue"],
-          ["Track", "pin", "/(tabs)/bookings"],
-          ["Garage", "garage", "/(tabs)/garage"],
-          ["Club", "club", "/(tabs)/membership"],
-        ] as const).map(([label, glyph, href]) => (
-          <Pressable
-            key={label}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-            onPress={() => router.push(href)}
-            style={{ flex: 1, alignItems: "center", gap: 6, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
-              <Icon name={glyph} color={colors.accent} size={22} />
-            </View>
-            <T role="label" tone="secondary">{label}</T>
-          </Pressable>
-        ))}
-      </View>
-
       {m.protections.length > 0 ? (
         <View style={{ gap: space.line }}>
-          <Kicker>Papers</Kicker>
+          <Kicker>Reminders</Kicker>
           <Pane pad="gap">
             {m.protections.slice(0, 4).map((p, i, arr) => (
               <Row
@@ -273,6 +251,7 @@ export default function HomeScreen() {
               />
             ))}
           </Pane>
+          <Button kind="quiet" label="Book another service" onPress={() => router.push("/(tabs)/catalogue")} />
         </View>
       ) : null}
 
