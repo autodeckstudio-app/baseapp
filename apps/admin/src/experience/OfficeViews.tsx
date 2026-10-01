@@ -29,7 +29,7 @@ export function CustomersView(p: {
   const newThisMonth = p.customers.filter((c) => c.createdAt >= monthAgo).length;
   const cols: Column<Customer>[] = [
     { key: "name", head: "Customer", kind: "strong", width: "minmax(0, 2fr)", cell: (c) => c.name || "Unnamed customer" },
-    { key: "phone", head: "Phone", kind: "data", width: "minmax(0, 1.2fr)", cell: (c) => c.phone || "-" },
+    { key: "phone", head: "Phone", kind: "data", width: "minmax(0, 1.2fr)", cell: (c) => c.phone || "Not added" },
     { key: "joined", head: "Customer since", kind: "muted", width: "minmax(0, 1fr)", align: "end", cell: (c) => formatDate(c.createdAt) },
   ];
   return (

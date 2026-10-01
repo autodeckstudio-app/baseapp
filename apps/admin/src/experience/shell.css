@@ -471,7 +471,14 @@
 .ad-main .detail-card, .ad-main .stat-tile, .ad-main .ad-panel { box-shadow: 0 6px 20px rgba(122, 111, 208, 0.06); }
 @media (max-width: 900px) {
   .ad-shell-frame { padding: 8px; gap: 8px; }
-  .ad-side { height: auto; top: 0; border-radius: 20px; position: static; }
+  .ad-side { height: auto; top: 0; border-radius: 20px; position: static; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 12px 14px; }
+  .ad-side .ad-wordmark { order: 1; }
+  .ad-side .ad-side-foot { order: 2; margin: 0; padding: 0; border: 0; }
+  .ad-side .ad-who { display: none; }
+  .ad-side .ad-nav-group { order: 3; display: flex; flex-direction: row; gap: 4px; overflow-x: auto; flex: 1 1 100%; max-width: 100%; scrollbar-width: none; padding: 2px 0; }
+  .ad-side .ad-nav-group::-webkit-scrollbar { display: none; }
+  .ad-side .ad-nav-group .ad-label { display: none; }
+  .ad-side .ad-nav-link { white-space: nowrap; flex: none; padding: 8px 14px; }
 }
 
 /* Dashboard tiles and floor chart: all AutoDeck orange, navy for the lead tile */
