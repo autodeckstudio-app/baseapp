@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_SERVICE, toServicePayload } from "./services-draft";
 
-const base = { ...EMPTY_SERVICE, name: "Ceramic coat", priceRupees: "18450", minutes: "240" };
+const base = { ...EMPTY_SERVICE, name: "Ceramic coat", description: "Long-lasting gloss.", priceRupees: "18450", minutes: "240" };
 
 describe("toServicePayload", () => {
   it("converts rupees to paise", () => {

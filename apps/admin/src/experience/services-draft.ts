@@ -65,6 +65,7 @@ const paise = (rupees: string) => Math.round(Number(rupees) * 100);
 
 export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServicePayload } | { ok: false; problem: string } {
   if (!d.name.trim()) return { ok: false, problem: "Give the service a name." };
+  if (!d.description.trim()) return { ok: false, problem: "Add a short description customers will read." };
   const price = Number(d.priceRupees);
   if (!d.priceRupees.trim() || !Number.isFinite(price) || price <= 0) return { ok: false, problem: "Starting price must be more than ₹0." };
   const minutes = Number(d.minutes);
