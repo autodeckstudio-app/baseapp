@@ -14,6 +14,7 @@ import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { serviceImagery } from "../../../lib/imagery";
 import { COPY_IS_DRAFT, FAQS, showcaseFor } from "../../../lib/showcase";
+import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
@@ -40,6 +41,7 @@ export default function ServiceDetailScreen() {
   const [priceError, setPriceError] = useState(false);
   const [siblings, setSiblings] = useState<Service[]>([]);
   const [after, setAfter] = useState(true);
+  const [reviews, setReviews] = useState<ServiceReviews | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Default the price chip to the size of the customer's first saved car (until they pick one).
@@ -78,6 +80,11 @@ export default function ServiceDetailScreen() {
   useEffect(() => {
     if (!service) return;
     void getServiceCatalogue().then((all) => setSiblings(all.filter((x) => x.category === service.category).sort((a, b) => a.basePrice - b.basePrice))).catch(() => undefined);
+  }, [service]);
+
+  useEffect(() => {
+    if (!service) return;
+    void getServiceReviews(service.id).then(setReviews).catch(() => setReviews(null));
   }, [service]);
 
   if (loading) return <Loading label="Opening the menu" />;
@@ -140,6 +147,24 @@ export default function ServiceDetailScreen() {
                 <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="ceramic" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
               ))}
             </Pane>
+          </View>
+        ) : null}
+
+        {reviews && reviews.count > 0 ? (
+          <View style={{ gap: space.breath }}>
+            {H("Customer reviews", <Chip label={`${reviews.average?.toFixed(1)} from ${reviews.count} rating${reviews.count === 1 ? "" : "s"}`} tone="premium" />)}
+            {reviews.recent.length > 0 ? (
+              <Pane pad="gap">
+                {reviews.recent.map((r, i) => (
+                  <Row
+                    key={`${r.date}-${i}`}
+                    title={<View style={{ flexDirection: "row", gap: 2 }}>{[1, 2, 3, 4, 5].map((n) => <Icon key={n} name="star" color={n <= r.rating ? colors.accent : colors.borderStrong} size={14} />)}</View>}
+                    detail={r.comment}
+                    last={i === reviews.recent.length - 1}
+                  />
+                ))}
+              </Pane>
+            ) : null}
           </View>
         ) : null}
 

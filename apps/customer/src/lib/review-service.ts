@@ -13,3 +13,14 @@ export async function getReview(bookingId: string): Promise<Review | null> {
 export async function submitReview(bookingId: string, rating: number, comment: string): Promise<void> {
   await httpsCallable(functions, "submitReview")({ bookingId, rating, comment });
 }
+
+export type ServiceReviews = {
+  average: number | null;
+  count: number;
+  recent: { rating: number; comment: string; date: string }[];
+};
+
+export async function getServiceReviews(serviceId: string): Promise<ServiceReviews> {
+  const res = await httpsCallable<{ serviceId: string }, ServiceReviews>(functions, "getServiceReviews")({ serviceId });
+  return res.data;
+}

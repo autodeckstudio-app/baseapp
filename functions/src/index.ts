@@ -112,6 +112,7 @@ export { reviewPaper } from "./functions/papers/reviewPaper.js";
 export { updatePaper } from "./functions/papers/updatePaper.js";
 export { listPapers } from "./functions/papers/listPapers.js";
 export { submitMyPaper } from "./functions/papers/submitMyPaper.js";
+export { getServiceReviews } from "./functions/booking/getServiceReviews.js";
 
 // ─── Daily Close (M6 Automodz Office) ──────────────────────────────────────
 export { performDailyClose } from "./functions/dailyclose/performDailyClose.js";
