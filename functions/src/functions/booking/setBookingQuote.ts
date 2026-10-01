@@ -40,7 +40,12 @@ export const setBookingQuote = onCall({ region: "asia-south1" }, async (request)
       vehicleCategoryPricing: pricing,
       ...(cfg ? { taxRatePercent: cfg.taxRatePercent, taxDescription: cfg.taxDescription, currency: cfg.currency } : {}),
     });
+    // The job was created at booking time with a zero price; keep it in step with the quote.
+    const jobsSnap = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1));
     const nowIso = new Date().toISOString();
+    for (const j of jobsSnap.docs) {
+      tx.update(j.ref, { priceBreakdown: breakdown, totalAmount: breakdown.total, updatedAt: nowIso });
+    }
     tx.update(ref, { priceBreakdown: breakdown, totalAmount: breakdown.total, quoteStatus: "quoted", updatedAt: nowIso });
     writeAuditLog(tx, {
       action: "booking.quoted",
