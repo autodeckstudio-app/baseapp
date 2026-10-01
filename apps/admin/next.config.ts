@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // Preview-only fallback for the (public) reCAPTCHA v3 site key used by App Check.
   // Production builds must set NEXT_PUBLIC_RECAPTCHA_SITE_KEY themselves.
   env:
-    process.env["VERCEL_ENV"] === "preview" && !process.env["NEXT_PUBLIC_RECAPTCHA_SITE_KEY"]
+    !process.env["NEXT_PUBLIC_RECAPTCHA_SITE_KEY"]
       ? { NEXT_PUBLIC_RECAPTCHA_SITE_KEY: "6Lf0QtktAAAAAP60iBH6o8kWSPAPwsRsnJQyry0B" }
       : {},
   transpilePackages: [
