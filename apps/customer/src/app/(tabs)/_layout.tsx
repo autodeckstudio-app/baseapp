@@ -2,8 +2,7 @@
 // journey: book (Services), track and pay (Bookings), car and papers (Garage).
 // Membership, notifications and approvals are nested routes with a back bar.
 import { Tabs } from "expo-router";
-import { Platform, Text, View } from "react-native";
-import { BlurView } from "expo-blur";
+import { Text, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { textStyle } from "../../ui/kit";
 
@@ -15,23 +14,30 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarActiveTintColor: "#F59A45",
+        tabBarInactiveTintColor: "rgba(244,245,251,0.62)",
         tabBarLabelStyle: { ...textStyle("label"), fontSize: 10 },
+        // Floating navy pill (owner reference): lifted off the bottom edge, rounded.
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: Platform.OS === "ios" ? "transparent" : glass.fallbackFill,
-          borderTopColor: colors.borderSubtle,
+          left: 16,
+          right: 16,
+          bottom: 14,
           height: 64,
+          borderRadius: 32,
+          borderTopWidth: 0,
+          backgroundColor: colors.ink,
           paddingTop: 6,
           paddingBottom: 8,
+          shadowColor: "#0B1033",
+          shadowOpacity: 0.25,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 8,
+          maxWidth: 528,
+          alignSelf: "center",
         },
-        tabBarBackground: () =>
-          Platform.OS === "ios" ? (
-            <BlurView tint="dark" intensity={40} style={{ flex: 1 }} />
-          ) : (
-            <View style={{ flex: 1, backgroundColor: glass.fallbackFill }} />
-          ),
+        tabBarBackground: () => <View style={{ flex: 1, borderRadius: 32, backgroundColor: colors.ink }} />,
         tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>{GLYPH[route.name] ?? "·"}</Text>,
         sceneStyle: { backgroundColor: colors.canvas },
       })}

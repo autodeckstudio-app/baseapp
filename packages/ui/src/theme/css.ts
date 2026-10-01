@@ -27,7 +27,7 @@ export function themeVariables(name: ThemeName): Record<string, string> {
   vars["--ad-accent-grad"] =
     name === "dark"
       ? "linear-gradient(120deg, #F0C48C 0%, #E0A45C 46%, #E8D9BE 100%)"
-      : "linear-gradient(120deg, #8F6326 0%, #7A521E 50%, #5E3F16 100%)";
+      : "linear-gradient(120deg, #F59A45 0%, #E8731A 55%, #C2540A 100%)";
   return vars;
 }
 

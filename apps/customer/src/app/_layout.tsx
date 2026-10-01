@@ -15,7 +15,7 @@ if (Platform.OS === "web" && doc && !doc.getElementById("ad-fonts")) {
   link.href =
     "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Outfit:wght@200;300;400&display=swap";
   doc.head.appendChild(link);
-  doc.body.style.backgroundColor = "#08090A";
+  doc.body.style.backgroundColor = "#E7EAF7";
 }
 
 // Routes once claims are known, so a customer never sees staff screens and
@@ -48,10 +48,10 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <ExperienceThemeProvider name="dark">
-      <StatusBar style="light" />
+    <ExperienceThemeProvider name="light">
+      <StatusBar style="dark" />
       <NavigationGuard>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#08090A" } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#E7EAF7" } }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>

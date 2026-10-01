@@ -445,3 +445,34 @@
 }
 .ad-hero h1.ad-hero-name { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; letter-spacing: -0.6px; }
 .ad-invoice-totals { min-width: 280px; } .ad-invoice-totals .kv { gap: var(--ad-space-gap); }
+
+/* Owner reference theme (Oct 1 2026): floating navy side panel on a soft
+ * light ground; the active tab is a light pill; orange accent. */
+.ad-shell-frame { padding: 16px; gap: 16px; }
+.ad-side {
+  --ad-text-primary: var(--ad-on-ink);
+  --ad-text-secondary: rgba(244, 245, 251, 0.74);
+  --ad-text-tertiary: rgba(244, 245, 251, 0.56);
+  --ad-accent-strong: #F59A45;
+  height: calc(100vh - 32px);
+  top: 16px;
+  border: none;
+  border-radius: 28px;
+  background: var(--ad-ink) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 18px 40px rgba(11, 16, 51, 0.22);
+}
+.ad-side .ad-nav-link:hover { background: rgba(255, 255, 255, 0.08); }
+.ad-side .ad-nav-link[aria-current="page"] {
+  background: #F4F5FB;
+  color: #0B1033;
+  border-color: transparent;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+.ad-main .detail-card, .ad-main .stat-tile, .ad-main .ad-panel { box-shadow: 0 6px 20px rgba(11, 16, 51, 0.06); }
+@media (max-width: 900px) {
+  .ad-shell-frame { padding: 8px; gap: 8px; }
+  .ad-side { height: auto; top: 0; border-radius: 20px; position: static; }
+}

@@ -162,7 +162,7 @@ export default function CatalogueScreen() {
                 const low = Math.min(...xs.map((x) => x.basePrice));
                 return (
                   <Pressable key={c} accessibilityRole="button" onPress={() => setActive(c)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.accentHaze, padding: space.line, gap: 6, opacity: pressed ? 0.7 : 1 })}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface }}>
                       <T role="title">{ICON[c] ?? "🔧"}</T>
                     </View>
                     <T role="bodyStrong">{GROUP[c] ?? c}</T>
