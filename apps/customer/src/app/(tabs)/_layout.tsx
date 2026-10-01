@@ -14,10 +14,10 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#F59A45",
-        tabBarInactiveTintColor: "rgba(244,245,251,0.62)",
+        tabBarActiveTintColor: "#C2540A",
+        tabBarInactiveTintColor: "#7A7587",
         tabBarLabelStyle: { ...textStyle("label"), fontSize: 10, letterSpacing: 0 },
-        // Floating navy pill (owner reference): lifted off the bottom edge, rounded.
+        // Floating white pill (owner reference): lifted off the bottom edge, rounded.
         tabBarStyle: {
           position: "absolute",
           left: 0,
@@ -28,18 +28,18 @@ export default function TabsLayout() {
           height: 64,
           borderRadius: 32,
           borderTopWidth: 0,
-          backgroundColor: colors.ink,
+          backgroundColor: "rgba(255,255,255,0.92)",
           paddingTop: 6,
           paddingBottom: 8,
-          shadowColor: "#0B1033",
-          shadowOpacity: 0.25,
+          shadowColor: "#7A6FD0",
+          shadowOpacity: 0.28,
           shadowRadius: 18,
           shadowOffset: { width: 0, height: 8 },
           elevation: 8,
           maxWidth: 480,
           alignSelf: "center",
         },
-        tabBarBackground: () => <View style={{ flex: 1, borderRadius: 32, backgroundColor: colors.ink }} />,
+        tabBarBackground: () => <View style={{ flex: 1, borderRadius: 32, backgroundColor: "rgba(255,255,255,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.9)" }} />,
         tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>{GLYPH[route.name] ?? "·"}</Text>,
         sceneStyle: { backgroundColor: colors.canvas },
       })}

@@ -152,8 +152,8 @@ export default function HomeScreen() {
     <Screen header={header}>
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
-      <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: colors.ink, shadowColor: "#0B1033", shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 }}>
-        <ExperienceThemeProvider name="dark">
+      <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#F3E6F5", backgroundImage: "linear-gradient(160deg, #C9D0F5 0%, #F6DCE6 55%, #FFD9B8 100%)", shadowColor: "#7A6FD0", shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 }}>
+        <ExperienceThemeProvider name="light">
         <HeroImage source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
         <View style={{ padding: space.inset, gap: space.line }}>
           <Kicker tone="accent">{copy.kicker}</Kicker>

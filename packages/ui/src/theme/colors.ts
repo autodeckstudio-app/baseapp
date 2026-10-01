@@ -41,7 +41,7 @@ export const darkColors: ThemeColors = {
   textPrimary: "#EDEBE7",
   textSecondary: "#ADACA9",
   textTertiary: "#91918F",
-  textOnAccent: "#0B1033",
+  textOnAccent: "#1D1B26",
   accent: "#F27A1A",
   accentStrong: "#F59A45",
   accentHaze: "rgba(242,122,26,0.18)",
@@ -56,19 +56,19 @@ export const darkColors: ThemeColors = {
   onInk: "#EDEBE7",
 };
 
-// Soft lavender ground, white cards, deep navy chrome, AutoDeck orange.
+// Soft lavender-to-peach gradient ground, white cards, light frosted chrome, AutoDeck orange.
 // (Owner reference, Oct 1 2026: light gradient surfaces, floating navy nav,
 // blue swapped for orange.)
 export const lightColors: ThemeColors = {
-  canvas: "#E7EAF7",
+  canvas: "#ECEBF8",
   canvasDeep: "#D6DBF1",
   surface: "#FFFFFF",
   surfaceElevated: "#F2F4FC",
-  borderSubtle: "rgba(11,16,51,0.08)",
-  borderStrong: "rgba(11,16,51,0.24)",
-  textPrimary: "#0B1033",
-  textSecondary: "#383E63",
-  textTertiary: "#525979",
+  borderSubtle: "rgba(29,27,38,0.08)",
+  borderStrong: "rgba(29,27,38,0.24)",
+  textPrimary: "#1D1B26",
+  textSecondary: "#4A4655",
+  textTertiary: "#625D70",
   textOnAccent: "#FFFFFF",
   accent: "#C2540A",
   accentStrong: "#9C4108",
@@ -79,9 +79,9 @@ export const lightColors: ThemeColors = {
   warning: "#8A5A00",
   danger: "#B93838",
   inactive: "#6B6E85",
-  scrim: "rgba(11,16,51,0.36)",
-  ink: "#0B1033",
-  onInk: "#F4F5FB",
+  scrim: "rgba(29,27,38,0.36)",
+  ink: "#FFFFFF",
+  onInk: "#1D1B26",
 };
 
 export type ThemeName = "dark" | "light";

@@ -59,8 +59,8 @@ export const glass: Record<ThemeName, GlassRecipe> = {
     fillWarm: "linear-gradient(160deg, rgba(242,122,26,0.07), rgba(255,255,255,0.92))",
     fillCool: "linear-gradient(160deg, rgba(120,132,220,0.14), rgba(255,255,255,0.92))",
     fallbackFill: "rgba(255,255,255,0.96)",
-    chromeFill: "rgba(11,16,51,0.94)",
-    edge: "rgba(11,16,51,0.06)",
+    chromeFill: "rgba(255,255,255,0.82)",
+    edge: "rgba(29,27,38,0.06)",
     sheen: "rgba(255,255,255,0.9)",
     blur: 24,
     saturate: 1.4,
@@ -106,8 +106,8 @@ export const ambient: Record<ThemeName, readonly AmbientLight[]> = {
     { color: "#F0C48C", x: 40, y: 100, size: 60, opacity: 0.05 },
   ],
   light: [
-    { color: "#9AA6EC", x: 15, y: 5, size: 80, opacity: 0.35 },
-    { color: "#F7B27A", x: 95, y: 40, size: 55, opacity: 0.22 },
+    { color: "#9AA6EC", x: 10, y: 0, size: 85, opacity: 0.55 },
+    { color: "#FFB27A", x: 100, y: 55, size: 65, opacity: 0.45 },
     { color: "#C9D0F5", x: 40, y: 100, size: 70, opacity: 0.4 },
   ],
 };
