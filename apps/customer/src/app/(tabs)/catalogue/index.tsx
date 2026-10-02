@@ -38,7 +38,7 @@ function subGroup(s: Service): string {
       return s.brand ? `${s.brand} films` : "Film packages";
     case "ceramic":
     case "coating":
-      if (s.warrantyLabel) return `${s.warrantyLabel} protection`;
+      if (s.warrantyLabel) return s.warrantyLabel.length > 24 ? "Warranty-backed" : `${s.warrantyLabel} protection`;
       return s.category === "ceramic" ? "Ceramic packages" : "Polish and coat";
     default:
       return GROUP[s.category] ?? "More";
