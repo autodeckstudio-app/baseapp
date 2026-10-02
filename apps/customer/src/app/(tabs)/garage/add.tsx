@@ -86,7 +86,8 @@ export default function AddVehicleScreen() {
       }
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add vehicle.");
+      const msg = err instanceof Error ? err.message : "";
+      setError(/registrationNumber/i.test(msg) ? "Check the registration number, for example GJ01AB1234." : /at most|character/i.test(msg) ? "One of the details is too long. Shorten it and try again." : "We could not add this car. Check the details and try again.");
     } finally {
       setLoading(false);
     }
@@ -105,6 +106,7 @@ export default function AddVehicleScreen() {
               onChangeText={(v: string) => update(key, v)}
               autoCapitalize={autoCapitalize}
               keyboardType={keyboardType}
+              maxLength={key === "registrationNumber" ? 13 : key === "year" ? 4 : 50}
             />
           ))}
         </View>

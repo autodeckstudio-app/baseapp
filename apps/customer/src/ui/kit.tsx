@@ -349,7 +349,9 @@ export function Field({
   autoCapitalize = "sentences",
   keyboardType = "default",
   multiline = false,
+  maxLength,
 }: {
+  maxLength?: number;
   label: string;
   value: string;
   onChangeText: (v: string) => void;
@@ -370,6 +372,7 @@ export function Field({
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
         multiline={multiline}
+        maxLength={maxLength}
         style={[
           textStyle("body"),
           {
