@@ -39,3 +39,6 @@ Kovalent bottle images were cut out of the brand's product tiles (icon boxes rem
 | stock/inspection.jpg | Inspection | https://www.pexels.com/photo/a-mechanic-checking-the-engine-of-the-car-9626877/ | STOCK-OK |
 
 Older CC-BY placeholders (Flickr) are listed in ATTRIBUTION.md and still used for hero/membership/vehicle fallbacks and the category fallback.
+
+## Distinct service photos (pool, TEST placeholders)
+Files stock/x-*.jpg are Pexels photos (free licence), each taken from pexels.com/photo/<slug>-<id>/ where the id is in the pool list in src/lib/imagery.ts (4876675, 30564616, 29504453 etc). Assigned one per service by primeVisuals(); replace with studio photos before launch.

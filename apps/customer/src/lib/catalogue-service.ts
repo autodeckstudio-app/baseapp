@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
 import { rupees } from "../ui/kit";
+import { primeVisuals } from "./imagery";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 export async function getServiceCatalogue(category?: ServiceCategory): Promise<Service[]> {
@@ -9,7 +10,9 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
     "getServiceCatalogue",
   );
   const result = await fn(category !== undefined ? { category } : {});
-  return result.data.services.map(applyBrandWarranty);
+  const list = result.data.services.map(applyBrandWarranty);
+  if (category === undefined) primeVisuals(list);
+  return list;
 }
 
 // Per Meet via parent relay (phonemsg-01M3T6NC5N3Q1R0K1PFXRXW7K0): brand-website facts override the studio's old price-list labels.

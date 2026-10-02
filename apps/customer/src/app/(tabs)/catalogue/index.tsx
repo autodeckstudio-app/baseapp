@@ -108,9 +108,7 @@ export default function CatalogueScreen() {
     return [...m.entries()];
   }, [shown, active, q]);
 
-  const kovalent = useMemo(() => all.filter((x) => serviceVisual(x).bottle).sort((a, b) => Number(!!b.warrantyLabel) - Number(!!a.warrantyLabel) || a.name.localeCompare(b.name)), [all]);
-
-  const chip = (key: string, label: string) => {
+  const chip = (key: string, label: string, icon: IconName) => {
     const on = active === key;
     return (
       <Pressable
@@ -118,9 +116,12 @@ export default function CatalogueScreen() {
         accessibilityRole="button"
         accessibilityState={{ selected: on }}
         onPress={() => setActive(key)}
-        style={{ borderRadius: 9999, borderWidth: 1, borderColor: on ? colors.accent : colors.borderSubtle, backgroundColor: on ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
+        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, height: 46, paddingLeft: 8, paddingRight: 16, borderRadius: 23, backgroundColor: on ? colors.accent : colors.surface, borderWidth: 1, borderColor: on ? colors.accent : colors.borderSubtle, opacity: pressed ? 0.8 : 1 })}
       >
-        <T role="caption" tone={on ? "accent" : "secondary"}>{label}</T>
+        <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: on ? "rgba(255,255,255,0.28)" : colors.accentHaze }}>
+          <Icon name={icon} color={on ? "#FFFFFF" : colors.accent} size={17} />
+        </View>
+        <T role="bodyStrong" style={{ color: on ? "#FFFFFF" : colors.textPrimary }}>{label}</T>
       </Pressable>
     );
   };
@@ -139,8 +140,8 @@ export default function CatalogueScreen() {
         style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 14, paddingVertical: 10, color: colors.textPrimary, fontSize: 15 }}
       />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
-        {chip("all", "All")}
-        {cats.map((c) => chip(c, GROUP[c] ?? c))}
+        {chip("all", "All", "tools")}
+        {cats.map((c) => chip(c, GROUP[c] ?? c, ICON[c] ?? "tools"))}
       </ScrollView>
     </View>
   );
@@ -155,124 +156,51 @@ export default function CatalogueScreen() {
         </View>
       ) : null}
       {services && sections.length === 0 ? <Notice title="Nothing matches" body="Try another word or pick All." /> : null}
-      {services && active === "all" && !q.trim() ? (
-        <View style={{ gap: space.inset }}>
-          <View style={{ gap: space.breath }}>
-            <Kicker>Browse by need</Kicker>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-              {cats.map((c) => {
-                const xs = all.filter((x) => x.category === c);
-                const low = Math.min(...xs.map((x) => x.basePrice));
-                return (
-                  <Pressable key={c} accessibilityRole="button" onPress={() => setActive(c)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface, padding: space.line, gap: 6, opacity: pressed ? 0.7 : 1 })}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
-                      <Icon name={ICON[c] ?? "tools"} color={colors.accent} size={22} />
-                    </View>
-                    <T role="bodyStrong">{GROUP[c] ?? c}</T>
-                    <T role="caption" tone="tertiary">{BLURB[c] ?? ""}</T>
-                    <T role="caption" tone="accent">{`${xs.length} options · from ${rupees(low)}`}</T>
-                  </Pressable>
-                );
-              })}
+      {sections.map(([title, xs]) => {
+        const parts = title.split(" · ");
+        const name = parts.pop() ?? title;
+        const group = parts[0];
+        const br = BRANDS.find((x) => x.name === name);
+        const cat = xs[0]?.svc?.category;
+        return (
+          <View key={title} style={{ gap: space.breath }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.line }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                {group ? <Kicker tone="accent">{group}</Kicker> : null}
+                <T role="title" numberOfLines={1}>{name}</T>
+                {br ? <T role="caption" tone="secondary" numberOfLines={2}>{br.blurb}</T> : null}
+              </View>
+              {active === "all" && cat ? (
+                <Pressable accessibilityRole="button" onPress={() => setActive(cat)} hitSlop={8}>
+                  <T role="caption" tone="accent">See all</T>
+                </Pressable>
+              ) : null}
             </View>
-          </View>
-          <View style={{ gap: space.breath }}>
-            <Kicker tone="premium">Top picks</Kicker>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
-              {cats.map((c) => {
-                const xs = all.filter((x) => x.category === c).sort((a, b) => Number(!!b.warrantyLabel) - Number(!!a.warrantyLabel) || a.basePrice - b.basePrice);
-                const sv = xs[0];
-                if (!sv) return null;
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath, paddingRight: space.line }}>
+              {xs.map((e) => {
+                const sv = e.svc!;
                 return (
-                  <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 220, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
-                    <ServicePhoto service={sv} height={130} />
-                    <View style={{ padding: space.line, gap: 4 }}>
-                      <T role="bodyStrong" numberOfLines={1}>{sv.name}</T>
-                      <T role="caption" tone="tertiary">{[duration(sv.estimatedDurationMinutes), sv.brand].filter(Boolean).join(" · ")}</T>
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <T role="bodyStrong" tone="accent">{priceLabel(sv)}</T>
-                        {sv.warrantyLabel ? <Chip label={sv.warrantyLabel} tone="premium" /> : null}
-                      </View>
+                  <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 156, opacity: pressed ? 0.85 : 1 })}>
+                    <View>
+                      <ServicePhoto service={sv} height={196} radius={22} />
+                      {sv.warrantyLabel ? (
+                        <View style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "88%", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>
+                          <T role="caption" tone="accent" numberOfLines={1}>{sv.warrantyLabel}</T>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={{ paddingTop: 8, gap: 2 }}>
+                      <T role="bodyStrong" numberOfLines={2}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
+                      <T role="caption" tone="tertiary" numberOfLines={1}>{[duration(sv.estimatedDurationMinutes), sv.brand].filter(Boolean).join(" · ")}</T>
+                      <T role="bodyStrong" tone="accent" numberOfLines={1}>{priceLabel(sv)}</T>
                     </View>
                   </Pressable>
                 );
               })}
             </ScrollView>
           </View>
-          <Kicker>All services</Kicker>
-        </View>
-      ) : null}
-      {(active === "ceramic" || (active === "all" && !q.trim())) && kovalent.length > 0 ? (
-        <View style={{ gap: space.breath }}>
-          <View style={{ gap: 2 }}>
-            <Kicker tone="premium">Kovalent</Kicker>
-            <T role="caption" tone="secondary">The full Kovalent range, in studio.</T>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
-            {kovalent.map((sv) => (
-              <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 150, opacity: pressed ? 0.85 : 1 })}>
-                <ServicePhoto service={sv} height={190} radius={20} />
-                <View style={{ paddingTop: 8, gap: 2 }}>
-                  <T role="bodyStrong" numberOfLines={1}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
-                  <T role="caption" tone="accent">{priceLabel(sv)}</T>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
-      {sections.map(([title, xs]) => (
-        <View key={title} style={{ gap: space.breath }}>
-          <Kicker>{title}</Kicker>
-          {(() => {
-            const bn = title.split(" · ").pop() ?? "";
-            const br = BRANDS.find((b) => b.name === bn);
-            if (!br || br.name === "Kovalent") return null;
-            return (
-              <View style={{ borderRadius: 22, overflow: "hidden", backgroundColor: colors.accentHaze, flexDirection: "row", minHeight: 110 }}>
-                <View style={{ flex: 1, padding: space.line, gap: 4, justifyContent: "center" }}>
-                  <T role="bodyStrong">{br.name}</T>
-                  <T role="caption" tone="secondary">{br.blurb}</T>
-                  <T role="caption" tone="accent">{xs.length} {xs.length === 1 ? "option" : "options"}</T>
-                </View>
-                {brandHero(br.name) ? <View style={{ width: "42%" }}><Image source={brandHero(br.name)!} resizeMode="cover" style={{ width: "100%", height: "100%", minHeight: 110 }} /></View> : null}
-              </View>
-            );
-          })()}
-          <Pane pad="gap">
-            {xs.map((e, i) =>
-              e.svc ? (
-                <Pressable
-                  key={e.svc.id}
-                  accessibilityRole="button"
-                  onPress={() => router.push(`/(tabs)/catalogue/${e.svc!.id}`)}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.line, paddingVertical: space.breath, borderBottomWidth: i === xs.length - 1 ? 0 : 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}
-                >
-                  <ServicePhoto service={e.svc} width={72} height={72} radius={14} />
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <T role="bodyStrong" numberOfLines={2}>{e.svc.name}</T>
-                    <T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>
-                    {e.svc.warrantyLabel ? <T role="caption" tone="accent" numberOfLines={1}>{e.svc.warrantyLabel}</T> : null}
-                  </View>
-                  <View style={{ alignItems: "flex-end", gap: 2 }}>
-                    <T role="caption" tone="tertiary">from</T>
-                    <T role="bodyStrong" tone="accent">{priceLabel(e.svc)}</T>
-                  </View>
-                </Pressable>
-              ) : (
-                <Row
-                  key={`${title}-${e.item!.name}`}
-                  title={e.item!.name}
-                  detail={e.item!.note ? <T role="caption" tone="tertiary">{e.item!.note}</T> : undefined}
-                  trailing={e.item!.warranty ? <Chip label={e.item!.warranty.split(" (")[0] ?? e.item!.warranty} tone="premium" /> : <T role="caption" tone="tertiary">Ask the studio</T>}
-                  onPress={() => router.push(`/(tabs)/catalogue/brands?b=${encodeURIComponent(title.split(" · ").pop() ?? "")}&n=${encodeURIComponent(e.item!.name)}`)}
-                  last={i === xs.length - 1}
-                />
-              ),
-            )}
-          </Pane>
-        </View>
-      ))}
+        );
+      })}
     </Screen>
   );
 }
