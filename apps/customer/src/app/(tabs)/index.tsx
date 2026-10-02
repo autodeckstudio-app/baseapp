@@ -1,7 +1,7 @@
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { ExperienceThemeProvider, Icon, useExperienceTheme } from "@autodeck/ui/native";
@@ -14,6 +14,12 @@ import { resolveVehiclePhotoUrl } from "../../lib/vehicle-service";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
 import { listenToVehicleWarranties } from "../../lib/warranty-service";
+import type { Service } from "@autodeck/core";
+import { getServiceCatalogue, priceLabel } from "../../lib/catalogue-service";
+import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
+import { StoryCircles } from "../../ui/StoryCircles";
+import { StoryViewer } from "../../ui/StoryViewer";
+import { ServicePhoto } from "../../ui/ServicePhoto";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
 const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: string }> = {
@@ -67,6 +73,20 @@ export default function HomeScreen() {
   const ready = auth.status === "ready";
   const home = useCustomerHome(ready ? auth.user.uid : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
   const [unread, setUnread] = useState(0);
+  const [groups, setGroups] = useState<StoryGroup[]>([]);
+  const [open, setOpen] = useState<StoryGroup | null>(null);
+  const [seen, setSeen] = useState<Set<string>>(new Set());
+  const [picks, setPicks] = useState<Service[]>([]);
+  useEffect(() => {
+    if (!ready) return;
+    void getStories().then((l) => setGroups(groupStories(l)));
+    void getServiceCatalogue()
+      .then((all) => {
+        const order = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection"];
+        setPicks([...all].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.basePrice - b.basePrice).filter((x, n, arr) => arr.findIndex((y) => y.category === x.category) === arr.indexOf(x) || n < 8).slice(0, 8));
+      })
+      .catch(() => undefined);
+  }, [ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -171,41 +191,71 @@ export default function HomeScreen() {
     <Screen header={header}>
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
-      <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#F3E6F5", ...({ backgroundImage: "linear-gradient(160deg, #C9D0F5 0%, #F6DCE6 55%, #FFD9B8 100%)" } as object), shadowColor: "#7A6FD0", shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 8 }}>
-        <ExperienceThemeProvider name="light">
-        <HeroImage source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
-        <View style={{ padding: space.inset, gap: space.line }}>
-          <Kicker tone="accent">{copy.kicker}</Kicker>
+      <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} />
+      <StoryViewer group={open} onClose={() => setOpen(null)} />
+
+      <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#2A2433", shadowColor: "#7A6FD0", shadowOpacity: 0.3, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
+        <HeroImage aspect={4 / 5} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0.35) 0%, rgba(20,12,30,0) 30%, rgba(20,12,30,0.78) 100%)" } as object) }} />
+        <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: space.breath }}>
+          <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 5 }}>
+            <T role="caption" tone="accent">{copy.kicker}</T>
+          </View>
           {car ? (
-            <View style={{ gap: space.breath }}>
-              <T role="display" numberOfLines={1}>{car.make} {car.model}</T>
+            <View style={{ gap: 6 }}>
+              <T role="display" numberOfLines={1} style={{ color: "#FFFFFF" }}>{car.make} {car.model}</T>
               <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center" }}>
-                <Plate value={car.registrationNumber} />
-                <T role="caption" tone="tertiary">{car.year}{car.color ? ` · ${car.color}` : ""}</T>
+                <View style={{ borderRadius: 10, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 6 }}><Plate value={car.registrationNumber} /></View>
+                <T role="caption" style={{ color: "rgba(255,255,255,0.8)" }}>{car.year}{car.color ? ` · ${car.color}` : ""}</T>
               </View>
             </View>
           ) : (
-            <T role="display">Your garage is empty</T>
+            <T role="display" style={{ color: "#FFFFFF" }}>Your garage is empty</T>
           )}
-          <T tone="secondary">{copy.line}</T>
-
-          {m.pendingApproval ? (
-            <Row title={m.pendingApproval.serviceName} detail={m.pendingApproval.reason} trailing={<T role="data" tone="accent">+{rupees(m.pendingApproval.priceImpact)}</T>} last />
-          ) : m.dueInvoice ? (
-            <Row title={m.dueInvoice.invoiceNumber} detail="Issued" trailing={<T role="data">{rupees(m.dueInvoice.total)}</T>} last />
-          ) : m.liveJob ? (
-            <View style={{ gap: space.line }}>
-              <Row title={JOB_STAGE[m.liveJob.status] ?? "In the studio"} detail={`Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`} last />
-              <StatusRail status={m.liveJob.status} />
-            </View>
-          ) : m.upcomingBooking ? (
-            <Row title={`${formatDateShort(m.upcomingBooking.scheduledDate)} · ${m.upcomingBooking.scheduledTime}`} detail={m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed"} last />
-          ) : null}
-
+          <T style={{ color: "rgba(255,255,255,0.9)" }}>{copy.line}</T>
           <Button label={m.primaryAction.label} onPress={act} testID="home-primary" />
         </View>
-              </ExperienceThemeProvider>
       </View>
+
+      {m.pendingApproval || m.dueInvoice || m.liveJob || m.upcomingBooking ? (
+        <Pane pad="inset">
+          <View style={{ gap: space.line }}>
+            <Kicker tone="accent">{m.liveJob ? "Live now" : m.pendingApproval ? "Needs your OK" : m.dueInvoice ? "Bill ready" : "Next visit"}</Kicker>
+            {m.pendingApproval ? (
+              <Row title={m.pendingApproval.serviceName} detail={m.pendingApproval.reason} trailing={<T role="data" tone="accent">+{rupees(m.pendingApproval.priceImpact)}</T>} last />
+            ) : m.dueInvoice ? (
+              <Row title={m.dueInvoice.invoiceNumber} detail="Issued" trailing={<T role="data">{rupees(m.dueInvoice.total)}</T>} last />
+            ) : m.liveJob ? (
+              <View style={{ gap: space.line }}>
+                <Row title={JOB_STAGE[m.liveJob.status] ?? "In the studio"} detail={`Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`} last />
+                <StatusRail status={m.liveJob.status} />
+              </View>
+            ) : m.upcomingBooking ? (
+              <Row title={`${formatDateShort(m.upcomingBooking.scheduledDate)} · ${m.upcomingBooking.scheduledTime}`} detail={m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed"} last />
+            ) : null}
+          </View>
+        </Pane>
+      ) : null}
+
+      {picks.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          <View style={{ gap: 2 }}>
+            <Kicker tone="accent">Book in a tap</Kicker>
+            <T role="title">Pick up where you left off</T>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath, paddingRight: space.line }}>
+            {picks.map((sv) => (
+              <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 156, opacity: pressed ? 0.85 : 1 })}>
+                <ServicePhoto service={sv} height={196} radius={22} />
+                <View style={{ paddingTop: 8, gap: 2 }}>
+                  <T role="bodyStrong" numberOfLines={2}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
+                  <T role="bodyStrong" tone="accent" numberOfLines={1}>{priceLabel(sv)}</T>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
       {reminders.length > 0 ? (
         <View style={{ gap: space.line }}>

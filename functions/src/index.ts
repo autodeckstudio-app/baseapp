@@ -124,6 +124,12 @@ export { updateGalleryImage } from "./functions/gallery/updateGalleryImage.js";
 export { deleteGalleryImage } from "./functions/gallery/deleteGalleryImage.js";
 export { listGalleryImages } from "./functions/gallery/listGalleryImages.js";
 
+// ─── Stories (24h photo/video circles + permanent highlights) ──────────────
+export { issueStoryUploadUrl } from "./functions/story/issueStoryUploadUrl.js";
+export { createStory } from "./functions/story/createStory.js";
+export { updateStory } from "./functions/story/updateStory.js";
+export { listStories } from "./functions/story/listStories.js";
+
 // ─── Office dashboard & reports (M6 Automodz Office) ───────────────────────
 export { getOfficeDashboard } from "./functions/office/getOfficeDashboard.js";
 export { getOfficeReport } from "./functions/office/getOfficeReport.js";

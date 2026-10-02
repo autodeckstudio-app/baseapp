@@ -2,9 +2,10 @@
 // `filled` variants are used for the active tab.
 export type IconName =
   | "home" | "services" | "bookings" | "garage" | "profile" | "wash" | "ceramic" | "coating" | "ppf" | "tint" | "inspect"
-  | "search" | "wrench" | "check" | "star" | "pin" | "club" | "bell" | "users" | "plus" | "calendar" | "car" | "tools" | "shield" | "dot";
+  | "search" | "wrench" | "check" | "star" | "pin" | "club" | "bell" | "users" | "plus" | "calendar" | "car" | "tools" | "shield" | "dot" | "close";
 
 const P: Record<IconName, string> = {
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
   home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/>',
   services: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
   bookings: '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M9 15l2 2 4-4"/>',

@@ -77,7 +77,9 @@ export type AuditAction =
   | "dailyClose.reclosed"
   | "gallery.imageAdded"
   | "gallery.imageUpdated"
-  | "gallery.imageDeleted";
+  | "gallery.imageDeleted"
+  | "story.created"
+  | "story.updated";
 
 export interface AuditLog {
   id: string;

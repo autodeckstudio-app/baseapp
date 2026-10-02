@@ -29,6 +29,7 @@ export const COLLECTIONS = {
   papers: () => "papers",
   dailyClosings: () => "dailyClosings",
   gallery: () => "gallery",
+  stories: () => "stories",
   studioConfig: () => "studioConfig",
   inventory: () => "inventory",
   auditLog: () => "auditLog",
