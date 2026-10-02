@@ -93,7 +93,7 @@ export function serviceVisual(s: { name: string; brand?: string | null; category
   const n = s.name.toLowerCase();
   const b = (s.brand ?? "").toLowerCase();
   const fallback = serviceImagery[s.category as ServiceCategory] ?? serviceImagery.other;
-  if (b === "kovalent" || n.includes("kovalent") || n.includes("borophene") || n.includes("graphene")) {
+  if (b === "kovalent" || n.includes("kovalent") || (b === "" && (n === "borophene" || n === "graphene matrix"))) {
     const key = ["graphene matrix", "prolong light", "borophene", "graphene", "prolong", "powershield", "restore", "matte", "fabric", "glass", "revive"].find((k) => n.includes(k));
     const bottle = key ? BOTTLES[key] : undefined;
     return bottle ? { photo: P.coating, bottle } : { photo: P.coating };

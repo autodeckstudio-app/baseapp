@@ -108,7 +108,7 @@ export default function CatalogueScreen() {
     return [...m.entries()];
   }, [shown, active, q]);
 
-  const kovalent = useMemo(() => all.filter((x) => (x.brand ?? "").toLowerCase() === "kovalent" || /kovalent|borophene|graphene/i.test(x.name)).filter((x) => serviceVisual(x).bottle).sort((a, b) => Number(!!b.warrantyLabel) - Number(!!a.warrantyLabel) || a.name.localeCompare(b.name)), [all]);
+  const kovalent = useMemo(() => all.filter((x) => serviceVisual(x).bottle).sort((a, b) => Number(!!b.warrantyLabel) - Number(!!a.warrantyLabel) || a.name.localeCompare(b.name)), [all]);
 
   const chip = (key: string, label: string) => {
     const on = active === key;
