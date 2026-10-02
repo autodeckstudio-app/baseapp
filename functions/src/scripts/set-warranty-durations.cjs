@@ -16,7 +16,7 @@ const parse = (l) => {
   let n = 0;
   for (const doc of snap.docs) {
     const s = doc.data();
-    if (!s.warrantyLabel) continue;
+    if (!s.warrantyLabel || !/warranty/i.test(s.warrantyLabel)) continue;
     if (s.warrantyDurationUnit) continue;
     const p = parse(s.warrantyLabel);
     console.log(`${doc.id} | ${s.name} | ${s.warrantyLabel} => ${p ? JSON.stringify(p) : "SKIP (unparsed)"}`);
