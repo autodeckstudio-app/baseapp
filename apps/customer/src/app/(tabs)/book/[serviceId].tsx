@@ -108,7 +108,7 @@ export default function BookServiceScreen() {
 
   if (loading) return <Loading label="Finding times" />;
   if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." /></Screen>;
-  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
+  if (!service || (service as any).active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
     (acc[slot.date] ??= []).push(slot);
