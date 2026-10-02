@@ -7,7 +7,7 @@ import type { Service } from "@autodeck/core";
 import { space, type IconName } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
-import { serviceImagery } from "../../../lib/imagery";
+import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -182,7 +182,7 @@ export default function CatalogueScreen() {
                 if (!sv) return null;
                 return (
                   <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 220, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}>
-                    <Image source={serviceImagery[sv.category] ?? serviceImagery.other} style={{ width: "100%", height: 110 }} resizeMode="cover" />
+                    <ServicePhoto service={sv} height={130} />
                     <View style={{ padding: space.line, gap: 4 }}>
                       <T role="bodyStrong" numberOfLines={1}>{sv.name}</T>
                       <T role="caption" tone="tertiary">{[duration(sv.estimatedDurationMinutes), sv.brand].filter(Boolean).join(" · ")}</T>
@@ -211,7 +211,7 @@ export default function CatalogueScreen() {
                   onPress={() => router.push(`/(tabs)/catalogue/${e.svc!.id}`)}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.line, paddingVertical: space.breath, borderBottomWidth: i === xs.length - 1 ? 0 : 1, borderBottomColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 })}
                 >
-                  <Image source={serviceImagery[e.svc.category] ?? serviceImagery.other} style={{ width: 64, height: 64, borderRadius: 14 }} resizeMode="cover" />
+                  <ServicePhoto service={e.svc} width={72} height={72} radius={14} />
                   <View style={{ flex: 1, gap: 3 }}>
                     <T role="bodyStrong" numberOfLines={2}>{e.svc.name}</T>
                     <T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>

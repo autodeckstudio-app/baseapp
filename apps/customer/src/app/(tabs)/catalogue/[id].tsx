@@ -12,7 +12,7 @@ import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
-import { serviceImagery } from "../../../lib/imagery";
+import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
 import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
@@ -118,7 +118,7 @@ export default function ServiceDetailScreen() {
         }
       >
         <Pane pad="none">
-          <HeroImage source={serviceImagery[service.category] ?? serviceImagery.other} />
+          <ServicePhoto service={service} aspect={16 / 10} />
         </Pane>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath, alignItems: "center" }}>
@@ -176,7 +176,7 @@ export default function ServiceDetailScreen() {
           {H("Before and after", <Chip label="Placeholder photos" tone="danger" />)}
           <Pane pad="none">
             <View style={{ position: "relative" }}>
-              <HeroImage source={serviceImagery[service.category] ?? serviceImagery.other} aspect={16 / 9} />
+              <ServicePhoto service={service} aspect={16 / 10} />
               {!after ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(10,10,12,0.55)" }} /> : null}
             </View>
             <View style={{ flexDirection: "row", gap: space.breath, padding: space.line }}>

@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { BRANDS } from "../../../lib/brands";
-import { serviceImagery } from "../../../lib/imagery";
+import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Chip, HeroImage, Kicker, Pane, Row, Screen, T } from "../../../ui/kit";
 
 export default function BrandProduct() {
@@ -11,7 +11,7 @@ export default function BrandProduct() {
   const brand = BRANDS.find((x) => x.name === b);
   const item = brand?.items.find((x) => x.name === n);
   if (!brand || !item) return <Screen><T role="title">Product not found</T></Screen>;
-  const img = item.kind === "PPF" ? serviceImagery.ppf : serviceImagery.ceramic;
+  const svc = { name: `${brand.name} ${item.name}`, brand: brand.name, category: item.kind === "PPF" ? "ppf" : "ceramic" };
   return (
     <Screen
       header={
@@ -22,7 +22,7 @@ export default function BrandProduct() {
         </View>
       }
     >
-      <HeroImage source={img} aspect={16 / 9} />
+      <ServicePhoto service={svc} aspect={16 / 10} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
         {item.warranty ? <Chip label={item.warranty.split(" (")[0] ?? item.warranty} tone="premium" /> : null}
         <Chip label={brand.name} tone="neutral" />
