@@ -8,7 +8,7 @@ import { space, type IconName } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { serviceVisual } from "../../../lib/imagery";
+import { serviceVisual, brandHero } from "../../../lib/imagery";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -228,7 +228,6 @@ export default function CatalogueScreen() {
             const bn = title.split(" · ").pop() ?? "";
             const br = BRANDS.find((b) => b.name === bn);
             if (!br || br.name === "Kovalent") return null;
-            const sample = xs.find((x) => x.svc)?.svc;
             return (
               <View style={{ borderRadius: 22, overflow: "hidden", backgroundColor: colors.accentHaze, flexDirection: "row", minHeight: 110 }}>
                 <View style={{ flex: 1, padding: space.line, gap: 4, justifyContent: "center" }}>
@@ -236,7 +235,7 @@ export default function CatalogueScreen() {
                   <T role="caption" tone="secondary">{br.blurb}</T>
                   <T role="caption" tone="accent">{xs.length} {xs.length === 1 ? "option" : "options"}</T>
                 </View>
-                {sample && ["XPEL", "Garware"].includes(br.name) ? <View style={{ width: "42%" }}><ServicePhoto service={sample} height={110} /></View> : null}
+                {brandHero(br.name) ? <View style={{ width: "42%" }}><Image source={brandHero(br.name)!} resizeMode="cover" style={{ width: "100%", height: "100%", minHeight: 110 }} /></View> : null}
               </View>
             );
           })()}

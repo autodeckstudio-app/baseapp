@@ -112,3 +112,10 @@ export function serviceVisual(s: { name: string; brand?: string | null; category
   if (s.category === "inspection" || n.includes("inspect") || n.includes("check")) return { photo: P.inspection };
   return { photo: fallback };
 }
+
+/** Brand banner photo, only where the brand's own site gave a usable image. */
+export function brandHero(name: string): ImageSourcePropType | null {
+  if (name === "XPEL") return P.xpel;
+  if (name === "Garware") return P.garwarePpf;
+  return null;
+}
