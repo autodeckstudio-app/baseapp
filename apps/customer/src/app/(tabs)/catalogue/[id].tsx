@@ -13,7 +13,7 @@ import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { serviceImagery } from "../../../lib/imagery";
-import { COPY_IS_DRAFT, FAQS, showcaseFor } from "../../../lib/showcase";
+import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
 import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
@@ -168,7 +168,7 @@ export default function ServiceDetailScreen() {
           </View>
         ) : null}
 
-        <View style={{ gap: space.breath }}>
+        {SHOW_BEFORE_AFTER ? <View style={{ gap: space.breath }}>
           {H("Before and after", <Chip label="Placeholder photos" tone="danger" />)}
           <Pane pad="none">
             <View style={{ position: "relative" }}>
@@ -184,7 +184,7 @@ export default function ServiceDetailScreen() {
             </View>
           </Pane>
           <T role="caption" tone="tertiary">Stock image for layout only. Real studio before and after photos go here.</T>
-        </View>
+        </View> : null}
 
         <View style={{ gap: space.line }}>
           {H("Price for your car")}

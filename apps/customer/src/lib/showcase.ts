@@ -14,7 +14,9 @@ export interface Showcase {
   studioPick?: boolean;
 }
 
-export const COPY_IS_DRAFT = true;
+export const COPY_IS_DRAFT = false;
+// Flip to true once real studio before and after photos are uploaded.
+export const SHOW_BEFORE_AFTER = false;
 
 const FAQ_COMMON: { q: string; a: string }[] = [
   { q: "How long will my car be with you?", a: "The time shown on the service is our estimate. We confirm it when you book." },

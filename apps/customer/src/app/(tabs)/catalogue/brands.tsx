@@ -32,7 +32,6 @@ export default function BrandProduct() {
         {item.warranty ? <Row title="Warranty" detail={<T role="caption" tone="secondary">{item.warranty}. As stated by the brand.</T>} /> : <Row title="Warranty" detail={<T role="caption" tone="secondary">Not listed. Ask the studio.</T>} />}
         <Row title="Price" detail={<T role="caption" tone="secondary">Ask the studio</T>} last />
       </Pane>
-      <T role="caption" tone="tertiary">Source: {brand.source}. Stock image for layout only. Draft, pending studio review.</T>
     </Screen>
   );
 }

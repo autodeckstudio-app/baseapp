@@ -118,7 +118,7 @@ export default function BookServiceScreen() {
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="caption" tone="accent">Total {rupees(total)} incl. tax</T> : null}</View>}>
       <View style={{ gap: space.line }}>
-        <Kicker>Step 3 of 6 · Your car</Kicker>
+        <Kicker>Your car</Kicker>
         {vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : (
@@ -144,7 +144,7 @@ export default function BookServiceScreen() {
       </View>
 
       <View style={{ gap: space.line }}>
-        <Kicker>Step 3 of 6 · Size</Kicker>
+        <Kicker>Size</Kicker>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
           {VEHICLE_CATEGORIES.map(({ value, label }) => {
             const selected = selectedCategory === value;
@@ -164,7 +164,7 @@ export default function BookServiceScreen() {
       </View>
 
       <View style={{ gap: space.line }}>
-        <Kicker>Step 5 of 6 · Pick a time</Kicker>
+        <Kicker>Pick a time</Kicker>
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." /> : null}
         {slotsLoading ? (
           <T role="caption" tone="tertiary">Checking the studio's calendar...</T>

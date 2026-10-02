@@ -125,7 +125,7 @@ export default function BookingConfirmScreen() {
   const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "-";
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Step 6 of 6 · Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
       <Pane pad="gap">
         <Row title="Service" detail={service?.name ?? "-"} />
         <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
