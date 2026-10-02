@@ -252,7 +252,7 @@ export default function CatalogueScreen() {
                   <View style={{ flex: 1, gap: 3 }}>
                     <T role="bodyStrong" numberOfLines={2}>{e.svc.name}</T>
                     <T role="caption" tone="tertiary">{[duration(e.svc.estimatedDurationMinutes), e.svc.brand].filter(Boolean).join(" · ")}</T>
-                    {e.svc.warrantyLabel ? <View style={{ alignSelf: "flex-start" }}><Chip label={e.svc.warrantyLabel} tone="premium" /></View> : null}
+                    {e.svc.warrantyLabel ? <T role="caption" tone="accent" numberOfLines={1}>{e.svc.warrantyLabel}</T> : null}
                   </View>
                   <View style={{ alignItems: "flex-end", gap: 2 }}>
                     <T role="caption" tone="tertiary">from</T>
