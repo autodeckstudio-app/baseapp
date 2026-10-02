@@ -31,9 +31,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (loading) {
     return (
-      <div className="ad-shell">
+      <div className="ax-shell">
         <Ambient>
-          <p className="ad-label" style={{ padding: "var(--ad-space-section)" }} role="status">
+          <p className="ax-label" style={{ padding: "var(--ad-space-section)" }} role="status">
             Loading…
           </p>
         </Ambient>

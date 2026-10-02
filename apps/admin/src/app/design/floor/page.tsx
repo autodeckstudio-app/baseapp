@@ -20,24 +20,24 @@ const SAMPLE: BoardJob[] = [
 export default function FloorPreview() {
   return (
     <StaffShell pathname="/jobs" office role="admin" who="studio@autodeck.example" home="/design/floor" onSignOut={() => {}}>
-      <div className="ad-page">
-        <header className="ad-page-head">
+      <div className="ax-page">
+        <header className="ax-page-head">
           <div>
-            <p className="ad-label">Studio floor</p>
+            <p className="ax-label">Studio floor</p>
             <h1>Jobs</h1>
           </div>
-          <div className="ad-kpis">
-            <div><span className="ad-kpi-v">2</span><span className="ad-label">Arriving today</span></div>
-            <div><span className="ad-kpi-v ad-kpi-v--accent">4</span><span className="ad-label">In the studio</span></div>
-            <div><span className="ad-kpi-v ad-kpi-v--premium">1</span><span className="ad-label">Ready for pickup</span></div>
+          <div className="ax-kpis">
+            <div><span className="ax-kpi-v">2</span><span className="ax-label">Arriving today</span></div>
+            <div><span className="ax-kpi-v ax-kpi-v--accent">4</span><span className="ax-label">In the studio</span></div>
+            <div><span className="ax-kpi-v ax-kpi-v--premium">1</span><span className="ax-label">Ready for pickup</span></div>
           </div>
         </header>
-        <div className="ad-toolbar">
-          <div className="ad-seg"><button type="button" aria-pressed>Board</button><button type="button" aria-pressed={false}>List</button></div>
-          <div className="ad-seg"><button type="button" aria-pressed>Today</button><button type="button" aria-pressed={false}>Upcoming</button><button type="button" aria-pressed={false}>All</button></div>
+        <div className="ax-toolbar">
+          <div className="ax-seg"><button type="button" aria-pressed>Board</button><button type="button" aria-pressed={false}>List</button></div>
+          <div className="ax-seg"><button type="button" aria-pressed>Today</button><button type="button" aria-pressed={false}>Upcoming</button><button type="button" aria-pressed={false}>All</button></div>
           <select aria-label="Source" defaultValue=""><option value="">Bookings and walk-ins</option></select>
-          <input className="ad-search" type="search" placeholder="Search plate, customer or job" />
-          <span className="ad-count">7 of 7</span>
+          <input className="ax-search" type="search" placeholder="Search plate, customer or job" />
+          <span className="ax-count">7 of 7</span>
         </div>
         <JobBoard jobs={SAMPLE} onOpen={() => {}} />
       </div>

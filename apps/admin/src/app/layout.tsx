@@ -6,7 +6,7 @@ import "./globals.css";
 import "../experience/experience.css";
 
 // Experience type faces (OFL). Exposed as CSS variables; screens opt in
-// through the ad- type classes as they migrate.
+// through the ax- type classes as they migrate.
 const display = Outfit({ subsets: ["latin"], weight: ["200", "300", "400"], variable: "--ad-font-display", display: "swap" });
 const body = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--ad-font-body", display: "swap" });
 const data = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--ad-font-data", display: "swap" });

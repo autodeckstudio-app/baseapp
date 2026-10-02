@@ -45,19 +45,19 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
   if (counts.pendingPapers) alerts.push({ tone: "warning", text: `${n(counts.pendingPapers, "document is", "documents are")} waiting for verification`, href: "/papers", action: "Review" });
 
   return (
-    <div className="ad-page">
-      <header className="ad-page-head">
+    <div className="ax-page">
+      <header className="ax-page-head">
         <div>
-          <p className="ad-label">{formatDayLong(today)}</p>
+          <p className="ax-label">{formatDayLong(today)}</p>
           <h1>{greeting(now)}</h1>
         </div>
-        <div className="ad-hero-side">
-          <span className="ad-label">Taken today</span>
-          <span className="ad-hero-total">{formatPaise(revenueToday)}</span>
+        <div className="ax-hero-side">
+          <span className="ax-label">Taken today</span>
+          <span className="ax-hero-total">{formatPaise(revenueToday)}</span>
         </div>
       </header>
 
-      <div className="ad-tiles">
+      <div className="ax-tiles">
         <Tile icon="calendar" featured value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
         <Tile icon="wrench" value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
         <Tile icon="check" value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
@@ -65,75 +65,75 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
         <Tile icon="users" value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
       </div>
 
-      <div className="ad-detail" style={{ marginTop: "var(--ad-space-inset)" }}>
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <span className="ad-label">Needs attention</span>
+      <div className="ax-detail" style={{ marginTop: "var(--ad-space-inset)" }}>
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <span className="ax-label">Needs attention</span>
             {alerts.length === 0 ? (
-              <div className="ad-allclear">
-                <span className="ad-allclear-dot" aria-hidden="true" />
+              <div className="ax-allclear">
+                <span className="ax-allclear-dot" aria-hidden="true" />
                 <div>
-                  <p className="ad-title" style={{ margin: 0, fontSize: 20 }}>All clear</p>
+                  <p className="ax-title" style={{ margin: 0, fontSize: 20 }}>All clear</p>
                   <p style={{ margin: "4px 0 0" }}>No failed payments, stuck jobs or waiting approvals.</p>
                 </div>
               </div>
             ) : (
-              <ul className="ad-alerts">
+              <ul className="ax-alerts">
                 {alerts.map((al) => (
-                  <li key={al.text} className={`ad-alert-row ad-alert-row--${al.tone}`}>
-                    <span className="ad-alert-dot" aria-hidden="true" />
+                  <li key={al.text} className={`ax-alert-row ax-alert-row--${al.tone}`}>
+                    <span className="ax-alert-dot" aria-hidden="true" />
                     <span>{al.text}</span>
-                    <Link href={al.href} className="ad-button">{al.action}</Link>
+                    <Link href={al.href} className="ax-button">{al.action}</Link>
                   </li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="ad-panel">
-            <span className="ad-label">Set up your studio</span>
-            <div className="ad-links">
+          <section className="ax-panel">
+            <span className="ax-label">Set up your studio</span>
+            <div className="ax-links">
               {SECTIONS.map((sec) => (
-                <Link key={sec.href} href={sec.href} className="ad-linkcard">
-                  <span className="ad-linkcard-title">{sec.label}</span>
-                  <span className="ad-linkcard-desc">{sec.description}</span>
+                <Link key={sec.href} href={sec.href} className="ax-linkcard">
+                  <span className="ax-linkcard-title">{sec.label}</span>
+                  <span className="ax-linkcard-desc">{sec.description}</span>
                 </Link>
               ))}
             </div>
           </section>
         </div>
 
-        <aside className="ad-detail-side">
-          <section className="ad-panel">
-            <span className="ad-label">On the floor now</span>
-            <div className="ad-bars" role="img" aria-label={`Arriving ${floor.arriving}, working ${floor.working}, ready ${floor.ready}, delivered ${floor.delivered}`}>
+        <aside className="ax-detail-side">
+          <section className="ax-panel">
+            <span className="ax-label">On the floor now</span>
+            <div className="ax-bars" role="img" aria-label={`Arriving ${floor.arriving}, working ${floor.working}, ready ${floor.ready}, delivered ${floor.delivered}`}>
               {([["Arriving", floor.arriving], ["Working", floor.working], ["Ready", floor.ready], ["Done", floor.delivered]] as const).map(([l, v]) => {
                 const max = Math.max(1, floor.arriving, floor.working, floor.ready, floor.delivered);
                 return (
-                  <div key={l} className="ad-bar">
-                    <span className="ad-bar-v">{v}</span>
-                    <span className="ad-bar-fill" style={{ height: `${Math.max(6, (v / max) * 100)}%` }} />
-                    <span className="ad-bar-l">{l}</span>
+                  <div key={l} className="ax-bar">
+                    <span className="ax-bar-v">{v}</span>
+                    <span className="ax-bar-fill" style={{ height: `${Math.max(6, (v / max) * 100)}%` }} />
+                    <span className="ax-bar-l">{l}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="kv"><span>Arriving today</span><span className="ad-data">{floor.arriving}</span></div>
-            <div className="kv"><span>Being worked on</span><span className="ad-data" style={{ color: "var(--ad-accent)" }}>{floor.working}</span></div>
-            <div className="kv"><span>Ready for pickup</span><span className="ad-data" style={{ color: "var(--ad-premium)" }}>{floor.ready}</span></div>
-            <div className="kv"><span>Delivered today</span><span className="ad-data">{floor.delivered}</span></div>
-            <div className="ad-panel-actions">
-              <Link href="/jobs" className="ad-button ad-button--primary">Open studio floor</Link>
+            <div className="kv"><span>Arriving today</span><span className="ax-data">{floor.arriving}</span></div>
+            <div className="kv"><span>Being worked on</span><span className="ax-data" style={{ color: "var(--ad-accent)" }}>{floor.working}</span></div>
+            <div className="kv"><span>Ready for pickup</span><span className="ax-data" style={{ color: "var(--ad-premium)" }}>{floor.ready}</span></div>
+            <div className="kv"><span>Delivered today</span><span className="ax-data">{floor.delivered}</span></div>
+            <div className="ax-panel-actions">
+              <Link href="/jobs" className="ax-button ax-button--primary">Open studio floor</Link>
             </div>
           </section>
-          <section className="ad-panel">
-            <span className="ad-label">Money</span>
-            <div className="kv"><span>Taken today</span><span className="ad-data">{formatPaise(revenueToday)}</span></div>
-            <div className="kv"><span>Awaiting confirmation</span><span className="ad-data">{counts.pendingPayments}</span></div>
-            <div className="kv"><span>Failed</span><span className="ad-data" style={counts.failedPayments ? { color: "var(--ad-danger)" } : undefined}>{counts.failedPayments}</span></div>
-            <div className="ad-panel-actions">
-              <Link href="/payments" className="ad-button">Payments</Link>
-              <Link href="/invoices" className="ad-button">Invoices</Link>
+          <section className="ax-panel">
+            <span className="ax-label">Money</span>
+            <div className="kv"><span>Taken today</span><span className="ax-data">{formatPaise(revenueToday)}</span></div>
+            <div className="kv"><span>Awaiting confirmation</span><span className="ax-data">{counts.pendingPayments}</span></div>
+            <div className="kv"><span>Failed</span><span className="ax-data" style={counts.failedPayments ? { color: "var(--ad-danger)" } : undefined}>{counts.failedPayments}</span></div>
+            <div className="ax-panel-actions">
+              <Link href="/payments" className="ax-button">Payments</Link>
+              <Link href="/invoices" className="ax-button">Invoices</Link>
             </div>
           </section>
         </aside>
@@ -144,10 +144,10 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
 
 function Tile({ value, label, tone, icon, featured, onClick }: { value: number | string; label: string; tone?: "accent" | "premium"; icon?: IconName; featured?: boolean; onClick: () => void }) {
   return (
-    <button type="button" className={`ad-tile${featured ? " ad-tile--featured" : ""}`} onClick={onClick}>
-      {icon ? <span className="ad-tile-ico" aria-hidden="true"><Icon name={icon} size={20} /></span> : null}
-      <span className={`ad-kpi-v${tone ? ` ad-kpi-v--${tone}` : ""}`}>{value}</span>
-      <span className="ad-label">{label}</span>
+    <button type="button" className={`ax-tile${featured ? " ax-tile--featured" : ""}`} onClick={onClick}>
+      {icon ? <span className="ax-tile-ico" aria-hidden="true"><Icon name={icon} size={20} /></span> : null}
+      <span className={`ax-kpi-v${tone ? ` ax-kpi-v--${tone}` : ""}`}>{value}</span>
+      <span className="ax-label">{label}</span>
     </button>
   );
 }

@@ -31,7 +31,7 @@ export function ReportsView(p: {
   const bestDay = days.length ? days.reduce((best, d) => (d[1] > best[1] ? d : best)) : null;
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Reports"
@@ -41,31 +41,31 @@ export function ReportsView(p: {
           { value: formatPaise(r.netPaise), label: "Net", tone: r.netPaise >= 0 ? "premium" : "accent" },
         ] : []}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
 
-      <div className="ad-form-pair" style={{ maxWidth: 320, marginBottom: "var(--ad-space-gap)" }}>
-        <span className="ad-label">Month</span>
+      <div className="ax-form-pair" style={{ maxWidth: 320, marginBottom: "var(--ad-space-gap)" }}>
+        <span className="ax-label">Month</span>
         <input type="month" value={p.month} onChange={(e) => e.target.value && p.onMonthChange(e.target.value)} aria-label="Month" />
       </div>
 
       {p.loading ? (
-        [0, 1, 2].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+        [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
       ) : !r ? null : (
-        <div className="ad-detail">
-          <div className="ad-detail-main">
-            <section className="ad-panel">
-              <span className="ad-label">Revenue by day</span>
+        <div className="ax-detail">
+          <div className="ax-detail-main">
+            <section className="ax-panel">
+              <span className="ax-label">Revenue by day</span>
               {days.length === 0 ? (
-                <p className="ad-note">No completed payments this month.</p>
+                <p className="ax-note">No completed payments this month.</p>
               ) : (
-                <ul className="ad-list">
+                <ul className="ax-list">
                   {days.map(([date, amount]) => (
-                    <li key={date} className="ad-list-row">
-                      <span className="ad-slot-main">
-                        <span className="ad-person-name">{formatDate(date)}</span>
-                        {bestDay && date === bestDay[0] && <span className="ad-sub">best day</span>}
+                    <li key={date} className="ax-list-row">
+                      <span className="ax-slot-main">
+                        <span className="ax-person-name">{formatDate(date)}</span>
+                        {bestDay && date === bestDay[0] && <span className="ax-sub">best day</span>}
                       </span>
-                      <span className="ad-slot-amt">{formatPaise(amount)}</span>
+                      <span className="ax-slot-amt">{formatPaise(amount)}</span>
                     </li>
                   ))}
                 </ul>
@@ -73,37 +73,37 @@ export function ReportsView(p: {
             </section>
           </div>
 
-          <div className="ad-detail-side">
-            <section className="ad-panel">
-              <span className="ad-label">Revenue by method</span>
-              <ul className="ad-list">
-                <li className="ad-list-row"><span className="ad-slot-main">Cash</span><span className="ad-slot-amt">{formatPaise(r.cashPaise)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main">UPI (manual)</span><span className="ad-slot-amt">{formatPaise(r.upiPaise)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main">Online (Razorpay)</span><span className="ad-slot-amt">{formatPaise(r.razorpayPaise)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main">Bank transfer</span><span className="ad-slot-amt">{formatPaise(r.bankTransferPaise)}</span></li>
+          <div className="ax-detail-side">
+            <section className="ax-panel">
+              <span className="ax-label">Revenue by method</span>
+              <ul className="ax-list">
+                <li className="ax-list-row"><span className="ax-slot-main">Cash</span><span className="ax-slot-amt">{formatPaise(r.cashPaise)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main">UPI (manual)</span><span className="ax-slot-amt">{formatPaise(r.upiPaise)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main">Online (Razorpay)</span><span className="ax-slot-amt">{formatPaise(r.razorpayPaise)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main">Bank transfer</span><span className="ax-slot-amt">{formatPaise(r.bankTransferPaise)}</span></li>
               </ul>
-              <p className="ad-note">{r.paymentCount} completed payments</p>
+              <p className="ax-note">{r.paymentCount} completed payments</p>
             </section>
 
-            <section className="ad-panel">
-              <span className="ad-label">Expenses by category</span>
+            <section className="ax-panel">
+              <span className="ax-label">Expenses by category</span>
               {categories.length === 0 ? (
-                <p className="ad-note">No expenses recorded this month.</p>
+                <p className="ax-note">No expenses recorded this month.</p>
               ) : (
-                <ul className="ad-list">
+                <ul className="ax-list">
                   {categories.map(([cat, amount]) => (
-                    <li key={cat} className="ad-list-row"><span className="ad-slot-main">{CATEGORY_NAME[cat] ?? cat}</span><span className="ad-slot-amt">{formatPaise(amount)}</span></li>
+                    <li key={cat} className="ax-list-row"><span className="ax-slot-main">{CATEGORY_NAME[cat] ?? cat}</span><span className="ax-slot-amt">{formatPaise(amount)}</span></li>
                   ))}
                 </ul>
               )}
             </section>
 
-            <section className="ad-panel">
-              <span className="ad-label">Jobs</span>
-              <ul className="ad-list">
-                <li className="ad-list-row"><span className="ad-slot-main">Booked in</span><span className="ad-slot-amt">{r.jobsCreated}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main">Delivered</span><span className="ad-slot-amt ad-success">{r.jobsCompleted}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main">Cancelled</span><span className="ad-slot-amt ad-danger">{r.jobsCancelled}</span></li>
+            <section className="ax-panel">
+              <span className="ax-label">Jobs</span>
+              <ul className="ax-list">
+                <li className="ax-list-row"><span className="ax-slot-main">Booked in</span><span className="ax-slot-amt">{r.jobsCreated}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main">Delivered</span><span className="ax-slot-amt ax-success">{r.jobsCompleted}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main">Cancelled</span><span className="ax-slot-amt ax-danger">{r.jobsCancelled}</span></li>
               </ul>
             </section>
           </div>

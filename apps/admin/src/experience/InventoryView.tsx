@@ -57,25 +57,25 @@ export function InventoryView(p: {
   if (p.selected) {
     const item = p.selected;
     return (
-      <div className="ad-page">
+      <div className="ax-page">
         <PageHead eyebrow="Office · Inventory" title={item.name} />
-        {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-        {p.message && <p className="ad-status-msg">{p.message}</p>}
-        <div className="ad-detail">
-          <div className="ad-detail-main">
-            <section className="ad-panel">
-              <span className="ad-label">Movement log</span>
+        {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+        {p.message && <p className="ax-status-msg">{p.message}</p>}
+        <div className="ax-detail">
+          <div className="ax-detail-main">
+            <section className="ax-panel">
+              <span className="ax-label">Movement log</span>
               {p.txns.length === 0 ? (
-                <p className="ad-note">No movements recorded yet.</p>
+                <p className="ax-note">No movements recorded yet.</p>
               ) : (
-                <ul className="ad-list">
+                <ul className="ax-list">
                   {p.txns.map((t) => (
-                    <li key={t.id} className="ad-list-row">
-                      <span className="ad-slot-main">
-                        <span className="ad-person-name">{TXN_NAME[t.type]}</span>
-                        <span className="ad-sub">{formatDateTime(t.createdAt)}{t.notes ? ` · ${t.notes}` : ""}</span>
+                    <li key={t.id} className="ax-list-row">
+                      <span className="ax-slot-main">
+                        <span className="ax-person-name">{TXN_NAME[t.type]}</span>
+                        <span className="ax-sub">{formatDateTime(t.createdAt)}{t.notes ? ` · ${t.notes}` : ""}</span>
                       </span>
-                      <span className={`ad-slot-amt ${t.qtyDelta < 0 ? "ad-danger" : "ad-success"}`}>
+                      <span className={`ax-slot-amt ${t.qtyDelta < 0 ? "ax-danger" : "ax-success"}`}>
                         {t.qtyDelta > 0 ? "+" : ""}{t.qtyDelta} {UNIT_NAME[item.unit]}
                       </span>
                     </li>
@@ -84,13 +84,13 @@ export function InventoryView(p: {
               )}
             </section>
           </div>
-          <div className="ad-detail-side">
-            <section className="ad-panel">
-              <span className="ad-label">
-                On hand · <strong className="ad-data">{item.stockQty} {UNIT_NAME[item.unit]}</strong>
+          <div className="ax-detail-side">
+            <section className="ax-panel">
+              <span className="ax-label">
+                On hand · <strong className="ax-data">{item.stockQty} {UNIT_NAME[item.unit]}</strong>
               </span>
-              <div className="ad-form-section">
-                <div className="ad-form-pair">
+              <div className="ax-form-section">
+                <div className="ax-form-pair">
                   <select value={txnType} onChange={(e) => setTxnType(e.target.value as InventoryTxnType)} aria-label="Movement type" disabled={p.busy}>
                     <option value="USAGE">Usage (stock out)</option>
                     <option value="PURCHASE">Purchase (stock in)</option>
@@ -102,7 +102,7 @@ export function InventoryView(p: {
                 <input value={txnNotes} onChange={(e) => setTxnNotes(e.target.value)} placeholder="Note (optional)" aria-label="Note" disabled={p.busy} />
                 <button
                   type="button"
-                  className="ad-button ad-button--primary"
+                  className="ax-button ax-button--primary"
                   disabled={p.busy || !qtyOk}
                   onClick={() => {
                     const delta = txnType === "PURCHASE" ? qty : txnType === "ADJUSTMENT" ? qty : -qty;
@@ -112,18 +112,18 @@ export function InventoryView(p: {
                 >
                   Record movement
                 </button>
-                <p className="ad-note">Stock can't go below zero. Use Adjustment after a physical count.</p>
+                <p className="ax-note">Stock can't go below zero. Use Adjustment after a physical count.</p>
               </div>
             </section>
-            <div className="ad-panel-actions">
-              <button type="button" className="ad-button" onClick={() => p.onSelect(null)}>Back to all items</button>
+            <div className="ax-panel-actions">
+              <button type="button" className="ax-button" onClick={() => p.onSelect(null)}>Back to all items</button>
               {p.isAdmin && (
                 confirmId === item.id ? (
-                  <button type="button" className="ad-button ad-button--danger" disabled={p.busy} onClick={() => { p.onDeactivate(item); setConfirmId(null); }}>
+                  <button type="button" className="ax-button ax-button--danger" disabled={p.busy} onClick={() => { p.onDeactivate(item); setConfirmId(null); }}>
                     Deactivate item
                   </button>
                 ) : (
-                  <button type="button" className="ad-button" onClick={() => setConfirmId(item.id)}>Deactivate</button>
+                  <button type="button" className="ax-button" onClick={() => setConfirmId(item.id)}>Deactivate</button>
                 )
               )}
             </div>
@@ -134,7 +134,7 @@ export function InventoryView(p: {
   }
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Inventory"
@@ -143,28 +143,28 @@ export function InventoryView(p: {
           { value: lowStock.length, label: "Low stock", tone: lowStock.length > 0 ? "accent" : undefined },
         ]}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <span className="ad-label">Stock on hand</span>
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <span className="ax-label">Stock on hand</span>
             {p.loading ? (
-              [0, 1, 2].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+              [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : p.items.length === 0 ? (
-              <p className="ad-note">No items yet. Add the first one from the form.</p>
+              <p className="ax-note">No items yet. Add the first one from the form.</p>
             ) : (
-              <ul className="ad-list">
+              <ul className="ax-list">
                 {p.items.map((item) => {
                   const low = item.stockQty <= item.lowStockThreshold;
                   return (
-                    <li key={item.id} className="ad-list-row">
-                      <button type="button" className="ad-slot-main" onClick={() => p.onSelect(item)} style={{ textAlign: "left", background: "none", border: "none", cursor: "pointer" }}>
-                        <span className="ad-person-name">{item.name}</span>
-                        <span className="ad-sub">{CATEGORY_NAME[item.category]} · cost {formatPaise(item.costPerUnit)}/{UNIT_NAME[item.unit]}</span>
+                    <li key={item.id} className="ax-list-row">
+                      <button type="button" className="ax-slot-main" onClick={() => p.onSelect(item)} style={{ textAlign: "left", background: "none", border: "none", cursor: "pointer" }}>
+                        <span className="ax-person-name">{item.name}</span>
+                        <span className="ax-sub">{CATEGORY_NAME[item.category]} · cost {formatPaise(item.costPerUnit)}/{UNIT_NAME[item.unit]}</span>
                       </button>
-                      <span className={`ad-expiry ${low ? "ad-expiry--danger" : "ad-expiry--ok"}`}>
+                      <span className={`ax-expiry ${low ? "ax-expiry--danger" : "ax-expiry--ok"}`}>
                         {item.stockQty} {UNIT_NAME[item.unit]}{low ? " · low" : ""}
                       </span>
                     </li>
@@ -176,12 +176,12 @@ export function InventoryView(p: {
         </div>
 
         {p.isAdmin && (
-          <div className="ad-detail-side">
-            <section className="ad-panel">
-              <span className="ad-label">Add item</span>
-              <div className="ad-form-section">
+          <div className="ax-detail-side">
+            <section className="ax-panel">
+              <span className="ax-label">Add item</span>
+              <div className="ax-form-section">
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Item name" aria-label="Item name" disabled={p.busy} />
-                <div className="ad-form-pair">
+                <div className="ax-form-pair">
                   <select value={category} onChange={(e) => setCategory(e.target.value as InventoryCategory)} aria-label="Category" disabled={p.busy}>
                     {(Object.keys(CATEGORY_NAME) as InventoryCategory[]).map((c) => (
                       <option key={c} value={c}>{CATEGORY_NAME[c]}</option>
@@ -193,14 +193,14 @@ export function InventoryView(p: {
                     ))}
                   </select>
                 </div>
-                <div className="ad-form-pair">
+                <div className="ax-form-pair">
                   <input value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="Opening qty" inputMode="decimal" aria-label="Opening quantity" disabled={p.busy} />
                   <input value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="Low-stock at" inputMode="decimal" aria-label="Low stock threshold" disabled={p.busy} />
                 </div>
                 <input value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Cost per unit ₹ (optional)" inputMode="decimal" aria-label="Cost per unit" disabled={p.busy} />
                 <button
                   type="button"
-                  className="ad-button ad-button--primary"
+                  className="ax-button ax-button--primary"
                   disabled={p.busy || !name.trim()}
                   onClick={() => {
                     p.onAdd({

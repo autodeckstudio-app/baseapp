@@ -44,7 +44,7 @@ export function PapersView(p: {
   const vehicleName = (v: Vehicle | undefined) => (v ? `${v.make} ${v.model} · ${v.registrationNumber}` : "Unknown vehicle");
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Papers"
@@ -53,12 +53,12 @@ export function PapersView(p: {
           { value: p.papers.filter((x) => x.expiresOn !== null && x.expiresOn < today).length, label: "Expired" },
         ]}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
             <Segmented<StatusFilter>
               value={p.filter}
               options={[
@@ -69,28 +69,28 @@ export function PapersView(p: {
               onChange={p.onFilter}
             />
             {p.loading ? (
-              [0, 1, 2].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+              [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : p.papers.length === 0 ? (
-              <p className="ad-note">Nothing {p.filter.toLowerCase()} right now.</p>
+              <p className="ax-note">Nothing {p.filter.toLowerCase()} right now.</p>
             ) : (
-              <ul className="ad-list">
+              <ul className="ax-list">
                 {p.papers.map((paper) => {
                   const expired = paper.expiresOn !== null && paper.expiresOn < today;
                   return (
-                    <li key={paper.id} className="ad-list-row">
-                      <span className="ad-slot-main">
-                        <span className="ad-person-name">
+                    <li key={paper.id} className="ax-list-row">
+                      <span className="ax-slot-main">
+                        <span className="ax-person-name">
                           {KIND_NAME[paper.kind]} · {paper.reference}
                         </span>
-                        <span className="ad-sub">
+                        <span className="ax-sub">
                           {vehicleName(p.vehiclesById.get(paper.vehicleId))} · expires {formatDate(paper.expiresOn)}
                           {paper.rejectionReason ? ` · rejected: ${paper.rejectionReason}` : ""}
                         </span>
                       </span>
-                      {expired && <span className="ad-expiry ad-expiry--danger">expired</span>}
+                      {expired && <span className="ax-expiry ax-expiry--danger">expired</span>}
                       {paper.status === "PENDING" && (
-                        <span className="ad-row-actions">
-                          <button type="button" className="ad-button ad-button--primary" disabled={p.busy} onClick={() => p.onReview(paper, "VERIFIED", "")}>
+                        <span className="ax-row-actions">
+                          <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => p.onReview(paper, "VERIFIED", "")}>
                             Verify
                           </button>
                           {rejectId === paper.id ? (
@@ -103,7 +103,7 @@ export function PapersView(p: {
                               />
                               <button
                                 type="button"
-                                className="ad-button ad-button--danger"
+                                className="ax-button ax-button--danger"
                                 disabled={p.busy || !rejectReason.trim()}
                                 onClick={() => { p.onReview(paper, "REJECTED", rejectReason.trim()); setRejectId(null); setRejectReason(""); }}
                               >
@@ -111,7 +111,7 @@ export function PapersView(p: {
                               </button>
                             </>
                           ) : (
-                            <button type="button" className="ad-button" onClick={() => setRejectId(paper.id)}>Reject</button>
+                            <button type="button" className="ax-button" onClick={() => setRejectId(paper.id)}>Reject</button>
                           )}
                         </span>
                       )}
@@ -123,15 +123,15 @@ export function PapersView(p: {
           </section>
         </div>
 
-        <div className="ad-detail-side">
-          <section className="ad-panel">
-            <span className="ad-label">Register a document</span>
-            <div className="ad-form-section">
-              <div className="ad-form-pair">
+        <div className="ax-detail-side">
+          <section className="ax-panel">
+            <span className="ax-label">Register a document</span>
+            <div className="ax-form-section">
+              <div className="ax-form-pair">
                 <input value={plate} onChange={(e) => { setPlate(e.target.value.toUpperCase()); setFound(null); }} placeholder="Plate · GJ01AB1234" aria-label="Vehicle plate" disabled={p.busy} />
                 <button
                   type="button"
-                  className="ad-button"
+                  className="ax-button"
                   disabled={p.busy || plate.trim().length < 6}
                   onClick={() => {
                     setFound("searching");
@@ -141,12 +141,12 @@ export function PapersView(p: {
                   Find
                 </button>
               </div>
-              {found === "searching" && <p className="ad-note">Searching…</p>}
-              {found === "missing" && <p className="ad-status-msg ad-status-msg--warn">No vehicle with that plate.</p>}
+              {found === "searching" && <p className="ax-note">Searching…</p>}
+              {found === "missing" && <p className="ax-status-msg ax-status-msg--warn">No vehicle with that plate.</p>}
               {found && found !== "searching" && found !== "missing" && (
-                <p className="ad-status-msg">{vehicleName(found)}</p>
+                <p className="ax-status-msg">{vehicleName(found)}</p>
               )}
-              <div className="ad-form-pair">
+              <div className="ax-form-pair">
                 <select value={kind} onChange={(e) => setKind(e.target.value as PaperKind)} aria-label="Document kind" disabled={p.busy}>
                   {(Object.keys(KIND_NAME) as PaperKind[]).map((k) => (
                     <option key={k} value={k}>{KIND_NAME[k]}</option>
@@ -158,7 +158,7 @@ export function PapersView(p: {
               <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Note (optional)" aria-label="Note" disabled={p.busy} />
               <button
                 type="button"
-                className="ad-button ad-button--primary"
+                className="ax-button ax-button--primary"
                 disabled={p.busy || !found || found === "searching" || found === "missing" || !reference.trim()}
                 onClick={() => {
                   if (!found || found === "searching" || found === "missing") return;

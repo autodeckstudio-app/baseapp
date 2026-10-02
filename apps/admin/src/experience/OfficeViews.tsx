@@ -33,7 +33,7 @@ export function CustomersView(p: {
     { key: "joined", head: "Customer since", kind: "muted", width: "minmax(0, 1fr)", align: "end", cell: (c) => formatDate(c.createdAt) },
   ];
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Customers"
@@ -43,10 +43,10 @@ export function CustomersView(p: {
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.customers.length }}>
-        <input className="ad-search" type="search" placeholder="Search name or phone" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" placeholder="Search name or phone" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
         <PlateLookup onLookup={p.onPlateLookup} />
       </Toolbar>
-      {p.plateMessage && <p className="ad-status-msg ad-status-msg--warn">{p.plateMessage}</p>}
+      {p.plateMessage && <p className="ax-status-msg ax-status-msg--warn">{p.plateMessage}</p>}
       <ListPane
         rows={rows}
         columns={cols}
@@ -62,9 +62,9 @@ export function CustomersView(p: {
 function PlateLookup({ onLookup }: { onLookup: (plate: string) => void }) {
   const [plate, setPlate] = useState("");
   return (
-    <form className="ad-inline-form" onSubmit={(e) => { e.preventDefault(); onLookup(plate); }}>
-      <input className="ad-search ad-search--plate" placeholder="Number plate" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
-      <button type="submit" className="ad-button" disabled={plate.trim().length < 4}>Find</button>
+    <form className="ax-inline-form" onSubmit={(e) => { e.preventDefault(); onLookup(plate); }}>
+      <input className="ax-search ax-search--plate" placeholder="Number plate" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
+      <button type="submit" className="ax-button" disabled={plate.trim().length < 4}>Find</button>
     </form>
   );
 }
@@ -119,25 +119,25 @@ export function PaymentsView(p: {
       align: "end",
       width: "minmax(180px, 1.2fr)",
       cell: (x) => (
-        <span className="ad-row-actions">
-          {x.invoiceId && <button type="button" className="ad-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
+        <span className="ax-row-actions">
+          {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
           {x.status === "completed" && (confirmId === x.id ? (
             <>
               <input placeholder="Reason for refund" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Refund reason" />
-              <button type="button" className="ad-button ad-button--danger" disabled={p.refundingId === x.id || !reason.trim()} onClick={() => p.onRefund(x.id, reason.trim())}>
+              <button type="button" className="ax-button ax-button--danger" disabled={p.refundingId === x.id || !reason.trim()} onClick={() => p.onRefund(x.id, reason.trim())}>
                 {p.refundingId === x.id ? "Refunding" : "Refund"}
               </button>
-              <button type="button" className="ad-button" onClick={() => { setConfirmId(null); setReason(""); }}>Keep</button>
+              <button type="button" className="ax-button" onClick={() => { setConfirmId(null); setReason(""); }}>Keep</button>
             </>
           ) : (
-            <button type="button" className="ad-button" onClick={() => { setConfirmId(x.id); setReason(""); }}>Refund</button>
+            <button type="button" className="ax-button" onClick={() => { setConfirmId(x.id); setReason(""); }}>Refund</button>
           ))}
         </span>
       ),
     },
   ];
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Money"
         title="Payments"
@@ -149,9 +149,9 @@ export function PaymentsView(p: {
       />
       <Toolbar count={{ shown: rows.length, total: p.payments.length }}>
         <Segmented value={p.status} options={PAYMENT_FILTERS} onChange={p.onStatus} />
-        <input className="ad-search" type="search" placeholder="Search customer, job or booking" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" placeholder="Search customer, job or booking" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
       </Toolbar>
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
       <ListPane
         rows={rows}
         columns={cols}
@@ -202,7 +202,7 @@ export function InvoicesView(p: {
     { key: "total", head: "Total", kind: "data", align: "end", width: "120px", cell: (i) => formatPaise(i.total) },
   ];
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Money"
         title="Invoices"
@@ -213,7 +213,7 @@ export function InvoicesView(p: {
       />
       <Toolbar count={{ shown: rows.length, total: p.invoices.length }}>
         <Segmented value={p.status} options={INVOICE_FILTERS} onChange={p.onStatus} />
-        <input className="ad-search" type="search" placeholder="Search invoice number or customer" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" placeholder="Search invoice number or customer" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
       </Toolbar>
       <ListPane
         rows={rows}
@@ -253,15 +253,15 @@ export function AuditView(p: {
   const cols: Column<AuditLog>[] = [
     { key: "when", head: "When", kind: "muted", width: "160px", cell: (e) => formatDateTime(e.createdAt) },
     { key: "what", head: "What happened", kind: "strong", width: "minmax(0, 1.4fr)", cell: (e) => statusLabel(e.action) },
-    { key: "on", head: "Record", width: "minmax(0, 1.4fr)", cell: (e) => <>{statusLabel(e.entityType)} <span className="ad-sub" style={{ display: "inline" }}>{e.entityId}</span></> },
-    { key: "by", head: "By", width: "minmax(0, 1.2fr)", cell: (e) => <>{p.who[e.performedBy] ?? e.performedBy}<span className="ad-sub">{statusLabel(e.performedByRole)}</span></> },
+    { key: "on", head: "Record", width: "minmax(0, 1.4fr)", cell: (e) => <>{statusLabel(e.entityType)} <span className="ax-sub" style={{ display: "inline" }}>{e.entityId}</span></> },
+    { key: "by", head: "By", width: "minmax(0, 1.2fr)", cell: (e) => <>{p.who[e.performedBy] ?? e.performedBy}<span className="ax-sub">{statusLabel(e.performedByRole)}</span></> },
   ];
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead eyebrow="Office" title="Audit log" kpis={[{ value: p.entries.length, label: "Entries" }]} />
-      <p className="ad-note" style={{ marginTop: 0 }}>Every change to bookings, jobs, money and access is written here. Entries can&apos;t be edited or deleted.</p>
+      <p className="ax-note" style={{ marginTop: 0 }}>Every change to bookings, jobs, money and access is written here. Entries can&apos;t be edited or deleted.</p>
       <Toolbar count={{ shown: rows.length, total: p.entries.length }}>
-        <input className="ad-search" type="search" placeholder="Search person or record ID" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="ax-search" type="search" placeholder="Search person or record ID" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={action} onChange={(e) => setAction(e.target.value)} aria-label="Action">
           <option value="">All actions</option>
           {actions.map((a) => <option key={a} value={a}>{statusLabel(a)}</option>)}
@@ -282,13 +282,13 @@ export function AuditView(p: {
       />
       {selected && (
         <Drawer eyebrow={formatDateTime(selected.createdAt)} title={statusLabel(selected.action)} onClose={() => setSelected(null)}>
-          <div className="kv"><span>Record</span><span>{statusLabel(selected.entityType)} · <span className="ad-data">{selected.entityId}</span></span></div>
+          <div className="kv"><span>Record</span><span>{statusLabel(selected.entityType)} · <span className="ax-data">{selected.entityId}</span></span></div>
           <div className="kv"><span>By</span><span>{p.who[selected.performedBy] ?? selected.performedBy} ({statusLabel(selected.performedByRole)})</span></div>
           <div className="kv"><span>Studio</span><span>{selected.studioId ?? "Whole business"}</span></div>
-          <p className="ad-label" style={{ marginTop: 20 }}>Before</p>
-          <pre className="ad-code">{selected.before ? JSON.stringify(selected.before, null, 2) : "Nothing (new record)"}</pre>
-          <p className="ad-label">After</p>
-          <pre className="ad-code">{selected.after ? JSON.stringify(selected.after, null, 2) : "Nothing (removed)"}</pre>
+          <p className="ax-label" style={{ marginTop: 20 }}>Before</p>
+          <pre className="ax-code">{selected.before ? JSON.stringify(selected.before, null, 2) : "Nothing (new record)"}</pre>
+          <p className="ax-label">After</p>
+          <pre className="ax-code">{selected.after ? JSON.stringify(selected.after, null, 2) : "Nothing (removed)"}</pre>
         </Drawer>
       )}
     </div>

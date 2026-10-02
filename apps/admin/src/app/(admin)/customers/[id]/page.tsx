@@ -64,9 +64,9 @@ export default function CustomerDetailPage() {
     void getProtectionsForVehicles(vehicleIds).then(setProtections);
   }, [id, claims, vehicles]);
 
-  if (error) return <div className="ad-panel ad-empty" role="alert"><p className="ad-title">Couldn&apos;t load this customer</p><p>{error}</p></div>;
-  if (customer === undefined) return <div className="ad-page"><div className="ad-skel" style={{ height: 140, marginBottom: 16 }} /><div className="ad-skel" style={{ height: 320 }} /></div>;
-  if (customer === null) return <div className="ad-panel ad-empty"><p className="ad-title">Customer not found</p><p>They may have been merged or removed.</p></div>;
+  if (error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Couldn&apos;t load this customer</p><p>{error}</p></div>;
+  if (customer === undefined) return <div className="ax-page"><div className="ax-skel" style={{ height: 140, marginBottom: 16 }} /><div className="ax-skel" style={{ height: 320 }} /></div>;
+  if (customer === null) return <div className="ax-panel ax-empty"><p className="ax-title">Customer not found</p><p>They may have been merged or removed.</p></div>;
 
   return (
     <CustomerView

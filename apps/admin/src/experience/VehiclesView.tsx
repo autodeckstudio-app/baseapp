@@ -33,11 +33,11 @@ export function daysLeft(expiry: string, today: string): number {
 }
 
 function Expiry({ date, today }: { date: string | null; today: string }) {
-  if (!date) return <span className="ad-sub">No expiry on file</span>;
+  if (!date) return <span className="ax-sub">No expiry on file</span>;
   const d = daysLeft(date, today);
   const tone = d < 0 ? "danger" : d <= 30 ? "warning" : "ok";
   const text = d < 0 ? `Expired ${-d} day${d === -1 ? "" : "s"} ago` : d === 0 ? "Expires today" : `${d} day${d === 1 ? "" : "s"} left`;
-  return <span className={`ad-expiry ad-expiry--${tone}`}>{text} · {formatDate(date)}</span>;
+  return <span className={`ax-expiry ax-expiry--${tone}`}>{text} · {formatDate(date)}</span>;
 }
 
 export function VehiclesView(p: {
@@ -57,45 +57,45 @@ export function VehiclesView(p: {
   const expiring = p.protections.filter((x) => x.expiryDate && daysLeft(x.expiryDate, p.today) <= 30).length;
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead eyebrow="Office" title="Vehicles" />
-      <form className="ad-panel ad-plate-search" onSubmit={(e) => { e.preventDefault(); p.onSearch(plate); }}>
-        <span className="ad-label">Find a car</span>
-        <div className="ad-plate-row">
-          <input className="ad-plate-input" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} placeholder="GJ 01 AB 1234" aria-label="Number plate" />
-          <button type="submit" className="ad-button ad-button--primary" disabled={p.searching || plate.trim().length < 4}>{p.searching ? "Looking" : "Find"}</button>
+      <form className="ax-panel ax-plate-search" onSubmit={(e) => { e.preventDefault(); p.onSearch(plate); }}>
+        <span className="ax-label">Find a car</span>
+        <div className="ax-plate-row">
+          <input className="ax-plate-input" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} placeholder="GJ 01 AB 1234" aria-label="Number plate" />
+          <button type="submit" className="ax-button ax-button--primary" disabled={p.searching || plate.trim().length < 4}>{p.searching ? "Looking" : "Find"}</button>
         </div>
       </form>
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
       {p.vehicle && (
         <>
-          <div className="ad-hero" style={{ marginTop: "var(--ad-space-inset)" }}>
+          <div className="ax-hero" style={{ marginTop: "var(--ad-space-inset)" }}>
             <div>
-              <p className="ad-label">{[p.vehicle.year, p.vehicle.make].filter(Boolean).join(" ")}</p>
+              <p className="ax-label">{[p.vehicle.year, p.vehicle.make].filter(Boolean).join(" ")}</p>
               <h1>{p.vehicle.registrationNumber}</h1>
-              <p className="ad-hero-sub">{[p.vehicle.make, p.vehicle.model].filter(Boolean).join(" ")}</p>
+              <p className="ax-hero-sub">{[p.vehicle.make, p.vehicle.model].filter(Boolean).join(" ")}</p>
             </div>
-            <div className="ad-kpis">
-              <div><span className="ad-kpi-v">{p.protections.length}</span><span className="ad-label">Papers on file</span></div>
-              <div><span className={`ad-kpi-v${expiring ? " ad-kpi-v--accent" : ""}`}>{expiring}</span><span className="ad-label">Due within 30 days</span></div>
+            <div className="ax-kpis">
+              <div><span className="ax-kpi-v">{p.protections.length}</span><span className="ax-label">Papers on file</span></div>
+              <div><span className={`ax-kpi-v${expiring ? " ax-kpi-v--accent" : ""}`}>{expiring}</span><span className="ax-label">Due within 30 days</span></div>
             </div>
           </div>
 
-          <div className="ad-detail">
-            <div className="ad-detail-main">
-              <section className="ad-panel">
-                <span className="ad-label">Papers</span>
+          <div className="ax-detail">
+            <div className="ax-detail-main">
+              <section className="ax-panel">
+                <span className="ax-label">Papers</span>
                 {p.protections.length === 0 ? (
-                  <p className="ad-note">Nothing on file for this car yet.</p>
+                  <p className="ax-note">Nothing on file for this car yet.</p>
                 ) : (
-                  <ul className="ad-papers">
+                  <ul className="ax-papers">
                     {p.protections.map((x) => (
-                      <li key={x.id} className="ad-paper">
-                        <div className="ad-paper-main">
-                          <span className="ad-person-name">{KIND_LABEL[x.kind]}</span>
-                          <span className="ad-sub">{[x.provider, x.policyNumber].filter(Boolean).join(" · ") || "No provider details"}</span>
+                      <li key={x.id} className="ax-paper">
+                        <div className="ax-paper-main">
+                          <span className="ax-person-name">{KIND_LABEL[x.kind]}</span>
+                          <span className="ax-sub">{[x.provider, x.policyNumber].filter(Boolean).join(" · ") || "No provider details"}</span>
                           <Expiry date={x.expiryDate} today={p.today} />
                         </div>
                         <select value={x.status} onChange={(e) => p.onStatus(x, e.target.value as ProtectionStatus)} aria-label={`Status of ${KIND_LABEL[x.kind]}`}>
@@ -109,32 +109,32 @@ export function VehiclesView(p: {
                 )}
               </section>
             </div>
-            <aside className="ad-detail-side">
+            <aside className="ax-detail-side">
               {adding ? (
-                <form className="ad-panel" onSubmit={(e) => { e.preventDefault(); p.onAdd(draft); setDraft(EMPTY); setAdding(false); }}>
-                  <span className="ad-label">Add a paper</span>
-                  <label className="ad-form-row"><span>Type</span>
+                <form className="ax-panel" onSubmit={(e) => { e.preventDefault(); p.onAdd(draft); setDraft(EMPTY); setAdding(false); }}>
+                  <span className="ax-label">Add a paper</span>
+                  <label className="ax-form-row"><span>Type</span>
                     <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as ProtectionKind })}>
                       {KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
                     </select>
                   </label>
-                  <label className="ad-form-row"><span>Provider</span><input value={draft.provider} onChange={(e) => setDraft({ ...draft, provider: e.target.value })} placeholder="e.g. ICICI Lombard" /></label>
-                  <label className="ad-form-row"><span>Policy or reference number</span><input value={draft.policyNumber} onChange={(e) => setDraft({ ...draft, policyNumber: e.target.value })} /></label>
-                  <div className="ad-form-pair">
-                    <label className="ad-form-row"><span>Starts</span><input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} /></label>
-                    <label className="ad-form-row"><span>Expires</span><input type="date" value={draft.expiryDate} onChange={(e) => setDraft({ ...draft, expiryDate: e.target.value })} /></label>
+                  <label className="ax-form-row"><span>Provider</span><input value={draft.provider} onChange={(e) => setDraft({ ...draft, provider: e.target.value })} placeholder="e.g. ICICI Lombard" /></label>
+                  <label className="ax-form-row"><span>Policy or reference number</span><input value={draft.policyNumber} onChange={(e) => setDraft({ ...draft, policyNumber: e.target.value })} /></label>
+                  <div className="ax-form-pair">
+                    <label className="ax-form-row"><span>Starts</span><input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} /></label>
+                    <label className="ax-form-row"><span>Expires</span><input type="date" value={draft.expiryDate} onChange={(e) => setDraft({ ...draft, expiryDate: e.target.value })} /></label>
                   </div>
-                  <label className="ad-form-row"><span>Notes</span><input value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
-                  <div className="ad-panel-actions">
-                    <button type="submit" className="ad-button ad-button--primary">Save</button>
-                    <button type="button" className="ad-button" onClick={() => setAdding(false)}>Cancel</button>
+                  <label className="ax-form-row"><span>Notes</span><input value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+                  <div className="ax-panel-actions">
+                    <button type="submit" className="ax-button ax-button--primary">Save</button>
+                    <button type="button" className="ax-button" onClick={() => setAdding(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
-                <section className="ad-panel">
-                  <span className="ad-label">Keep papers current</span>
+                <section className="ax-panel">
+                  <span className="ax-label">Keep papers current</span>
                   <p style={{ margin: 0, fontSize: 14 }}>Add insurance, FASTag, PUC or warranty details so the studio can remind the owner before they run out.</p>
-                  <div className="ad-panel-actions"><button type="button" className="ad-button ad-button--primary" onClick={() => setAdding(true)}>Add a paper</button></div>
+                  <div className="ax-panel-actions"><button type="button" className="ax-button ax-button--primary" onClick={() => setAdding(true)}>Add a paper</button></div>
                 </section>
               )}
             </aside>
@@ -142,8 +142,8 @@ export function VehiclesView(p: {
         </>
       )}
       {!p.vehicle && !p.error && (
-        <div className="ad-panel ad-empty" style={{ marginTop: "var(--ad-space-inset)" }}>
-          <p className="ad-title">Type a number plate to start</p>
+        <div className="ax-panel ax-empty" style={{ marginTop: "var(--ad-space-inset)" }}>
+          <p className="ax-title">Type a number plate to start</p>
           <p>Spaces don&apos;t matter. You&apos;ll see the car, its owner&apos;s papers and what&apos;s about to expire.</p>
         </div>
       )}

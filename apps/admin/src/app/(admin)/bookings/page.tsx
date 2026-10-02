@@ -88,33 +88,33 @@ export default function BookingsPage() {
   });
 
   return (
-    <div className="ad-page">
-      <header className="ad-page-head">
+    <div className="ax-page">
+      <header className="ax-page-head">
         <div>
-          <p className="ad-label">Studio schedule</p>
+          <p className="ax-label">Studio schedule</p>
           <h1>Bookings</h1>
         </div>
-        <div className="ad-kpis" aria-label="At a glance">
-          <div><span className="ad-kpi-v">{dayMode ? dayCount : bookings.length}</span><span className="ad-label">{dayMode ? "On this day" : "All bookings"}</span></div>
-          <div><span className="ad-kpi-v ad-kpi-v--accent">{pending}</span><span className="ad-label">Need confirming</span></div>
-          <div><span className="ad-kpi-v ad-kpi-v--premium">{upcoming}</span><span className="ad-label">Coming up</span></div>
+        <div className="ax-kpis" aria-label="At a glance">
+          <div><span className="ax-kpi-v">{dayMode ? dayCount : bookings.length}</span><span className="ax-label">{dayMode ? "On this day" : "All bookings"}</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{pending}</span><span className="ax-label">Need confirming</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{upcoming}</span><span className="ax-label">Coming up</span></div>
         </div>
       </header>
 
-      <div className="ad-toolbar">
+      <div className="ax-toolbar">
         {dayMode ? (
-          <div className="ad-daynav" role="group" aria-label="Day">
-            <button type="button" className="ad-button" aria-label="Previous day" onClick={() => setDate(shiftDay(date, -1))}>‹</button>
-            <span className="ad-daynav-date" aria-live="polite">{date === today ? "Today" : formatDayLong(date)}</span>
-            <button type="button" className="ad-button" aria-label="Next day" onClick={() => setDate(shiftDay(date, 1))}>›</button>
-            {date !== today && <button type="button" className="ad-button" onClick={() => setDate(today)}>Today</button>}
+          <div className="ax-daynav" role="group" aria-label="Day">
+            <button type="button" className="ax-button" aria-label="Previous day" onClick={() => setDate(shiftDay(date, -1))}>‹</button>
+            <span className="ax-daynav-date" aria-live="polite">{date === today ? "Today" : formatDayLong(date)}</span>
+            <button type="button" className="ax-button" aria-label="Next day" onClick={() => setDate(shiftDay(date, 1))}>›</button>
+            {date !== today && <button type="button" className="ax-button" onClick={() => setDate(today)}>Today</button>}
           </div>
         ) : null}
-        <div className="ad-seg" role="group" aria-label="View">
+        <div className="ax-seg" role="group" aria-label="View">
           <button type="button" aria-pressed={dayMode} onClick={() => setDate(today)}>Day</button>
           <button type="button" aria-pressed={!dayMode} onClick={() => setDate("")}>All dates</button>
         </div>
-        <div className="ad-filters">
+        <div className="ax-filters">
         <input type="date" aria-label="Pick a date" value={date} onChange={(e) => setDate(e.target.value)} />
         <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus | "")}>
           <option value="">All statuses</option>
@@ -129,8 +129,8 @@ export default function BookingsPage() {
           ))}
         </select>
         </div>
-        <input className="ad-search" type="search" aria-label="Search" placeholder="Search plate, customer or booking" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <span className="ad-count">{filtered.length} of {bookings.length}</span>
+        <input className="ax-search" type="search" aria-label="Search" placeholder="Search plate, customer or booking" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <span className="ax-count">{filtered.length} of {bookings.length}</span>
       </div>
 
       {dayMode ? (
@@ -138,7 +138,7 @@ export default function BookingsPage() {
       ) : loading ? (
         <DayAgenda items={[]} loading onOpen={open} />
       ) : sorted.length === 0 ? (
-        <div className="ad-empty"><p className="ad-title">No matches</p><p>Try another status, service or search.</p></div>
+        <div className="ax-empty"><p className="ax-title">No matches</p><p>Try another status, service or search.</p></div>
       ) : (
         <table>
           <thead>
@@ -158,12 +158,12 @@ export default function BookingsPage() {
               <tr key={b.id} className="row-link" onClick={() => open(b.id)}>
                 <td>{formatDateTime(b.scheduledAt)}</td>
                 <td><StatusBadge label={b.status} /></td>
-                <td className="ad-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
+                <td className="ax-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
                 <td>{customerNames[b.customerId] ?? "-"}</td>
                 <td>{serviceNames[b.serviceId] ?? "-"}</td>
                 <td>{b.bayId}</td>
                 <td><StatusBadge label={b.paymentStatus} /></td>
-                <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
+                <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
               </tr>
             ))}
           </tbody>

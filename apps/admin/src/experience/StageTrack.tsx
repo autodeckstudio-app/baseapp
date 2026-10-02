@@ -7,14 +7,14 @@ export const JOB_STAGES = ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS",
 export function StageTrack({ current, stages = JOB_STAGES }: { current: string; stages?: readonly string[] }) {
   const at = stages.indexOf(current);
   if (at < 0) {
-    return <p className="ad-track-off">{statusLabel(current)}</p>;
+    return <p className="ax-track-off">{statusLabel(current)}</p>;
   }
   return (
-    <ol className="ad-track" aria-label="Progress">
+    <ol className="ax-track" aria-label="Progress">
       {stages.map((s, i) => (
         <li key={s} className={i < at ? "is-done" : i === at ? "is-now" : ""} aria-current={i === at ? "step" : undefined}>
-          <span className="ad-track-dot" aria-hidden="true" />
-          <span className="ad-track-label">{statusLabel(s)}</span>
+          <span className="ax-track-dot" aria-hidden="true" />
+          <span className="ax-track-label">{statusLabel(s)}</span>
         </li>
       ))}
     </ol>

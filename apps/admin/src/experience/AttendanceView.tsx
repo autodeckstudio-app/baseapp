@@ -49,7 +49,7 @@ export function AttendanceView(p: {
   const activeStaff = p.staff.filter((s) => !s.terminatedAt);
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Studio"
         title="Attendance"
@@ -59,40 +59,40 @@ export function AttendanceView(p: {
           { value: p.records.length, label: "Marked", tone: "premium" },
         ]}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <span className="ad-label">Today · {p.date}</span>
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <span className="ax-label">Today · {p.date}</span>
             {p.loading ? (
-              [0, 1, 2].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+              [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : activeStaff.length === 0 ? (
-              <p className="ad-note">No one on the roster yet. Add people from Office → Team.</p>
+              <p className="ax-note">No one on the roster yet. Add people from Office → Team.</p>
             ) : (
-              <ul className="ad-people">
+              <ul className="ax-people">
                 {activeStaff.map((emp) => {
                   const rec = byEmployee.get(emp.id);
                   const empOnBreak = rec?.breaks.some((b) => b.endedAt === null) ?? false;
                   return (
-                    <li key={emp.id} className="ad-person">
-                      <span className={`ad-avatar ad-avatar--${emp.role}`} aria-hidden="true">
+                    <li key={emp.id} className="ax-person">
+                      <span className={`ax-avatar ax-avatar--${emp.role}`} aria-hidden="true">
                         {emp.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?"}
                       </span>
-                      <span className="ad-person-main">
-                        <span className="ad-person-name">
+                      <span className="ax-person-main">
+                        <span className="ax-person-name">
                           {emp.name}
                           {empOnBreak ? " · on break" : ""}
                         </span>
-                        <span className="ad-sub">
+                        <span className="ax-sub">
                           {rec
                             ? `${STATUS_NAME[rec.status]} · in ${formatTime(rec.checkInAt)} · out ${formatTime(rec.checkOutAt)} · ${workedLabel(rec.workedMinutes)}`
                             : "Not marked today"}
                         </span>
                       </span>
                       {rec && (
-                        <span className={`ad-expiry ${rec.status === "ABSENT" ? "ad-expiry--danger" : rec.status === "HALF_DAY" ? "ad-expiry--warning" : "ad-expiry--ok"}`}>
+                        <span className={`ax-expiry ${rec.status === "ABSENT" ? "ax-expiry--danger" : rec.status === "HALF_DAY" ? "ax-expiry--warning" : "ax-expiry--ok"}`}>
                           {STATUS_NAME[rec.status]}
                         </span>
                       )}
@@ -104,36 +104,36 @@ export function AttendanceView(p: {
           </section>
         </div>
 
-        <div className="ad-detail-side">
+        <div className="ax-detail-side">
           {p.me && (
-            <section className="ad-panel">
-              <span className="ad-label">Your day</span>
+            <section className="ax-panel">
+              <span className="ax-label">Your day</span>
               {p.myRecord ? (
-                <p className="ad-note">
+                <p className="ax-note">
                   {STATUS_NAME[p.myRecord.status]} · in {formatTime(p.myRecord.checkInAt)} · out{" "}
                   {formatTime(p.myRecord.checkOutAt)} · {workedLabel(p.myRecord.workedMinutes)}
                 </p>
               ) : (
-                <p className="ad-note">You haven't checked in today.</p>
+                <p className="ax-note">You haven't checked in today.</p>
               )}
-              <div className="ad-panel-actions">
+              <div className="ax-panel-actions">
                 {!p.myRecord?.checkInAt && (
-                  <button type="button" className="ad-button ad-button--primary" disabled={p.busy} onClick={p.onCheckIn}>
+                  <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={p.onCheckIn}>
                     Check in
                   </button>
                 )}
                 {p.myRecord?.checkInAt && !p.myRecord.checkOutAt && !myOnBreak && (
                   <>
-                    <button type="button" className="ad-button" disabled={p.busy} onClick={p.onStartBreak}>
+                    <button type="button" className="ax-button" disabled={p.busy} onClick={p.onStartBreak}>
                       Start break
                     </button>
-                    <button type="button" className="ad-button ad-button--primary" disabled={p.busy} onClick={p.onCheckOut}>
+                    <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={p.onCheckOut}>
                       Check out
                     </button>
                   </>
                 )}
                 {myOnBreak && (
-                  <button type="button" className="ad-button ad-button--primary" disabled={p.busy} onClick={p.onEndBreak}>
+                  <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={p.onEndBreak}>
                     End break
                   </button>
                 )}
@@ -142,16 +142,16 @@ export function AttendanceView(p: {
           )}
 
           {p.isAdmin && (
-            <section className="ad-panel">
-              <span className="ad-label">Mark someone (Office)</span>
-              <div className="ad-form-section">
+            <section className="ax-panel">
+              <span className="ax-label">Mark someone (Office)</span>
+              <div className="ax-form-section">
                 <select value={markFor} onChange={(e) => setMarkFor(e.target.value)} aria-label="Person" disabled={p.busy}>
                   <option value="">Choose person…</option>
                   {activeStaff.map((emp) => (
                     <option key={emp.id} value={emp.id}>{emp.name}</option>
                   ))}
                 </select>
-                <div className="ad-form-pair">
+                <div className="ax-form-pair">
                   <select value={markStatus} onChange={(e) => setMarkStatus(e.target.value as AttendanceStatus)} aria-label="Status" disabled={p.busy}>
                     {(Object.keys(STATUS_NAME) as AttendanceStatus[]).map((s) => (
                       <option key={s} value={s}>{STATUS_NAME[s]}</option>
@@ -167,13 +167,13 @@ export function AttendanceView(p: {
                 </div>
                 <button
                   type="button"
-                  className="ad-button ad-button--primary"
+                  className="ax-button ax-button--primary"
                   disabled={p.busy || !markFor}
                   onClick={() => { p.onMark(markFor, markStatus, markNotes.trim()); setMarkNotes(""); }}
                 >
                   Save mark
                 </button>
-                <p className="ad-note">Marking never changes recorded check-in times.</p>
+                <p className="ax-note">Marking never changes recorded check-in times.</p>
               </div>
             </section>
           )}

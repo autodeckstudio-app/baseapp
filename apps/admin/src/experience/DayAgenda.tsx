@@ -20,44 +20,44 @@ export interface AgendaItem {
 export function DayAgenda({ items, loading, onOpen }: { items: AgendaItem[]; loading?: boolean; onOpen: (id: string) => void }) {
   if (loading) {
     return (
-      <div className="ad-agenda" aria-busy="true">
+      <div className="ax-agenda" aria-busy="true">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="ad-skel" style={{ height: 72 }} />
+          <div key={i} className="ax-skel" style={{ height: 72 }} />
         ))}
       </div>
     );
   }
   if (items.length === 0) {
     return (
-      <div className="ad-empty">
-        <p className="ad-title">A clear day</p>
+      <div className="ax-empty">
+        <p className="ax-title">A clear day</p>
         <p>No bookings on this date. New online and phone bookings appear here as they come in.</p>
       </div>
     );
   }
   return (
-    <ol className="ad-agenda">
+    <ol className="ax-agenda">
       {items.map((b) => (
         <li key={b.id}>
-          <button type="button" className={`ad-slot ad-slot--${b.status.toLowerCase()}`} onClick={() => onOpen(b.id)}>
-            <span className="ad-slot-time">
+          <button type="button" className={`ax-slot ax-slot--${b.status.toLowerCase()}`} onClick={() => onOpen(b.id)}>
+            <span className="ax-slot-time">
               <span>{b.time}</span>
-              {b.endTime && <span className="ad-slot-end">to {b.endTime}</span>}
+              {b.endTime && <span className="ax-slot-end">to {b.endTime}</span>}
             </span>
-            <span className="ad-slot-main">
-              <span className="ad-slot-line">
-                <span className="ad-job-plate">{b.plate}</span>
-                <span className="ad-slot-who">{b.customer}</span>
+            <span className="ax-slot-main">
+              <span className="ax-slot-line">
+                <span className="ax-job-plate">{b.plate}</span>
+                <span className="ax-slot-who">{b.customer}</span>
               </span>
-              <span className="ad-job-what">
+              <span className="ax-job-what">
                 {b.service}
                 {b.bay ? ` · Bay ${b.bay}` : ""}
               </span>
             </span>
-            <span className="ad-slot-side">
+            <span className="ax-slot-side">
               <StatusBadge label={b.status} />
-              <span className="ad-slot-amt">
-                <span className="ad-data">{b.amount}</span>
+              <span className="ax-slot-amt">
+                <span className="ax-data">{b.amount}</span>
                 <StatusBadge label={b.payment} />
               </span>
             </span>

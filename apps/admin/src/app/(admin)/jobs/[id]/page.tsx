@@ -103,11 +103,11 @@ export default function JobDetailPage() {
   }
 
   if (error) return <p className="error">{error}</p>;
-  if (job === undefined) return <p className="ad-label" role="status">Loading…</p>;
+  if (job === undefined) return <p className="ax-label" role="status">Loading…</p>;
   if (job === null) {
     return (
-      <div className="ad-empty">
-        <p className="ad-title">Job not found</p>
+      <div className="ax-empty">
+        <p className="ax-title">Job not found</p>
         <p>It may have been removed, or the link is wrong.</p>
       </div>
     );
@@ -118,52 +118,52 @@ export default function JobDetailPage() {
   const METHOD_LABEL: Record<string, string> = { cash: "Cash", upi_manual: "UPI", bank_transfer: "Bank transfer", razorpay_payment_link: "Online (Razorpay)" };
 
   return (
-    <div className="ad-page">
-      <button type="button" className="ad-back" onClick={() => router.push("/jobs")}>‹ Studio floor</button>
+    <div className="ax-page">
+      <button type="button" className="ax-back" onClick={() => router.push("/jobs")}>‹ Studio floor</button>
 
-      <header className="ad-hero">
+      <header className="ax-hero">
         <div>
-          <p className="ad-label">{job.isWalkIn ? "Walk-in job" : "Booked job"} · {service?.name ?? "Service"}</p>
+          <p className="ax-label">{job.isWalkIn ? "Walk-in job" : "Booked job"} · {service?.name ?? "Service"}</p>
           <h1>{plate}</h1>
-          <p className="ad-hero-sub">{[car, customer?.name].filter(Boolean).join(" · ")}</p>
+          <p className="ax-hero-sub">{[car, customer?.name].filter(Boolean).join(" · ")}</p>
         </div>
-        <div className="ad-hero-side">
+        <div className="ax-hero-side">
           <StatusBadge label={job.status} />
-          <span className="ad-hero-total">{formatPaise(job.totalAmount)}</span>
+          <span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
           <StatusBadge label={job.paymentStatus} />
         </div>
       </header>
 
       <StageTrack current={job.status} />
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <span className="ad-label">Timeline</span>
-            <ol className="ad-timeline">
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <span className="ax-label">Timeline</span>
+            <ol className="ax-timeline">
               {[...job.statusHistory].reverse().map((h, i) => (
                 <li key={i}>
-                  <span className="ad-timeline-dot" aria-hidden="true" />
+                  <span className="ax-timeline-dot" aria-hidden="true" />
                   <span>
                     {statusLabel(h.status)}
-                    {h.notes && <span className="ad-timeline-note">{h.notes}</span>}
+                    {h.notes && <span className="ax-timeline-note">{h.notes}</span>}
                   </span>
-                  <span className="ad-timeline-meta">{formatDateTime(h.changedAt)}</span>
+                  <span className="ax-timeline-meta">{formatDateTime(h.changedAt)}</span>
                 </li>
               ))}
             </ol>
           </section>
 
           {inspection && (
-            <section className="ad-panel">
-              <span className="ad-label">Inspection · {inspection.status === "finalized" ? "Finalized" : "In progress"}</span>
-              {inspection.finalizedAt && <p className="ad-note" style={{ marginTop: 0 }}>Finalized {formatDateTime(inspection.finalizedAt)}</p>}
+            <section className="ax-panel">
+              <span className="ax-label">Inspection · {inspection.status === "finalized" ? "Finalized" : "In progress"}</span>
+              {inspection.finalizedAt && <p className="ax-note" style={{ marginTop: 0 }}>Finalized {formatDateTime(inspection.finalizedAt)}</p>}
               {(["exterior", "glass", "interior", "service_specific"] as InspectionArea[]).map((area) => {
                 const items = inspection.checklist.filter((i) => i.area === area && i.rating);
                 if (items.length === 0) return null;
                 return (
                   <div key={area} style={{ marginTop: 12 }}>
-                    <p className="ad-label" style={{ margin: "0 0 4px" }}>{area.replace("_", " ")}</p>
+                    <p className="ax-label" style={{ margin: "0 0 4px" }}>{area.replace("_", " ")}</p>
                     {items.map((item) => (
                       <div className="kv" key={item.key}>
                         <span>{item.label}</span>
@@ -178,8 +178,8 @@ export default function JobDetailPage() {
           )}
 
           {approvals.length > 0 && (
-            <section className="ad-panel">
-              <span className="ad-label">Extra work approvals</span>
+            <section className="ax-panel">
+              <span className="ax-label">Extra work approvals</span>
               <table>
                 <thead><tr><th>Work</th><th>Status</th><th style={{ textAlign: "right" }}>Price</th><th>Asked</th></tr></thead>
                 <tbody>
@@ -187,7 +187,7 @@ export default function JobDetailPage() {
                     <tr key={a.id}>
                       <td>{a.serviceName}</td>
                       <td><StatusBadge label={a.status} /></td>
-                      <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(a.priceImpact)}</td>
+                      <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(a.priceImpact)}</td>
                       <td>{formatDateTime(a.createdAt)}</td>
                     </tr>
                   ))}
@@ -196,17 +196,17 @@ export default function JobDetailPage() {
             </section>
           )}
 
-          <section className="ad-panel">
-            <span className="ad-label">Activity</span>
+          <section className="ax-panel">
+            <span className="ax-label">Activity</span>
             {audit.length === 0 ? (
-              <p className="ad-note" style={{ marginTop: 0 }}>No recorded changes yet.</p>
+              <p className="ax-note" style={{ marginTop: 0 }}>No recorded changes yet.</p>
             ) : (
-              <ol className="ad-timeline">
+              <ol className="ax-timeline">
                 {audit.map((a) => (
                   <li key={a.id}>
-                    <span className="ad-timeline-dot" style={{ background: "var(--ad-inactive)" }} aria-hidden="true" />
-                    <span>{statusLabel(a.action)}<span className="ad-timeline-note">by {statusLabel(a.performedByRole)}</span></span>
-                    <span className="ad-timeline-meta">{formatDateTime(a.createdAt)}</span>
+                    <span className="ax-timeline-dot" style={{ background: "var(--ad-inactive)" }} aria-hidden="true" />
+                    <span>{statusLabel(a.action)}<span className="ax-timeline-note">by {statusLabel(a.performedByRole)}</span></span>
+                    <span className="ax-timeline-meta">{formatDateTime(a.createdAt)}</span>
                   </li>
                 ))}
               </ol>
@@ -214,20 +214,20 @@ export default function JobDetailPage() {
           </section>
         </div>
 
-        <aside className="ad-detail-side">
-          <section className="ad-panel">
-            <span className="ad-label">Car and owner</span>
+        <aside className="ax-detail-side">
+          <section className="ax-panel">
+            <span className="ax-label">Car and owner</span>
             <div className="kv"><span>Customer</span><span>{customer?.name ?? "-"}</span></div>
             {customer?.phone && <div className="kv"><span>Phone</span><span><a href={`tel:${customer.phone}`}>{customer.phone}</a></span></div>}
             <div className="kv"><span>Vehicle</span><span>{car || "-"}</span></div>
-            <div className="kv"><span>Plate</span><span className="ad-data">{vehicle?.registrationNumber ?? "-"}</span></div>
-            <div className="ad-panel-actions">
-              {job.bookingId && <button type="button" className="ad-button" onClick={() => router.push(`/bookings/${job.bookingId}`)}>Open booking</button>}
+            <div className="kv"><span>Plate</span><span className="ax-data">{vehicle?.registrationNumber ?? "-"}</span></div>
+            <div className="ax-panel-actions">
+              {job.bookingId && <button type="button" className="ax-button" onClick={() => router.push(`/bookings/${job.bookingId}`)}>Open booking</button>}
             </div>
           </section>
 
-          <section className="ad-panel">
-            <span className="ad-label">Bay and timing</span>
+          <section className="ax-panel">
+            <span className="ax-label">Bay and timing</span>
             <div className="kv"><span>Bay</span><span>{job.bayId}</span></div>
             <div className="kv"><span>Starts</span><span>{formatDateTime(job.scheduledAt)}</span></div>
             <div className="kv"><span>Est. finish</span><span>{formatDateTime(job.estimatedEndAt)}</span></div>
@@ -240,63 +240,63 @@ export default function JobDetailPage() {
               </span>
             </div>
             {job.scheduledDate !== job.estimatedEndDate && (
-              <p className="ad-note">Multi-day job. The bay is held {formatDate(job.scheduledDate)} to {formatDate(job.estimatedEndDate)}.</p>
+              <p className="ax-note">Multi-day job. The bay is held {formatDate(job.scheduledDate)} to {formatDate(job.estimatedEndDate)}.</p>
             )}
             {job.sealedAt && <div className="kv"><span>Sealed</span><span>{formatDateTime(job.sealedAt)}</span></div>}
           </section>
 
-          <section className="ad-panel">
-            <span className="ad-label">Price</span>
-            <div className="kv"><span>Service</span><span className="ad-data">{formatPaise(job.priceBreakdown.total)}</span></div>
-            <div className="kv"><span>Extra work</span><span className="ad-data">{formatPaise(job.additionalWorkDelta)}</span></div>
-            <div className="kv"><span>Total</span><span className="ad-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
+          <section className="ax-panel">
+            <span className="ax-label">Price</span>
+            <div className="kv"><span>Service</span><span className="ax-data">{formatPaise(job.priceBreakdown.total)}</span></div>
+            <div className="kv"><span>Extra work</span><span className="ax-data">{formatPaise(job.additionalWorkDelta)}</span></div>
+            <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
           </section>
 
-          <section className="ad-panel">
-            <span className="ad-label">Payment</span>
-            {status && <p className="ad-status-msg" role="status">{status}</p>}
+          <section className="ax-panel">
+            <span className="ax-label">Payment</span>
+            {status && <p className="ax-status-msg" role="status">{status}</p>}
             {payment ? (
               <>
                 <div className="kv"><span>{METHOD_LABEL[payment.method] ?? statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
-                <div className="kv"><span>Amount</span><span className="ad-data">{formatPaise(payment.amount)}</span></div>
+                <div className="kv"><span>Amount</span><span className="ax-data">{formatPaise(payment.amount)}</span></div>
                 {(payment.status === "pending" || payment.status === "processing") &&
                   (payment.method === "razorpay_payment_link" ? (
-                    <p className="ad-note">Waiting for the payment provider to confirm the online payment.</p>
+                    <p className="ax-note">Waiting for the payment provider to confirm the online payment.</p>
                   ) : (
-                    <div className="ad-panel-actions">
-                      <button type="button" className="ad-button ad-button--primary" onClick={() => void handleConfirmCashPayment()} disabled={confirming}>
+                    <div className="ax-panel-actions">
+                      <button type="button" className="ax-button ax-button--primary" onClick={() => void handleConfirmCashPayment()} disabled={confirming}>
                         {confirming ? "Confirming…" : "Confirm money received"}
                       </button>
                     </div>
                   ))}
               </>
             ) : (
-              <p className="ad-note" style={{ marginTop: 0 }}>No payment started yet.</p>
+              <p className="ax-note" style={{ marginTop: 0 }}>No payment started yet.</p>
             )}
             {invoice && (
               <>
                 <div className="kv"><span>Invoice {invoice.invoiceNumber}</span><span><StatusBadge label={invoice.status} /></span></div>
-                <div className="ad-panel-actions">
-                  <button type="button" className="ad-button" onClick={() => router.push(`/invoices/${invoice.id}`)}>Open invoice</button>
+                <div className="ax-panel-actions">
+                  <button type="button" className="ax-button" onClick={() => router.push(`/invoices/${invoice.id}`)}>Open invoice</button>
                 </div>
               </>
             )}
             {job.paymentStatus === "unpaid" && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
-                <p className="ad-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
-                <label className="ad-form-row">
-                  <span className="ad-label">Method</span>
+                <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
+                <label className="ax-form-row">
+                  <span className="ax-label">Method</span>
                   <select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
                     <option value="cash">Cash</option>
                     <option value="upi_manual">UPI</option>
                     <option value="bank_transfer">Bank transfer</option>
                   </select>
                 </label>
-                <label className="ad-form-row">
-                  <span className="ad-label">Reference (optional)</span>
+                <label className="ax-form-row">
+                  <span className="ax-label">Reference (optional)</span>
                   <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="UPI or transfer reference" />
                 </label>
-                <button type="button" className="ad-button ad-button--primary" style={{ width: "100%" }} onClick={() => void handleRecordPayment()} disabled={recording}>
+                <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleRecordPayment()} disabled={recording}>
                   {recording ? "Recording…" : `Record ${formatPaise(job.totalAmount)} received`}
                 </button>
               </div>
@@ -304,8 +304,8 @@ export default function JobDetailPage() {
           </section>
 
           {warranty && (
-            <section className="ad-panel">
-              <span className="ad-label">Protection</span>
+            <section className="ax-panel">
+              <span className="ax-label">Protection</span>
               <div className="kv"><span>{warranty.warrantyLabel}</span><span>{warranty.endDate ? `Until ${formatDate(warranty.endDate)}` : "No fixed term"}</span></div>
               <div className="kv"><span>Sealed</span><span>{formatDateTime(warranty.sealedAt)}</span></div>
               {warranty.revokedAt && <div className="kv"><span>Revoked</span><span>{warranty.revokedReason}</span></div>}

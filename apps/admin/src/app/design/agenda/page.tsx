@@ -18,26 +18,26 @@ const ITEMS: AgendaItem[] = [
 export default function AgendaPreview() {
   return (
     <StaffShell pathname="/bookings" office role="admin" who="studio@autodeck.example" home="/design/agenda" onSignOut={() => {}}>
-      <div className="ad-page">
-        <header className="ad-page-head">
+      <div className="ax-page">
+        <header className="ax-page-head">
           <div>
-            <p className="ad-label">Studio schedule</p>
+            <p className="ax-label">Studio schedule</p>
             <h1>Bookings</h1>
           </div>
-          <div className="ad-kpis">
-            <div><span className="ad-kpi-v">4</span><span className="ad-label">On this day</span></div>
-            <div><span className="ad-kpi-v ad-kpi-v--accent">1</span><span className="ad-label">Need confirming</span></div>
-            <div><span className="ad-kpi-v ad-kpi-v--premium">12</span><span className="ad-label">Coming up</span></div>
+          <div className="ax-kpis">
+            <div><span className="ax-kpi-v">4</span><span className="ax-label">On this day</span></div>
+            <div><span className="ax-kpi-v ax-kpi-v--accent">1</span><span className="ax-label">Need confirming</span></div>
+            <div><span className="ax-kpi-v ax-kpi-v--premium">12</span><span className="ax-label">Coming up</span></div>
           </div>
         </header>
-        <div className="ad-toolbar">
-          <div className="ad-daynav">
-            <button type="button" className="ad-button" aria-label="Previous day">‹</button>
-            <span className="ad-daynav-date">Today</span>
-            <button type="button" className="ad-button" aria-label="Next day">›</button>
+        <div className="ax-toolbar">
+          <div className="ax-daynav">
+            <button type="button" className="ax-button" aria-label="Previous day">‹</button>
+            <span className="ax-daynav-date">Today</span>
+            <button type="button" className="ax-button" aria-label="Next day">›</button>
           </div>
-          <div className="ad-seg"><button type="button" aria-pressed>Day</button><button type="button" aria-pressed={false}>All dates</button></div>
-          <input className="ad-search" type="search" placeholder="Search plate, customer or booking" />
+          <div className="ax-seg"><button type="button" aria-pressed>Day</button><button type="button" aria-pressed={false}>All dates</button></div>
+          <input className="ax-search" type="search" placeholder="Search plate, customer or booking" />
         </div>
         <DayAgenda items={ITEMS} onOpen={() => {}} />
       </div>

@@ -34,7 +34,7 @@ export function TeamView(p: {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Team"
@@ -44,37 +44,37 @@ export function TeamView(p: {
           { value: waiting, label: "Not signed in yet", tone: waiting ? "accent" : undefined },
         ]}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <span className="ad-label">People with access</span>
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <span className="ax-label">People with access</span>
             {p.loading ? (
-              [0, 1, 2].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+              [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : current.length === 0 ? (
-              <p className="ad-note">No one on the team yet. Add the first person on the right.</p>
+              <p className="ax-note">No one on the team yet. Add the first person on the right.</p>
             ) : (
-              <ul className="ad-people">
+              <ul className="ax-people">
                 {current.map((emp) => (
-                  <li key={emp.id} className="ad-person">
-                    <span className={`ad-avatar ad-avatar--${emp.role}`} aria-hidden="true">{initials(emp.name)}</span>
-                    <span className="ad-person-main">
-                      <span className="ad-person-name">{emp.name}</span>
-                      <span className="ad-sub">{emp.email ?? emp.phone}{emp.authUid ? "" : " · hasn't signed in yet"}</span>
+                  <li key={emp.id} className="ax-person">
+                    <span className={`ax-avatar ax-avatar--${emp.role}`} aria-hidden="true">{initials(emp.name)}</span>
+                    <span className="ax-person-main">
+                      <span className="ax-person-name">{emp.name}</span>
+                      <span className="ax-sub">{emp.email ?? emp.phone}{emp.authUid ? "" : " · hasn't signed in yet"}</span>
                     </span>
                     <select value={emp.role} onChange={(e) => p.onRole(emp, e.target.value as Role)} aria-label={`Access for ${emp.name}`} disabled={p.busy}>
                       <option value="studio">Studio</option>
                       <option value="admin">Office</option>
                     </select>
                     {confirmId === emp.id ? (
-                      <span className="ad-row-actions">
-                        <button type="button" className="ad-button ad-button--danger" disabled={p.busy} onClick={() => { p.onRemove(emp); setConfirmId(null); }}>Remove access</button>
-                        <button type="button" className="ad-button" onClick={() => setConfirmId(null)}>Keep</button>
+                      <span className="ax-row-actions">
+                        <button type="button" className="ax-button ax-button--danger" disabled={p.busy} onClick={() => { p.onRemove(emp); setConfirmId(null); }}>Remove access</button>
+                        <button type="button" className="ax-button" onClick={() => setConfirmId(null)}>Keep</button>
                       </span>
                     ) : (
-                      <button type="button" className="ad-button" onClick={() => setConfirmId(emp.id)}>Remove</button>
+                      <button type="button" className="ax-button" onClick={() => setConfirmId(emp.id)}>Remove</button>
                     )}
                   </li>
                 ))}
@@ -82,15 +82,15 @@ export function TeamView(p: {
             )}
           </section>
           {past.length > 0 && (
-            <section className="ad-panel">
-              <span className="ad-label">Former team</span>
-              <ul className="ad-people">
+            <section className="ax-panel">
+              <span className="ax-label">Former team</span>
+              <ul className="ax-people">
                 {past.map((emp) => (
-                  <li key={emp.id} className="ad-person is-past">
-                    <span className="ad-avatar" aria-hidden="true">{initials(emp.name)}</span>
-                    <span className="ad-person-main">
-                      <span className="ad-person-name">{emp.name}</span>
-                      <span className="ad-sub">{emp.email ?? emp.phone} · access removed</span>
+                  <li key={emp.id} className="ax-person is-past">
+                    <span className="ax-avatar" aria-hidden="true">{initials(emp.name)}</span>
+                    <span className="ax-person-main">
+                      <span className="ax-person-name">{emp.name}</span>
+                      <span className="ax-sub">{emp.email ?? emp.phone} · access removed</span>
                     </span>
                   </li>
                 ))}
@@ -99,9 +99,9 @@ export function TeamView(p: {
           )}
         </div>
 
-        <aside className="ad-detail-side">
+        <aside className="ax-detail-side">
           <form
-            className="ad-panel"
+            className="ax-panel"
             onSubmit={(e) => {
               e.preventDefault();
               p.onAdd({ name: name.trim(), email: email.trim().toLowerCase(), role });
@@ -109,30 +109,30 @@ export function TeamView(p: {
               setEmail("");
             }}
           >
-            <span className="ad-label">Add someone</span>
-            <label className="ad-form-row">
+            <span className="ax-label">Add someone</span>
+            <label className="ax-form-row">
               <span>Name</span>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Vikram Solanki" autoComplete="off" />
             </label>
-            <label className="ad-form-row">
+            <label className="ax-form-row">
               <span>Google account</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@gmail.com" autoComplete="off" />
             </label>
-            <div className="ad-form-row">
+            <div className="ax-form-row">
               <span>Access</span>
-              <div className="ad-choice">
+              <div className="ax-choice">
                 {(["studio", "admin"] as Role[]).map((r) => (
-                  <button key={r} type="button" aria-pressed={role === r} className="ad-choice-opt" onClick={() => setRole(r)}>
-                    <span className="ad-choice-title">{ROLE_NAME[r]}</span>
-                    <span className="ad-sub">{ROLE_HINT[r]}</span>
+                  <button key={r} type="button" aria-pressed={role === r} className="ax-choice-opt" onClick={() => setRole(r)}>
+                    <span className="ax-choice-title">{ROLE_NAME[r]}</span>
+                    <span className="ax-sub">{ROLE_HINT[r]}</span>
                   </button>
                 ))}
               </div>
             </div>
-            <button type="submit" className="ad-button ad-button--primary" style={{ width: "100%" }} disabled={p.busy || !name.trim() || !emailOk}>
+            <button type="submit" className="ax-button ax-button--primary" style={{ width: "100%" }} disabled={p.busy || !name.trim() || !emailOk}>
               Add to team
             </button>
-            <p className="ad-note">They sign in with Google using this exact address. Nothing is sent to them; tell them it&apos;s ready.</p>
+            <p className="ax-note">They sign in with Google using this exact address. Nothing is sent to them; tell them it&apos;s ready.</p>
           </form>
         </aside>
       </div>

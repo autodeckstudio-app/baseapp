@@ -98,25 +98,25 @@ export default function JobsPage() {
   const open = (id: string) => router.push(`/jobs/${id}`);
 
   return (
-    <div className="ad-page">
-      <header className="ad-page-head">
+    <div className="ax-page">
+      <header className="ax-page-head">
         <div>
-          <p className="ad-label">Studio floor</p>
+          <p className="ax-label">Studio floor</p>
           <h1>Jobs</h1>
         </div>
-        <div className="ad-kpis" aria-label="Today at a glance">
-          <div><span className="ad-kpi-v">{awaiting}</span><span className="ad-label">Arriving today</span></div>
-          <div><span className="ad-kpi-v ad-kpi-v--accent">{inStudio}</span><span className="ad-label">In the studio</span></div>
-          <div><span className="ad-kpi-v ad-kpi-v--premium">{ready}</span><span className="ad-label">Ready for pickup</span></div>
+        <div className="ax-kpis" aria-label="Today at a glance">
+          <div><span className="ax-kpi-v">{awaiting}</span><span className="ax-label">Arriving today</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{inStudio}</span><span className="ax-label">In the studio</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{ready}</span><span className="ax-label">Ready for pickup</span></div>
         </div>
       </header>
 
-      <div className="ad-toolbar">
-        <div className="ad-seg" role="group" aria-label="View">
+      <div className="ax-toolbar">
+        <div className="ax-seg" role="group" aria-label="View">
           <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}>Board</button>
           <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>List</button>
         </div>
-        <div className="ad-seg" role="group" aria-label="Date">
+        <div className="ax-seg" role="group" aria-label="Date">
           <button type="button" aria-pressed={when === "today"} onClick={() => setWhen("today")}>Today</button>
           <button type="button" aria-pressed={when === "upcoming"} onClick={() => setWhen("upcoming")}>Upcoming</button>
           <button type="button" aria-pressed={when === ""} onClick={() => setWhen("")}>All</button>
@@ -134,21 +134,21 @@ export default function JobsPage() {
             ))}
           </select>
         )}
-        <input className="ad-search" type="search" aria-label="Search" placeholder="Search plate, customer or job" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <span className="ad-count">{filtered.length} of {jobs.length}</span>
+        <input className="ax-search" type="search" aria-label="Search" placeholder="Search plate, customer or job" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <span className="ax-count">{filtered.length} of {jobs.length}</span>
       </div>
 
       {loading ? (
         <JobBoard jobs={[]} loading onOpen={open} />
       ) : jobs.length === 0 ? (
-        <div className="ad-empty">
-          <p className="ad-title">No jobs yet</p>
+        <div className="ax-empty">
+          <p className="ax-title">No jobs yet</p>
           <p>Jobs appear here as bookings are confirmed and walk-ins are checked in.</p>
         </div>
       ) : view === "board" ? (
         <JobBoard jobs={filtered.map(toBoard)} onOpen={open} />
       ) : filtered.length === 0 ? (
-        <div className="ad-empty"><p className="ad-title">No matches</p><p>Try another date, source or search.</p></div>
+        <div className="ax-empty"><p className="ax-title">No matches</p><p>Try another date, source or search.</p></div>
       ) : (
         <table>
           <thead>
@@ -166,14 +166,14 @@ export default function JobsPage() {
           <tbody>
             {filtered.map((j) => (
               <tr key={j.id} className="row-link" onClick={() => open(j.id)}>
-                <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ad-muted"> · Walk-in</span> : null}</td>
+                <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ax-muted"> · Walk-in</span> : null}</td>
                 <td><StatusBadge label={j.status} /></td>
-                <td className="ad-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>
+                <td className="ax-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>
                 <td>{customerNames[j.customerId] ?? "-"}</td>
                 <td>{serviceNames[j.serviceId] ?? "-"}</td>
                 <td>{j.bayId}</td>
                 <td><StatusBadge label={j.paymentStatus} /></td>
-                <td className="ad-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>
+                <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>
               </tr>
             ))}
           </tbody>

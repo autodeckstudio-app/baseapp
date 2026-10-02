@@ -56,7 +56,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
     <a
       key={l.href}
       href={l.href}
-      className="ad-nav-link"
+      className="ax-nav-link"
       aria-current={isActive(pathname, l.href) ? "page" : undefined}
     >
       {l.label}
@@ -64,36 +64,36 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   );
 
   return (
-    <div className="ad-shell">
+    <div className="ax-shell">
       <Ambient>
-        <div className="ad-shell-frame">
-          <aside className="ad-side" aria-label="Main navigation">
-            <a href={home} className="ad-wordmark">
+        <div className="ax-shell-frame">
+          <aside className="ax-side" aria-label="Main navigation">
+            <a href={home} className="ax-wordmark">
               Auto<span>Deck</span>
             </a>
-            <nav className="ad-nav-group" aria-label="Studio">
-              <span className="ad-label">Studio</span>
+            <nav className="ax-nav-group" aria-label="Studio">
+              <span className="ax-label">Studio</span>
               {STUDIO_LINKS.map(link)}
             </nav>
             {office && (
-              <nav className="ad-nav-group" aria-label="Office">
-                <span className="ad-label">Office</span>
+              <nav className="ax-nav-group" aria-label="Office">
+                <span className="ax-label">Office</span>
                 {OFFICE_LINKS.map(link)}
               </nav>
             )}
-            <div className="ad-side-foot">
-              <div className="ad-who">
+            <div className="ax-side-foot">
+              <div className="ax-who">
                 <div>{who}</div>
-                <span className="ad-chip ad-chip--accent" style={{ marginTop: "var(--ad-space-hair)" }}>
+                <span className="ax-chip ax-chip--accent" style={{ marginTop: "var(--ad-space-hair)" }}>
                   {ROLE_LABEL[role] ?? role}
                 </span>
               </div>
-              <button type="button" className="ad-button" onClick={onSignOut}>
+              <button type="button" className="ax-button" onClick={onSignOut}>
                 Sign out
               </button>
             </div>
           </aside>
-          <main className="ad-main">{children}</main>
+          <main className="ax-main">{children}</main>
         </div>
       </Ambient>
     </div>

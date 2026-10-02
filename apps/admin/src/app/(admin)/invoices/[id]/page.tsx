@@ -61,9 +61,9 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  if (error) return <div className="ad-panel ad-empty" role="alert"><p className="ad-title">Couldn&apos;t load this invoice</p><p>{error}</p></div>;
-  if (invoice === undefined) return <div className="ad-page"><div className="ad-skel" style={{ height: 480 }} /></div>;
-  if (invoice === null) return <div className="ad-panel ad-empty"><p className="ad-title">Invoice not found</p><p>Check the number and try again.</p></div>;
+  if (error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Couldn&apos;t load this invoice</p><p>{error}</p></div>;
+  if (invoice === undefined) return <div className="ax-page"><div className="ax-skel" style={{ height: 480 }} /></div>;
+  if (invoice === null) return <div className="ax-panel ax-empty"><p className="ax-title">Invoice not found</p><p>Check the number and try again.</p></div>;
 
   return (
     <InvoiceView

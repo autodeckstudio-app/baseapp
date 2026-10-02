@@ -28,7 +28,7 @@ export function DailyCloseView(p: {
   const variancePreview = countedOk ? Math.round(countedRupees * 100) - expected : null;
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Daily Close"
@@ -38,62 +38,62 @@ export function DailyCloseView(p: {
           { value: formatPaise(p.live.expectedCashPaise), label: "Expected cash", tone: "premium" },
         ] : []}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <div className="ad-form-pair" style={{ marginBottom: "var(--ad-space-gap)" }}>
-              <span className="ad-label">Date</span>
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <div className="ax-form-pair" style={{ marginBottom: "var(--ad-space-gap)" }}>
+              <span className="ax-label">Date</span>
               <input type="date" value={p.date} onChange={(e) => e.target.value && p.onDateChange(e.target.value)} aria-label="Date" />
             </div>
             {p.loading ? (
-              [0, 1].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+              [0, 1].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : (
-              <ul className="ad-list">
-                <li className="ad-list-row"><span className="ad-slot-main"><span className="ad-person-name">Cash payments</span><span className="ad-sub">{p.live?.paymentCount ?? 0} completed payments today</span></span><span className="ad-slot-amt">{formatPaise(p.live?.cashPaise ?? 0)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main"><span className="ad-person-name">UPI (manual)</span></span><span className="ad-slot-amt">{formatPaise(p.live?.upiPaise ?? 0)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main"><span className="ad-person-name">Online (Razorpay)</span></span><span className="ad-slot-amt">{formatPaise(p.live?.razorpayPaise ?? 0)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main"><span className="ad-person-name">Bank transfer</span></span><span className="ad-slot-amt">{formatPaise(p.live?.bankTransferPaise ?? 0)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main"><span className="ad-person-name">Cash expenses</span><span className="ad-sub">{p.live?.expenseCount ?? 0} expenses recorded today</span></span><span className="ad-slot-amt ad-danger">−{formatPaise(p.live?.cashExpensesPaise ?? 0)}</span></li>
-                <li className="ad-list-row"><span className="ad-slot-main"><span className="ad-person-name">Expected in drawer</span></span><span className="ad-slot-amt ad-kpi-v--premium">{formatPaise(expected)}</span></li>
+              <ul className="ax-list">
+                <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Cash payments</span><span className="ax-sub">{p.live?.paymentCount ?? 0} completed payments today</span></span><span className="ax-slot-amt">{formatPaise(p.live?.cashPaise ?? 0)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">UPI (manual)</span></span><span className="ax-slot-amt">{formatPaise(p.live?.upiPaise ?? 0)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Online (Razorpay)</span></span><span className="ax-slot-amt">{formatPaise(p.live?.razorpayPaise ?? 0)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Bank transfer</span></span><span className="ax-slot-amt">{formatPaise(p.live?.bankTransferPaise ?? 0)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Cash expenses</span><span className="ax-sub">{p.live?.expenseCount ?? 0} expenses recorded today</span></span><span className="ax-slot-amt ax-danger">−{formatPaise(p.live?.cashExpensesPaise ?? 0)}</span></li>
+                <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Expected in drawer</span></span><span className="ax-slot-amt ax-kpi-v--premium">{formatPaise(expected)}</span></li>
               </ul>
             )}
           </section>
 
           {p.close && (
-            <section className="ad-panel">
-              <span className="ad-label">Closed · {formatDateTime(p.close.closedAt)}{p.close.closeCount > 1 ? ` · closed ${p.close.closeCount} times` : ""}</span>
-              <p className="ad-note">
+            <section className="ax-panel">
+              <span className="ax-label">Closed · {formatDateTime(p.close.closedAt)}{p.close.closeCount > 1 ? ` · closed ${p.close.closeCount} times` : ""}</span>
+              <p className="ax-note">
                 Counted {formatPaise(p.close.countedCashPaise)} against expected {formatPaise(p.close.expectedCashPaise)} - variance{" "}
-                <strong className={p.close.variancePaise === 0 ? "ad-success" : "ad-danger"}>{formatPaise(p.close.variancePaise)}</strong>.
+                <strong className={p.close.variancePaise === 0 ? "ax-success" : "ax-danger"}>{formatPaise(p.close.variancePaise)}</strong>.
                 {p.close.notes ? ` Note: ${p.close.notes}` : ""}
               </p>
             </section>
           )}
         </div>
 
-        <div className="ad-detail-side">
-          <section className="ad-panel">
-            <span className="ad-label">{p.close ? "Re-close this day" : "Close this day"}</span>
-            <div className="ad-form-section">
+        <div className="ax-detail-side">
+          <section className="ax-panel">
+            <span className="ax-label">{p.close ? "Re-close this day" : "Close this day"}</span>
+            <div className="ax-form-section">
               <input value={counted} onChange={(e) => setCounted(e.target.value)} placeholder="Counted cash in drawer ₹" inputMode="decimal" aria-label="Counted cash" disabled={p.busy} />
               <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Note (optional)" aria-label="Note" disabled={p.busy} />
               {variancePreview !== null && (
-                <p className={`ad-status-msg ${variancePreview === 0 ? "" : "ad-status-msg--warn"}`}>
+                <p className={`ax-status-msg ${variancePreview === 0 ? "" : "ax-status-msg--warn"}`}>
                   Variance: {formatPaise(variancePreview)}
                 </p>
               )}
               <button
                 type="button"
-                className="ad-button ad-button--primary"
+                className="ax-button ax-button--primary"
                 disabled={p.busy || !countedOk || p.loading}
                 onClick={() => { p.onClose(Math.round(countedRupees * 100), notes.trim(), p.close !== null); setCounted(""); setNotes(""); }}
               >
                 {p.close ? "Recompute and re-close" : "Close the day"}
               </button>
-              <p className="ad-note">
+              <p className="ax-note">
                 Closing snapshots today's numbers. Payments or expenses added afterwards only show up if you re-close.
               </p>
             </div>

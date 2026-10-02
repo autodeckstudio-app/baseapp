@@ -52,20 +52,20 @@ export default function LoginPage() {
   const message = localError ?? error;
 
   return (
-    <div className="ad-shell">
+    <div className="ax-shell">
       <Ambient>
-        <main className="ad-login">
-          <Glass className="ad-login-card" pad="inset" round="pane" raised>
-            <p className="ad-label" style={{ margin: 0 }}>Studio · Office</p>
-            <h1 className="ad-display" style={{ margin: "var(--ad-space-breath) 0 var(--ad-space-line)" }}>
+        <main className="ax-login">
+          <Glass className="ax-login-card" pad="inset" round="pane" raised>
+            <p className="ax-label" style={{ margin: 0 }}>Studio · Office</p>
+            <h1 className="ax-display" style={{ margin: "var(--ad-space-breath) 0 var(--ad-space-line)" }}>
               Auto<span style={{ color: "var(--ad-accent)" }}>Deck</span>
             </h1>
             {mfaRequired ? (
               <form onSubmit={handleConfirmCode}>
-                <p className="ad-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
+                <p className="ax-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
                   Enter the verification code sent to your phone.
                 </p>
-                <label htmlFor="code" className="ad-label" style={{ display: "block", marginBottom: "var(--ad-space-breath)" }}>
+                <label htmlFor="code" className="ax-label" style={{ display: "block", marginBottom: "var(--ad-space-breath)" }}>
                   Verification code
                 </label>
                 <input
@@ -78,13 +78,13 @@ export default function LoginPage() {
                   onChange={(e) => setCode(e.target.value)}
                 />
                 {message && (
-                  <p className="ad-alert" role="alert">
+                  <p className="ax-alert" role="alert">
                     {message}
                   </p>
                 )}
                 <button
                   type="submit"
-                  className="ad-button ad-button--primary"
+                  className="ax-button ax-button--primary"
                   disabled={submitting}
                   style={{ marginTop: "var(--ad-space-gap)" }}
                 >
@@ -93,12 +93,12 @@ export default function LoginPage() {
               </form>
             ) : (
               <>
-                <p className="ad-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
+                <p className="ax-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
                   Studio and office sign-in. Use the Google account your studio added you with.
                 </p>
                 <button
                   type="button"
-                  className="ad-button ad-button--primary"
+                  className="ax-button ax-button--primary"
                   onClick={() => void handleGoogle()}
                   disabled={submitting || loading}
                 >
@@ -106,7 +106,7 @@ export default function LoginPage() {
                   {submitting ? "Opening Google…" : "Continue with Google"}
                 </button>
                 {message && (
-                  <p className="ad-alert" role="alert">
+                  <p className="ax-alert" role="alert">
                     {message}
                   </p>
                 )}

@@ -51,7 +51,7 @@ export function ExpensesView(p: {
   const amountOk = Number.isFinite(amountRupees) && amountRupees > 0;
 
   return (
-    <div className="ad-page">
+    <div className="ax-page">
       <PageHead
         eyebrow="Office"
         title="Expenses"
@@ -61,42 +61,42 @@ export function ExpensesView(p: {
           { value: p.expenses.length, label: "Entries" },
         ]}
       />
-      {p.error && <p className="ad-status-msg ad-status-msg--warn" role="alert">{p.error}</p>}
-      {p.message && <p className="ad-status-msg">{p.message}</p>}
+      {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
+      {p.message && <p className="ax-status-msg">{p.message}</p>}
 
-      <div className="ad-detail">
-        <div className="ad-detail-main">
-          <section className="ad-panel">
-            <div className="ad-form-pair" style={{ marginBottom: "var(--ad-space-gap)" }}>
-              <span className="ad-label">Month</span>
+      <div className="ax-detail">
+        <div className="ax-detail-main">
+          <section className="ax-panel">
+            <div className="ax-form-pair" style={{ marginBottom: "var(--ad-space-gap)" }}>
+              <span className="ax-label">Month</span>
               <input type="month" value={p.month} onChange={(e) => e.target.value && p.onMonthChange(e.target.value)} aria-label="Month" />
             </div>
             {p.loading ? (
-              [0, 1, 2].map((i) => <div key={i} className="ad-skel ad-skel--row" />)
+              [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : p.expenses.length === 0 ? (
-              <p className="ad-note">No expenses recorded for this month.</p>
+              <p className="ax-note">No expenses recorded for this month.</p>
             ) : (
-              <ul className="ad-list">
+              <ul className="ax-list">
                 {p.expenses.map((e) => (
-                  <li key={e.id} className="ad-list-row">
-                    <span className="ad-slot-main">
-                      <span className="ad-person-name">
+                  <li key={e.id} className="ax-list-row">
+                    <span className="ax-slot-main">
+                      <span className="ax-person-name">
                         {CATEGORY_NAME[e.category]}{e.vendor ? ` · ${e.vendor}` : ""}
                       </span>
-                      <span className="ad-sub">
+                      <span className="ax-sub">
                         {formatDate(e.date)} · {PAID_VIA_NAME[e.paidVia]}{e.notes ? ` · ${e.notes}` : ""}
                       </span>
                     </span>
-                    <span className="ad-slot-amt">{formatPaise(e.amount)}</span>
+                    <span className="ax-slot-amt">{formatPaise(e.amount)}</span>
                     {confirmId === e.id ? (
-                      <span className="ad-row-actions">
-                        <button type="button" className="ad-button ad-button--danger" disabled={p.busy} onClick={() => { p.onDelete(e); setConfirmId(null); }}>
+                      <span className="ax-row-actions">
+                        <button type="button" className="ax-button ax-button--danger" disabled={p.busy} onClick={() => { p.onDelete(e); setConfirmId(null); }}>
                           Delete entry
                         </button>
-                        <button type="button" className="ad-button" onClick={() => setConfirmId(null)}>Keep</button>
+                        <button type="button" className="ax-button" onClick={() => setConfirmId(null)}>Keep</button>
                       </span>
                     ) : (
-                      <button type="button" className="ad-button" onClick={() => setConfirmId(e.id)}>Delete</button>
+                      <button type="button" className="ax-button" onClick={() => setConfirmId(e.id)}>Delete</button>
                     )}
                   </li>
                 ))}
@@ -105,15 +105,15 @@ export function ExpensesView(p: {
           </section>
         </div>
 
-        <div className="ad-detail-side">
-          <section className="ad-panel">
-            <span className="ad-label">Record expense</span>
-            <div className="ad-form-section">
-              <div className="ad-form-pair">
+        <div className="ax-detail-side">
+          <section className="ax-panel">
+            <span className="ax-label">Record expense</span>
+            <div className="ax-form-section">
+              <div className="ax-form-pair">
                 <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount ₹" inputMode="decimal" aria-label="Amount in rupees" disabled={p.busy} />
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" disabled={p.busy} />
               </div>
-              <div className="ad-form-pair">
+              <div className="ax-form-pair">
                 <select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)} aria-label="Category" disabled={p.busy}>
                   {(Object.keys(CATEGORY_NAME) as ExpenseCategory[]).map((c) => (
                     <option key={c} value={c}>{CATEGORY_NAME[c]}</option>
@@ -129,7 +129,7 @@ export function ExpensesView(p: {
               <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Note (optional)" aria-label="Note" disabled={p.busy} />
               <button
                 type="button"
-                className="ad-button ad-button--primary"
+                className="ax-button ax-button--primary"
                 disabled={p.busy || !amountOk || !date}
                 onClick={() => {
                   p.onAdd({ amountPaise: Math.round(amountRupees * 100), category, paidVia, vendor: vendor.trim(), date, notes: notes.trim() });
@@ -138,7 +138,7 @@ export function ExpensesView(p: {
               >
                 Record expense
               </button>
-              <p className="ad-note">Cash expenses count against the drawer in Daily Close.</p>
+              <p className="ax-note">Cash expenses count against the drawer in Daily Close.</p>
             </div>
           </section>
         </div>

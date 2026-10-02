@@ -26,33 +26,33 @@ export const BOARD_COLUMNS: { status: string; title: string; tone: "wait" | "act
 
 export function JobBoard({ jobs, loading, onOpen }: { jobs: BoardJob[]; loading?: boolean; onOpen: (id: string) => void }) {
   return (
-    <div className="ad-board" aria-busy={loading || undefined}>
+    <div className="ax-board" aria-busy={loading || undefined}>
       {BOARD_COLUMNS.map((c) => {
         const items = jobs.filter((j) => j.status === c.status);
         return (
-          <section key={c.status} className={`ad-col ad-col--${c.tone}`} aria-label={c.title}>
-            <header className="ad-col-head">
-              <span className="ad-label">{c.title}</span>
-              {!loading && <span className="ad-col-n">{items.length}</span>}
+          <section key={c.status} className={`ax-col ax-col--${c.tone}`} aria-label={c.title}>
+            <header className="ax-col-head">
+              <span className="ax-label">{c.title}</span>
+              {!loading && <span className="ax-col-n">{items.length}</span>}
             </header>
             {loading ? (
               <>
-                <div className="ad-skel" />
-                <div className="ad-skel" />
+                <div className="ax-skel" />
+                <div className="ax-skel" />
               </>
             ) : items.length === 0 ? (
-              <p className="ad-col-empty">Nothing here</p>
+              <p className="ax-col-empty">Nothing here</p>
             ) : (
               items.map((j) => (
-                <button key={j.id} type="button" className="ad-job" onClick={() => onOpen(j.id)}>
-                  <span className="ad-job-plate">{j.plate}</span>
-                  <span className="ad-job-who">{j.customer}</span>
-                  <span className="ad-job-what">
+                <button key={j.id} type="button" className="ax-job" onClick={() => onOpen(j.id)}>
+                  <span className="ax-job-plate">{j.plate}</span>
+                  <span className="ax-job-who">{j.customer}</span>
+                  <span className="ax-job-what">
                     {j.service}
                     {j.bay ? ` · Bay ${j.bay}` : ""}
                     {j.walkIn ? " · Walk-in" : ""}
                   </span>
-                  <span className="ad-job-foot">
+                  <span className="ax-job-foot">
                     <span>{j.when}</span>
                     <StatusBadge label={j.payment} />
                   </span>

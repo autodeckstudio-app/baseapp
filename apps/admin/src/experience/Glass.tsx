@@ -1,5 +1,5 @@
 // Web glass pane: the one raised material. Styling lives in
-// experience.css (.ad-glass) so the blur, sheen and no-blur fallback travel
+// experience.css (.ax-glass) so the blur, sheen and no-blur fallback travel
 // together. Server-component safe (no state, no handlers).
 import type { CSSProperties, ElementType, ReactNode } from "react";
 
@@ -32,10 +32,10 @@ export function Glass({
   style,
 }: GlassProps) {
   const cls = [
-    "ad-glass",
-    fill !== "base" && `ad-glass--${fill}`,
-    tone && `ad-glass--tone-${tone}`,
-    raised && "ad-glass--raised",
+    "ax-glass",
+    fill !== "base" && `ax-glass--${fill}`,
+    tone && `ax-glass--tone-${tone}`,
+    raised && "ax-glass--raised",
     className,
   ]
     .filter(Boolean)

@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 
 export function Ambient({ children }: { children?: ReactNode }) {
   return (
-    <div className="ad-ambient-root">
-      <div className="ad-ambient" aria-hidden="true" />
-      <div className="ad-ambient-content">{children}</div>
+    <div className="ax-ambient-root">
+      <div className="ax-ambient" aria-hidden="true" />
+      <div className="ax-ambient-content">{children}</div>
     </div>
   );
 }
