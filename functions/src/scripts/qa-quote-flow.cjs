@@ -16,7 +16,10 @@ async function call(name, tok, data) {
   const find = async () => (await col.get()).docs.find((d) => d.id === BID);
   let d = await find(); const b = d.data(); console.log("BEFORE", b.quoteStatus, b.priceOnRequest, b.status, b.tenantId);
   const adm = await idt("qa-admin-quote", { role: "admin", tenantId: b.tenantId, studioId: b.studioId });
+  const jq = async () => (await admin.firestore().collectionGroup("jobs").where("bookingId", "==", BID).get()).docs.map((j) => j.id + " total=" + j.data().totalAmount);
+  console.log("JOB BEFORE", await jq());
   console.log(await call("setBookingQuote", adm, { bookingId: BID, basePricePaise: 700000 }));
+  console.log("JOB AFTER", await jq());
   d = await find(); console.log("AFTER QUOTE", d.data().quoteStatus, d.data().basePrice ?? d.data().totalPrice ?? JSON.stringify(d.data().priceBreakdown || "").slice(0, 120));
   const cu = await idt(CUST, { role: "customer", tenantId: b.tenantId });
   console.log(await call("respondToBookingQuote", cu, { bookingId: BID }));
