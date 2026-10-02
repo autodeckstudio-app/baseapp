@@ -114,6 +114,7 @@ export default function BookingsPage() {
           <button type="button" aria-pressed={dayMode} onClick={() => setDate(today)}>Day</button>
           <button type="button" aria-pressed={!dayMode} onClick={() => setDate("")}>All dates</button>
         </div>
+        <div className="ad-filters">
         <input type="date" aria-label="Pick a date" value={date} onChange={(e) => setDate(e.target.value)} />
         <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus | "")}>
           <option value="">All statuses</option>
@@ -127,6 +128,7 @@ export default function BookingsPage() {
             <option key={s} value={s}>{serviceNames[s] ?? "Service"}</option>
           ))}
         </select>
+        </div>
         <input className="ad-search" type="search" aria-label="Search" placeholder="Search plate, customer or booking" value={search} onChange={(e) => setSearch(e.target.value)} />
         <span className="ad-count">{filtered.length} of {bookings.length}</span>
       </div>

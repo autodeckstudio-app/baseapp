@@ -510,3 +510,5 @@
 .ad-shell .ad-hours-times { gap: 6px; }
 .ad-shell .ad-hours-times input[type="time"] { flex: 1 1 0; min-width: 104px; max-width: 150px; padding-left: 8px; padding-right: 6px; font-size: 14px; }
 @media (max-width: 700px) { .ad-shell .ad-hours li { grid-template-columns: 1fr 1fr; } }
+
+.ad-shell .ad-toolbar .ad-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ad-space-line); }
