@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
-import { greetingFor, type CustomerHomeModel, type ProtectionAttention } from "@autodeck/core";
+import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { ExperienceThemeProvider, Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
@@ -12,6 +12,8 @@ import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, vehicleImagery } from "../../lib/imagery";
 import { resolveVehiclePhotoUrl } from "../../lib/vehicle-service";
 import { listenToMyNotifications } from "../../lib/notification-service";
+import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
+import { listenToVehicleWarranties } from "../../lib/warranty-service";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
 const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: string }> = {
@@ -58,15 +60,6 @@ function StatusRail({ status }: { status: string }) {
   );
 }
 
-const PAPER: Record<ProtectionAttention["kind"], string> = {
-  insurance: "Insurance",
-  fasttag: "FASTag",
-  puc: "PUC",
-  rc: "RC",
-  extended_warranty: "Extended warranty",
-  other: "Document",
-};
-
 export default function HomeScreen() {
   const auth = useAuth();
   const router = useRouter();
@@ -93,6 +86,20 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [photoPath]);
 
+  const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
+  const [papers, setPapers] = useState<MyPaper[]>([]);
+  const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
+  useEffect(() => {
+    setPapers([]);
+    if (!ready || !carId) return;
+    return listenToVehiclePapers(carId, auth.claims.tenantId, auth.user.uid, setPapers, () => undefined);
+  }, [ready, carId]);
+  useEffect(() => {
+    setWarranties([]);
+    if (!ready || !carId) return;
+    return listenToVehicleWarranties(carId, auth.claims.tenantId, auth.user.uid, (w) => setWarranties(w as never), () => undefined);
+  }, [ready, carId]);
+
   if (!ready || !home.model) {
     return (
       <Screen>
@@ -106,6 +113,18 @@ export default function HomeScreen() {
   const m = home.model;
   const copy = HERO_COPY[m.heroState];
   const car = m.activeVehicle;
+  const KIND: Record<string, string> = { insurance: "Insurance", fasttag: "FASTag", puc: "PUC", rc: "RC", extended_warranty: "Extended warranty" };
+  const reminders: Array<{ title: string; detail: string; chip: string; danger: boolean }> = [];
+  for (const p of papers) {
+    const left = daysUntil(p.expiresOn);
+    const name = KIND[p.kind.toLowerCase()] ?? "Document";
+    if (left !== null && left < 0) reminders.push({ title: name, detail: "Expired. Upload the renewed copy.", chip: "Expired", danger: true });
+    else if (left !== null && left <= 30) reminders.push({ title: name, detail: `Expires ${formatDateShort(p.expiresOn as string)}`, chip: `${left} day${left === 1 ? "" : "s"}`, danger: false });
+  }
+  for (const w of warranties) {
+    const left = daysUntil(w.endDate);
+    if (!w.revokedAt && left !== null && left >= 0 && left <= 60) reminders.push({ title: w.warrantyLabel, detail: `Ends ${formatDateShort(w.endDate as string)}`, chip: `${left} days`, danger: false });
+  }
 
   const act = () => {
     const a = m.primaryAction;
@@ -188,20 +207,12 @@ export default function HomeScreen() {
               </ExperienceThemeProvider>
       </View>
 
-      {m.protections.length > 0 ? (
+      {reminders.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Kicker>Reminders</Kicker>
           <Pane pad="gap">
-            {m.protections.slice(0, 4).map((p, i, arr) => (
-              <Row
-                key={p.id}
-                title={PAPER[p.kind]}
-                detail={p.expiryDate ? `Until ${formatDateShort(p.expiryDate)}` : "No expiry on file"}
-                trailing={
-                  p.attention === "expired" ? <Chip label="Expired" tone="danger" /> : p.attention === "soon" ? <Chip label={`${p.daysLeft} days`} tone="accent" /> : p.attention === "ok" ? <Chip label="Valid" tone="premium" /> : null
-                }
-                last={i === arr.length - 1}
-              />
+            {reminders.map((r, i) => (
+              <Row key={r.title} title={r.title} detail={r.detail} trailing={<Chip label={r.chip} tone={r.danger ? "danger" : "accent"} />} onPress={() => router.push(`/(tabs)/garage/${carId}`)} last={i === reminders.length - 1} />
             ))}
           </Pane>
         </View>
