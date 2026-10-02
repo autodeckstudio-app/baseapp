@@ -161,8 +161,8 @@ export default function CatalogueScreen() {
                 const xs = all.filter((x) => x.category === c);
                 const low = Math.min(...xs.map((x) => x.basePrice));
                 return (
-                  <Pressable key={c} accessibilityRole="button" onPress={() => setActive(c)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.accentHaze, padding: space.line, gap: 6, opacity: pressed ? 0.7 : 1 })}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface }}>
+                  <Pressable key={c} accessibilityRole="button" onPress={() => setActive(c)} style={({ pressed }) => ({ width: "48%", flexGrow: 1, borderRadius: 20, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface, padding: space.line, gap: 6, opacity: pressed ? 0.7 : 1 })}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
                       <Icon name={ICON[c] ?? "tools"} color={colors.accent} size={22} />
                     </View>
                     <T role="bodyStrong">{GROUP[c] ?? c}</T>

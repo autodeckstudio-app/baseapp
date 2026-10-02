@@ -63,7 +63,8 @@ export async function getAvailability(
     "getAvailability",
   );
   const result = await fn({ serviceId, studioId, startDate, lookAheadDays });
-  return result.data.slots;
+  const now = Date.now();
+  return result.data.slots.filter((s) => { const t = Date.parse(s.startAt); return Number.isNaN(t) || t > now; });
 }
 
 export async function createBooking(input: CreateBookingInput): Promise<Booking> {

@@ -71,10 +71,14 @@ export default function ServiceDetailScreen() {
     if (!id || !service) return;
     setPriceLoading(true);
     setPriceError(false);
-    void calculateServicePrice(id, selectedCategory)
-      .then(({ breakdown }) => setPriceBreakdown(breakdown))
-      .catch(() => setPriceError(true))
-      .finally(() => setPriceLoading(false));
+    let stale = false;
+    const ask = () => calculateServicePrice(id, selectedCategory);
+    void ask()
+      .catch(() => new Promise<Awaited<ReturnType<typeof ask>>>((resolve, reject) => setTimeout(() => ask().then(resolve, reject), 900)))
+      .then(({ breakdown }) => { if (!stale) setPriceBreakdown(breakdown); })
+      .catch(() => { if (!stale) setPriceError(true); })
+      .finally(() => { if (!stale) setPriceLoading(false); });
+    return () => { stale = true; };
   }, [id, service, selectedCategory]);
 
   useEffect(() => {
