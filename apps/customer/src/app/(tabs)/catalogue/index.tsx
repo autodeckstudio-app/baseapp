@@ -8,6 +8,7 @@ import { space, type IconName } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
+import { serviceVisual } from "../../../lib/imagery";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -107,6 +108,8 @@ export default function CatalogueScreen() {
     return [...m.entries()];
   }, [shown, active, q]);
 
+  const kovalent = useMemo(() => all.filter((x) => (x.brand ?? "").toLowerCase() === "kovalent" || /kovalent|borophene|graphene/i.test(x.name)).filter((x) => serviceVisual(x).bottle).sort((a, b) => Number(!!b.warrantyLabel) - Number(!!a.warrantyLabel) || a.name.localeCompare(b.name)), [all]);
+
   const chip = (key: string, label: string) => {
     const on = active === key;
     return (
@@ -197,6 +200,25 @@ export default function CatalogueScreen() {
             </ScrollView>
           </View>
           <Kicker>All services</Kicker>
+        </View>
+      ) : null}
+      {(active === "ceramic" || (active === "all" && !q.trim())) && kovalent.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          <View style={{ gap: 2 }}>
+            <Kicker tone="premium">Kovalent</Kicker>
+            <T role="caption" tone="secondary">The full Kovalent range, in studio.</T>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
+            {kovalent.map((sv) => (
+              <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 150, opacity: pressed ? 0.85 : 1 })}>
+                <ServicePhoto service={sv} height={190} radius={20} />
+                <View style={{ paddingTop: 8, gap: 2 }}>
+                  <T role="bodyStrong" numberOfLines={1}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
+                  <T role="caption" tone="accent">{priceLabel(sv)}</T>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
       {sections.map(([title, xs]) => (

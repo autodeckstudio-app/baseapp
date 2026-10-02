@@ -98,7 +98,7 @@ export function serviceVisual(s: { name: string; brand?: string | null; category
     const bottle = key ? BOTTLES[key] : undefined;
     return bottle ? { photo: P.coating, bottle } : { photo: P.coating };
   }
-  if (b === "xpel" || n.includes("xpel")) return { photo: P.xpel };
+  if (b === "xpel" || n.includes("xpel")) return { photo: s.category === "ppf" ? P.xpel : P.coating };
   if (b === "garware" || n.includes("garware")) return { photo: n.includes("sun") || n.includes("tint") || s.category === "tinting" ? P.garwareSun : P.garwarePpf };
   if (s.category === "ppf") return { photo: n.includes("stealth") || n.includes("matte") ? P.ppfHood : P.ppfInstall };
   if (s.category === "tinting" || n.includes("tint")) return { photo: P.tint };
