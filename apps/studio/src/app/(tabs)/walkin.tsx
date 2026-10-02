@@ -219,7 +219,7 @@ export default function WalkinScreen() {
           <View style={{ backgroundColor: colors.warningMuted, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm }}>
             <Text style={{ ...typography.caption, color: colors.warning }}>
               No AutoDeck account found for this number. Ask the customer to sign up in the Customer app first, then
-              search again — walk-in registration works only for existing accounts.
+              search again. Walk-in registration works only for existing accounts.
             </Text>
           </View>
         )}

@@ -50,12 +50,12 @@ export default function LookupVehicleScreen() {
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>{vehicle.registrationNumber}</Text>
 
       <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-        <ListRow label="Category" value={vehicle.category ?? "—"} />
+        <ListRow label="Category" value={vehicle.category ?? "-"} />
         <View style={{ height: 1, backgroundColor: colors.divider }} />
         {owner ? (
           <ListRow label="Owner" value={owner.name} showChevron onPress={() => router.push(`/(tabs)/lookup/customer/${owner.id}`)} />
         ) : (
-          <ListRow label="Owner" value="—" />
+          <ListRow label="Owner" value="-" />
         )}
       </View>
 

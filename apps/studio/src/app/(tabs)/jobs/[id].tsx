@@ -339,7 +339,7 @@ export default function JobDetailScreen() {
         <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
           <Text style={{ ...typography.bodyMedium, color: colors.accentPressed, marginBottom: spacing.xs }}>Multi-day job</Text>
           <Text style={{ ...typography.caption, color: colors.accentPressed }}>
-            This job spans multiple days — the bay stays reserved from {job.scheduledDate} through {job.estimatedEndDate}.
+            This job spans multiple days. The bay stays reserved from {job.scheduledDate} through {job.estimatedEndDate}.
           </Text>
         </View>
       )}

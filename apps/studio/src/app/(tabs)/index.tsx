@@ -49,7 +49,7 @@ export default function TodaysJobsScreen() {
       ListHeaderComponent={
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
           <Text style={{ ...typography.title, color: colors.textPrimary }}>
-            Today — {todayIST()} ({activeJobs.length} job{activeJobs.length !== 1 ? "s" : ""})
+            Today, {todayIST()} ({activeJobs.length} job{activeJobs.length !== 1 ? "s" : ""})
           </Text>
           <Button label="+ Walk-in" size="md" fullWidth={false} onPress={() => router.push("/(tabs)/walkin")} />
         </View>
