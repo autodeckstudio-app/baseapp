@@ -14,6 +14,7 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
+import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
@@ -117,6 +118,7 @@ export default function BookServiceScreen() {
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="caption" tone="accent">Total {rupees(total)} incl. tax</T> : null}</View>}>
+      <ServicePhoto service={service} aspect={21 / 9} radius={22} />
       <View style={{ gap: space.line }}>
         <Kicker>Your car</Kicker>
         {vehicles.length === 0 ? (

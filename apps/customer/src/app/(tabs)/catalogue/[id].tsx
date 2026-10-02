@@ -118,7 +118,7 @@ export default function ServiceDetailScreen() {
         }
       >
         <Pane pad="none">
-          <ServicePhoto service={service} aspect={16 / 10} />
+          <ServicePhoto service={service} aspect={4 / 3} radius={26} />
         </Pane>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath, alignItems: "center" }}>
@@ -176,7 +176,7 @@ export default function ServiceDetailScreen() {
           {H("Before and after", <Chip label="Placeholder photos" tone="danger" />)}
           <Pane pad="none">
             <View style={{ position: "relative" }}>
-              <ServicePhoto service={service} aspect={16 / 10} />
+              <ServicePhoto service={service} aspect={4 / 3} radius={26} />
               {!after ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(10,10,12,0.55)" }} /> : null}
             </View>
             <View style={{ flexDirection: "row", gap: space.breath, padding: space.line }}>

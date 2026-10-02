@@ -224,6 +224,22 @@ export default function CatalogueScreen() {
       {sections.map(([title, xs]) => (
         <View key={title} style={{ gap: space.breath }}>
           <Kicker>{title}</Kicker>
+          {(() => {
+            const bn = title.split(" · ").pop() ?? "";
+            const br = BRANDS.find((b) => b.name === bn);
+            if (!br || br.name === "Kovalent") return null;
+            const sample = xs.find((x) => x.svc)?.svc;
+            return (
+              <View style={{ borderRadius: 22, overflow: "hidden", backgroundColor: colors.accentHaze, flexDirection: "row", minHeight: 110 }}>
+                <View style={{ flex: 1, padding: space.line, gap: 4, justifyContent: "center" }}>
+                  <T role="bodyStrong">{br.name}</T>
+                  <T role="caption" tone="secondary">{br.blurb}</T>
+                  <T role="caption" tone="accent">{xs.length} {xs.length === 1 ? "option" : "options"}</T>
+                </View>
+                {sample && ["XPEL", "Garware"].includes(br.name) ? <View style={{ width: "42%" }}><ServicePhoto service={sample} height={110} /></View> : null}
+              </View>
+            );
+          })()}
           <Pane pad="gap">
             {xs.map((e, i) =>
               e.svc ? (

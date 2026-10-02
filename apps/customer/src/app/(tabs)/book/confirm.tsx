@@ -9,6 +9,7 @@ import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdow
 import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
+import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 // Multi-day PPF services run into thousands of minutes - "~4320 min" is
@@ -126,6 +127,7 @@ export default function BookingConfirmScreen() {
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
+      {service ? <ServicePhoto service={service} aspect={21 / 9} radius={22} /> : null}
       <Pane pad="gap">
         <Row title="Service" detail={service?.name ?? "-"} />
         <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
