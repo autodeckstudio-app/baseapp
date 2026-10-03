@@ -79,7 +79,11 @@ export type AuditAction =
   | "gallery.imageUpdated"
   | "gallery.imageDeleted"
   | "story.created"
-  | "story.updated";
+  | "story.updated"
+  | "carListing.saved"
+  | "carListing.submitted"
+  | "carListing.reviewed"
+  | "carLead.created";
 
 export interface AuditLog {
   id: string;

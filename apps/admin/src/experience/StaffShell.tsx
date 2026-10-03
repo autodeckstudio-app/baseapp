@@ -30,6 +30,7 @@ export const OFFICE_LINKS = [
   { href: "/studio", label: "Studio" },
   { href: "/audit", label: "Audit log" },
   { href: "/stories", label: "Stories" },
+  { href: "/cars", label: "Cars for sale" },
 ] as const;
 
 const ROLE_LABEL: Record<string, string> = {

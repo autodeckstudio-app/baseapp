@@ -257,6 +257,19 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
+      <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/cars")}>
+        <Pane pad="inset">
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
+            <View style={{ flex: 1, gap: space.hair }}>
+              <Kicker tone="accent">Cars for sale</Kicker>
+              <T role="heading">Buy or sell a car</T>
+              <T role="caption" tone="tertiary">Browse cars, or list yours for review</T>
+            </View>
+            <Icon name="car" color={colors.accent} size={28} />
+          </View>
+        </Pane>
+      </Pressable>
+
       {reminders.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Kicker>Reminders</Kicker>

@@ -52,3 +52,4 @@ export * from "./paper.js";
 export * from "./dailyClose.js";
 export * from "./gallery.js";
 export * from "./story.js";
+export * from "./carsale.js";

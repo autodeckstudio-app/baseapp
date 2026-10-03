@@ -141,3 +141,6 @@ export { markNotificationRead } from "./functions/notification/markNotificationR
 // ─── Admin-only smoke test (deployed in every environment, not emulator-only —
 // see functions/src/functions/health.ts) ───────────────────────────────────
 export { healthCheck } from "./functions/health.js";
+
+// ─── Cars for sale (studio stock + customer submissions behind approval) ───
+export { issueListingPhotoUploadUrl, adminSaveListing, submitMyListing, reviewListing, listCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
