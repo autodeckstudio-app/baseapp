@@ -1,6 +1,6 @@
 // You: account, membership, notifications, sign out.
 import { useState } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { updateProfile } from "firebase/auth";
@@ -9,6 +9,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { LANGS, setLang, useLang } from "../../lib/i18n";
 import { signOut } from "../../lib/auth-service";
+import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
 import { Button, Field, Kicker, Loading, Pane, Row, Screen, T } from "../../ui/kit";
 
@@ -63,6 +64,7 @@ export default function YouScreen() {
       <Pane pad="gap">
         <Row title={t("Membership")} detail={t("Plans, washes left, history")} onPress={() => router.push("/(tabs)/membership")} />
         <Row title={t("Notifications")} detail={t("Updates from the studio")} onPress={() => router.push("/(tabs)/notifications")} />
+        {pushAvailable() ? <Row title="Booking alerts" detail="Get a notification when the studio updates your booking" onPress={() => void enablePush().then((r) => Alert.alert(r === "on" ? "Alerts on" : "Not enabled", r === "on" ? "You will get booking updates on this device." : "Allow notifications in your browser settings to turn this on."))} /> : null}
         <Row title={t("Help and contact")} detail={t("Call, WhatsApp, FAQ")} onPress={() => router.push("/(tabs)/help")} last />
       </Pane>
       <View style={{ gap: space.breath }}>

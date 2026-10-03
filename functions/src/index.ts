@@ -144,3 +144,7 @@ export { healthCheck } from "./functions/health.js";
 
 // ─── Cars for sale (studio stock + customer submissions behind approval) ───
 export { issueListingPhotoUploadUrl, adminSaveListing, submitMyListing, reviewListing, listCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
+
+// ─── Push (web, OFF until PUSH_ENABLED=true) ──────────────────────────────────
+export { registerPushToken } from "./functions/push/registerPushToken.js";
+export { onNotificationPush } from "./functions/push/onNotificationPush.js";
