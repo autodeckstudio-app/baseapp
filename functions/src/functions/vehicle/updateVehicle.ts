@@ -46,6 +46,21 @@ export const updateVehicle = onCall({ region: "asia-south1" }, async (request) =
     if (data.category !== undefined) updates["category"] = data.category;
     if (data.photoUrl !== undefined) updates["photoUrl"] = data.photoUrl;
 
+    // Changing the plate to one this owner already has live is a duplicate.
+    if (data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber) {
+      const clash = await tx.get(
+        db
+          .collection(COLLECTIONS.vehicles())
+          .where("tenantId", "==", existing.tenantId)
+          .where("ownerId", "==", existing.ownerId)
+          .where("registrationNumber", "==", data.registrationNumber)
+          .limit(10),
+      );
+      if (clash.docs.some((d) => d.id !== data.vehicleId && (d.data() as Vehicle).deletedAt === null)) {
+        throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
+      }
+    }
+
     tx.update(ref, updates);
 
     writeAuditLog(tx, {

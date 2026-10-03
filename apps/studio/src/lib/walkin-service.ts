@@ -64,3 +64,16 @@ export async function previewServicePrice(
 
 // createWalkinJob already exists in studio-service.ts — reused from there,
 // not duplicated here.
+
+export async function findCustomersByEmail(tenantId: string, email: string): Promise<Customer[]> {
+  const q = query(collection(db, COLLECTIONS.customers()), where("tenantId", "==", tenantId), where("email", "==", email.trim().toLowerCase()));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data() as Customer);
+}
+
+/** New walk-in customer by email. Returns the existing customer if that email already has a login. */
+export async function registerWalkinCustomer(input: { name: string; email: string; phone?: string }): Promise<{ customer: Customer; created: boolean }> {
+  const fn = httpsCallable<typeof input, { customer: Customer; created: boolean }>(functions, "createWalkinCustomer");
+  const result = await fn(input);
+  return result.data;
+}

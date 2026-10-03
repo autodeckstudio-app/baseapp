@@ -44,6 +44,12 @@ export const setupCustomerProfile = onCall(
 
       if (snap.exists) {
         const existing = snap.data() as Customer;
+        // Additive: remember the sign-in email so the studio can find this customer by email.
+        const signInEmail = typeof rawAuth.email === "string" ? rawAuth.email.trim().toLowerCase() : "";
+        if (!existing.email && signInEmail) {
+          tx.update(customerRef, { email: signInEmail });
+          return { customer: { ...existing, email: signInEmail }, isNew: false };
+        }
         return { customer: existing, isNew: false };
       }
 
@@ -61,6 +67,7 @@ export const setupCustomerProfile = onCall(
         authUid: uid,
         name,
         phone: phone ?? "",
+        ...(typeof rawAuth.email === "string" && rawAuth.email ? { email: rawAuth.email.trim().toLowerCase() } : {}),
         notificationPrefs: { push: true, quietMode: false },
         createdAt: now,
         updatedAt: now,

@@ -67,7 +67,7 @@ export const createVehicle = onCall({ region: "asia-south1" }, async (request) =
         .limit(10),
     );
     const rows = same.docs.map((d) => d.data() as Vehicle);
-    if (rows.some((v) => v.deletedAt === null)) throw new HttpsError("already-exists", "This car is already added.");
+    if (rows.some((v) => v.deletedAt === null)) throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
     const archived = rows.find((v) => v.deletedAt !== null);
     if (archived && data.archivedChoice !== "new") {
       throw new HttpsError("failed-precondition", "archived-match", {

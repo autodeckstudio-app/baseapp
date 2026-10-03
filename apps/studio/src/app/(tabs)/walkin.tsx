@@ -8,6 +8,8 @@ import {
 } from "../../lib/studio-service";
 import {
   findCustomersByPhone,
+  findCustomersByEmail,
+  registerWalkinCustomer,
   getVehiclesForCustomer,
   createVehicleForCustomer,
   previewServicePrice,
@@ -56,6 +58,10 @@ export default function WalkinScreen() {
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [showNew, setShowNew] = useState(false);
+  const [newCust, setNewCust] = useState({ name: "", email: "", phone: "" });
+  const [registering, setRegistering] = useState(false);
+  const [justRegistered, setJustRegistered] = useState(false);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -124,12 +130,15 @@ export default function WalkinScreen() {
     if (!auth.status || auth.status !== "ready" || !phone.trim()) return;
     setSearching(true);
     setSearched(false);
+    setJustRegistered(false);
     setCustomer(null);
     setVehicles([]);
     setSelectedVehicleId(null);
     try {
-      const formatted = phone.trim().startsWith("+91") ? phone.trim() : `+91${phone.trim().replace(/\s/g, "")}`;
-      const results = await findCustomersByPhone(auth.claims.tenantId, formatted);
+      const term = phone.trim();
+      const results = term.includes("@")
+        ? await findCustomersByEmail(auth.claims.tenantId, term)
+        : await findCustomersByPhone(auth.claims.tenantId, term.startsWith("+91") ? term : `+91${term.replace(/\s/g, "")}`);
       const found = results[0] ?? null;
       setCustomer(found);
       if (found) {
@@ -142,6 +151,26 @@ export default function WalkinScreen() {
     } finally {
       setSearching(false);
       setSearched(true);
+    }
+  }
+
+  async function handleRegister() {
+    const email = newCust.email.trim().toLowerCase();
+    if (newCust.name.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      Alert.alert("Missing details", "Enter the customer's name and a valid email.");
+      return;
+    }
+    setRegistering(true);
+    try {
+      const { customer: c, created } = await registerWalkinCustomer({ name: newCust.name.trim(), email, ...(newCust.phone.trim() ? { phone: newCust.phone.trim() } : {}) });
+      setCustomer(c);
+      setJustRegistered(created);
+      setShowNew(false);
+      if (auth.status === "ready") setVehicles(await getVehiclesForCustomer(auth.claims.tenantId, c.id));
+    } catch (err) {
+      Alert.alert("Could not add customer", err instanceof Error ? err.message : "Please try again.");
+    } finally {
+      setRegistering(false);
     }
   }
 
@@ -211,22 +240,31 @@ export default function WalkinScreen() {
       <Section title="1. Find customer">
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
-            <TextInput placeholder="98765 43210" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+            <TextInput placeholder="Phone or email" keyboardType="email-address" autoCapitalize="none" value={phone} onChangeText={setPhone} />
           </View>
           <Button label="Search" size="md" onPress={() => void handleSearch()} loading={searching} />
         </View>
-        {searched && !customer && (
-          <View style={{ backgroundColor: colors.warningMuted, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm }}>
-            <Text style={{ ...typography.caption, color: colors.warning }}>
-              No AutoDeck account found for this number. Ask the customer to sign up in the Customer app first, then
-              search again. Walk-in registration works only for existing accounts.
-            </Text>
+        {searched && !customer && !showNew && (
+          <View style={{ backgroundColor: colors.warningMuted, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, gap: spacing.sm }}>
+            <Text style={{ ...typography.caption, color: colors.warning }}>No customer found. Add them now with their email, so they can sign in to the customer app later.</Text>
+            <Button label="Add new customer" size="md" onPress={() => { setShowNew(true); setNewCust((p) => ({ ...p, ...(phone.includes("@") ? { email: phone.trim() } : { phone: phone.trim() }) })); }} />
+          </View>
+        )}
+        {showNew && (
+          <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm }}>
+            <TextInput label="Name" value={newCust.name} onChangeText={(v) => setNewCust((p) => ({ ...p, name: v }))} />
+            <TextInput label="Email (their Google account)" keyboardType="email-address" autoCapitalize="none" value={newCust.email} onChangeText={(v) => setNewCust((p) => ({ ...p, email: v }))} />
+            <TextInput label="Phone (optional)" keyboardType="phone-pad" value={newCust.phone} onChangeText={(v) => setNewCust((p) => ({ ...p, phone: v }))} />
+            <Button label="Save customer" size="md" loading={registering} onPress={() => void handleRegister()} />
           </View>
         )}
         {customer && (
           <View style={{ backgroundColor: colors.successMuted, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm }}>
             <Text style={{ ...typography.bodyMedium, color: colors.success }}>{customer.name}</Text>
-            <Text style={{ ...typography.caption, color: colors.success }}>{customer.phone}</Text>
+            <Text style={{ ...typography.caption, color: colors.success }}>{[customer.phone, customer.email].filter(Boolean).join("  |  ")}</Text>
+            {justRegistered && customer.email ? (
+              <Text style={{ ...typography.caption, color: colors.success, marginTop: spacing.xs }}>Added. Tell them to open the AutoDeck app and continue with Google using {customer.email}. They will see this same record.</Text>
+            ) : null}
           </View>
         )}
       </Section>
