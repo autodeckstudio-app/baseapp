@@ -513,3 +513,20 @@
 
 .ax-shell .ax-toolbar .ax-filters { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--ad-space-line); flex: 0 0 auto; }
 .ax-shell .ax-toolbar .ax-filters > * { flex: 0 0 auto !important; width: auto !important; }
+
+/* ---- Phone pass: one clean scrolling nav row, no clipped card text ---- */
+.ax-shell .ax-job, .ax-shell .ax-job * { min-width: 0; overflow-wrap: anywhere; }
+.ax-job-foot > span { overflow-wrap: anywhere; }
+@media (max-width: 860px) {
+  .ax-side { flex-wrap: nowrap; flex-direction: row; gap: var(--ad-space-breath); padding: 10px var(--ad-space-line); overflow: hidden; }
+  .ax-wordmark { flex: 0 0 auto; font-size: 18px; }
+  .ax-side { overflow-x: auto; scrollbar-width: none; }
+  .ax-side::-webkit-scrollbar { display: none; }
+  .ax-side nav { display: contents; }
+  .ax-side .ax-nav-link { flex: 0 0 auto; white-space: nowrap; padding: 0 12px; min-height: 36px; font-size: 14px; }
+  .ax-side-foot { flex: 0 0 auto; margin-left: auto; }
+  .ax-side-foot .ax-who { display: none; }
+  .ax-side-foot .ax-button { min-height: 36px; padding: 0 12px; font-size: 13px; }
+  .ax-board { grid-template-columns: repeat(5, 78vw); scroll-snap-type: x mandatory; }
+  .ax-col { scroll-snap-align: start; }
+}
