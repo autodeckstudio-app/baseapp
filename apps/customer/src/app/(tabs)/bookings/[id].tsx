@@ -91,7 +91,7 @@ function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason
 }
 
 export default function BookingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, placed } = useLocalSearchParams<{ id: string; placed?: string }>();
   const router = useRouter();
   useLang();
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -240,6 +240,13 @@ export default function BookingDetailScreen() {
         </View>
       }
     >
+      {placed === "1" && booking.status === "PENDING" ? (
+        <Notice
+          title="Request sent"
+          body="Pending means the studio has your request and will confirm your slot. You will see the status change here once they do. Nothing is charged now."
+        />
+      ) : null}
+
       {booking.status === "COMPLETED" ? (
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
@@ -269,8 +276,8 @@ export default function BookingDetailScreen() {
       <Pane pad="gap">
         <Row title="Time" detail={`${displayTime} IST`} />
         <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
-        <Row title="Expected ready" detail={`${displayEndDate}, ${booking.estimatedEndTime} IST`} />
-        {booking.notes !== null ? <Row title="Notes" detail={booking.notes} last /> : <Row title="" detail="" last />}
+        <Row title="Expected ready" detail={`${displayEndDate}, ${booking.estimatedEndTime} IST`} last={!(booking.notes !== null && booking.notes.trim() !== "")} />
+        {booking.notes !== null && booking.notes.trim() !== "" ? <Row title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
       {isMultiDay ? (

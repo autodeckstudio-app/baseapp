@@ -103,9 +103,10 @@ export default function BookingConfirmScreen() {
         scheduledTime: params.scheduledTime,
         idempotencyKey,
       });
-      router.replace(`/(tabs)/bookings/${result.id}`);
+      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
     } catch (err) {
-      setBookError(err instanceof Error ? err.message : "Could not create booking. Please try again.");
+      console.warn("create booking failed", err);
+      setBookError("We could not send your request. Nothing was booked and you have not been charged. Please try again.");
     } finally {
       setBooking(false);
     }
@@ -151,14 +152,14 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : breakdown !== null ? <PricePane breakdown={breakdown} /> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        Payment is collected at the studio. Price may vary based on final work.
+        The studio confirms your slot after you send this. Payment is collected at the studio. Price may vary based on final work.
       </T>
 
-      {bookError ? <Notice title="Booking failed" body={bookError} /> : null}
+      {bookError ? <Notice title="Request not sent" body={bookError} /> : null}
 
       <View style={{ gap: space.breath }}>
-        <Button label={service?.priceOnRequest === true ? "Request quote and book" : "Confirm booking"} busy={booking} onPress={() => void handleConfirm()} />
-        <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+        <Button label={service?.priceOnRequest === true ? "Request quote and book" : "Request booking"} busy={booking} onPress={() => void handleConfirm()} />
+        {bookError ? <Button label="Back to my details" kind="quiet" onPress={() => router.back()} /> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
     </Screen>
   );
