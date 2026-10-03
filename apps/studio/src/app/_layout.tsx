@@ -34,6 +34,13 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    const doc = (globalThis as { document?: { documentElement: { style: { backgroundColor: string } }; body: { style: { backgroundColor: string } } } }).document;
+    if (doc) {
+      doc.documentElement.style.backgroundColor = colors.background;
+      doc.body.style.backgroundColor = colors.background;
+    }
+  }, []);
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
     <NavigationGuard>
