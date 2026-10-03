@@ -7,7 +7,7 @@ export default function Index() {
 
   if (auth.status === "loading") {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#ECEBF8" }}>
         <ActivityIndicator size="large" />
       </View>
     );

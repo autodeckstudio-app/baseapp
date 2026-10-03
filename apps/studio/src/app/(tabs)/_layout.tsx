@@ -1,8 +1,20 @@
 import { Tabs } from "expo-router";
+import { colors } from "@autodeck/ui";
 
 export default function StudioTabsLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: "#1a1a1a" }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1 },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: colors.textPrimary, fontWeight: "700" },
+        sceneStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{ title: "Today's Jobs", tabBarLabel: "Today" }}

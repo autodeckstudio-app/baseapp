@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
-import { auth } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions } from "../lib/firebase";
 
 type AuthState =
   | { status: "loading" }
@@ -27,7 +28,17 @@ export function useAuth(): AuthState {
         return;
       }
 
-      const tokenResult = await user.getIdTokenResult();
+      let tokenResult = await user.getIdTokenResult();
+      if (typeof (tokenResult.claims as Record<string, unknown>)["role"] !== "string") {
+        // First Google sign-in: the server resolves the role from the staff
+        // roster and sets claims; then refresh the token to receive them.
+        try {
+          await httpsCallable(functions, "setupCustomerProfile")({});
+          tokenResult = await user.getIdTokenResult(true);
+        } catch {
+          // Falls through to "unauthorized" below.
+        }
+      }
       const rawClaims = tokenResult.claims as Record<string, unknown>;
       const role = typeof rawClaims["role"] === "string" ? rawClaims["role"] : null;
       const tenantId = typeof rawClaims["tenantId"] === "string" ? rawClaims["tenantId"] : null;
