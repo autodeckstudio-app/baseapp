@@ -353,15 +353,7 @@ export default function BookingDetailScreen() {
               />
             </View>
           ) : null}
-          {canPay && !payment && job && !(booking.priceOnRequest === true && booking.quoteStatus !== "approved") ? (
-            <View style={{ marginTop: space.line }}>
-              {payRequested ? (
-                <T role="caption" tone="secondary">Pay the studio team in person - your status will update once confirmed.</T>
-              ) : (
-                <Button label="Pay at studio" busy={payingNow} onPress={() => void handlePayAtStudio()} />
-              )}
-            </View>
-          ) : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>You will pay at the studio. The team marks it paid once you do.</T> : null}
         </Pane>
       </View>
 

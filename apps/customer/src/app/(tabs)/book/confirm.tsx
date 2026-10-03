@@ -152,8 +152,11 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : breakdown !== null ? <PricePane breakdown={breakdown} /> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        The studio confirms your slot after you send this. Payment is collected at the studio. Price may vary based on final work.
+        The studio confirms your slot after you send this. Price may vary based on final work.
       </T>
+      <Pane pad="gap">
+        <Row title="Payment" detail="You will pay at the studio" last />
+      </Pane>
 
       {bookError ? <Notice title="Request not sent" body={bookError} /> : null}
 
