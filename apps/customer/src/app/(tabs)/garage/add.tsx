@@ -45,6 +45,7 @@ export default function AddVehicleScreen() {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [archivedMatch, setArchivedMatch] = useState<{ vehicleId: string; label: string } | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
 
   function pickPhoto(file: { blob: Blob; type: string } | null) {
@@ -61,16 +62,43 @@ export default function AddVehicleScreen() {
     setForm((prev: FormState) => ({ ...prev, [field]: value }));
   }
 
-  async function handleAdd(archivedChoice?: "new") {
-    const yearNum = parseInt(form.year, 10);
-    const plate = normalizePlate(form.registrationNumber);
+  function validate(f: FormState): Partial<Record<keyof FormState, string>> {
+    const yearNum = parseInt(f.year, 10);
+    const plate = normalizePlate(f.registrationNumber);
     const maxYear = new Date().getFullYear() + 1;
     const fe: Partial<Record<keyof FormState, string>> = {};
-    if (!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH 12 AB 1234";
-    if (form.make.trim().length < 2) fe.make = "Enter the car make";
-    if (form.model.trim().length < 1) fe.model = "Enter the car model";
-    if (!/^\d{4}$/.test(form.year.trim()) || yearNum < 1980 || yearNum > maxYear) fe.year = `Enter a 4-digit year between 1980 and ${maxYear}`;
-    if (form.color.trim().length < 2) fe.color = "Enter the car colour";
+    if (!plate) fe.registrationNumber = "Enter your registration number.";
+    else if (!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH 12 AB 1234.";
+    if (f.make.trim().length < 2) fe.make = "Enter the car make.";
+    if (f.model.trim().length < 1) fe.model = "Enter the car model.";
+    if (!/^\d{4}$/.test(f.year.trim()) || yearNum < 1980 || yearNum > maxYear) fe.year = `Enter a 4-digit year between 1980 and ${maxYear}.`;
+    if (f.color.trim().length < 2) fe.color = "Enter the car colour.";
+    return fe;
+  }
+
+  function checkField(key: keyof FormState) {
+    const msg = validate(form)[key];
+    setFieldErrors((f) => ({ ...f, [key]: msg }));
+  }
+
+  async function retryPhoto() {
+    if (!savedId || !photo) return;
+    setLoading(true);
+    try {
+      await uploadVehiclePhoto(savedId, photo.blob, photo.contentType);
+      router.back();
+    } catch {
+      setError("The photo still could not be uploaded. Try again, or tap Done to continue without it.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAdd(archivedChoice?: "new") {
+    if (loading || savedId) return;
+    const yearNum = parseInt(form.year, 10);
+    const plate = normalizePlate(form.registrationNumber);
+    const fe = validate(form);
     setFieldErrors(fe);
     if (Object.keys(fe).length > 0) {
       setError(null);
@@ -81,7 +109,7 @@ export default function AddVehicleScreen() {
     setError(null);
     try {
       if (auth.status === "ready" && (await hasVehicleWithPlate(auth.user.uid, auth.claims.tenantId, plate))) {
-        setFieldErrors({ registrationNumber: "This car is already added" });
+        setFieldErrors({ registrationNumber: "This car is already added." });
         return;
       }
       const vehicle = await createVehicle({
@@ -92,13 +120,14 @@ export default function AddVehicleScreen() {
         color: form.color.trim(),
         ...(archivedChoice ? { archivedChoice } : {}),
       });
+      setSavedId(vehicle.id);
       if (photo) {
         try {
           await uploadVehiclePhoto(vehicle.id, photo.blob, photo.contentType);
         } catch {
           // Stay on this screen so the message is actually seen.
           setPhotoFailed(true);
-          setError("Your car is saved, but the photo could not be uploaded right now. Tap Done to continue without it.");
+          setError("Your car is saved, but the photo could not be uploaded. Try again, or tap Done to continue without it.");
           return;
         }
       }
@@ -113,7 +142,7 @@ export default function AddVehicleScreen() {
         return;
       }
       if (/already-exists/.test(code)) {
-        setFieldErrors({ registrationNumber: "This car is already added" });
+        setFieldErrors({ registrationNumber: "This car is already added." });
         return;
       }
       setError(
@@ -140,6 +169,7 @@ export default function AddVehicleScreen() {
               value={form[key]}
               onChangeText={(v: string) => { update(key, v); if (fieldErrors[key]) setFieldErrors((f) => ({ ...f, [key]: undefined })); }}
               error={fieldErrors[key]}
+              onBlur={() => { if (form[key] !== "") checkField(key); }}
               autoCapitalize={autoCapitalize}
               keyboardType={keyboardType}
               maxLength={key === "registrationNumber" ? 16 : key === "year" ? 4 : 50}
@@ -178,7 +208,7 @@ export default function AddVehicleScreen() {
 
         {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}
 
-        {photoFailed ? <Button label="Done" onPress={() => router.back()} /> : <Button label="Add car" busy={loading} onPress={() => void handleAdd()} />}
+        {photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.back()} /></View> : <Button label="Add car" busy={loading} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

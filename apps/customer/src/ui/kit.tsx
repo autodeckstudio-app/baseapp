@@ -351,7 +351,9 @@ export function Field({
   multiline = false,
   maxLength,
   error,
+  onBlur,
 }: {
+  onBlur?: (() => void) | undefined;
   error?: string | undefined;
   maxLength?: number;
   label: string;
@@ -369,6 +371,7 @@ export function Field({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onBlur={onBlur}
         placeholder={placeholder}
         placeholderTextColor={colors.textTertiary}
         autoCapitalize={autoCapitalize}
