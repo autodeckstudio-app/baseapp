@@ -20,7 +20,9 @@ const GROUP: Record<string, string> = {
   inspection: "Inspection",
   other: "More",
 };
-const ORDER = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection", "other"];
+// Order is deliberate: an easy first yes (wash), then the two "protect your investment" anchors
+// (ceramic, paint film), then the budget coating shown after them, then practical add-ons.
+const ORDER = ["washing", "ceramic", "ppf", "coating", "tinting", "inspection", "other"];
 // Old "?need=" deep links map onto a category chip.
 const NEED_TO_CAT: Record<string, string> = { wash: "washing", shine: "coating", ceramic: "ceramic", ppf: "ppf", tint: "tinting", check: "inspection" };
 
@@ -62,15 +64,20 @@ function duration(min: number): string {
   return h >= 8 ? `${Math.round(h / 8)} day${h >= 16 ? "s" : ""}` : `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
 }
 
+function fromPrice(xs: Service[]): string | null {
+  const priced = xs.filter((x) => x.priceOnRequest !== true && x.basePrice > 0).map((x) => x.basePrice);
+  return priced.length ? `From ${rupees(Math.min(...priced))}` : null;
+}
+
 export default function CatalogueScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
-  const { need, cat } = useLocalSearchParams<{ need?: string; cat?: string }>();
+  const { need, cat: catParam, brand: brandParam } = useLocalSearchParams<{ need?: string; cat?: string; brand?: string }>();
   const [services, setServices] = useState<Service[] | null>(null);
   const [error, setError] = useState(false);
-  const [active, setActive] = useState<string>("all");
   const [q, setQ] = useState("");
-  const brand: string | null = null;
+  const cat = catParam ?? (need ? NEED_TO_CAT[need] : undefined);
+  const brand = brandParam;
 
   const load = useCallback(async () => {
     setError(false);
@@ -81,56 +88,74 @@ export default function CatalogueScreen() {
     }
   }, []);
   useEffect(() => void load(), [load]);
-  useEffect(() => {
-    const c = cat ?? (need ? NEED_TO_CAT[need] : undefined);
-    if (c) setActive(c);
-  }, [need, cat]);
 
   const all = services ?? [];
   const cats = ORDER.filter((c) => all.some((x) => x.category === c));
-  const shown = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return all.filter((x) => (active === "all" || x.category === active) && (!brand || x.brand === brand) && (!t || `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)));
-  }, [all, active, q, brand]);
-  // One pattern for every category: brand (or sub-group) > product cards. Studio services carry a real
-  // price; brand-catalogue products (sourced from the brand's site) say "ask the studio".
-  type Entry = { svc?: Service; item?: BrandItem };
-  const sections = useMemo(() => {
-    const m = new Map<string, Entry[]>();
-    const catOf = (k: BrandItem["kind"]) => (k === "PPF" ? "ppf" : "ceramic");
-    const ranked = [...shown].sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice);
-    const label = (cat: string, name: string) => (active === "all" ? `${GROUP[cat] ?? "More"} · ${name}` : name);
-    for (const sv of ranked) {
-      const inferred = BRANDS.find((b) => b.items.some((it) => sv.name.toLowerCase().includes(it.name.toLowerCase())))?.name;
-      const k = label(sv.category, sv.brand ?? inferred ?? subGroup(sv));
-      m.set(k, [...(m.get(k) ?? []), { svc: sv }]);
-    }
-    return [...m.entries()];
-  }, [shown, active, q]);
+  const byPrice = (a: Service, b: Service) => Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice;
+  const groupName = (sv: Service) => sv.brand ?? BRANDS.find((b) => b.items.some((it) => sv.name.toLowerCase().includes(it.name.toLowerCase())))?.name ?? subGroup(sv);
 
-  const chip = (key: string, label: string, icon: IconName) => {
-    const on = active === key;
-    return (
-      <Pressable
-        key={key}
-        accessibilityRole="button"
-        accessibilityState={{ selected: on }}
-        onPress={() => setActive(key)}
-        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, height: 46, paddingLeft: 8, paddingRight: 16, borderRadius: 23, backgroundColor: on ? colors.accent : colors.surface, borderWidth: 1, borderColor: on ? colors.accent : colors.borderSubtle, opacity: pressed ? 0.8 : 1 })}
-      >
-        <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: on ? "rgba(255,255,255,0.28)" : colors.accentHaze }}>
-          <Icon name={icon} color={on ? "#FFFFFF" : colors.accent} size={17} />
-        </View>
-        <T role="bodyStrong" style={{ color: on ? "#FFFFFF" : colors.textPrimary }}>{label}</T>
-      </Pressable>
-    );
-  };
+  // Level 2: groups (brands, or sub-groups where a category has no brands) inside one category, easiest entry first.
+  const groups = useMemo(() => {
+    if (!cat) return [] as [string, Service[]][];
+    const m = new Map<string, Service[]>();
+    for (const sv of all.filter((x) => x.category === cat)) m.set(groupName(sv), [...(m.get(groupName(sv)) ?? []), sv]);
+    return [...m.entries()].map(([k, v]) => [k, [...v].sort(byPrice)] as [string, Service[]]).sort((a, b) => byPrice(a[1][0]!, b[1][0]!));
+  }, [all, cat]);
+
+  const go = (params: Record<string, string>) => router.push({ pathname: "/(tabs)/catalogue", params });
+  const t = q.trim().toLowerCase();
+  const searching = t.length > 0;
+  const found = searching ? all.filter((x) => `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)).sort(byPrice) : [];
+  // Skip a pointless level: one group means go straight to its products.
+  const level: 1 | 2 | 3 = !cat ? 1 : brand || groups.length === 1 ? 3 : 2;
+  const groupKey = brand ?? groups[0]?.[0];
+  const products = level === 3 ? (groups.find(([k]) => k === groupKey)?.[1] ?? []) : [];
+
+  const tile = (key: string, title: string, sub: string | undefined, meta: string | undefined, icon: IconName, onPress: () => void) => (
+    <Pressable key={key} accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.85 : 1 })}>
+      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
+        <Icon name={icon} color={colors.accent} size={22} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <T role="bodyStrong" numberOfLines={1}>{title}</T>
+        {sub ? <T role="caption" tone="secondary" numberOfLines={2}>{sub}</T> : null}
+        {meta ? <T role="caption" tone="accent" numberOfLines={1}>{meta}</T> : null}
+      </View>
+      <T tone="tertiary">›</T>
+    </Pressable>
+  );
+
+  const card = (sv: Service) => (
+    <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: "47.5%", opacity: pressed ? 0.85 : 1 })}>
+      <View>
+        <ServicePhoto service={sv} height={190} radius={22} />
+        {sv.warrantyLabel ? (
+          <View style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "88%", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>
+            <T role="caption" tone="accent" numberOfLines={1}>{sv.warrantyLabel}</T>
+          </View>
+        ) : null}
+      </View>
+      <View style={{ paddingTop: 8, gap: 2 }}>
+        <T role="bodyStrong" numberOfLines={2}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
+        <T role="caption" tone="tertiary" numberOfLines={1}>{duration(sv.estimatedDurationMinutes)}</T>
+        <T role="bodyStrong" tone="accent" numberOfLines={1}>{priceLabel(sv)}</T>
+      </View>
+    </Pressable>
+  );
+
+  const crumb = (label: string, onPress: () => void) => (
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ alignSelf: "flex-start" }}>
+      <T role="caption" tone="accent">‹ {label}</T>
+    </Pressable>
+  );
 
   const top = (
     <View style={{ gap: space.line }}>
       <View style={{ gap: space.hair }}>
-        <Kicker tone="accent">Services</Kicker>
-        <T role="title">What does your car need?</T>
+        {level === 3 && groups.length > 1 && cat ? crumb(GROUP[cat] ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
+        <Kicker tone="accent">{cat ? GROUP[cat] ?? "Services" : "Services"}</Kicker>
+        <T role="title">{level === 3 && groupKey ? groupKey : level === 2 ? "Pick a brand" : "What does your car need?"}</T>
+        {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
       <TextInput
         value={q}
@@ -139,10 +164,6 @@ export default function CatalogueScreen() {
         placeholderTextColor={colors.textTertiary}
         style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 14, paddingVertical: 10, color: colors.textPrimary, fontSize: 15 }}
       />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath }}>
-        {chip("all", "All", "tools")}
-        {cats.map((c) => chip(c, GROUP[c] ?? c, ICON[c] ?? "tools"))}
-      </ScrollView>
     </View>
   );
 
@@ -151,56 +172,25 @@ export default function CatalogueScreen() {
       {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {!services && !error ? (
         <View style={{ gap: space.line }}>
-          <Skeleton height={18} width="40%" />
           <Skeleton height={64} /><Skeleton height={64} /><Skeleton height={64} />
         </View>
       ) : null}
-      {services && sections.length === 0 ? <Notice title="Nothing matches" body="Try another word or pick All." /> : null}
-      {sections.map(([title, xs]) => {
-        const parts = title.split(" · ");
-        const name = parts.pop() ?? title;
-        const group = parts[0];
-        const br = BRANDS.find((x) => x.name === name);
-        const cat = xs[0]?.svc?.category;
-        return (
-          <View key={title} style={{ gap: space.breath }}>
-            <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.line }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                {group ? <Kicker tone="accent">{group}</Kicker> : null}
-                <T role="title" numberOfLines={1}>{name}</T>
-                {br ? <T role="caption" tone="secondary" numberOfLines={2}>{br.blurb}</T> : null}
-              </View>
-              {active === "all" && cat ? (
-                <Pressable accessibilityRole="button" onPress={() => setActive(cat)} hitSlop={8}>
-                  <T role="caption" tone="accent">See all</T>
-                </Pressable>
-              ) : null}
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath, paddingRight: space.line }}>
-              {xs.map((e) => {
-                const sv = e.svc!;
-                return (
-                  <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 156, opacity: pressed ? 0.85 : 1 })}>
-                    <View>
-                      <ServicePhoto service={sv} height={196} radius={22} />
-                      {sv.warrantyLabel ? (
-                        <View style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "88%", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>
-                          <T role="caption" tone="accent" numberOfLines={1}>{sv.warrantyLabel}</T>
-                        </View>
-                      ) : null}
-                    </View>
-                    <View style={{ paddingTop: 8, gap: 2 }}>
-                      <T role="bodyStrong" numberOfLines={2}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
-                      <T role="caption" tone="tertiary" numberOfLines={1}>{[duration(sv.estimatedDurationMinutes), sv.brand].filter(Boolean).join(" · ")}</T>
-                      <T role="bodyStrong" tone="accent" numberOfLines={1}>{priceLabel(sv)}</T>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        );
-      })}
+      {services && searching ? (
+        found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.line, justifyContent: "space-between" }}>{found.map(card)}</View>
+      ) : null}
+      {services && !searching && level === 1 ? (
+        <View style={{ gap: space.breath }}>
+          {cats.map((c) => tile(c, GROUP[c] ?? c, BLURB[c], fromPrice(all.filter((x) => x.category === c)) ?? undefined, ICON[c] ?? "tools", () => go({ cat: c })))}
+        </View>
+      ) : null}
+      {services && !searching && level === 2 ? (
+        <View style={{ gap: space.breath }}>
+          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, fromPrice(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name })))}
+        </View>
+      ) : null}
+      {services && !searching && level === 3 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.line, justifyContent: "space-between" }}>{products.map(card)}</View>
+      ) : null}
     </Screen>
   );
 }

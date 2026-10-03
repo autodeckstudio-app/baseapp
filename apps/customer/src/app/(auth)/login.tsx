@@ -40,28 +40,28 @@ export default function LoginScreen() {
   return (
     <Ambient>
       <View style={{ flex: 1, justifyContent: "center", width: "100%", maxWidth: 480, alignSelf: "center", padding: space.inset, gap: space.section }}>
-        <View style={{ gap: space.line }}>
+        <View style={{ gap: space.line, alignItems: "center" }}>
           <Kicker tone="accent">AutoDeck</Kicker>
-          <T role="display">Care for your car, without the chasing.</T>
+          <T role="display" style={{ textAlign: "center" }}>Care for your car, without the chasing.</T>
         </View>
         <Pane pad="inset" round="pane">
           <View style={{ gap: space.gap }}>
             {PROMISES.map(([title, body]) => (
-              <View key={title} style={{ gap: 2 }}>
-                <T role="heading">{title}</T>
-                <T role="caption" tone="tertiary">{body}</T>
+              <View key={title} style={{ gap: 2, alignItems: "center" }}>
+                <T role="heading" style={{ textAlign: "center" }}>{title}</T>
+                <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>{body}</T>
               </View>
             ))}
           </View>
         </Pane>
-        <View style={{ gap: space.line }}>
+        <View style={{ gap: space.line, alignItems: "stretch" }}>
           {web ? <WebGoogleButton onError={setError} /> : googleSignInConfigured() ? <GoogleButton onError={setError} /> : null}
           {!web && useEmulator ? <DevSignIn onError={setError} /> : null}
           {!web && !googleSignInConfigured() && !useEmulator ? (
             <T tone="tertiary">Sign-in isn't set up in this build yet.</T>
           ) : null}
           {error ? <T role="caption" tone="danger">{error}</T> : null}
-          <T role="caption" tone="tertiary">Google sign-in only. We never ask for a password.</T>
+          <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Google sign-in only. We never ask for a password.</T>
         </View>
       </View>
     </Ambient>

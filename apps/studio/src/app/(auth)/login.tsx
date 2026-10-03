@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../../lib/firebase";
 import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
@@ -17,8 +17,17 @@ export default function StudioLoginScreen() {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      await signInWithPopup(auth, provider);
-      router.replace("/(tabs)");
+      try {
+        await signInWithPopup(auth, provider);
+        router.replace("/(tabs)");
+      } catch (e) {
+        // In-app browsers and some mobile browsers block popups: fall back to a full-page redirect.
+        if (/popup-blocked|operation-not-supported|web-storage-unsupported/.test((e as FirebaseError).code ?? "")) {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw e;
+      }
     } catch (err) {
       const code = (err as FirebaseError).code ?? "";
       if (!/popup-closed|cancelled/.test(code)) Alert.alert("Sign in failed", "Could not sign in with Google. Try again.");
@@ -46,8 +55,8 @@ export default function StudioLoginScreen() {
       style={{ flex: 1, justifyContent: "center", alignSelf: "center", width: "100%", maxWidth: 420, padding: spacing.xxl }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs }}>AutoDeck Studio</Text>
-      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl }}>Staff sign in</Text>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs, textAlign: "center" }}>AutoDeck Studio</Text>
+      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl, textAlign: "center" }}>Staff sign in</Text>
 
       {Platform.OS === "web" ? (
         <Button label="Continue with Google" onPress={() => void handleGoogle()} loading={loading} />
