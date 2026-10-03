@@ -55,19 +55,29 @@ export const createVehicle = onCall({ region: "asia-south1" }, async (request) =
   };
 
   await db.runTransaction(async (tx) => {
-    // One live car per plate per owner. The query is read inside the transaction,
-    // so two simultaneous requests cannot both pass. Archived cars (deletedAt set)
-    // free the plate again.
+    // One live car per plate per owner, read inside the transaction so two
+    // simultaneous requests cannot both pass. An archived car with the same plate
+    // is never shown; the app asks the customer whether it is the same car.
     const same = await tx.get(
       db
         .collection(COLLECTIONS.vehicles())
         .where("tenantId", "==", vehicle.tenantId)
         .where("ownerId", "==", ownerId)
         .where("registrationNumber", "==", vehicle.registrationNumber)
-        .where("deletedAt", "==", null)
-        .limit(1),
+        .limit(10),
     );
-    if (!same.empty) throw new HttpsError("already-exists", "This car is already added.");
+    const rows = same.docs.map((d) => d.data() as Vehicle);
+    if (rows.some((v) => v.deletedAt === null)) throw new HttpsError("already-exists", "This car is already added.");
+    const archived = rows.find((v) => v.deletedAt !== null);
+    if (archived && data.archivedChoice !== "new") {
+      throw new HttpsError("failed-precondition", "archived-match", {
+        vehicleId: archived.id,
+        make: archived.make,
+        model: archived.model,
+        year: archived.year,
+        color: archived.color,
+      });
+    }
     tx.set(ref, vehicle);
     writeAuditLog(tx, {
       action: "vehicle.created",

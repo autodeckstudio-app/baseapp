@@ -28,6 +28,8 @@ export const createVehicleSchema = z.object({
   // (enforced in the handler, not just by convention); ignored for role
   // 'customer', who always owns the vehicle they create.
   ownerId: z.string().min(1).optional(),
+  // Set by the app after the customer answers "not the same car" to an archived-plate prompt.
+  archivedChoice: z.literal("new").optional(),
 }).strict();
 
 export const updateVehicleSchema = z.object({
@@ -53,6 +55,10 @@ export const issueVehiclePhotoUploadUrlSchema = z.object({
 }).strict();
 
 export const archiveVehicleSchema = z.object({
+  vehicleId: z.string().min(1),
+}).strict();
+
+export const restoreVehicleSchema = z.object({
   vehicleId: z.string().min(1),
 }).strict();
 

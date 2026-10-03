@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { useAuth } from "../../../hooks/useAuth";
-import { createVehicle, hasVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { createVehicle, restoreVehicle, hasVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
   registrationNumber: string;
@@ -43,6 +43,7 @@ export default function AddVehicleScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [archivedMatch, setArchivedMatch] = useState<{ vehicleId: string; label: string } | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
 
@@ -60,7 +61,7 @@ export default function AddVehicleScreen() {
     setForm((prev: FormState) => ({ ...prev, [field]: value }));
   }
 
-  async function handleAdd() {
+  async function handleAdd(archivedChoice?: "new") {
     const yearNum = parseInt(form.year, 10);
     const plate = normalizePlate(form.registrationNumber);
     const maxYear = new Date().getFullYear() + 1;
@@ -89,6 +90,7 @@ export default function AddVehicleScreen() {
         model: form.model.trim(),
         year: yearNum,
         color: form.color.trim(),
+        ...(archivedChoice ? { archivedChoice } : {}),
       });
       if (photo) {
         try {
@@ -105,6 +107,11 @@ export default function AddVehicleScreen() {
       const code = (err as { code?: string })?.code ?? "";
       const msg = err instanceof Error ? err.message : "";
       console.warn("add car failed", code, msg);
+      const details = (err as { details?: { vehicleId?: string; make?: string; model?: string; year?: number; color?: string } }).details;
+      if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
+        setArchivedMatch({ vehicleId: details.vehicleId, label: [details.make, details.model, details.year, details.color].filter(Boolean).join(" ") });
+        return;
+      }
       if (/already-exists/.test(code)) {
         setFieldErrors({ registrationNumber: "This car is already added" });
         return;
@@ -154,6 +161,19 @@ export default function AddVehicleScreen() {
             })}
             {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
           </View>
+        ) : null}
+
+        {archivedMatch ? (
+          <Notice
+            title="We have this car on file"
+            body={`Is it the same car${archivedMatch.label ? ` (${archivedMatch.label})` : ""}? If yes, we bring it back with its details. If no, we add a fresh car with only what you entered.`}
+            action={
+              <View style={{ gap: space.breath }}>
+                <Button label="Yes, same car" busy={loading} onPress={() => void (async () => { setLoading(true); try { await restoreVehicle(archivedMatch.vehicleId); router.back(); } catch { setArchivedMatch(null); setError("We could not restore this car. Please try again."); } finally { setLoading(false); } })()} />
+                <Button label="No, a different car" kind="quiet" onPress={() => { setArchivedMatch(null); void handleAdd("new"); }} />
+              </View>
+            }
+          />
         ) : null}
 
         {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}

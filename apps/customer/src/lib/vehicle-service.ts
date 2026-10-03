@@ -19,6 +19,7 @@ type CreateVehicleInput = {
   model: string;
   year: number;
   color: string;
+  archivedChoice?: "new";
 };
 
 type UpdateVehicleInput = {
@@ -124,4 +125,9 @@ export async function hasVehicleWithPlate(uid: string, tenantId: string, plate: 
   );
   const target = normalizePlate(plate);
   return snap.docs.some((d) => normalizePlate(String((d.data() as Vehicle).registrationNumber ?? "")) === target);
+}
+
+export async function restoreVehicle(vehicleId: string): Promise<void> {
+  const fn = httpsCallable<{ vehicleId: string }, { vehicleId: string; restored: boolean }>(functions, "restoreVehicle");
+  await fn({ vehicleId });
 }
