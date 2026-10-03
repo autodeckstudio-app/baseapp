@@ -1,3 +1,4 @@
+import "../lib/webAlert";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { signOut } from "firebase/auth";

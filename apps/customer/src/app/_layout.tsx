@@ -1,3 +1,4 @@
+import "../lib/webAlert";
 import { useEffect } from "react";
 import { Platform } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
