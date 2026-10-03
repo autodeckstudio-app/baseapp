@@ -521,9 +521,10 @@
 @media (max-width: 860px) {
   .ax-side { display: none; }
   .ax-main { padding-bottom: 96px; }
-  .ax-tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: #fff; border-top: 1px solid var(--ad-border-subtle); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
-  .ax-shell .ax-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 48px; justify-content: center; color: var(--ad-text-tertiary); font-size: 11px; font-weight: 500; background: none; border: none; box-shadow: none; text-decoration: none; cursor: pointer; padding: 0; }
-  .ax-shell .ax-tab[aria-current="page"] { color: var(--ad-accent-strong); }
+  .ax-tabbar { display: flex; position: fixed; left: 14px; right: 14px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 40; gap: 4px; padding: 6px; border-radius: 9999px; background: rgba(255,255,255,0.82); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(29,27,38,0.08); box-shadow: 0 10px 30px rgba(60,40,90,0.16); }
+  .ax-shell .ax-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 9999px; color: var(--ad-text-tertiary); font-size: 0; background: none; border: none; box-shadow: none; text-decoration: none; cursor: pointer; padding: 0; transition: background .15s; }
+  .ax-shell .ax-tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ax-shell .ax-tab[aria-current="page"] { color: var(--ad-accent-strong); background: rgba(240,125,40,0.14); }
   .ax-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: var(--ad-space-gap); }
   .ax-chips::-webkit-scrollbar { display: none; }
   .ax-chip-link { flex: 0 0 auto; padding: 8px 14px; border-radius: 9999px; border: 1px solid var(--ad-border-subtle); background: #fff; color: var(--ad-text-secondary); font-size: 14px; text-decoration: none; white-space: nowrap; }

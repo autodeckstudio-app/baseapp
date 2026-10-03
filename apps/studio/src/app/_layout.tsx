@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { Alert, View } from "react-native";
+import { Alert, Platform, View } from "react-native";
 import { auth } from "../lib/firebase";
 import { colors } from "@autodeck/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -23,7 +23,9 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
       // (e.g. deactivateStaffMember) — sign out and bounce to login rather
       // than leaving the user stuck on a screen where every call 403s.
       void signOut(auth).then(() => {
-        Alert.alert("Access removed", "Your studio access has been removed. Please contact your admin.");
+        const msg = "Your studio access has been removed. Please contact your admin.";
+        if (Platform.OS === "web") (globalThis as { alert?: (m: string) => void }).alert?.(msg);
+        else Alert.alert("Access removed", msg);
       });
     } else if (authState.status === "ready" && inAuthGroup) {
       router.replace("/(tabs)");
