@@ -23,11 +23,11 @@ type FieldDef = {
 };
 
 const FIELDS: FieldDef[] = [
-  { key: "registrationNumber", label: "Registration number", placeholder: "GJ01AB1234", autoCapitalize: "characters" },
-  { key: "make", label: "Make", placeholder: "Maruti Suzuki", autoCapitalize: "words" },
-  { key: "model", label: "Model", placeholder: "Swift", autoCapitalize: "words" },
-  { key: "year", label: "Year", placeholder: "2022", keyboardType: "numeric" },
-  { key: "color", label: "Colour", placeholder: "White", autoCapitalize: "words" },
+  { key: "registrationNumber", label: "Registration number", placeholder: "e.g. MH 12 AB 1234", autoCapitalize: "characters" },
+  { key: "make", label: "Make", placeholder: "e.g. Maruti Suzuki", autoCapitalize: "words" },
+  { key: "model", label: "Model", placeholder: "e.g. Swift", autoCapitalize: "words" },
+  { key: "year", label: "Year", placeholder: "e.g. 2022", keyboardType: "numeric" },
+  { key: "color", label: "Colour", placeholder: "e.g. White", autoCapitalize: "words" },
 ];
 
 export default function AddVehicleScreen() {
@@ -42,6 +42,7 @@ export default function AddVehicleScreen() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [photoFailed, setPhotoFailed] = useState(false);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
 
@@ -61,14 +62,17 @@ export default function AddVehicleScreen() {
 
   async function handleAdd() {
     const yearNum = parseInt(form.year, 10);
-    if (isNaN(yearNum) || yearNum < 1980) {
-      setError("Enter a valid year (e.g. 2020).");
-      return;
-    }
-
     const plate = normalizePlate(form.registrationNumber);
-    if (!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) {
-      setError("Check the registration number, for example GJ01AB1234.");
+    const maxYear = new Date().getFullYear() + 1;
+    const fe: Partial<Record<keyof FormState, string>> = {};
+    if (!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH 12 AB 1234";
+    if (form.make.trim().length < 2) fe.make = "Enter the car make";
+    if (form.model.trim().length < 1) fe.model = "Enter the car model";
+    if (!/^\d{4}$/.test(form.year.trim()) || yearNum < 1980 || yearNum > maxYear) fe.year = `Enter a 4-digit year between 1980 and ${maxYear}`;
+    if (form.color.trim().length < 2) fe.color = "Enter the car colour";
+    setFieldErrors(fe);
+    if (Object.keys(fe).length > 0) {
+      setError(null);
       return;
     }
 
@@ -76,7 +80,7 @@ export default function AddVehicleScreen() {
     setError(null);
     try {
       if (auth.status === "ready" && (await hasVehicleWithPlate(auth.user.uid, auth.claims.tenantId, plate))) {
-        setError("This car is already in your garage.");
+        setFieldErrors({ registrationNumber: "This car is already added" });
         return;
       }
       const vehicle = await createVehicle({
@@ -123,10 +127,11 @@ export default function AddVehicleScreen() {
               label={label}
               placeholder={placeholder}
               value={form[key]}
-              onChangeText={(v: string) => update(key, v)}
+              onChangeText={(v: string) => { update(key, v); if (fieldErrors[key]) setFieldErrors((f) => ({ ...f, [key]: undefined })); }}
+              error={fieldErrors[key]}
               autoCapitalize={autoCapitalize}
               keyboardType={keyboardType}
-              maxLength={key === "registrationNumber" ? 13 : key === "year" ? 4 : 50}
+              maxLength={key === "registrationNumber" ? 16 : key === "year" ? 4 : 50}
             />
           ))}
         </View>

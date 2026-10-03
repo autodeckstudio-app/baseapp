@@ -350,7 +350,9 @@ export function Field({
   keyboardType = "default",
   multiline = false,
   maxLength,
+  error,
 }: {
+  error?: string | undefined;
   maxLength?: number;
   label: string;
   value: string;
@@ -379,7 +381,7 @@ export function Field({
             color: colors.textPrimary,
             backgroundColor: colors.surface,
             borderWidth: 1,
-            borderColor: colors.borderSubtle,
+            borderColor: error ? colors.danger : colors.borderSubtle,
             borderRadius: radius.chip,
             paddingHorizontal: space.line,
             paddingVertical: 12,
@@ -388,6 +390,7 @@ export function Field({
           },
         ]}
       />
+      {error ? <T role="caption" tone="danger">{error}</T> : null}
     </View>
   );
 }
