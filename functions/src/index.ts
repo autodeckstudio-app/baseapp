@@ -11,6 +11,7 @@ export { createVehicle } from "./functions/vehicle/createVehicle.js";
 export { updateVehicle } from "./functions/vehicle/updateVehicle.js";
 export { archiveVehicle } from "./functions/vehicle/archiveVehicle.js";
 export { restoreVehicle } from "./functions/vehicle/restoreVehicle.js";
+export { createWalkinCustomer } from "./functions/auth/createWalkinCustomer.js";
 export { submitReview } from "./functions/booking/submitReview.js";
 export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhotoUploadUrl.js";
 

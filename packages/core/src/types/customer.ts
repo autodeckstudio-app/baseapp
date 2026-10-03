@@ -6,6 +6,7 @@ export interface Customer {
   authUid: string;
   name: string;
   phone: string; // E.164 format, e.g. "+919876543210"
+  email?: string; // lower-case; set for walk-in registrations and from Google sign-in
   notificationPrefs: {
     push: boolean;
     quietMode: boolean;
