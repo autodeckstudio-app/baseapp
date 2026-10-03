@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
+import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
@@ -92,6 +93,7 @@ function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  useLang();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -278,7 +280,7 @@ export default function BookingDetailScreen() {
       {job ? (
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>
-            <Kicker tone="accent">Studio status</Kicker>
+            <Kicker tone="accent">{translate("Studio status")}</Kicker>
             {job.status === "CANCELLED" ? (
               <T role="heading">Cancelled</T>
             ) : (
@@ -289,7 +291,7 @@ export default function BookingDetailScreen() {
                 return (
                   <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: space.line }}>
                     <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: done || active ? "#C2540A" : "rgba(29,27,38,0.25)", backgroundColor: done ? "#C2540A" : "#FFFFFF" }} />
-                    <T role={active ? "bodyStrong" : "body"} tone={done || active ? "primary" : "tertiary"}>{JOB_STATUS_LABELS[step]}</T>
+                    <T role={active ? "bodyStrong" : "body"} tone={done || active ? "primary" : "tertiary"}>{translate(JOB_STATUS_LABELS[step] ?? step)}</T>
                   </View>
                 );
               })

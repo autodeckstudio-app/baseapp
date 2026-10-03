@@ -3,21 +3,23 @@ import { useState } from "react";
 import { Linking, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
+import { useLang } from "../../lib/i18n";
 import { FAQ, STUDIO_INFO } from "../../lib/studio-info";
 import { Button, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function HelpScreen() {
   const router = useRouter();
+  const { t } = useLang();
   const [open, setOpen] = useState<number | null>(null);
   const s = STUDIO_INFO;
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Help</Kicker><T role="title">We are here</T></View>}>
-      <Button kind="quiet" label="Back" onPress={() => router.back()} />
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">{t("Help")}</Kicker><T role="title">{t("We are here")}</T></View>}>
+      <Button kind="quiet" label={t("Back")} onPress={() => router.back()} />
       {hasContact ? (
         <View style={{ gap: space.breath }}>
-          {s.phone ? <Button label="Call the studio" onPress={() => void Linking.openURL(`tel:${s.phone}`)} /> : null}
-          {s.whatsapp ? <Button kind="quiet" label="Message on WhatsApp" onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} /> : null}
+          {s.phone ? <Button label={t("Call the studio")} onPress={() => void Linking.openURL(`tel:${s.phone}`)} /> : null}
+          {s.whatsapp ? <Button kind="quiet" label={t("Message on WhatsApp")} onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} /> : null}
         </View>
       ) : (
         <Notice title="Contact details coming soon" body="Calling and messaging the studio will appear here." />
@@ -28,7 +30,7 @@ export default function HelpScreen() {
           {s.hours ? <Row title="Hours" detail={s.hours} last /> : null}
         </Pane>
       ) : null}
-      <Kicker>Questions</Kicker>
+      <Kicker>{t("Questions")}</Kicker>
       <Pane pad="gap">
         {FAQ.map((f, i) => (
           <View key={f.q}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { Invoice } from "@autodeck/core";
 import { listenToInvoiceForJob } from "../../../lib/invoice-service";
@@ -82,6 +82,9 @@ export default function InvoiceScreen() {
         Issued {invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "-"}
       </T>
 
+      {Platform.OS === "web" ? (
+        <Button label="Print or save as PDF" onPress={() => (globalThis as { print?: () => void }).print?.()} />
+      ) : null}
       <Button label="Go back" kind="quiet" onPress={() => router.back()} />
     </Screen>
   );
