@@ -1,24 +1,16 @@
-import { View } from "react-native";
 import { Tabs } from "expo-router";
 import { colors } from "@autodeck/ui";
-import { Icon } from "@autodeck/ui/native";
+import { PillTabBar } from "@autodeck/ui/native";
 
 const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "profile"> = { index: "home", bays: "wrench", calendar: "calendar", lookup: "search", account: "profile" };
 
 export default function StudioTabsLayout() {
   return (
     <Tabs
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }: { focused: boolean }) => (
-          <View style={{ width: 60, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(240,125,40,0.16)" : "transparent" }}>
-            <Icon name={TAB_ICON[route.name] ?? "home"} color={focused ? colors.accent : colors.textMuted} size={24} filled={focused} />
-          </View>
-        ),
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor={colors.accent} inactiveColor={colors.textMuted} />}
+      screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarShowLabel: false,
-        tabBarStyle: { backgroundColor: "rgba(255,255,255,0.92)", borderTopWidth: 0, borderWidth: 1, borderColor: "rgba(29,27,38,0.08)", height: 64, marginHorizontal: 14, marginBottom: 12, borderRadius: 32, paddingHorizontal: 6, paddingTop: 0, paddingBottom: 0, elevation: 8, shadowColor: "#3C285A", shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
-        tabBarItemStyle: { height: 52, marginTop: 6 },
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "700" },
