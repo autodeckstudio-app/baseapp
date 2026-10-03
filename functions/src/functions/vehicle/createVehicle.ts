@@ -55,6 +55,19 @@ export const createVehicle = onCall({ region: "asia-south1" }, async (request) =
   };
 
   await db.runTransaction(async (tx) => {
+    // One live car per plate per owner. The query is read inside the transaction,
+    // so two simultaneous requests cannot both pass. Archived cars (deletedAt set)
+    // free the plate again.
+    const same = await tx.get(
+      db
+        .collection(COLLECTIONS.vehicles())
+        .where("tenantId", "==", vehicle.tenantId)
+        .where("ownerId", "==", ownerId)
+        .where("registrationNumber", "==", vehicle.registrationNumber)
+        .where("deletedAt", "==", null)
+        .limit(1),
+    );
+    if (!same.empty) throw new HttpsError("already-exists", "This car is already added.");
     tx.set(ref, vehicle);
     writeAuditLog(tx, {
       action: "vehicle.created",

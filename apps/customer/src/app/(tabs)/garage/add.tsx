@@ -105,6 +105,10 @@ export default function AddVehicleScreen() {
       const code = (err as { code?: string })?.code ?? "";
       const msg = err instanceof Error ? err.message : "";
       console.warn("add car failed", code, msg);
+      if (/already-exists/.test(code)) {
+        setFieldErrors({ registrationNumber: "This car is already added" });
+        return;
+      }
       setError(
         /registrationNumber/i.test(msg) ? "Check the registration number, for example GJ01AB1234."
         : /resource-exhausted/.test(code) ? "Too many attempts. Please wait a minute and try again."
