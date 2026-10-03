@@ -10,9 +10,11 @@ import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
 import { formatPaise } from "../lib/format";
 import { EMPTY_SERVICE, draftFromService, toServicePayload, type ServiceDraft, type ServicePayload } from "./services-draft";
 
-export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash", ceramic: "Ceramic", ppf: "PPF", coating: "Coating", tinting: "Tint", inspection: "Inspection", other: "Other" };
+export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash and care", ceramic: "Ceramic", ppf: "Paint film", coating: "Coatings", tinting: "Window film", inspection: "Inspection", other: "More" };
+const CATEGORY_BLURB: Record<ServiceCategory, string> = { washing: "Quick, safe cleans", ceramic: "Deep gloss that lasts", ppf: "Stone-chip armour", coating: "Shine and easy upkeep", tinting: "Heat and privacy", inspection: "Know before you fix", other: "Extras" };
 const CATEGORY_ICON: Record<ServiceCategory, IconName> = { washing: "wash", ceramic: "ceramic", ppf: "ppf", coating: "coating", tinting: "tint", inspection: "inspect", other: "tools" };
-const CATEGORIES = Object.keys(CATEGORY_NAME) as ServiceCategory[];
+// Same order the customer app shows.
+const CATEGORIES: ServiceCategory[] = ["washing", "ceramic", "ppf", "coating", "tinting", "inspection", "other"];
 const SIZE_NAME: Record<VehicleCategory, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", luxury: "Luxury", commercial: "Commercial", van: "Van" };
 const SIZES = Object.keys(SIZE_NAME) as VehicleCategory[];
 const BAY_NAME: Record<BayType, string> = { wash: "Wash bay", protection: "Protection bay", general: "Any bay" };
@@ -72,43 +74,49 @@ export function ServicesView(p: {
           <p>{p.services.length ? "Try another kind or search." : "Add your first service so customers can book it."}</p>
         </div>
       ) : (
-        groups.map((g) => (
-          <section key={g} className="ax-svc-group">
-            <p className="ax-label"><Icon name={CATEGORY_ICON[g]} size={14} /> {CATEGORY_NAME[g]} · {rows.filter((s) => s.category === g).length}</p>
-            <div className="ax-list">
-              {rows.filter((s) => s.category === g).map((s) => (
-                <div key={s.id} className={`ax-svc${s.active ? "" : " is-hidden"}`}>
-                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "rgba(242,122,26,0.12)", flex: "none" }}><Icon name={CATEGORY_ICON[s.category]} size={18} /></span>
-                  <div className="ax-svc-main">
-                    <span className="ax-person-name">{s.name}{s.brand ? <span className="ax-sub" style={{ display: "inline" }}> · {s.brand}</span> : null}</span>
-                    <span className="ax-sub">
-                      {duration(s.estimatedDurationMinutes)} · {BAY_NAME[s.requiredBayType]}
-                      {warranty(s) ? ` · ${warranty(s)}` : ""}
-                      {s.membershipWashEligible ? " · counts as a member wash" : ""}
-                    </span>
+        groups.map((g) => {
+          const inCat = rows.filter((s) => s.category === g);
+          const brands = Array.from(new Set(inCat.map((s) => s.brand || ""))).sort((x, y) => (x === "" ? 1 : y === "" ? -1 : x.localeCompare(y)));
+          return (
+            <section key={g} className="ax-svc-group">
+              <div className="ax-cat-head">
+                <span className="ax-cat-icon" aria-hidden="true"><Icon name={CATEGORY_ICON[g]} size={20} /></span>
+                <div><p className="ax-cat-name">{CATEGORY_NAME[g]}</p><p className="ax-sub">{CATEGORY_BLURB[g]} · {inCat.length}</p></div>
+              </div>
+              {brands.map((b) => (
+                <div key={b || "none"} className="ax-brand-block">
+                  {brands.length > 1 || b ? <p className="ax-label">{b || "Other"}</p> : null}
+                  <div className="ax-svc-cards">
+                    {inCat.filter((s) => (s.brand || "") === b).map((s) => (
+                      <div key={s.id} className={`ax-svc-card${s.active ? "" : " is-hidden"}`}>
+                        <div className="ax-svc-card-top">
+                          <span className="ax-person-name">{s.name}</span>
+                          {!s.active && <span className="ax-chip">Hidden</span>}
+                        </div>
+                        {s.description ? <p className="ax-sub ax-svc-desc">{s.description}</p> : null}
+                        <div className="ax-svc-card-price">
+                          <span className="ax-data ax-svc-from">{s.vehicleCategoryPricing.length > 0 ? "From " : ""}{formatPaise(s.basePrice)}</span>
+                          <span className="ax-sub">{duration(s.estimatedDurationMinutes)}{warranty(s) ? ` · ${warranty(s)}` : ""}{s.membershipWashEligible ? " · member wash" : ""}</span>
+                        </div>
+                        <div className="ax-row-actions">
+                          <button type="button" className="ax-button" onClick={() => setDraft(draftFromService(s))}>Edit</button>
+                          {confirmId === s.id ? (
+                            <>
+                              <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{s.active ? "Hide from menu" : "Show on menu"}</button>
+                              <button type="button" className="ax-button" onClick={() => setConfirmId(null)}>Cancel</button>
+                            </>
+                          ) : (
+                            <button type="button" className="ax-button" onClick={() => setConfirmId(s.id)}>{s.active ? "Hide" : "Show"}</button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="ax-svc-price">
-                    <span className="ax-sub">from</span>
-                    <span className="ax-data">{formatPaise(s.basePrice)}</span>
-                    {s.vehicleCategoryPricing.length > 0 && <span className="ax-sub">{s.vehicleCategoryPricing.length} size rule{s.vehicleCategoryPricing.length === 1 ? "" : "s"}</span>}
-                  </div>
-                  <span className="ax-row-actions">
-                    {!s.active && <span className="ax-chip">Hidden</span>}
-                    <button type="button" className="ax-button" onClick={() => setDraft(draftFromService(s))}>Edit</button>
-                    {confirmId === s.id ? (
-                      <>
-                        <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{s.active ? "Hide from menu" : "Show on menu"}</button>
-                        <button type="button" className="ax-button" onClick={() => setConfirmId(null)}>Cancel</button>
-                      </>
-                    ) : (
-                      <button type="button" className="ax-button" onClick={() => setConfirmId(s.id)}>{s.active ? "Hide" : "Show"}</button>
-                    )}
-                  </span>
                 </div>
               ))}
-            </div>
-          </section>
-        ))
+            </section>
+          );
+        })
       )}
 
       {draft && (
