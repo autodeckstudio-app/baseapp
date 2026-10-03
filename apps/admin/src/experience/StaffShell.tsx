@@ -10,7 +10,6 @@ export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },
   { href: "/jobs", label: "Jobs" },
   { href: "/attendance", label: "Attendance" },
-  { href: "/gallery", label: "Gallery" },
 ] as const;
 
 export const OFFICE_LINKS = [

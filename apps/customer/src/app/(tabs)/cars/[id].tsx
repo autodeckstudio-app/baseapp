@@ -42,7 +42,6 @@ export default function CarDetail() {
 
   return (
     <Screen>
-      <Button kind="quiet" label="Back" onPress={() => router.back()} />
       <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ borderRadius: 26 }}>
         {car.photoUrls.map((u) => (
           <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: 340, maxWidth: "100%", aspectRatio: 4 / 3, borderRadius: 26, marginRight: 8 }} />

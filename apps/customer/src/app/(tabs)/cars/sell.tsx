@@ -44,7 +44,6 @@ export default function SellScreen() {
   }
   return (
     <Screen top={<View style={{ gap: space.hair }}><Kicker tone="accent">Sell your car</Kicker><T role="title">Tell us about it</T></View>}>
-      <Button kind="quiet" label="Back" onPress={() => router.back()} />
       <View style={{ gap: space.line }}>
         <Field label="Make" value={f.make} onChangeText={(v) => up("make", v)} placeholder="Tata" autoCapitalize="words" maxLength={50} />
         <Field label="Model" value={f.model} onChangeText={(v) => up("model", v)} placeholder="Nexon" autoCapitalize="words" maxLength={80} />
