@@ -6,7 +6,8 @@ const config: ExpoConfig = {
   version: "1.0.0",
   orientation: "portrait",
   scheme: "autodeck-studio",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "light",
+  web: { bundler: "metro", output: "single" },
   ios: {
     supportsTablet: true,
     bundleIdentifier: "in.autodeck.studio",

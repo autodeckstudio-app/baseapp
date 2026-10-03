@@ -10,13 +10,15 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "clean": "rm -rf .expo dist"
+    "clean": "rm -rf .expo dist",
+    "build:web": "expo export --platform web"
   },
   "dependencies": {
     "@autodeck/auth": "workspace:*",
     "@autodeck/core": "workspace:*",
     "@autodeck/database": "workspace:*",
     "@autodeck/ui": "workspace:*",
+    "@expo/metro-runtime": "~5.0.5",
     "@react-native-async-storage/async-storage": "^2.1.2",
     "expo": "~53.0.0",
     "expo-blur": "~14.1.5",
@@ -25,7 +27,9 @@
     "expo-status-bar": "~2.2.3",
     "firebase": "^10.14.1",
     "react": "19.0.0",
-    "react-native": "0.79.6"
+    "react-dom": "19.0.0",
+    "react-native": "0.79.6",
+    "react-native-web": "~0.20.0"
   },
   "devDependencies": {
     "@autodeck/config": "workspace:*",

@@ -28,7 +28,7 @@ export default function StudioLoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, justifyContent: "center", padding: spacing.xxl, backgroundColor: colors.background }}
+      style={{ flex: 1, justifyContent: "center", alignSelf: "center", width: "100%", maxWidth: 420, padding: spacing.xxl }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs }}>AutoDeck Studio</Text>

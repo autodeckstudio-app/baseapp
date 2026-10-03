@@ -1,8 +1,9 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { Alert } from "react-native";
+import { Alert, View } from "react-native";
 import { auth } from "../lib/firebase";
+import { colors } from "@autodeck/ui";
 import { useAuth } from "../hooks/useAuth";
 
 function NavigationGuard({ children }: { children: React.ReactNode }) {
@@ -34,11 +35,13 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
     <NavigationGuard>
-      <Stack>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </NavigationGuard>
+    </View>
   );
 }

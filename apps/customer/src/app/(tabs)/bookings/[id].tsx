@@ -24,6 +24,8 @@ const JOB_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
+const TRACK_STEPS = ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"] as const;
+
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Awaiting confirmation at studio",
   processing: "Processing",
@@ -275,9 +277,24 @@ export default function BookingDetailScreen() {
 
       {job ? (
         <Pane pad="inset">
-          <View style={{ gap: space.hair }}>
+          <View style={{ gap: space.breath }}>
             <Kicker tone="accent">Studio status</Kicker>
-            <T role="heading">{JOB_STATUS_LABELS[job.status] ?? job.status}</T>
+            {job.status === "CANCELLED" ? (
+              <T role="heading">Cancelled</T>
+            ) : (
+              TRACK_STEPS.map((step, i) => {
+                const cur = TRACK_STEPS.indexOf(job.status as (typeof TRACK_STEPS)[number]);
+                const done = i < cur || job.status === "DELIVERED";
+                const active = i === cur && job.status !== "DELIVERED";
+                return (
+                  <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: space.line }}>
+                    <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: done || active ? "#C2540A" : "rgba(29,27,38,0.25)", backgroundColor: done ? "#C2540A" : "#FFFFFF" }} />
+                    <T role={active ? "bodyStrong" : "body"} tone={done || active ? "primary" : "tertiary"}>{JOB_STATUS_LABELS[step]}</T>
+                  </View>
+                );
+              })
+            )}
+            <T role="caption" tone="tertiary">Updates here as the studio moves your car along.</T>
           </View>
         </Pane>
       ) : null}

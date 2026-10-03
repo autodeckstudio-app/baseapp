@@ -1,4 +1,4 @@
-// AutoDeck colour tokens - dark studio ground with one warm amber light.
+// AutoDeck colour tokens - light lavender ground, white cards and one orange accent.
 // Amber is reserved for primary actions, the active state and price
 // emphasis - never used to flood the UI.
 //
@@ -9,41 +9,41 @@ export const colors = {
   // dark studio ground, amber light and champagne reflection. Kept under the
   // legacy role names so every existing screen picks it up.
   // Surfaces
-  background: "#08090A", // the room: cool near-black
-  surface: "#15161A", // flat pane for rows/cards (glass is the raised one)
-  surfaceElevated: "#1E2024", // sheets, modals
-  surfaceSunken: "#0E0F12", // inputs, recessed wells
+  background: "#ECEBF8", // the room: cool near-black
+  surface: "#FFFFFF", // flat pane for rows/cards (glass is the raised one)
+  surfaceElevated: "#F2F4FC", // sheets, modals
+  surfaceSunken: "#F6F5FC", // inputs, recessed wells
 
   // Text
-  textPrimary: "#EDEBE7",
-  textSecondary: "#ADACA9",
-  textMuted: "#91918F",
-  textOnAccent: "#100C06",
+  textPrimary: "#1D1B26",
+  textSecondary: "#4A4655",
+  textMuted: "#625D70",
+  textOnAccent: "#FFFFFF",
 
   // Structure
-  border: "rgba(255,255,255,0.08)",
-  borderStrong: "rgba(245,246,247,0.22)",
-  divider: "rgba(255,255,255,0.06)",
+  border: "rgba(29,27,38,0.12)",
+  borderStrong: "rgba(29,27,38,0.24)",
+  divider: "rgba(29,27,38,0.08)",
 
   // Accent - amber, one warm light
-  accent: "#E0A45C",
-  accentPressed: "#C98A40",
-  accentMuted: "rgba(224,164,92,0.14)",
+  accent: "#C2540A",
+  accentPressed: "#9C4108",
+  accentMuted: "rgba(242,122,26,0.14)",
 
   // Status
-  success: "#E8D9BE", // champagne: done, verified
-  successMuted: "rgba(232,217,190,0.12)",
-  warning: "#E0A45C",
-  warningMuted: "rgba(224,164,92,0.14)",
-  error: "#E2705A",
-  errorMuted: "rgba(226,112,90,0.14)",
-  info: "#8FB3D9",
-  infoMuted: "rgba(143,179,217,0.12)",
+  success: "#1F7A4D", // champagne: done, verified
+  successMuted: "rgba(31,122,77,0.12)",
+  warning: "#8A5A00",
+  warningMuted: "rgba(138,90,0,0.12)",
+  error: "#B93838",
+  errorMuted: "rgba(185,56,56,0.12)",
+  info: "#2F5FA3",
+  infoMuted: "rgba(47,95,163,0.12)",
 
   // Fixed
   white: "#FFFFFF",
   black: "#000000",
-  overlay: "rgba(4, 5, 6, 0.64)", // modal/sheet backdrop
+  overlay: "rgba(29, 27, 38, 0.36)", // modal/sheet backdrop
 } as const;
 
 export type ColorToken = keyof typeof colors;

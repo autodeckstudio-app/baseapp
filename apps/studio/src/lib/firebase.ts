@@ -1,7 +1,8 @@
 import { getApps, initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import * as fbAuth from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { Platform } from "react-native";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // In a real production (release) build, silently falling back to the dev
@@ -31,11 +32,13 @@ const firebaseConfig = {
 
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
+// Browser build has no getReactNativePersistence; use local storage on web.
+const rnPersist = (fbAuth as unknown as { getReactNativePersistence?: (s: unknown) => fbAuth.Persistence }).getReactNativePersistence;
+export const auth = fbAuth.initializeAuth(app, {
+  persistence: Platform.OS === "web" || !rnPersist ? fbAuth.browserLocalPersistence : rnPersist(AsyncStorage),
 });
 
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, Platform.OS === "web" ? { experimentalForceLongPolling: true } : {});
 export const functions = getFunctions(app, "asia-south1");
 
 export const useEmulator = process.env["USE_FIREBASE_EMULATOR"] === "true";
