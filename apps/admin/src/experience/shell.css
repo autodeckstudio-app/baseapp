@@ -525,6 +525,8 @@
   .ax-shell .ax-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; line-height: 0; border-radius: 9999px; color: var(--ad-text-tertiary); font-size: 0; background: none; border: none; box-shadow: none; text-decoration: none; cursor: pointer; padding: 0; transition: background .15s; }
   .ax-shell .ax-tab svg, .ax-shell .ax-tab img { display: block; margin: 0 auto; }
   .ax-shell .ax-tab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ax-shell .ax-tab svg { transition: transform .18s ease; }
+  .ax-shell .ax-tab[aria-current="page"] svg { fill: currentColor; fill-opacity: .22; transform: scale(1.04); }
   .ax-shell .ax-tab[aria-current="page"] { color: var(--ad-accent-strong); background: rgba(240,125,40,0.14); }
   .ax-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: var(--ad-space-gap); }
   .ax-chips::-webkit-scrollbar { display: none; }
@@ -555,3 +557,11 @@
 .ax-svc-from { font-size: 22px; color: var(--ad-accent-strong); }
 .ax-svc-card .ax-row-actions { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 860px) { .ax-svc-cards { grid-template-columns: 1fr; } }
+
+.ax-side [aria-current="page"] svg { fill: currentColor; fill-opacity: .2; }
+
+.ax-sheet-link { display: flex; align-items: center; gap: 10px; }
+.ax-sheet-link svg { flex: none; color: var(--ad-accent-strong); }
+.ax-sheet .ax-label { margin: 0 0 8px; }
+.ax-setup > summary { list-style: none; }
+.ax-setup > summary::-webkit-details-marker { display: none; }

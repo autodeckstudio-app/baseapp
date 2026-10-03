@@ -1,6 +1,6 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Image, type ImageSourcePropType, Pressable, ScrollView, TextInput, View } from "react-native";
 import { BRANDS, type BrandItem } from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
@@ -8,7 +8,7 @@ import { space, type IconName } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { serviceVisual, brandHero } from "../../../lib/imagery";
+import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -18,7 +18,7 @@ const GROUP: Record<string, string> = {
   ppf: "Paint film",
   tinting: "Window film",
   inspection: "Inspection",
-  other: "More",
+  other: "Other",
 };
 // Order is deliberate: an easy first yes (wash), then the two "protect your investment" anchors
 // (ceramic, paint film), then the budget coating shown after them, then practical add-ons.
@@ -49,13 +49,13 @@ function subGroup(s: Service): string {
 
 const ICON: Record<string, IconName> = { washing: "wash", ceramic: "ceramic", coating: "coating", ppf: "ppf", tinting: "tint", inspection: "inspect", other: "tools" };
 const BLURB: Record<string, string> = {
-  washing: "Quick, safe cleans",
-  ceramic: "Deep gloss that lasts",
-  coating: "Shine and easy upkeep",
-  ppf: "Stone-chip armour",
-  tinting: "Heat and privacy",
-  inspection: "Know before you fix",
-  other: "Extras",
+  washing: "Safe hand washes, interior cleaning and finishing touches to keep your car fresh.",
+  ceramic: "A hard, glossy layer that repels dirt and keeps paint looking new for years.",
+  coating: "Budget-friendly shine and easier upkeep between full ceramic treatments.",
+  ppf: "Clear film that takes the hit from stone chips, scratches and road wear.",
+  tinting: "Heat rejection, privacy and UV protection for your windows.",
+  inspection: "A careful check of paint and body so you know what needs attention first.",
+  other: "Extras and one-off jobs that do not fit the other groups.",
 };
 
 function duration(min: number): string {
@@ -111,22 +111,22 @@ export default function CatalogueScreen() {
   const groupKey = brand ?? groups[0]?.[0];
   const products = level === 3 ? (groups.find(([k]) => k === groupKey)?.[1] ?? []) : [];
 
-  const tile = (key: string, title: string, sub: string | undefined, meta: string | undefined, icon: IconName, onPress: () => void) => (
-    <Pressable key={key} accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: colors.accentHaze }}>
-        <Icon name={icon} color={colors.accent} size={22} />
+  const tile = (key: string, title: string, sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
+    <Pressable key={key} accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.85 : 1 })}>
+      {image ? <Image source={image} resizeMode="cover" style={{ width: "100%", height: 132 }} /> : null}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <T role="bodyStrong" numberOfLines={1}>{title}</T>
+          {sub ? <T role="caption" tone="secondary" numberOfLines={2}>{sub}</T> : null}
+          {meta ? <T role="caption" tone="accent" numberOfLines={1}>{meta}</T> : null}
+        </View>
+        <T tone="tertiary">›</T>
       </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <T role="bodyStrong" numberOfLines={1}>{title}</T>
-        {sub ? <T role="caption" tone="secondary" numberOfLines={2}>{sub}</T> : null}
-        {meta ? <T role="caption" tone="accent" numberOfLines={1}>{meta}</T> : null}
-      </View>
-      <T tone="tertiary">›</T>
     </Pressable>
   );
 
   const card = (sv: Service) => (
-    <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: "47.5%", opacity: pressed ? 0.85 : 1 })}>
+    <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: "48%", minWidth: 0, overflow: "hidden", opacity: pressed ? 0.85 : 1 })}>
       <View>
         <ServicePhoto service={sv} height={190} radius={22} />
         {sv.warrantyLabel ? (
@@ -176,20 +176,20 @@ export default function CatalogueScreen() {
         </View>
       ) : null}
       {services && searching ? (
-        found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.line, justifyContent: "space-between" }}>{found.map(card)}</View>
+        found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.line, justifyContent: "space-between", rowGap: 18 }}>{found.map(card)}</View>
       ) : null}
       {services && !searching && level === 1 ? (
         <View style={{ gap: space.breath }}>
-          {cats.map((c) => tile(c, GROUP[c] ?? c, BLURB[c], fromPrice(all.filter((x) => x.category === c)) ?? undefined, ICON[c] ?? "tools", () => go({ cat: c })))}
+          {cats.map((c) => tile(c, GROUP[c] ?? c, BLURB[c], fromPrice(all.filter((x) => x.category === c)) ?? undefined, ICON[c] ?? "tools", () => go({ cat: c }), serviceImagery[c as keyof typeof serviceImagery]))}
         </View>
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: space.breath }}>
-          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, fromPrice(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name })))}
+          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, fromPrice(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name }), brandHero(name) ?? serviceImagery[(cat ?? "other") as keyof typeof serviceImagery]))}
         </View>
       ) : null}
       {services && !searching && level === 3 ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.line, justifyContent: "space-between" }}>{products.map(card)}</View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.line, justifyContent: "space-between", rowGap: 18 }}>{products.map(card)}</View>
       ) : null}
     </Screen>
   );

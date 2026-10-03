@@ -1,6 +1,6 @@
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import type { Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
@@ -10,6 +10,7 @@ import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { Service, Vehicle } from "@autodeck/core";
 import { getMyBookings } from "../../../lib/booking-service";
+import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
@@ -59,18 +60,24 @@ export default function BookingsScreen() {
   const past = all.filter((b) => !upcoming.includes(b));
 
   const list = (items: Booking[]) => (
-    <Pane pad="gap">
-      {items.map((b, i) => (
-        <Row
-          key={b.id}
-          title={svcs[b.serviceId]?.name ?? "Service"}
-          detail={<T role="data" tone="tertiary">{`${formatDateShort(b.scheduledDate)} · ${b.scheduledTime} · ${cars[b.vehicleId] ? `${cars[b.vehicleId]!.make} ${cars[b.vehicleId]!.model}` : "Car"} · ${rupees(b.totalAmount)}`}</T>}
-          trailing={<Chip label={STATUS[b.status].label} tone={STATUS[b.status].tone} />}
-          onPress={() => router.push(`/(tabs)/bookings/${b.id}`)}
-          last={i === items.length - 1}
-        />
-      ))}
-    </Pane>
+    <View style={{ gap: space.breath }}>
+      {items.map((b) => {
+        const car = cars[b.vehicleId];
+        return (
+          <Pressable key={b.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", opacity: pressed ? 0.85 : 1 })}>
+            <CarThumb car={car} height={120} radius={0} />
+            <View style={{ gap: space.hair, padding: space.inset }}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.breath }}>
+                <View style={{ flex: 1, minWidth: 0 }}><T role="bodyStrong" numberOfLines={2}>{svcs[b.serviceId]?.name ?? "Service"}</T></View>
+                <Chip label={STATUS[b.status].label} tone={STATUS[b.status].tone} />
+              </View>
+              <T role="caption" tone="secondary" numberOfLines={1}>{car ? `${car.make} ${car.model}` : "Car"}</T>
+              <T role="data" tone="tertiary" numberOfLines={2}>{`${formatDateShort(b.scheduledDate)} · ${b.scheduledTime} · ${rupees(b.totalAmount)}`}</T>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 
   return (

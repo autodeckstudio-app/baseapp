@@ -8,6 +8,7 @@ import { space } from "@autodeck/ui/theme";
 import { listenToMyVehicles, resolveVehiclePhotoUrl } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
+import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 
@@ -52,26 +53,27 @@ export default function GarageScreen() {
     router.push({ pathname: "/(tabs)/garage/[id]", params: { id: v.id } });
   };
   const list = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const [lead, ...rest] = list;
+  const lead = list[0];
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Garage</Kicker><T role="title">Your cars</T></View>}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." /> : null}
-      {lead ? (
-        <Pressable onPress={() => open(lead)} accessibilityRole="button" accessibilityLabel={`${lead.make} ${lead.model}`}>
-          <Pane pad="none" round="hero" fill="warm">
-            {leadPhoto ? <HeroImage source={{ uri: leadPhoto }} /> : null}
-            <View style={{ gap: space.line, padding: space.inset }}>
-              <Kicker tone="accent">{list.length > 1 ? "Most recent" : "Your car"}</Kicker>
-              <T role="display" numberOfLines={1}>{lead.make} {lead.model}</T>
-              <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center", flexWrap: "wrap" }}>
-                <Plate value={lead.registrationNumber} />
-                <T role="caption" tone="tertiary">{[lead.year, lead.color, lead.category ? CATEGORY[lead.category] : null].filter(Boolean).join(" · ")}</T>
+      {list.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          {list.map((v, i) => (
+            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", opacity: pressed ? 0.85 : 1 })}>
+              <CarThumb car={v} height={i === 0 ? 190 : 140} radius={0} />
+              <View style={{ gap: space.hair, padding: space.inset }}>
+                {i === 0 && list.length > 1 ? <Kicker tone="accent">Most recent</Kicker> : null}
+                <T role={i === 0 ? "heading" : "bodyStrong"} numberOfLines={1}>{v.make} {v.model}</T>
+                <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center", flexWrap: "wrap" }}>
+                  <Plate value={v.registrationNumber} />
+                  <T role="caption" tone="tertiary" numberOfLines={1}>{[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).join(" · ")}</T>
+                </View>
               </View>
-              <T role="caption" tone="secondary">Open for visits, papers and warranties ›</T>
-            </View>
-          </Pane>
-        </Pressable>
+            </Pressable>
+          ))}
+        </View>
       ) : !error ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroAlt} />
@@ -79,13 +81,6 @@ export default function GarageScreen() {
             <T role="heading">No cars yet</T>
             <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
           </View>
-        </Pane>
-      ) : null}
-      {rest.length > 0 ? (
-        <Pane pad="gap">
-          {rest.map((v, i) => (
-            <Row key={v.id} title={`${v.make} ${v.model}`} detail={<Plate value={v.registrationNumber} />} onPress={() => open(v)} last={i === rest.length - 1} />
-          ))}
         </Pane>
       ) : null}
       <Button kind={lead ? "quiet" : "primary"} label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />

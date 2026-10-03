@@ -56,6 +56,8 @@ const MORE_LINKS = [
   { href: "/cars", label: "Cars for sale" }, { href: "/audit", label: "Audit log" },
 ] as const;
 
+const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
+
 const ROLE_LABEL: Record<string, string> = {
   admin: "Owner",
   studio: "Studio",
@@ -151,7 +153,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
                     <p className="ax-label">{sec.label}</p>
                     <div className="ax-sheet-grid">
                       {sec.links.map((l) => (
-                        <a key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</a>
+                        <a key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}><Icon name={(LINK_ICON[l.href] ?? "dot") as never} size={18} /><span>{l.label}</span></a>
                       ))}
                     </div>
                   </div>

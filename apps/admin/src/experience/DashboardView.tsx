@@ -89,18 +89,6 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
               </ul>
             )}
           </section>
-
-          <section className="ax-panel">
-            <span className="ax-label">Set up your studio</span>
-            <div className="ax-links">
-              {SECTIONS.map((sec) => (
-                <Link key={sec.href} href={sec.href} className="ax-linkcard">
-                  <span className="ax-linkcard-title">{sec.label}</span>
-                  <span className="ax-linkcard-desc">{sec.description}</span>
-                </Link>
-              ))}
-            </div>
-          </section>
         </div>
 
         <aside className="ax-detail-side">
@@ -138,6 +126,17 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
           </section>
         </aside>
       </div>
+      <details className="ax-panel ax-setup" style={{ marginTop: "var(--ad-space-inset)" }}>
+        <summary className="ax-label" style={{ cursor: "pointer" }}>Set up your studio</summary>
+        <div className="ax-links" style={{ marginTop: "var(--ad-space-gap)" }}>
+          {SECTIONS.map((sec) => (
+            <Link key={sec.href} href={sec.href} className="ax-linkcard">
+              <span className="ax-linkcard-title">{sec.label}</span>
+              <span className="ax-linkcard-desc">{sec.description}</span>
+            </Link>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }

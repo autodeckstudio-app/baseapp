@@ -10,11 +10,12 @@ type Props = {
   icons: Record<string, IconName>;
   activeColor: string;
   inactiveColor: string;
+  badges?: Record<string, boolean>;
   floating?: boolean; // true = overlay the screen (absolute), false = sits in the layout
 };
 
 /** Floating pill bar: icons only, each centred in an equal slot, active tab in a rounded highlight. */
-export function PillTabBar({ state, descriptors, navigation, icons, activeColor, inactiveColor, floating = false }: Props) {
+export function PillTabBar({ state, descriptors, navigation, icons, activeColor, inactiveColor, badges, floating = false }: Props) {
   const visible = state.routes.filter((r) => descriptors[r.key]?.options.href !== null && icons[r.name]);
   return (
     <View
@@ -55,8 +56,9 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
             }}
             style={{ flex: 1, height: 62, alignItems: "center", justifyContent: "center" }}
           >
-            <View style={{ width: 58, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(240,125,40,0.16)" : "transparent" }}>
-              <Icon name={icons[route.name]!} color={focused ? activeColor : inactiveColor} size={25} filled={focused} />
+            <View style={{ width: 58, height: 46, borderRadius: 23, backgroundColor: focused ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
+              <Icon name={icons[route.name]!} color={focused ? activeColor : inactiveColor} size={24} filled={focused} />
+              {badges?.[route.name] ? <View style={{ position: "absolute", top: 8, right: 14, width: 9, height: 9, borderRadius: 5, backgroundColor: "#E5484D", borderWidth: 2, borderColor: "#fff" }} /> : null}
             </View>
           </Pressable>
         );
