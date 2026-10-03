@@ -38,6 +38,10 @@ export default function StudioTabsLayout() {
         options={{ href: null, headerShown: false }} // sub-route, hidden from tab bar
       />
       <Tabs.Screen
+        name="pickups"
+        options={{ title: "Pickup requests", href: null }}
+      />
+      <Tabs.Screen
         name="walkin"
         options={{ title: "New Walk-in", href: null }} // accessed via Bay Board, hidden from tab bar
       />

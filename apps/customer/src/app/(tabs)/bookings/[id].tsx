@@ -8,6 +8,7 @@ import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-ser
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { getReview, submitReview } from "../../../lib/review-service";
 import { Pressable } from "react-native";
+import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
@@ -407,6 +408,8 @@ export default function BookingDetailScreen() {
           <T role="caption" tone="tertiary">{rescheduleEligibility.reason}</T>
         )
       ) : null}
+
+      {canCancel ? <PickupCard bookingId={booking.id} /> : null}
 
       {canCancel ? (
         confirmingCancel ? (

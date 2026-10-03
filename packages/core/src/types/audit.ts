@@ -1,4 +1,7 @@
 export type AuditAction =
+  | "account.deletion_requested"
+  | "pickup.requested"
+  | "pickup.updated"
   | "customer.created"
   | "customer.profile_updated"
   | "vehicle.created"

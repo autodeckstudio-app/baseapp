@@ -112,6 +112,20 @@ service cloud.firestore {
       }
     }
 
+    // ─── /pickupRequests/{id}: pickup and drop requests, written by Cloud Functions only ───
+    match /pickupRequests/{requestId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    // ─── /accountDeletionRequests/{uid}: written by Cloud Functions only; the customer can read their own ───
+    match /accountDeletionRequests/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isStudioOrAbove());
+      allow write: if false;
+    }
+
     // ─── /bookings/{bookingId} ──────────────────────────────────────────────
     match /bookings/{bookingId} {
       allow read: if isAuthenticated()

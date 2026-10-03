@@ -8,6 +8,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { LANGS, setLang, useLang } from "../../lib/i18n";
+import { requestAccountDeletion } from "../../lib/pickup-service";
 import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
@@ -18,6 +19,8 @@ export default function YouScreen() {
   const { lang, t } = useLang();
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
+  const [delStep, setDelStep] = useState<"idle" | "ask" | "sent">("idle");
+  const [delBusy, setDelBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -81,6 +84,19 @@ export default function YouScreen() {
         </View>
       ) : (
         <Button kind="quiet" label={t("Sign out")} onPress={() => setConfirm(true)} />
+      )}
+      {delStep === "sent" ? (
+        <T role="caption" tone="secondary">Your deletion request is with the studio. We will contact you to confirm before anything is removed.</T>
+      ) : delStep === "ask" ? (
+        <View style={{ gap: space.breath }}>
+          <T tone="secondary">Request deletion of your account and data? The studio confirms it first, and records we must keep, like invoices, stay.</T>
+          <View style={{ flexDirection: "row", gap: space.breath }}>
+            <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => { setDelBusy(true); void requestAccountDeletion().then(() => setDelStep("sent")).catch(() => Alert.alert("Could not send", "Try again in a moment.")).finally(() => setDelBusy(false)); }} />
+            <Button kind="quiet" label="Cancel" onPress={() => setDelStep("idle")} style={{ flex: 1 }} />
+          </View>
+        </View>
+      ) : (
+        <Button kind="quiet" label="Delete my account" onPress={() => setDelStep("ask")} />
       )}
     </Screen>
   );

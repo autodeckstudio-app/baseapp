@@ -150,3 +150,5 @@ export { issueListingPhotoUploadUrl, adminSaveListing, submitMyListing, reviewLi
 // ─── Push (web, OFF until PUSH_ENABLED=true) ──────────────────────────────────
 export { registerPushToken } from "./functions/push/registerPushToken.js";
 export { onNotificationPush } from "./functions/push/onNotificationPush.js";
+export { requestPickupDrop, updatePickupRequest } from "./functions/booking/pickupRequests.js";
+export { requestAccountDeletion } from "./functions/auth/requestAccountDeletion.js";
