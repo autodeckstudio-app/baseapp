@@ -1,6 +1,7 @@
 // Customer tabs: Home, Services, Bookings, Garage, You. One tab per
 // journey: book (Services), track and pay (Bookings), car and papers (Garage).
 // Membership, notifications and approvals are nested routes with a back bar.
+import { View } from "react-native";
 import { Tabs } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 
@@ -34,9 +35,12 @@ export default function TabsLayout() {
           shadowRadius: 18,
           shadowOffset: { width: 0, height: 8 },
         },
-        tabBarItemStyle: { height: 50, marginTop: 5, borderRadius: 25, alignItems: "center", justifyContent: "center" },
-        tabBarActiveBackgroundColor: "rgba(240,125,40,0.14)",
-        tabBarIcon: ({ focused }) => <Icon name={TAB_ICON[route.name] ?? "home"} color={focused ? "#1D1B26" : "#6B6877"} size={26} filled={focused} />,
+        tabBarItemStyle: { height: 50, marginTop: 5, alignItems: "center", justifyContent: "center" },
+        tabBarIcon: ({ focused }) => (
+          <View style={{ width: 58, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(240,125,40,0.16)" : "transparent" }}>
+            <Icon name={TAB_ICON[route.name] ?? "home"} color={focused ? "#1D1B26" : "#6B6877"} size={26} filled={focused} />
+          </View>
+        ),
         sceneStyle: { backgroundColor: colors.canvas },
       })}
     >

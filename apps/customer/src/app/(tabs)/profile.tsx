@@ -67,14 +67,7 @@ export default function YouScreen() {
         {pushAvailable() ? <Row title="Booking alerts" detail="Get a notification when the studio updates your booking" onPress={() => void enablePush().then((r) => Alert.alert(r === "on" ? "Alerts on" : "Not enabled", r === "on" ? "You will get booking updates on this device." : "Allow notifications in your browser settings to turn this on."))} /> : null}
         <Row title={t("Help and contact")} detail={t("Call, WhatsApp, FAQ")} onPress={() => router.push("/(tabs)/help")} last />
       </Pane>
-      <View style={{ gap: space.breath }}>
-        <Kicker>{t("Language")}</Kicker>
-        <View style={{ flexDirection: "row", gap: space.breath }}>
-          {LANGS.map((l) => (
-            <Button key={l.code} kind={lang === l.code ? "primary" : "quiet"} label={l.label} onPress={() => setLang(l.code)} style={{ flex: 1 }} />
-          ))}
-        </View>
-      </View>
+      {/* Language picker hidden until the whole app is translated (LANGS, setLang kept in lib/i18n). */}
       <Pane pad="gap">
         <Row title="Signed in with Google" detail="AutoDeck never stores a password for you." last />
       </Pane>

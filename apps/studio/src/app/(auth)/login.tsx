@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
-import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { GoogleAuthProvider, getRedirectResult, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../../lib/firebase";
 import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
@@ -11,26 +11,37 @@ export default function StudioLoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  // Coming back from a full-page Google redirect (used on iPhone Safari): pick up the result or show why it failed.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    getRedirectResult(auth).then((r) => { if (r) router.replace("/(tabs)"); }).catch((e) => setProblem(`Sign in did not finish (${(e as FirebaseError).code ?? "unknown"}).`));
+  }, [router]);
 
   async function handleGoogle() {
     setLoading(true);
+    setProblem(null);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: "select_account" });
-      try {
-        await signInWithPopup(auth, provider);
-        router.replace("/(tabs)");
-      } catch (e) {
-        // In-app browsers and some mobile browsers block popups: fall back to a full-page redirect.
-        if (/popup-blocked|operation-not-supported|web-storage-unsupported/.test((e as FirebaseError).code ?? "")) {
+      await signInWithPopup(auth, provider);
+      router.replace("/(tabs)");
+    } catch (e) {
+      const code = (e as FirebaseError).code ?? "";
+      if (/popup-closed|cancelled-popup/.test(code)) {
+        // Person closed the window: nothing to report.
+      } else if (/popup-blocked|operation-not-supported|web-storage-unsupported|internal-error|argument-error/.test(code)) {
+        // Popups are blocked on some phones and in-app browsers: use a full-page redirect.
+        try {
           await signInWithRedirect(auth, provider);
           return;
+        } catch (e2) {
+          setProblem(`Could not open Google sign in (${(e2 as FirebaseError).code ?? "unknown"}). Try Chrome, or open the link in your browser app.`);
         }
-        throw e;
+      } else {
+        setProblem(`Could not sign in with Google (${code || "unknown"}).`);
       }
-    } catch (err) {
-      const code = (err as FirebaseError).code ?? "";
-      if (!/popup-closed|cancelled/.test(code)) Alert.alert("Sign in failed", "Could not sign in with Google. Try again.");
     } finally {
       setLoading(false);
     }
@@ -59,7 +70,10 @@ export default function StudioLoginScreen() {
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl, textAlign: "center" }}>Staff sign in</Text>
 
       {Platform.OS === "web" ? (
-        <Button label="Continue with Google" onPress={() => void handleGoogle()} loading={loading} />
+        <>
+          <Button label="Continue with Google" onPress={() => void handleGoogle()} loading={loading} />
+          {problem ? <Text style={{ ...typography.caption, color: "#C0392B", marginTop: spacing.md, textAlign: "center" }}>{problem}</Text> : null}
+        </>
       ) : (
         <>
       <TextInput
