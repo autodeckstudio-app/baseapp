@@ -19,7 +19,7 @@ export default function StudioTabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: "Today's Jobs", tabBarLabel: "Today" }}
+        options={{ title: "Today", tabBarLabel: "Today", headerShown: false }}
       />
       <Tabs.Screen
         name="bays"
