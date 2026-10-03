@@ -33,6 +33,16 @@ export const OFFICE_LINKS = [
   { href: "/cars", label: "Cars for sale" },
 ] as const;
 
+// Sidebar and More sheet: sections ordered by daily use. Studio-role staff only see sections with office:false links.
+type NavLink = { href: string; label: string; office: boolean };
+const SECTIONS: { key: string; label: string; links: NavLink[] }[] = [
+  { key: "today", label: "Today", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
+  { key: "customers", label: "Customers", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/vehicles", label: "Vehicles", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
+  { key: "money", label: "Money", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily Close", office: true }, { href: "/reports", label: "Reports", office: true }] },
+  { key: "catalogue", label: "Catalogue", links: [{ href: "/services", label: "Services and pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }, { href: "/stories", label: "Stories", office: true }, { href: "/cars", label: "Cars for sale", office: true }] },
+  { key: "admin", label: "Admin", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
+];
+
 // Phone bottom bar: five groups. A group lights up for any page inside it and shows its sibling pages as chips.
 const GROUPS = [
   { key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard" }], office: true },
@@ -82,7 +92,8 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   const groups = GROUPS.filter((g) => office || !g.office);
   const activeGroup = groups.find((g) => g.links.some((l) => isActive(pathname, l.href)));
   const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
-  const moreLinks = office ? MORE_LINKS : [];
+  const sections = SECTIONS.map((sec) => ({ ...sec, links: sec.links.filter((l) => office || !l.office) })).filter((sec) => sec.links.length > 0);
+  const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "admin");
 
   return (
     <div className="ax-shell">
@@ -92,16 +103,12 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
             <a href={home} className="ax-wordmark">
               Auto<span>Deck</span>
             </a>
-            <nav className="ax-nav-group" aria-label="Studio">
-              <span className="ax-label">Studio</span>
-              {STUDIO_LINKS.map(link)}
-            </nav>
-            {office && (
-              <nav className="ax-nav-group" aria-label="Office">
-                <span className="ax-label">Office</span>
-                {OFFICE_LINKS.map(link)}
+            {sections.map((sec) => (
+              <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>
+                <span className="ax-label">{sec.label}</span>
+                {sec.links.map(link)}
               </nav>
-            )}
+            ))}
             <div className="ax-side-foot">
               <div className="ax-who">
                 <div>{who}</div>
@@ -139,11 +146,16 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
           {moreOpen ? (
             <div className="ax-sheet-back" onClick={() => setMoreOpen(false)}>
               <div className="ax-sheet" role="dialog" aria-label="More" onClick={(e) => e.stopPropagation()}>
-                <div className="ax-sheet-grid">
-                  {moreLinks.map((l) => (
-                    <a key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</a>
-                  ))}
-                </div>
+                {moreSections.map((sec) => (
+                  <div key={sec.key}>
+                    <p className="ax-label">{sec.label}</p>
+                    <div className="ax-sheet-grid">
+                      {sec.links.map((l) => (
+                        <a key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</a>
+                      ))}
+                    </div>
+                  </div>
+                ))}
                 <div className="ax-sheet-foot">
                   <span>{who} · {ROLE_LABEL[role] ?? role}</span>
                   <button type="button" className="ax-button" onClick={onSignOut}>Sign out</button>
