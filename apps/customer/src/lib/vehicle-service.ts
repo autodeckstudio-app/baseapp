@@ -3,6 +3,7 @@ import {
   query,
   where,
   onSnapshot,
+  getDocs,
   type Unsubscribe,
   type QuerySnapshot,
 } from "firebase/firestore";
@@ -105,4 +106,22 @@ export async function uploadVehiclePhoto(vehicleId: string, blob: Blob, contentT
 /** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
 export async function resolveVehiclePhotoUrl(path: string): Promise<string> {
   return getDownloadURL(storageRef(storage, path));
+}
+
+export function normalizePlate(value: string): string {
+  return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+}
+
+/** True when this customer already has a saved car with the same plate (spaces and case ignored). */
+export async function hasVehicleWithPlate(uid: string, tenantId: string, plate: string): Promise<boolean> {
+  const snap = await getDocs(
+    query(
+      collection(db, COLLECTIONS.vehicles()),
+      where("ownerId", "==", uid),
+      where("tenantId", "==", tenantId),
+      where("deletedAt", "==", null),
+    ),
+  );
+  const target = normalizePlate(plate);
+  return snap.docs.some((d) => normalizePlate(String((d.data() as Vehicle).registrationNumber ?? "")) === target);
 }

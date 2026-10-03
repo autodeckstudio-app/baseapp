@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
+import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { getAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -53,24 +54,8 @@ export default function BookServiceScreen() {
     if (!serviceId || auth.status !== "ready") return;
     void (async () => {
       try {
-        const [serviceSnap, vehiclesSnap] = await Promise.all([
-          getDoc(doc(db, COLLECTIONS.services(), serviceId)),
-          getDocs(
-            query(
-              collection(db, COLLECTIONS.vehicles()),
-              where("ownerId", "==", auth.user.uid),
-              where("tenantId", "==", auth.claims.tenantId),
-              where("deletedAt", "==", null),
-            ),
-          ),
-        ]);
+        const serviceSnap = await getDoc(doc(db, COLLECTIONS.services(), serviceId));
         if (serviceSnap.exists()) setService(serviceSnap.data() as Service);
-        const vList = vehiclesSnap.docs.map((d) => d.data() as Vehicle);
-        setVehicles(vList);
-        if (vList.length > 0 && vList[0]) {
-          setSelectedVehicle(vList[0]);
-          if (vList[0].category) setSelectedCategory(vList[0].category);
-        }
       } catch {
         setLoadError(true);
       } finally {
@@ -78,6 +63,22 @@ export default function BookServiceScreen() {
       }
     })();
   }, [serviceId, auth.status]);
+
+  useEffect(() => {
+    if (auth.status !== "ready") return;
+    return listenToMyVehicles(
+      auth.user.uid,
+      auth.claims.tenantId,
+      (list) => {
+        setVehicles(list);
+        setSelectedVehicle((cur) => {
+          const keep = cur && list.find((v) => v.id === cur.id);
+          return keep ?? list[0] ?? null;
+        });
+      },
+      () => undefined,
+    );
+  }, [auth.status]);
 
   useEffect(() => {
     if (!serviceId || !service) return;

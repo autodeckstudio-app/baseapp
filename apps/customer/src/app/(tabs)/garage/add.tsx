@@ -3,7 +3,8 @@ import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
-import { createVehicle, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { useAuth } from "../../../hooks/useAuth";
+import { createVehicle, hasVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
   registrationNumber: string;
@@ -31,6 +32,7 @@ const FIELDS: FieldDef[] = [
 
 export default function AddVehicleScreen() {
   const router = useRouter();
+  const auth = useAuth();
   const [form, setForm] = useState<FormState>({
     registrationNumber: "",
     make: "",
@@ -64,11 +66,21 @@ export default function AddVehicleScreen() {
       return;
     }
 
+    const plate = normalizePlate(form.registrationNumber);
+    if (!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) {
+      setError("Check the registration number, for example GJ01AB1234.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
+      if (auth.status === "ready" && (await hasVehicleWithPlate(auth.user.uid, auth.claims.tenantId, plate))) {
+        setError("This car is already in your garage.");
+        return;
+      }
       const vehicle = await createVehicle({
-        registrationNumber: form.registrationNumber.toUpperCase(),
+        registrationNumber: plate,
         make: form.make.trim(),
         model: form.model.trim(),
         year: yearNum,
@@ -86,8 +98,16 @@ export default function AddVehicleScreen() {
       }
       router.back();
     } catch (err) {
+      const code = (err as { code?: string })?.code ?? "";
       const msg = err instanceof Error ? err.message : "";
-      setError(/registrationNumber/i.test(msg) ? "Check the registration number, for example GJ01AB1234." : /at most|character/i.test(msg) ? "One of the details is too long. Shorten it and try again." : "We could not add this car. Check the details and try again.");
+      console.warn("add car failed", code, msg);
+      setError(
+        /registrationNumber/i.test(msg) ? "Check the registration number, for example GJ01AB1234."
+        : /resource-exhausted/.test(code) ? "Too many attempts. Please wait a minute and try again."
+        : /unauthenticated|permission|app-check/i.test(code + msg) ? "Your session needs a refresh. Reload the page and try again."
+        : /unavailable|network|internal/i.test(code + msg) ? "We could not reach the server. Check your connection and try again."
+        : "We could not add this car. Check the details and try again.",
+      );
     } finally {
       setLoading(false);
     }
