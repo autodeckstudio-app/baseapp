@@ -78,21 +78,6 @@ function FadeUp({ children, delay = 0 }: { children: ReactNode; delay?: number }
 
 const DISC_SHADOW = { shadowColor: "#281E3C", shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 4, height: 6 }, elevation: 5 } as const;
 
-function QuickActions({ items }: { items: Array<{ icon: Parameters<typeof Icon>[0]["name"]; label: string; onPress: () => void }> }) {
-  return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      {items.map((it) => (
-        <Pressable key={it.label} accessibilityRole="button" accessibilityLabel={it.label} onPress={it.onPress} style={({ pressed }) => ({ alignItems: "center", gap: 8, width: 76, transform: [{ scale: pressed ? 0.94 : 1 }] })}>
-          <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...DISC_SHADOW }}>
-            <Icon name={it.icon} color="#2E2E33" size={36} />
-          </View>
-          <T role="caption" tone="secondary">{it.label}</T>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export default function HomeScreen() {
   const auth = useAuth();
   const router = useRouter();
@@ -234,48 +219,6 @@ export default function HomeScreen() {
       <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} />
       <StoryViewer group={open} onClose={() => setOpen(null)} />
 
-      <FadeUp>
-      <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-      <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#2A2433", shadowColor: "#7A6FD0", shadowOpacity: 0.3, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
-        <HeroImage aspect={4 / 5} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0.35) 0%, rgba(20,12,30,0) 30%, rgba(20,12,30,0.78) 100%)" } as object) }} />
-        <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: space.breath }}>
-          <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 5 }}>
-            <T role="caption" tone="accent">{copy.kicker}</T>
-          </View>
-          {car ? (
-            <View style={{ gap: 6 }}>
-              <T role="display" numberOfLines={1} style={{ color: "#FFFFFF" }}>{car.make} {car.model}</T>
-              <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center" }}>
-                <View style={{ borderRadius: 10, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 6 }}><Plate value={car.registrationNumber} /></View>
-                <T role="caption" style={{ color: "rgba(255,255,255,0.8)" }}>{car.year}{car.color ? ` · ${car.color}` : ""}</T>
-              </View>
-            </View>
-          ) : (
-            <T role="display" style={{ color: "#FFFFFF" }}>Your garage is empty</T>
-          )}
-          <T style={{ color: "rgba(255,255,255,0.9)" }}>{copy.line}</T>
-          <Button label={m.primaryAction.label} onPress={act} testID="home-primary" />
-        </View>
-        {car ? (
-          <View style={{ position: "absolute", top: space.inset, right: space.inset, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 6 }}>
-            <T role="caption" tone="accent">Details</T>
-            <T role="caption" tone="accent">›</T>
-          </View>
-        ) : null}
-      </View>
-      </Pressable>
-      </FadeUp>
-
-      <QuickActions
-        items={[
-          { icon: "services", label: "Book", onPress: () => router.push("/(tabs)/catalogue") },
-          { icon: "garage", label: "Garage", onPress: () => router.push("/(tabs)/garage") },
-          { icon: "bookings", label: "Visits", onPress: () => router.push("/(tabs)/bookings") },
-          { icon: "club", label: "Club", onPress: () => router.push("/(tabs)/membership") },
-        ]}
-      />
-
       {car && suggest && !m.liveJob && !m.pendingApproval && !m.dueInvoice ? (() => {
         const first = suggest.slots[0]!;
         const dayName = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short" });
@@ -310,6 +253,39 @@ export default function HomeScreen() {
           </FadeUp>
         );
       })() : null}
+
+      <FadeUp>
+      <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+      <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#2A2433", shadowColor: "#7A6FD0", shadowOpacity: 0.3, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
+        <HeroImage aspect={3 / 2} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0.35) 0%, rgba(20,12,30,0) 30%, rgba(20,12,30,0.78) 100%)" } as object) }} />
+        <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
+          <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>
+            <T role="caption" tone="accent">{copy.kicker}</T>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.breath }}>
+            {car ? (
+              <View style={{ flex: 1, gap: 4 }}>
+                <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{car.make} {car.model}</T>
+                <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center" }}>
+                  <View style={{ borderRadius: 10, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 6 }}><Plate value={car.registrationNumber} /></View>
+                </View>
+              </View>
+            ) : (
+              <T role="heading" style={{ color: "#FFFFFF", flex: 1 }}>Your garage is empty</T>
+            )}
+            <Button label={m.primaryAction.label} onPress={act} testID="home-primary" style={{ minHeight: 40, paddingHorizontal: 16 }} />
+          </View>
+        </View>
+        {car ? (
+          <View style={{ position: "absolute", top: space.inset, right: space.inset, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 6 }}>
+            <T role="caption" tone="accent">Details</T>
+            <T role="caption" tone="accent">›</T>
+          </View>
+        ) : null}
+      </View>
+      </Pressable>
+      </FadeUp>
 
       {car || m.membership ? (
         <View style={{ flexDirection: "row", gap: space.line }}>
