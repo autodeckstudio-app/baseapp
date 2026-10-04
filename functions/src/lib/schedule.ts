@@ -14,7 +14,7 @@ export function getTZOffsetMinutes(timezone: string, atUTC: Date): number {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   });
   const parts = fmt.formatToParts(atUTC);
   const get = (type: string) =>
@@ -47,7 +47,7 @@ export function utcToLocalTime(utcDate: Date, timezone: string): string {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   });
 }
 
