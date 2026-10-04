@@ -91,7 +91,7 @@ export function ServicesView(p: {
           return (
             <section key={g} className="ax-svc-group">
               <div className="ax-cat-head">
-                <span className="ax-cat-icon" aria-hidden="true"><Icon name={CATEGORY_ICON[g]} size={20} /></span>
+                <span className="ax-cat-icon" aria-hidden="true"><Icon name={CATEGORY_ICON[g]} size={30} /></span>
                 <div><p className="ax-cat-name">{CATEGORY_NAME[g]}</p><p className="ax-sub">{CATEGORY_BLURB[g]} · {inCat.length}</p></div>
               </div>
               {brands.map((b) => (

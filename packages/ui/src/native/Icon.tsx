@@ -1,9 +1,12 @@
 import { createElement } from "react";
 import { Image, Platform } from "react-native";
-import { iconDataUri, iconInner, isFillable, type IconName } from "../theme/icons.js";
+import { DUO_VIEWBOX, duotoneInner, iconDataUri, iconInner, isFillable, type IconName } from "../theme/icons.js";
 
 export function Icon({ name, color, size = 24, filled = false }: { name: IconName; color: string; size?: number; filled?: boolean }) {
   if (Platform.OS === "web") {
+    if (duotoneInner(name)) {
+      return createElement("svg", { "aria-hidden": true, width: size, height: size, viewBox: DUO_VIEWBOX, style: { flexShrink: 0, display: "block", opacity: filled || color === "#FFFFFF" ? 1 : 0.92 }, dangerouslySetInnerHTML: { __html: iconInner(name) } });
+    }
     return createElement("svg", {
       "aria-hidden": true,
       width: size,

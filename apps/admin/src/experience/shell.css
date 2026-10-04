@@ -484,7 +484,7 @@
 /* Dashboard tiles and floor chart: all AutoDeck orange, navy for the lead tile */
 .ax-shell .ax-tile { background: #fff; border: 1px solid rgba(122,111,208,0.06); border-radius: 22px; box-shadow: 0 8px 24px rgba(122,111,208,0.07); position: relative; }
 .ax-shell .ax-tile .ax-kpi-v { font-weight: 600; font-size: 34px; }
-.ax-tile-ico { width: 36px; height: 36px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--ad-accent-haze, rgba(242,122,26,0.14)); font-size: 18px; margin-bottom: 4px; }
+.ax-tile-ico { width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: #fff; box-shadow: 4px 6px 12px rgba(40,30,60,0.14), -1px -1px 3px rgba(255,255,255,0.9); font-size: 18px; margin-bottom: 4px; }
 .ax-shell .ax-tile--featured { background: linear-gradient(135deg, #F58A2E, #C2540A); border-color: transparent; }
 .ax-shell .ax-tile--featured .ax-kpi-v, .ax-shell .ax-tile--featured .ax-label { color: #FFFFFF; }
 .ax-shell .ax-tile--featured .ax-tile-ico { background: rgba(255,255,255,0.25); }
@@ -545,7 +545,7 @@
 /* Services: category > brand > service cards, same order as the customer app */
 .ax-svc-group { margin-bottom: 28px; }
 .ax-cat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.ax-cat-icon { width: 40px; height: 40px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; background: rgba(240,125,40,0.14); flex: none; }
+.ax-cat-icon { width: 48px; height: 48px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; background: #fff; box-shadow: 4px 6px 12px rgba(40,30,60,0.14), -1px -1px 3px rgba(255,255,255,0.9); flex: none; }
 .ax-cat-name { font-size: 20px; font-weight: 600; margin: 0; }
 .ax-brand-block { margin-bottom: 14px; }
 .ax-svc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }

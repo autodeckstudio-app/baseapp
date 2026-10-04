@@ -144,7 +144,7 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
 function Tile({ value, label, tone, icon, featured, onClick }: { value: number | string; label: string; tone?: "accent" | "premium"; icon?: IconName; featured?: boolean; onClick: () => void }) {
   return (
     <button type="button" className={`ax-tile${featured ? " ax-tile--featured" : ""}`} onClick={onClick}>
-      {icon ? <span className="ax-tile-ico" aria-hidden="true"><Icon name={icon} size={20} /></span> : null}
+      {icon ? <span className="ax-tile-ico" aria-hidden="true"><Icon name={icon} size={30} /></span> : null}
       <span className={`ax-kpi-v${tone ? ` ax-kpi-v--${tone}` : ""}`}>{value}</span>
       <span className="ax-label">{label}</span>
     </button>

@@ -2,9 +2,12 @@
 // `filled` variants are used for the active tab.
 export type IconName =
   | "home" | "services" | "bookings" | "garage" | "profile" | "wash" | "ceramic" | "coating" | "ppf" | "tint" | "inspect"
-  | "search" | "wrench" | "check" | "star" | "pin" | "club" | "bell" | "users" | "plus" | "calendar" | "car" | "tools" | "shield" | "dot" | "close";
+  | "search" | "wrench" | "check" | "star" | "pin" | "club" | "bell" | "users" | "plus" | "calendar" | "car" | "tools" | "shield" | "dot" | "close"
+  | "bay" | "break" | "check-in" | "check-out" | "detailing" | "invoice" | "membership" | "notifications" | "payments" | "photos" | "pickup" | "ppf-film" | "settings" | "walk-in" | "window-tint";
 
-const P: Record<IconName, string> = {
+import { DUOTONE, DUOTONE_ALIAS } from "./glyphs.js";
+
+const P: Partial<Record<IconName, string>> = {
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   services: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/>',
@@ -35,11 +38,18 @@ const P: Record<IconName, string> = {
 
 const FILLABLE: IconName[] = ["home", "services", "bookings", "garage", "profile", "star", "calendar", "car", "users", "bell", "club", "tools", "wrench", "shield", "pin", "check", "search"];
 
-export function iconMarkup(name: IconName, color: string, size = 24, filled = false): string {
-  const fill = filled && FILLABLE.includes(name) ? color : "none";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" fill-opacity="${fill === "none" ? 0 : 0.22}" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name]}</svg>`;
+export const DUO_VIEWBOX = "2 2 60 60";
+/** Duotone glyph markup for a name, or null when the name only has a line icon. */
+export function duotoneInner(name: IconName): string | null {
+  return DUOTONE[name] ?? DUOTONE[DUOTONE_ALIAS[name] ?? ""] ?? null;
 }
-export function iconInner(name: IconName): string { return P[name]; }
+export function iconInner(name: IconName): string { return duotoneInner(name) ?? P[name] ?? ""; }
+export function iconMarkup(name: IconName, color: string, size = 24, filled = false): string {
+  const duo = duotoneInner(name);
+  if (duo) return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="${DUO_VIEWBOX}">${duo}</svg>`;
+  const fill = filled && FILLABLE.includes(name) ? color : "none";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" fill-opacity="${fill === "none" ? 0 : 0.22}" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name] ?? ""}</svg>`;
+}
 export function iconDataUri(name: IconName, color: string, size = 24, filled = false): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(iconMarkup(name, color, size, filled))}`;
 }
