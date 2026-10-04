@@ -5,6 +5,9 @@ import { signOut } from "firebase/auth";
 import { Alert, Platform, View } from "react-native";
 import { auth } from "../lib/firebase";
 import { colors } from "@autodeck/ui";
+import { installWebFonts } from "@autodeck/ui/native";
+
+installWebFonts();
 import { useAuth } from "../hooks/useAuth";
 
 function NavigationGuard({ children }: { children: React.ReactNode }) {

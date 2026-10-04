@@ -43,13 +43,13 @@ export const depth = {
   alert: { z: 50, shadow: "0 60px 120px -40px rgba(0,0,0,0.95)", elevation: 24 },
 } as const;
 
-// Font families are OFL (Google Fonts): Outfit (display), DM Sans (body),
-// DM Mono (data/labels). Web loads them via next/font; native bundles them
+// Font families are OFL (Google Fonts): Montserrat (headings, matches the logo wordmark),
+// Inter (body, UI and tabular numbers). Gujarati and Hindi fall back to Noto Sans. Web loads them via next/font; native bundles them
 // with expo-font. Fallbacks keep roles meaningful if a face fails.
 export const fontFamily = {
-  display: "Outfit",
-  body: "DM Sans",
-  data: "DM Mono",
+  display: "Montserrat",
+  body: "Inter",
+  data: "Inter",
 } as const;
 
 export interface TypeRole {
@@ -64,13 +64,13 @@ export interface TypeRole {
 }
 
 export const type = {
-  display: { family: "display", size: 40, lineHeight: 44, weight: "200", letterSpacing: -0.8 },
-  title: { family: "display", size: 24, lineHeight: 30, weight: "300", letterSpacing: -0.3 },
-  heading: { family: "body", size: 17, lineHeight: 24, weight: "600", letterSpacing: -0.1 },
+  display: { family: "display", size: 32, lineHeight: 38, weight: "600", letterSpacing: -0.5 },
+  title: { family: "display", size: 24, lineHeight: 30, weight: "600", letterSpacing: -0.3 },
+  heading: { family: "display", size: 18, lineHeight: 24, weight: "600", letterSpacing: -0.2 },
   body: { family: "body", size: 15, lineHeight: 22, weight: "400", letterSpacing: 0 },
   bodyStrong: { family: "body", size: 15, lineHeight: 22, weight: "500", letterSpacing: 0 },
-  data: { family: "data", size: 14, lineHeight: 20, weight: "400", letterSpacing: 0, tabular: true },
-  label: { family: "data", size: 11, lineHeight: 14, weight: "500", letterSpacing: 1.4, uppercase: true },
+  data: { family: "data", size: 14, lineHeight: 20, weight: "500", letterSpacing: 0, tabular: true },
+  label: { family: "body", size: 12, lineHeight: 16, weight: "600", letterSpacing: 1.4, uppercase: true },
   // Never below 12px: accessible minimum.
   caption: { family: "body", size: 12, lineHeight: 16, weight: "400", letterSpacing: 0.1 },
 } as const satisfies Record<string, TypeRole>;

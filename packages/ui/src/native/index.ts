@@ -7,3 +7,4 @@ export { Icon } from "./Icon.js";
 export { PillTabBar } from "./PillTabBar.js";
 export { Logo } from "./Logo.js";
 export { AuthCard, AuthButton } from "./AuthCard.js";
+export { installWebFonts } from "./webFonts.js";

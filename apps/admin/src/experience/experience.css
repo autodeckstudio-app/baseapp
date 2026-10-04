@@ -123,10 +123,10 @@
 .ax-chip--inactive { color: var(--ad-inactive); }
 
 /* ── Type roles ── */
-.ax-display { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; font-size: 40px; line-height: 44px; letter-spacing: -0.8px; }
-.ax-title { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 24px; line-height: 30px; letter-spacing: -0.3px; }
-.ax-label { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 11px; line-height: 14px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
-.ax-data { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.ax-display { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 40px; line-height: 44px; letter-spacing: -0.8px; }
+.ax-title { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 24px; line-height: 30px; letter-spacing: -0.3px; }
+.ax-label { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
+.ax-data { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-variant-numeric: tabular-nums; font-weight: 500; }
 .ax-muted { color: var(--ad-text-secondary); }
 
 /* Inside the experience layer, legacy element styles (globals.css sets a

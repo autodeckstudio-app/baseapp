@@ -22,9 +22,9 @@ import { Ambient, Glass, type GlassProps, useExperienceTheme } from "@autodeck/u
 import { fontFamily, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
-  display: Platform.select({ web: "Outfit, system-ui, sans-serif", default: "System" }) ?? "System",
-  body: Platform.select({ web: "'DM Sans', system-ui, sans-serif", default: "System" }) ?? "System",
-  data: Platform.select({ web: "'DM Mono', ui-monospace, monospace", default: "Menlo" }) ?? "Menlo",
+  display: Platform.select({ web: "Montserrat, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
+  body: Platform.select({ web: "Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
+  data: Platform.select({ web: "Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "Menlo" }) ?? "Menlo",
 };
 
 export function textStyle(role: keyof typeof typeScale): TextStyle {

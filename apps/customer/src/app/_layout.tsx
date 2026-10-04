@@ -3,21 +3,13 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ExperienceThemeProvider } from "@autodeck/ui/native";
+import { ExperienceThemeProvider, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 
-// Web build: load the three OFL faces the type scale names.
+installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const doc = (globalThis as any).document;
-if (Platform.OS === "web" && doc && !doc.getElementById("ad-fonts")) {
-  const link = doc.createElement("link");
-  link.id = "ad-fonts";
-  link.rel = "stylesheet";
-  link.href =
-    "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Outfit:wght@200;300;400&display=swap";
-  doc.head.appendChild(link);
-  doc.body.style.backgroundColor = "#E7EAF7";
-}
+const bodyDoc = (globalThis as any).document;
+if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#E7EAF7";
 
 // Routes once claims are known, so a customer never sees staff screens and
 // staff never see customer screens (spec §5.1). Staff accounts land on a

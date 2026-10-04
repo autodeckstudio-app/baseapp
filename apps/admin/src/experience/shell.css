@@ -24,7 +24,7 @@
   --color-warning-muted: var(--ad-accent-haze);
   --color-error: var(--ad-danger);
   --color-error-muted: rgba(226, 112, 90, 0.14);
-  font-family: var(--ad-font-body, "DM Sans", system-ui, sans-serif);
+  font-family: var(--ad-font-body, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif;
   color: var(--ad-text-primary);
 }
 
@@ -55,8 +55,8 @@
 }
 
 .ax-wordmark {
-  font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif);
-  font-weight: 300;
+  font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif;
+  font-weight: 600;
   font-size: 22px;
   letter-spacing: -0.3px;
   color: var(--ad-text-primary);
@@ -98,8 +98,8 @@
 
 /* Legacy element styles, restated on the ground. */
 .ax-shell h1 {
-  font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif);
-  font-weight: 200;
+  font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif;
+  font-weight: 600;
   font-size: 34px;
   line-height: 40px;
   letter-spacing: -0.6px;
@@ -109,7 +109,7 @@
 .ax-shell p { color: var(--ad-text-secondary); }
 .ax-shell .ax-main a:not([class]) { color: var(--ad-accent-strong); }
 .ax-shell table { border-radius: var(--ad-radius-card); }
-.ax-shell th { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-weight: 400; letter-spacing: 1.2px; color: var(--ad-text-tertiary); }
+.ax-shell th { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 400; letter-spacing: 1.2px; color: var(--ad-text-tertiary); }
 .ax-shell td { color: var(--ad-text-primary); }
 .ax-shell button { border-radius: var(--ad-radius-pill); min-height: 36px; }
 .ax-shell button[type="submit"] { background: var(--ad-accent-grad); border-color: transparent; }
@@ -117,8 +117,8 @@
 .ax-shell input, .ax-shell select, .ax-shell textarea { background: rgba(255, 255, 255, 0.04); border-color: var(--ad-border-subtle); border-radius: var(--ad-radius-chip); }
 .ax-shell select option { background: var(--ad-surface); color: var(--ad-text-primary); }
 .ax-shell .detail-card, .ax-shell .stat-tile { border-radius: var(--ad-radius-card); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); }
-.ax-shell .stat-tile .value { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-weight: 400; }
-.ax-shell .detail-card h3, .ax-shell .stat-tile .label { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-weight: 400; letter-spacing: 1.4px; }
+.ax-shell .stat-tile .value { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 400; }
+.ax-shell .detail-card h3, .ax-shell .stat-tile .label { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 400; letter-spacing: 1.4px; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .ax-shell .detail-card, .ax-shell .stat-tile, .ax-shell table {
     background: var(--ad-glass-fill);
@@ -142,7 +142,7 @@
 .ax-login { min-height: 100vh; display: grid; place-items: center; padding: var(--ad-space-inset); }
 .ax-login-card { width: 100%; max-width: 400px; }
 .ax-login .ax-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--ad-space-breath); font-size: 15px; font-weight: 600; cursor: pointer; }
-.ax-login input { width: 100%; min-height: var(--ad-hit); padding: 0 var(--ad-space-line); font-size: 18px; letter-spacing: 4px; color: var(--ad-text-primary); background: rgba(122,111,208,0.04); border: 1px solid var(--ad-border-subtle); border-radius: var(--ad-radius-chip); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); }
+.ax-login input { width: 100%; min-height: var(--ad-hit); padding: 0 var(--ad-space-line); font-size: 18px; letter-spacing: 4px; color: var(--ad-text-primary); background: rgba(122,111,208,0.04); border: 1px solid var(--ad-border-subtle); border-radius: var(--ad-radius-chip); font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; }
 .ax-login input:focus { outline: none; border-color: var(--ad-accent); }
 .ax-login .ax-alert { margin: var(--ad-space-line) 0 0; padding: var(--ad-space-breath) var(--ad-space-line); border-radius: var(--ad-radius-chip); border: 1px solid rgba(226,112,90,0.4); background: rgba(226,112,90,0.10); color: var(--ad-danger); font-size: 13px; }
 
@@ -157,14 +157,14 @@
 .ax-page-head .ax-label { margin: 0; }
 .ax-kpis { display: flex; gap: var(--ad-space-section); }
 .ax-kpis > div { display: flex; flex-direction: column; gap: 2px; }
-.ax-kpi-v { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; font-size: 36px; line-height: 40px; color: var(--ad-text-primary); font-variant-numeric: tabular-nums; }
+.ax-kpi-v { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 36px; line-height: 40px; color: var(--ad-text-primary); font-variant-numeric: tabular-nums; }
 .ax-kpi-v--accent { color: var(--ad-accent); }
 .ax-kpi-v--premium { color: var(--ad-premium); }
 
 .ax-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ad-space-line); margin-bottom: var(--ad-space-inset); }
 .ax-toolbar select, .ax-toolbar input { min-height: 36px; font-size: 14px; padding: 0 var(--ad-space-line); }
 .ax-search { flex: 1 1 220px; max-width: 360px; }
-.ax-count { font-size: 12px; color: var(--ad-text-tertiary); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); margin-left: auto; }
+.ax-count { font-size: 12px; color: var(--ad-text-tertiary); font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; margin-left: auto; }
 .ax-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--ad-radius-pill); border: 1px solid var(--ad-border-subtle); background: rgba(122,111,208,0.03); }
 .ax-shell .ax-seg button { min-height: 30px; padding: 0 var(--ad-space-line); border: none; background: transparent; color: var(--ad-text-secondary); font-weight: 500; }
 .ax-shell .ax-seg button[aria-pressed="true"] { background: var(--ad-accent-haze); color: var(--ad-accent-strong); }
@@ -176,14 +176,14 @@
 .ax-col--active { border-top: 2px solid var(--ad-accent-haze); }
 .ax-col--done { border-top: 2px solid var(--ad-premium-haze); }
 .ax-col-head { display: flex; align-items: center; justify-content: space-between; padding: 2px var(--ad-space-hair) var(--ad-space-breath); }
-.ax-col-n { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 12px; color: var(--ad-text-secondary); padding: 1px 8px; border-radius: var(--ad-radius-pill); background: rgba(122,111,208,0.05); }
+.ax-col-n { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 12px; color: var(--ad-text-secondary); padding: 1px 8px; border-radius: var(--ad-radius-pill); background: rgba(122,111,208,0.05); }
 .ax-col-empty { font-size: 13px; color: var(--ad-text-tertiary) !important; padding: var(--ad-space-line) var(--ad-space-hair); margin: 0; }
 .ax-shell .ax-job { display: flex; flex-direction: column; align-items: stretch; gap: 4px; text-align: left; width: 100%; min-height: 0; padding: var(--ad-space-line); border-radius: var(--ad-radius-card); border: 1px solid var(--ad-glass-edge); background: var(--ad-glass-fallback); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); color: var(--ad-text-primary); font-weight: 400; transition: transform var(--ad-dur-tick) var(--ad-ease), border-color var(--ad-dur-tick) var(--ad-ease); }
 .ax-shell .ax-job:hover:not(:disabled) { border-color: var(--ad-border-strong); transform: translateY(-1px); }
 .ax-shell .ax-job:focus-visible { outline: 2px solid var(--ad-accent-strong); outline-offset: 1px; }
 .ax-col--active .ax-job { background: var(--ad-glass-fill-warm, var(--ad-glass-fallback)); }
 .ax-job-top { display: flex; align-items: center; justify-content: space-between; gap: var(--ad-space-breath); }
-.ax-job-plate { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 15px; letter-spacing: 0.6px; }
+.ax-job-plate { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 15px; letter-spacing: 0.6px; }
 .ax-job-who { font-size: 14px; color: var(--ad-text-primary); }
 .ax-job-what { font-size: 13px; color: var(--ad-text-secondary); }
 .ax-job-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--ad-space-breath); margin-top: 4px; font-size: 12px; color: var(--ad-text-tertiary); }
@@ -206,7 +206,7 @@
 /* ---- Day agenda (bookings) ---- */
 .ax-daynav { display: inline-flex; align-items: center; gap: var(--ad-space-breath); }
 .ax-shell .ax-daynav button { min-height: 36px; min-width: 36px; padding: 0 var(--ad-space-line); }
-.ax-daynav-date { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 20px; color: var(--ad-text-primary); min-width: 210px; text-align: center; }
+.ax-daynav-date { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 20px; color: var(--ad-text-primary); min-width: 210px; text-align: center; }
 .ax-agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ad-space-breath); max-width: 1100px; }
 .ax-shell .ax-slot { width: 100%; display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; gap: var(--ad-space-gap); text-align: left; padding: var(--ad-space-line) var(--ad-space-gap); border-radius: var(--ad-radius-card); border: 1px solid var(--ad-glass-edge); border-left: 3px solid var(--ad-border-strong); background: var(--ad-glass-fallback); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); color: var(--ad-text-primary); font-weight: 400; min-height: 72px; transition: border-color var(--ad-dur-tick) var(--ad-ease), transform var(--ad-dur-tick) var(--ad-ease); }
 .ax-shell .ax-slot:hover:not(:disabled) { border-color: var(--ad-border-strong); transform: translateY(-1px); }
@@ -215,7 +215,7 @@
 .ax-shell .ax-slot--pending { border-left-color: var(--ad-warning); }
 .ax-shell .ax-slot--completed { border-left-color: var(--ad-premium); }
 .ax-shell .ax-slot--cancelled, .ax-shell .ax-slot--expired { border-left-color: var(--ad-inactive); opacity: 0.6; }
-.ax-slot-time { display: flex; flex-direction: column; font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 15px; }
+.ax-slot-time { display: flex; flex-direction: column; font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 15px; }
 .ax-slot-end { font-size: 11px; color: var(--ad-text-tertiary); }
 .ax-slot-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .ax-slot-line { display: flex; align-items: baseline; gap: var(--ad-space-line); flex-wrap: wrap; }
@@ -228,10 +228,10 @@
 .ax-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ad-text-secondary) !important; text-decoration: none; margin-bottom: var(--ad-space-gap); background: none; border: none; padding: 0; min-height: 0; cursor: pointer; font-weight: 500; }
 .ax-back:hover { color: var(--ad-text-primary) !important; }
 .ax-hero { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--ad-space-inset); margin-bottom: var(--ad-space-inset); }
-.ax-hero h1 { margin: var(--ad-space-hair) 0; font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace) !important; font-weight: 400 !important; letter-spacing: 1px !important; }
+.ax-hero h1 { margin: var(--ad-space-hair) 0; font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif !important; font-weight: 400 !important; letter-spacing: 1px !important; }
 .ax-hero-sub { font-size: 15px; color: var(--ad-text-secondary); margin: 0; }
 .ax-hero-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--ad-space-breath); }
-.ax-hero-total { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; font-size: 36px; line-height: 40px; color: var(--ad-text-primary); }
+.ax-hero-total { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 36px; line-height: 40px; color: var(--ad-text-primary); }
 .ax-track { list-style: none; margin: 0 0 var(--ad-space-inset); padding: var(--ad-space-gap) var(--ad-space-inset); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-radius: var(--ad-radius-pane); border: 1px solid var(--ad-glass-edge); background: var(--ad-glass-fallback); }
 .ax-track li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
 .ax-track li + li::before { content: ""; position: absolute; top: 6px; right: 50%; width: 100%; height: 2px; background: var(--ad-border-subtle); z-index: 0; }
@@ -284,14 +284,14 @@
 .ax-linkcard-desc { font-size: 13px; color: var(--ad-text-secondary); }
 
 /* ---- Office lists (M4) ---- */
-.ax-count { margin-left: auto; font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 12px; letter-spacing: 1px; color: var(--ad-text-tertiary); }
+.ax-count { margin-left: auto; font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--ad-text-tertiary); }
 .ax-list { display: flex; flex-direction: column; border-radius: var(--ad-radius-pane); border: 1px solid var(--ad-glass-edge); background: var(--ad-glass-fallback); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); overflow: hidden; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .ax-list, .ax-drawer { background: var(--ad-glass-fill); backdrop-filter: var(--ad-glass-blur); -webkit-backdrop-filter: var(--ad-glass-blur); }
 }
 .ax-list-head, .ax-shell .ax-list-row { display: grid; align-items: center; gap: var(--ad-space-gap); padding: 0 var(--ad-space-inset); }
 .ax-list-head { min-height: 44px; border-bottom: 1px solid var(--ad-border-subtle); }
-.ax-list-head span { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
+.ax-list-head span { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
 .ax-shell .ax-list-row { width: 100%; min-height: 60px; border: none; border-bottom: 1px solid var(--ad-border-subtle); border-radius: 0; background: transparent; text-align: left; font-weight: 400; font-size: 14px; color: var(--ad-text-primary); }
 .ax-shell .ax-list-row:last-child { border-bottom: none; }
 .ax-shell .ax-list-row.is-link { cursor: pointer; transition: background var(--ad-dur-tick) var(--ad-ease); }
@@ -299,7 +299,7 @@
 .ax-shell .ax-list-row.is-link:focus-visible { outline: 2px solid var(--ad-accent-strong); outline-offset: -2px; }
 .ax-list-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ax-list .is-end { text-align: right; justify-self: end; }
-.ax-list .is-data { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 13px; letter-spacing: 0.4px; }
+.ax-list .is-data { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 13px; letter-spacing: 0.4px; }
 .ax-list .is-strong { font-size: 15px; font-weight: 500; }
 .ax-list .is-muted { color: var(--ad-text-secondary); font-size: 13px; }
 .ax-skel--row { height: 60px; border-radius: 0; border-bottom: 1px solid var(--ad-border-subtle); }
@@ -310,15 +310,15 @@
 .ax-drawer-scrim { position: fixed; inset: 0; background: rgba(5,5,6,0.55); display: flex; justify-content: flex-end; z-index: 40; }
 .ax-drawer { width: 460px; max-width: 92vw; height: 100%; overflow-y: auto; padding: var(--ad-space-inset); background: var(--ad-glass-fallback); border-left: 1px solid var(--ad-glass-edge); }
 .ax-drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--ad-space-gap); margin-bottom: var(--ad-space-inset); }
-.ax-drawer-head h2 { margin: 4px 0 0; font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 24px; }
+.ax-drawer-head h2 { margin: 4px 0 0; font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 24px; }
 .ax-drawer .kv { font-size: 14px; padding: 8px 0; }
-.ax-code { margin: 0 0 var(--ad-space-gap); padding: var(--ad-space-line); border-radius: var(--ad-radius-chip); border: 1px solid var(--ad-border-subtle); background: rgba(0,0,0,0.25); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 12px; color: var(--ad-text-secondary); overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+.ax-code { margin: 0 0 var(--ad-space-gap); padding: var(--ad-space-line); border-radius: var(--ad-radius-chip); border: 1px solid var(--ad-border-subtle); background: rgba(0,0,0,0.25); font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 12px; color: var(--ad-text-secondary); overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 860px) {
   .ax-list-head { display: none; }
   .ax-shell .ax-list-row { grid-template-columns: 1fr 1fr !important; padding: var(--ad-space-line) var(--ad-space-gap); row-gap: 4px; }
 }
 .ax-inline-form { display: inline-flex; gap: 6px; align-items: center; }
-.ax-shell .ax-search--plate { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); letter-spacing: 1px; max-width: 220px; }
+.ax-shell .ax-search--plate { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; letter-spacing: 1px; max-width: 220px; }
 .ax-shell .ax-button--danger { color: var(--ad-danger); border-color: color-mix(in srgb, var(--ad-danger) 40%, transparent); }
 .ax-status-msg--warn { color: var(--ad-warning) !important; }
 
@@ -342,7 +342,7 @@
 
 /* ---- Vehicles ---- */
 .ax-plate-row { display: flex; gap: var(--ad-space-line); align-items: center; }
-.ax-shell .ax-plate-input { flex: 1 1 auto; max-width: 420px; min-height: 52px; padding: 0 var(--ad-space-gap); font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 22px; letter-spacing: 3px; }
+.ax-shell .ax-plate-input { flex: 1 1 auto; max-width: 420px; min-height: 52px; padding: 0 var(--ad-space-gap); font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 22px; letter-spacing: 3px; }
 .ax-shell .ax-plate-row .ax-button { min-height: 52px; padding: 0 var(--ad-space-inset); }
 .ax-papers { list-style: none; margin: 0; padding: 0; }
 .ax-paper { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ad-space-line); padding: 14px 0; border-bottom: 1px solid var(--ad-border-subtle); }
@@ -364,8 +364,8 @@
 .ax-plan--gold { border-color: var(--ad-accent-haze); }
 .ax-plan.is-paused { opacity: 0.55; }
 .ax-plan-top { display: flex; justify-content: space-between; align-items: center; }
-.ax-plan-name { margin: var(--ad-space-breath) 0 0; font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 24px; }
-.ax-plan-price { margin: var(--ad-space-line) 0; font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; font-size: 36px; color: var(--ad-text-primary) !important; }
+.ax-plan-name { margin: var(--ad-space-breath) 0 0; font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 24px; }
+.ax-plan-price { margin: var(--ad-space-line) 0; font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 36px; color: var(--ad-text-primary) !important; }
 .ax-plan-price span { font-size: 14px; color: var(--ad-text-tertiary); }
 .ax-plan-perks { list-style: none; margin: 0 0 auto; padding: 0; font-size: 14px; color: var(--ad-text-secondary); }
 .ax-plan-perks li { padding: 6px 0 6px 18px; position: relative; }
@@ -425,17 +425,17 @@
 
 /* ---- Invoice ---- */
 .ax-invoice-head { display: flex; justify-content: space-between; gap: var(--ad-space-gap); padding-bottom: var(--ad-space-gap); border-bottom: 1px solid var(--ad-border-subtle); }
-.ax-invoice-brand { margin: 0; font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 300; font-size: 26px; color: var(--ad-text-primary) !important; }
+.ax-invoice-brand { margin: 0; font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 26px; color: var(--ad-text-primary) !important; }
 .ax-invoice-brand span { color: var(--ad-accent); }
 .ax-invoice-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--ad-space-gap); padding: var(--ad-space-gap) 0; border-bottom: 1px solid var(--ad-border-subtle); }
 .ax-invoice-meta p { margin: 4px 0 2px; color: var(--ad-text-primary) !important; font-size: 15px; }
 .ax-invoice-lines { padding: var(--ad-space-line) 0; }
 .ax-invoice-line { display: grid; grid-template-columns: minmax(0, 1fr) 50px 110px 120px; gap: var(--ad-space-line); padding: 10px 0; border-bottom: 1px solid var(--ad-border-subtle); font-size: 14px; color: var(--ad-text-primary); }
 .ax-invoice-line > span:not(:first-child) { text-align: right; }
-.ax-invoice-line.is-head span { font-family: var(--ad-font-data, "DM Mono", ui-monospace, monospace); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
+.ax-invoice-line.is-head span { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ad-text-tertiary); }
 .ax-invoice-totals { margin-left: auto; max-width: 320px; }
 .ax-invoice-grand { border-top: 1px solid var(--ad-border-strong); margin-top: 6px; padding-top: 12px !important; font-size: 18px !important; color: var(--ad-text-primary); }
-.ax-invoice-grand span:last-child { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-size: 24px; font-weight: 300; }
+.ax-invoice-grand span:last-child { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 24px; font-weight: 600; }
 @media print {
   .ax-side, .ax-noprint { display: none !important; }
   .ax-shell-frame { display: block !important; }
@@ -443,7 +443,7 @@
   .ax-invoice { background: #fff !important; color: #111 !important; border: none !important; box-shadow: none !important; }
   .ax-invoice *, .ax-invoice p { color: #111 !important; }
 }
-.ax-hero h1.ax-hero-name { font-family: var(--ad-font-display, "Outfit", system-ui, sans-serif); font-weight: 200; letter-spacing: -0.6px; }
+.ax-hero h1.ax-hero-name { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; letter-spacing: -0.6px; }
 .ax-invoice-totals { min-width: 280px; } .ax-invoice-totals .kv { gap: var(--ad-space-gap); }
 
 /* Owner reference theme (Oct 1 2026): floating navy side panel on a soft
@@ -570,3 +570,4 @@
   .ax-wordmark .ax-logo-full { display: none !important; }
   .ax-wordmark .ax-logo-mark { display: block !important; }
 }
+.ax-shell button, .ax-shell input, .ax-shell select, .ax-shell textarea { font-family: inherit; }
