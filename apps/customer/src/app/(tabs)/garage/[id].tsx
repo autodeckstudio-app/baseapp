@@ -9,7 +9,8 @@ import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
-import { updateVehicle, archiveVehicle } from "../../../lib/vehicle-service";
+import { updateVehicle, archiveVehicle, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { listenToVehicleProtections } from "../../../lib/protection-service";
 import { listenToVehicleWarranties } from "../../../lib/warranty-service";
@@ -50,6 +51,7 @@ export default function VehicleDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newPhoto, setNewPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   const [form, setForm] = useState({ make: "", model: "", color: "", odometer: "" });
   const [tab, setTab] = useState<TabKey>("overview");
   const [confirmingArchive, setConfirmingArchive] = useState(false);
@@ -166,6 +168,16 @@ export default function VehicleDetailScreen() {
         ...(form.color.trim() ? { color: form.color.trim() } : {}),
         ...(odometerNum !== null ? { odometer: odometerNum } : {}),
       });
+      if (newPhoto) {
+        try {
+          await uploadVehiclePhoto(id, newPhoto.blob, newPhoto.contentType);
+        } catch (e) {
+          setActionError(e instanceof Error ? e.message : "The photo could not be uploaded. Your other changes are saved.");
+          setNewPhoto(null);
+          return;
+        }
+        setNewPhoto(null);
+      }
       setEditing(false);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to update.");
@@ -310,15 +322,41 @@ export default function VehicleDetailScreen() {
             </Pane>
           </View>
 
+          {vehicle ? (
+            <View style={{ borderRadius: 20, overflow: "hidden" }}>
+              {newPhoto ? (
+                createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 200, objectFit: "cover", display: "block" } })
+              ) : (
+                <CarThumb car={vehicle} height={200} radius={0} />
+              )}
+            </View>
+          ) : null}
+
           {editing ? (
             <View style={{ gap: space.line }}>
+              {Platform.OS === "web" ? (
+                <View style={{ gap: space.hair }}>
+                  <Kicker>Car photo</Kicker>
+                  {createElement("input", {
+                    type: "file",
+                    accept: "image/jpeg,image/png,image/webp",
+                    onChange: (e: { target: { files: unknown } }) => {
+                      const files = e.target.files as { item: (i: number) => { type?: string } | null } | null;
+                      const f = files?.item(0) ?? null;
+                      if (f && f.type && ["image/jpeg", "image/png", "image/webp"].includes(f.type)) setNewPhoto({ blob: f as unknown as Blob, contentType: f.type, previewUrl: URL.createObjectURL(f as unknown as Blob) });
+                      else setNewPhoto(null);
+                    },
+                  })}
+                  <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
+                </View>
+              ) : null}
               <Field label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
               <Field label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
               <Field label="Colour" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
               <Field label="Odometer (km)" value={form.odometer} onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))} keyboardType="numeric" />
               <View style={{ gap: space.breath }}>
                 <Button label="Save changes" busy={saving} onPress={() => void handleSave()} />
-                <Button label="Cancel" kind="quiet" onPress={() => setEditing(false)} />
+                <Button label="Cancel" kind="quiet" onPress={() => { setNewPhoto(null); setEditing(false); }} />
               </View>
             </View>
           ) : (
