@@ -26,7 +26,7 @@ export function AuthCard({ role, title, copy, children, error }: { role: string;
         >
           <Logo variant="stacked" height={AUTH.logoHeight} />
           <Text style={{ color: AUTH.accent, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "600" }}>{role}</Text>
-          <Text style={{ color: AUTH.text, fontSize: 24, fontWeight: "500", textAlign: "center" }}>{title}</Text>
+          <Text style={{ color: AUTH.text, fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, fontWeight: "600", textAlign: "center" }}>{title}</Text>
           <Text style={{ color: AUTH.muted, fontSize: 15, lineHeight: 22, textAlign: "center" }}>{copy}</Text>
           <View style={{ width: "100%", gap: 10, marginTop: 6 }}>{children}</View>
           {error ? <Text style={{ color: AUTH.danger, fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
