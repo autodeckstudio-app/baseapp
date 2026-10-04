@@ -5,9 +5,10 @@ const config: ExpoConfig = {
   slug: "autodeck-studio",
   version: "1.0.0",
   orientation: "portrait",
+  icon: "./assets/brand/icon.png",
   scheme: "autodeck-studio",
   userInterfaceStyle: "light",
-  web: { bundler: "metro", output: "single" },
+  web: { favicon: "./assets/brand/favicon.png", bundler: "metro", output: "single" },
   ios: {
     supportsTablet: true,
     bundleIdentifier: "in.autodeck.studio",
@@ -17,6 +18,7 @@ const config: ExpoConfig = {
     package: "in.autodeck.studio",
     adaptiveIcon: {
       backgroundColor: "#ffffff",
+      foregroundImage: "./assets/brand/icon-512.png",
     },
   },
   plugins: [

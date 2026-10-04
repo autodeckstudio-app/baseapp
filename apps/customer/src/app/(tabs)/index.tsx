@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
-import { ExperienceThemeProvider, Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { ExperienceThemeProvider, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -170,7 +170,7 @@ export default function HomeScreen() {
   const header = (
     <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
       <View style={{ flex: 1, gap: space.hair }}>
-        <Kicker tone="accent">AutoDeck</Kicker>
+        <View style={{ alignSelf: "flex-start" }}><Logo height={24} /></View>
         <T role="title">{greetingFor(new Date(), m.customer.firstName)}</T>
       </View>
       <Pressable

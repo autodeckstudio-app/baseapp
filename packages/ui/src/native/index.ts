@@ -5,3 +5,4 @@ export { Glass, type GlassProps, type GlassTone } from "./Glass.js";
 export { Ambient } from "./Ambient.js";
 export { Icon } from "./Icon.js";
 export { PillTabBar } from "./PillTabBar.js";
+export { Logo } from "./Logo.js";

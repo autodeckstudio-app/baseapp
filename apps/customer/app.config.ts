@@ -5,6 +5,8 @@ const config: ExpoConfig = {
   slug: "autodeck-customer",
   version: "1.0.0",
   orientation: "portrait",
+  icon: "./assets/brand/icon.png",
+  web: { favicon: "./assets/brand/favicon.png" },
   scheme: "autodeck",
   userInterfaceStyle: "automatic",
   ios: {
@@ -16,6 +18,7 @@ const config: ExpoConfig = {
     package: "in.autodeck.customer",
     adaptiveIcon: {
       backgroundColor: "#ffffff",
+      foregroundImage: "./assets/brand/icon-512.png",
     },
     // Google Play Developer account required — REQUIRES APPROVAL ($25 one-time)
   },

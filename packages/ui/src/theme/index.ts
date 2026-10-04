@@ -16,3 +16,4 @@ export { space, layout, radius, depth, fontFamily, type, motion, cubicBezier, ty
 export { contrastRatio } from "./contrast.js";
 export { themeVariables, scaleVariables, themeStylesheet } from "./css.js";
 export * from "./icons.js";
+export * from "./logo.js";

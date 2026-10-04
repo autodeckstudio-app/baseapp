@@ -4,7 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { TextInput } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
-import { Ambient } from "@autodeck/ui/native";
+import { Ambient, Logo } from "@autodeck/ui/native";
 import {
   devGoogleSignIn,
   googleClientIds,
@@ -41,7 +41,7 @@ export default function LoginScreen() {
     <Ambient>
       <View style={{ flex: 1, justifyContent: "center", width: "100%", maxWidth: 480, alignSelf: "center", padding: space.inset, gap: space.section }}>
         <View style={{ gap: space.line, alignItems: "center" }}>
-          <Kicker tone="accent">AutoDeck</Kicker>
+          <Logo height={44} />
           <T role="display" style={{ textAlign: "center" }}>Care for your car, without the chasing.</T>
         </View>
         <Pane pad="inset" round="pane">

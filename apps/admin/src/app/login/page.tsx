@@ -7,6 +7,7 @@ import { homeFor } from "../../lib/staff-access";
 import { Ambient } from "../../experience/Ambient";
 import { Glass } from "../../experience/Glass";
 import "../../experience/shell.css";
+import { LOGO_HORIZONTAL_SVG, logoDataUri } from "@autodeck/ui/theme";
 
 // Google-only sign-in. The studio owner's account opens the full app; Gmail
 // addresses on the staff roster open the Studio floor; anyone else is told
@@ -58,7 +59,7 @@ export default function LoginPage() {
           <Glass className="ax-login-card" pad="inset" round="pane" raised>
             <p className="ax-label" style={{ margin: 0 }}>Studio · Office</p>
             <h1 className="ax-display" style={{ margin: "var(--ad-space-breath) 0 var(--ad-space-line)" }}>
-              Auto<span style={{ color: "var(--ad-accent)" }}>Deck</span>
+              <img src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 44, width: "auto" }} />
             </h1>
             {mfaRequired ? (
               <form onSubmit={handleConfirmCode}>

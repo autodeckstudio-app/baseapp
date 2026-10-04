@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Text, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { Text, View, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { GoogleAuthProvider, getRedirectResult, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../../lib/firebase";
 import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
+import { Logo } from "@autodeck/ui/native";
 
 export default function StudioLoginScreen() {
   const router = useRouter();
@@ -66,7 +67,8 @@ export default function StudioLoginScreen() {
       style={{ flex: 1, justifyContent: "center", alignSelf: "center", width: "100%", maxWidth: 420, padding: spacing.xxl }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs, textAlign: "center" }}>AutoDeck Studio</Text>
+      <View style={{ alignItems: "center", marginBottom: spacing.xs }}><Logo height={48} /></View>
+      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs, textAlign: "center" }}>Studio</Text>
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl, textAlign: "center" }}>Staff sign in</Text>
 
       {Platform.OS === "web" ? (
