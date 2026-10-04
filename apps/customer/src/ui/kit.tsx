@@ -192,7 +192,11 @@ export function Button({
           backgroundColor: primary ? colors.accent : "transparent",
           borderWidth: primary ? 0 : 1,
           borderColor: kind === "danger" ? colors.danger : colors.borderStrong,
-          opacity: off ? 0.5 : pressed ? 0.85 : 1,
+          opacity: off ? 0.45 : 1,
+          transform: pressed && !off ? [{ translateY: 2 }] : [],
+          ...(Platform.OS === "web" && primary
+            ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 8px 18px rgba(236,134,56,0.38), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
+            : {}),
         },
         style,
       ]}

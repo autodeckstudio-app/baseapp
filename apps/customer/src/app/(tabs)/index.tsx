@@ -1,7 +1,7 @@
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Animated, Platform, Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { ExperienceThemeProvider, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
@@ -16,6 +16,8 @@ import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-
 import { listenToVehicleWarranties } from "../../lib/warranty-service";
 import type { Service } from "@autodeck/core";
 import { getServiceCatalogue, priceLabel } from "../../lib/catalogue-service";
+import { getAvailability, todayIST, type AvailableSlot } from "../../lib/booking-service";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { StoryViewer } from "../../ui/StoryViewer";
@@ -66,6 +68,31 @@ function StatusRail({ status }: { status: string }) {
   );
 }
 
+function FadeUp({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: 1, duration: 520, delay, useNativeDriver: Platform.OS !== "web" }).start();
+  }, [v, delay]);
+  return <Animated.View style={{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }}>{children}</Animated.View>;
+}
+
+const DISC_SHADOW = { shadowColor: "#281E3C", shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 4, height: 6 }, elevation: 5 } as const;
+
+function QuickActions({ items }: { items: Array<{ icon: Parameters<typeof Icon>[0]["name"]; label: string; onPress: () => void }> }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      {items.map((it) => (
+        <Pressable key={it.label} accessibilityRole="button" accessibilityLabel={it.label} onPress={it.onPress} style={({ pressed }) => ({ alignItems: "center", gap: 8, width: 76, transform: [{ scale: pressed ? 0.94 : 1 }] })}>
+          <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...DISC_SHADOW }}>
+            <Icon name={it.icon} color="#2E2E33" size={36} />
+          </View>
+          <T role="caption" tone="secondary">{it.label}</T>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const auth = useAuth();
   const router = useRouter();
@@ -77,6 +104,7 @@ export default function HomeScreen() {
   const [open, setOpen] = useState<StoryGroup | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [picks, setPicks] = useState<Service[]>([]);
+  const [suggest, setSuggest] = useState<{ service: Service; slots: AvailableSlot[] } | null>(null);
   useEffect(() => {
     if (!ready) return;
     void getStories().then((l) => setGroups(groupStories(l)));
@@ -107,6 +135,18 @@ export default function HomeScreen() {
   }, [photoPath]);
 
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
+  const lastVisitServiceId = (ready ? (home.model?.recentHistory[0] as { serviceId?: string } | undefined)?.serviceId : undefined) ?? null;
+  useEffect(() => {
+    setSuggest(null);
+    if (!ready || !carId || picks.length === 0) return;
+    const svc = picks.find((x) => x.id === lastVisitServiceId) ?? picks[0];
+    if (!svc) return;
+    let alive = true;
+    void getAvailability(svc.id, FIRST_STUDIO_ID, todayIST(), 7)
+      .then((sl) => { if (alive && sl.length > 0) setSuggest({ service: svc, slots: sl.slice(0, 3) }); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [ready, carId, picks, lastVisitServiceId]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
   useEffect(() => {
@@ -194,6 +234,8 @@ export default function HomeScreen() {
       <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} />
       <StoryViewer group={open} onClose={() => setOpen(null)} />
 
+      <FadeUp>
+      <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
       <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#2A2433", shadowColor: "#7A6FD0", shadowOpacity: 0.3, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
         <HeroImage aspect={4 / 5} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0.35) 0%, rgba(20,12,30,0) 30%, rgba(20,12,30,0.78) 100%)" } as object) }} />
@@ -215,9 +257,116 @@ export default function HomeScreen() {
           <T style={{ color: "rgba(255,255,255,0.9)" }}>{copy.line}</T>
           <Button label={m.primaryAction.label} onPress={act} testID="home-primary" />
         </View>
+        {car ? (
+          <View style={{ position: "absolute", top: space.inset, right: space.inset, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 6 }}>
+            <T role="caption" tone="accent">Details</T>
+            <T role="caption" tone="accent">›</T>
+          </View>
+        ) : null}
       </View>
+      </Pressable>
+      </FadeUp>
+
+      <QuickActions
+        items={[
+          { icon: "services", label: "Book", onPress: () => router.push("/(tabs)/catalogue") },
+          { icon: "garage", label: "Garage", onPress: () => router.push("/(tabs)/garage") },
+          { icon: "bookings", label: "Visits", onPress: () => router.push("/(tabs)/bookings") },
+          { icon: "club", label: "Club", onPress: () => router.push("/(tabs)/membership") },
+        ]}
+      />
+
+      {car && suggest && !m.liveJob && !m.pendingApproval && !m.dueInvoice ? (() => {
+        const first = suggest.slots[0]!;
+        const dayName = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short" });
+        const lastVisit = m.recentHistory[0]?.scheduledDate;
+        const daysAgo = lastVisit ? Math.max(0, Math.round((Date.now() - new Date(lastVisit).getTime()) / 86400000)) : null;
+        const go = (sl: AvailableSlot) => router.push({ pathname: "/(tabs)/book/confirm", params: { serviceId: suggest.service.id, vehicleId: car.id, vehicleCategory: car.category ?? "hatchback", scheduledDate: sl.date, scheduledTime: sl.startTime, startAt: sl.startAt, estimatedEndAt: sl.estimatedEndAt, estimatedEndDate: sl.estimatedEndDate, endTime: sl.endTime } });
+        return (
+          <FadeUp delay={120}>
+            <Pane pad="inset">
+              <View style={{ gap: space.line }}>
+                <Kicker tone="accent">Suggested for you</Kicker>
+                <T role="title">Ready for {dayName(first.date)}?</T>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...DISC_SHADOW }}>
+                    <Icon name="wash" color="#2E2E33" size={32} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <T role="bodyStrong" numberOfLines={1}>{suggest.service.name.replace(/^Kovalent\s+/i, "")} for your {car.model}</T>
+                    <T role="caption" tone="tertiary">{daysAgo !== null ? `Last visit ${daysAgo} day${daysAgo === 1 ? "" : "s"} ago` : "Open times this week"}</T>
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                  {suggest.slots.map((sl) => (
+                    <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 9, transform: [{ translateY: pressed ? 2 : 0 }], ...DISC_SHADOW })}>
+                      <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
+                    </Pressable>
+                  ))}
+                </View>
+                <Button label="Book in one tap" onPress={() => go(first)} />
+              </View>
+            </Pane>
+          </FadeUp>
+        );
+      })() : null}
+
+      {car || m.membership ? (
+        <View style={{ flexDirection: "row", gap: space.line }}>
+          <Pressable style={{ flex: 1 }} accessibilityRole="button" onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")}>
+            <Pane pad="inset">
+              <View style={{ gap: 4 }}>
+                <Kicker>Club</Kicker>
+                {m.membership ? (
+                  <>
+                    <T role="display">{m.membership.washesTotal - m.membership.washesUsed}<T role="caption" tone="tertiary"> of {m.membership.washesTotal}</T></T>
+                    <T role="caption" tone="tertiary">washes left</T>
+                  </>
+                ) : (
+                  <>
+                    <T role="heading">Join</T>
+                    <T role="caption" tone="tertiary">Washes included</T>
+                  </>
+                )}
+              </View>
+            </Pane>
+          </Pressable>
+          {(() => {
+            // Care status: one honest rule. Days since the last delivered visit (Fresh up to 21, Due soon up to 35, Overdue after),
+            // raised by any expired or soon-to-expire paper or warranty. No score, no invented numbers.
+            const last = m.recentHistory.find((j) => j.status === "DELIVERED")?.scheduledDate;
+            const days = last ? Math.max(0, Math.round((Date.now() - new Date(last).getTime()) / 86400000)) : null;
+            let level: 0 | 1 | 2 = days === null ? 1 : days <= 21 ? 0 : days <= 35 ? 1 : 2;
+            let why = days === null ? "No visit on record yet" : days === 0 ? "Visited today" : `Last visit ${days} day${days === 1 ? "" : "s"} ago`;
+            const expired = reminders.find((r) => r.danger);
+            if (expired) { level = 2; why = `${expired.title} expired`; }
+            else if (reminders[0] && level < 1) { level = 1; why = `${reminders[0].title} ends soon`; }
+            const label = ["Fresh", "Due soon", "Overdue"][level] as string;
+            return (
+              <Pressable style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={`Care status ${label}. ${why}`} onPress={() => (level > 0 ? router.push("/(tabs)/catalogue") : car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}>
+                <Pane pad="inset">
+                  <View style={{ gap: 6 }}>
+                    <Kicker>Care status</Kicker>
+                    <Chip label={label} tone={level === 2 ? "danger" : level === 1 ? "accent" : "premium"} />
+                    <T role="caption" tone="tertiary">{why}</T>
+                  </View>
+                </Pane>
+              </Pressable>
+            );
+          })()}
+        </View>
+      ) : null}
 
       {m.pendingApproval || m.dueInvoice || m.liveJob || m.upcomingBooking ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            const bid = (m.liveJob as { bookingId?: string } | undefined)?.bookingId ?? m.upcomingBooking?.id;
+            if (m.pendingApproval) router.push(`/(tabs)/approvals/${m.pendingApproval.id}`);
+            else if (bid) router.push(`/(tabs)/bookings/${bid}`);
+            else if (car) router.push(`/(tabs)/garage/${car.id}`);
+          }}
+        >
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
             <Kicker tone="accent">{m.liveJob ? "Live now" : m.pendingApproval ? "Needs your OK" : m.dueInvoice ? "Bill ready" : "Next visit"}</Kicker>
@@ -235,21 +384,26 @@ export default function HomeScreen() {
             ) : null}
           </View>
         </Pane>
+        </Pressable>
       ) : null}
 
       {picks.length > 0 ? (
         <View style={{ gap: space.breath }}>
           <View style={{ gap: 2 }}>
-            <Kicker tone="accent">Book in a tap</Kicker>
-            <T role="title">Pick up where you left off</T>
+            <Kicker tone="accent">Care</Kicker>
+            <T role="title">{car ? `Made for your ${car.model}` : "Popular services"}</T>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.breath, paddingRight: space.line }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={238} contentContainerStyle={{ gap: 14, paddingRight: space.line }}>
             {picks.map((sv) => (
-              <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 156, opacity: pressed ? 0.85 : 1 })}>
-                <ServicePhoto service={sv} height={196} radius={22} />
-                <View style={{ paddingTop: 8, gap: 2 }}>
-                  <T role="bodyStrong" numberOfLines={2}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
-                  <T role="bodyStrong" tone="accent" numberOfLines={1}>{priceLabel(sv)}</T>
+              <Pressable key={sv.id} accessibilityRole="button" accessibilityLabel={sv.name} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 224, borderRadius: 28, overflow: "hidden", transform: [{ scale: pressed ? 0.97 : 1 }], ...DISC_SHADOW })}>
+                <ServicePhoto service={sv} height={300} radius={0} />
+                <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0) 40%, rgba(20,12,30,0.82) 100%)" } as object) }} />
+                <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, bottom: 16, gap: 6 }}>
+                  <T role="heading" numberOfLines={2} style={{ color: "#FFFFFF" }}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <T role="bodyStrong" style={{ color: "#FFFFFF" }} numberOfLines={1}>{priceLabel(sv)}</T>
+                    <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 6 }}><T role="caption" style={{ color: "#FFFFFF" }}>Book</T></View>
+                  </View>
                 </View>
               </Pressable>
             ))}
@@ -281,7 +435,7 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      {!m.membership ? (
+      {!m.membership && !car ? (
         <Pressable onPress={() => router.push("/(tabs)/membership")}>
           <Pane pad="inset" fill="cool" tone="premium">
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
@@ -296,7 +450,7 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {m.membership ? (
+      {m.membership && !car ? (
         <View style={{ gap: space.line }}>
           <Kicker tone="premium">Membership</Kicker>
           <Pane pad="inset" fill="cool" tone="premium">
