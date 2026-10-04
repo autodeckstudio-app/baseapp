@@ -15,7 +15,7 @@ import { rescheduleBookingSchema } from "../../schemas/booking.js";
 import { buildOccupiedInterval, hasConflict, type OccupiedInterval } from "../../lib/availability.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
-export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request) => {
+export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request): Promise<{ booking: Booking }> => {
   const user = extractUser(request);
   const data = validate(rescheduleBookingSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.reschedule");
@@ -220,5 +220,5 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     return { ...booking, ...bookingUpdates };
   });
 
-  return { booking: updatedBooking };
+  return { booking: updatedBooking as Booking };
 });

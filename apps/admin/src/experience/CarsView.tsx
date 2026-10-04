@@ -47,7 +47,6 @@ export function CarsView(p: {
 
   const row = (l: AdminListing, review: boolean) => (
     <li key={l.id} className="ax-list-row">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={l.photoUrls[0]} alt="" width={72} height={54} style={{ objectFit: "cover", borderRadius: "var(--ad-radius-chip)" }} />
       <span className="ax-slot-main">
         <span className="ax-person-name">{l.year} {l.make} {l.model}{l.variant ? ` ${l.variant}` : ""}</span>

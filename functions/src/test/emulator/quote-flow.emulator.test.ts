@@ -222,7 +222,7 @@ describe("Price-on-request quote flow", () => {
     expect(b0.quoteStatus).toBe("requested");
     const job = (await db.collection("jobs").where("bookingId", "==", booking.id).limit(1).get()).docs[0];
     const studioA = studioAuth(uid("staff"), TENANT_A, studio.id);
-    await expect(advanceJobStatus.run({ data: { jobId: job.id }, auth: studioA } as never)).rejects.toThrow(/approve the quote/);
+    await expect(advanceJobStatus.run({ data: { jobId: job?.id }, auth: studioA } as never)).rejects.toThrow(/approve the quote/);
     console.log("QUOTE2 advance blocked before quote OK");
     await expect(respondToBookingQuote.run({ data: { bookingId: booking.id }, auth: customerAuth(customerId) } as never)).rejects.toThrow();
     console.log("QUOTE3 approve before quote rejected OK");
@@ -231,11 +231,11 @@ describe("Price-on-request quote flow", () => {
     const q = await bk();
     console.log("QUOTE4 after admin quote", q.quoteStatus, JSON.stringify(q.priceBreakdown ?? q.totalPrice ?? q.basePrice));
     expect(q.quoteStatus).toBe("quoted");
-    await expect(advanceJobStatus.run({ data: { jobId: job.id }, auth: studioA } as never)).rejects.toThrow(/approve the quote/);
+    await expect(advanceJobStatus.run({ data: { jobId: job?.id }, auth: studioA } as never)).rejects.toThrow(/approve the quote/);
     await respondToBookingQuote.run({ data: { bookingId: booking.id }, auth: customerAuth(customerId) } as never);
     expect((await bk()).quoteStatus).toBe("approved");
     console.log("QUOTE5 approved");
-    const r = await advanceJobStatus.run({ data: { jobId: job.id }, auth: studioA } as never);
+    const r = await advanceJobStatus.run({ data: { jobId: job?.id }, auth: studioA } as never);
     console.log("QUOTE6 advanced", JSON.stringify(r).slice(0, 120));
   });
 });

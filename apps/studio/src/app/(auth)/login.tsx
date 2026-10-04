@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Text, View, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { GoogleAuthProvider, getRedirectResult, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../../lib/firebase";
-import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
+import { TextInput } from "@autodeck/ui";
 import { AuthButton, AuthCard } from "@autodeck/ui/native";
 
 export default function StudioLoginScreen() {

@@ -57,7 +57,7 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
             style={{ flex: 1, height: 62, alignItems: "center", justifyContent: "center" }}
           >
             <View style={{ width: 58, height: 46, borderRadius: 23, backgroundColor: focused ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
-              <Icon name={icons[route.name]!} color={focused ? activeColor : inactiveColor} size={24} filled={focused} />
+              <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={24} filled={focused} />
               {badges?.[route.name] ? <View style={{ position: "absolute", top: 8, right: 14, width: 9, height: 9, borderRadius: 5, backgroundColor: "#E5484D", borderWidth: 2, borderColor: "#fff" }} /> : null}
             </View>
           </Pressable>

@@ -22,7 +22,7 @@ export function StoryViewer({ group, onClose }: { group: StoryGroup | null; onCl
     const t = setTimeout(next, PHOTO_MS);
     const raf = setInterval(() => setTick((x) => x + 100), 100);
     return () => { clearTimeout(t); clearInterval(raf); };
-  }, [group?.key, i]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [group?.key, i]);
 
   if (!group || !item) return null;
   return (

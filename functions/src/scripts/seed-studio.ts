@@ -103,7 +103,7 @@ async function seedPlans(): Promise<void> {
       .limit(1)
       .get();
     if (!existing.empty) {
-      console.warn(`[seed-studio] ${p.tier} plan already exists (${existing.docs[0].id}) - left untouched.`);
+      console.warn(`[seed-studio] ${p.tier} plan already exists (${existing.docs[0]?.id}) - left untouched.`);
       skipped++;
       continue;
     }

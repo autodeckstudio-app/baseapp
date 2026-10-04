@@ -59,7 +59,6 @@ export function GalleryView(p: {
               <ul className="ax-list">
                 {p.images.map((img) => (
                   <li key={img.id} className="ax-list-row">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={img.imageUrl} alt={img.caption ?? CATEGORY_NAME[img.category]} width={72} height={48} style={{ objectFit: "cover", borderRadius: "var(--ad-radius-chip)" }} />
                     <span className="ax-slot-main">
                       <span className="ax-person-name">{img.caption ?? CATEGORY_NAME[img.category]}</span>

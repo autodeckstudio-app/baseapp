@@ -74,7 +74,6 @@ export default function AttendancePage() {
         "Marked.",
         "Couldn't save the mark.",
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [today],
   );
 

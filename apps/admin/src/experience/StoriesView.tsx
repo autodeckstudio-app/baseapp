@@ -56,7 +56,6 @@ export function StoriesView(p: {
                     {s.mediaType === "video" ? (
                       <video src={s.url} width={48} height={72} muted style={{ objectFit: "cover", borderRadius: "var(--ad-radius-chip)" }} />
                     ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={s.url} alt={s.caption ?? "Story"} width={48} height={72} style={{ objectFit: "cover", borderRadius: "var(--ad-radius-chip)" }} />
                     )}
                     <span className="ax-slot-main">

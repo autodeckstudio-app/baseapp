@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   let vehicleId: string | null = null;
   const existingV = await db.collection("vehicles").where("registrationNumber", "==", PLATE).limit(1).get();
   if (!existingV.empty) {
-    vehicleId = existingV.docs[0].id;
+    vehicleId = existingV.docs[0]?.id ?? vehicleId;
     log("createVehicle", `reusing existing ${vehicleId}`);
   } else {
     const v = await callFn("createVehicle", cust2.token, {
@@ -136,6 +136,7 @@ async function main(): Promise<void> {
   log("getAvailability", `${slots.length} slots from ${date}`);
   if (!slots.length) throw new Error("no availability - studio config or bay issue");
   const slot = slots[0];
+  if (!slot) throw new Error("no availability - studio config or bay issue");
   log("chosen slot", `${slot.date} ${slot.startTime}`);
 
   const b = await callFn("createBooking", cust2.token, {
@@ -157,8 +158,10 @@ async function main(): Promise<void> {
   // ── Find the job created with the booking ──────────────────────────────────
   const jobSnap = await db.collection("jobs").where("bookingId", "==", booking.id).limit(1).get();
   if (jobSnap.empty) throw new Error("no job found for booking " + booking.id);
-  const jobId = jobSnap.docs[0].id;
-  log("job", { jobId, status: jobSnap.docs[0].data().status });
+  const jobDoc = jobSnap.docs[0];
+  if (!jobDoc) throw new Error("no job found for booking " + booking.id);
+  const jobId = jobDoc.id;
+  log("job", { jobId, status: jobDoc.data().status });
 
   // ── Advance the job through the full chain ─────────────────────────────────
   for (const next of ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"]) {
@@ -187,7 +190,7 @@ async function main(): Promise<void> {
   const inv = await db.collection("invoices").where("jobId", "==", jobId).limit(1).get();
   log("READBACK job", { status: job.status, paymentStatus: job.paymentStatus });
   log("READBACK booking", { status: bk.status });
-  log("READBACK invoice", inv.empty ? "none" : { id: inv.docs[0].id, status: inv.docs[0].data().status, total: inv.docs[0].data().totalAmount });
+  log("READBACK invoice", inv.docs[0] ? { id: inv.docs[0].id, status: inv.docs[0].data().status, total: inv.docs[0].data().totalAmount } : "none");
   console.warn("[journey] COMPLETE");
 }
 

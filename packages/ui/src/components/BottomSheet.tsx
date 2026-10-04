@@ -40,7 +40,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
                   marginBottom: spacing.md,
                 }}
               />
-              {children as any}
+              {children}
             </SafeAreaView>
           </TouchableWithoutFeedback>
         </View>
