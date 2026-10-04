@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   View,
+  Platform,
   Text,
   TextInput as RNTextInput,
   type TextInputProps as RNTextInputProps,
@@ -40,14 +41,15 @@ export function TextInput({ label, error, helperText, onFocus, onBlur, ...rest }
         }}
         style={{
           borderWidth: 1.5,
-          borderColor: hasError ? colors.error : focused ? colors.accent : colors.border,
+          borderColor: hasError ? colors.error : focused ? colors.accent : "transparent",
           borderRadius: radius.md,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm + 4,
           fontSize: typography.body.fontSize,
           color: colors.textPrimary,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceSunken,
           minHeight: 44,
+          ...(Platform.OS === "web" ? ({ boxShadow: "inset 2px 3px 6px rgba(40,30,60,0.10), inset -1px -1px 3px rgba(255,255,255,0.9)", outlineStyle: "none" } as object) : {}),
         }}
         accessibilityLabel={label}
         {...rest}
