@@ -54,6 +54,7 @@ export const createServiceSchema = z.object({
   membershipWashEligible: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
+  imageUrl: z.string().url().max(2000).nullable().optional(),
 }).strict();
 
 export const updateServiceSchema = z.object({
@@ -73,6 +74,7 @@ export const updateServiceSchema = z.object({
   membershipWashEligible: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
+  imageUrl: z.string().url().max(2000).nullable().optional(),
 }).strict();
 
 export const setServiceActiveSchema = z.object({

@@ -49,6 +49,7 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
     if (data.membershipWashEligible !== undefined) updates["membershipWashEligible"] = data.membershipWashEligible;
     if (data.priceOnRequest !== undefined) updates["priceOnRequest"] = data.priceOnRequest;
     if (data.displayOrder !== undefined) updates["displayOrder"] = data.displayOrder;
+    if (data.imageUrl !== undefined) updates["imageUrl"] = data.imageUrl;
 
     tx.update(ref, updates);
     writeAuditLog(tx, {

@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { BayType, Service, ServiceCategory, VehicleCategory, WarrantyDurationUnit } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
 import { formatPaise } from "../lib/format";
+import { uploadServiceImage } from "../lib/service-image";
 import { EMPTY_SERVICE, draftFromService, toServicePayload, type ServiceDraft, type ServicePayload } from "./services-draft";
 
 export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash and care", ceramic: "Ceramic", ppf: "Paint film", coating: "Coatings", tinting: "Window film", inspection: "Inspection", other: "More" };
@@ -53,6 +54,16 @@ export function ServicesView(p: {
   const groups = present.filter((c) => rows.some((s) => s.category === c));
   const result = draft ? toServicePayload(draft) : null;
   const set = (patch: Partial<ServiceDraft>) => draft && setDraft({ ...draft, ...patch });
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try { const url = await uploadServiceImage(file); setDraft((d) => (d ? { ...d, imageUrl: url } : d)); }
+    catch (e) { setPhotoError(e instanceof Error ? e.message : "Upload failed. Try again."); }
+    finally { setPhotoBusy(false); }
+  };
 
   return (
     <div className="ax-page">
@@ -128,6 +139,14 @@ export function ServicesView(p: {
                 <select value={draft.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })}>{CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_NAME[c]}</option>)}</select>
               </label>
               <label className="ax-form-row"><span>Brand (optional)</span><input value={draft.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Gyeon" /></label>
+            </div>
+            <div className="ax-form-row">
+              <span>Photo on the customer card (optional)</span>
+              {draft.imageUrl ? <img src={draft.imageUrl} alt="Service photo" style={{ width: "100%", maxWidth: 280, height: 150, objectFit: "cover", borderRadius: 14 }} /> : <p className="ax-sub">No photo yet. Customers see a standard picture.</p>}
+              <input type="file" accept="image/*" disabled={photoBusy} onChange={(e) => void pickPhoto(e.target.files?.[0])} aria-label="Upload service photo" />
+              {photoBusy ? <p className="ax-sub">Uploading...</p> : null}
+              {photoError ? <p className="ax-status-msg">{photoError}</p> : null}
+              {draft.imageUrl ? <button type="button" className="ax-link" onClick={() => set({ imageUrl: "" })}>Remove photo</button> : null}
             </div>
             <label className="ax-form-row"><span>Description (shown to customers)</span><textarea rows={3} value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
             {draft.internalNotes ? <label className="ax-form-row"><span>Internal notes (admin only, customers never see this)</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}

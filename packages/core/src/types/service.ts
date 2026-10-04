@@ -64,6 +64,8 @@ export interface Service {
   priceEstimate?: boolean;
   priceBasis?: string;
   priceBasisAt?: string;
+  // Optional photo shown on the customer service card. Absent means the app's built-in image is used.
+  imageUrl?: string | null;
   active: boolean;
   displayOrder: number; // ascending; lower = shown first
   createdAt: string; // ISO timestamp

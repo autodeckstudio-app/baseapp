@@ -151,7 +151,7 @@ const POOLS: Record<string, ImageSourcePropType[]> = {
 };
 const ALL_POOL = Object.values(POOLS).flat();
 
-type Svc = { name: string; brand?: string | null; category: string };
+type Svc = { name: string; brand?: string | null; category: string; imageUrl?: string | null };
 
 function topicOf(s: Svc): string {
   const n = s.name.toLowerCase();

@@ -46,6 +46,7 @@ export const createService = onCall({ region: "asia-south1", enforceAppCheck: sh
     active: true,
     priceOnRequest: data.priceOnRequest ?? false,
     displayOrder: data.displayOrder ?? 0,
+    ...(data.imageUrl ? { imageUrl: data.imageUrl } : {}),
     createdAt: now,
     updatedAt: now,
   };

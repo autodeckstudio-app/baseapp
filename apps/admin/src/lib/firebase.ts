@@ -1,5 +1,6 @@
 "use client";
 
+import { getStorage } from "firebase/storage";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
@@ -45,6 +46,7 @@ const app = getApps()[0] ?? initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "asia-south1");
+export const storage = getStorage(app);
 
 export const useEmulator = process.env["NEXT_PUBLIC_USE_FIREBASE_EMULATOR"] === "true";
 

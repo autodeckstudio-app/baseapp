@@ -62,6 +62,16 @@ service firebase.storage {
       allow write: if false;
     }
 
+    // ─── Service photos: service-images/{tenantId}/{filename} ───────────────
+    // Public read so the customer app can show them. Only admins of that tenant
+    // can add or replace, images only, up to 5 MB. New folder; nothing else changes.
+    match /service-images/{tid}/{filename} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isAdminOrAbove() && tenantId() == tid
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
     // ─── Deny everything else ────────────────────────────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;

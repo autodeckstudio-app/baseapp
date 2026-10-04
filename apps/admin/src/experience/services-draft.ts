@@ -20,11 +20,12 @@ export interface ServiceDraft {
   displayOrder: string;
   washEligible: boolean;
   sizes: SizeRuleDraft[];
+  imageUrl: string;
 }
 
 export const EMPTY_SERVICE: ServiceDraft = {
   serviceId: null, name: "", category: "washing", brand: "", description: "", internalNotes: "", priceRupees: "", minutes: "60",
-  warrantyLabel: "", warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [],
+  warrantyLabel: "", warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [], imageUrl: "",
 };
 
 export function draftFromService(s: Service): ServiceDraft {
@@ -43,6 +44,7 @@ export function draftFromService(s: Service): ServiceDraft {
     bay: s.requiredBayType,
     displayOrder: String(s.displayOrder),
     washEligible: s.membershipWashEligible,
+    imageUrl: s.imageUrl ?? "",
     sizes: s.vehicleCategoryPricing.map((r) => ({ vehicleCategory: r.vehicleCategory, extraRupees: String(r.additionalPricePaise / 100), extraMinutes: String(r.additionalMinutes) })),
   };
 }
@@ -61,6 +63,8 @@ export interface ServicePayload {
   displayOrder: number;
   membershipWashEligible: boolean;
   vehicleCategoryPricing: VehicleCategoryPricing[];
+  // Only sent once a photo has been uploaded, so saves from before the photo feature stay unchanged.
+  imageUrl?: string;
 }
 
 const paise = (rupees: string) => Math.round(Number(rupees) * 100);
@@ -113,6 +117,7 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
       displayOrder: order,
       membershipWashEligible: d.washEligible,
       vehicleCategoryPricing,
+      ...(d.imageUrl ? { imageUrl: d.imageUrl } : {}),
     },
   };
 }
