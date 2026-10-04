@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAdminAuth, MFA_RECAPTCHA_CONTAINER_ID } from "../../lib/auth-context";
 import { homeFor } from "../../lib/staff-access";
 import { Ambient } from "../../experience/Ambient";
-import { Glass } from "../../experience/Glass";
 import "../../experience/shell.css";
-import { LOGO_HORIZONTAL_SVG, logoDataUri } from "@autodeck/ui/theme";
+import { AUTH, AUTH_FOOTNOTE, LOGO_STACKED_SVG, logoDataUri } from "@autodeck/ui/theme";
 
 // Google-only sign-in. The studio owner's account opens the full app; Gmail
 // addresses on the staff roster open the Studio floor; anyone else is told
@@ -55,17 +54,17 @@ export default function LoginPage() {
   return (
     <div className="ax-shell">
       <Ambient>
-        <main className="ax-login">
-          <Glass className="ax-login-card" pad="inset" round="pane" raised>
-            <p className="ax-label" style={{ margin: 0 }}>Studio · Office</p>
-            <h1 className="ax-display" style={{ margin: "var(--ad-space-breath) 0 var(--ad-space-line)" }}>
-              <img src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 44, width: "auto" }} />
-            </h1>
+        <main className="ax-login" style={{ background: AUTH.ground }}>
+          <div style={{ width: "100%", maxWidth: AUTH.maxWidth, display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: AUTH.cardPad, borderRadius: AUTH.cardRadius, background: AUTH.cardBg, border: `1px solid ${AUTH.cardBorder}`, boxShadow: AUTH.cardShadow, textAlign: "center" }}>
+            <img src={logoDataUri(LOGO_STACKED_SVG)} alt="AutoDeck" style={{ display: "block", height: AUTH.logoHeight, width: "auto" }} />
+            <span style={{ color: AUTH.accent, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Office and studio</span>
+            <h1 style={{ margin: 0, color: AUTH.text, fontSize: 24, fontWeight: 500 }}>Sign in to AutoDeck Admin</h1>
+            <p style={{ margin: 0, color: AUTH.muted, fontSize: 15, lineHeight: "22px" }}>
+              {mfaRequired ? "Enter the verification code sent to your phone." : "Bookings, payments and the team, for the people who run the studio."}
+            </p>
+            <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
             {mfaRequired ? (
               <form onSubmit={handleConfirmCode}>
-                <p className="ax-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
-                  Enter the verification code sent to your phone.
-                </p>
                 <label htmlFor="code" className="ax-label" style={{ display: "block", marginBottom: "var(--ad-space-breath)" }}>
                   Verification code
                 </label>
@@ -94,14 +93,11 @@ export default function LoginPage() {
               </form>
             ) : (
               <>
-                <p className="ax-muted" style={{ marginTop: 0, marginBottom: "var(--ad-space-inset)" }}>
-                  Studio and office sign-in. Use the Google account your studio added you with.
-                </p>
                 <button
                   type="button"
-                  className="ax-button ax-button--primary"
                   onClick={() => void handleGoogle()}
                   disabled={submitting || loading}
+                  style={{ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, background: AUTH.accent, color: "#fff", border: 0, fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: submitting || loading ? 0.6 : 1 }}
                 >
                   <GoogleMark />
                   {submitting ? "Opening Google…" : "Continue with Google"}
@@ -116,7 +112,9 @@ export default function LoginPage() {
             {/* Invisible reCAPTCHA host for an MFA phone challenge on accounts
                 that enrolled one. Never visibly rendered. */}
             <div id={MFA_RECAPTCHA_CONTAINER_ID} />
-          </Glass>
+            </div>
+            <span style={{ color: AUTH.muted, fontSize: 12, opacity: 0.8 }}>{AUTH_FOOTNOTE}</span>
+          </div>
         </main>
       </Ambient>
     </div>

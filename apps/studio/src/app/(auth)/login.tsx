@@ -5,7 +5,7 @@ import { GoogleAuthProvider, getRedirectResult, signInWithEmailAndPassword, sign
 import type { FirebaseError } from "firebase/app";
 import { auth } from "../../lib/firebase";
 import { colors, spacing, typography, TextInput, Button } from "@autodeck/ui";
-import { Logo } from "@autodeck/ui/native";
+import { AuthButton, AuthCard } from "@autodeck/ui/native";
 
 export default function StudioLoginScreen() {
   const router = useRouter();
@@ -63,35 +63,16 @@ export default function StudioLoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, justifyContent: "center", alignSelf: "center", width: "100%", maxWidth: 420, padding: spacing.xxl }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <View style={{ alignItems: "center", marginBottom: spacing.xs }}><Logo height={48} /></View>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.xxs, textAlign: "center" }}>Studio</Text>
-      <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xxl, textAlign: "center" }}>Staff sign in</Text>
-
+    <AuthCard role="Studio staff" title="Sign in to the studio" copy="Today's cars, walk-ins and bays, for the studio team." error={problem}>
       {Platform.OS === "web" ? (
-        <>
-          <Button label="Continue with Google" onPress={() => void handleGoogle()} loading={loading} />
-          {problem ? <Text style={{ ...typography.caption, color: "#C0392B", marginTop: spacing.md, textAlign: "center" }}>{problem}</Text> : null}
-        </>
+        <AuthButton label="Continue with Google" onPress={() => void handleGoogle()} busy={loading} />
       ) : (
         <>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        editable={!loading}
-      />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry editable={!loading} />
-
-      <Button label="Sign In" onPress={() => void handleLogin()} loading={loading} />
+          <TextInput placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} editable={!loading} />
+          <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry editable={!loading} />
+          <AuthButton label="Sign In" onPress={() => void handleLogin()} busy={loading} />
         </>
       )}
-    </KeyboardAvoidingView>
+    </AuthCard>
   );
 }

@@ -170,7 +170,7 @@ export default function HomeScreen() {
   const header = (
     <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
       <View style={{ flex: 1, gap: space.hair }}>
-        <View style={{ alignSelf: "flex-start" }}><Logo height={24} /></View>
+        <View style={{ alignSelf: "flex-start" }}><Logo variant="mark" height={26} /></View>
         <T role="title">{greetingFor(new Date(), m.customer.firstName)}</T>
       </View>
       <Pressable

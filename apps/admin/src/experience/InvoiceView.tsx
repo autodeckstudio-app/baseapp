@@ -2,6 +2,7 @@
 
 // Invoice: reads like the document the customer receives, with payment and
 // actions beside it. Printing hides the chrome and prints just the document.
+import { LOGO_HORIZONTAL_SVG, logoDataUri } from "@autodeck/ui/theme";
 import { useState } from "react";
 import type { Customer, Invoice, Payment, Vehicle } from "@autodeck/core";
 import { StatusBadge } from "../components/StatusBadge";
@@ -32,7 +33,7 @@ export function InvoiceView(p: {
         <article className="ax-panel ax-invoice ax-detail-main">
           <header className="ax-invoice-head">
             <div>
-              <p className="ax-invoice-brand">Auto<span>Deck</span></p>
+              <img src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 34, width: "auto" }} />
               <p className="ax-sub">{p.studioName}</p>
             </div>
             <div style={{ textAlign: "right" }}>

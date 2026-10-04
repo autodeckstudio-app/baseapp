@@ -17,3 +17,4 @@ export { contrastRatio } from "./contrast.js";
 export { themeVariables, scaleVariables, themeStylesheet } from "./css.js";
 export * from "./icons.js";
 export * from "./logo.js";
+export * from "./auth.js";

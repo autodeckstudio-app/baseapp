@@ -4,7 +4,7 @@
 // auth state; the (admin) layout decides who may see what and passes it in.
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
-import { LOGO_HORIZONTAL_SVG, logoDataUri } from "@autodeck/ui/theme";
+import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, logoDataUri } from "@autodeck/ui/theme";
 import { Ambient } from "./Ambient";
 import "./shell.css";
 
@@ -104,7 +104,8 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
         <div className="ax-shell-frame">
           <aside className="ax-side" aria-label="Main navigation">
             <a href={home} className="ax-wordmark">
-              <img src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" height={30} style={{ display: "block", height: 30, width: "auto" }} />
+              <img className="ax-logo-full" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 30, width: "auto" }} />
+              <img className="ax-logo-mark" src={logoDataUri(LOGO_MARK_SVG)} alt="AutoDeck" style={{ display: "none", height: 30, width: "auto" }} />
             </a>
             {sections.map((sec) => (
               <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>

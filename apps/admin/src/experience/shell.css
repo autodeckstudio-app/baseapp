@@ -565,3 +565,8 @@
 .ax-sheet .ax-label { margin: 0 0 8px; }
 .ax-setup > summary { list-style: none; }
 .ax-setup > summary::-webkit-details-marker { display: none; }
+
+@media (max-width: 860px) {
+  .ax-wordmark .ax-logo-full { display: none !important; }
+  .ax-wordmark .ax-logo-mark { display: block !important; }
+}
