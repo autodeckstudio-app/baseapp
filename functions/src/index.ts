@@ -55,6 +55,8 @@ export { cancelMembership } from "./functions/membership/cancelMembership.js";
 export { getMyMemberships } from "./functions/membership/getMyMemberships.js";
 export { getMembershipUsage } from "./functions/membership/getMembershipUsage.js";
 export { expireStaleMemberships } from "./functions/membership/expireStaleMemberships.js";
+export { cancelAccountDeletion } from "./functions/auth/cancelAccountDeletion.js";
+export { processAccountDeletionsScheduled } from "./functions/auth/processAccountDeletionsScheduled.js";
 export { expireStaleMembershipsScheduled } from "./functions/membership/expireStaleMembershipsScheduled.js";
 
 // ─── Studio Settings (Admin) ────────────────────────────────────────────────

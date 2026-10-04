@@ -1,5 +1,5 @@
 export type AuditAction =
-  | "account.deletion_requested"
+  | "account.deletion_requested" | "account.deletion_cancelled"
   | "pickup.requested"
   | "pickup.updated"
   | "customer.created"

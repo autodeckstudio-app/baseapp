@@ -89,6 +89,7 @@ const EXCLUDED_NON_CALLABLE = [
   "membership/expireStaleMembershipsScheduled.ts",
   "notification/onAuditLogCreated.ts",
   "push/onNotificationPush.ts",
+  "auth/processAccountDeletionsScheduled.ts",
 ].sort();
 
 // Reachable by the customer and/or studio Expo apps. Deliberately NOT
@@ -172,6 +173,7 @@ const DEFERRED = [
   "story/updateStory.ts",
   "vehicle/issueVehiclePhotoUploadUrl.ts",
   "vehicle/restoreVehicle.ts",
+  "auth/cancelAccountDeletion.ts",
 ].sort();
 
 describe("Phase 5B P1-13: App Check coverage", () => {

@@ -75,6 +75,7 @@ export type RateLimitAction =
   | "vehicle.create"
   | "customer.walkin"
   | "account.deletion"
+  | "account.deletion.cancel"
   | "pickup.request"
   | "pickup.update"
   | "vehicle.update"
@@ -179,6 +180,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "vehicle.create": { limit: 20, windowMs: 60_000 },
   "customer.walkin": { limit: 30, windowMs: 60_000 },
   "account.deletion": { limit: 5, windowMs: 60_000 },
+  "account.deletion.cancel": { limit: 5, windowMs: 60_000 },
   "pickup.request": { limit: 10, windowMs: 60_000 },
   "pickup.update": { limit: 60, windowMs: 60_000 },
   "vehicle.update": { limit: 30, windowMs: 60_000 },

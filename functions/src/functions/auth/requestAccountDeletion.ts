@@ -19,7 +19,10 @@ export const requestAccountDeletion = onCall({ region: "asia-south1" }, async (r
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (snap.exists) return;
-    tx.set(ref, { id: user.uid, tenantId: user.claims.tenantId, customerId: user.uid, status: "REQUESTED", createdAt: new Date().toISOString() });
+    const now = new Date();
+    const plusDays = (n: number) => new Date(now.getTime() + n * 86400000).toISOString();
+    // Owner rule: the customer can cancel within 7 days; personal data is erased 30 days after the request.
+    tx.set(ref, { id: user.uid, tenantId: user.claims.tenantId, customerId: user.uid, status: "REQUESTED", createdAt: now.toISOString(), cancelUntil: plusDays(7), purgeAfter: plusDays(30) });
     writeAuditLog(tx, { action: "account.deletion_requested", entityType: "Customer", entityId: user.uid, user, studioId: null });
   });
   return { status: "REQUESTED" };

@@ -8,7 +8,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { LANGS, setLang, useLang } from "../../lib/i18n";
-import { requestAccountDeletion } from "../../lib/pickup-service";
+import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-service";
 import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
@@ -86,10 +86,13 @@ export default function YouScreen() {
         <Button kind="quiet" label={t("Sign out")} onPress={() => setConfirm(true)} />
       )}
       {delStep === "sent" ? (
-        <T role="caption" tone="secondary">Your deletion request is with the studio. We will contact you to confirm before anything is removed.</T>
+        <View style={{ gap: space.breath }}>
+          <T role="caption" tone="secondary">Your deletion request is in. Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
+          <Button kind="quiet" label="Cancel deletion" busy={delBusy} onPress={() => { setDelBusy(true); void cancelAccountDeletion().then(() => setDelStep("idle")).catch(() => Alert.alert("Could not cancel", "The 7 day window may have passed. Contact the studio.")).finally(() => setDelBusy(false)); }} />
+        </View>
       ) : delStep === "ask" ? (
         <View style={{ gap: space.breath }}>
-          <T tone="secondary">Request deletion of your account and data? The studio confirms it first, and records we must keep, like invoices, stay.</T>
+          <T tone="secondary">Delete your account? Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
           <View style={{ flexDirection: "row", gap: space.breath }}>
             <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => { setDelBusy(true); void requestAccountDeletion().then(() => setDelStep("sent")).catch(() => Alert.alert("Could not send", "Try again in a moment.")).finally(() => setDelBusy(false)); }} />
             <Button kind="quiet" label="Cancel" onPress={() => setDelStep("idle")} style={{ flex: 1 }} />

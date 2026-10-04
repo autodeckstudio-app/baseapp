@@ -17,3 +17,7 @@ export async function requestPickupDrop(input: { bookingId: string; kind: Pickup
 export async function requestAccountDeletion(): Promise<void> {
   await httpsCallable(functions, "requestAccountDeletion")({});
 }
+
+export async function cancelAccountDeletion(): Promise<void> {
+  await httpsCallable(functions, "cancelAccountDeletion")({});
+}
