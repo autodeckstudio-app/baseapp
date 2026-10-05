@@ -92,24 +92,29 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#161618", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
-              <CarThumb car={v} height={i === 0 ? 190 : 140} radius={0} />
+            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
+              <CarThumb car={v} height={i === 0 ? 230 : 170} radius={0} />
+              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: i === 0 ? 230 : 170, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.45) 0%, rgba(5,5,6,0) 35%, rgba(5,5,6,0.88) 100%)" } as object) }} />
               <Pressable
                 onPress={(e) => { e.stopPropagation?.(); setRemoveError(null); setRemoving(v); }}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${v.registrationNumber} from your garage`}
                 hitSlop={8}
-                style={({ pressed }) => ({ position: "absolute", top: 10, right: 10, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.7 : 1 })}
               >
                 <Icon name="close" color="#F6F4F1" size={16} />
               </Pressable>
-              <View style={{ gap: space.hair, padding: space.inset }}>
-                {i === 0 && list.length > 1 ? <Kicker tone="accent">Most recent</Kicker> : null}
-                <T role={i === 0 ? "heading" : "bodyStrong"} numberOfLines={1}>{v.make} {v.model}</T>
-                <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center", flexWrap: "wrap" }}>
-                  <Plate value={v.registrationNumber} />
-                  <T role="caption" tone="tertiary" numberOfLines={1}>{[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).join(" · ")}</T>
-                </View>
+              <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: (i === 0 ? 230 : 170) - 64, gap: 4 }}>
+                {i === 0 && list.length > 1 ? <T role="label" tone="accent">Most recent</T> : null}
+                <T role={i === 0 ? "heading" : "bodyStrong"} numberOfLines={1} style={{ color: "#FFFFFF" }}>{v.make} {v.model}</T>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", padding: space.line }}>
+                <Plate value={v.registrationNumber} />
+                {[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map((t) => (
+                  <View key={String(t)} style={{ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <T role="caption" tone="secondary" style={{ textTransform: "capitalize" }}>{String(t)}</T>
+                  </View>
+                ))}
               </View>
             </Pressable>
           ))}

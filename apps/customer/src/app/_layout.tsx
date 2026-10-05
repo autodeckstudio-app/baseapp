@@ -26,7 +26,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const inAuth = group === "(auth)";
 
     if (auth.status === "unauthenticated") {
-      if (!inAuth || segs[1] !== "login") router.replace("/(auth)/login");
+      if (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome")) router.replace("/(auth)/login");
     } else if (auth.status === "authenticated_no_claims") {
       if (!inAuth || segs[1] !== "setup") router.replace("/(auth)/setup");
     } else if (auth.claims.role !== "customer") {
@@ -42,7 +42,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <ExperienceThemeProvider name="charcoal">
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <NavigationGuard>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0B0B0D" } }}>
           <Stack.Screen name="(auth)" />

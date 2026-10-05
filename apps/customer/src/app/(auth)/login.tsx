@@ -4,7 +4,8 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { TextInput } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
-import { AuthButton, AuthCard } from "@autodeck/ui/native";
+import { AuthButton } from "@autodeck/ui/native";
+import { LoginStage } from "../../ui/LoginStage";
 import {
   devGoogleSignIn,
   googleClientIds,
@@ -32,11 +33,11 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const web = Platform.OS === "web";
   return (
-    <AuthCard dark role="Customer" title="Welcome to AutoDeck" copy="Book services, follow your car's visit and keep every bill and warranty in one place." error={error}>
+    <LoginStage title="Welcome to AutoDeck" copy="Book services, follow your car's visit and keep every bill and warranty in one place." error={error}>
       {web ? <WebGoogleButton onError={setError} /> : googleSignInConfigured() ? <GoogleButton onError={setError} /> : null}
       {!web && useEmulator ? <DevSignIn onError={setError} /> : null}
       {!web && !googleSignInConfigured() && !useEmulator ? <T tone="tertiary">Sign-in isn't set up in this build yet.</T> : null}
-    </AuthCard>
+    </LoginStage>
   );
 }
 

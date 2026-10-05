@@ -223,12 +223,20 @@ export default function VehicleDetailScreen() {
     <Screen
       header={
         <View style={{ gap: space.breath }}>
-          <View style={{ gap: space.hair }}>
-            <Kicker tone="accent">Vehicle room</Kicker>
-            <T role="title">{vehicle.year} {vehicle.make} {vehicle.model}</T>
-            <Plate value={vehicle.registrationNumber} />
+          <View style={{ borderRadius: 30, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+            {newPhoto ? (
+              createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 250, objectFit: "cover", display: "block" } })
+            ) : (
+              <CarThumb car={vehicle} height={250} radius={0} />
+            )}
+            <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 250, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.35) 0%, rgba(5,5,6,0) 35%, rgba(5,5,6,0.9) 100%)" } as object) }} />
+            <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, gap: 6 }}>
+              <T role="label" tone="accent">Vehicle room</T>
+              <T role="title" style={{ color: "#FFFFFF" }} numberOfLines={1}>{vehicle.year} {vehicle.make} {vehicle.model}</T>
+              <View style={{ alignSelf: "flex-start" }}><Plate value={vehicle.registrationNumber} /></View>
+            </View>
           </View>
-          <View style={{ flexDirection: "row", gap: space.inset }}>
+          <View style={{ flexDirection: "row", gap: 4, padding: 4, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
             {TABS.map((t) => {
               const selected = tab === t.key;
               return (
@@ -237,9 +245,9 @@ export default function VehicleDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => setTab(t.key)}
-                  style={{ paddingVertical: space.breath, borderBottomWidth: 2, borderBottomColor: selected ? colors.accent : "transparent" }}
+                  style={{ flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 9999, backgroundColor: selected ? "#F59A45" : "transparent" }}
                 >
-                  <T role="label" tone={selected ? "accent" : "tertiary"}>{t.label}</T>
+                  <T role="label" tone={selected ? "onAccent" : "secondary"}>{t.label}</T>
                 </Pressable>
               );
             })}
@@ -322,7 +330,7 @@ export default function VehicleDetailScreen() {
             </Pane>
           </View>
 
-          {vehicle ? (
+          {vehicle && editing ? (
             <View style={{ borderRadius: 20, overflow: "hidden" }}>
               {newPhoto ? (
                 createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 200, objectFit: "cover", display: "block" } })
