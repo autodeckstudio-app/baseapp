@@ -22,6 +22,7 @@ import type {
   NotificationType,
   NotificationEntityType,
 } from "@autodeck/core";
+import { isBookingMissed } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
 export interface NotificationDraft {
@@ -93,6 +94,23 @@ export async function buildNotification(
         type: "booking_cancelled",
         title: "Booking cancelled",
         body: `Your ${vehicle} booking has been cancelled.`,
+        entityType: "Booking",
+        entityId: booking.id,
+      };
+    }
+
+    case "booking.missed": {
+      const booking = (await db.collection(COLLECTIONS.bookings()).doc(log.entityId).get()).data() as
+        | Booking
+        | undefined;
+      // Skip if the customer already rescheduled or cancelled before this was processed.
+      if (!booking || !isBookingMissed(booking)) return null;
+      const vehicle = await vehicleLabel(db, booking.vehicleId);
+      return {
+        userId: booking.customerId,
+        type: "booking_missed",
+        title: "Your slot was missed",
+        body: `Your ${vehicle} booking for ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)} passed. Pick a new time or cancel it.`,
         entityType: "Booking",
         entityId: booking.id,
       };

@@ -86,6 +86,7 @@ const ENFORCED = [
 // regardless of App Check.
 const EXCLUDED_NON_CALLABLE = [
   "approval/expireStaleApprovalsScheduled.ts",
+  "booking/flagMissedBookingsScheduled.ts",
   "membership/expireStaleMembershipsScheduled.ts",
   "notification/onAuditLogCreated.ts",
   "push/onNotificationPush.ts",

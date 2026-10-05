@@ -79,6 +79,7 @@ export { respondToBookingQuote } from "./functions/booking/respondToBookingQuote
 export { cancelApproval } from "./functions/approval/cancelApproval.js";
 export { expireStaleApprovals } from "./functions/approval/expireStaleApprovals.js";
 export { expireStaleApprovalsScheduled } from "./functions/approval/expireStaleApprovalsScheduled.js";
+export { flagMissedBookingsScheduled } from "./functions/booking/flagMissedBookingsScheduled.js";
 
 // ─── Protection (Phase 2D) ──────────────────────────────────────────────────
 export { createProtection } from "./functions/protection/createProtection.js";
