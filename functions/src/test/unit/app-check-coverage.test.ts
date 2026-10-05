@@ -110,6 +110,7 @@ const DEFERRED = [
   "booking/cancelBooking.ts",
   "booking/createBooking.ts",
   "booking/getAvailability.ts",
+  "studio/getStudioInfo.ts",
   "booking/rescheduleBooking.ts",
   "inspection/finalizeInspection.ts",
   "inspection/startInspection.ts",

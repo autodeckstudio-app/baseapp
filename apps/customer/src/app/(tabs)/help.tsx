@@ -1,17 +1,25 @@
 // Help: call, WhatsApp, location, hours and a short FAQ.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Linking, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { useLang } from "../../lib/i18n";
-import { FAQ, STUDIO_INFO } from "../../lib/studio-info";
+import { FAQ, STUDIO_INFO, formatHours } from "../../lib/studio-info";
+import { getStudioInfo } from "../../lib/booking-service";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { Button, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function HelpScreen() {
   const router = useRouter();
   const { t } = useLang();
   const [open, setOpen] = useState<number | null>(null);
-  const s = STUDIO_INFO;
+  const [liveHours, setLiveHours] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) setLiveHours(formatHours(i.operatingHours)); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
+  const s = { ...STUDIO_INFO, hours: liveHours ?? STUDIO_INFO.hours };
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">{t("Help")}</Kicker><T role="title">{t("We are here")}</T></View>}>

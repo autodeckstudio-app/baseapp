@@ -1,4 +1,5 @@
 import { httpsCallable } from "firebase/functions";
+import type { LiveStudioInfo } from "./studio-info";
 import {
   collection,
   query,
@@ -131,4 +132,9 @@ export function todayIST(): string {
 export async function approveBookingQuote(bookingId: string): Promise<void> {
   const fn = httpsCallable<{ bookingId: string }, { bookingId: string }>(functions, "respondToBookingQuote");
   await fn({ bookingId });
+}
+
+export async function getStudioInfo(studioId: string): Promise<LiveStudioInfo> {
+  const fn = httpsCallable<{ studioId: string }, LiveStudioInfo>(functions, "getStudioInfo");
+  return (await fn({ studioId })).data;
 }

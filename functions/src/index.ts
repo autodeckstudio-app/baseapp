@@ -24,6 +24,7 @@ export { setServiceActive } from "./functions/service/setServiceActive.js";
 
 // ─── Booking ─────────────────────────────────────────────────────────────────
 export { getAvailability } from "./functions/booking/getAvailability.js";
+export { getStudioInfo } from "./functions/studio/getStudioInfo.js";
 export { createBooking } from "./functions/booking/createBooking.js";
 export { cancelBooking } from "./functions/booking/cancelBooking.js";
 export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";

@@ -88,6 +88,7 @@ export type RateLimitAction =
   | "inspection.update"
   | "inspection.finalize"
   | "read.availability"
+  | "read.studioInfo"
   | "read.catalogue"
   | "read.calculatePrice"
   | "read.studioJobs"
@@ -193,6 +194,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "inspection.update": { limit: 120, windowMs: 60_000 }, // many small checklist edits per session
   "inspection.finalize": { limit: 30, windowMs: 60_000 },
   "read.availability": { limit: 120, windowMs: 60_000 },
+  "read.studioInfo": { limit: 60, windowMs: 60_000 },
   "read.catalogue": { limit: 120, windowMs: 60_000 },
   "read.calculatePrice": { limit: 120, windowMs: 60_000 },
   "read.studioJobs": { limit: 120, windowMs: 60_000 },

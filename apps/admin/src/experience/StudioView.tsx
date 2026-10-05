@@ -88,10 +88,10 @@ export function StudioView(p: {
             <p className="ax-label ax-form-section">Business</p>
             <div className="ax-form-pair">
               <label className="ax-form-row"><span>Studio name</span><input value={cur.name} onChange={(e) => setProf({ ...cur, name: e.target.value })} /></label>
-              <label className="ax-form-row"><span>GST (%)</span><input inputMode="decimal" value={cur.taxRatePercent} onChange={(e) => setProf({ ...cur, taxRatePercent: e.target.value })} /></label>
+              <label className="ax-form-row"><span>GST (%), fixed at 18 in billing</span><input inputMode="decimal" value={cur.taxRatePercent} disabled readOnly /></label>
             </div>
-            <label className="ax-form-row"><span>Time zone</span>
-              <select value={cur.timezone} onChange={(e) => setProf({ ...cur, timezone: e.target.value })}>
+            <label className="ax-form-row"><span>Time zone, India only for now</span>
+              <select disabled value={cur.timezone} onChange={(e) => setProf({ ...cur, timezone: e.target.value })}>
                 {Array.from(new Set([cur.timezone, "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Europe/London"])).map((tz) => <option key={tz} value={tz}>{tz.replace("_", " ")}</option>)}
               </select>
             </label>

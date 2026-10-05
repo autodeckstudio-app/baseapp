@@ -8,10 +8,11 @@
 // (and set explicitly to "autodeck-dev" by the emulator test harness — see
 // emulator-setup.ts) — not something a deploy can forget to configure, unlike
 // an application-defined env var.
-const PRODUCTION_PROJECT_ID = "autodeck-prod";
+// The live Firebase project is "autodeck-studio"; "autodeck-prod" is kept for a future split.
+const PRODUCTION_PROJECT_IDS = new Set(["autodeck-prod", "autodeck-studio"]);
 
 export function isProductionProject(): boolean {
-  return process.env["GCLOUD_PROJECT"] === PRODUCTION_PROJECT_ID;
+  return PRODUCTION_PROJECT_IDS.has(process.env["GCLOUD_PROJECT"] ?? "");
 }
 
 // Phase 5B P1-13: whether a callable should enforce Firebase App Check.
