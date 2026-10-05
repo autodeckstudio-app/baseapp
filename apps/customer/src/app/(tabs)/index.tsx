@@ -145,7 +145,6 @@ export default function HomeScreen() {
       .then((sl) => { if (alive && sl.length > 0) setSlotsFor({ service: svc, slots: sl.slice(0, 3) }); })
       .catch(() => undefined);
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, carId, cat, washSvcId]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
