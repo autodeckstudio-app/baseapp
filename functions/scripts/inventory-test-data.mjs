@@ -52,7 +52,13 @@ for (const u of users) {
   const c = cust.get(u.uid) ?? {};
   const claims = u.customClaims ?? {};
   const label = [u.displayName ?? c.name ?? c.displayName, u.email, u.phoneNumber].filter(Boolean).join(" / ") || "(no name, email or phone)";
-  const keep = KEEP.test(label) ? "KEEP?" : "";
+  const role = claims.role;
+  const human = Boolean(u.email || u.phoneNumber || u.displayName || c.name);
+  const testy = /test|demo|dummy|example\.com|fake|sample/i.test(label);
+  const keep = role && role !== "customer" ? "KEEP (staff/admin)"
+    : KEEP.test(label) ? "KEEP (Meet/Gauri candidate)"
+    : human && !testy ? "KEEP-until-confirmed (looks like a person)"
+    : "looks-like-test (no person details or test-like name)";
   console.log(`${u.uid} | role=${claims.role ?? "-"} | ${label} | providers=${u.providerData.map((p) => p.providerId).join(",") || "-"} | created=${u.metadata.creationTime} | lastSignIn=${u.metadata.lastSignInTime ?? "never"} | data=${JSON.stringify(perUid.get(u.uid) ?? {})} ${keep}`);
 }
 const authIds = new Set(users.map((u) => u.uid));
