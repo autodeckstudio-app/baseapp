@@ -13,6 +13,7 @@ export { archiveVehicle } from "./functions/vehicle/archiveVehicle.js";
 export { restoreVehicle } from "./functions/vehicle/restoreVehicle.js";
 export { createWalkinCustomer } from "./functions/auth/createWalkinCustomer.js";
 export { submitReview } from "./functions/booking/submitReview.js";
+export { publishVehiclePhoto } from "./functions/vehicle/publishVehiclePhoto.js";
 export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhotoUploadUrl.js";
 
 // ─── Service Catalogue ───────────────────────────────────────────────────────

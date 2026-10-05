@@ -54,6 +54,13 @@ export const issueVehiclePhotoUploadUrlSchema = z.object({
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
 }).strict();
 
+export const publishVehiclePhotoSchema = z.object({
+  vehicleId: z.string().min(1),
+  path: z.string().min(1).max(500),
+  /** true right after an upload: also point the vehicle at this file and bump updatedAt. */
+  publish: z.boolean().optional(),
+}).strict();
+
 export const archiveVehicleSchema = z.object({
   vehicleId: z.string().min(1),
 }).strict();

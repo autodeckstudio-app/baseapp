@@ -100,13 +100,26 @@ export async function uploadVehiclePhoto(vehicleId: string, blob: Blob, contentT
   const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType })).data;
   const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
   if (!res.ok) throw new Error(`Photo upload failed (${res.status}).`);
-  await updateVehicle({ vehicleId, photoUrl: path });
+  try {
+    // Stamps the download token the apps need and points the car at the new file.
+    await httpsCallable<{ vehicleId: string; path: string; publish: boolean }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path, publish: true });
+  } catch {
+    await updateVehicle({ vehicleId, photoUrl: path });
+  }
   return path;
 }
 
 /** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
 export async function resolveVehiclePhotoUrl(path: string, version?: string | null): Promise<string> {
-  const url = await getDownloadURL(storageRef(storage, path));
+  let url: string;
+  try {
+    url = await getDownloadURL(storageRef(storage, path));
+  } catch {
+    // Photos uploaded through the signed URL have no download token yet; the
+    // backend adds one and hands back a working URL.
+    const vehicleId = path.split("/")[2] ?? "";
+    url = (await httpsCallable<{ vehicleId: string; path: string }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path })).data.url;
+  }
   // A replaced photo keeps the same storage path (cover.<ext>), so the URL alone never changes.
   // The vehicle's updatedAt busts browser and image caches so every screen shows the new picture.
   return version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url;

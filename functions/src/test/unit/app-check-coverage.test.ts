@@ -174,6 +174,7 @@ const DEFERRED = [
   "story/listStories.ts",
   "story/updateStory.ts",
   "vehicle/issueVehiclePhotoUploadUrl.ts",
+  "vehicle/publishVehiclePhoto.ts",
   "vehicle/restoreVehicle.ts",
   "auth/cancelAccountDeletion.ts",
 ].sort();
