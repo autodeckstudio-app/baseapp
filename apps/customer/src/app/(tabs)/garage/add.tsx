@@ -68,7 +68,7 @@ export default function AddVehicleScreen() {
     const maxYear = new Date().getFullYear() + 1;
     const fe: Partial<Record<keyof FormState, string>> = {};
     if (!plate) fe.registrationNumber = "Enter your registration number.";
-    else if (!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH 12 AB 1234.";
+    else if (/[^A-Za-z0-9\s]/.test(f.registrationNumber) || !/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH 12 AB 1234.";
     if (f.make.trim().length < 2) fe.make = "Enter the car make.";
     if (f.model.trim().length < 1) fe.model = "Enter the car model.";
     if (!/^\d{4}$/.test(f.year.trim()) || yearNum < 1980 || yearNum > maxYear) fe.year = `Enter a 4-digit year between 1980 and ${maxYear}.`;
@@ -136,6 +136,11 @@ export default function AddVehicleScreen() {
       const code = (err as { code?: string })?.code ?? "";
       const msg = err instanceof Error ? err.message : "";
       console.warn("add car failed", code, msg);
+      const fieldHint = (err as { details?: { field?: string } }).details?.field;
+      if (fieldHint && fieldHint in form && !/archived-match/.test(msg)) {
+        setFieldErrors({ [fieldHint]: /already-exists/.test(code) ? "This car is already added." : "Check this field." });
+        return;
+      }
       const details = (err as { details?: { vehicleId?: string; make?: string; model?: string; year?: number; color?: string } }).details;
       if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
         setArchivedMatch({ vehicleId: details.vehicleId, label: [details.make, details.model, details.year, details.color].filter(Boolean).join(" ") });
@@ -208,7 +213,7 @@ export default function AddVehicleScreen() {
 
         {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}
 
-        {photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.back()} /></View> : <Button label="Add car" busy={loading} onPress={() => void handleAdd()} />}
+        {photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.back()} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready"} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

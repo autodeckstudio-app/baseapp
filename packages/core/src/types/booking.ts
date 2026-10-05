@@ -39,6 +39,8 @@ export interface Booking {
   studioId: string;
   customerId: string;
   vehicleId: string;
+  // Copy of the car at booking time, so old bookings still read correctly if the car is edited or removed.
+  vehicleSnapshot?: { registrationNumber: string; make: string; model: string; year: number; color: string; photoUrl: string | null };
   serviceId: string;
   vehicleCategory: VehicleCategory;
   scheduledAt: string; // ISO UTC — slot start time

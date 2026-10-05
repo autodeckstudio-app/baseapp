@@ -16,7 +16,7 @@ export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undef
     let alive = true;
     setUri(null);
     setFailed(false);
-    if (path) void resolveVehiclePhotoUrl(path).then((u) => { if (alive) setUri(u); }).catch(() => { if (alive) setFailed(true); });
+    if (path) void resolveVehiclePhotoUrl(path).then((u) => { if (alive) setUri(u); }).catch((err: unknown) => { console.warn("car photo could not be loaded", path, (err as { code?: string })?.code ?? err); if (alive) setFailed(true); });
     return () => { alive = false; };
   }, [path]);
   const fallback = vehicleImagery[(car?.category ?? "sedan") as keyof typeof vehicleImagery] ?? vehicleImagery.sedan;

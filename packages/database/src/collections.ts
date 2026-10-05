@@ -9,6 +9,7 @@ export const COLLECTIONS = {
   tenants: () => "tenants",
   customers: () => "customers",
   vehicles: () => "vehicles",
+  vehiclePlateClaims: () => "vehiclePlateClaims",
   bookings: () => "bookings",
   pickupRequests: () => "pickupRequests",
   accountDeletionRequests: () => "accountDeletionRequests",
