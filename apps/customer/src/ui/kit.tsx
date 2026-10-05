@@ -248,7 +248,7 @@ export function Row({
         {detail ? typeof detail === "string" ? <T role="caption" tone="tertiary">{detail}</T> : detail : null}
       </View>
       {trailing}
-      {onPress ? <T tone="tertiary">›</T> : null}
+      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}><T tone="secondary">›</T></View> : null}
     </Pressable>
   );
 }

@@ -51,7 +51,12 @@ export default function YouScreen() {
   const name = savedName ?? auth.user.displayName ?? "AutoDeck member";
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">{t("You")}</Kicker><T role="title">{name}</T>{auth.user.email ? <T role="caption" tone="tertiary">{auth.user.email}</T> : null}</View>}>
+    <Screen header={<View style={{ flexDirection: "row", alignItems: "center", gap: space.inset }}>
+      <View style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: "#F59A45", ...({ backgroundImage: "linear-gradient(160deg,#F9B060,#EC8638)", boxShadow: "0 10px 26px rgba(236,134,56,0.35)" } as object) }}>
+        <T role="title" style={{ color: "#1A1410" }}>{(name.trim()[0] ?? "A").toUpperCase()}</T>
+      </View>
+      <View style={{ flex: 1, gap: space.hair }}><Kicker tone="accent">{t("You")}</Kicker><T role="title" numberOfLines={1}>{name}</T>{auth.user.email ? <T role="caption" tone="tertiary" numberOfLines={1}>{auth.user.email}</T> : null}</View>
+    </View>}>
       {editing ? (
         <View style={{ gap: space.breath }}>
           <Field label="Your name" value={draft} onChangeText={setDraft} autoCapitalize="words" maxLength={100} />
