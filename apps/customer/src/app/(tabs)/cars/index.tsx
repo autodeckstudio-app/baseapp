@@ -15,6 +15,7 @@ const BUDGETS: Array<{ id: string; label: string; max: number }> = [
   { id: "10", label: "Under 10 lakh", max: 1000000 * 100 },
   { id: "20", label: "Under 20 lakh", max: 2000000 * 100 },
 ];
+const BODY_FILTERS = ["hatchback", "sedan", "suv", "muv", "coupe", "other"];
 const FUEL_FILTERS = ["petrol", "diesel", "cng", "electric", "hybrid"];
 
 function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
@@ -57,6 +58,7 @@ export default function CarsScreen() {
   const [error, setError] = useState(false);
   const [query, setQuery] = useState("");
   const [fuel, setFuel] = useState<string | null>(null);
+  const [body, setBody] = useState<string | null>(null);
   const [budget, setBudget] = useState("any");
   const [sort, setSort] = useState<"new" | "low" | "high">("new");
   const shown = useMemo(() => {
@@ -64,12 +66,12 @@ export default function CarsScreen() {
     const max = BUDGETS.find((b) => b.id === budget)?.max ?? Infinity;
     const list = (all ?? []).filter((l) =>
       (!q || `${l.make} ${l.model} ${l.variant ?? ""} ${l.year} ${l.area}`.toLowerCase().includes(q)) &&
-      (!fuel || l.fuel === fuel) && l.askingPrice <= max);
+      (!fuel || l.fuel === fuel) && (!body || l.bodyType === body) && l.askingPrice <= max);
     if (sort === "low") return [...list].sort((a, b) => a.askingPrice - b.askingPrice);
     if (sort === "high") return [...list].sort((a, b) => b.askingPrice - a.askingPrice);
     return list;
-  }, [all, query, fuel, budget, sort]);
-  const filtering = query.trim() !== "" || fuel !== null || budget !== "any";
+  }, [all, query, fuel, body, budget, sort]);
+  const filtering = query.trim() !== "" || fuel !== null || body !== null || budget !== "any";
   useEffect(() => {
     getCarListings(false).then(setAll).catch(() => setError(true));
     getCarListings(true).then(setMine).catch(() => undefined);
@@ -95,6 +97,9 @@ export default function CarsScreen() {
             {FUEL_FILTERS.map((f) => <Pill key={f} label={f} on={fuel === f} onPress={() => setFuel(fuel === f ? null : f)} />)}
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {BODY_FILTERS.map((b) => <Pill key={b} label={b} on={body === b} onPress={() => setBody(body === b ? null : b)} />)}
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Pill label="Newest" on={sort === "new"} onPress={() => setSort("new")} />
             <Pill label="Price low to high" on={sort === "low"} onPress={() => setSort("low")} />
             <Pill label="Price high to low" on={sort === "high"} onPress={() => setSort("high")} />
@@ -105,7 +110,7 @@ export default function CarsScreen() {
       {!all && !error ? <View style={{ gap: space.line }}><Skeleton height={200} /><Skeleton height={200} /></View> : null}
       {all && all.length === 0 ? <Notice title="No cars listed yet" body="New cars appear here as soon as the studio lists them." /> : null}
       {all && all.length > 0 && shown.length === 0 && filtering ? (
-        <Notice title="No cars match" body="Try a wider budget or clear the search." action={<Button kind="quiet" label="Clear filters" onPress={() => { setQuery(""); setFuel(null); setBudget("any"); }} />} />
+        <Notice title="No cars match" body="Try a wider budget or clear the search." action={<Button kind="quiet" label="Clear filters" onPress={() => { setQuery(""); setFuel(null); setBody(null); setBudget("any"); }} />} />
       ) : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
         {shown.map((l) => <Card key={l.id} l={l} onPress={() => router.push(`/(tabs)/cars/${l.id}`)} />)}

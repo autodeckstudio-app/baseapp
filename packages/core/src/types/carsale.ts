@@ -6,6 +6,7 @@
 export type CarListingStatus = "draft" | "pending" | "live" | "reserved" | "sold" | "rejected" | "expired";
 export type CarFuel = "petrol" | "diesel" | "cng" | "electric" | "hybrid";
 export type CarGearbox = "manual" | "automatic";
+export type CarBodyType = "hatchback" | "sedan" | "suv" | "muv" | "coupe" | "other";
 
 export interface CarListing {
   id: string;
@@ -21,6 +22,7 @@ export interface CarListing {
   kmDriven: number;
   fuel: CarFuel;
   gearbox: CarGearbox;
+  bodyType?: CarBodyType | null; // optional, older listings have none
   owners: number;
   colour: string;
   area: string; // area or city only, never a full address
@@ -53,6 +55,7 @@ export interface CarListingView {
   kmDriven: number;
   fuel: CarFuel;
   gearbox: CarGearbox;
+  bodyType?: CarBodyType | null;
   owners: number;
   colour: string;
   area: string;

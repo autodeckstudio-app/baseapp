@@ -17,12 +17,16 @@ export async function uploadListingPhoto(blob: Blob, contentType: string): Promi
 
 export type SellInput = {
   listingId?: string; make: string; model: string; variant: string | null; year: number; kmDriven: number;
-  fuel: "petrol" | "diesel" | "cng" | "electric" | "hybrid"; gearbox: "manual" | "automatic"; owners: number; colour: string; area: string;
+  fuel: "petrol" | "diesel" | "cng" | "electric" | "hybrid"; gearbox: "manual" | "automatic"; bodyType: "hatchback" | "sedan" | "suv" | "muv" | "coupe" | "other" | null; owners: number; colour: string; area: string;
   askingPrice: number; description: string | null; insuranceValidTill: string | null; photoPaths: string[];
   sellerName: string; sellerPhone: string; registrationNumber: string | null;
 };
 export async function submitMyListing(input: SellInput): Promise<void> {
   await httpsCallable<SellInput, { id: string }>(functions, "submitMyListing")(input);
+}
+
+export async function markListingSold(listingId: string): Promise<void> {
+  await httpsCallable(functions, "markMyListingSold")({ listingId });
 }
 
 export async function sendCarLead(listingId: string, kind: "interest" | "report", phone?: string, note?: string): Promise<void> {

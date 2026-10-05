@@ -18,7 +18,7 @@ export type ListingInput = {
   listingId?: string;
   status: "draft" | "live" | "reserved" | "sold";
   make: string; model: string; variant: string | null; year: number; kmDriven: number;
-  fuel: "petrol" | "diesel" | "cng" | "electric" | "hybrid"; gearbox: "manual" | "automatic"; owners: number;
+  fuel: "petrol" | "diesel" | "cng" | "electric" | "hybrid"; gearbox: "manual" | "automatic"; bodyType?: "hatchback" | "sedan" | "suv" | "muv" | "coupe" | "other" | null; owners: number;
   colour: string; area: string; askingPrice: number; description: string | null; insuranceValidTill: string | null;
   photoPaths: string[];
   sellerName?: string | null; sellerPhone?: string | null; registrationNumber?: string | null; reservePrice?: number | null; adminNotes?: string | null;

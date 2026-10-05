@@ -16,6 +16,7 @@ import {
   issueListingPhotoUploadUrlSchema,
   listCarLeadsSchema,
   listCarListingsSchema,
+  markMyListingSoldSchema,
   noContactInText,
   reviewListingSchema,
   setLeadStatusSchema,
@@ -69,6 +70,7 @@ export const adminSaveListing = onCall({ region: "asia-south1" }, async (request
     sellerId: cur?.sellerId ?? null,
     status: d.status,
     make: d.make, model: d.model, variant: d.variant ?? null, year: d.year, kmDriven: d.kmDriven, fuel: d.fuel, gearbox: d.gearbox,
+    bodyType: d.bodyType ?? cur?.bodyType ?? null,
     owners: d.owners, colour: d.colour, area: d.area, askingPrice: d.askingPrice, description: d.description ?? null,
     insuranceValidTill: d.insuranceValidTill ?? null, photoPaths: d.photoPaths,
     sellerName: d.sellerName ?? cur?.sellerName ?? null,
@@ -105,7 +107,7 @@ export const submitMyListing = onCall({ region: "asia-south1" }, async (request)
   if (cur && (cur.sellerId !== user.uid || cur.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "This is not your listing.");
   const listing: CarListing = {
     id: ref.id, tenantId: user.claims.tenantId, studioId: cur?.studioId ?? FIRST_STUDIO_ID, source: "customer", sellerId: user.uid, status: "pending",
-    make: d.make, model: d.model, variant: d.variant ?? null, year: d.year, kmDriven: d.kmDriven, fuel: d.fuel, gearbox: d.gearbox, owners: d.owners,
+    make: d.make, model: d.model, variant: d.variant ?? null, year: d.year, kmDriven: d.kmDriven, fuel: d.fuel, gearbox: d.gearbox, bodyType: d.bodyType ?? null, owners: d.owners,
     colour: d.colour, area: d.area, askingPrice: d.askingPrice, description: d.description ?? null, insuranceValidTill: d.insuranceValidTill ?? null, photoPaths: d.photoPaths,
     sellerName: d.sellerName, sellerPhone: d.sellerPhone, registrationNumber: d.registrationNumber ?? null,
     reservePrice: cur?.reservePrice ?? null, adminNotes: cur?.adminNotes ?? null, rejectionReason: null,
@@ -114,6 +116,26 @@ export const submitMyListing = onCall({ region: "asia-south1" }, async (request)
   await getFirestore().runTransaction(async (tx) => {
     tx.set(ref, listing);
     writeAuditLog(tx, { action: "carListing.submitted", entityType: "carListing", entityId: ref.id, user, studioId: listing.studioId, after: { status: "pending" } });
+  });
+  return { id: ref.id };
+});
+
+// Customer: mark their own car as sold. It leaves the buyer list at once and shows as Sold to the seller and in admin.
+export const markMyListingSold = onCall({ region: "asia-south1" }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "customer");
+  const d = validate(markMyListingSoldSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "paper.submit");
+  const ref = col().doc(d.listingId);
+  await getFirestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError("not-found", "Listing not found.");
+    const cur = snap.data() as CarListing;
+    if (cur.sellerId !== user.uid || cur.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "This is not your listing.");
+    if (cur.status === "sold") return;
+    if (cur.status !== "live" && cur.status !== "reserved" && cur.status !== "pending") throw new HttpsError("failed-precondition", "This listing can not be marked as sold.");
+    tx.update(ref, { status: "sold", updatedAt: new Date().toISOString() });
+    writeAuditLog(tx, { action: "carListing.sold", entityType: "carListing", entityId: ref.id, user, studioId: cur.studioId, before: { status: cur.status }, after: { status: "sold" } });
   });
   return { id: ref.id };
 });
@@ -143,7 +165,7 @@ export const reviewListing = onCall({ region: "asia-south1" }, async (request) =
 async function view(l: CarListing, uid: string): Promise<CarListingView> {
   const bucket = getStorage().bucket();
   const photoUrls = await Promise.all(l.photoPaths.map(async (p) => (await bucket.file(p).getSignedUrl({ version: "v4", action: "read", expires: Date.now() + 3600 * 1000 }))[0]));
-  return { id: l.id, source: l.source, status: l.status, make: l.make, model: l.model, variant: l.variant, year: l.year, kmDriven: l.kmDriven, fuel: l.fuel, gearbox: l.gearbox, owners: l.owners, colour: l.colour, area: l.area, askingPrice: l.askingPrice, description: l.description, insuranceValidTill: l.insuranceValidTill, photoUrls, mine: l.sellerId === uid, rejectionReason: l.sellerId === uid ? l.rejectionReason : null, createdAt: l.createdAt };
+  return { id: l.id, source: l.source, status: l.status, make: l.make, model: l.model, variant: l.variant, year: l.year, kmDriven: l.kmDriven, fuel: l.fuel, gearbox: l.gearbox, bodyType: l.bodyType ?? null, owners: l.owners, colour: l.colour, area: l.area, askingPrice: l.askingPrice, description: l.description, insuranceValidTill: l.insuranceValidTill, photoUrls, mine: l.sellerId === uid, rejectionReason: l.sellerId === uid ? l.rejectionReason : null, createdAt: l.createdAt };
 }
 
 // Customers: live and reserved listings (not expired), plus their own in any status. Staff with includeAll get private fields too.

@@ -6,12 +6,12 @@ import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { submitMyListing, uploadListingPhoto } from "../../../lib/carsale-service";
 
-type F = { make: string; model: string; variant: string; year: string; km: string; fuel: string; gearbox: string; owners: string; colour: string; area: string; price: string; description: string; name: string; phone: string; reg: string };
+type F = { make: string; model: string; variant: string; year: string; km: string; fuel: string; gearbox: string; body: string; owners: string; colour: string; area: string; price: string; description: string; name: string; phone: string; reg: string };
 const FUELS = ["petrol", "diesel", "cng", "electric", "hybrid"];
 
 export default function SellScreen() {
   const router = useRouter();
-  const [f, setF] = useState<F>({ make: "", model: "", variant: "", year: "", km: "", fuel: "petrol", gearbox: "manual", owners: "1", colour: "", area: "", price: "", description: "", name: "", phone: "", reg: "" });
+  const [f, setF] = useState<F>({ make: "", model: "", variant: "", year: "", km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", name: "", phone: "", reg: "" });
   const [photos, setPhotos] = useState<Array<{ blob: Blob; type: string }>>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export default function SellScreen() {
     try {
       const paths = await Promise.all(photos.map((p) => uploadListingPhoto(p.blob, p.type)));
       await submitMyListing({
-        make: f.make.trim(), model: f.model.trim(), variant: f.variant.trim() || null, year: n(f.year), kmDriven: n(f.km), fuel: f.fuel as never, gearbox: f.gearbox as never,
+        make: f.make.trim(), model: f.model.trim(), variant: f.variant.trim() || null, year: n(f.year), kmDriven: n(f.km), fuel: f.fuel as never, gearbox: f.gearbox as never, bodyType: (f.body || null) as never,
         owners: Math.max(1, n(f.owners)), colour: f.colour.trim(), area: f.area.trim(), askingPrice: n(f.price) * 100, description: f.description.trim() || null, insuranceValidTill: null,
         photoPaths: paths, sellerName: f.name.trim(), sellerPhone: f.phone.trim(), registrationNumber: f.reg.trim().toUpperCase() || null,
       });
@@ -57,6 +57,10 @@ export default function SellScreen() {
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Gearbox</T>
           {Platform.OS === "web" ? createElement("select", { value: f.gearbox, onChange: (e: { target: { value: string } }) => up("gearbox", e.target.value), style: { padding: 12, borderRadius: 14, fontSize: 15 } }, ["manual", "automatic"].map((x) => createElement("option", { key: x, value: x }, x))) : null}
+        </View>
+        <View style={{ gap: space.hair }}>
+          <T role="label" tone="tertiary">Body type (optional)</T>
+          {Platform.OS === "web" ? createElement("select", { value: f.body, onChange: (e: { target: { value: string } }) => up("body", e.target.value), style: { padding: 12, borderRadius: 14, fontSize: 15 } }, [createElement("option", { key: "", value: "" }, "Not sure"), ...["hatchback", "sedan", "suv", "muv", "coupe", "other"].map((x) => createElement("option", { key: x, value: x }, x))]) : null}
         </View>
         <Field label="Owners so far" value={f.owners} onChangeText={(v) => up("owners", v)} keyboardType="numeric" maxLength={2} />
         <Field label="Colour" value={f.colour} onChangeText={(v) => up("colour", v)} autoCapitalize="words" maxLength={40} />

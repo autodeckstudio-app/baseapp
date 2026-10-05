@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Pane, Screen, Skeleton, T } from "../../../ui/kit";
-import { getCarListings, inr, kmLabel, sendCarLead } from "../../../lib/carsale-service";
+import { getCarListings, inr, kmLabel, markListingSold, sendCarLead } from "../../../lib/carsale-service";
 
 export default function CarDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +24,17 @@ export default function CarDetail() {
       .catch(() => setCar(null));
   }, [id]);
 
+  async function markSold() {
+    if (!car) return;
+    setBusy(true); setError(null);
+    try {
+      await markListingSold(car.id);
+      setCar({ ...car, status: "sold" });
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "That did not go through. Try again.");
+    } finally { setBusy(false); }
+  }
+
   async function send(kind: "interest" | "report") {
     if (!car) return;
     setBusy(true); setError(null);
@@ -38,7 +49,7 @@ export default function CarDetail() {
   if (car === undefined) return <Screen><Skeleton height={300} /><Skeleton height={120} /></Screen>;
   if (car === null) return <Screen><Notice title="Car not found" body="It may have been sold or taken down." action={<Button kind="quiet" label="Back to cars" onPress={() => router.replace("/(tabs)/cars")} />} /></Screen>;
 
-  const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ["Owners", String(car.owners)], ["Colour", car.colour], ["Area", car.area], ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
+  const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ...(car.bodyType ? [["Body", car.bodyType] as [string, string]] : []), ["Owners", String(car.owners)], ["Colour", car.colour], ["Area", car.area], ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
 
   return (
     <Screen>
@@ -64,8 +75,14 @@ export default function CarDetail() {
       </Pane>
       {car.description ? <T tone="secondary">{car.description}</T> : null}
 
+      {car.mine && (car.status === "live" || car.status === "reserved" || car.status === "pending") ? (
+        <View style={{ gap: space.line }}>
+          {error ? <Notice title="Not done" body={error} /> : null}
+          <Button kind="quiet" label="Mark as sold" busy={busy} onPress={() => void markSold()} />
+        </View>
+      ) : null}
       {car.mine ? (
-        <Notice title={car.status === "pending" ? "Waiting for review" : car.status === "rejected" ? "Not approved" : "Your listing"} body={car.status === "pending" ? "The studio checks every car before it shows to others." : car.rejectionReason ?? "Live for other customers."} />
+        <Notice title={car.status === "pending" ? "Waiting for review" : car.status === "rejected" ? "Not approved" : "Your listing"} body={car.status === "pending" ? "The studio checks every car before it shows to others." : car.status === "sold" ? "Marked as sold. It is no longer shown to other customers." : car.rejectionReason ?? "Live for other customers."} />
       ) : sent === "interest" ? (
         <Notice title="Sent to the studio" body="The studio will call you. Your number is not shared with the seller." />
       ) : sent === "report" ? (

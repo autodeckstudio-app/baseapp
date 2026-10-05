@@ -9,6 +9,7 @@ const fields = {
   kmDriven: z.number().int().min(0).max(1_500_000),
   fuel: z.enum(["petrol", "diesel", "cng", "electric", "hybrid"]),
   gearbox: z.enum(["manual", "automatic"]),
+  bodyType: z.enum(["hatchback", "sedan", "suv", "muv", "coupe", "other"]).nullable().optional(),
   owners: z.number().int().min(1).max(10),
   colour: z.string().min(1).max(40).trim(),
   area: z.string().min(1).max(60).trim(),
@@ -59,3 +60,5 @@ export const expressInterestSchema = z.object({
 
 export const setLeadStatusSchema = z.object({ leadId: z.string().min(1), status: z.enum(["new", "contacted", "closed"]) }).strict();
 export const listCarLeadsSchema = z.object({}).strict();
+
+export const markMyListingSoldSchema = z.object({ listingId: z.string().min(1) }).strict();

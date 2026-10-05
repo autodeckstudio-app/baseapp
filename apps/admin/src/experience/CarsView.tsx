@@ -10,9 +10,9 @@ import { PageHead } from "./Office";
 const rupees = (paise: number) => `Rs ${(paise / 100).toLocaleString("en-IN")}`;
 const STATUS: Record<string, string> = { draft: "Draft", pending: "Waiting for review", live: "Live", reserved: "Reserved", sold: "Sold", rejected: "Rejected", expired: "Expired" };
 
-type Form = { id?: string; make: string; model: string; variant: string; year: string; km: string; fuel: ListingInput["fuel"]; gearbox: ListingInput["gearbox"]; owners: string; colour: string; area: string; price: string; description: string; insurance: string; status: ListingInput["status"]; sellerName: string; sellerPhone: string; reg: string; reserve: string; notes: string; paths: string[] };
-const blank = (): Form => ({ make: "", model: "", variant: "", year: String(new Date().getFullYear() - 3), km: "", fuel: "petrol", gearbox: "manual", owners: "1", colour: "", area: "", price: "", description: "", insurance: "", status: "live", sellerName: "", sellerPhone: "", reg: "", reserve: "", notes: "", paths: [] });
-const fromListing = (l: AdminListing): Form => ({ id: l.id, make: l.make, model: l.model, variant: l.variant ?? "", year: String(l.year), km: String(l.kmDriven), fuel: l.fuel, gearbox: l.gearbox, owners: String(l.owners), colour: l.colour, area: l.area, price: String(l.askingPrice / 100), description: l.description ?? "", insurance: l.insuranceValidTill ?? "", status: (["draft", "live", "reserved", "sold"].includes(l.status) ? l.status : "draft") as Form["status"], sellerName: l.sellerName ?? "", sellerPhone: l.sellerPhone ?? "", reg: l.registrationNumber ?? "", reserve: l.reservePrice ? String(l.reservePrice / 100) : "", notes: l.adminNotes ?? "", paths: l.photoPaths });
+type Form = { id?: string; make: string; model: string; variant: string; year: string; km: string; fuel: ListingInput["fuel"]; gearbox: ListingInput["gearbox"]; body: string; owners: string; colour: string; area: string; price: string; description: string; insurance: string; status: ListingInput["status"]; sellerName: string; sellerPhone: string; reg: string; reserve: string; notes: string; paths: string[] };
+const blank = (): Form => ({ make: "", model: "", variant: "", year: String(new Date().getFullYear() - 3), km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", insurance: "", status: "live", sellerName: "", sellerPhone: "", reg: "", reserve: "", notes: "", paths: [] });
+const fromListing = (l: AdminListing): Form => ({ id: l.id, make: l.make, model: l.model, variant: l.variant ?? "", year: String(l.year), km: String(l.kmDriven), fuel: l.fuel, gearbox: l.gearbox, body: l.bodyType ?? "", owners: String(l.owners), colour: l.colour, area: l.area, price: String(l.askingPrice / 100), description: l.description ?? "", insurance: l.insuranceValidTill ?? "", status: (["draft", "live", "reserved", "sold"].includes(l.status) ? l.status : "draft") as Form["status"], sellerName: l.sellerName ?? "", sellerPhone: l.sellerPhone ?? "", reg: l.registrationNumber ?? "", reserve: l.reservePrice ? String(l.reservePrice / 100) : "", notes: l.adminNotes ?? "", paths: l.photoPaths });
 
 export function CarsView(p: {
   listings: AdminListing[]; leads: CarLead[]; loading: boolean; busy: boolean; error: string | null; message: string | null;
@@ -37,7 +37,7 @@ export function CarsView(p: {
     if (!form) return;
     p.onSave({
       ...(form.id ? { listingId: form.id } : {}), status: form.status, make: form.make.trim(), model: form.model.trim(), variant: form.variant.trim() || null,
-      year: num(form.year), kmDriven: num(form.km), fuel: form.fuel, gearbox: form.gearbox, owners: num(form.owners), colour: form.colour.trim(), area: form.area.trim(),
+      year: num(form.year), kmDriven: num(form.km), fuel: form.fuel, gearbox: form.gearbox, bodyType: (form.body || null) as NonNullable<ListingInput["bodyType"]> | null, owners: num(form.owners), colour: form.colour.trim(), area: form.area.trim(),
       askingPrice: Math.round(num(form.price) * 100), description: form.description.trim() || null, insuranceValidTill: form.insurance || null, photoPaths: form.paths,
       sellerName: form.sellerName.trim() || null, sellerPhone: form.sellerPhone.trim() || null, registrationNumber: form.reg.trim() || null,
       reservePrice: form.reserve ? Math.round(num(form.reserve) * 100) : null, adminNotes: form.notes.trim() || null,
@@ -127,6 +127,7 @@ export function CarsView(p: {
                   <select value={form.fuel} onChange={(e) => set("fuel", e.target.value)} aria-label="Fuel">{["petrol", "diesel", "cng", "electric", "hybrid"].map((x) => <option key={x}>{x}</option>)}</select>
                   <select value={form.gearbox} onChange={(e) => set("gearbox", e.target.value)} aria-label="Gearbox"><option>manual</option><option>automatic</option></select>
                 </div>
+                <select value={form.body} onChange={(e) => set("body", e.target.value)} aria-label="Body type"><option value="">Body type (optional)</option>{["hatchback", "sedan", "suv", "muv", "coupe", "other"].map((x) => <option key={x}>{x}</option>)}</select>
                 <div className="ax-form-pair"><input value={form.owners} onChange={(e) => set("owners", e.target.value)} inputMode="numeric" placeholder="Owners" aria-label="Owners" /><input value={form.colour} onChange={(e) => set("colour", e.target.value)} placeholder="Colour" aria-label="Colour" /></div>
                 <input value={form.area} onChange={(e) => set("area", e.target.value)} placeholder="Area or city (not a full address)" aria-label="Area" />
                 <input value={form.price} onChange={(e) => set("price", e.target.value)} inputMode="numeric" placeholder="Asking price in rupees" aria-label="Asking price" />

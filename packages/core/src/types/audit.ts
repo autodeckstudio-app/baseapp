@@ -87,6 +87,7 @@ export type AuditAction =
   | "carListing.saved"
   | "carListing.submitted"
   | "carListing.reviewed"
+  | "carListing.sold"
   | "carLead.created";
 
 export interface AuditLog {
