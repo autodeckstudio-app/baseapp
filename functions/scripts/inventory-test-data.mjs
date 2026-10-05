@@ -7,12 +7,18 @@ initializeApp({ projectId: "autodeck-studio" });
 const db = getFirestore();
 
 const users = [];
-let token;
-do {
-  const page = await getAuth().listUsers(1000, token);
-  users.push(...page.users);
-  token = page.pageToken;
-} while (token);
+let authOk = true;
+try {
+  let token;
+  do {
+    const page = await getAuth().listUsers(1000, token);
+    users.push(...page.users);
+    token = page.pageToken;
+  } while (token);
+} catch (e) {
+  authOk = false;
+  console.log(`!! could not list sign-in accounts (${String(e.message).slice(0, 160)}). Falling back to the customers records only.`);
+}
 
 const OWNER_FIELDS = ["ownerId", "customerId", "userId", "uid", "createdBy"];
 const COLS = ["customers", "vehicles", "bookings", "jobs", "payments", "invoices", "approvals", "papers", "memberships", "notifications", "pickupRequests", "reviews", "warranties", "inspections", "membershipUsage", "accountDeletionRequests", "carLeads"];
@@ -20,7 +26,8 @@ const perUid = new Map();
 const totals = {};
 const payments = [];
 for (const c of COLS) {
-  const s = await db.collection(c).get();
+  let s;
+  try { s = await db.collection(c).get(); } catch (e) { console.log(`!! could not read ${c}: ${String(e.message).slice(0, 120)}`); totals[c] = "unreadable"; continue; }
   totals[c] = s.size;
   for (const d of s.docs) {
     const x = d.data();
@@ -32,7 +39,10 @@ for (const c of COLS) {
   }
 }
 const cust = new Map();
-for (const d of (await db.collection("customers").get()).docs) cust.set(d.id, d.data());
+try { for (const d of (await db.collection("customers").get()).docs) cust.set(d.id, d.data()); } catch (e) { console.log("!! customers unreadable"); }
+if (!authOk) {
+  for (const [id, c] of cust) users.push({ uid: id, displayName: c.name ?? c.displayName, email: c.email, phoneNumber: c.phone ?? c.phoneNumber, customClaims: {}, providerData: [], metadata: { creationTime: c.createdAt ?? "?", lastSignInTime: null } });
+}
 
 const KEEP = /meet|gauri|sheth871/i;
 console.log("== collection totals ==");
