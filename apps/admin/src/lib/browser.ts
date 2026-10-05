@@ -28,3 +28,9 @@ const POPUP_UNAVAILABLE = new Set([
 export function shouldFallBackToRedirect(code: string | undefined): boolean {
   return typeof code === "string" && POPUP_UNAVAILABLE.has(code);
 }
+
+// iPhone and iPad Safari (iPadOS reports itself as a Mac, so touch points tell
+// them apart). Popup sign-in can hang there, most often in split view, with the
+// button stuck on "Opening Google". Redirect sign-in is used instead.
+export const isIosBrowser = (ua: string | undefined | null, touchPoints = 0): boolean =>
+  typeof ua === "string" && (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touchPoints > 1));

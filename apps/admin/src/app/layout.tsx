@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AdminAuthProvider } from "../lib/auth-context";
 import { ThemeStyle } from "../experience/ThemeStyle";
@@ -16,7 +16,12 @@ const hi = localFont({ src: "../fonts/noto-sans-devanagari-devanagari-wght-norma
 export const metadata: Metadata = {
   title: "AutoDeck Admin",
   description: "AutoDeck studio operations and administration",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Admin", statusBarStyle: "default" },
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#F3EEFB" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

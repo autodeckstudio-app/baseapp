@@ -34,7 +34,8 @@ if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_RECAPTCHA_
 
 const firebaseConfig = {
   apiKey: process.env["NEXT_PUBLIC_FIREBASE_API_KEY"] ?? "demo-key",
-  authDomain: process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"] ?? "autodeck-dev.firebaseapp.com",
+  // In the browser the auth handler is served from this site (see the /__/auth rewrite in next.config.ts), so Safari does not treat sign-in as cross-site.
+  authDomain: (typeof window !== "undefined" && process.env["NEXT_PUBLIC_AUTH_SAME_ORIGIN"] === "1" ? window.location.host : undefined) ?? process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"] ?? "autodeck-dev.firebaseapp.com",
   projectId: process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"] ?? "autodeck-dev",
   storageBucket: process.env["NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"] ?? "autodeck-dev.firebasestorage.app",
   messagingSenderId: process.env["NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"] ?? "000000000000",

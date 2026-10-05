@@ -26,5 +26,5 @@ export function middleware(request: NextRequest): NextResponse {
 // static theme reference - tokens and primitives only, no data), /api (session
 // exchange endpoints must stay reachable pre-cookie), and Next internals.
 export const config = {
-  matcher: ["/((?!login|design|api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!login|design|api|__|_next/static|_next/image|favicon.ico|manifest.webmanifest|apple-touch-icon.png|icon-192.png|icon-512.png).*)"],
 };

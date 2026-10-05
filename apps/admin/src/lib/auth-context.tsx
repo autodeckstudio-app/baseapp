@@ -18,7 +18,7 @@ import {
 import type { AutoDeckClaims } from "@autodeck/auth";
 import { auth } from "./firebase";
 import { isMultiFactorRequiredError, pickPhoneHint } from "./mfa";
-import { currentUserAgent, isInAppBrowser, shouldFallBackToRedirect } from "./browser";
+import { currentUserAgent, isInAppBrowser, isIosBrowser, shouldFallBackToRedirect } from "./browser";
 
 function googleProvider(): GoogleAuthProvider {
   const provider = new GoogleAuthProvider();
@@ -271,7 +271,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   async function signIn(): Promise<"signed-in" | "mfa" | "redirect"> {
     setError(null);
     setLoading(true);
-    if (isInAppBrowser(currentUserAgent())) return startRedirect();
+    if (isInAppBrowser(currentUserAgent()) || isIosBrowser(currentUserAgent(), typeof navigator === "undefined" ? 0 : navigator.maxTouchPoints)) return startRedirect();
     signingInRef.current = true;
     try {
       const credential = await signInWithPopup(auth, googleProvider());
