@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import type { Booking } from "@autodeck/core";
+import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
 import { useAuth } from "../../../hooks/useAuth";
@@ -69,7 +69,7 @@ export default function BookingsScreen() {
             <View style={{ gap: space.hair, padding: space.inset }}>
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.breath }}>
                 <View style={{ flex: 1, minWidth: 0 }}><T role="bodyStrong" numberOfLines={2}>{svcs[b.serviceId]?.name ?? "Service"}</T></View>
-                <Chip label={STATUS[b.status].label} tone={STATUS[b.status].tone} />
+                <Chip label={isBookingMissed(b) ? "Missed" : STATUS[b.status].label} tone={isBookingMissed(b) ? "danger" : STATUS[b.status].tone} />
               </View>
               <T role="caption" tone="secondary" numberOfLines={1}>{car ? `${car.make} ${car.model}` : "Car"}</T>
               <T role="data" tone="tertiary" numberOfLines={2}>{`${formatDateShort(b.scheduledDate)} · ${b.scheduledTime} · ${rupees(b.totalAmount)}`}</T>

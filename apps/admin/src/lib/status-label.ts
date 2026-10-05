@@ -8,6 +8,7 @@ const LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
   EXPIRED: "Expired",
   NO_SHOW: "No-show",
+  MISSED: "Missed",
   PENDING_VEHICLE: "Awaiting vehicle",
   VEHICLE_RECEIVED: "Checked in",
   IN_PROGRESS: "In progress",

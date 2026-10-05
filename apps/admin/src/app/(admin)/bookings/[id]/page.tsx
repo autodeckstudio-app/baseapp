@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Customer, Vehicle, Service } from "@autodeck/core";
+import { isBookingMissed, type Booking, type ServiceJob, type Payment, type Invoice, type ApprovalRequest, type Customer, type Vehicle, type Service } from "@autodeck/core";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import {
   listenToBooking,
@@ -103,7 +103,7 @@ export default function BookingDetailPage() {
           <p className="ax-hero-sub">{[service?.name, car, customer?.name].filter(Boolean).join(" · ")}</p>
         </div>
         <div className="ax-hero-side">
-          <StatusBadge label={booking.status} />
+          <StatusBadge label={isBookingMissed(booking) ? "MISSED" : booking.status} />
           <span className="ax-hero-total">{formatPaise(booking.totalAmount)}</span>
           <StatusBadge label={booking.paymentStatus} />
         </div>

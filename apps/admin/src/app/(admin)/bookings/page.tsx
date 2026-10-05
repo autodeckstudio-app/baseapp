@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Booking, BookingStatus } from "@autodeck/core";
+import { isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToBookings } from "../../../lib/bookings-service";
 import { StatusBadge } from "../../../components/StatusBadge";
@@ -157,7 +157,7 @@ export default function BookingsPage() {
             {sorted.map((b) => (
               <tr key={b.id} className="row-link" onClick={() => open(b.id)}>
                 <td>{formatDateTime(b.scheduledAt)}</td>
-                <td><StatusBadge label={b.status} /></td>
+                <td><StatusBadge label={isBookingMissed(b) ? "MISSED" : b.status} /></td>
                 <td className="ax-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
                 <td>{customerNames[b.customerId] ?? "-"}</td>
                 <td>{serviceNames[b.serviceId] ?? "-"}</td>

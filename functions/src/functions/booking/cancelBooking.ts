@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, ServiceJob, Membership } from "@autodeck/core";
-import { CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
+import { CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -50,8 +50,8 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
     );
   }
 
-  // Customers cannot cancel within 24h of the scheduled time
-  if (isCustomer) {
+  // Customers cannot cancel within 24h of the scheduled time (a missed booking can always be cancelled)
+  if (isCustomer && !isBookingMissed(booking)) {
     const scheduledAt = new Date(booking.scheduledAt);
     const hoursUntil = (scheduledAt.getTime() - Date.now()) / 3600000;
     if (hoursUntil < CANCELLATION_FREE_WINDOW_HOURS) {

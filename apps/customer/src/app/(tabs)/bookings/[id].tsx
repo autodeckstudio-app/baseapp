@@ -11,7 +11,7 @@ import { Pressable } from "react-native";
 import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
@@ -72,6 +72,7 @@ function formatDuration(minutes: number): string {
 }
 
 function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason: string | null } {
+  if (booking.status === "CONFIRMED" && isBookingMissed(booking)) return { eligible: true, reason: null };
   if (booking.status !== "CONFIRMED") {
     return { eligible: false, reason: NON_RESCHEDULABLE_STATUS_REASONS[booking.status] ?? "This booking can't be rescheduled." };
   }
@@ -210,9 +211,10 @@ export default function BookingDetailScreen() {
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
   const hoursToStart = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
-  const withinFreeWindow = hoursToStart >= CANCELLATION_FREE_WINDOW_HOURS;
+  const missed = isBookingMissed(booking);
+  const withinFreeWindow = missed || hoursToStart >= CANCELLATION_FREE_WINDOW_HOURS;
   const canCancel = (booking.status === "CONFIRMED" || booking.status === "PENDING") && withinFreeWindow;
-  const lateToCancel = (booking.status === "CONFIRMED" || booking.status === "PENDING") && !withinFreeWindow;
+  const lateToCancel = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING") && !withinFreeWindow;
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   const showRescheduleSection = booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
@@ -414,6 +416,10 @@ export default function BookingDetailScreen() {
       ) : null}
 
       {canCancel || lateToCancel ? <PickupCard bookingId={booking.id} /> : null}
+
+      {missed ? (
+        <Notice title="This booking time has passed" body="Your car did not arrive for this slot. Pick a new time, or cancel the booking." />
+      ) : null}
 
       {lateToCancel ? (
         <Notice title="Cancelling" body={`Bookings can be cancelled online up to ${CANCELLATION_FREE_WINDOW_HOURS} hours before the start. After that, please call the studio.`} />

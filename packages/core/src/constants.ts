@@ -18,6 +18,13 @@ export const MAX_ADVANCE_BOOKING_DAYS = 30;
 export const MAX_SERVICE_SPAN_DAYS = 14;
 export const MAX_CUSTOMER_RESCHEDULES = 3;
 export const CANCELLATION_FREE_WINDOW_HOURS = 24;
+/** A confirmed or pending booking is "missed" this long after its start if the car never arrived (status stays CONFIRMED/PENDING). */
+export const MISSED_BOOKING_GRACE_HOURS = 3;
+export function isBookingMissed(b: { status: string; scheduledAt: string }, now: number = Date.now()): boolean {
+  if (b.status !== "CONFIRMED" && b.status !== "PENDING") return false;
+  const t = Date.parse(b.scheduledAt);
+  return Number.isFinite(t) && now - t > MISSED_BOOKING_GRACE_HOURS * 3600000;
+}
 
 export const JOB_STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING_VEHICLE: ["VEHICLE_RECEIVED", "CANCELLED"],

@@ -29,6 +29,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   unpaid: "warning",
   partial: "warning",
   NO_SHOW: "error",
+  MISSED: "warning",
   void: "neutral",
   active: "success",
   expired: "neutral",

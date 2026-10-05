@@ -4,6 +4,7 @@ import type { Booking, StudioConfig, ServiceJob, Service } from "@autodeck/core"
 import {
   MAX_CUSTOMER_RESCHEDULES,
   CANCELLATION_FREE_WINDOW_HOURS,
+  isBookingMissed,
   MAX_SERVICE_SPAN_DAYS,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -52,7 +53,8 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   }
 
   // Customer reschedule rules (doc07 §7.8)
-  if (isCustomer) {
+  // A missed booking (start time passed, car never came) can always be moved to a new future time.
+  if (isCustomer && !isBookingMissed(booking)) {
     if (booking.rescheduleCount >= MAX_CUSTOMER_RESCHEDULES) {
       throw new HttpsError(
         "failed-precondition",
