@@ -1,7 +1,9 @@
 // Customer tabs: Home, Services, Bookings, Garage, You. One tab per
 // journey: book (Services), track and pay (Bookings), car and papers (Garage).
 // Membership, notifications and approvals are nested routes with a back bar.
+import { View } from "react-native";
 import { Tabs } from "expo-router";
+import { InstallPrompt } from "../../ui/InstallPrompt";
 import { PillTabBar, useExperienceTheme } from "@autodeck/ui/native";
 
 const TAB_ICON: Record<string, "home" | "services" | "bookings" | "garage" | "profile"> = { index: "home", catalogue: "services", bookings: "bookings", garage: "garage", profile: "profile" };
@@ -9,6 +11,7 @@ const TAB_ICON: Record<string, "home" | "services" | "bookings" | "garage" | "pr
 export default function TabsLayout() {
   const { colors, glass } = useExperienceTheme();
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor="#F59A45" inactiveColor="#C9C9CE" floating dark resetOnPress />}
       screenOptions={() => ({
@@ -28,5 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="help" options={{ href: null }} />
       <Tabs.Screen name="cars" options={{ href: null }} />
     </Tabs>
+    <InstallPrompt />
+    </View>
   );
 }
