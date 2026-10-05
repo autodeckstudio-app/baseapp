@@ -8,7 +8,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityInfo, Platform, View, type StyleProp, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
-import { radius as radii, space } from "../theme/index.js";
+import { glassFill, radius as radii, space } from "../theme/index.js";
 import { useExperienceTheme } from "./ThemeContext.js";
 
 export type GlassTone = "accent" | "premium" | "danger" | "warning";
@@ -40,7 +40,7 @@ function useReduceTransparency(): boolean {
 }
 
 export function Glass({ children, pad = "gap", round = "card", tone, fill = "base", style, testID }: GlassProps) {
-  const { colors, glass } = useExperienceTheme();
+  const { name, colors, glass } = useExperienceTheme();
   const reduce = useReduceTransparency();
   const blur = Platform.OS === "ios" && !reduce;
   const edge = tone ? colors[tone] : glass.edge;
@@ -53,6 +53,16 @@ export function Glass({ children, pad = "gap", round = "card", tone, fill = "bas
     borderTopColor: tone ? edge : glass.sheen,
     overflow: "hidden",
     backgroundColor: blur ? "transparent" : glass.fallbackFill,
+    // Web (the PWA): real gradient glass with backdrop blur and a lit edge, only on the dark theme.
+    ...(Platform.OS === "web" && name === "charcoal"
+      ? ({
+          backgroundColor: "transparent",
+          backgroundImage: glassFill(glass, fill === "warm" ? "warm" : fill === "cool" ? "cool" : "base"),
+          backdropFilter: `blur(${glass.blur}px) saturate(${glass.saturate})`,
+          WebkitBackdropFilter: `blur(${glass.blur}px) saturate(${glass.saturate})`,
+          boxShadow: "0 14px 34px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10)",
+        } as object)
+      : {}),
   };
   const inner: ViewStyle = { padding: pad === "none" ? 0 : space[pad] };
 

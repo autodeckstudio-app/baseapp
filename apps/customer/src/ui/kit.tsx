@@ -316,7 +316,7 @@ export function Chip({ label, tone = "neutral" }: { label: string; tone?: "neutr
   const { colors } = useExperienceTheme();
   const c = tone === "accent" ? colors.accent : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
   return (
-    <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start" }}>
+    <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.05)" }}>
       <T role="label" style={{ color: c }}>
         {label}
       </T>
