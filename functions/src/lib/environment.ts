@@ -15,31 +15,12 @@ export function isProductionProject(): boolean {
   return PRODUCTION_PROJECT_IDS.has(process.env["GCLOUD_PROJECT"] ?? "");
 }
 
-// Phase 5B P1-13: whether a callable should enforce Firebase App Check.
-// FUNCTIONS_EMULATOR is populated automatically by the real Cloud Functions
-// emulator runtime at cold start — not an application-defined env var
-// someone could forget to set, unlike USE_PAYMENT_MOCK. Enforcement holds
-// in every REAL deployment (dev/staging/prod), not just the "autodeck-prod"
-// project, so that a caller without a valid App Check token is rejected the
-// moment a function is actually deployed, not only once it reaches
-// production. The Firebase Functions emulator has a known bug
-// (firebase-tools#5253) where enforceAppCheck:true rejects callable
-// requests even though the emulator cannot itself verify App Check tokens —
-// so enforcement is switched off for that one specific, auto-detected
-// context.
-//
-// Phase 5C Batch 1 hardening: unlike GCLOUD_PROJECT (runtime-injected,
-// never application-configurable), FUNCTIONS_EMULATOR is a plain env var —
-// Cloud Functions Gen2 supports deploy-time env files
-// (.env.<project-id>), so it is not structurally impossible for it to end
-// up accidentally set to "true" in a real deployment's own config, the same
-// class of risk P1-10/P1-11 already defended against for payment mocking
-// (see isProductionProject()'s doc comment above). isProductionProject() is
-// checked FIRST and short-circuits to enforced — a misconfigured
-// FUNCTIONS_EMULATOR can never disable App Check in the actual
-// "autodeck-prod" project, only in non-production ones (where the known
-// emulator-verification bug this exists to work around actually applies).
+// App Check is switched OFF for now (requested 5 Oct 2026: not needed
+// before launch). Every callable still reads `enforceAppCheck:
+// shouldEnforceAppCheck()`, so turning it back on later is a single deploy
+// with APP_CHECK_ENFORCE=true in the function environment - no code edits -
+// once the web apps send App Check tokens again. Never enforced in the emulator.
 export function shouldEnforceAppCheck(): boolean {
-  if (isProductionProject()) return true;
-  return process.env["FUNCTIONS_EMULATOR"] !== "true";
+  if (process.env["FUNCTIONS_EMULATOR"] === "true") return false;
+  return process.env["APP_CHECK_ENFORCE"] === "true";
 }

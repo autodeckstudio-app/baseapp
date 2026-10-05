@@ -69,7 +69,7 @@ function initAdminApp(): App {
   // Google Auth Library error - not the clear boot-time throw every other
   // production config guard in this app uses (see
   // apps/admin/src/lib/firebase.ts's NEXT_PUBLIC_FIREBASE_PROJECT_ID/
-  // NEXT_PUBLIC_RECAPTCHA_SITE_KEY checks). Fail the same way here instead.
+  // NEXT_PUBLIC_FIREBASE_PROJECT_ID check). Fail the same way here instead.
   // Never include the (absent) secret's value - only the env var's name.
   throw new Error(
     "Firebase Admin SDK has no credential source: FIREBASE_SERVICE_ACCOUNT_KEY is not set, and this does not look like a GCP-native host (no K_SERVICE env var found). " +

@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // reCAPTCHA v3 site key (public) registered with Firebase App Check for the
-  // autodeck-studio preview admin. Overrides the Vercel env value, which pointed
-  // at a key that is not registered with App Check.
-  env: { NEXT_PUBLIC_RECAPTCHA_SITE_KEY: "6Lf0QtktAAAAAP60iBH6o8kWSPAPwsRsnJQyry0B" },
   // Serves Firebase's sign-in handler from this site so redirect sign-in works in Safari.
   async rewrites() {
     const host = process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"];
