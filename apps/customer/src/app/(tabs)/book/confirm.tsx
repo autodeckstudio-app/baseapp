@@ -9,6 +9,7 @@ import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdow
 import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
+import { Icon } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
@@ -154,9 +155,13 @@ export default function BookingConfirmScreen() {
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         The studio confirms your slot after you send this. Price may vary based on final work.
       </T>
-      <Pane pad="gap">
-        <Row title="Payment" detail="You will pay at the studio" last />
-      </Pane>
+      <View style={{ gap: space.line }}>
+        <Kicker>How will you pay</Kicker>
+        <Pane pad="gap">
+          <Row title="Pay at the studio" detail={<T role="caption" tone="secondary">Pay when you collect your car. Nothing is charged now.</T>} trailing={<Icon name="check" color="#EC8638" size={20} />} />
+          <Row title="Pay online now" detail={<T role="caption" tone="tertiary">Opens when online payments go live. For now, pay at the studio.</T>} last />
+        </Pane>
+      </View>
 
       {bookError ? <Notice title="Request not sent" body={bookError} /> : null}
 

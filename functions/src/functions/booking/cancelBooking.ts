@@ -99,20 +99,25 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
     // a job could be cancelled while paid/pending, then still get its
     // payment manually confirmed afterward, invoicing cancelled work
     // (Phase 6 hostile-audit finding).
-    const jobsForPaymentCheck = !jobsSnap.empty
+    const paymentsOnJob = !jobsSnap.empty
       ? await tx.get(
           db
             .collection(COLLECTIONS.payments())
             .where("jobId", "==", jobsSnap.docs[0]?.id ?? "")
             .where("status", "in", ["pending", "processing", "completed"])
-            .limit(1),
+            .limit(10),
         )
       : null;
-    if (jobsForPaymentCheck && !jobsForPaymentCheck.empty) {
+    // Money already taken, or being taken, needs the studio to settle it first.
+    // A payment that was only started (pending) holds no money, so it is simply closed.
+    if (paymentsOnJob && paymentsOnJob.docs.some((d) => d.data()["status"] !== "pending")) {
       throw new HttpsError(
         "failed-precondition",
-        "Cannot cancel a booking once payment has been initiated or completed for its job. Contact the studio to resolve payment first.",
+        "This booking has a payment on it. Please contact the studio to cancel it and arrange any refund.",
       );
+    }
+    for (const p of paymentsOnJob?.docs ?? []) {
+      tx.update(p.ref, { status: "cancelled", updatedAt: now });
     }
 
     tx.update(bookingRef, {

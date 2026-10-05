@@ -200,7 +200,7 @@ export default function BookingDetailScreen() {
       setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
       setConfirmingCancel(false);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Cancellation failed.");
+      setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
     } finally {
       setCancelling(false);
     }
@@ -209,7 +209,11 @@ export default function BookingDetailScreen() {
   if (loading) return <Loading label="Opening your booking" />;
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
-  const canCancel = booking.status === "CONFIRMED" || booking.status === "PENDING";
+  const hoursToStart = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
+  const withinFreeWindow = hoursToStart >= CANCELLATION_FREE_WINDOW_HOURS;
+  const canCancel = (booking.status === "CONFIRMED" || booking.status === "PENDING") && withinFreeWindow;
+  const lateToCancel = (booking.status === "CONFIRMED" || booking.status === "PENDING") && !withinFreeWindow;
+  const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   const showRescheduleSection = booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
@@ -409,13 +413,17 @@ export default function BookingDetailScreen() {
         )
       ) : null}
 
-      {canCancel ? <PickupCard bookingId={booking.id} /> : null}
+      {canCancel || lateToCancel ? <PickupCard bookingId={booking.id} /> : null}
+
+      {lateToCancel ? (
+        <Notice title="Cancelling" body={`Bookings can be cancelled online up to ${CANCELLATION_FREE_WINDOW_HOURS} hours before the start. After that, please call the studio.`} />
+      ) : null}
 
       {canCancel ? (
         confirmingCancel ? (
           <Notice
             title="Cancel this booking?"
-            body="This can't be undone."
+            body={paidAlready ? "This booking has been paid. The studio will contact you about the refund. This can't be undone." : "The slot is released straight away. This can't be undone."}
             action={
               <View style={{ gap: space.breath }}>
                 <Button label="Yes, cancel booking" kind="danger" busy={cancelling} onPress={() => void handleCancelConfirmed()} />
