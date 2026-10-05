@@ -85,13 +85,21 @@ export default function MembershipScreen() {
             const topTier = p.priceInPaise === Math.max(...otherPlans.map((x) => x.priceInPaise));
             return (
               <Pressable key={p.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/membership/${p.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
-                <Pane pad="gap" {...(topTier ? { tone: "premium" as const, fill: "cool" as const } : {})}>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
-                    <View style={{ flex: 1, gap: space.hair }}>
-                      <T role="heading">{p.name}</T>
-                      <T role="caption" tone="tertiary">{p.includedWashes} washes a month · {p.discountPercent}% off other services</T>
+                <Pane pad="inset" {...(topTier ? { tone: "premium" as const, fill: "cool" as const } : {})}>
+                  <View style={{ gap: space.line }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
+                      <View style={{ flex: 1, gap: space.hair }}>
+                        {topTier ? <Chip label="Best value" tone="premium" /> : null}
+                        <T role="heading">{p.name}</T>
+                      </View>
+                      <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 8 }}>
+                        <T role="bodyStrong" style={{ color: "#1A1410" }}>{rupees(p.priceInPaise)}</T>
+                      </View>
                     </View>
-                    <T role="bodyStrong" tone="accent">{rupees(p.priceInPaise)}</T>
+                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      <Chip label={`${p.includedWashes} washes a month`} tone="accent" />
+                      <Chip label={`${p.discountPercent}% off other services`} />
+                    </View>
                   </View>
                 </Pane>
               </Pressable>

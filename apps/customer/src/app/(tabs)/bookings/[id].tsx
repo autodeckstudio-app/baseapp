@@ -14,6 +14,8 @@ import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { ServicePhoto } from "../../../ui/ServicePhoto";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -164,6 +166,14 @@ export default function BookingDetailScreen() {
     return listenToApprovalsForJob(job.id, job.tenantId, job.customerId, setApprovals, () => undefined);
   }, [job?.id]);
 
+  const [svc, setSvc] = useState<{ name: string; brand?: string | null; category: string; imageUrl?: string | null } | null>(null);
+  useEffect(() => {
+    if (!booking) return;
+    let alive = true;
+    void getServiceCatalogue().then((all) => { if (alive) setSvc(all.find((x) => x.id === booking.serviceId) ?? null); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [booking?.serviceId]);
+
   async function handlePayAtStudio() {
     if (!job) return;
     setPayingNow(true);
@@ -241,9 +251,14 @@ export default function BookingDetailScreen() {
   return (
     <Screen
       header={
-        <View style={{ gap: space.breath }}>
-          <Chip label={BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={BOOKING_CHIP_TONE[booking.status] ?? "neutral"} />
-          <T role="title">{displayDate}</T>
+        <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+          {svc ? <ServicePhoto service={svc} aspect={16 / 10} radius={0} /> : <View style={{ aspectRatio: 16 / 10 }} />}
+          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
+          <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
+            <View style={{ alignSelf: "flex-start" }}><Chip label={BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
+            {svc ? <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc.name}</T> : null}
+            <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
+          </View>
         </View>
       }
     >

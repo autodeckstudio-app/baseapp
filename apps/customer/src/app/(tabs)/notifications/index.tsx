@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
-import { useExperienceTheme } from "@autodeck/ui/native";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
@@ -94,25 +94,28 @@ export default function NotificationsScreen() {
       {notifications.length === 0 ? (
         <Notice title="No notifications yet" body="Updates about your bookings and services will show up here." />
       ) : (
-        <Pane pad="gap">
-          {notifications.map((item, i) => {
+        <View style={{ gap: space.line }}>
+          {notifications.map((item) => {
             const unread = item.readAt === null;
             return (
-              <Row
-                key={item.id}
-                title={
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.breath }}>
-                    {unread ? <View style={{ width: 7, height: 7, borderRadius: 9999, backgroundColor: colors.accent }} /> : null}
-                    <T role="bodyStrong">{item.title}</T>
+              <Pressable key={item.id} accessibilityRole="button" onPress={() => void handlePress(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+                <Pane pad="inset">
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.line }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)" }}>
+                      <Icon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} />
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <T role="bodyStrong">{item.title}</T>
+                      <T role="caption" tone="secondary">{item.body}</T>
+                      <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
+                    </View>
+                    {unread ? <View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accent }} /> : null}
                   </View>
-                }
-                detail={`${item.body} - ${formatWhen(item.createdAt)}`}
-                onPress={() => void handlePress(item)}
-                last={i === notifications.length - 1}
-              />
+                </Pane>
+              </Pressable>
             );
           })}
-        </Pane>
+        </View>
       )}
     </Screen>
   );

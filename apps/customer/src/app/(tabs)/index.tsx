@@ -76,7 +76,7 @@ function FadeUp({ children, delay = 0 }: { children: ReactNode; delay?: number }
   return <Animated.View style={{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }}>{children}</Animated.View>;
 }
 
-const DISC_SHADOW = { shadowColor: "#281E3C", shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 4, height: 6 }, elevation: 5 } as const;
+const DISC_SHADOW = { shadowColor: "#000000", shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 4, height: 6 }, elevation: 5 } as const;
 
 export default function HomeScreen() {
   const auth = useAuth();
@@ -229,75 +229,11 @@ export default function HomeScreen() {
     <Screen header={header}>
       {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
 
-      <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} />
-      <StoryViewer group={open} onClose={() => setOpen(null)} />
-
-      {car && catalogue.length > 0 && !m.liveJob && !m.pendingApproval && !m.dueInvoice ? (() => {
-        const dayName = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short" });
-        const go = (sl: AvailableSlot) => router.push({ pathname: "/(tabs)/book/confirm", params: { serviceId: slotsFor!.service.id, vehicleId: car.id, vehicleCategory: car.category ?? "hatchback", scheduledDate: sl.date, scheduledTime: sl.startTime, startAt: sl.startAt, estimatedEndAt: sl.estimatedEndAt, estimatedEndDate: sl.estimatedEndDate, endTime: sl.endTime } });
-        const COPY = {
-          washing: { title: visitDays !== null && visitDays > 21 ? "Time for a wash?" : "Keep it fresh", line: visitDays !== null ? `Last visit ${visitDays} day${visitDays === 1 ? "" : "s"} ago` : "Pick a wash for your car", name: "Washing" },
-          ceramic: { title: `Protect your ${car.model}`, line: hasProtection ? "Add a fresh coat of gloss and protection" : "No paint protection on file yet", name: "Ceramic" },
-          ppf: { title: `Shield your ${car.model}`, line: "Clear film against stone chips and scratches", name: "PPF" },
-        }[cat];
-        const options = catalogue.filter((x) => x.category === cat).sort((a, b) => a.basePrice - b.basePrice).slice(0, 4);
-        const price = (x: Service) => (x as { priceOnRequest?: boolean }).priceOnRequest === true ? "On request" : `From ₹${Math.round(x.basePrice / 100).toLocaleString("en-IN")}`;
-        const picked = options.find((x) => x.id === chosen);
-        return (
-          <FadeUp delay={120}>
-            <Stage service={picked ?? options[0] ?? catSvc(cat)}>
-              <View style={{ gap: space.line }}>
-                <Kicker tone="accent">Suggested for you</Kicker>
-                <T role="title">{COPY.title}</T>
-                <T role="caption" tone="tertiary">{COPY.line}</T>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {(["washing", "ceramic", "ppf"] as const).filter((c) => catSvc(c)).map((c) => {
-                    const on = c === cat;
-                    return (
-                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "rgba(8,8,10,0.55)", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
-                        <T role="bodyStrong" style={{ color: on ? "#1A1410" : "#E4E2DF" }}>{c === "washing" ? "Washing" : c === "ceramic" ? "Ceramic" : "PPF"}</T>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <View style={{ gap: 8 }}>
-                  {options.map((x) => {
-                    const on = x.id === chosen;
-                    return (
-                      <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setChosen(on ? null : x.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 18, borderWidth: 1.5, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(236,134,56,0.22)" : "rgba(8,8,10,0.55)", paddingHorizontal: 14, paddingVertical: 12, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-                        <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{x.name.replace(/^Kovalent\s+/i, "")}</T>
-                        <T role="caption" tone="tertiary">{price(x)}</T>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                {picked && slotsFor ? (
-                  <View style={{ gap: 6 }}>
-                    <T role="caption" tone="tertiary">Open times, or choose your own</T>
-                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                      {slotsFor.slots.map((sl) => (
-                        <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "rgba(8,8,10,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
-                          <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-                <Button label={picked ? "Choose date and time" : "Choose a service"} onPress={() => (picked ? router.push(`/(tabs)/book/${picked.id}` as never) : router.push({ pathname: "/(tabs)/catalogue", params: { cat } }))} />
-                <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/catalogue")} style={{ alignSelf: "center", paddingVertical: 4 }}>
-                  <T role="caption" tone="accent">See all services</T>
-                </Pressable>
-              </View>
-            </Stage>
-          </FadeUp>
-        );
-      })() : null}
-
       <FadeUp>
       <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-      <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#2A2433", shadowColor: "#7A6FD0", shadowOpacity: 0.3, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
-        <HeroImage aspect={3 / 2} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0.35) 0%, rgba(20,12,30,0) 30%, rgba(20,12,30,0.78) 100%)" } as object) }} />
+      <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", shadowColor: "#EC8638", shadowOpacity: 0.28, shadowRadius: 30, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
+        <HeroImage aspect={5 / 4} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.45) 0%, rgba(8,8,10,0) 28%, rgba(8,8,10,0.9) 100%)" } as object) }} />
         <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
           <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>
             <T role="caption" tone="accent">{copy.kicker}</T>
@@ -396,6 +332,70 @@ export default function HomeScreen() {
         </Pane>
         </Pressable>
       ) : null}
+
+      <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} />
+      <StoryViewer group={open} onClose={() => setOpen(null)} />
+
+      {car && catalogue.length > 0 && !m.liveJob && !m.pendingApproval && !m.dueInvoice ? (() => {
+        const dayName = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short" });
+        const go = (sl: AvailableSlot) => router.push({ pathname: "/(tabs)/book/confirm", params: { serviceId: slotsFor!.service.id, vehicleId: car.id, vehicleCategory: car.category ?? "hatchback", scheduledDate: sl.date, scheduledTime: sl.startTime, startAt: sl.startAt, estimatedEndAt: sl.estimatedEndAt, estimatedEndDate: sl.estimatedEndDate, endTime: sl.endTime } });
+        const COPY = {
+          washing: { title: visitDays !== null && visitDays > 21 ? "Time for a wash?" : "Keep it fresh", line: visitDays !== null ? `Last visit ${visitDays} day${visitDays === 1 ? "" : "s"} ago` : "Pick a wash for your car", name: "Washing" },
+          ceramic: { title: `Protect your ${car.model}`, line: hasProtection ? "Add a fresh coat of gloss and protection" : "No paint protection on file yet", name: "Ceramic" },
+          ppf: { title: `Shield your ${car.model}`, line: "Clear film against stone chips and scratches", name: "PPF" },
+        }[cat];
+        const options = catalogue.filter((x) => x.category === cat).sort((a, b) => a.basePrice - b.basePrice).slice(0, 4);
+        const price = (x: Service) => (x as { priceOnRequest?: boolean }).priceOnRequest === true ? "On request" : `From ₹${Math.round(x.basePrice / 100).toLocaleString("en-IN")}`;
+        const picked = options.find((x) => x.id === chosen);
+        return (
+          <FadeUp delay={120}>
+            <Stage service={picked ?? options[0] ?? catSvc(cat)}>
+              <View style={{ gap: space.line }}>
+                <Kicker tone="accent">Suggested for you</Kicker>
+                <T role="title">{COPY.title}</T>
+                <T role="caption" tone="tertiary">{COPY.line}</T>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {(["washing", "ceramic", "ppf"] as const).filter((c) => catSvc(c)).map((c) => {
+                    const on = c === cat;
+                    return (
+                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "rgba(8,8,10,0.55)", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                        <T role="bodyStrong" style={{ color: on ? "#1A1410" : "#E4E2DF" }}>{c === "washing" ? "Washing" : c === "ceramic" ? "Ceramic" : "PPF"}</T>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <View style={{ gap: 8 }}>
+                  {options.map((x) => {
+                    const on = x.id === chosen;
+                    return (
+                      <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setChosen(on ? null : x.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 18, borderWidth: 1.5, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(236,134,56,0.22)" : "rgba(8,8,10,0.55)", paddingHorizontal: 14, paddingVertical: 12, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+                        <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{x.name.replace(/^Kovalent\s+/i, "")}</T>
+                        <T role="caption" tone="tertiary">{price(x)}</T>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {picked && slotsFor ? (
+                  <View style={{ gap: 6 }}>
+                    <T role="caption" tone="tertiary">Open times, or choose your own</T>
+                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      {slotsFor.slots.map((sl) => (
+                        <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "rgba(8,8,10,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                          <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+                <Button label={picked ? "Choose date and time" : "Choose a service"} onPress={() => (picked ? router.push(`/(tabs)/book/${picked.id}` as never) : router.push({ pathname: "/(tabs)/catalogue", params: { cat } }))} />
+                <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/catalogue")} style={{ alignSelf: "center", paddingVertical: 4 }}>
+                  <T role="caption" tone="accent">See all services</T>
+                </Pressable>
+              </View>
+            </Stage>
+          </FadeUp>
+        );
+      })() : null}
 
       {catalogue.length === 0 && catalogueFailed ? (
         <Notice title="Services didn't load" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => { setCatalogueFailed(false); setRetryTick((n) => n + 1); }} />} />

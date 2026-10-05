@@ -70,6 +70,9 @@ export default function CurrentMembershipScreen() {
         <HeroImage source={sceneImagery.membership} />
         <View style={{ padding: space.inset, gap: space.breath }}>
           <T role="display">{washesRemaining}</T>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+            <View style={{ height: 8, borderRadius: 4, backgroundColor: "#EC8638", width: `${membership.washesTotal > 0 ? Math.round((washesRemaining / membership.washesTotal) * 100) : 0}%` }} />
+          </View>
           <T tone="secondary">of {membership.washesTotal} washes left this cycle · {membership.discountPercent}% off everything else</T>
         </View>
       </Pane>
