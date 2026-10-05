@@ -6,7 +6,7 @@ export const STUDIO_INFO = {
   whatsapp: "", // digits only with country code, e.g. "919800000000"
   address: "Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad, Gujarat 380006", // street address shown to the customer
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Sunbeam+Complex%2C+Old+Sharda+Mandir+Rd%2C+Ellisbridge%2C+Ahmedabad%2C+Gujarat+380006", // opens Google Maps at the address
-  hours: "", // e.g. "Mon to Sat, 9 am to 7 pm"
+  hours: "Mon to Sat, 10 am to 9 pm. Sunday, 10 am to 7 pm", // shown on Help
 } as const;
 
 export const FAQ: { q: string; a: string }[] = [
