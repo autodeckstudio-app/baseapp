@@ -288,26 +288,19 @@ export default function HomeScreen() {
       </FadeUp>
 
       {car || m.membership ? (
-        <View style={{ flexDirection: "row", gap: space.line }}>
-          <Pressable style={{ flex: 1 }} accessibilityRole="button" onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")}>
-            <Pane pad="inset">
-              <View style={{ gap: 4 }}>
-                <Kicker>Club</Kicker>
-                {m.membership ? (
-                  <>
-                    <T role="display">{m.membership.washesTotal - m.membership.washesUsed}<T role="caption" tone="tertiary"> of {m.membership.washesTotal}</T></T>
-                    <T role="caption" tone="tertiary">washes left</T>
-                  </>
-                ) : (
-                  <>
-                    <T role="heading">Join</T>
-                    <T role="caption" tone="tertiary">Washes included</T>
-                  </>
-                )}
-              </View>
-            </Pane>
-          </Pressable>
+        <View style={{ flexDirection: "row", gap: space.line, alignItems: "stretch" }}>
           {(() => {
+            const tile = (kicker: string, value: string, tone: "primary" | "accent" | "danger" | "premium", sub: string, onPress: () => void, label: string) => (
+              <Pressable style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
+                <Pane pad="inset">
+                  <View style={{ height: 88, justifyContent: "flex-start", gap: 6 }}>
+                    <Kicker>{kicker}</Kicker>
+                    <T role="heading" tone={tone} numberOfLines={1}>{value}</T>
+                    <T role="caption" tone="tertiary" numberOfLines={2}>{sub}</T>
+                  </View>
+                </Pane>
+              </Pressable>
+            );
             // Care status: one honest rule. Days since the last delivered visit (Fresh up to 21, Due soon up to 35, Overdue after),
             // raised by any expired or soon-to-expire paper or warranty. No score, no invented numbers.
             const last = m.recentHistory.find((j) => j.status === "DELIVERED")?.scheduledDate;
@@ -319,15 +312,17 @@ export default function HomeScreen() {
             else if (reminders[0] && level < 1) { level = 1; why = `${reminders[0].title} ends soon`; }
             const label = ["Fresh", "Due soon", "Overdue"][level] as string;
             return (
-              <Pressable style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={`Care status ${label}. ${why}`} onPress={() => (level > 0 ? router.push("/(tabs)/catalogue") : car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}>
-                <Pane pad="inset">
-                  <View style={{ gap: 6 }}>
-                    <Kicker>Care status</Kicker>
-                    <Chip label={label} tone={level === 2 ? "danger" : level === 1 ? "accent" : "premium"} />
-                    <T role="caption" tone="tertiary">{why}</T>
-                  </View>
-                </Pane>
-              </Pressable>
+              <>
+                {tile(
+                  "Club",
+                  m.membership ? `${m.membership.washesTotal - m.membership.washesUsed} of ${m.membership.washesTotal}` : "Join",
+                  m.membership ? "primary" : "accent",
+                  m.membership ? "washes left" : "Washes included",
+                  () => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership"),
+                  m.membership ? "Club membership" : "Join the club",
+                )}
+                {tile("Care status", label, level === 2 ? "danger" : level === 1 ? "accent" : "premium", why, () => (level > 0 ? router.push("/(tabs)/catalogue") : car ? router.push(`/(tabs)/garage/${car.id}`) : undefined), `Care status ${label}. ${why}`)}
+              </>
             );
           })()}
         </View>

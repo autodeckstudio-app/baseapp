@@ -1,4 +1,5 @@
 import { Pressable, View, Platform } from "react-native";
+import { BlurView } from "expo-blur";
 import { Icon } from "./Icon.js";
 import type { IconName } from "../theme/icons.js";
 
@@ -30,18 +31,23 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
         borderRadius: 31,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.92)",
+        backgroundColor: Platform.OS === "web" ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.35)",
         borderWidth: 1,
-        borderColor: "rgba(29,27,38,0.08)",
+        borderColor: "rgba(255,255,255,0.7)",
         paddingHorizontal: 6,
         shadowColor: "#3C285A",
         shadowOpacity: 0.16,
         shadowRadius: 18,
         shadowOffset: { width: 0, height: 8 },
         elevation: 8,
-        ...(Platform.OS === "web" ? ({ backdropFilter: "blur(18px)" } as object) : {}),
+        ...(Platform.OS === "web" ? ({ backdropFilter: "saturate(180%) blur(24px)", WebkitBackdropFilter: "saturate(180%) blur(24px)" } as object) : {}),
       }}
     >
+      {Platform.OS !== "web" ? (
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 31, overflow: "hidden" }}>
+          <BlurView intensity={60} tint="light" style={{ flex: 1 }} />
+        </View>
+      ) : null}
       {visible.map((route) => {
         const focused = state.routes[state.index]?.key === route.key;
         return (
@@ -54,7 +60,7 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
               const ev = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
               if (!focused && !ev.defaultPrevented) navigation.navigate(route.name);
             }}
-            style={{ flex: 1, height: 62, alignItems: "center", justifyContent: "center" }}
+            style={({ pressed }) => ({ flex: 1, height: 62, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
           >
             <View style={{ width: 58, height: 46, borderRadius: 23, backgroundColor: focused ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
               <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={24} filled={focused} />

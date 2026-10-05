@@ -193,7 +193,8 @@ export function Button({
           borderWidth: primary ? 0 : 1,
           borderColor: kind === "danger" ? colors.danger : colors.borderStrong,
           opacity: off ? 0.45 : 1,
-          transform: pressed && !off ? [{ translateY: 2 }] : [],
+          transform: pressed && !off ? [{ scale: 0.97 }] : [],
+          ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
           ...(Platform.OS === "web" && primary
             ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 8px 18px rgba(236,134,56,0.38), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
             : {}),
@@ -297,7 +298,7 @@ export function PhotoCard({
       disabled={!onPress}
       onPress={onPress}
       accessibilityRole={onPress ? "button" : undefined}
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.985 : 1 }], ...(Platform.OS === "web" ? ({ transition: "transform 140ms ease, opacity 140ms ease" } as object) : {}) })}
     >
       <Pane pad="none">
         <HeroImage source={image} aspect={imageAspect} />

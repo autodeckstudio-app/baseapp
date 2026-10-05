@@ -8,3 +8,5 @@ export { PillTabBar } from "./PillTabBar.js";
 export { Logo } from "./Logo.js";
 export { AuthCard, AuthButton } from "./AuthCard.js";
 export { installWebFonts } from "./webFonts.js";
+
+export { FadeImage } from "./FadeImage.js";

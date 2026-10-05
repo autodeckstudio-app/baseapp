@@ -1,6 +1,7 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, type ImageSourcePropType, Pressable, ScrollView, TextInput, View } from "react-native";
+import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS, type BrandItem } from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
@@ -113,7 +114,7 @@ export default function CatalogueScreen() {
 
   const tile = (key: string, title: string, sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
     <Pressable key={key} accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.85 : 1 })}>
-      {image ? <Image source={image} resizeMode="cover" style={{ width: "100%", height: 132 }} /> : null}
+      {image ? <FadeImage source={image} resizeMode="cover" style={{ width: "100%", height: 132 }} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <T role="bodyStrong" numberOfLines={1}>{title}</T>
