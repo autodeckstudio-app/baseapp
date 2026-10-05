@@ -112,8 +112,8 @@
 .ax-shell th { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 400; letter-spacing: 1.2px; color: var(--ad-text-tertiary); }
 .ax-shell td { color: var(--ad-text-primary); }
 .ax-shell button { border-radius: var(--ad-radius-pill); min-height: 36px; }
-.ax-shell button[type="submit"] { background: var(--ad-accent-grad); border-color: transparent; }
-.ax-shell button[type="submit"]:hover:not(:disabled) { background: var(--ad-accent-grad); filter: brightness(1.06); }
+.ax-shell button[type="submit"] { background: linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%); border-color: transparent; }
+.ax-shell button[type="submit"]:hover:not(:disabled) { background: linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%); filter: brightness(1.06); }
 .ax-shell input, .ax-shell select, .ax-shell textarea { background: rgba(255, 255, 255, 0.04); border-color: var(--ad-border-subtle); border-radius: var(--ad-radius-chip); }
 .ax-shell select option { background: var(--ad-surface); color: var(--ad-text-primary); }
 .ax-shell .detail-card, .ax-shell .stat-tile { border-radius: var(--ad-radius-card); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); }
@@ -571,3 +571,6 @@
   .ax-wordmark .ax-logo-mark { display: block !important; }
 }
 .ax-shell button, .ax-shell input, .ax-shell select, .ax-shell textarea { font-family: inherit; }
+
+/* Phone: filter rows scroll sideways instead of clipping */
+@media (max-width: 700px) { .ax-shell .ax-toolbar .ax-filters { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; } .ax-shell .ax-toolbar .ax-filters::-webkit-scrollbar { display: none; } }

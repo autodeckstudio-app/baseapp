@@ -18,7 +18,13 @@ const JOB_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
+export function jobStatusLabel(status: string): string {
+  return JOB_STATUS_LABELS[status] ?? status;
+}
+
 export interface JobCardProps {
+  bayName?: string | undefined;
+  serviceName?: string | undefined;
   job: ServiceJob;
   onPress?: () => void;
   // The date this card is being shown under (e.g. the Calendar's selected
@@ -29,7 +35,7 @@ export interface JobCardProps {
 }
 
 /** Dense job summary for the studio app's Today's Jobs / Calendar lists. */
-export function JobCard({ job, onPress, viewDate }: JobCardProps) {
+export function JobCard({ job, onPress, viewDate, bayName, serviceName }: JobCardProps) {
   const isMultiDay = job.scheduledDate !== job.estimatedEndDate;
   const isOngoingFromEarlierDay = viewDate !== undefined && viewDate !== job.scheduledDate;
 
@@ -41,7 +47,7 @@ export function JobCard({ job, onPress, viewDate }: JobCardProps) {
         </Text>
         <StatusBadge label={JOB_STATUS_LABELS[job.status] ?? job.status} tone={statusTone(job.status)} />
       </View>
-      <Text style={{ ...typography.caption, color: colors.textSecondary }}>Bay: {job.bayId}</Text>
+      <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{bayName ?? "Bay"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs }}>
         {job.isWalkIn && <Tag label="WALK-IN" />}
         {isMultiDay && <Tag label={`MULTI-DAY · until ${job.estimatedEndDate}`} />}

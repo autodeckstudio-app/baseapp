@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { listenToJobsByDate } from "../../lib/studio-service";
 import { useAuth } from "../../hooks/useAuth";
+import { useJobLabels } from "../../hooks/useBayNames";
 import type { ServiceJob } from "@autodeck/core";
 // V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
@@ -34,6 +35,7 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(todayIST());
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const labels = useJobLabels(auth.status === "ready" ? FIRST_STUDIO_ID : null);
 
   const today = todayIST();
   const dateDays = Array.from({ length: 7 }, (_, i) => addDays(today, i));
@@ -100,12 +102,12 @@ export default function CalendarScreen() {
         <LoadingState />
       ) : (
         <FlatList
-          contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
+          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1 }}
           data={jobs}
           keyExtractor={(j) => j.id}
           ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
           renderItem={({ item }) => (
-            <JobCard job={item} viewDate={selectedDate} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+            <JobCard job={item} viewDate={selectedDate} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
           )}
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         />

@@ -234,7 +234,7 @@ export default function WalkinScreen() {
   const canSubmit = Boolean(customer && selectedVehicleId && selectedServiceId && selectedBayId);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.lg }}>New Walk-in</Text>
 
       <Section title="1. Find customer">

@@ -115,7 +115,7 @@ export default function InspectionScreen() {
   const areas: InspectionArea[] = ["exterior", "glass", "interior", "service_specific"];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
         <Text style={{ ...typography.heading, color: colors.textPrimary }}>Inspection</Text>
         <StatusBadge label={readOnly ? "Finalized" : "In Progress"} tone={readOnly ? "success" : "accent"} />

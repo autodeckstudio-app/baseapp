@@ -18,4 +18,4 @@ export { PriceBreakdown, type PriceBreakdownProps } from "./PriceBreakdown.js";
 export { VehicleCard, type VehicleCardProps } from "./VehicleCard.js";
 export { ServiceCard, type ServiceCardProps } from "./ServiceCard.js";
 export { BookingCard, type BookingCardProps } from "./BookingCard.js";
-export { JobCard, type JobCardProps } from "./JobCard.js";
+export { JobCard, jobStatusLabel, type JobCardProps } from "./JobCard.js";

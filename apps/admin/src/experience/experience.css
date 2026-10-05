@@ -95,7 +95,8 @@
   transition: transform var(--ad-dur-tick) var(--ad-ease), background var(--ad-dur-tick) var(--ad-ease);
 }
 .ax-button--primary {
-  background: var(--ad-accent-grad);
+  background: linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%);
+  box-shadow: 0 8px 18px rgba(236,134,56,0.34), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.25);
   color: var(--ad-text-on-accent);
   border-color: transparent;
 }
@@ -104,7 +105,7 @@
   outline-offset: 2px;
 }
 .ax-button:disabled { opacity: 0.5; cursor: not-allowed; }
-.ax-button:active:not(:disabled) { transform: scale(0.98); }
+.ax-button:active:not(:disabled) { transform: scale(0.97); box-shadow: 0 3px 8px rgba(236,134,56,0.3); }
 
 /* ── Status chip (pill only for status) ── */
 .ax-chip {

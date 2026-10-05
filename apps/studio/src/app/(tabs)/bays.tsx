@@ -7,7 +7,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { listenToJobsByDate, getStudioConfig } from "../../lib/studio-service";
 import { listenToPendingApprovalsForStudio, getActiveServices } from "../../lib/approval-service";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
-import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, jobStatusLabel } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 
 const BAY_TYPE_LABELS: Record<BayType, string> = {
@@ -112,10 +112,10 @@ export default function BayBoardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.heading, color: colors.textPrimary }}>Bay Board</Text>
-          <Button label="+ New Walk-in" size="md" onPress={() => router.push("/(tabs)/walkin")} />
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>{jobs.filter((j) => ACTIVE_STATUSES.includes(j.status)).length} on the floor</Text>
+          <Button label="New walk-in" size="md" onPress={() => router.push("/(tabs)/walkin")} />
         </View>
 
         {[...groups.entries()].map(([bayType, bays]) => (
@@ -180,7 +180,7 @@ export default function BayBoardScreen() {
                       </Text>
                     </View>
                     <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
-                      <StatusBadge label={job.status.replace(/_/g, " ")} tone={statusTone(job.status)} />
+                      <StatusBadge label={jobStatusLabel(job.status)} tone={statusTone(job.status)} />
                       <StatusBadge label={job.paymentStatus} tone={statusTone(job.paymentStatus)} />
                       {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
                     </View>

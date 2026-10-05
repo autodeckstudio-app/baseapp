@@ -7,7 +7,7 @@ const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "prof
 export default function StudioTabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor={colors.accent} inactiveColor={colors.textMuted} />}
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor={colors.accent} inactiveColor={colors.textMuted} floating />}
       screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,

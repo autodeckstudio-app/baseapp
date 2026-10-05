@@ -89,12 +89,15 @@ export default function HomeScreen() {
   const [open, setOpen] = useState<StoryGroup | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [picks, setPicks] = useState<Service[]>([]);
-  const [suggest, setSuggest] = useState<{ service: Service; slots: AvailableSlot[] } | null>(null);
+  const [catalogue, setCatalogue] = useState<Service[]>([]);
+  const [focus, setFocus] = useState<"washing" | "ceramic" | "ppf" | null>(null);
+  const [slotsFor, setSlotsFor] = useState<{ service: Service; slots: AvailableSlot[] } | null>(null);
   useEffect(() => {
     if (!ready) return;
     void getStories().then((l) => setGroups(groupStories(l)));
     void getServiceCatalogue()
       .then((all) => {
+        setCatalogue(all);
         const order = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection"];
         setPicks([...all].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.basePrice - b.basePrice).filter((x, n, arr) => arr.findIndex((y) => y.category === x.category) === arr.indexOf(x) || n < 8).slice(0, 8));
       })
@@ -121,17 +124,29 @@ export default function HomeScreen() {
 
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
   const lastVisitServiceId = (ready ? (home.model?.recentHistory[0] as { serviceId?: string } | undefined)?.serviceId : undefined) ?? null;
+  // Suggestion is category-led (washing, ceramic or PPF), chosen from the car's real history:
+  // washing when it is due or has no visit yet; otherwise ceramic when no protection is on file; else washing.
+  const lastVisitDate = ready ? home.model?.recentHistory[0]?.scheduledDate : undefined;
+  const visitDays = lastVisitDate ? Math.max(0, Math.round((Date.now() - new Date(lastVisitDate).getTime()) / 86400000)) : null;
+  const hasProtection = ready ? (home.model?.protections?.length ?? 0) > 0 : false;
+  const autoFocus: "washing" | "ceramic" | "ppf" = visitDays === null || visitDays > 21 ? "washing" : !hasProtection ? "ceramic" : "washing";
+  const cat = focus ?? autoFocus;
+  const catSvc = (c: string): Service | undefined => {
+    const list = catalogue.filter((x) => x.category === c).sort((a, b) => a.basePrice - b.basePrice);
+    return c === "washing" ? list.find((x) => x.id === lastVisitServiceId) ?? list[0] : list[0];
+  };
+  const washSvcId = catSvc("washing")?.id ?? null;
   useEffect(() => {
-    setSuggest(null);
-    if (!ready || !carId || picks.length === 0) return;
-    const svc = picks.find((x) => x.id === lastVisitServiceId) ?? picks[0];
-    if (!svc) return;
+    setSlotsFor(null);
+    const svc = catSvc("washing");
+    if (!ready || !carId || !svc || cat !== "washing") return;
     let alive = true;
     void getAvailability(svc.id, FIRST_STUDIO_ID, todayIST(), 7)
-      .then((sl) => { if (alive && sl.length > 0) setSuggest({ service: svc, slots: sl.slice(0, 3) }); })
+      .then((sl) => { if (alive && sl.length > 0) setSlotsFor({ service: svc, slots: sl.slice(0, 3) }); })
       .catch(() => undefined);
     return () => { alive = false; };
-  }, [ready, carId, picks, lastVisitServiceId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, carId, cat, washSvcId]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
   useEffect(() => {
@@ -219,35 +234,51 @@ export default function HomeScreen() {
       <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} />
       <StoryViewer group={open} onClose={() => setOpen(null)} />
 
-      {car && suggest && !m.liveJob && !m.pendingApproval && !m.dueInvoice ? (() => {
-        const first = suggest.slots[0]!;
+      {car && catalogue.length > 0 && !m.liveJob && !m.pendingApproval && !m.dueInvoice ? (() => {
         const dayName = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short" });
-        const lastVisit = m.recentHistory[0]?.scheduledDate;
-        const daysAgo = lastVisit ? Math.max(0, Math.round((Date.now() - new Date(lastVisit).getTime()) / 86400000)) : null;
-        const go = (sl: AvailableSlot) => router.push({ pathname: "/(tabs)/book/confirm", params: { serviceId: suggest.service.id, vehicleId: car.id, vehicleCategory: car.category ?? "hatchback", scheduledDate: sl.date, scheduledTime: sl.startTime, startAt: sl.startAt, estimatedEndAt: sl.estimatedEndAt, estimatedEndDate: sl.estimatedEndDate, endTime: sl.endTime } });
+        const sug = slotsFor && cat === "washing" ? slotsFor : null;
+        const first = sug?.slots[0];
+        const go = (sl: AvailableSlot) => router.push({ pathname: "/(tabs)/book/confirm", params: { serviceId: sug!.service.id, vehicleId: car.id, vehicleCategory: car.category ?? "hatchback", scheduledDate: sl.date, scheduledTime: sl.startTime, startAt: sl.startAt, estimatedEndAt: sl.estimatedEndAt, estimatedEndDate: sl.estimatedEndDate, endTime: sl.endTime } });
+        const COPY = {
+          washing: { icon: "wash" as const, title: first ? `Ready for ${dayName(first.date)}?` : "Time for a wash?", line: visitDays !== null ? `Last visit ${visitDays} day${visitDays === 1 ? "" : "s"} ago` : "Open times this week", name: "Washing" },
+          ceramic: { icon: "ceramic" as const, title: `Protect your ${car.model}`, line: hasProtection ? "Add a fresh coat of gloss and protection" : "No paint protection on file yet", name: "Ceramic" },
+          ppf: { icon: "ppf" as const, title: `Shield your ${car.model}`, line: "Clear film against stone chips and scratches", name: "PPF" },
+        }[cat];
         return (
           <FadeUp delay={120}>
             <Pane pad="inset">
               <View style={{ gap: space.line }}>
                 <Kicker tone="accent">Suggested for you</Kicker>
-                <T role="title">Ready for {dayName(first.date)}?</T>
+                <T role="title">{COPY.title}</T>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                   <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...DISC_SHADOW }}>
-                    <Icon name="wash" color="#2E2E33" size={32} />
+                    <Icon name={COPY.icon} color="#2E2E33" size={32} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <T role="bodyStrong" numberOfLines={1}>{suggest.service.name.replace(/^Kovalent\s+/i, "")} for your {car.model}</T>
-                    <T role="caption" tone="tertiary">{daysAgo !== null ? `Last visit ${daysAgo} day${daysAgo === 1 ? "" : "s"} ago` : "Open times this week"}</T>
+                    <T role="bodyStrong" numberOfLines={1}>{COPY.name} for your {car.model}</T>
+                    <T role="caption" tone="tertiary" numberOfLines={2}>{COPY.line}</T>
                   </View>
                 </View>
-                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                  {suggest.slots.map((sl) => (
-                    <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 9, transform: [{ translateY: pressed ? 2 : 0 }], ...DISC_SHADOW })}>
-                      <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
-                    </Pressable>
-                  ))}
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {(["washing", "ceramic", "ppf"] as const).filter((c) => catSvc(c)).map((c) => {
+                    const on = c === cat;
+                    return (
+                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                        <T role="bodyStrong" style={{ color: on ? "#FFFFFF" : "#2E2E33" }}>{c === "washing" ? "Washing" : c === "ceramic" ? "Ceramic" : "PPF"}</T>
+                      </Pressable>
+                    );
+                  })}
                 </View>
-                <Button label="Book in one tap" onPress={() => go(first)} />
+                {cat === "washing" && sug ? (
+                  <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                    {sug.slots.map((sl) => (
+                      <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                        <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+                {cat === "washing" && first ? <Button label="Book in one tap" onPress={() => go(first)} /> : <Button label={`See ${COPY.name} options`} onPress={() => router.push({ pathname: "/(tabs)/catalogue", params: { cat } })} />}
               </View>
             </Pane>
           </FadeUp>

@@ -320,7 +320,7 @@ export default function JobDetailScreen() {
   const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId) ?? [];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
         <StatusBadge label={statusLabel} tone={statusTone(job.status)} />
         {job.isWalkIn && <StatusBadge label="Walk-in" tone="accent" />}

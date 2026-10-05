@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, FlatList, Alert, Pressable } from "react-native";
+import { View, Text, FlatList, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import { listenToJobsByDate } from "../../lib/studio-service";
 import type { ServiceJob } from "@autodeck/core";
-import { colors, spacing, radius, typography, JobCard, LoadingState } from "@autodeck/ui";
-import { Icon } from "@autodeck/ui/native";
+import { colors, spacing, radius, typography, JobCard, LoadingState, Button } from "@autodeck/ui";
+import { Icon, FadeUp } from "@autodeck/ui/native";
+import { useJobLabels } from "../../hooks/useBayNames";
 
 function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -19,6 +20,7 @@ export default function TodaysJobsScreen() {
   const studioId = authState.status === "ready" ? authState.claims.studioId : null;
   const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
 
+  const labels = useJobLabels(studioId);
   useEffect(() => {
     if (!studioId || !tenantId) return undefined;
     const unsub = listenToJobsByDate(
@@ -55,7 +57,7 @@ export default function TodaysJobsScreen() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
+      contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
       data={activeJobs}
       keyExtractor={(j) => j.id}
       ListHeaderComponent={
@@ -69,15 +71,7 @@ export default function TodaysJobsScreen() {
             <Stat label="In progress" value={inProgress} />
             <Stat label="Ready" value={ready} />
           </View>
-          <Pressable
-            onPress={() => router.push("/(tabs)/walkin")}
-            accessibilityRole="button"
-            accessibilityLabel="New walk-in"
-            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.accent, borderRadius: radius.lg, minHeight: 52 }}
-          >
-            <Icon name="plus" color="#FFFFFF" size={22} />
-            <Text style={{ ...typography.body, color: "#FFFFFF", fontWeight: "700" }}>New walk-in</Text>
-          </Pressable>
+          <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
         </View>
       }
       ListEmptyComponent={
@@ -89,8 +83,10 @@ export default function TodaysJobsScreen() {
           <Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center" }}>No cars on the floor right now. New bookings and walk-ins show up here.</Text>
         </View>
       }
-      renderItem={({ item }) => (
-        <JobCard job={item} viewDate={todayIST()} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+      renderItem={({ item, index }) => (
+        <FadeUp delay={Math.min(index, 5) * 50}>
+          <JobCard job={item} viewDate={todayIST()} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+        </FadeUp>
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
     />

@@ -44,7 +44,7 @@ export default function LookupCustomerScreen() {
   if (customer === null) return <ErrorState title="Customer not found" />;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <Text style={{ ...typography.heading, color: colors.textPrimary }}>{customer.name}</Text>
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>{customer.phone}</Text>
 

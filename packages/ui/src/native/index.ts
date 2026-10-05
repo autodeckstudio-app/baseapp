@@ -10,3 +10,4 @@ export { AuthCard, AuthButton } from "./AuthCard.js";
 export { installWebFonts } from "./webFonts.js";
 
 export { FadeImage } from "./FadeImage.js";
+export { FadeUp } from "./FadeUp.js";

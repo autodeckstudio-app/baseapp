@@ -55,8 +55,7 @@ export default function LookupScreen() {
   const hasResults = mode === "customer" ? customers.length > 0 : vehicle !== null;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.md }}>Lookup</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1 }}>
 
       <View style={{ flexDirection: "row", backgroundColor: colors.surfaceSunken, borderRadius: radius.md, padding: spacing.xxs, marginBottom: spacing.md }}>
         {(["customer", "vehicle"] as SearchMode[]).map((m) => {
