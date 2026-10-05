@@ -6,7 +6,6 @@ import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { claimIsHeldByOther, plateClaimRef, releaseClaim, writeClaim } from "../../lib/plateClaim.js";
 import { updateVehicleSchema } from "../../schemas/vehicle.js";
 
 export const updateVehicle = onCall({ region: "asia-south1" }, async (request) => {
@@ -62,20 +61,7 @@ export const updateVehicle = onCall({ region: "asia-south1" }, async (request) =
       }
     }
 
-    let claimMove: { oldData: { vehicleId?: string | null } | undefined } | null = null;
-    if (data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber && existing.deletedAt === null) {
-      if (await claimIsHeldByOther(db, tx, existing.tenantId, existing.ownerId, data.registrationNumber, data.vehicleId)) {
-        throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
-      }
-      const oldSnap = await tx.get(plateClaimRef(db, existing.tenantId, existing.ownerId, existing.registrationNumber));
-      claimMove = { oldData: oldSnap.exists ? (oldSnap.data() as { vehicleId?: string | null }) : undefined };
-    }
-
     tx.update(ref, updates);
-    if (claimMove && data.registrationNumber !== undefined) {
-      await releaseClaim(db, tx, claimMove.oldData, existing.tenantId, existing.ownerId, existing.registrationNumber, data.vehicleId, updates["updatedAt"] as string);
-      writeClaim(db, tx, existing.tenantId, existing.ownerId, data.registrationNumber, data.vehicleId, updates["updatedAt"] as string);
-    }
 
     writeAuditLog(tx, {
       action: "vehicle.updated",

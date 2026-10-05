@@ -7,7 +7,6 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createVehicleSchema } from "../../schemas/vehicle.js";
-import { claimIsHeldByOther, writeClaim } from "../../lib/plateClaim.js";
 
 export const createVehicle = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -79,11 +78,7 @@ export const createVehicle = onCall({ region: "asia-south1" }, async (request) =
         color: archived.color,
       });
     }
-    if (await claimIsHeldByOther(db, tx, vehicle.tenantId, ownerId, vehicle.registrationNumber, null)) {
-      throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
-    }
     tx.set(ref, vehicle);
-    writeClaim(db, tx, vehicle.tenantId, ownerId, vehicle.registrationNumber, ref.id, now);
     writeAuditLog(tx, {
       action: "vehicle.created",
       entityType: "Vehicle",

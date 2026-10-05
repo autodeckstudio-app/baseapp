@@ -7,7 +7,6 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { restoreVehicleSchema } from "../../schemas/vehicle.js";
-import { claimIsHeldByOther, writeClaim } from "../../lib/plateClaim.js";
 
 // Brings an archived car back with all its details. Same ownership rules as archiveVehicle.
 export const restoreVehicle = onCall({ region: "asia-south1" }, async (request) => {
@@ -37,12 +36,8 @@ export const restoreVehicle = onCall({ region: "asia-south1" }, async (request) 
     if (same.docs.some((d) => d.id !== ref.id && (d.data() as Vehicle).deletedAt === null)) {
       throw new HttpsError("already-exists", "This car is already added.");
     }
-    if (await claimIsHeldByOther(db, tx, v.tenantId, v.ownerId, v.registrationNumber, ref.id)) {
-      throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
-    }
     const now = new Date().toISOString();
     tx.update(ref, { deletedAt: null, updatedAt: now });
-    writeClaim(db, tx, v.tenantId, v.ownerId, v.registrationNumber, ref.id, now);
     writeAuditLog(tx, {
       action: "vehicle.restored",
       entityType: "Vehicle",

@@ -7,7 +7,6 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { archiveVehicleSchema } from "../../schemas/vehicle.js";
-import { plateClaimRef, releaseClaim } from "../../lib/plateClaim.js";
 
 export const archiveVehicle = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -38,10 +37,8 @@ export const archiveVehicle = onCall({ region: "asia-south1" }, async (request) 
       throw new HttpsError("failed-precondition", "Vehicle is already archived.");
     }
 
-    const claimSnap = await tx.get(plateClaimRef(db, existing.tenantId, existing.ownerId, existing.registrationNumber));
     const now = new Date().toISOString();
     tx.update(ref, { deletedAt: now, updatedAt: now });
-    await releaseClaim(db, tx, claimSnap.exists ? (claimSnap.data() as { vehicleId?: string | null }) : undefined, existing.tenantId, existing.ownerId, existing.registrationNumber, ref.id, now);
 
     writeAuditLog(tx, {
       action: "vehicle.archived",
