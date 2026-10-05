@@ -68,6 +68,21 @@ export const glass: Record<ThemeName, GlassRecipe> = {
     nativeIntensity: 60,
     nativeTint: "light",
   },
+  charcoal: {
+    fill: "linear-gradient(160deg, #3A3C43, #2F3136)",
+    fillLit: "linear-gradient(160deg, #42444C, #34363C)",
+    fillWarm: "linear-gradient(160deg, rgba(245,154,69,0.18), #2F3136)",
+    fillCool: "linear-gradient(160deg, rgba(242,211,166,0.14), #2F3136)",
+    fallbackFill: "rgba(48,50,56,0.97)",
+    chromeFill: "rgba(34,35,39,0.88)",
+    edge: "rgba(255,255,255,0.09)",
+    sheen: "rgba(255,255,255,0.14)",
+    blur: 24,
+    saturate: 1.4,
+    chromeBlur: 28,
+    nativeIntensity: 50,
+    nativeTint: "dark",
+  },
 };
 
 export type GlassFill = "base" | "lit" | "warm" | "cool";
@@ -109,6 +124,11 @@ export const ambient: Record<ThemeName, readonly AmbientLight[]> = {
     { color: "#9AA6EC", x: 10, y: 0, size: 85, opacity: 0.55 },
     { color: "#FFB27A", x: 100, y: 55, size: 65, opacity: 0.45 },
     { color: "#C9D0F5", x: 40, y: 100, size: 70, opacity: 0.4 },
+  ],
+  charcoal: [
+    { color: "#F59A45", x: 100, y: 0, size: 70, opacity: 0.16 },
+    { color: "#8A8C94", x: 0, y: 30, size: 60, opacity: 0.12 },
+    { color: "#F07D28", x: 50, y: 105, size: 60, opacity: 0.12 },
   ],
 };
 

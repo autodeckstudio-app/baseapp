@@ -6,7 +6,7 @@
 import type { ReactNode } from "react";
 import { Platform, View, type StyleProp, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
-import { ambient } from "../theme/index.js";
+import { ambient, ambientBackground } from "../theme/index.js";
 import { useExperienceTheme } from "./ThemeContext.js";
 
 const FILL = { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 } as const;
@@ -14,8 +14,12 @@ const FILL = { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 } as c
 export function Ambient({ children, style }: { children?: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { name, colors } = useExperienceTheme();
   const lit = Platform.OS === "ios";
+  const webGround =
+    Platform.OS === "web" && name === "charcoal"
+      ? ({ backgroundImage: ambientBackground(ambient.charcoal, "linear-gradient(165deg, #34363C 0%, #26272B 50%, #1B1C1F 100%)") } as object)
+      : null;
   return (
-    <View style={[{ flex: 1, backgroundColor: colors.canvas, overflow: "hidden" }, style]}>
+    <View style={[{ flex: 1, backgroundColor: colors.canvas, overflow: "hidden" }, webGround, style]}>
       {lit ? (
         <View pointerEvents="none" style={FILL}>
           {ambient[name].map((l, i) => (
@@ -33,7 +37,7 @@ export function Ambient({ children, style }: { children?: ReactNode; style?: Sty
               }}
             />
           ))}
-          <BlurView intensity={100} tint={name} style={FILL} />
+          <BlurView intensity={100} tint={name === "light" ? "light" : "dark"} style={FILL} />
         </View>
       ) : null}
       {children}

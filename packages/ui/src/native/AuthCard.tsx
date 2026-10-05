@@ -5,32 +5,35 @@ import { createElement } from "react";
 import { Logo } from "./Logo.js";
 
 /** The one sign-in layout for every AutoDeck app. Same card, logo, button slot and footnote; only role, title and copy differ. */
-export function AuthCard({ role, title, copy, children, error }: { role: string; title: string; copy: string; children: ReactNode; error?: string | null }) {
+export function AuthCard({ role, title, copy, children, error, dark = false }: { role: string; title: string; copy: string; children: ReactNode; error?: string | null; dark?: boolean }) {
   const web = Platform.OS === "web";
+  const A = dark
+    ? { ...AUTH, ground: "radial-gradient(60vmax 60vmax at 100% 0%, rgba(245,154,69,0.20), transparent 70%), linear-gradient(160deg, #3A3C43 0%, #26272B 55%, #1B1C1F 100%)", groundFallback: "#26272B", cardBg: "rgba(48,50,56,0.96)", cardBorder: "rgba(255,255,255,0.10)", cardShadow: "0 18px 50px rgba(0,0,0,0.45)", text: "#F6F4F1", muted: "#C4C2BF", accent: "#F59A45", danger: "#FF8D7A" }
+    : AUTH;
   return (
     <>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: AUTH.groundFallback, ...(web ? ({ backgroundImage: AUTH.ground, minHeight: "100vh" } as object) : {}) }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: A.groundFallback, ...(web ? ({ backgroundImage: A.ground, minHeight: "100vh" } as object) : {}) }}>
         <View
           style={{
             width: "100%",
-            maxWidth: AUTH.maxWidth,
+            maxWidth: A.maxWidth,
             alignItems: "center",
             gap: 14,
-            padding: AUTH.cardPad,
-            borderRadius: AUTH.cardRadius,
-            backgroundColor: AUTH.cardBg,
+            padding: A.cardPad,
+            borderRadius: A.cardRadius,
+            backgroundColor: A.cardBg,
             borderWidth: 1,
-            borderColor: AUTH.cardBorder,
-            ...(web ? ({ boxShadow: AUTH.cardShadow } as object) : { shadowColor: "#3C285A", shadowOpacity: 0.16, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }),
+            borderColor: A.cardBorder,
+            ...(web ? ({ boxShadow: A.cardShadow } as object) : { shadowColor: "#3C285A", shadowOpacity: 0.16, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }),
           }}
         >
-          <Logo variant="stacked" height={AUTH.logoHeight} />
-          <Text style={{ color: AUTH.accent, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "600" }}>{role}</Text>
-          <Text style={{ color: AUTH.text, fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, fontWeight: "600", textAlign: "center" }}>{title}</Text>
-          <Text style={{ color: AUTH.muted, fontSize: 15, lineHeight: 22, textAlign: "center" }}>{copy}</Text>
+          <Logo onDark={dark} variant="stacked" height={A.logoHeight} />
+          <Text style={{ color: A.accent, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "600" }}>{role}</Text>
+          <Text style={{ color: A.text, fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, fontWeight: "600", textAlign: "center" }}>{title}</Text>
+          <Text style={{ color: A.muted, fontSize: 15, lineHeight: 22, textAlign: "center" }}>{copy}</Text>
           <View style={{ width: "100%", gap: 10, marginTop: 6 }}>{children}</View>
-          {error ? <Text style={{ color: AUTH.danger, fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
-          <Text style={{ color: AUTH.muted, fontSize: 12, textAlign: "center", opacity: 0.8 }}>{AUTH_FOOTNOTE}</Text>
+          {error ? <Text style={{ color: A.danger, fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
+          <Text style={{ color: A.muted, fontSize: 12, textAlign: "center", opacity: 0.8 }}>{AUTH_FOOTNOTE}</Text>
         </View>
       </View>
     </>
@@ -38,7 +41,7 @@ export function AuthCard({ role, title, copy, children, error }: { role: string;
 }
 
 /** The sign-in button, identical in every app. */
-export function AuthButton({ label, onPress, busy, disabled, testID }: { label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
+export function AuthButton({ label, onPress, busy, disabled, testID, dark = false }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
   return (
     <Pressable
       testID={testID}
@@ -46,10 +49,10 @@ export function AuthButton({ label, onPress, busy, disabled, testID }: { label: 
       accessibilityLabel={label}
       disabled={busy || disabled}
       onPress={onPress}
-      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: AUTH.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1 })}
+      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: dark ? "#F59A45" : AUTH.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}) })}
     >
       {Platform.OS === "web" ? createElement("svg", { width: 18, height: 18, viewBox: "0 0 48 48", "aria-hidden": true, style: { marginRight: 10 }, dangerouslySetInnerHTML: { __html: G } }) : null}
-      <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
+      <Text style={{ color: dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
     </Pressable>
   );
 }

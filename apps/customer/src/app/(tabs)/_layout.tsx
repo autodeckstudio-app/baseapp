@@ -10,7 +10,7 @@ export default function TabsLayout() {
   const { colors, glass } = useExperienceTheme();
   return (
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor="#E8650A" inactiveColor="#6B6877" floating />}
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor="#F59A45" inactiveColor="#A4A6AD" floating />}
       screenOptions={() => ({
         headerShown: false,
         sceneStyle: { backgroundColor: colors.canvas },

@@ -90,16 +90,16 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", opacity: pressed ? 0.85 : 1 })}>
+            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#303238", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
               <CarThumb car={v} height={i === 0 ? 190 : 140} radius={0} />
               <Pressable
                 onPress={(e) => { e.stopPropagation?.(); setRemoveError(null); setRemoving(v); }}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${v.registrationNumber} from your garage`}
                 hitSlop={8}
-                style={({ pressed }) => ({ position: "absolute", top: 10, right: 10, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.85)", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ position: "absolute", top: 10, right: 10, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(26,28,31,0.7)", opacity: pressed ? 0.7 : 1 })}
               >
-                <Icon name="close" color="#2E2E33" size={16} />
+                <Icon name="close" color="#F6F4F1" size={16} />
               </Pressable>
               <View style={{ gap: space.hair, padding: space.inset }}>
                 {i === 0 && list.length > 1 ? <Kicker tone="accent">Most recent</Kicker> : null}

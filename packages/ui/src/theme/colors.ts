@@ -84,5 +84,31 @@ export const lightColors: ThemeColors = {
   onInk: "#1D1B26",
 };
 
-export type ThemeName = "dark" | "light";
-export const themeColors: Record<ThemeName, ThemeColors> = { dark: darkColors, light: lightColors };
+// Customer app: premium charcoal grey (not navy) with orange accents.
+export const charcoalColors: ThemeColors = {
+  canvas: "#26272B",
+  canvasDeep: "#1B1C1F",
+  surface: "#303238",
+  surfaceElevated: "#3A3C43",
+  borderSubtle: "rgba(255,255,255,0.10)",
+  borderStrong: "rgba(255,255,255,0.30)",
+  textPrimary: "#F6F4F1",
+  textSecondary: "#CFCDCA",
+  textTertiary: "#AAA8A5",
+  textOnAccent: "#1A1410",
+  accent: "#F59A45",
+  accentStrong: "#F9B56E",
+  accentHaze: "rgba(245,154,69,0.16)",
+  premium: "#F2D3A6",
+  premiumHaze: "rgba(242,211,166,0.12)",
+  success: "#6FD3A0",
+  warning: "#F2B95E",
+  danger: "#FF8D7A",
+  inactive: "#9C9EA5",
+  scrim: "rgba(0,0,0,0.55)",
+  ink: "#1F2024",
+  onInk: "#F6F4F1",
+};
+
+export type ThemeName = "dark" | "light" | "charcoal";
+export const themeColors: Record<ThemeName, ThemeColors> = { dark: darkColors, light: lightColors, charcoal: charcoalColors };

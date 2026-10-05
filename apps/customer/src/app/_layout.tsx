@@ -9,7 +9,7 @@ import { useAuth } from "../hooks/useAuth";
 installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;
-if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#E7EAF7";
+if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#26272B";
 
 // Routes once claims are known, so a customer never sees staff screens and
 // staff never see customer screens (spec §5.1). Staff accounts land on a
@@ -41,10 +41,10 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <ExperienceThemeProvider name="light">
+    <ExperienceThemeProvider name="charcoal">
       <StatusBar style="dark" />
       <NavigationGuard>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#E7EAF7" } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#26272B" } }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>

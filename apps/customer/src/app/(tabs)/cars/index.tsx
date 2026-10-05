@@ -24,9 +24,9 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: on ? "#EC8638" : "rgba(255,255,255,0.85)", borderWidth: 1, borderColor: on ? "#EC8638" : "#E6DFF0" }}
+      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.18)" }}
     >
-      <T role="label" style={{ color: on ? "#FFFFFF" : "#4A4458", textTransform: "capitalize" }}>{label}</T>
+      <T role="label" style={{ color: on ? "#1A1410" : "#E4E2DF", textTransform: "capitalize" }}>{label}</T>
     </Pressable>
   );
 }
@@ -34,7 +34,7 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: "48%", flexGrow: 1, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ borderRadius: 22, overflow: "hidden", aspectRatio: 4 / 5, backgroundColor: "#EEE9F6" }}>
+      <View style={{ borderRadius: 22, overflow: "hidden", aspectRatio: 4 / 5, backgroundColor: "#3A3C43" }}>
         <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
         {l.status === "reserved" ? (
           <View style={{ position: "absolute", left: 8, top: 8, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>

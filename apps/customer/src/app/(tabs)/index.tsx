@@ -210,7 +210,7 @@ export default function HomeScreen() {
   const header = (
     <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
       <View style={{ flex: 1, gap: space.hair }}>
-        <View style={{ alignSelf: "flex-start" }}><Logo variant="mark" height={26} /></View>
+        <View style={{ alignSelf: "flex-start" }}><Logo onDark variant="mark" height={26} /></View>
         <T role="title">{greetingFor(new Date(), m.customer.firstName)}</T>
       </View>
       <Pressable
@@ -256,8 +256,8 @@ export default function HomeScreen() {
                   {(["washing", "ceramic", "ppf"] as const).filter((c) => catSvc(c)).map((c) => {
                     const on = c === cat;
                     return (
-                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
-                        <T role="bodyStrong" style={{ color: on ? "#FFFFFF" : "#2E2E33" }}>{c === "washing" ? "Washing" : c === "ceramic" ? "Ceramic" : "PPF"}</T>
+                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "#3A3C43", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                        <T role="bodyStrong" style={{ color: on ? "#1A1410" : "#E4E2DF" }}>{c === "washing" ? "Washing" : c === "ceramic" ? "Ceramic" : "PPF"}</T>
                       </Pressable>
                     );
                   })}
@@ -266,7 +266,7 @@ export default function HomeScreen() {
                   {options.map((x) => {
                     const on = x.id === chosen;
                     return (
-                      <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setChosen(on ? null : x.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 18, borderWidth: 1.5, borderColor: on ? "#EC8638" : "rgba(29,27,38,0.08)", backgroundColor: on ? "rgba(236,134,56,0.08)" : "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+                      <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setChosen(on ? null : x.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 18, borderWidth: 1.5, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(236,134,56,0.16)" : "#303238", paddingHorizontal: 14, paddingVertical: 12, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
                         <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{x.name.replace(/^Kovalent\s+/i, "")}</T>
                         <T role="caption" tone="tertiary">{price(x)}</T>
                       </Pressable>
@@ -278,7 +278,7 @@ export default function HomeScreen() {
                     <T role="caption" tone="tertiary">Open times, or choose your own</T>
                     <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                       {slotsFor.slots.map((sl) => (
-                        <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                        <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "#3A3C43", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
                           <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
                         </Pressable>
                       ))}
@@ -414,7 +414,7 @@ export default function HomeScreen() {
                   <T role="heading" numberOfLines={2} style={{ color: "#FFFFFF" }}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <T role="bodyStrong" style={{ color: "#FFFFFF" }} numberOfLines={1}>{priceLabel(sv)}</T>
-                    <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 6 }}><T role="caption" style={{ color: "#FFFFFF" }}>Book</T></View>
+                    <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 6 }}><T role="caption" style={{ color: "#1A1410" }}>Book</T></View>
                   </View>
                 </View>
               </Pressable>
