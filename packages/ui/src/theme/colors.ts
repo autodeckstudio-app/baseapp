@@ -84,16 +84,16 @@ export const lightColors: ThemeColors = {
   onInk: "#1D1B26",
 };
 
-// Customer app: premium charcoal grey (not navy) with orange accents.
+// Customer app: deep black with orange accents (no grey tone, no navy).
 export const charcoalColors: ThemeColors = {
-  canvas: "#26272B",
-  canvasDeep: "#1B1C1F",
-  surface: "#303238",
-  surfaceElevated: "#3A3C43",
-  borderSubtle: "rgba(255,255,255,0.10)",
+  canvas: "#0B0B0D",
+  canvasDeep: "#050506",
+  surface: "#151517",
+  surfaceElevated: "#1E1E21",
+  borderSubtle: "rgba(255,255,255,0.09)",
   borderStrong: "rgba(255,255,255,0.30)",
   textPrimary: "#F6F4F1",
-  textSecondary: "#CFCDCA",
+  textSecondary: "#CDCBC8",
   textTertiary: "#AAA8A5",
   textOnAccent: "#1A1410",
   accent: "#F59A45",
@@ -104,9 +104,9 @@ export const charcoalColors: ThemeColors = {
   success: "#6FD3A0",
   warning: "#F2B95E",
   danger: "#FF8D7A",
-  inactive: "#9C9EA5",
+  inactive: "#8E8E93",
   scrim: "rgba(0,0,0,0.55)",
-  ink: "#1F2024",
+  ink: "#121214",
   onInk: "#F6F4F1",
 };
 

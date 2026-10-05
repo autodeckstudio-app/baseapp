@@ -6,19 +6,26 @@ import type { Vehicle } from "@autodeck/core";
 import { resolveVehiclePhotoUrl } from "../lib/vehicle-service";
 import { vehicleImagery } from "../lib/imagery";
 
-type Car = Pick<Vehicle, "photoUrl" | "category">;
+type Car = Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string };
 
-export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undefined; height: number; width?: number | `${number}%`; radius?: number }) {
+/** The car's own photo URL (cache-busted per save), or null while loading / when there is none. */
+export function useVehiclePhotoUri(car: Car | null | undefined): string | null {
   const [uri, setUri] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
   const path = car?.photoUrl ?? null;
+  const version = car?.updatedAt ?? null;
   useEffect(() => {
     let alive = true;
     setUri(null);
-    setFailed(false);
-    if (path) void resolveVehiclePhotoUrl(path).then((u) => { if (alive) setUri(u); }).catch((err: unknown) => { console.warn("car photo could not be loaded", path, (err as { code?: string })?.code ?? err); if (alive) setFailed(true); });
+    if (path) void resolveVehiclePhotoUrl(path, version).then((u) => { if (alive) setUri(u); }).catch(() => undefined);
     return () => { alive = false; };
-  }, [path]);
+  }, [path, version]);
+  return uri;
+}
+
+export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undefined; height: number; width?: number | `${number}%`; radius?: number }) {
+  const uri = useVehiclePhotoUri(car);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [uri]);
   const fallback = vehicleImagery[(car?.category ?? "sedan") as keyof typeof vehicleImagery] ?? vehicleImagery.sedan;
   const source = uri && !failed ? { uri } : fallback;
   return (

@@ -105,8 +105,11 @@ export async function uploadVehiclePhoto(vehicleId: string, blob: Blob, contentT
 }
 
 /** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
-export async function resolveVehiclePhotoUrl(path: string): Promise<string> {
-  return getDownloadURL(storageRef(storage, path));
+export async function resolveVehiclePhotoUrl(path: string, version?: string | null): Promise<string> {
+  const url = await getDownloadURL(storageRef(storage, path));
+  // A replaced photo keeps the same storage path (cover.<ext>), so the URL alone never changes.
+  // The vehicle's updatedAt busts browser and image caches so every screen shows the new picture.
+  return version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url;
 }
 
 export function normalizePlate(value: string): string {

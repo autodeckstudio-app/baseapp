@@ -64,7 +64,7 @@ export default function BookingsScreen() {
       {items.map((b) => {
         const car = cars[b.vehicleId] ?? (b.vehicleSnapshot ? { ...b.vehicleSnapshot, category: b.vehicleCategory } : undefined);
         return (
-          <Pressable key={b.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#303238", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
+          <Pressable key={b.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: "#161618", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
             <CarThumb car={car} height={120} radius={0} />
             <View style={{ gap: space.hair, padding: space.inset }}>
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.breath }}>

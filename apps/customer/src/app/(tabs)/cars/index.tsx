@@ -34,7 +34,7 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: "48%", flexGrow: 1, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ borderRadius: 22, overflow: "hidden", aspectRatio: 4 / 5, backgroundColor: "#3A3C43" }}>
+      <View style={{ borderRadius: 22, overflow: "hidden", aspectRatio: 4 / 5, backgroundColor: "#232326" }}>
         <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
         {l.status === "reserved" ? (
           <View style={{ position: "absolute", left: 8, top: 8, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>

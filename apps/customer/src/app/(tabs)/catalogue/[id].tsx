@@ -281,7 +281,7 @@ export default function ServiceDetailScreen() {
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
         <View style={{ height: 180 }} />
       </Screen>
-      <View style={{ position: "absolute", left: 0, right: 0, marginHorizontal: "auto" as unknown as number, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#303238", borderRadius: 24, maxWidth: 480, width: "92%", alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
+      <View style={{ position: "absolute", left: 0, right: 0, marginHorizontal: "auto" as unknown as number, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#161618", borderRadius: 24, maxWidth: 480, width: "92%", alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">From</T>

@@ -10,7 +10,7 @@ import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, vehicleImagery } from "../../lib/imagery";
-import { resolveVehiclePhotoUrl } from "../../lib/vehicle-service";
+import { useVehiclePhotoUri } from "../../ui/CarThumb";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
 import { listenToVehicleWarranties } from "../../lib/warranty-service";
@@ -21,7 +21,7 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { StoryViewer } from "../../ui/StoryViewer";
-import { ServicePhoto } from "../../ui/ServicePhoto";
+import { Stage, DepthCarousel } from "../../ui/Immersive";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
 const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: string }> = {
@@ -88,40 +88,38 @@ export default function HomeScreen() {
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [open, setOpen] = useState<StoryGroup | null>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
+  const [catalogueFailed, setCatalogueFailed] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   const [picks, setPicks] = useState<Service[]>([]);
   const [catalogue, setCatalogue] = useState<Service[]>([]);
   const [focus, setFocus] = useState<"washing" | "ceramic" | "ppf" | null>(null);
   const [slotsFor, setSlotsFor] = useState<{ service: Service; slots: AvailableSlot[] } | null>(null);
   useEffect(() => {
     if (!ready) return;
-    void getStories().then((l) => setGroups(groupStories(l)));
-    void getServiceCatalogue()
-      .then((all) => {
-        setCatalogue(all);
-        const order = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection"];
-        setPicks([...all].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.basePrice - b.basePrice).filter((x, n, arr) => arr.findIndex((y) => y.category === x.category) === arr.indexOf(x) || n < 8).slice(0, 8));
-      })
-      .catch(() => undefined);
-  }, [ready]);
+    let alive = true;
+    const loadStories = (tries: number) => void getStories().then((l) => { if (!alive) return; if (l.length === 0 && tries > 0) setTimeout(() => loadStories(tries - 1), 2500); else setGroups(groupStories(l)); });
+    loadStories(2);
+    const loadCatalogue = (tries: number) => {
+      void getServiceCatalogue()
+        .then((all) => {
+          if (!alive) return;
+          setCatalogueFailed(false);
+          setCatalogue(all);
+          const order = ["washing", "ceramic", "coating", "ppf", "tinting", "inspection"];
+          setPicks([...all].sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.basePrice - b.basePrice).filter((x, n, arr) => arr.findIndex((y) => y.category === x.category) === arr.indexOf(x) || n < 8).slice(0, 8));
+        })
+        .catch(() => { if (!alive) return; if (tries > 0) setTimeout(() => loadCatalogue(tries - 1), 2000); else setCatalogueFailed(true); });
+    };
+    loadCatalogue(2);
+    return () => { alive = false; };
+  }, [ready, retryTick]);
 
   useEffect(() => {
     if (!ready) return;
     return listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => setUnread(n.filter((x) => x.readAt === null).length), () => undefined);
   }, [ready]);
 
-  const [carPhoto, setCarPhoto] = useState<string | null>(null);
-  const photoPath = ready ? home.model?.activeVehicle?.photoUrl ?? null : null;
-  useEffect(() => {
-    let alive = true;
-    setCarPhoto(null);
-    if (photoPath) {
-      void resolveVehiclePhotoUrl(photoPath)
-        .then((u) => { if (alive) setCarPhoto(u); })
-        .catch(() => undefined);
-    }
-    return () => { alive = false; };
-  }, [photoPath]);
-
+  const carPhoto = useVehiclePhotoUri(ready ? home.model?.activeVehicle : null);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
   const lastVisitServiceId = (ready ? (home.model?.recentHistory[0] as { serviceId?: string } | undefined)?.serviceId : undefined) ?? null;
   // Suggestion is category-led (washing, ceramic or PPF), chosen from the car's real history:
@@ -247,7 +245,7 @@ export default function HomeScreen() {
         const picked = options.find((x) => x.id === chosen);
         return (
           <FadeUp delay={120}>
-            <Pane pad="inset">
+            <Stage service={picked ?? options[0] ?? catSvc(cat)}>
               <View style={{ gap: space.line }}>
                 <Kicker tone="accent">Suggested for you</Kicker>
                 <T role="title">{COPY.title}</T>
@@ -256,7 +254,7 @@ export default function HomeScreen() {
                   {(["washing", "ceramic", "ppf"] as const).filter((c) => catSvc(c)).map((c) => {
                     const on = c === cat;
                     return (
-                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "#3A3C43", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                      <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setFocus(c)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: on ? "#EC8638" : "rgba(8,8,10,0.55)", paddingHorizontal: 16, paddingVertical: 8, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
                         <T role="bodyStrong" style={{ color: on ? "#1A1410" : "#E4E2DF" }}>{c === "washing" ? "Washing" : c === "ceramic" ? "Ceramic" : "PPF"}</T>
                       </Pressable>
                     );
@@ -266,7 +264,7 @@ export default function HomeScreen() {
                   {options.map((x) => {
                     const on = x.id === chosen;
                     return (
-                      <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setChosen(on ? null : x.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 18, borderWidth: 1.5, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(236,134,56,0.16)" : "#303238", paddingHorizontal: 14, paddingVertical: 12, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+                      <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setChosen(on ? null : x.id)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 18, borderWidth: 1.5, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(236,134,56,0.22)" : "rgba(8,8,10,0.55)", paddingHorizontal: 14, paddingVertical: 12, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
                         <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{x.name.replace(/^Kovalent\s+/i, "")}</T>
                         <T role="caption" tone="tertiary">{price(x)}</T>
                       </Pressable>
@@ -278,7 +276,7 @@ export default function HomeScreen() {
                     <T role="caption" tone="tertiary">Open times, or choose your own</T>
                     <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                       {slotsFor.slots.map((sl) => (
-                        <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "#3A3C43", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
+                        <Pressable key={sl.startAt} accessibilityRole="button" accessibilityLabel={`Book ${dayName(sl.date)} ${sl.startTime}`} onPress={() => go(sl)} style={({ pressed }) => ({ borderRadius: 9999, backgroundColor: "rgba(8,8,10,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 14, paddingVertical: 9, transform: [{ scale: pressed ? 0.96 : 1 }], ...DISC_SHADOW })}>
                           <T role="bodyStrong">{dayName(sl.date)} {sl.startTime}</T>
                         </Pressable>
                       ))}
@@ -290,7 +288,7 @@ export default function HomeScreen() {
                   <T role="caption" tone="accent">See all services</T>
                 </Pressable>
               </View>
-            </Pane>
+            </Stage>
           </FadeUp>
         );
       })() : null}
@@ -399,27 +397,20 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
+      {catalogue.length === 0 && catalogueFailed ? (
+        <Notice title="Services didn't load" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => { setCatalogueFailed(false); setRetryTick((n) => n + 1); }} />} />
+      ) : catalogue.length === 0 ? (
+        <View style={{ gap: space.line }}><Skeleton height={28} width="50%" /><Skeleton height={220} /></View>
+      ) : null}
+
       {picks.length > 0 ? (
         <View style={{ gap: space.breath }}>
           <View style={{ gap: 2 }}>
             <Kicker tone="accent">Care</Kicker>
             <T role="title">{car ? `Made for your ${car.model}` : "Popular services"}</T>
+            <T role="caption" tone="tertiary">Swipe through care picked for {car ? "this car" : "you"}</T>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={238} contentContainerStyle={{ gap: 14, paddingRight: space.line }}>
-            {picks.map((sv) => (
-              <Pressable key={sv.id} accessibilityRole="button" accessibilityLabel={sv.name} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: 224, borderRadius: 28, overflow: "hidden", transform: [{ scale: pressed ? 0.97 : 1 }], ...DISC_SHADOW })}>
-                <ServicePhoto service={sv} height={300} radius={0} />
-                <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(20,12,30,0) 40%, rgba(20,12,30,0.82) 100%)" } as object) }} />
-                <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, bottom: 16, gap: 6 }}>
-                  <T role="heading" numberOfLines={2} style={{ color: "#FFFFFF" }}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                    <T role="bodyStrong" style={{ color: "#FFFFFF" }} numberOfLines={1}>{priceLabel(sv)}</T>
-                    <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 6 }}><T role="caption" style={{ color: "#1A1410" }}>Book</T></View>
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <DepthCarousel items={picks} carName={car?.model} onOpen={(sv) => router.push(`/(tabs)/catalogue/${sv.id}`)} />
         </View>
       ) : null}
 

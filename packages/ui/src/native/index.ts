@@ -11,3 +11,4 @@ export { installWebFonts } from "./webFonts.js";
 
 export { FadeImage } from "./FadeImage.js";
 export { FadeUp } from "./FadeUp.js";
+export { onTabPressed, emitTabPressed } from "./tabBus.js";

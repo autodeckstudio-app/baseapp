@@ -18,7 +18,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useRouter, useSegments } from "expo-router";
-import { Ambient, Glass, type GlassProps, useExperienceTheme } from "@autodeck/ui/native";
+import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { fontFamily, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
@@ -108,6 +108,10 @@ export function Screen({
   /** Pinned above the scroll area (sticky chips, search). */
   top?: ReactNode;
 }) {
+  const scrollRef = useRef<ScrollView>(null);
+  const segs = useSegments() as string[];
+  const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
+  useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
     <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, paddingBottom: 120, gap: space.inset }}>
       <BackBar />
@@ -118,7 +122,7 @@ export function Screen({
   return (
     <Ambient>
       {top ? <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, gap: space.line, zIndex: 2 }}>{top}</View> : null}
-      {scroll ? <ScrollView contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
+      {scroll ? <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );
 }
