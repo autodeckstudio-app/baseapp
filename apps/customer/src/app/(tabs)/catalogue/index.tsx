@@ -113,15 +113,16 @@ export default function CatalogueScreen() {
   const products = level === 3 ? (groups.find(([k]) => k === groupKey)?.[1] ?? []) : [];
 
   const tile = (key: string, title: string, sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
-    <Pressable key={key} accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: "100%", borderRadius: 22, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, opacity: pressed ? 0.85 : 1 })}>
-      {image ? <FadeImage source={image} resizeMode="cover" style={{ width: "100%", height: 132 }} /> : null}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <T role="bodyStrong" numberOfLines={1}>{title}</T>
-          {sub ? <T role="caption" tone="secondary" numberOfLines={2}>{sub}</T> : null}
-          {meta ? <T role="caption" tone="accent" numberOfLines={1}>{meta}</T> : null}
+    <Pressable key={key} accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ width: "100%", height: 168, borderRadius: 28, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+      {image ? <FadeImage source={image} resizeMode="cover" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} /> : null}
+      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(90deg, rgba(5,5,6,0.88) 0%, rgba(5,5,6,0.45) 60%, rgba(5,5,6,0.1) 100%)" } as object), backgroundColor: "rgba(5,5,6,0.3)" }} />
+      <View style={{ flex: 1, justifyContent: "flex-end", padding: 18, gap: 4 }}>
+        <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{title}</T>
+        {sub ? <T role="caption" numberOfLines={2} style={{ color: "#D6D4D1" }}>{sub}</T> : null}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+          {meta ? <View style={{ borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.5)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 3 }}><T role="caption" tone="accent" numberOfLines={1}>{meta}</T></View> : <View />}
+          <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "#F59A45" }}><T style={{ color: "#1A1410" }}>›</T></View>
         </View>
-        <T tone="tertiary">›</T>
       </View>
     </Pressable>
   );
@@ -129,9 +130,9 @@ export default function CatalogueScreen() {
   const card = (sv: Service) => (
     <Pressable key={sv.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} style={({ pressed }) => ({ width: "48%", minWidth: 0, overflow: "hidden", opacity: pressed ? 0.85 : 1 })}>
       <View>
-        <ServicePhoto service={sv} height={190} radius={22} />
+        <ServicePhoto service={sv} height={200} radius={24} />
         {sv.warrantyLabel ? (
-          <View style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "88%", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>
+          <View style={{ position: "absolute", left: 8, bottom: 8, maxWidth: "88%", borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 4 }}>
             <T role="caption" tone="accent" numberOfLines={1}>{sv.warrantyLabel}</T>
           </View>
         ) : null}
@@ -163,7 +164,7 @@ export default function CatalogueScreen() {
         onChangeText={setQ}
         placeholder="Search washes, ceramic, PPF..."
         placeholderTextColor={colors.textTertiary}
-        style={{ borderRadius: 14, borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: 14, paddingVertical: 10, color: colors.textPrimary, fontSize: 15 }}
+        style={{ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 18, paddingVertical: 12, color: colors.textPrimary, fontSize: 15 }}
       />
     </View>
   );
