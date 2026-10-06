@@ -32,6 +32,8 @@ export function CustomersView(p: {
     { key: "phone", head: "Phone", kind: "data", width: "minmax(0, 1.2fr)", cell: (c) => c.phone || "Not added" },
     { key: "joined", head: "Customer since", kind: "muted", width: "minmax(0, 1fr)", align: "end", cell: (c) => formatDate(c.createdAt) },
   ];
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
       <PageHead
@@ -43,7 +45,7 @@ export function CustomersView(p: {
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.customers.length }}>
-        <input className="ax-search" type="search" placeholder="Search name or phone" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" aria-label="Search customers by name or phone" placeholder="Search name or phone" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
         <PlateLookup onLookup={p.onPlateLookup} />
       </Toolbar>
       {p.plateMessage && <p className="ax-status-msg ax-status-msg--warn">{p.plateMessage}</p>}
@@ -63,7 +65,7 @@ function PlateLookup({ onLookup }: { onLookup: (plate: string) => void }) {
   const [plate, setPlate] = useState("");
   return (
     <form className="ax-inline-form" onSubmit={(e) => { e.preventDefault(); onLookup(plate); }}>
-      <input className="ax-search ax-search--plate" placeholder="Number plate" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
+      <input className="ax-search ax-search--plate" aria-label="Vehicle registration" placeholder="Number plate" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} />
       <button type="submit" className="ax-button" disabled={plate.trim().length < 4}>Find</button>
     </form>
   );
@@ -136,6 +138,8 @@ export function PaymentsView(p: {
       ),
     },
   ];
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
       <PageHead
@@ -149,7 +153,7 @@ export function PaymentsView(p: {
       />
       <Toolbar count={{ shown: rows.length, total: p.payments.length }}>
         <Segmented value={p.status} options={PAYMENT_FILTERS} onChange={p.onStatus} />
-        <input className="ax-search" type="search" placeholder="Search customer, job or booking" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" aria-label="Search payments" placeholder="Search customer, job or booking" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
       </Toolbar>
       {p.message && <p className="ax-status-msg">{p.message}</p>}
       <ListPane
@@ -201,6 +205,8 @@ export function InvoicesView(p: {
     { key: "gst", head: "GST", kind: "data", align: "end", width: "100px", cell: (i) => formatPaise(i.tax) },
     { key: "total", head: "Total", kind: "data", align: "end", width: "120px", cell: (i) => formatPaise(i.total) },
   ];
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
       <PageHead
@@ -213,7 +219,7 @@ export function InvoicesView(p: {
       />
       <Toolbar count={{ shown: rows.length, total: p.invoices.length }}>
         <Segmented value={p.status} options={INVOICE_FILTERS} onChange={p.onStatus} />
-        <input className="ax-search" type="search" placeholder="Search invoice number or customer" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" aria-label="Search invoices" placeholder="Search invoice number or customer" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
       </Toolbar>
       <ListPane
         rows={rows}
@@ -256,12 +262,14 @@ export function AuditView(p: {
     { key: "on", head: "Record", width: "minmax(0, 1.4fr)", cell: (e) => <>{statusLabel(e.entityType)} <span className="ax-sub" style={{ display: "inline" }}>{e.entityId}</span></> },
     { key: "by", head: "By", width: "minmax(0, 1.2fr)", cell: (e) => <>{p.who[e.performedBy] ?? e.performedBy}<span className="ax-sub">{statusLabel(e.performedByRole)}</span></> },
   ];
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
       <PageHead eyebrow="Office" title="Audit log" kpis={[{ value: p.entries.length, label: "Entries" }]} />
       <p className="ax-note" style={{ marginTop: 0 }}>Every change to bookings, jobs, money and access is written here. Entries can&apos;t be edited or deleted.</p>
       <Toolbar count={{ shown: rows.length, total: p.entries.length }}>
-        <input className="ax-search" type="search" placeholder="Search person or record ID" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="ax-search" type="search" aria-label="Search audit entries" placeholder="Search person or record ID" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={action} onChange={(e) => setAction(e.target.value)} aria-label="Action">
           <option value="">All actions</option>
           {actions.map((a) => <option key={a} value={a}>{statusLabel(a)}</option>)}

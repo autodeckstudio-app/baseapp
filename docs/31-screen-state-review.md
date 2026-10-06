@@ -16,9 +16,9 @@ Pending means not yet visually verified after the unified-system release. A shar
 | customer | `apps/customer/src/app/(tabs)/bookings/inspection.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/bookings/invoice.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/bookings/reschedule.tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/cars/[id].tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/cars/index.tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/cars/sell.tsx` | Pending | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/cars/[id].tsx` | Pass d70de62, 390px | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/cars/index.tsx` | Pass d70de62, 390px | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/cars/sell.tsx` | Steps 1-2 pass d70de62, 390px; final review pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/catalogue/[id].tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/catalogue/brands.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/catalogue/index.tsx` | Pending | Pending | Pending |
@@ -26,7 +26,7 @@ Pending means not yet visually verified after the unified-system release. A shar
 | customer | `apps/customer/src/app/(tabs)/garage/add.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/garage/index.tsx` | Pass 0890755, 390px | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/help.tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/index.tsx` | Pending | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/index.tsx` | Pass d70de62, 390px | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/membership/[planId].tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/membership/current.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/membership/history.tsx` | Pending | Pending | Pending |
@@ -51,7 +51,7 @@ Pending means not yet visually verified after the unified-system release. A shar
 | admin | `apps/admin/src/app/(admin)/invoices/[id]/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/invoices/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/jobs/[id]/page.tsx` | Pending | Pending | Pending |
-| admin | `apps/admin/src/app/(admin)/jobs/page.tsx` | Pending | Pending | Pending |
+| admin | `apps/admin/src/app/(admin)/jobs/page.tsx` | Pass 04f5256, 390px | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/memberships/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/papers/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/payments/page.tsx` | Pending | Pending | Pending |
@@ -94,3 +94,8 @@ Pending means not yet visually verified after the unified-system release. A shar
 | studio | `apps/studio/src/app/(tabs)/pickups.tsx` | Pending | Pending | Pending |
 | studio | `apps/studio/src/app/(tabs)/walkin.tsx` | Pending | Pending | Pending |
 | studio | `apps/studio/src/app/index.tsx` | Pending | Pending | Pending |
+
+## Evidence notes
+- Cars sell step 1 missing required fields and step 2 missing photo/price are blocked in-app. No photo uploads, listing submission or enquiry sent during testing. Final populated review and success states still pending.
+- Admin More sheet visually inspected at 390px. Close control and Escape worked. Full keyboard focus-cycle audit still pending.
+- Existing stock/design library only was changed. Listing, garage and evidence originals were not altered.

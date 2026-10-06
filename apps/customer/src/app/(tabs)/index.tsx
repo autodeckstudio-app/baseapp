@@ -189,7 +189,7 @@ export default function HomeScreen() {
 
   return (
     <Screen header={header}>
-      {home.error ? <T role="caption" tone="tertiary">{home.error}</T> : null}
+      {home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh}/>}/> : null}
 
       <FadeUp>
       <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>

@@ -611,3 +611,6 @@
 @media (max-width:700px) { .ax-shell .ax-board {display:flex;flex-direction:column;overflow:visible;} .ax-shell .ax-col {width:100%;min-height:0;} .ax-shell .ax-col:has(.ax-col-empty) {padding:12px 16px;} .ax-shell .ax-job {padding:16px;} .ax-shell .ax-col-head {padding-bottom:8px;} }
 
 @media(max-width:700px){.ax-shell .ax-toolbar .ax-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;max-width:100%;overflow:visible;}.ax-shell .ax-toolbar .ax-filters>*{min-width:0;width:100% !important;}.ax-shell .ax-toolbar .ax-filters>*:last-child{grid-column:1/-1;}}
+
+/* Status choices remain readable without widening a phone viewport. */
+@media(max-width:700px){.ax-shell .ax-seg{max-width:100%;flex-wrap:wrap;border-radius:20px;}.ax-shell .ax-seg button{flex:1 0 auto;}.ax-shell .ax-toolbar .ax-search{max-width:100%;}}

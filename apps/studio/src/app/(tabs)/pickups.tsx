@@ -5,7 +5,7 @@ import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { colors, spacing, radius, typography, Button, LoadingState } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
 
 type Req = { id: string; bookingId: string; kind: string; address: string; preferredTime: string; note: string; status: string; staffNote: string };
 const KIND: Record<string, string> = { pickup: "Pick up", drop: "Drop back", both: "Pick up and drop back" };
@@ -13,18 +13,20 @@ const KIND: Record<string, string> = { pickup: "Pick up", drop: "Drop back", bot
 export default function PickupsScreen() {
   const auth = useAuth();
   const [rows, setRows] = useState<Req[] | null>(null);
+  const [error,setError] = useState<string|null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const studioId = auth.status === "ready" ? auth.claims.studioId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
 
   const load = useCallback(async () => {
     if (!tenantId || !studioId) return;
+    setError(null);
     const snap = await getDocs(query(collection(db, COLLECTIONS.pickupRequests()), where("tenantId", "==", tenantId), where("studioId", "==", studioId)));
     const list = snap.docs.map((d) => d.data() as Req).filter((r) => r.status === "REQUESTED" || r.status === "CONFIRMED");
     setRows(list);
   }, [tenantId, studioId]);
 
-  useEffect(() => { void load().catch((e) => { setRows([]); Alert.alert("Could not load requests", e instanceof Error ? e.message : "Try again."); }); }, [load]);
+  useEffect(() => { void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); }, [load]);
 
   async function setStatus(r: Req, status: "CONFIRMED" | "DONE" | "DECLINED") {
     setBusy(r.id);
@@ -38,6 +40,7 @@ export default function PickupsScreen() {
     }
   }
 
+  if (error) return <ErrorState title="Requests unavailable" message={error} onRetry={()=>void load().catch(e=>setError(e instanceof Error?e.message:"Try again."))}/>;
   if (rows === null) return <LoadingState />;
   return (
     <FlatList
