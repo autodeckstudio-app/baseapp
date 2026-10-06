@@ -76,6 +76,7 @@ export interface CustomerHomeModel {
 }
 
 const LIVE_JOB: ReadonlySet<ServiceJob["status"]> = new Set([
+  "STANDBY",
   "VEHICLE_RECEIVED",
   "IN_PROGRESS",
   "QUALITY_CHECK",
