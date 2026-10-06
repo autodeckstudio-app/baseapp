@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -36,6 +36,7 @@ export default function BookServiceScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
+  const [selectedDate,setSelectedDate] = useState<string|null>(null);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -95,6 +96,8 @@ export default function BookServiceScreen() {
       .catch(() => setSlotsError(true))
       .finally(() => setSlotsLoading(false));
   }, [serviceId, service,retryTick]);
+
+  useEffect(()=>{setSelectedDate(cur=>slots.some(s=>s.date===cur)?cur:slots[0]?.date??null);},[slots]);
 
   function handleSelectSlot(slot: AvailableSlot) {
     if (!selectedVehicle || !serviceId) return;
@@ -180,12 +183,12 @@ export default function BookServiceScreen() {
         ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (
           <Notice title="Fully booked this week" body="No free times in the next 7 days. Try again tomorrow or call the studio." />
         ) : (
-          Object.entries(slotsByDate).map(([date, daySlots]) => (
+          <View style={{gap:space.line}}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).map(date=><Pressable key={date} accessibilityRole="button" accessibilityLabel={`Choose ${date}`} accessibilityState={{selected:date===selectedDate}} onPress={()=>setSelectedDate(date)} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
             <Pane key={date} pad="gap">
               <View style={{ gap: space.line }}>
                 <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-                  {daySlots.map((slot) => {
+                  {[...daySlots].sort((a,b)=>a.startAt.localeCompare(b.startAt)).map((slot) => {
                     const multiDay = slot.estimatedEndDate !== slot.date;
                     return (
                       <Pressable
@@ -206,7 +209,7 @@ export default function BookServiceScreen() {
                 </View>
               </View>
             </Pane>
-          ))
+          ))}</View>
         )}
       </View>
     </Screen>

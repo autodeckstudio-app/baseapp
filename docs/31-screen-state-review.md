@@ -101,3 +101,9 @@ Pending means not yet visually verified after the unified-system release. A shar
 - Existing stock/design library only was changed. Listing, garage and evidence originals were not altered.
 
 - Customer inactive tabs remained exposed in the accessibility tree despite being visually hidden. Shared Screen focus cleanup added; live keyboard/read-tree verification pending release.
+
+## Opening-ready pass, 7 October
+- 964ecfc Cars filter/search/sort bar checked live at 390px: Diesel returns two; Diesel+Safari one; budget mismatch empty; Clear all three; low-price sort puts i10 first. Labels and persistent controls verified.
+- 5539021 Customer booking review and existing booking tracker checked read-only at 390px. No request sent. Studio job detail service/bay names checked on existing QA job without changes.
+- 22 isolated staff-workflow tests passed again (standby FIFO/occupancy/reservations, QC rework, paid delivery and milestone mappings). This is mocked unit evidence, not a live backend deployment/transaction check.
+- Pending next-release checks: day-by-day times, automatic car size, Studio owner/vehicle identity and advancement confirmation, populated approval/invoice/error retry states.

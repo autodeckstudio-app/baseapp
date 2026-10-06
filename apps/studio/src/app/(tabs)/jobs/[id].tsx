@@ -13,7 +13,7 @@ import {
 import { getCustomerMembership } from "../../../lib/membership-service";
 import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
 import { listenToInspection, startInspection } from "../../../lib/inspection-service";
-import type { ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
+import type { Vehicle, Customer, ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import {
@@ -80,6 +80,8 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
+  const [vehicle,setVehicle] = useState<Vehicle|null>(null);
+  const [customerName,setCustomerName] = useState<string|null>(null);
   const [serviceName,setServiceName] = useState<string|null>(null);
   const [requiredBayType, setRequiredBayType] = useState<string | null>(null);
   const [config, setConfig] = useState<StudioConfig | null>(null);
@@ -114,6 +116,8 @@ export default function JobDetailScreen() {
         if (snap.exists()) {
           const j = snap.data() as ServiceJob;
           setJob(j);
+          void getDoc(doc(db,COLLECTIONS.vehicles(),j.vehicleId)).then(s=>setVehicle(s.exists()?s.data() as Vehicle:null)).catch(()=>setVehicle(null));
+          void getDoc(doc(db,COLLECTIONS.customers(),j.customerId)).then(s=>setCustomerName((s.data() as Customer|undefined)?.name??null)).catch(()=>setCustomerName(null));
           void getDoc(doc(db, COLLECTIONS.services(), j.serviceId)).then(s => { const data=s.data() as Service|undefined; setRequiredBayType(data?.requiredBayType??null);setServiceName(data?.name??null); }).catch(()=>setServiceName(null));
           if (!config) {
             void getStudioConfig(j.studioId).then(setConfig);
@@ -294,6 +298,7 @@ export default function JobDetailScreen() {
   }
 
   const [staffAction, setStaffAction] = useState<"enqueue" | "admit" | "rework" | null>(null);
+  const [advanceConfirm,setAdvanceConfirm] = useState(false);
   const [standbyBay, setStandbyBay] = useState("");
   async function performStaffAction() {
     if (!id || !staffAction) return;
@@ -306,10 +311,11 @@ export default function JobDetailScreen() {
     finally { setAdvancing(false); }
   }
   async function handleAdvance() {
-    if (!job || !id) return;
+    if (!job || !id || advancing) return;
     setAdvancing(true);
     try {
       await advanceJobStatus(id);
+      setAdvanceConfirm(false);
     } catch (err) {
       Alert.alert("Error", err instanceof Error ? err.message : "Failed to advance status.");
     } finally {
@@ -367,8 +373,9 @@ export default function JobDetailScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth:640,alignSelf:"center" }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
-        <StatusBadge label={statusLabel} tone={statusTone(job.status)} />
+      <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+        <View style={{gap:spacing.xs}}><Text style={{...typography.title,color:colors.textPrimary}}>{vehicle?.registrationNumber??"Vehicle details"}</Text><Text style={{...typography.body,color:colors.textMuted}}>{vehicle?`${vehicle.make} ${vehicle.model}`:"Loading vehicle..."}{customerName?` · ${customerName}`:""}</Text></View>
+      <StatusBadge label={statusLabel} tone={statusTone(job.status)} />
         {job.isWalkIn && <StatusBadge label="Walk-in" tone="accent" />}
       </View>
 
@@ -578,9 +585,10 @@ export default function JobDetailScreen() {
       {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {job.status === "QUALITY_CHECK" ? <Button label="QC failed - send for rework" variant="secondary" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
       {canAdvance && (
-        <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => void handleAdvance()} loading={advancing} style={{ marginBottom: spacing.lg }} />
+        <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => setAdvanceConfirm(true)} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}
 
       {job.status === "PENDING_VEHICLE" && job.bookingId ? (

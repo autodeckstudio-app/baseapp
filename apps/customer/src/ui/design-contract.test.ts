@@ -12,6 +12,10 @@ describe("unified product design contract",()=>{
   it("does not send or upload before the staged sell review",()=>{
     const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("photos.length===0");
   });
+  it("makes critical booking load failures retryable without false rollback claims",()=>{
+    const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(selectedVehicle.category)');expect(booking).toContain('label="Retry"');expect(booking).toContain('date===selectedDate');
+    const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings before trying again");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
+  });
   it("keeps car filtering available during search and normalizes legacy fuel values",()=>{
     const source=read("src/app/(tabs)/cars/index.tsx");expect(source).not.toContain("searching ?");expect(source).toContain('filterCars(all??[]');expect(source).toContain('label="Car body type"');expect(source).toContain('label="Sort cars"');expect(source).toContain('Clear all');
   });
