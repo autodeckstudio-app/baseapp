@@ -42,3 +42,6 @@ Older CC-BY placeholders (Flickr) are listed in ATTRIBUTION.md and still used fo
 
 ## Distinct service photos (pool, TEST placeholders)
 Files stock/x-*.jpg are Pexels photos (free licence), each taken from pexels.com/photo/<slug>-<id>/ where the id is in the pool list in src/lib/imagery.ts. Assigned one per service by primeVisuals(); replace with studio photos before launch.
+
+## Curated white/orange visual system (Oct 7)
+`curated/*.jpg` are edited derivatives of the reviewed, already licensed source files in this register. Warm-neutral grading, lower saturation and consistent 3:2 framing. Topic identity takes priority over uniqueness. Car/hero is a side profile without a visible plate; category images show service subjects rather than generic car ads. Brand packshots keep their original colors and labels on a uniform warm-white panel. Customer uploads, seller photos, Stories and document/evidence originals are not edited.

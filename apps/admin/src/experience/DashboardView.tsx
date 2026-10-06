@@ -61,8 +61,6 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
         <Tile icon="calendar" featured value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
         <Tile icon="wrench" value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
         <Tile icon="check" value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
-        <Tile icon="car" value={tiles.walkins} label="Walk-ins today" onClick={() => onOpen("/jobs")} />
-        <Tile icon="users" value={tiles.staffPresent} label="Staff in today" onClick={() => onOpen("/attendance")} />
       </div>
 
       <div className="ax-detail" style={{ marginTop: "var(--ad-space-inset)" }}>
@@ -94,18 +92,6 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
         <aside className="ax-detail-side">
           <section className="ax-panel">
             <span className="ax-label">On the floor now</span>
-            <div className="ax-bars" role="img" aria-label={`Arriving ${floor.arriving}, working ${floor.working}, ready ${floor.ready}, delivered ${floor.delivered}`}>
-              {([["Arriving", floor.arriving], ["Working", floor.working], ["Ready", floor.ready], ["Done", floor.delivered]] as const).map(([l, v]) => {
-                const max = Math.max(1, floor.arriving, floor.working, floor.ready, floor.delivered);
-                return (
-                  <div key={l} className="ax-bar">
-                    <span className="ax-bar-v">{v}</span>
-                    <span className="ax-bar-fill" style={{ height: `${Math.max(6, (v / max) * 100)}%` }} />
-                    <span className="ax-bar-l">{l}</span>
-                  </div>
-                );
-              })}
-            </div>
             <div className="kv"><span>Arriving today</span><span className="ax-data">{floor.arriving}</span></div>
             <div className="kv"><span>Being worked on</span><span className="ax-data" style={{ color: "var(--ad-accent)" }}>{floor.working}</span></div>
             <div className="kv"><span>Ready for pickup</span><span className="ax-data" style={{ color: "var(--ad-premium)" }}>{floor.ready}</span></div>

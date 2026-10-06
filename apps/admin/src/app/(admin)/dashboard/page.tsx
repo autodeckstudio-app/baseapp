@@ -16,6 +16,8 @@ export default function DashboardPage() {
   const { claims } = useAdminAuth();
   const router = useRouter();
 
+  const [loaded, setLoaded] = useState({bookings: false, jobs: false, payments: false, approvals: false});
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -28,10 +30,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!claims) return undefined;
     const unsubs = [
-      listenToBookings(claims.tenantId, setBookings, () => undefined),
-      listenToJobs(claims.tenantId, setJobs, () => undefined),
-      listenToPayments(claims.tenantId, setPayments, () => undefined),
-      listenToPendingApprovals(claims.tenantId, setPendingApprovals, () => undefined),
+      listenToBookings(claims.tenantId, data => {setBookings(data);setLoaded(l => ({...l, bookings: true}));}, err => setLoadError(err.message)),
+      listenToJobs(claims.tenantId, data => {setJobs(data);setLoaded(l => ({...l, jobs: true}));}, err => setLoadError(err.message)),
+      listenToPayments(claims.tenantId, data => {setPayments(data);setLoaded(l => ({...l, payments: true}));}, err => setLoadError(err.message)),
+      listenToPendingApprovals(claims.tenantId, data => {setPendingApprovals(data);setLoaded(l => ({...l, approvals: true}));}, err => setLoadError(err.message)),
       listenToExpiringMemberships(claims.tenantId, setExpiringMemberships, () => undefined),
     ];
     return () => unsubs.forEach((u) => u());
@@ -86,6 +88,9 @@ export default function DashboardPage() {
       soonExpiring,
     };
   }, [bookings, jobs, payments, expiringMemberships, today]);
+
+  if (loadError) return <div className="ax-panel" role="alert">Could not load today: {loadError}. Refresh to try again.</div>;
+  if (!Object.values(loaded).every(Boolean)) return <div className="ax-panel" role="status">Loading today's studio and payments...</div>;
 
   return (
     <DashboardView

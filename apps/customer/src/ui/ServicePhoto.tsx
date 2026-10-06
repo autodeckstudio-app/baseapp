@@ -1,6 +1,6 @@
 // One image block for any service: a product shot on a tinted panel (brand bottles) or a cover photo.
 import { useState } from "react";
-import { Image, View } from "react-native";
+import { Platform, Image, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
 import { serviceVisual } from "../lib/imagery";
 
@@ -13,13 +13,13 @@ export function ServicePhoto({ service, height, width, radius = 0, aspect }: { s
   if (service.imageUrl && !bad) {
     return (
       <View style={box}>
-        <FadeImage onError={() => setBad(true)} source={{ uri: service.imageUrl }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+        <FadeImage onError={() => setBad(true)} source={{ uri: service.imageUrl }} resizeMode="cover" style={{ width: "100%", height: "100%", ...(Platform.OS === "web" ? {filter: "saturate(0.8) contrast(0.95)"} : {}) }} />
       </View>
     );
   }
   if (v.bottle) {
     return (
-      <View style={[box, { backgroundColor: v.bottle.tint, alignItems: "center", justifyContent: "center" }]}>
+      <View style={[box, { backgroundColor: "#F3EFE8", alignItems: "center", justifyContent: "center" }]}>
         <Image source={v.bottle.src} resizeMode="contain" style={{ width: "62%", height: "88%" }} />
       </View>
     );
