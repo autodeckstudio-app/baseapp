@@ -89,7 +89,7 @@ export default function GarageScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${v.registrationNumber} from your garage`}
                 hitSlop={8}
-                style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.7 : 1 })}
               >
                 <Icon name="close" color="#F6F4F1" size={16} />
               </Pressable>

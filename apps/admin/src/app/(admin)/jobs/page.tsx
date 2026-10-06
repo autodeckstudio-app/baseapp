@@ -79,6 +79,7 @@ export default function JobsPage() {
 
   if (error) return <p className="error">{error}</p>;
 
+  if (loading) return <div className="ax-panel" role="status">Loading the studio floor...</div>;
   const activeToday = jobs.filter((j) => j.scheduledDate <= today && j.estimatedEndDate >= today);
   const inStudio = activeToday.filter((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)).length;
   const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
@@ -111,11 +112,11 @@ export default function JobsPage() {
         </div>
       </header>
 
-      <section className="ax-panel" aria-label="Standby waiting queue">
+      {jobs.some(j=>j.status==="STANDBY") && <section className="ax-panel" aria-label="Standby waiting queue">
         <h2>Arrived - standby</h2><p className="ax-note">Waiting in arrival order. No bay or time reserved. Open the next car to admit into an available compatible bay.</p>
         {jobs.filter(j => j.status === "STANDBY").sort((a,b) => (a.standbyArrivedAt ?? a.createdAt).localeCompare(b.standbyArrivedAt ?? b.createdAt) || a.id.localeCompare(b.id)).map((j,i) => <button key={j.id} className="ax-button" onClick={() => open(j.id)}>{i+1}. {vehicleRegs[j.vehicleId] ?? "Vehicle"} - {serviceNames[j.serviceId] ?? "Service"} - waiting since {formatDateTime(j.standbyArrivedAt ?? j.createdAt)}</button>)}
         {!jobs.some(j => j.status === "STANDBY") ? <p>No cars waiting.</p> : null}
-      </section>
+      </section>}
       <div className="ax-toolbar">
         <div className="ax-seg" role="group" aria-label="View">
           <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}>Board</button>
@@ -170,7 +171,7 @@ export default function JobsPage() {
           </thead>
           <tbody>
             {filtered.map((j) => (
-              <tr key={j.id} className="row-link" onClick={() => open(j.id)}>
+              <tr key={j.id} className="row-link" tabIndex={0} role="link" aria-label={`Open job for ${vehicleRegs[j.vehicleId] ?? "vehicle"}`} onKeyDown={e=>{if(e.key==="Enter")open(j.id);}} onClick={() => open(j.id)}>
                 <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ax-muted"> · Walk-in</span> : null}</td>
                 <td><StatusBadge label={j.status} /></td>
                 <td className="ax-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>

@@ -28,7 +28,7 @@ export const BOARD_COLUMNS: { status: string; title: string; tone: "wait" | "act
 export function JobBoard({ jobs, loading, onOpen }: { jobs: BoardJob[]; loading?: boolean; onOpen: (id: string) => void }) {
   return (
     <div className="ax-board" aria-busy={loading || undefined}>
-      {BOARD_COLUMNS.map((c) => {
+      {BOARD_COLUMNS.filter(c => loading || c.status!=="STANDBY" || jobs.some(j=>j.status==="STANDBY")).map((c) => {
         const items = jobs.filter((j) => j.status === c.status);
         return (
           <section key={c.status} className={`ax-col ax-col--${c.tone}`} aria-label={c.title}>

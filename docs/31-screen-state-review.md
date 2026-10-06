@@ -12,7 +12,7 @@ Pending means not yet visually verified after the unified-system release. A shar
 | customer | `apps/customer/src/app/(tabs)/book/[serviceId].tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/book/confirm.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/bookings/[id].tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/bookings/index.tsx` | Pending | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/bookings/index.tsx` | Pass 0890755, 390px | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/bookings/inspection.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/bookings/invoice.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/bookings/reschedule.tsx` | Pending | Pending | Pending |
@@ -24,7 +24,7 @@ Pending means not yet visually verified after the unified-system release. A shar
 | customer | `apps/customer/src/app/(tabs)/catalogue/index.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/garage/[id].tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/garage/add.tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/garage/index.tsx` | Pending | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/garage/index.tsx` | Pass 0890755, 390px | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/help.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/index.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/membership/[planId].tsx` | Pending | Pending | Pending |
@@ -44,7 +44,7 @@ Pending means not yet visually verified after the unified-system release. A shar
 | admin | `apps/admin/src/app/(admin)/customers/[id]/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/customers/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/daily-close/page.tsx` | Pending | Pending | Pending |
-| admin | `apps/admin/src/app/(admin)/dashboard/page.tsx` | Pending | Pending | Pending |
+| admin | `apps/admin/src/app/(admin)/dashboard/page.tsx` | Pass 0890755, 390px | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/expenses/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/gallery/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/inventory/page.tsx` | Pending | Pending | Pending |
@@ -83,9 +83,9 @@ Pending means not yet visually verified after the unified-system release. A shar
 | admin | `apps/admin/src/app/page.tsx` | Pending | Pending | Pending |
 | studio | `apps/studio/src/app/(auth)/login.tsx` | Pending | Pending | Pending |
 | studio | `apps/studio/src/app/(tabs)/account.tsx` | Pending | Pending | Pending |
-| studio | `apps/studio/src/app/(tabs)/bays.tsx` | Pending | Pending | Pending |
-| studio | `apps/studio/src/app/(tabs)/calendar.tsx` | Pending | Pending | Pending |
-| studio | `apps/studio/src/app/(tabs)/index.tsx` | Pending | Pending | Pending |
+| studio | `apps/studio/src/app/(tabs)/bays.tsx` | Pass 0890755, 390px | Pending | Pending |
+| studio | `apps/studio/src/app/(tabs)/calendar.tsx` | Pass 0890755, 390px | Pending | Pending |
+| studio | `apps/studio/src/app/(tabs)/index.tsx` | Pass 0890755, 390px | Pending | Pending |
 | studio | `apps/studio/src/app/(tabs)/jobs/[id].tsx` | Pending | Pending | Pending |
 | studio | `apps/studio/src/app/(tabs)/jobs/inspection/[jobId].tsx` | Pending | Pending | Pending |
 | studio | `apps/studio/src/app/(tabs)/lookup/customer/[id].tsx` | Pending | Pending | Pending |
