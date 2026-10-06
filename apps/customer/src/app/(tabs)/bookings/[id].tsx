@@ -101,6 +101,8 @@ export default function BookingDetailScreen() {
   useLang();
   const [, tick] = useState(0);
   useEffect(() => { const timer = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(timer); }, []);
+  const [retryTick,setRetryTick] = useState(0);
+  const [feedError,setFeedError] = useState<string|null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -137,10 +139,10 @@ export default function BookingDetailScreen() {
   }
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    return listenToBooking(id, (value) => { setBooking(value); setLoading(false); }, () => { setBooking(null); setLoading(false); });
-  }, [id]);
+    if (!id) {setLoading(false);return;}
+    setLoading(true);setFeedError(null);
+    return listenToBooking(id, (value) => { setFeedError(null);setBooking(value); setLoading(false); }, (err) => { setFeedError(err.message);setLoading(false); });
+  }, [id,retryTick]);
 
   useEffect(() => {
     if (!id || !booking) return;
@@ -203,6 +205,7 @@ export default function BookingDetailScreen() {
   }
 
   if (loading) return <Loading label="Opening your booking" />;
+  if(feedError) return <Screen><Notice title="Can't load your booking" body={feedError} action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
   const hoursToStart = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;

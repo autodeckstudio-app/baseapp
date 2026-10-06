@@ -27,6 +27,7 @@ export function DailyCloseView(p: {
   const expected = p.close?.expectedCashPaise ?? p.live?.expectedCashPaise ?? 0;
   const variancePreview = countedOk ? Math.round(countedRupees * 100) - expected : null;
 
+  if(p.loading) return <div className="ax-panel" role="status">Loading daily close...</div>;
   return (
     <div className="ax-page">
       <PageHead
@@ -51,7 +52,7 @@ export function DailyCloseView(p: {
             {p.loading ? (
               [0, 1].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
             ) : (
-              <ul className="ax-list">
+              <ul className="ax-list ax-cash-summary">
                 <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Cash payments</span><span className="ax-sub">{p.live?.paymentCount ?? 0} completed payments today</span></span><span className="ax-slot-amt">{formatPaise(p.live?.cashPaise ?? 0)}</span></li>
                 <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">UPI (manual)</span></span><span className="ax-slot-amt">{formatPaise(p.live?.upiPaise ?? 0)}</span></li>
                 <li className="ax-list-row"><span className="ax-slot-main"><span className="ax-person-name">Online (Razorpay)</span></span><span className="ax-slot-amt">{formatPaise(p.live?.razorpayPaise ?? 0)}</span></li>

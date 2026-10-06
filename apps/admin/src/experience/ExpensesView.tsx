@@ -50,6 +50,7 @@ export function ExpensesView(p: {
   const amountRupees = Number(amount);
   const amountOk = Number.isFinite(amountRupees) && amountRupees > 0;
 
+  if(p.loading) return <div className="ax-panel" role="status">Loading expenses...</div>;
   return (
     <div className="ax-page">
       <PageHead

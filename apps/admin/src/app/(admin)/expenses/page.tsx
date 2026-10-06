@@ -29,7 +29,7 @@ export default function ExpensesPage() {
       claims.tenantId,
       studioId,
       month,
-      (rows) => { setExpenses(rows); setLoading(false); },
+      (rows) => { setError(null);setExpenses(rows); setLoading(false); },
       () => { setError("Couldn't load expenses."); setLoading(false); },
     );
     return unsub;

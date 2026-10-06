@@ -16,7 +16,7 @@ import {
 } from "../../lib/walkin-service";
 import { getActiveServices } from "../../lib/approval-service";
 import type { Customer, Vehicle, Service, ServiceJob, StudioConfig, VehicleCategory, PriceBreakdown } from "@autodeck/core";
-import { colors, spacing, radius, typography, Button, TextInput, StatusBadge, LoadingState } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, TextInput, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
@@ -54,6 +54,8 @@ export default function WalkinScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ bayId?: string }>();
 
+  const [feedError,setFeedError] = useState<string|null>(null);
+  const [retryTick,setRetryTick] = useState(0);
   const [phone, setPhone] = useState("");
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -86,18 +88,19 @@ export default function WalkinScreen() {
   const studioId = auth.status === "ready" ? auth.claims.studioId : null;
 
   useEffect(() => {
-    void getActiveServices().then(setServices);
-  }, []);
+    setFeedError(null);
+    void getActiveServices().then(setServices).catch(()=>setFeedError("Could not load services. Try again."));
+  }, [retryTick]);
 
   useEffect(() => {
     if (!studioId) return;
-    void getStudioConfig(studioId).then(setConfig);
-  }, [studioId]);
+    void getStudioConfig(studioId).then(setConfig).catch(()=>setFeedError("Could not load studio bays. Try again."));
+  }, [studioId,retryTick]);
 
   useEffect(() => {
     if (auth.status !== "ready" || !studioId) return undefined;
-    return listenToJobsByDate(auth.claims.tenantId, studioId, todayIST(), setJobs, () => undefined);
-  }, [auth.status, studioId]);
+    return listenToJobsByDate(auth.claims.tenantId, studioId, todayIST(), setJobs, ()=>setFeedError("Could not check bay occupancy. Try again."));
+  }, [auth.status, studioId,retryTick]);
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) ?? null;
@@ -231,11 +234,11 @@ export default function WalkinScreen() {
     }
   }
 
-  const canSubmit = Boolean(customer && selectedVehicleId && selectedServiceId && selectedBayId);
+  const canSubmit = Boolean(customer && selectedVehicleId && selectedServiceId && selectedBayId && !feedError);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
-      <Text style={{ ...typography.heading, color: colors.textPrimary, marginBottom: spacing.lg }}>New Walk-in</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
+      {feedError?<ErrorState title="Walk-in setup unavailable" message={feedError} fill={false} onRetry={()=>setRetryTick(n=>n+1)}/>:null}
 
       <Section title="1. Find customer">
         <View style={{ flexDirection: "row", gap: spacing.sm }}>

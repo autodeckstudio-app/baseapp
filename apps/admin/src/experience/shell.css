@@ -614,3 +614,5 @@
 
 /* Status choices remain readable without widening a phone viewport. */
 @media(max-width:700px){.ax-shell .ax-seg{max-width:100%;flex-wrap:wrap;border-radius:20px;}.ax-shell .ax-seg button{flex:1 0 auto;}.ax-shell .ax-toolbar .ax-search{max-width:100%;}}
+
+.ax-shell .ax-cash-summary .ax-list-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;}.ax-shell .ax-cash-summary .ax-person-name,.ax-shell .ax-cash-summary .ax-sub{white-space:normal;overflow:visible;word-break:normal;}.ax-shell .ax-cash-summary .ax-slot-amt{white-space:nowrap;}
