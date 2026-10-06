@@ -401,7 +401,7 @@ export default function VehicleDetailScreen() {
 
       {tab === "passport" ? (
         jobs.length === 0 ? (
-          <Notice title="No service history yet" body="Completed services for this car will appear here." />
+          <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />
         ) : (
           <Pane pad="gap">
             {jobs.map((job, i) => (
