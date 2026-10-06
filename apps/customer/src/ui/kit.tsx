@@ -113,7 +113,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, paddingBottom: 120, gap: space.inset }}>
+    <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: top ? space.inset : space.section, paddingBottom: 120, gap: space.inset }}>
       <BackBar />
       {header}
       {children}
@@ -377,6 +377,7 @@ export function Field({
     <View style={{ gap: space.hair }}>
       <T role="label" tone="tertiary">{label}</T>
       <TextInput
+        accessibilityLabel={label}
         value={value}
         onChangeText={onChangeText}
         onBlur={onBlur}

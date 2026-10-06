@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../hooks/useAuth";
 import { findCustomersByPhone } from "../../../lib/walkin-service";
 import { searchCustomersByName, findVehicleByRegistration } from "../../../lib/lookup-service";
 import type { Customer, Vehicle } from "@autodeck/core";
-import { colors, spacing, radius, typography, Button, SearchInput, ListRow, EmptyState, LoadingState } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, SearchInput, ListRow, EmptyState, ErrorState, LoadingState } from "@autodeck/ui";
 
 type SearchMode = "customer" | "vehicle";
 
@@ -15,6 +15,7 @@ export default function LookupScreen() {
   const [mode, setMode] = useState<SearchMode>("customer");
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [error,setError] = useState<string|null>(null);
   const [searched, setSearched] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -22,7 +23,7 @@ export default function LookupScreen() {
   async function handleSearch() {
     if (auth.status !== "ready" || !query.trim()) return;
     const tenantId = auth.claims.tenantId;
-    setSearching(true);
+    setSearching(true);setError(null);
     setSearched(false);
     setCustomers([]);
     setVehicle(null);
@@ -43,7 +44,7 @@ export default function LookupScreen() {
         setVehicle(result);
       }
     } catch (err) {
-      Alert.alert("Search failed", err instanceof Error ? err.message : "Please try again.");
+      setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
       setSearching(false);
       setSearched(true);
@@ -64,7 +65,7 @@ export default function LookupScreen() {
             <TouchableOpacity
               key={m}
               onPress={() => {
-                setMode(m);
+                setMode(m);setError(null);
                 setQuery("");
                 setSearched(false);
                 setCustomers([]);
@@ -72,7 +73,7 @@ export default function LookupScreen() {
               }}
               style={{
                 flex: 1,
-                paddingVertical: spacing.sm,
+                minHeight:44,justifyContent:"center",paddingVertical: spacing.sm,
                 borderRadius: radius.sm,
                 alignItems: "center",
                 backgroundColor: selected ? colors.surface : "transparent",
@@ -96,7 +97,8 @@ export default function LookupScreen() {
 
       <View style={{ height: spacing.lg }} />
 
-      {searched && !hasResults && (
+      {error ? <ErrorState title="Search unavailable" message={error} onRetry={()=>void handleSearch()} fill={false}/> : null}
+      {searched && !error && !hasResults && (
         <EmptyState
           title="No results"
           message={mode === "customer" ? "No customer matches this phone number or name." : "No vehicle found with that registration number."}

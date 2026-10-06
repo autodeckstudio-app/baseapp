@@ -72,15 +72,15 @@ export default function SellScreen() {
         <Field label="Kilometres driven" value={f.km} onChangeText={(v) => up("km", v)} keyboardType="numeric" maxLength={7} />
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Fuel</T>
-          {Platform.OS === "web" ? createElement("select", { value: f.fuel, onChange: (e: { target: { value: string } }) => up("fuel", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, FUELS.map((x) => createElement("option", { key: x, value: x }, x))) : null}
+          {Platform.OS === "web" ? createElement("select", { "aria-label":"Fuel",value: f.fuel, onChange: (e: { target: { value: string } }) => up("fuel", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, FUELS.map((x) => createElement("option", { key: x, value: x }, x))) : null}
         </View>
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Gearbox</T>
-          {Platform.OS === "web" ? createElement("select", { value: f.gearbox, onChange: (e: { target: { value: string } }) => up("gearbox", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, ["manual", "automatic"].map((x) => createElement("option", { key: x, value: x }, x))) : null}
+          {Platform.OS === "web" ? createElement("select", { "aria-label":"Gearbox",value: f.gearbox, onChange: (e: { target: { value: string } }) => up("gearbox", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, ["manual", "automatic"].map((x) => createElement("option", { key: x, value: x }, x))) : null}
         </View>
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Body type (optional)</T>
-          {Platform.OS === "web" ? createElement("select", { value: f.body, onChange: (e: { target: { value: string } }) => up("body", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, [createElement("option", { key: "", value: "" }, "Not sure"), ...["hatchback", "sedan", "suv", "muv", "coupe", "other"].map((x) => createElement("option", { key: x, value: x }, x))]) : null}
+          {Platform.OS === "web" ? createElement("select", { "aria-label":"Body type",value: f.body, onChange: (e: { target: { value: string } }) => up("body", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, [createElement("option", { key: "", value: "" }, "Not sure"), ...["hatchback", "sedan", "suv", "muv", "coupe", "other"].map((x) => createElement("option", { key: x, value: x }, x))]) : null}
         </View>
         <Field label="Owners so far" value={f.owners} onChangeText={(v) => up("owners", v)} keyboardType="numeric" maxLength={2} />
         <Field label="Colour" value={f.colour} onChangeText={(v) => up("colour", v)} autoCapitalize="words" maxLength={40} />
@@ -113,7 +113,7 @@ export default function SellScreen() {
         <Field label="Your phone" value={f.phone} onChangeText={(v) => up("phone", v)} keyboardType="phone-pad" maxLength={15} />
         <Field label="Registration number (optional)" value={f.reg} onChangeText={(v) => up("reg", v)} autoCapitalize="characters" maxLength={13} />
       </View>}
-      {error ? <Notice title="Not sent" body={error} /> : null}
+      {error ? <Notice title="Check these details" body={error} /> : null}
       {step===2 ? <Button label="Send for studio review" busy={busy} onPress={() => void submit()}/> : <Button label={step===0 ? "Continue to photos & price" : "Continue to review"} onPress={next}/>}
       {step>0 && <Button kind="quiet" label="Previous step" disabled={busy} onPress={() => {setError(null);setStep(step-1);}}/>}
       <T role="caption" tone="tertiary">We check that you are the registered owner before approving. Your phone number is never shown to buyers.</T>

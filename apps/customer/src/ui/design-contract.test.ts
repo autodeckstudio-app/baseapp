@@ -1,0 +1,18 @@
+import {describe,it,expect} from "vitest";
+import {readFileSync} from "node:fs";
+import {resolve} from "node:path";
+const read=(p:string)=>readFileSync(resolve(".",p),"utf8");
+describe("unified product design contract",()=>{
+  it("keeps user-uploaded service photos untreated",()=>{
+    expect(read("src/ui/ServicePhoto.tsx")).not.toContain("filter:");
+  });
+  it("labels shared input controls and preserves minimum back target",()=>{
+    const source=read("src/ui/kit.tsx");expect(source).toContain("accessibilityLabel={label}");expect(source).toContain("minHeight: 44");
+  });
+  it("does not send or upload before the staged sell review",()=>{
+    const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("photos.length===0");
+  });
+  it("does not choose unrelated images for vehicle fallbacks",()=>{
+    const source=read("src/lib/imagery.ts");expect(source).toContain("suv: heroAlt");expect(source).toContain("luxury: heroAlt");expect(source).not.toContain("ALL_POOL");
+  });
+});

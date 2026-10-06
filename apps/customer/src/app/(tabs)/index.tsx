@@ -271,7 +271,7 @@ export default function HomeScreen() {
             return <Pressable key={category} accessibilityRole="button" accessibilityLabel={`Explore ${category} services`} onPress={() => router.push({pathname:"/(tabs)/catalogue",params:{cat:category}})} style={{width:216,gap:10}}>
               <View style={{borderRadius:20,overflow:"hidden"}}><HeroImage aspect={3/2} source={serviceImagery[category as keyof typeof serviceImagery]} /></View>
               <T role="bodyStrong">{category === "washing" ? "Wash and care" : category === "ceramic" ? "Ceramic protection" : "Paint protection film"}</T>
-              <T role="caption" tone="tertiary">{service.priceOnRequest ? "Explore options" : priceLabel(service)}</T>
+              <T role="caption" tone="tertiary">{service.priceOnRequest ? "Explore options" : `From ${priceLabel(service)}`}</T>
             </Pressable>;
           })}
         </ScrollView>
@@ -285,8 +285,8 @@ export default function HomeScreen() {
       <View style={{gap:space.line}}>
         <Kicker>With AutoDeck</Kicker>
         <Pane pad="gap">
-          <Row title={m.membership ? "Your membership" : "Make regular care simpler"} detail={m.membership ? "Wash benefits and usage" : "Explore wash memberships"} trailing={<T tone="accent">›</T>} onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")}/>
-          <Row title="Find your next car" detail="Browse cars or list yours for studio review" trailing={<T tone="accent">›</T>} onPress={() => router.push("/(tabs)/cars")} last/>
+          <Row title={m.membership ? "Your membership" : "Make regular care simpler"} detail={m.membership ? "Wash benefits and usage" : "Explore wash memberships"} onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")}/>
+          <Row title="Find your next car" detail="Browse cars or list yours for studio review" onPress={() => router.push("/(tabs)/cars")} last/>
         </Pane>
       </View>
       {m.recentHistory.length > 0 ? <View style={{gap:space.line}}><Kicker>Recent activity</Kicker><Pane pad="gap">{m.recentHistory.slice(0,2).map((job,i,js) => <Row key={job.id} title={catalogue.find(x=>x.id===job.serviceId)?.name ?? "Studio visit completed"} detail={formatDateShort(job.scheduledDate)} trailing={<Chip label="Delivered"/>} onPress={() => job.bookingId ? router.push(`/(tabs)/bookings/${job.bookingId}`) : router.push("/(tabs)/bookings")} last={i===js.length-1}/>)}</Pane></View> : null}
