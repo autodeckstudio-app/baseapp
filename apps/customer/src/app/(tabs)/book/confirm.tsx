@@ -65,13 +65,15 @@ export default function BookingConfirmScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [breakdown, setBreakdown] = useState<PriceBreakdownData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [retryTick,setRetryTick] = useState(0);
   const [loadError, setLoadError] = useState(false);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   useEffect(() => {
-    if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) return;
+    if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
+    setLoading(true);setLoadError(false);
     void (async () => {
       try {
         const [serviceSnap, vehicleSnap, priceResult] = await Promise.all([
@@ -79,8 +81,9 @@ export default function BookingConfirmScreen() {
           getDoc(doc(db, COLLECTIONS.vehicles(), params.vehicleId)),
           calculateServicePrice(params.serviceId, params.vehicleCategory),
         ]);
-        if (serviceSnap.exists()) setService(serviceSnap.data() as Service);
-        if (vehicleSnap.exists()) setVehicle(vehicleSnap.data() as Vehicle);
+        if (!serviceSnap.exists() || !vehicleSnap.exists()) throw new Error("Booking details unavailable");
+        setService(serviceSnap.data() as Service);
+        setVehicle(vehicleSnap.data() as Vehicle);
         setBreakdown(priceResult.breakdown);
       } catch {
         setLoadError(true);
@@ -88,9 +91,10 @@ export default function BookingConfirmScreen() {
         setLoading(false);
       }
     })();
-  }, [params.serviceId, params.vehicleId, params.vehicleCategory]);
+  }, [params.serviceId, params.vehicleId, params.vehicleCategory,retryTick]);
 
   async function handleConfirm() {
+    if(booking || !service || !vehicle || !breakdown) return;
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
     setBooking(true);
     setBookError(null);
@@ -107,14 +111,14 @@ export default function BookingConfirmScreen() {
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
     } catch (err) {
       console.warn("create booking failed", err);
-      setBookError("We could not send your request. Nothing was booked and you have not been charged. Please try again.");
+      setBookError("We could not send your request. Check your bookings before trying again. If the request reached the studio, it will appear there.");
     } finally {
       setBooking(false);
     }
   }
 
   if (loading) return <Loading label="Getting your price" />;
-  if (loadError) return <Screen><Notice title="Can't load details" body="Check your connection and try again." /></Screen>;
+  if (loadError) return <Screen><Notice title="Can't load details" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
 
   const displayDate =
     params.scheduledDate &&
@@ -171,7 +175,7 @@ export default function BookingConfirmScreen() {
         </Pane>
       </View>
 
-      {bookError ? <Notice title="Request not sent" body={bookError} /> : null}
+      {bookError ? <Notice title="Could not confirm the request" body={bookError} /> : null}
 
       <View style={{ gap: space.breath }}>
         <Button label={service?.priceOnRequest === true ? "Request quote and book" : "Request booking"} busy={booking} onPress={() => void handleConfirm()} />

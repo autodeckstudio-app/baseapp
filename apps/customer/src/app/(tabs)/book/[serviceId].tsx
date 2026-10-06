@@ -40,6 +40,8 @@ export default function BookServiceScreen() {
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const [vehiclesError,setVehiclesError] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
   const { colors } = useExperienceTheme();
@@ -52,6 +54,7 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     if (!serviceId || auth.status !== "ready") return;
+    setLoading(true); setLoadError(false);
     void (async () => {
       try {
         const serviceSnap = await getDoc(doc(db, COLLECTIONS.services(), serviceId));
@@ -62,7 +65,7 @@ export default function BookServiceScreen() {
         setLoading(false);
       }
     })();
-  }, [serviceId, auth.status]);
+  }, [serviceId, auth.status, retryTick]);
 
   useEffect(() => {
     if (auth.status !== "ready") return;
@@ -70,15 +73,18 @@ export default function BookServiceScreen() {
       auth.user.uid,
       auth.claims.tenantId,
       (list) => {
+        setVehiclesError(false);
         setVehicles(list);
         setSelectedVehicle((cur) => {
           const keep = cur && list.find((v) => v.id === cur.id);
           return keep ?? list[0] ?? null;
         });
       },
-      () => undefined,
+      () => setVehiclesError(true),
     );
-  }, [auth.status]);
+  }, [auth.status,retryTick]);
+
+  useEffect(()=>{if(selectedVehicle?.category) setSelectedCategory(selectedVehicle.category);},[selectedVehicle?.id,selectedVehicle?.category]);
 
   useEffect(() => {
     if (!serviceId || !service) return;
@@ -88,7 +94,7 @@ export default function BookServiceScreen() {
       .then(setSlots)
       .catch(() => setSlotsError(true))
       .finally(() => setSlotsLoading(false));
-  }, [serviceId, service]);
+  }, [serviceId, service,retryTick]);
 
   function handleSelectSlot(slot: AvailableSlot) {
     if (!selectedVehicle || !serviceId) return;
@@ -109,7 +115,7 @@ export default function BookServiceScreen() {
   }
 
   if (loading) return <Loading label="Finding times" />;
-  if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." /></Screen>;
+  if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
@@ -122,7 +128,7 @@ export default function BookServiceScreen() {
       <View style={{ borderRadius: 28, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={16 / 9} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Your car</Kicker>
-        {vehicles.length === 0 ? (
+        {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : (
           <Pane pad="gap">
@@ -157,7 +163,7 @@ export default function BookServiceScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 onPress={() => setSelectedCategory(value)}
-                style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
+                style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8, minHeight:44, justifyContent:"center" }}
               >
                 <T role="caption" tone={selected ? "accent" : "secondary"}>{label}</T>
               </Pressable>
@@ -168,7 +174,7 @@ export default function BookServiceScreen() {
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>
-        {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." /> : null}
+        {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
           <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
         ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (
@@ -186,9 +192,9 @@ export default function BookServiceScreen() {
                         key={slot.startAt}
                         accessibilityRole="button"
                         accessibilityLabel={`Book ${slot.startTime}`}
-                        disabled={!selectedVehicle}
+                        disabled={!selectedVehicle || vehiclesError}
                         onPress={() => handleSelectSlot(slot)}
-                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(245,154,69,0.55)", backgroundColor: "rgba(245,154,69,0.12)", paddingHorizontal: 16, paddingVertical: 10, opacity: !selectedVehicle ? 0.4 : pressed ? 0.7 : 1, minWidth: 76, alignItems: "center" })}
+                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(245,154,69,0.55)", backgroundColor: "rgba(245,154,69,0.12)", paddingHorizontal: 16, paddingVertical: 10, opacity: !selectedVehicle ? 0.4 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
                       >
                         <T role="data" tone="accent">{slot.startTime}</T>
                         {multiDay ? (

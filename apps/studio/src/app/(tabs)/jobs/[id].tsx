@@ -80,6 +80,7 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
+  const [serviceName,setServiceName] = useState<string|null>(null);
   const [requiredBayType, setRequiredBayType] = useState<string | null>(null);
   const [config, setConfig] = useState<StudioConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,7 +110,7 @@ export default function JobDetailScreen() {
         if (snap.exists()) {
           const j = snap.data() as ServiceJob;
           setJob(j);
-          void getDoc(doc(db, COLLECTIONS.services(), j.serviceId)).then(s => setRequiredBayType((s.data() as Service | undefined)?.requiredBayType ?? null));
+          void getDoc(doc(db, COLLECTIONS.services(), j.serviceId)).then(s => { const data=s.data() as Service|undefined; setRequiredBayType(data?.requiredBayType??null);setServiceName(data?.name??null); }).catch(()=>setServiceName(null));
           if (!config) {
             void getStudioConfig(j.studioId).then(setConfig);
           }
@@ -360,19 +361,19 @@ export default function JobDetailScreen() {
   const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth:640,alignSelf:"center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
         <StatusBadge label={statusLabel} tone={statusTone(job.status)} />
         {job.isWalkIn && <StatusBadge label="Walk-in" tone="accent" />}
       </View>
 
       <Section>
-        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : job.bayId} />
-        <Row label="Service" value={job.serviceId} />
+        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : config?.bays.find(b=>b.id===job.bayId)?.name??"Loading bay..."} />
+        <Row label="Service" value={serviceName??"Loading service..."} />
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label="Expected ready" value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label="Payment" value={job.paymentStatus} />
+        <Row label="Payment" value={job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus} />
       </Section>
 
       {isMultiDay && (
