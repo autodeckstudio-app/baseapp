@@ -13,7 +13,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { rescheduleBookingSchema } from "../../schemas/booking.js";
-import { buildOccupiedInterval, hasConflict, type OccupiedInterval } from "../../lib/availability.js";
+import { buildOccupiedInterval, generateDaySlots, type OccupiedInterval } from "../../lib/availability.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
 export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request): Promise<{ booking: Booking }> => {
@@ -82,6 +82,9 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
 
   const service = serviceSnap.data() as Service;
   const config = configSnap.data() as StudioConfig;
+  assertTenant(user, service.tenantId);
+  assertTenant(user, config.tenantId);
+  if (!service.active) throw new HttpsError("failed-precondition", "Service is not currently available.");
 
   const newStart = localToUTC(data.newDate, data.newTime, config.timezone);
   if (newStart <= new Date()) {
@@ -117,10 +120,18 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     // Fetching via tx.get() makes Firestore's transaction conflict
     // detection cover this read, so a genuinely concurrent status change
     // causes a retry against fresh data instead of a silent overwrite.
+    const freshBookingSnap = await tx.get(db.collection(COLLECTIONS.bookings()).doc(data.bookingId));
+    const freshBooking = freshBookingSnap.data() as Booking | undefined;
+    if (!freshBooking || freshBooking.status !== "CONFIRMED" || freshBooking.scheduledAt !== booking.scheduledAt || freshBooking.rescheduleCount !== booking.rescheduleCount) {
+      throw new HttpsError("failed-precondition", "Booking changed. Reload it before rescheduling.");
+    }
     const jobsSnap = await tx.get(
       db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1),
     );
     const jobDoc = jobsSnap.docs[0];
+    if (jobDoc && (jobDoc.data() as ServiceJob).status !== "PENDING_VEHICLE") {
+      throw new HttpsError("failed-precondition", "The vehicle has already arrived. Reload the job.");
+    }
 
     // Re-validate availability for the new slot inside the transaction.
     // Widened to a MAX_SERVICE_SPAN_DAYS range so a multi-day job that
@@ -153,7 +164,14 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     let minJobs = Infinity;
     for (const bay of compatibleBays) {
       const occupied = bayOccupancy.get(bay.id) ?? [];
-      if (!hasConflict(newStart, newEstimatedEndAt, occupied)) {
+      const localDay = new Date(`${data.newDate}T12:00:00Z`).getUTCDay();
+      const hours = config.operatingHours.find(h => h.dayOfWeek === localDay);
+      const offered = hours && !hours.closed && !config.holidays.includes(data.newDate) ? generateDaySlots({
+        date: data.newDate, openTime: hours.open, closeTime: hours.close,
+        serviceDurationMinutes: service.estimatedDurationMinutes, occupiedIntervals: occupied,
+        timezone: config.timezone, operatingHours: config.operatingHours, holidays: config.holidays,
+      }) : [];
+      if (offered.some(slot => slot.startAt === newStart.toISOString())) {
         if (occupied.length < minJobs) {
           minJobs = occupied.length;
           assignedBayId = bay.id;

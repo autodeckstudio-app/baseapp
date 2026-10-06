@@ -66,13 +66,40 @@ describe("additive customer capability", () => {
 describe("missed booking reschedule limits", () => {
   it("moves a missed slot without spending a reschedule and clears the stamp", async () => {
     h.docs["bookings/b"] = { id: "b", tenantId: "tenant", customerId: "staff", studioId: "studio", status: "CONFIRMED", scheduledAt: "2026-01-01T04:30:00Z", serviceId: "svc", rescheduleCount: 3, missedAt: "2026-01-01T15:30:00Z" };
-    h.docs["services/svc"] = { requiredBayType: "wash", estimatedDurationMinutes: 30 };
-    h.docs["studioConfig/studio"] = { bays: [{ id: "bay", active: true, bayType: "wash" }], operatingHours: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, open: "09:00", close: "21:00", closed: false })), holidays: [], timezone: "Asia/Kolkata" };
+    h.docs["services/svc"] = { tenantId: "tenant", active: true, requiredBayType: "wash", estimatedDurationMinutes: 30 };
+    h.docs["studioConfig/studio"] = { tenantId: "tenant", bays: [{ id: "bay", active: true, bayType: "wash" }], operatingHours: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, open: "09:00", close: "21:00", closed: false })), holidays: [], timezone: "Asia/Kolkata" };
     const newDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
     const result: any = await rescheduleBooking.run(req({ bookingId: "b", newDate, newTime: "11:00", idempotencyKey: "missed", customerContext: true }));
     expect(result.booking.rescheduleCount).toBe(3);
     expect(result.booking.missedAt).toBeNull();
     expect(result.booking.missedForScheduledAt).toBeNull();
     expect(result.booking.scheduledDate).toBe(newDate);
+  });
+});
+
+describe("staff re-slot guards", () => {
+  function setup() {
+    h.docs["bookings/b"] = { id: "b", tenantId: "tenant", customerId: "customer", studioId: "studio", status: "CONFIRMED", scheduledAt: "2026-01-01T04:30:00Z", serviceId: "svc", rescheduleCount: 0 };
+    h.docs["services/svc"] = { tenantId: "tenant", active: true, requiredBayType: "wash", estimatedDurationMinutes: 30 };
+    h.docs["studioConfig/studio"] = { tenantId: "tenant", bays: [{ id: "bay", active: true, bayType: "wash" }], operatingHours: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, open: "09:00", close: "21:00", closed: false })), holidays: [], timezone: "Asia/Kolkata" };
+    return { bookingId: "b", newDate: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), newTime: "11:00", idempotencyKey: "staff-slot" };
+  }
+  it("allows staff to move another customer's missed booking into an offered slot", async () => {
+    const data = setup();
+    const result: any = await rescheduleBooking.run(req(data));
+    expect(result.booking.scheduledTime).toBe("11:00");
+    expect(result.booking.rescheduleCount).toBe(0);
+  });
+  it.each(["08:00", "21:00", "11:07"])("rejects non-offered time %s", async time => {
+    const data = setup();
+    await expect(rescheduleBooking.run(req({ ...data, newTime: time }))).rejects.toMatchObject({ code: "resource-exhausted" });
+  });
+  it("rejects closed days", async () => {
+    const data = setup(); h.docs["studioConfig/studio"].holidays = [data.newDate];
+    await expect(rescheduleBooking.run(req(data))).rejects.toMatchObject({ code: "resource-exhausted" });
+  });
+  it("rejects a booking whose car is already received", async () => {
+    const data = setup(); h.docs["bookings/b"].status = "ACTIVE";
+    await expect(rescheduleBooking.run(req(data))).rejects.toMatchObject({ code: "failed-precondition" });
   });
 });

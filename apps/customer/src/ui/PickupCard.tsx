@@ -51,7 +51,9 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
         <Pane pad="gap">
           <Row title={KINDS.find((k) => k.value === req.kind)?.label ?? "Pickup"} detail={req.address} />
           <Row title="Status" detail={STATUS[req.status]} />
-          <Row title="Charge" detail={req.staffNote ? req.staffNote : req.status === "REQUESTED" ? "Free up to 5 km. Beyond 5 km: Rs 100 per pickup and Rs 100 per drop." : "Free up to 5 km"} />
+          {req.preferredTime ? <Row title="Preferred time" detail={req.preferredTime} /> : null}
+          <Row title="Pricing" detail="Free within 5 km of the studio. Beyond 5 km: Rs 100 for pickup and Rs 100 for drop-off (Rs 200 for both). The studio confirms the charge." />
+          {req.staffNote ? <Row title="Studio note" detail={req.staffNote} /> : null}
           <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
         </Pane>
       ) : open ? (

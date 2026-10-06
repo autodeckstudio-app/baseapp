@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
-import { advanceJobStatus, assignBay, getStudioConfig } from "../../../lib/studio-service";
+import { advanceJobStatus, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
 import {
   recordManualPayment,
   confirmManualPayment,
@@ -69,6 +69,13 @@ const ADVANCE_ACTION_LABELS: Record<string, string> = {
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const [reslotOpen, setReslotOpen] = useState(false);
+  const [reslotOptions, setReslotOptions] = useState<ReslotOption[]>([]);
+  const [reslotLoading, setReslotLoading] = useState(false);
+  const [reslotBusy, setReslotBusy] = useState(false);
+  const [reslotError, setReslotError] = useState<string | null>(null);
+  const [reslotPick, setReslotPick] = useState<ReslotOption | null>(null);
+  const [reslotDone, setReslotDone] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
@@ -258,6 +265,24 @@ export default function JobDetailScreen() {
         },
       },
     ]);
+  }
+
+  async function openReslot() {
+    if (!job) return;
+    setReslotOpen(true); setReslotLoading(true); setReslotError(null); setReslotPick(null); setReslotDone(false);
+    try { setReslotOptions(await getReslotOptions(job)); }
+    catch (err) { setReslotError(err instanceof Error ? err.message : "Could not load upcoming slots."); }
+    finally { setReslotLoading(false); }
+  }
+  async function confirmReslot() {
+    if (!job?.bookingId || !reslotPick) return;
+    setReslotBusy(true); setReslotError(null);
+    try { await reslotBooking(job.bookingId, reslotPick); setReslotOpen(false); setReslotPick(null); setReslotDone(true); }
+    catch (err) { setReslotError(err instanceof Error ? err.message : "Could not reschedule. Reload the available times."); }
+    finally { setReslotBusy(false); }
+  }
+  function slotLabel(slot: ReslotOption): string {
+    return new Date(slot.startAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST";
   }
 
   async function handleAdvance() {
@@ -484,7 +509,7 @@ export default function JobDetailScreen() {
                         paddingVertical: spacing.sm,
                         borderRadius: radius.md,
                         borderWidth: 1,
-                        borderColor: selected ? colors.accent : colors.border,
+                        borderColor: selected ? colors.accent : colors.textMuted,
                         backgroundColor: selected ? colors.accentMuted : colors.surface,
                       }}
                     >
@@ -526,6 +551,27 @@ export default function JobDetailScreen() {
       {canAdvance && (
         <Button label={advanceLabel} onPress={() => void handleAdvance()} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}
+
+      {job.status === "PENDING_VEHICLE" && job.bookingId ? (
+        <Section>
+          <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>Reschedule booking</Text>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>Customer arrived late? Move this booking into an upcoming available slot before checking in. The same booking and job are kept.</Text>
+          {reslotDone ? <Text style={{ ...typography.caption, color: colors.textPrimary }}>Booking rescheduled. The new time is shown above.</Text> : null}
+          {!reslotOpen ? <Button label="Reschedule" variant="secondary" onPress={() => void openReslot()} /> : (
+            <View style={{ gap: spacing.sm }}>
+              {reslotLoading ? <Text style={{ color: colors.textMuted }}>Loading upcoming slots...</Text> : null}
+              {reslotError ? <Text accessibilityRole="alert" style={{ color: colors.textPrimary }}>{reslotError}</Text> : null}
+              {!reslotLoading && !reslotError && reslotOptions.length === 0 ? <Text style={{ color: colors.textMuted }}>No upcoming slots in the next 14 days.</Text> : null}
+              <ScrollView style={{ maxHeight: 260 }}>
+                {reslotOptions.map(slot => <TouchableOpacity key={slot.startAt} disabled={reslotBusy} accessibilityRole="button" accessibilityState={{ selected: reslotPick?.startAt === slot.startAt }} onPress={() => setReslotPick(slot)} style={{ padding: spacing.md, marginBottom: spacing.xs, borderRadius: radius.md, borderWidth: 1, borderColor: reslotPick?.startAt === slot.startAt ? colors.accent : colors.textMuted }}><Text style={{ color: colors.textPrimary }}>{slotLabel(slot)}</Text></TouchableOpacity>)}
+              </ScrollView>
+              {reslotPick ? <><Text style={{ color: colors.textPrimary }}>Move this booking to {slotLabel(reslotPick)}? The studio will recheck bay capacity before saving.</Text><Button label="Confirm reschedule" onPress={() => void confirmReslot()} loading={reslotBusy} /></> : null}
+              <Button label="Reload available times" variant="secondary" onPress={() => void openReslot()} disabled={reslotBusy || reslotLoading} />
+              <Button label="Cancel" variant="secondary" onPress={() => { setReslotOpen(false); setReslotPick(null); }} disabled={reslotBusy} />
+            </View>
+          )}
+        </Section>
+      ) : null}
 
       {compatibleBays.length > 0 && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
         <>

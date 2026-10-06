@@ -138,3 +138,13 @@ export async function getServiceById(serviceId: string): Promise<Service | null>
   if (!snap.exists()) return null;
   return snap.data() as Service;
 }
+
+export type ReslotOption = { date: string; startTime: string; startAt: string; estimatedEndAt: string };
+export async function getReslotOptions(job: ServiceJob): Promise<ReslotOption[]> {
+  const date = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const result = await httpsCallable<{ serviceId: string; studioId: string; startDate: string; lookAheadDays: number }, { slots: ReslotOption[] }>(functions, "getAvailability")({ serviceId: job.serviceId, studioId: job.studioId, startDate: date, lookAheadDays: 14 });
+  return result.data.slots.filter(slot => Date.parse(slot.startAt) > Date.now());
+}
+export async function reslotBooking(bookingId: string, slot: ReslotOption): Promise<void> {
+  await httpsCallable(functions, "rescheduleBooking")({ bookingId, newDate: slot.date, newTime: slot.startTime, idempotencyKey: `studio-${bookingId}-${slot.startAt}-${Date.now()}` });
+}

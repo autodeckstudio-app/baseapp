@@ -11,6 +11,7 @@ import { listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, 
 import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
+import { JobControls } from "../../../../components/JobControls";
 import { StageTrack } from "../../../../experience/StageTrack";
 
 type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
@@ -135,6 +136,7 @@ export default function JobDetailPage() {
       </header>
 
       <StageTrack current={job.status} />
+      <JobControls job={job} />
 
       <div className="ax-detail">
         <div className="ax-detail-main">
