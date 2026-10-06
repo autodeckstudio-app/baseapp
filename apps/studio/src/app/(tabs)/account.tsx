@@ -41,6 +41,7 @@ export default function AccountScreen() {
   const [note, setNote] = useState<string | null>(null);
 
   async function run(label: string, fn: string, done: string) {
+    if(busy) return;
     setBusy(label);
     setNote(null);
     try {

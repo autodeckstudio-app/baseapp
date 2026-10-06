@@ -115,3 +115,9 @@ Pending means not yet visually verified after the unified-system release. A shar
 - Direct inspection links for QA job return permission-denied in both apps; normal job shows Start Inspection, consistent with no inspection created. No rule changes and no QA inspection created. Existing-inspection flow remains unverified.
 - Local follow-up adds one-day reschedule times, stale-date Daily Close protection, retry states for car/inspection/plan/usage and inline Studio action errors/confirmation. Source checks passed, live verification awaits publication.
 - Membership purchase currently ignores returned payment URL; Razorpay handling is separate scope. No payment execution or payment integration changes made.
+
+## End of source pass
+
+Normal 390px live checks additionally covered Customer vehicle room, membership list and Help; Admin job detail top/payment bottom, services list and Studio settings top/bottom; Studio Lookup, calendar, pickup list and account. No writes were performed on these records. Source improvements after 5539021 require deployment before visual acceptance. These normal-state checks do not certify empty/error/loading/keyboard/tablet states for all routes.
+
+End-of-build dependencies: business number not yet assigned (Help stays unchanged), Razorpay checkout on Thursday, real inspection and mutation journeys during the Sunday-test-data window. Existing QA job/booking/vehicle/pickup and older production data left unchanged.
