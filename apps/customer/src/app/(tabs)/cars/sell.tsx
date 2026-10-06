@@ -1,6 +1,6 @@
 // Sell your car: a short form plus photos. It goes to the studio for review first, then shows to other customers.
-import { createElement, useState } from "react";
-import { Platform, View } from "react-native";
+import { createElement, useEffect, useState } from "react";
+import { Image, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Pane, Screen, T } from "../../../ui/kit";
@@ -13,6 +13,12 @@ export default function SellScreen() {
   const router = useRouter();
   const [f, setF] = useState<F>({ make: "", model: "", variant: "", year: "", km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", name: "", phone: "", reg: "" });
   const [photos, setPhotos] = useState<Array<{ blob: Blob; type: string }>>([]);
+  const [previews,setPreviews] = useState<string[]>([]);
+  useEffect(() => {
+    if (Platform.OS!=="web") return;
+    const urls=photos.map(p=>URL.createObjectURL(p.blob));setPreviews(urls);
+    return () => urls.forEach(u=>URL.revokeObjectURL(u));
+  },[photos]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -89,12 +95,13 @@ export default function SellScreen() {
         <View style={{ gap: space.hair }}>
           <Kicker>Photos (up to 12, first is the cover)</Kicker>
           {createElement("input", {
-            type: "file", multiple: true, accept: "image/jpeg,image/png,image/webp",
+            "aria-label":"Choose car photos, up to twelve", style:{color:"#F6F4F1",padding:16,border:"1px dashed #555558",borderRadius:16,width:"100%",boxSizing:"border-box"}, type: "file", multiple: true, accept: "image/jpeg,image/png,image/webp",
             onChange: (e: { target: { files: ArrayLike<{ type: string }> | null } }) => {
               const list = Array.from(e.target.files ?? []).filter((x) => ["image/jpeg", "image/png", "image/webp"].includes(x.type)).slice(0, 12);
               setPhotos(list.map((x) => ({ blob: x as unknown as Blob, type: x.type })));
             },
           })}
+          {previews.length>0 && <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{previews.map((uri,i)=><View key={uri} style={{width:"30%",gap:4}}><Image source={{uri}} resizeMode="cover" style={{width:"100%",aspectRatio:1,borderRadius:12}}/><T role="caption" tone="tertiary">{i===0?"Cover":`Photo ${i+1}`}</T></View>)}</View>}
           <T role="caption" tone="tertiary">{photos.length} photo{photos.length === 1 ? "" : "s"} selected. Use clear exterior and interior photos. Originals are kept unchanged.</T>
         </View>
       ) : null}

@@ -38,8 +38,8 @@ export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
 export const vehicleImagery: Record<VehicleCategory, ImageSourcePropType> = {
   hatchback: heroAlt,
   sedan: vehicleSedan,
-  suv: serviceTinting,
-  luxury: serviceCoating,
+  suv: heroAlt,
+  luxury: heroAlt,
   van: heroAlt,
   commercial: heroAlt,
 };

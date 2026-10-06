@@ -289,7 +289,7 @@ export default function HomeScreen() {
           <Row title="Find your next car" detail="Browse cars or list yours for studio review" trailing={<T tone="accent">›</T>} onPress={() => router.push("/(tabs)/cars")} last/>
         </Pane>
       </View>
-      {m.recentHistory.length > 0 ? <View style={{gap:space.line}}><Kicker>Recent activity</Kicker><Pane pad="gap">{m.recentHistory.slice(0,2).map((job,i,js) => <Row key={job.id} title="Studio visit completed" detail={formatDateShort(job.scheduledDate)} trailing={<Chip label="Delivered"/>} onPress={() => job.bookingId ? router.push(`/(tabs)/bookings/${job.bookingId}`) : router.push("/(tabs)/bookings")} last={i===js.length-1}/>)}</Pane></View> : null}
+      {m.recentHistory.length > 0 ? <View style={{gap:space.line}}><Kicker>Recent activity</Kicker><Pane pad="gap">{m.recentHistory.slice(0,2).map((job,i,js) => <Row key={job.id} title={catalogue.find(x=>x.id===job.serviceId)?.name ?? "Studio visit completed"} detail={formatDateShort(job.scheduledDate)} trailing={<Chip label="Delivered"/>} onPress={() => job.bookingId ? router.push(`/(tabs)/bookings/${job.bookingId}`) : router.push("/(tabs)/bookings")} last={i===js.length-1}/>)}</Pane></View> : null}
 
       {catalogue.length === 0 && catalogueFailed ? (
         <Notice title="Services didn't load" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => { setCatalogueFailed(false); setRetryTick((n) => n + 1); }} />} />
