@@ -1,16 +1,16 @@
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image, type ImageSourcePropType, Pressable, ScrollView, TextInput, View } from "react-native";
+import { type ImageSourcePropType, Pressable, TextInput, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
-import { BRANDS, type BrandItem } from "../../../lib/brands";
+import { BRANDS} from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space, type IconName } from "@autodeck/ui/theme";
-import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
-import { Button, Chip, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
+import { brandHero, serviceImagery } from "../../../lib/imagery";
+import { Button, Kicker, Notice, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
   washing: "Wash and care",

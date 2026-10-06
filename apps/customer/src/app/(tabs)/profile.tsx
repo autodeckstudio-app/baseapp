@@ -7,7 +7,7 @@ import { updateProfile } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
-import { LANGS, setLang, useLang } from "../../lib/i18n";
+import { useLang } from "../../lib/i18n";
 import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-service";
 import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";

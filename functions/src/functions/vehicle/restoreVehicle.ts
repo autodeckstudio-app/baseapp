@@ -32,7 +32,7 @@ export const restoreVehicle = onCall({ region: "asia-south1" }, async (request) 
         .where("tenantId", "==", v.tenantId)
         .where("ownerId", "==", v.ownerId),
     );
-    if (matchingVehicles(same.docs.filter((d) => d.id !== ref.id).map((d) => d.data() as Vehicle), v.registrationNumber).some((v) => !v.deletedAt)) {
+    if (matchingVehicles(same.docs.filter((d) => d.id !== ref.id).map((d) => d.data() as Vehicle), v.registrationNumber).some((candidate) => !candidate.deletedAt)) {
       throw new HttpsError("already-exists", "This car is already added.");
     }
     const now = new Date().toISOString();

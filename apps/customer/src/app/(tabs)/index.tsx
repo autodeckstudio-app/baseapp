@@ -1,10 +1,10 @@
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Platform, Pressable, ScrollView, View } from "react-native";
+import { Animated, Platform, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
-import { ExperienceThemeProvider, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
+import { Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -15,14 +15,14 @@ import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
 import { listenToVehicleWarranties } from "../../lib/warranty-service";
 import type { Service } from "@autodeck/core";
-import { getServiceCatalogue, priceLabel } from "../../lib/catalogue-service";
+import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getAvailability, todayIST, type AvailableSlot } from "../../lib/booking-service";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { StoryViewer } from "../../ui/StoryViewer";
 import { Stage, DepthCarousel } from "../../ui/Immersive";
-import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
 const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: string }> = {
   empty: { kicker: "Welcome", line: "Add your car to book care, track visits and keep its papers in one place." },

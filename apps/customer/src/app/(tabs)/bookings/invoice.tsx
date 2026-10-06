@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import type { Invoice } from "@autodeck/core";
 import { listenToInvoiceForJob } from "../../../lib/invoice-service";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 export default function InvoiceScreen() {
   const { jobId, tenantId, customerId } = useLocalSearchParams<{

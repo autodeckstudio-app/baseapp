@@ -45,7 +45,6 @@ export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const auth = useAuth();
-  const { colors } = useExperienceTheme();
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);

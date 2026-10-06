@@ -18,7 +18,6 @@ export default function SellScreen() {
   const [done, setDone] = useState(false);
   const up = (k: keyof F, v: string) => setF((p) => ({ ...p, [k]: v }));
   const n = (s: string) => Number(s.replace(/[^0-9]/g, ""));
-  const ready = f.make.trim() && f.model.trim() && f.colour.trim() && f.area.trim() && f.name.trim() && f.phone.trim().length >= 10 && n(f.year) >= 1990 && n(f.price) >= 1000 && photos.length > 0;
 
   async function submit() {
     setBusy(true); setError(null);

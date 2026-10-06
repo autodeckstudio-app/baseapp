@@ -6,7 +6,7 @@ import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
+import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
 import { useAuth } from "../../../hooks/useAuth";

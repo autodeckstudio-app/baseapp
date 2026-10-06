@@ -12,7 +12,7 @@ import type { Service, Vehicle } from "@autodeck/core";
 import { getMyBookings } from "../../../lib/booking-service";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
   PENDING: { label: "Awaiting confirm", tone: "accent" },

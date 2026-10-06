@@ -6,12 +6,12 @@ import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
-import { archiveVehicle, listenToMyVehicles, resolveVehiclePhotoUrl } from "../../../lib/vehicle-service";
+import { archiveVehicle, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { HeroImage, Button, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
+import { HeroImage, Button, Kicker, Loading, Notice, Pane, Plate, Screen, T } from "../../../ui/kit";
 
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
 
@@ -23,17 +23,6 @@ export default function GarageScreen() {
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [error, setError] = useState(false);
-  const [leadPhoto, setLeadPhoto] = useState<string | null>(null);
-  const leadCar = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-  const leadPath = leadCar?.photoUrl ?? null;
-  const leadVersion = leadCar?.updatedAt ?? null;
-  useEffect(() => {
-    let alive = true;
-    setLeadPhoto(null);
-    if (leadPath) void resolveVehiclePhotoUrl(leadPath, leadVersion).then((u) => { if (alive) setLeadPhoto(u); }).catch(() => {});
-    return () => { alive = false; };
-  }, [leadPath, leadVersion]);
-
   useEffect(() => {
     if (auth.status !== "ready") return;
     return listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));

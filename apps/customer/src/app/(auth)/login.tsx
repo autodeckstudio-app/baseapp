@@ -14,7 +14,7 @@ import {
   signInWithGooglePopup,
   useEmulator,
 } from "../../lib/auth-service";
-import { Button, Kicker, Pane, T } from "../../ui/kit";
+import { Button, Kicker, T } from "../../ui/kit";
 
 // Lets the auth browser session hand its result back to the app.
 WebBrowser.maybeCompleteAuthSession();

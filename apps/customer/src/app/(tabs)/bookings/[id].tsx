@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking } from "../../../lib/job-service";
-import { listenToPaymentForJob, initiatePayment } from "../../../lib/payment-service";
+import { listenToPaymentForJob } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { getReview, submitReview } from "../../../lib/review-service";
 import { Pressable } from "react-native";
@@ -103,10 +103,8 @@ export default function BookingDetailScreen() {
   const [cancelling, setCancelling] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [payRequested, setPayRequested] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
-  const [payingNow, setPayingNow] = useState(false);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const { colors } = useExperienceTheme();
@@ -173,20 +171,6 @@ export default function BookingDetailScreen() {
     void getServiceCatalogue().then((all) => { if (alive) setSvc(all.find((x) => x.id === booking.serviceId) ?? null); }).catch(() => undefined);
     return () => { alive = false; };
   }, [booking?.serviceId]);
-
-  async function handlePayAtStudio() {
-    if (!job) return;
-    setPayingNow(true);
-    setActionError(null);
-    try {
-      await initiatePayment(job.id, "cash");
-      setPayRequested(true);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Couldn't start payment. Please try again.");
-    } finally {
-      setPayingNow(false);
-    }
-  }
 
   const [quoteBusy, setQuoteBusy] = useState(false);
   async function handleApproveQuote() {

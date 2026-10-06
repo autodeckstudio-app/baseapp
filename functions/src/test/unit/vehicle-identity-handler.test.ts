@@ -10,7 +10,7 @@ vi.mock("firebase-admin/firestore", () => ({ getFirestore: () => ({
 import { createVehicle } from "../../functions/vehicle/createVehicle.js";
 import { restoreVehicle } from "../../functions/vehicle/restoreVehicle.js";
 const data = { registrationNumber: "MH40CQ3182", make: "Maruti Suzuki", model: "Fronx", year: 2022, color: "White" };
-const req = (data: any): any => ({ data });
+const req = (payload: any): any => ({ data: payload });
 const row = (plate: string, deletedAt: string | null = null) => ({ id: "original", registrationNumber: plate, deletedAt, tenantId: "tenant", ownerId: "owner", make: "Maruti Suzuki", model: "Fronx", year: 2022, color: "White" });
 beforeEach(() => { h.rows = []; h.archived = null; vi.clearAllMocks(); });
 describe("vehicle identity handlers", () => {

@@ -1,6 +1,6 @@
 // A car picture that never breaks: the customer's photo when there is one, otherwise a category placeholder.
 import { useEffect, useState } from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
 import type { Vehicle } from "@autodeck/core";
 import { resolveVehiclePhotoUrl } from "../lib/vehicle-service";

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
@@ -110,7 +110,7 @@ export default function BookServiceScreen() {
 
   if (loading) return <Loading label="Finding times" />;
   if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." /></Screen>;
-  if (!service || (service as any).active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
+  if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
     (acc[slot.date] ??= []).push(slot);

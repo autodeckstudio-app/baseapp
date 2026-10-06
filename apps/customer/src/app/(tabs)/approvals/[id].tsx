@@ -5,7 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import type { ApprovalRequest, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { listenToApproval, respondToApproval } from "../../../lib/approval-service";
 import { db } from "../../../lib/firebase";
 

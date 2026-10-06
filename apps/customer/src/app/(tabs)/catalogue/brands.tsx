@@ -4,7 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { BRANDS } from "../../../lib/brands";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { Chip, HeroImage, Kicker, Pane, Row, Screen, T } from "../../../ui/kit";
+import { Chip, Kicker, Pane, Row, Screen, T } from "../../../ui/kit";
 
 export default function BrandProduct() {
   const { b, n } = useLocalSearchParams<{ b?: string; n?: string }>();

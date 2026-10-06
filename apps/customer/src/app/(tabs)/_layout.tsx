@@ -9,7 +9,7 @@ import { PillTabBar, useExperienceTheme } from "@autodeck/ui/native";
 const TAB_ICON: Record<string, "home" | "services" | "bookings" | "garage" | "profile"> = { index: "home", catalogue: "services", bookings: "bookings", garage: "garage", profile: "profile" };
 
 export default function TabsLayout() {
-  const { colors, glass } = useExperienceTheme();
+  const { colors } = useExperienceTheme();
   return (
     <View style={{ flex: 1 }}>
     <Tabs
