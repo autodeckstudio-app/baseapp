@@ -22,6 +22,7 @@ export function JobControls({ job }: { job: ServiceJob }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   async function prepareStandby() {
+    if(busy) return;
     setOperation("admit"); setBusy(true); setError(null);
     try {
       const [c, s] = await Promise.all([getDoc(doc(db, COLLECTIONS.studioConfig(), job.studioId)), getDoc(doc(db, COLLECTIONS.services(), job.serviceId))]);
@@ -31,6 +32,7 @@ export function JobControls({ job }: { job: ServiceJob }) {
     finally { setBusy(false); }
   }
   async function perform() {
+    if(busy) return;
     setBusy(true); setError(null);
     try {
       if (operation === "rework") await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id, rework: true });
@@ -40,6 +42,7 @@ export function JobControls({ job }: { job: ServiceJob }) {
     finally { setBusy(false); }
   }
   async function loadSlots() {
+    if(busy) return;
     setOpen(true); setBusy(true); setError(null); setPick(null); setDone(null);
     try {
       const startDate = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -49,13 +52,14 @@ export function JobControls({ job }: { job: ServiceJob }) {
     finally { setBusy(false); }
   }
   async function advance() {
+    if(busy) return;
     setBusy(true); setError(null); setDone(null);
     try { await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id }); setAdvanceConfirm(false); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not update the stage."); }
     finally { setBusy(false); }
   }
   async function move() {
-    if (!pick || !job.bookingId) return;
+    if (!pick || !job.bookingId || busy) return;
     setBusy(true); setError(null);
     try {
       await httpsCallable(functions, "rescheduleBooking")({ bookingId: job.bookingId, newDate: pick.date, newTime: pick.startTime, idempotencyKey: `admin-${job.id}-${Date.now()}` });

@@ -15,6 +15,7 @@ import {
   getService,
 } from "../../../../lib/bookings-service";
 import { setBookingQuote } from "../../../../lib/bookings-service";
+import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatDayLong, formatTime } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
@@ -24,6 +25,8 @@ export default function BookingDetailPage() {
   const router = useRouter();
   const { claims } = useAdminAuth();
 
+  const [attempt,setAttempt] = useState(0);
+  const [bayName,setBayName] = useState("");
   const [booking, setBooking] = useState<Booking | null | undefined>(undefined);
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
@@ -50,14 +53,15 @@ export default function BookingDetailPage() {
   }
 
   useEffect(() => {
-    if (!id) return undefined;
-    return listenToBooking(id, setBooking, (err) => setError(err.message));
-  }, [id]);
+    setError(null);
+    if (!id) {setBooking(null);return undefined;}
+    return listenToBooking(id, value=>{setBooking(value);setError(null);}, (err) => setError(err.message));
+  }, [id,attempt]);
 
   useEffect(() => {
     if (!booking || !claims) return undefined;
     return listenToJobForBooking(booking.id, claims.tenantId, setJob, (err) => setError(err.message));
-  }, [booking?.id, claims]);
+  }, [booking?.id, claims,attempt]);
 
   useEffect(() => {
     if (!job || !claims) return undefined;
@@ -69,16 +73,22 @@ export default function BookingDetailPage() {
       unsubPayment();
       unsubInvoice();
     };
-  }, [job?.id, claims]);
+  }, [job?.id, claims,attempt]);
 
   useEffect(() => {
     if (!booking) return;
-    void getCustomer(booking.customerId).then(setCustomer);
-    void getVehicle(booking.vehicleId).then(setVehicle);
-    void getService(booking.serviceId).then(setService);
+    void getCustomer(booking.customerId).then(setCustomer).catch(()=>setCustomer(null));
+    void getVehicle(booking.vehicleId).then(setVehicle).catch(()=>setVehicle(null));
+    void getService(booking.serviceId).then(setService).catch(()=>setService(null));
   }, [booking]);
 
-  if (error) return <p className="error">{error}</p>;
+  useEffect(()=>{
+    if(!booking) return;
+    setBayName("");
+    void getStudioConfig(booking.studioId).then(c=>setBayName(c?.bays.find(b=>b.id===booking.bayId)?.name??"")).catch(()=>setBayName(""));
+  },[booking?.studioId,booking?.bayId,attempt]);
+
+  if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
   if (booking === undefined) return <p className="ax-label" role="status">Loading…</p>;
   if (booking === null) {
     return (
@@ -116,7 +126,7 @@ export default function BookingDetailPage() {
             <div className="kv"><span>Date</span><span>{formatDayLong(booking.scheduledDate)}</span></div>
             <div className="kv"><span>Time</span><span>{formatTime(booking.scheduledAt)} to {formatTime(booking.estimatedEndAt)}</span></div>
             <div className="kv"><span>Length</span><span>{booking.durationMinutes} min</span></div>
-            <div className="kv"><span>Bay</span><span>{booking.bayId}</span></div>
+            <div className="kv"><span>Bay</span><span>{bayName || "Assigned bay"}</span></div>
             {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
           </section>
 

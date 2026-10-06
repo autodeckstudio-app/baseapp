@@ -8,6 +8,7 @@ import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
 import { listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
+import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
@@ -22,6 +23,8 @@ export default function JobDetailPage() {
   const router = useRouter();
   const { claims } = useAdminAuth();
 
+  const [attempt,setAttempt] = useState(0);
+  const [bayName,setBayName] = useState("");
   const [job, setJob] = useState<ServiceJob | null | undefined>(undefined);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -41,9 +44,10 @@ export default function JobDetailPage() {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
-    if (!id) return undefined;
-    return listenToJob(id, setJob, (err) => setError(err.message));
-  }, [id]);
+    setError(null);
+    if (!id) {setJob(null);return undefined;}
+    return listenToJob(id, value=>{setJob(value);setError(null);}, (err) => setError(err.message));
+  }, [id,attempt]);
 
   useEffect(() => {
     if (!job || !claims) return undefined;
@@ -52,7 +56,7 @@ export default function JobDetailPage() {
     const unsubInvoice = listenToInvoiceForJob(job.id, claims.tenantId, setInvoice, (err) => setError(err.message));
     const unsubAudit = listenToAuditForEntity(claims.tenantId, "ServiceJob", job.id, setAudit, (err) => setError(err.message));
     const unsubInspection = listenToInspectionForJob(job.id, setInspection, () => undefined);
-    void getWarrantyForJob(job.id).then(setWarranty);
+    void getWarrantyForJob(job.id).then(setWarranty).catch(()=>setWarranty(null));
     return () => {
       unsubApprovals();
       unsubPayment();
@@ -60,13 +64,13 @@ export default function JobDetailPage() {
       unsubAudit();
       unsubInspection();
     };
-  }, [job?.id, claims]);
+  }, [job?.id, claims,attempt]);
 
   useEffect(() => {
     if (!job) return;
-    void getCustomer(job.customerId).then(setCustomer);
-    void getVehicle(job.vehicleId).then(setVehicle);
-    void getService(job.serviceId).then(setService);
+    void getCustomer(job.customerId).then(setCustomer).catch(()=>setCustomer(null));
+    void getVehicle(job.vehicleId).then(setVehicle).catch(()=>setVehicle(null));
+    void getService(job.serviceId).then(setService).catch(()=>setService(null));
   }, [job]);
 
   async function handleRecordPayment() {
@@ -103,7 +107,13 @@ export default function JobDetailPage() {
     }
   }
 
-  if (error) return <p className="error">{error}</p>;
+  useEffect(()=>{
+    if(!job) return;
+    setBayName("");
+    void getStudioConfig(job.studioId).then(c=>setBayName(c?.bays.find(b=>b.id===job.bayId)?.name??"")).catch(()=>setBayName(""));
+  },[job?.studioId,job?.bayId,attempt]);
+
+  if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
   if (job === undefined) return <p className="ax-label" role="status">Loading…</p>;
   if (job === null) {
     return (
@@ -230,7 +240,7 @@ export default function JobDetailPage() {
 
           <section className="ax-panel">
             <span className="ax-label">Bay and timing</span>
-            <div className="kv"><span>Bay</span><span>{job.status === "STANDBY" ? "No bay reserved" : job.bayId}</span></div>
+            <div className="kv"><span>Bay</span><span>{job.status === "STANDBY" ? "No bay reserved" : bayName || "Assigned bay"}</span></div>
             <div className="kv"><span>Starts</span><span>{job.status === "STANDBY" ? "Waiting - no slot reserved" : formatDateTime(job.scheduledAt)}</span></div>
             <div className="kv"><span>Est. finish</span><span>{formatDateTime(job.estimatedEndAt)}</span></div>
             <div className="kv">

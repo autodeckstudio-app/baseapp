@@ -1,6 +1,6 @@
 // You: account, membership, notifications, sign out.
 import { useState } from "react";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { updateProfile } from "firebase/auth";
@@ -12,12 +12,14 @@ import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-
 import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
-import { Button, Field, Kicker, Loading, Pane, Row, Screen, T } from "../../ui/kit";
+import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function YouScreen() {
   const auth = useAuth();
   const { lang, t } = useLang();
   const router = useRouter();
+  const [actionMessage,setActionMessage] = useState<string|null>(null);
+  function showActionMessage(title:string,body:string){setActionMessage(`${title}: ${body}`);}
   const [confirm, setConfirm] = useState(false);
   const [delStep, setDelStep] = useState<"idle" | "ask" | "sent">("idle");
   const [delBusy, setDelBusy] = useState(false);
@@ -28,7 +30,7 @@ export default function YouScreen() {
   const [savedName, setSavedName] = useState<string | null>(null);
 
   async function saveName() {
-    if (auth.status !== "ready") return;
+    if (auth.status !== "ready" || saving) return;
     const next = draft.trim();
     if (next.length < 2 || next.length > 100) {
       setSaveError("Enter your name, 2 to 100 characters.");
@@ -57,6 +59,7 @@ export default function YouScreen() {
       </View>
       <View style={{ flex: 1, gap: space.hair }}><Kicker tone="accent">{t("You")}</Kicker><T role="title" numberOfLines={1}>{name}</T>{auth.user.email ? <T role="caption" tone="tertiary" numberOfLines={1}>{auth.user.email}</T> : null}</View>
     </View>}>
+      {actionMessage?<Notice title="Account update" body={actionMessage}/>:null}
       {editing ? (
         <View style={{ gap: space.breath }}>
           <Field label="Your name" value={draft} onChangeText={setDraft} autoCapitalize="words" maxLength={100} />
@@ -72,7 +75,7 @@ export default function YouScreen() {
       <Pane pad="gap">
         <Row title={t("Membership")} detail={t("Plans, washes left, history")} onPress={() => router.push("/(tabs)/membership")} />
         <Row title={t("Notifications")} detail={t("Updates from the studio")} onPress={() => router.push("/(tabs)/notifications")} />
-        {pushAvailable() ? <Row title="Booking alerts" detail="Get a notification when the studio updates your booking" onPress={() => void enablePush().then((r) => Alert.alert(r === "on" ? "Alerts on" : "Not enabled", r === "on" ? "You will get booking updates on this device." : "Allow notifications in your browser settings to turn this on."))} /> : null}
+        {pushAvailable() ? <Row title="Booking alerts" detail="Get a notification when the studio updates your booking" onPress={() => void enablePush().then((r) => showActionMessage(r === "on" ? "Alerts on" : "Not enabled", r === "on" ? "You will get booking updates on this device." : "Allow notifications in your browser settings to turn this on."))} /> : null}
         <Row title={t("Help and contact")} detail={t("Call, WhatsApp, FAQ")} onPress={() => router.push("/(tabs)/help")} last />
       </Pane>
       {/* Language picker hidden until the whole app is translated (LANGS, setLang kept in lib/i18n). */}
@@ -93,13 +96,13 @@ export default function YouScreen() {
       {delStep === "sent" ? (
         <View style={{ gap: space.breath }}>
           <T role="caption" tone="secondary">Your deletion request is in. Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
-          <Button kind="quiet" label="Cancel deletion" busy={delBusy} onPress={() => { setDelBusy(true); void cancelAccountDeletion().then(() => setDelStep("idle")).catch(() => Alert.alert("Could not cancel", "The 7 day window may have passed. Contact the studio.")).finally(() => setDelBusy(false)); }} />
+          <Button kind="quiet" label="Cancel deletion" busy={delBusy} onPress={() => { setDelBusy(true); void cancelAccountDeletion().then(() => setDelStep("idle")).catch(() => showActionMessage("Could not cancel", "The 7 day window may have passed. Contact the studio.")).finally(() => setDelBusy(false)); }} />
         </View>
       ) : delStep === "ask" ? (
         <View style={{ gap: space.breath }}>
           <T tone="secondary">Delete your account? Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
           <View style={{ flexDirection: "row", gap: space.breath }}>
-            <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => { setDelBusy(true); void requestAccountDeletion().then(() => setDelStep("sent")).catch(() => Alert.alert("Could not send", "Try again in a moment.")).finally(() => setDelBusy(false)); }} />
+            <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => { setDelBusy(true); void requestAccountDeletion().then(() => setDelStep("sent")).catch(() => showActionMessage("Could not send", "Try again in a moment.")).finally(() => setDelBusy(false)); }} />
             <Button kind="quiet" label="Cancel" onPress={() => setDelStep("idle")} style={{ flex: 1 }} />
           </View>
         </View>
