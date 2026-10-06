@@ -71,6 +71,12 @@ export default function CarsScreen() {
     if (sort === "high") return [...list].sort((a, b) => b.askingPrice - a.askingPrice);
     return list;
   }, [all, query, fuel, body, budget, sort]);
+  const searching = query.trim() !== "";
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [] as CarListingView[];
+    return (all ?? []).filter((l) => `${l.year} ${l.make} ${l.model} ${l.variant ?? ""}`.toLowerCase().includes(q)).slice(0, 5);
+  }, [all, query]);
   const filtering = query.trim() !== "" || fuel !== null || body !== null || budget !== "any";
   useEffect(() => {
     getCarListings(false).then(setAll).catch(() => setError(true));
@@ -90,20 +96,35 @@ export default function CarsScreen() {
       {all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
+          {searching ? (
+            suggestions.length > 0 ? (
+              <View style={{ borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                {suggestions.map((l, i) => (
+                  <Pressable key={l.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/cars/${l.id}`)} style={({ pressed }) => ({ paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", gap: 12, backgroundColor: pressed ? "rgba(236,134,56,0.16)" : "transparent", borderTopWidth: i === 0 ? 0 : 1, borderTopColor: "rgba(255,255,255,0.08)" })}>
+                    <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{l.year} {l.make} {l.model}{l.variant ? ` ${l.variant}` : ""}</T>
+                    <T role="caption" tone="accent">{inr(l.askingPrice)}</T>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null
+          ) : (
+            <View style={{ gap: space.line }}>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {BUDGETS.map((b) => <Pill key={b.id} label={b.label} on={budget === b.id} onPress={() => setBudget(b.id)} />)}
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {FUEL_FILTERS.map((f) => <Pill key={f} label={f} on={fuel === f} onPress={() => setFuel(fuel === f ? null : f)} />)}
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {BODY_FILTERS.map((b) => <Pill key={b} label={b} on={body === b} onPress={() => setBody(body === b ? null : b)} />)}
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            <Pill label="Newest" on={sort === "new"} onPress={() => setSort("new")} />
-            <Pill label="Price low to high" on={sort === "low"} onPress={() => setSort("low")} />
-            <Pill label="Price high to low" on={sort === "high"} onPress={() => setSort("high")} />
-          </View>
+              {BUDGETS.map((b) => <Pill key={b.id} label={b.label} on={budget === b.id} onPress={() => setBudget(b.id)} />)}
+            </View>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {FUEL_FILTERS.map((f) => <Pill key={f} label={f} on={fuel === f} onPress={() => setFuel(fuel === f ? null : f)} />)}
+            </View>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {BODY_FILTERS.map((b) => <Pill key={b} label={b} on={body === b} onPress={() => setBody(body === b ? null : b)} />)}
+            </View>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <Pill label="Newest" on={sort === "new"} onPress={() => setSort("new")} />
+              <Pill label="Price low to high" on={sort === "low"} onPress={() => setSort("low")} />
+              <Pill label="Price high to low" on={sort === "high"} onPress={() => setSort("high")} />
+            </View>
+  </View>
+          )}
         </View>
       ) : null}
       {error ? <Notice title="Can't load cars" body="Check your connection and try again." /> : null}

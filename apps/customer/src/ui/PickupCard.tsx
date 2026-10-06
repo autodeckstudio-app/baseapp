@@ -10,8 +10,8 @@ const KINDS: { value: PickupRequest["kind"]; label: string }[] = [
   { value: "both", label: "Both" },
 ];
 const STATUS: Record<PickupRequest["status"], string> = {
-  REQUESTED: "Waiting for the studio",
-  CONFIRMED: "Confirmed by the studio",
+  REQUESTED: "Waiting for studio approval",
+  CONFIRMED: "Approved by the studio",
   DONE: "Done",
   DECLINED: "Declined by the studio",
 };
@@ -50,8 +50,9 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
       {active ? (
         <Pane pad="gap">
           <Row title={KINDS.find((k) => k.value === req.kind)?.label ?? "Pickup"} detail={req.address} />
-          <Row title="Status" detail={STATUS[req.status]} last />
-          {req.staffNote ? <T role="caption" tone="secondary">{req.staffNote}</T> : null}
+          <Row title="Status" detail={STATUS[req.status]} />
+          <Row title="Charge" detail={req.staffNote ? req.staffNote : req.status === "REQUESTED" ? "Free up to 5 km. Beyond 5 km: Rs 100 per pickup and Rs 100 per drop." : "Free up to 5 km"} />
+          <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
         </Pane>
       ) : open ? (
         <Pane pad="inset">
@@ -59,6 +60,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
               {KINDS.map((k) => <Button key={k.value} label={k.label} kind={kind === k.value ? "primary" : "quiet"} onPress={() => setKind(k.value)} style={{ flexGrow: 1 }} />)}
             </View>
+            <T role="caption" tone="secondary">Free pickup and drop within 5 km of the studio. Beyond 5 km it is Rs 100 for pickup and Rs 100 for drop (Rs 200 for both). You pay at the studio.</T>
             <Field label="Address" value={address} onChangeText={setAddress} placeholder="House, street, area" multiline />
             <Field label="Preferred time (optional)" value={time} onChangeText={setTime} placeholder="e.g. Saturday morning" />
             {error ? <T role="caption" tone="danger">{error}</T> : null}

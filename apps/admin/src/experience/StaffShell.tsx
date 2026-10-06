@@ -37,7 +37,7 @@ export const OFFICE_LINKS = [
 // Sidebar and More sheet: sections ordered by daily use. Studio-role staff only see sections with office:false links.
 type NavLink = { href: string; label: string; office: boolean };
 const SECTIONS: { key: string; label: string; links: NavLink[] }[] = [
-  { key: "today", label: "Today", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
+  { key: "today", label: "Today", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
   { key: "customers", label: "Customers", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/vehicles", label: "Vehicles", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
   { key: "money", label: "Money", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily Close", office: true }, { href: "/reports", label: "Reports", office: true }] },
   { key: "catalogue", label: "Catalogue", links: [{ href: "/services", label: "Services and pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }, { href: "/stories", label: "Stories", office: true }, { href: "/cars", label: "Cars for sale", office: true }] },
@@ -54,10 +54,10 @@ const GROUPS = [
 const MORE_LINKS = [
   { href: "/papers", label: "Papers" }, { href: "/inventory", label: "Inventory" }, { href: "/services", label: "Services" },
   { href: "/staff", label: "Team" }, { href: "/studio", label: "Studio" }, { href: "/stories", label: "Stories" },
-  { href: "/cars", label: "Cars for sale" }, { href: "/audit", label: "Audit log" },
+  { href: "/cars", label: "Cars for sale" }, { href: "/pickups", label: "Pickup and drop" }, { href: "/audit", label: "Audit log" },
 ] as const;
 
-const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
+const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car", "/pickups": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Owner",
