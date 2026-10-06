@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import type { PaperVerification, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { submitMyPaperSchema } from "../../schemas/paper.js";
@@ -15,7 +15,7 @@ const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "
 // derived from the vehicle, never from the client. When contentType is given,
 // returns a short-lived signed PUT URL for the photo.
 export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(submitMyPaperSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "paper.submit");

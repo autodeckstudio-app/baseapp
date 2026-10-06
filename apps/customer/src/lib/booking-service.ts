@@ -81,11 +81,11 @@ export async function cancelBooking(
   bookingId: string,
   reason: string,
 ): Promise<void> {
-  const fn = httpsCallable<CancelBookingInput, CancelBookingOutput>(
+  const fn = httpsCallable<CancelBookingInput & { customerContext: boolean }, CancelBookingOutput>(
     functions,
     "cancelBooking",
   );
-  await fn({ bookingId, reason });
+  await fn({ bookingId, reason, customerContext: true });
 }
 
 export async function rescheduleBooking(
@@ -94,11 +94,11 @@ export async function rescheduleBooking(
   newTime: string,
   idempotencyKey: string,
 ): Promise<Booking> {
-  const fn = httpsCallable<RescheduleBookingInput, RescheduleBookingOutput>(
+  const fn = httpsCallable<RescheduleBookingInput & { customerContext: boolean }, RescheduleBookingOutput>(
     functions,
     "rescheduleBooking",
   );
-  const result = await fn({ bookingId, newDate, newTime, idempotencyKey });
+  const result = await fn({ bookingId, newDate, newTime, idempotencyKey, customerContext: true });
   return result.data.booking;
 }
 

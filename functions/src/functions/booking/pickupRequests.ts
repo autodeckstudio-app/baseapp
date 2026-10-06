@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import type { Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -24,7 +24,7 @@ const updateSchema = z.object({
 
 /** Customer asks the studio to collect and/or return the car. A request only: the studio confirms or declines. New, additive. */
 export const requestPickupDrop = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   assertTenant(user, user.claims.tenantId);
   const data = validate(requestSchema, request.data);

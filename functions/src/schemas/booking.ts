@@ -32,11 +32,13 @@ export const createBookingSchema = z.object({
 }).strict();
 
 export const cancelBookingSchema = z.object({
+  customerContext: z.boolean().optional(),
   bookingId: z.string().min(1),
   reason: z.string().min(1).max(500),
 }).strict();
 
 export const rescheduleBookingSchema = z.object({
+  customerContext: z.boolean().optional(),
   bookingId: z.string().min(1),
   newDate: dateStr,
   newTime: timeStr,

@@ -98,3 +98,12 @@ export function assertStudio(user: AuthorizedUser, documentStudioId: string, ent
     throw new HttpsError("permission-denied", `${entityLabel} belongs to a different studio.`);
   }
 }
+
+/** Customer-facing capability is additive. Never writes or demotes global staff claims.
+ * Dedicated self-service endpoints use this view, and retain their own-record checks.
+ */
+export function extractCustomerUser(request: CallableRequest): AuthorizedUser {
+  const user = extractUser(request);
+  assertRole(user, "customer", "studio", "admin", "superadmin");
+  return { ...user, claims: { ...user.claims, role: "customer", studioId: null } };
+}

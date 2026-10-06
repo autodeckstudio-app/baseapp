@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
 import { randomUUID } from "node:crypto";
 import { FIRST_STUDIO_ID, type CarLead, type CarListing, type CarListingView } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -93,7 +93,7 @@ export const adminSaveListing = onCall({ region: "asia-south1" }, async (request
 
 // Customer: submit (or edit) their own car. Always lands PENDING; the owner comes from the login, not the client.
 export const submitMyListing = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(submitMyListingSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "paper.submit");
@@ -122,7 +122,7 @@ export const submitMyListing = onCall({ region: "asia-south1" }, async (request)
 
 // Customer: mark their own car as sold. It leaves the buyer list at once and shows as Sold to the seller and in admin.
 export const markMyListingSold = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(markMyListingSoldSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "paper.submit");
@@ -192,7 +192,7 @@ export const listCarListings = onCall({ region: "asia-south1" }, async (request)
 
 // Customer: "I'm interested" or "Report this listing". Goes to the admin inbox; seller details are never shared.
 export const expressInterest = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(expressInterestSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "paper.submit");

@@ -8,7 +8,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership, MembershipPlan, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { purchaseMembershipSchema } from "../../schemas/membership.js";
@@ -16,7 +16,7 @@ import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 
 export const purchaseMembership = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
 
   const data = validate(purchaseMembershipSchema, request.data);

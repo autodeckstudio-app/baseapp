@@ -8,7 +8,7 @@ import {
   MAX_SERVICE_SPAN_DAYS,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
+import { extractCustomerUser, extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -17,8 +17,8 @@ import { buildOccupiedInterval, hasConflict, type OccupiedInterval } from "../..
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
 export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request): Promise<{ booking: Booking }> => {
-  const user = extractUser(request);
   const data = validate(rescheduleBookingSchema, request.data);
+  const user = data.customerContext ? extractCustomerUser(request) : extractUser(request);
   await enforceRateLimit(subjectFrom(user), "booking.reschedule");
 
   const db = getFirestore();

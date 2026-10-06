@@ -11,9 +11,7 @@ installWebFonts();
 const bodyDoc = (globalThis as any).document;
 if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#0B0B0D";
 
-// Routes once claims are known, so a customer never sees staff screens and
-// staff never see customer screens (spec §5.1). Staff accounts land on a
-// notice that points them at the studio app.
+// Any signed-in account may use the customer app. Staff access stays additive.
 function NavigationGuard({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const router = useRouter();
@@ -29,8 +27,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
       if (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome")) router.replace("/(auth)/login");
     } else if (auth.status === "authenticated_no_claims") {
       if (!inAuth || segs[1] !== "setup") router.replace("/(auth)/setup");
-    } else if (auth.claims.role !== "customer") {
-      if (segs[1] !== "staff") router.replace("/(auth)/staff");
+
     } else if (inAuth) {
       router.replace("/(tabs)");
     }

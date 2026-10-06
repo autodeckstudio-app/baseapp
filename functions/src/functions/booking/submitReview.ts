@@ -5,7 +5,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import type { Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 
@@ -16,7 +16,7 @@ const submitReviewSchema = z.object({
 });
 
 export const submitReview = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(submitReviewSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.review");

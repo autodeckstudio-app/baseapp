@@ -4,7 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import type { Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole } from "../../middleware/auth.js";
+import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -12,7 +12,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 const schema = z.object({ bookingId: z.string().min(1) }).strict();
 
 export const respondToBookingQuote = onCall({ region: "asia-south1" }, async (request) => {
-  const user = extractUser(request);
+  const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(schema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.quoteRespond");
@@ -22,6 +22,7 @@ export const respondToBookingQuote = onCall({ region: "asia-south1" }, async (re
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
     const b = snap.data() as Booking;
+    assertTenant(user, b.tenantId);
     if (b.customerId !== user.uid) throw new HttpsError("permission-denied", "Not your booking.");
     if (b.quoteStatus !== "quoted") throw new HttpsError("failed-precondition", "There is no quote to approve yet.");
     tx.update(ref, { quoteStatus: "approved", updatedAt: new Date().toISOString() });
