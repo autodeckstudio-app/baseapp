@@ -68,6 +68,7 @@ export default function BookingsPage() {
 
   if (error) return <p className="error">{error}</p>;
 
+  if (loading) return <div className="ax-panel" role="status">Loading studio bookings...</div>;
   const dayMode = date !== "";
   const sorted = [...filtered].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
   const dayCount = bookings.filter((b) => b.scheduledDate === date && b.status !== "CANCELLED" && b.status !== "EXPIRED").length;

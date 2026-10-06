@@ -9,7 +9,7 @@ import { space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { brandHero, serviceImagery } from "../../../lib/imagery";
+import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { Button, Kicker, Notice, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const GROUP: Record<string, string> = {
@@ -156,10 +156,11 @@ export default function CatalogueScreen() {
       <View style={{ gap: space.hair }}>
         {level === 3 && groups.length > 1 && cat ? crumb(GROUP[cat] ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
         <Kicker tone="accent">{cat ? GROUP[cat] ?? "Services" : "Services"}</Kicker>
-        <T role="title">{level === 3 && groupKey ? groupKey : level === 2 ? "Pick a brand" : "What does your car need?"}</T>
+        <T role="title">{level === 3 && groupKey ? groupKey : level === 2 ? "Explore your options" : "What does your car need?"}</T>
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
       <TextInput
+        accessibilityLabel="Search services"
         value={q}
         onChangeText={setQ}
         placeholder="Search washes, ceramic, PPF..."
@@ -187,7 +188,7 @@ export default function CatalogueScreen() {
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: space.breath }}>
-          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, fromPrice(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name }), brandHero(name) ?? serviceImagery[(cat ?? "other") as keyof typeof serviceImagery]))}
+          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, fromPrice(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name }), brandHero(name) ?? serviceVisual(xs[0] ?? {name,category:cat ?? "other"}).photo))}
         </View>
       ) : null}
       {services && !searching && level === 3 ? (

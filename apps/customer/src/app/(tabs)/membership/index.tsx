@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { HeroImage, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, HeroImage, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { getMembershipPlans, getMyMemberships } from "../../../lib/membership-service";
 import { sceneImagery } from "../../../lib/imagery";
 
@@ -39,20 +39,20 @@ export default function MembershipScreen() {
         <Notice
           title="Could not load membership"
           body={error}
-          action={<Chip label="Try again" tone="accent" />}
+          action={<Button kind="quiet" label="Retry" onPress={()=>void load()}/>}
         />
       </Screen>
     );
   }
 
-  const otherPlans = current ? plans : plans;
+  const otherPlans = plans;
 
   return (
     <Screen
       header={
         <View style={{ gap: space.hair }}>
           <Kicker tone="accent">Membership</Kicker>
-          <T role="title">Plans that pay for themselves</T>
+          <T role="title">Care, made regular</T>
         </View>
       }
     >
@@ -89,7 +89,7 @@ export default function MembershipScreen() {
                   <View style={{ gap: space.line }}>
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
                       <View style={{ flex: 1, gap: space.hair }}>
-                        {topTier ? <Chip label="Best value" tone="premium" /> : null}
+                        {topTier ? <Chip label="More included" tone="premium" /> : null}
                         <T role="heading">{p.name}</T>
                       </View>
                       <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 8 }}>
