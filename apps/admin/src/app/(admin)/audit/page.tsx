@@ -21,6 +21,7 @@ export default function AuditPage() {
     return listenToAuditLog(
       claims.tenantId,
       (data) => {
+        setError(null);
         setEntries(data);
         setLoading(false);
       },

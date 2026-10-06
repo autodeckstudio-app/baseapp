@@ -22,6 +22,7 @@ export default function CustomersPage() {
     return listenToCustomers(
       claims.tenantId,
       (data) => {
+        setError(null);
         setCustomers(data);
         setLoading(false);
       },
@@ -35,9 +36,13 @@ export default function CustomersPage() {
   async function handlePlate(reg: string) {
     setPlateMessage(null);
     if (!claims || reg.trim().length < 4) return;
-    const customerId = await findCustomerIdByRegistration(claims.tenantId, reg.trim());
-    if (customerId) router.push(`/customers/${customerId}`);
-    else setPlateMessage(`No car with plate ${reg.trim()} is on file.`);
+    try {
+      const customerId = await findCustomerIdByRegistration(claims.tenantId, reg.trim());
+      if (customerId) router.push(`/customers/${customerId}`);
+      else setPlateMessage(`No car with plate ${reg.trim()} is on file.`);
+    } catch {
+      setPlateMessage("We could not check that plate. Try again.");
+    }
   }
 
   return (

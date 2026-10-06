@@ -24,6 +24,7 @@ export default function InvoicesPage() {
     return listenToInvoices(
       claims.tenantId,
       (data) => {
+        setError(null);
         setInvoices(data);
         setLoading(false);
       },

@@ -27,6 +27,7 @@ export default function PaymentsPage() {
     return listenToPayments(
       claims.tenantId,
       (data) => {
+        setError(null);
         setPayments(data);
         setLoading(false);
       },

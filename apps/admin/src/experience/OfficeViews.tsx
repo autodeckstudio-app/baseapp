@@ -32,7 +32,7 @@ export function CustomersView(p: {
     { key: "phone", head: "Phone", kind: "data", width: "minmax(0, 1.2fr)", cell: (c) => c.phone || "Not added" },
     { key: "joined", head: "Customer since", kind: "muted", width: "minmax(0, 1fr)", align: "end", cell: (c) => formatDate(c.createdAt) },
   ];
-  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
   if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
@@ -138,7 +138,7 @@ export function PaymentsView(p: {
       ),
     },
   ];
-  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
   if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
@@ -205,7 +205,7 @@ export function InvoicesView(p: {
     { key: "gst", head: "GST", kind: "data", align: "end", width: "100px", cell: (i) => formatPaise(i.tax) },
     { key: "total", head: "Total", kind: "data", align: "end", width: "120px", cell: (i) => formatPaise(i.total) },
   ];
-  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
   if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
@@ -262,7 +262,7 @@ export function AuditView(p: {
     { key: "on", head: "Record", width: "minmax(0, 1.4fr)", cell: (e) => <>{statusLabel(e.entityType)} <span className="ax-sub" style={{ display: "inline" }}>{e.entityId}</span></> },
     { key: "by", head: "By", width: "minmax(0, 1.2fr)", cell: (e) => <>{p.who[e.performedBy] ?? e.performedBy}<span className="ax-sub">{statusLabel(e.performedByRole)}</span></> },
   ];
-  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p></div>;
+  if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
   if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
     <div className="ax-page">
