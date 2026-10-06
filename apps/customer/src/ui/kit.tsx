@@ -1,7 +1,7 @@
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -17,7 +17,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { useRouter, useSegments } from "expo-router";
+import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { fontFamily, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
@@ -109,6 +109,11 @@ export function Screen({
   top?: ReactNode;
 }) {
   const scrollRef = useRef<ScrollView>(null);
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
   const segs = useSegments() as string[];
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
@@ -119,6 +124,7 @@ export function Screen({
       {children}
     </View>
   );
+  if (!focused) return null;
   return (
     <Ambient>
       {top ? <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, gap: space.line, zIndex: 2 }}>{top}</View> : null}

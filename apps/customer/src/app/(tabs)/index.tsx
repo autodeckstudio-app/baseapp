@@ -198,7 +198,7 @@ export default function HomeScreen() {
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.45) 0%, rgba(8,8,10,0) 28%, rgba(8,8,10,0.9) 100%)" } as object) }} />
         <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
           <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>
-            <T role="caption" tone="accent">{copy.kicker}</T>
+            <T role="caption" tone="accent">{home.error && m.heroState === "idle" ? "Checking your car" : copy.kicker}</T>
           </View>
           <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.breath }}>
             {car ? (

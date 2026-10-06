@@ -12,6 +12,9 @@ describe("unified product design contract",()=>{
   it("does not send or upload before the staged sell review",()=>{
     const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("photos.length===0");
   });
+  it("removes inactive tab controls from the accessibility and keyboard tree",()=>{
+    expect(read("src/ui/kit.tsx")).toContain("if (!focused) return null");
+  });
   it("waits for the core home feeds before claiming all clear",()=>{
     const source=read("src/hooks/useCustomerHome.ts");expect(source).toContain("settled.size === 6");expect(source).toContain("vehicles === null || !coreReady");expect(source).toContain('failFor("memberships")');
   });
