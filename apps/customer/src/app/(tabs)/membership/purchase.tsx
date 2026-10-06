@@ -19,8 +19,10 @@ export default function PurchaseMembershipScreen() {
   const [done, setDone] = useState(false);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
+  const [retryTick,setRetryTick] = useState(0);
   useEffect(() => {
-    if (!planId) return;
+    if (!planId) {setLoading(false);return;}
+    setLoading(true);setError(null);
     void getDoc(doc(db, COLLECTIONS.membershipPlans(), planId))
       .then((snap) => {
         if (snap.exists()) setPlan(snap.data() as MembershipPlan);
@@ -29,10 +31,10 @@ export default function PurchaseMembershipScreen() {
         setError(err instanceof Error ? err.message : "Could not load plan.");
       })
       .finally(() => setLoading(false));
-  }, [planId]);
+  }, [planId,retryTick]);
 
   async function handlePurchase() {
-    if (!plan) return;
+    if (!plan || purchasing) return;
     setPurchasing(true);
     setError(null);
     try {
@@ -46,7 +48,7 @@ export default function PurchaseMembershipScreen() {
   }
 
   if (loading) return <Loading label="Preparing checkout" />;
-  if (!plan) return <Screen>{error ? <Notice title="Could not load plan" body={error} /> : null}</Screen>;
+  if (!plan) return <Screen><Notice title={error?"Could not load plan":"Plan unavailable"} body={error??"This plan may no longer be offered."} action={<Button label={error?"Retry":"See plans"} onPress={()=>error?setRetryTick(n=>n+1):router.replace("/(tabs)/membership")}/>} /></Screen>;
 
   if (done) {
     return (

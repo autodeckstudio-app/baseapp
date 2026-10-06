@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput as RNTextInput } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput as RNTextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToInspection, updateInspection, finalizeInspection } from "../../../../lib/inspection-service";
 import type { Inspection, InspectionArea, InspectionRating } from "@autodeck/core";
@@ -34,14 +34,17 @@ export default function InspectionScreen() {
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [overallNotes, setOverallNotes] = useState("");
   const [, setNotesInitialized] = useState(false);
+  const [retryTick,setRetryTick] = useState(0);
+  const [confirming,setConfirming] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
 
   useEffect(() => {
-    if (!jobId) return undefined;
+    setError(null);
+    if (!jobId) {setInspection(null);return undefined;}
     return listenToInspection(
       jobId,
       (i) => {
-        setInspection(i);
+        setError(null);setInspection(i);
         setNotesInitialized((already) => {
           if (i && !already) setOverallNotes(i.overallNotes ?? "");
           return already || !!i;
@@ -49,7 +52,7 @@ export default function InspectionScreen() {
       },
       (err) => setError(err.message),
     );
-  }, [jobId]);
+  }, [jobId,retryTick]);
 
   const readOnly = inspection?.status === "finalized";
 
@@ -59,7 +62,7 @@ export default function InspectionScreen() {
     try {
       await updateInspection({ jobId, items: [{ key, rating }] });
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Could not save.");
+      setError(err instanceof Error ? err.message : "Could not save.");
     } finally {
       setSavingKey(null);
     }
@@ -70,7 +73,7 @@ export default function InspectionScreen() {
     try {
       await updateInspection({ jobId, items: [{ key, notes: notes || null }] });
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Could not save note.");
+      setError(err instanceof Error ? err.message : "Could not save note.");
     }
   }
 
@@ -79,48 +82,33 @@ export default function InspectionScreen() {
     try {
       await updateInspection({ jobId, overallNotes: overallNotes || null });
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Could not save notes.");
+      setError(err instanceof Error ? err.message : "Could not save notes.");
     }
   }
 
-  function handleFinalize() {
-    if (!jobId) return;
-    Alert.alert(
-      "Finalize inspection?",
-      "Once finalized, the checklist and notes can no longer be edited.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Finalize",
-          style: "destructive",
-          onPress: async () => {
-            setFinalizing(true);
-            try {
-              await finalizeInspection(jobId);
-            } catch (err) {
-              Alert.alert("Error", err instanceof Error ? err.message : "Could not finalize.");
-            } finally {
-              setFinalizing(false);
-            }
-          },
-        },
-      ],
-    );
+  async function confirmFinalize() {
+    if(!jobId || finalizing || readOnly) return;
+    setFinalizing(true);
+    try{await finalizeInspection(jobId);setConfirming(false);}
+    catch(err){setError(err instanceof Error?err.message:"Could not finalize inspection.");}
+    finally{setFinalizing(false);}
   }
+  function handleFinalize(){setConfirming(true);}
 
-  if (error) return <ErrorState message={error} />;
+  if (error) return <ErrorState message={error} onRetry={()=>setRetryTick(n=>n+1)} />;
   if (inspection === undefined) return <LoadingState />;
   if (inspection === null) return <ErrorState title="Inspection not found" />;
 
   const areas: InspectionArea[] = ["exterior", "glass", "interior", "service_specific"];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
         <Text style={{ ...typography.heading, color: colors.textPrimary }}>Inspection</Text>
         <StatusBadge label={readOnly ? "Finalized" : "In Progress"} tone={readOnly ? "success" : "accent"} />
       </View>
 
+      {confirming?<View style={{gap:spacing.sm,padding:spacing.md,marginBottom:spacing.lg,backgroundColor:colors.surface,borderRadius:radius.lg}}><Text style={{color:colors.textPrimary}}>Finalize inspection? The checklist and notes cannot be edited afterward.</Text><Button label="Finalize inspection" loading={finalizing} onPress={()=>void confirmFinalize()}/><Button label="Keep editing" onPress={()=>setConfirming(false)} disabled={finalizing}/></View>:null}
       {areas.map((area) => {
         const items = inspection.checklist.filter((i) => i.area === area);
         if (items.length === 0) return null;

@@ -46,6 +46,8 @@ export default function VehicleDetailScreen() {
   const router = useRouter();
   const auth = useAuth();
 
+  const [feedError,setFeedError] = useState<string|null>(null);
+  const [retryTick,setRetryTick] = useState(0);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -69,7 +71,8 @@ export default function VehicleDetailScreen() {
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {setLoading(false);return;}
+    setFeedError(null);
     const ref = doc(db, COLLECTIONS.vehicles(), id);
     setVehicle(null); setLoading(true);
     const unsubscribe = onSnapshot(ref, { includeMetadataChanges: true }, (snap) => {
@@ -85,24 +88,24 @@ export default function VehicleDetailScreen() {
         });
       }
       setLoading(false);
-    });
+    },()=>{setFeedError("Could not load this car. Check your connection and try again.");setLoading(false);});
     return unsubscribe;
-  }, [id]);
+  }, [id,retryTick]);
 
   useEffect(() => {
     if (!id || auth.status !== "ready") return undefined;
-    return listenToJobsForVehicle(id, auth.claims.tenantId, auth.user.uid, setJobs, () => undefined);
-  }, [id, auth.status]);
+    return listenToJobsForVehicle(id, auth.claims.tenantId, auth.user.uid, setJobs, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
+  }, [id, auth.status,retryTick]);
 
   useEffect(() => {
     if (!id || auth.status !== "ready") return undefined;
-    return listenToVehicleProtections(id, auth.claims.tenantId, auth.user.uid, setProtections, () => undefined);
-  }, [id, auth.status]);
+    return listenToVehicleProtections(id, auth.claims.tenantId, auth.user.uid, setProtections, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
+  }, [id, auth.status,retryTick]);
 
   useEffect(() => {
     if (!id || auth.status !== "ready") return undefined;
-    return listenToVehiclePapers(id, auth.claims.tenantId, auth.user.uid, setPapers, () => undefined);
-  }, [id, auth.status]);
+    return listenToVehiclePapers(id, auth.claims.tenantId, auth.user.uid, setPapers, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
+  }, [id, auth.status,retryTick]);
 
   async function handleAddDoc() {
     if (!id) return;
@@ -131,8 +134,8 @@ export default function VehicleDetailScreen() {
 
   useEffect(() => {
     if (!id || auth.status !== "ready") return undefined;
-    return listenToVehicleWarranties(id, auth.claims.tenantId, auth.user.uid, setWarranties, () => undefined);
-  }, [id, auth.status]);
+    return listenToVehicleWarranties(id, auth.claims.tenantId, auth.user.uid, setWarranties, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
+  }, [id, auth.status,retryTick]);
 
   useEffect(() => {
     void getServiceCatalogue()
@@ -141,8 +144,8 @@ export default function VehicleDetailScreen() {
         for (const s of services) map[s.id] = s.name;
         setServiceNames(map);
       })
-      .catch(() => undefined);
-  }, []);
+      .catch(()=>setFeedError("Could not load some car records. Check your connection and retry."));
+  }, [retryTick]);
 
   useEffect(() => {
     if (!id || auth.status !== "ready") return;
@@ -153,8 +156,8 @@ export default function VehicleDetailScreen() {
           .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
         setUpcomingBooking(upcoming[0] ?? null);
       })
-      .catch(() => undefined);
-  }, [id, auth.status]);
+      .catch(()=>setFeedError("Could not load some car records. Check your connection and retry."));
+  }, [id, auth.status,retryTick]);
 
   async function handleSave() {
     if (!id) return;
@@ -198,6 +201,7 @@ export default function VehicleDetailScreen() {
     }
   }
 
+  if (feedError) return <Screen><Notice title="Car records unavailable" body={feedError} action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (loading) return <Loading label="Opening the room" />;
   if (!vehicle) return <Screen><Notice title="Vehicle not found" body="It may have been removed from your garage." /></Screen>;
 

@@ -16,6 +16,12 @@ describe("unified product design contract",()=>{
     const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(selectedVehicle.category)');expect(booking).toContain('label="Retry"');expect(booking).toContain('date===selectedDate');
     const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings before trying again");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
   });
+  it("recovers missing-link reports and membership screens without endless loaders",()=>{
+    expect(read("src/app/(tabs)/bookings/inspection.tsx")).toContain("setInspection(null)");
+    expect(read("src/app/(tabs)/membership/purchase.tsx")).toContain("Plan unavailable");
+    expect(read("src/app/(tabs)/membership/purchase.tsx")).toContain("!plan || purchasing");
+    expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("Car records unavailable");
+  });
   it("keeps car filtering available during search and normalizes legacy fuel values",()=>{
     const source=read("src/app/(tabs)/cars/index.tsx");expect(source).not.toContain("searching ?");expect(source).toContain('filterCars(all??[]');expect(source).toContain('label="Car body type"');expect(source).toContain('label="Sort cars"');expect(source).toContain('Clear all');
   });

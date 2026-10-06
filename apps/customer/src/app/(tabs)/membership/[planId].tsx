@@ -16,8 +16,10 @@ export default function PlanDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [retryTick,setRetryTick] = useState(0);
   useEffect(() => {
-    if (!planId) return;
+    if (!planId) {setLoading(false);return;}
+    setLoading(true);setError(null);setPlan(null);
     void (async () => {
       try {
         const snap = await getDoc(doc(db, COLLECTIONS.membershipPlans(), planId));
@@ -28,10 +30,10 @@ export default function PlanDetailScreen() {
         setLoading(false);
       }
     })();
-  }, [planId]);
+  }, [planId,retryTick]);
 
   if (loading) return <Loading label="Opening plan" />;
-  if (error) return <Screen><Notice title="Could not load plan" body={error} /></Screen>;
+  if (error) return <Screen><Notice title="Could not load plan" body={error} action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!plan) return <Screen><Notice title="Plan not found" body="It may no longer be available." /></Screen>;
 
   return (

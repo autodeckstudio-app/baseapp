@@ -33,15 +33,18 @@ export default function InspectionScreen() {
   const [inspection, setInspection] = useState<Inspection | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
+  const [retryTick,setRetryTick] = useState(0);
   useEffect(() => {
-    if (!jobId) return undefined;
-    return listenToInspection(jobId, setInspection, (err) => setError(err.message));
-  }, [jobId]);
+    setError(null);
+    if (!jobId) {setInspection(null);return undefined;}
+    setInspection(undefined);
+    return listenToInspection(jobId, value=>{setInspection(value);setError(null);}, (err) => setError(err.message));
+  }, [jobId,retryTick]);
 
   if (error) {
     return (
       <Screen>
-        <Notice title="Couldn't load the inspection" body={error} action={<Button label="Go back" onPress={() => router.back()} />} />
+        <Notice title="Couldn't load the inspection" body={error} action={<Button label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
       </Screen>
     );
   }

@@ -89,6 +89,8 @@ export default function JobDetailScreen() {
   const [attempt,setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [reassignPick,setReassignPick] = useState<{id:string;name:string}|null>(null);
+  const [actionError,setActionError] = useState<string|null>(null);
   const [reassigning, setReassigning] = useState(false);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -302,34 +304,35 @@ export default function JobDetailScreen() {
   const [standbyBay, setStandbyBay] = useState("");
   async function performStaffAction() {
     if (!id || !staffAction) return;
-    setAdvancing(true);
+    setActionError(null);setAdvancing(true);
     try {
       if (staffAction === "rework") await advanceJobStatus(id, "QC failed - rework requested", true);
       else await updateStandby(id, staffAction, staffAction === "admit" ? standbyBay : undefined);
       setStaffAction(null);
-    } catch (err) { Alert.alert("Error", err instanceof Error ? err.message : "Could not update job."); }
+    } catch (err) { setActionError(err instanceof Error ? err.message : "Could not update job."); }
     finally { setAdvancing(false); }
   }
   async function handleAdvance() {
     if (!job || !id || advancing) return;
-    setAdvancing(true);
+    setActionError(null);setAdvancing(true);
     try {
       await advanceJobStatus(id);
       setAdvanceConfirm(false);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to advance status.");
+      setActionError(err instanceof Error ? err.message : "Failed to advance status.");
     } finally {
       setAdvancing(false);
     }
   }
 
   async function handleReassignBay(bayId: string) {
-    if (!job || !id) return;
-    setReassigning(true);
+    if (!job || !id || reassigning) return;
+    setActionError(null);setReassigning(true);
     try {
       await assignBay({ jobId: id, bayId, reason: "Manual reassignment by studio" });
+      setReassignPick(null);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to reassign bay.");
+      setActionError(err instanceof Error ? err.message : "Failed to reassign bay.");
     } finally {
       setReassigning(false);
     }
@@ -388,6 +391,7 @@ export default function JobDetailScreen() {
         <Row label="Payment" value={job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus} />
       </Section>
 
+      {actionError?<ErrorState title="Action not completed" message={actionError} fill={false}/>:null}
       {isMultiDay && (
         <View style={{ backgroundColor: colors.accentMuted, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
           <Text style={{ ...typography.bodyMedium, color: colors.accentPressed, marginBottom: spacing.xs }}>Multi-day job</Text>
@@ -615,6 +619,7 @@ export default function JobDetailScreen() {
       {compatibleBays.length > 0 && job.status !== "STANDBY" && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
         <>
           <Text style={sectionTitle}>Reassign Bay</Text>
+          {reassignPick?<Section><Text style={{color:colors.textPrimary}}>Move this job to {reassignPick.name}?</Text><Button label="Confirm bay change" loading={reassigning} onPress={()=>void handleReassignBay(reassignPick.id)}/><Button label="Keep current bay" variant="secondary" disabled={reassigning} onPress={()=>setReassignPick(null)}/></Section>:null}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.lg }}>
             {compatibleBays.map((bay) => (
               <TouchableOpacity
@@ -627,12 +632,7 @@ export default function JobDetailScreen() {
                   borderColor: colors.textPrimary,
                   opacity: reassigning ? 0.5 : 1,
                 }}
-                onPress={() => {
-                  Alert.alert("Reassign Bay", `Move job to ${bay.name}?`, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Confirm", onPress: () => void handleReassignBay(bay.id) },
-                  ]);
-                }}
+                onPress={() => setReassignPick({id:bay.id,name:bay.name})}
                 disabled={reassigning}
               >
                 <Text style={{ ...typography.captionMedium, color: colors.textPrimary }}>{bay.name}</Text>
