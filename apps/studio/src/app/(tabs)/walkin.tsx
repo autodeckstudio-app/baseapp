@@ -145,6 +145,7 @@ export default function WalkinScreen() {
         ? await findCustomersByEmail(auth.claims.tenantId, term)
         : await findCustomersByPhone(auth.claims.tenantId, term.startsWith("+91") ? term : `+91${term.replace(/\s/g, "")}`);
       const found = results[0] ?? null;
+      setSearched(true);
       setCustomer(found);
       if (found) {
         const custVehicles = await getVehiclesForCustomer(auth.claims.tenantId, found.id);
@@ -155,7 +156,6 @@ export default function WalkinScreen() {
       showActionError("Search failed", err instanceof Error ? err.message : "Please try again.");
     } finally {
       setSearching(false);
-      setSearched(true);
     }
   }
 
@@ -247,9 +247,9 @@ export default function WalkinScreen() {
       <Section title="1. Find customer">
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
-            <TextInput placeholder="Phone or email" keyboardType="email-address" autoCapitalize="none" value={phone} onChangeText={setPhone} />
+            <TextInput label="Customer phone or email" placeholder="Phone or email" keyboardType="email-address" autoCapitalize="none" value={phone} onChangeText={setPhone} />
           </View>
-          <Button label="Search" size="md" onPress={() => void handleSearch()} loading={searching} />
+          <Button label="Search" size="md" fullWidth={false} onPress={() => void handleSearch()} loading={searching} />
         </View>
         {searched && !customer && !showNew && (
           <View style={{ backgroundColor: colors.warningMuted, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, gap: spacing.sm }}>

@@ -81,9 +81,14 @@ export default function CalendarScreen() {
           return (
             <TouchableOpacity
               key={d}
+              accessibilityRole="button"
+              accessibilityLabel={`Choose ${formatDisplayDate(d)}`}
+              accessibilityState={{selected}}
               onPress={() => setSelectedDate(d)}
               style={{
                 flex: 1,
+                minHeight:48,
+                justifyContent:"center",
                 alignItems: "center",
                 paddingVertical: spacing.xs,
                 borderRadius: radius.sm,

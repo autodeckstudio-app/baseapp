@@ -23,7 +23,7 @@ export default function StudioSettingsPage() {
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    setLoading(true);
+    setLoading(true);setError(null);
     try {
       const cfg = await getStudioConfig(studioId);
       setConfig(cfg ?? null);
@@ -40,6 +40,7 @@ export default function StudioSettingsPage() {
 
   // Each write is a server callable that re-checks the admin role.
   async function run(action: () => Promise<unknown>, ok: string, fail: string) {
+    if(busy) return;
     setBusy(true);
     setError(null);
     setStatus(null);
