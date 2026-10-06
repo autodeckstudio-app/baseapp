@@ -1,10 +1,11 @@
 // Cars for sale: studio stock and approved customer cars as a grid of photo cards, plus "Sell your car" and your own listings.
-import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, View } from "react-native";
+import { createElement, useEffect, useMemo, useState } from "react";
+import { Image, Platform, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, Field, Kicker, Notice, Screen, Skeleton, T } from "../../../ui/kit";
+import { filterCars } from "../../../lib/car-filters";
 import { getCarListings, inr, kmLabel } from "../../../lib/carsale-service";
 
 const STATE: Record<string, string> = { pending: "Waiting for review", live: "Live", reserved: "Reserved", sold: "Sold", rejected: "Not approved", expired: "Expired", draft: "Draft" };
@@ -31,6 +32,11 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
   );
 }
 
+function Choice({label,value,onChange,options}:{label:string;value:string;onChange:(v:string)=>void;options:Array<{value:string;label:string}>}) {
+  if(Platform.OS==="web") return createElement("select",{"aria-label":label,value,onChange:(e:{target:{value:string}})=>onChange(e.target.value),style:{width:"100%",minWidth:0,minHeight:48,padding:"0 14px",borderRadius:14,border:"1px solid #454548",background:"#202023",color:"#F6F4F1",fontSize:15,fontFamily:"Inter,system-ui,sans-serif",colorScheme:"dark"}},options.map(o=>createElement("option",{key:o.value,value:o.value},o.label)));
+  return <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{options.map(o=><Pill key={o.value} label={o.label} on={value===o.value} onPress={()=>onChange(o.value)}/>)}</View>;
+}
+
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",borderRadius:24,overflow:"hidden",backgroundColor:"#151517",borderWidth:1,borderColor:"rgba(255,255,255,.10)",opacity:pressed?.85:1})}>
     <View style={{aspectRatio:3/2,backgroundColor:"#202023"}}>{l.photoUrls[0] ? <Image source={{uri:l.photoUrls[0]}} resizeMode="cover" style={{width:"100%",height:"100%"}}/> : <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><T tone="tertiary">Photo unavailable</T></View>}
@@ -54,22 +60,7 @@ export default function CarsScreen() {
   const [filtersOpen,setFiltersOpen] = useState(false);
   const [attempt,setAttempt] = useState(0);
   const [sort, setSort] = useState<"new" | "low" | "high">("new");
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const max = BUDGETS.find((b) => b.id === budget)?.max ?? Infinity;
-    const list = (all ?? []).filter((l) =>
-      (!q || `${l.make} ${l.model} ${l.variant ?? ""} ${l.year} ${l.area}`.toLowerCase().includes(q)) &&
-      (!fuel || l.fuel === fuel) && (!body || l.bodyType === body) && l.askingPrice <= max);
-    if (sort === "low") return [...list].sort((a, b) => a.askingPrice - b.askingPrice);
-    if (sort === "high") return [...list].sort((a, b) => b.askingPrice - a.askingPrice);
-    return [...list].sort((a,b) => b.createdAt.localeCompare(a.createdAt));
-  }, [all, query, fuel, body, budget, sort]);
-  const searching = query.trim() !== "";
-  const suggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [] as CarListingView[];
-    return (all ?? []).filter((l) => `${l.year} ${l.make} ${l.model} ${l.variant ?? ""}`.toLowerCase().includes(q)).slice(0, 5);
-  }, [all, query]);
+  const shown = useMemo(() => filterCars(all??[],{query,fuel,body,maxPrice:BUDGETS.find(b=>b.id===budget)?.max??Infinity,sort}),[all,query,fuel,body,budget,sort]);
   const filtering = query.trim() !== "" || fuel !== null || body !== null || budget !== "any";
   useEffect(() => {
     setError(false);
@@ -91,37 +82,17 @@ export default function CarsScreen() {
       {all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
-          {searching ? (
-            suggestions.length > 0 ? (
-              <View style={{ borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                {suggestions.map((l, i) => (
-                  <Pressable key={l.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/cars/${l.id}`)} style={({ pressed }) => ({ paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", gap: 12, backgroundColor: pressed ? "rgba(236,134,56,0.16)" : "transparent", borderTopWidth: i === 0 ? 0 : 1, borderTopColor: "rgba(255,255,255,0.08)" })}>
-                    <T role="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>{l.year} {l.make} {l.model}{l.variant ? ` ${l.variant}` : ""}</T>
-                    <T role="caption" tone="accent">{inr(l.askingPrice)}</T>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null
-          ) : (
-            <View style={{ gap: space.line }}>
-          <Pressable accessibilityRole="button" accessibilityState={{expanded:filtersOpen}} onPress={() => setFiltersOpen(!filtersOpen)} style={{minHeight:44,flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><T role="bodyStrong">{shown.length} car{shown.length===1?"":"s"} to explore</T><T tone="accent">{filtersOpen ? "Close filters" : filtering ? "Edit filters" : "Filter & sort"}</T></Pressable>
-          {filtersOpen && <View style={{gap:12}}><View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {BUDGETS.map((b) => <Pill key={b.id} label={b.label} on={budget === b.id} onPress={() => setBudget(b.id)} />)}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {FUEL_FILTERS.map((f) => <Pill key={f} label={f} on={fuel === f} onPress={() => setFuel(fuel === f ? null : f)} />)}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {BODY_FILTERS.map((b) => <Pill key={b} label={b} on={body === b} onPress={() => setBody(body === b ? null : b)} />)}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              <Pill label="Newest" on={sort === "new"} onPress={() => setSort("new")} />
-              <Pill label="Price low to high" on={sort === "low"} onPress={() => setSort("low")} />
-              <Pill label="Price high to low" on={sort === "high"} onPress={() => setSort("high")} />
-            </View>
-          </View>}
+          <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#F59A45":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters{[fuel,body,budget!=="any"?budget:null].filter(Boolean).length ? ` · ${[fuel,body,budget!=="any"?budget:null].filter(Boolean).length}`:""} {filtersOpen?"−":"+"}</T></Pressable>
+            <View style={{flex:1}}><Choice label="Sort cars" value={sort} onChange={v=>setSort(v as typeof sort)} options={[{value:"new",label:"Newest first"},{value:"low",label:"Price: low to high"},{value:"high",label:"Price: high to low"}]}/></View>
           </View>
-          )}
+          {filtersOpen ? <View style={{padding:18,gap:16,borderRadius:20,borderWidth:1,borderColor:"#3B3B3F",backgroundColor:"#18181B"}}>
+            <View style={{gap:8}}><Kicker>Budget</Kicker><Choice label="Car budget" value={budget} onChange={setBudget} options={BUDGETS.map(b=>({value:b.id,label:b.label}))}/></View>
+            <View style={{gap:8}}><Kicker>Fuel</Kicker><Choice label="Car fuel" value={fuel??""} onChange={v=>setFuel(v||null)} options={[{value:"",label:"Any fuel"},...FUEL_FILTERS.map(f=>({value:f,label:f.toUpperCase()==="CNG"?"CNG":f[0]!.toUpperCase()+f.slice(1)}))]}/></View>
+            <View style={{gap:8}}><Kicker>Body type</Kicker><Choice label="Car body type" value={body??""} onChange={v=>setBody(v||null)} options={[{value:"",label:"Any body type"},...BODY_FILTERS.map(b=>({value:b,label:["suv","muv"].includes(b)?b.toUpperCase():b[0]!.toUpperCase()+b.slice(1)}))]}/></View>
+            <Button label={`Show ${shown.length} car${shown.length===1?"":"s"}`} onPress={()=>setFiltersOpen(false)}/>
+          </View> : null}
+          <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12}}><T role="caption" tone="tertiary">{shown.length} car{shown.length===1?"":"s"}{filtering?" match your search":" to explore"}</T>{filtering?<Pressable accessibilityRole="button" accessibilityLabel="Clear car filters and search" onPress={()=>{setQuery("");setFuel(null);setBody(null);setBudget("any");}} style={{minHeight:44,justifyContent:"center"}}><T role="caption" tone="accent">Clear all</T></Pressable>:null}</View>
         </View>
       ) : null}
       {error ? <Notice title="Can't load cars" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n => n+1)}/>} /> : null}

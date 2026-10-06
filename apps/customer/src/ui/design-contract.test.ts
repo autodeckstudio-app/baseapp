@@ -12,6 +12,9 @@ describe("unified product design contract",()=>{
   it("does not send or upload before the staged sell review",()=>{
     const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("photos.length===0");
   });
+  it("keeps car filtering available during search and normalizes legacy fuel values",()=>{
+    const source=read("src/app/(tabs)/cars/index.tsx");expect(source).not.toContain("searching ?");expect(source).toContain('filterCars(all??[]');expect(source).toContain('label="Car body type"');expect(source).toContain('label="Sort cars"');expect(source).toContain('Clear all');
+  });
   it("removes inactive tab controls from the accessibility and keyboard tree",()=>{
     expect(read("src/ui/kit.tsx")).toContain("if (!focused) return null");
   });
