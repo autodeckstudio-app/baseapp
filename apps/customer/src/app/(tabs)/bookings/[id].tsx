@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getBookingById, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
+import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking } from "../../../lib/job-service";
 import { listenToPaymentForJob } from "../../../lib/payment-service";
@@ -11,7 +11,7 @@ import { Pressable } from "react-native";
 import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, isBookingLateToday } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -98,6 +98,8 @@ export default function BookingDetailScreen() {
   const { id, placed } = useLocalSearchParams<{ id: string; placed?: string }>();
   const router = useRouter();
   useLang();
+  const [, tick] = useState(0);
+  useEffect(() => { const timer = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(timer); }, []);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -135,10 +137,8 @@ export default function BookingDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
-    void getBookingById(id)
-      .then(setBooking)
-      .catch(() => setBooking(null))
-      .finally(() => setLoading(false));
+    setLoading(true);
+    return listenToBooking(id, (value) => { setBooking(value); setLoading(false); }, () => { setBooking(null); setLoading(false); });
   }, [id]);
 
   useEffect(() => {
@@ -239,7 +239,7 @@ export default function BookingDetailScreen() {
           {svc ? <ServicePhoto service={svc} aspect={16 / 10} radius={0} /> : <View style={{ aspectRatio: 16 / 10 }} />}
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start" }}><Chip label={BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
+            <View style={{ alignSelf: "flex-start" }}><Chip label={missed ? "Missed" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
             {svc ? <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc.name}</T> : null}
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
           </View>
@@ -414,10 +414,11 @@ export default function BookingDetailScreen() {
         )
       ) : null}
 
-      {canCancel || lateToCancel ? <PickupCard bookingId={booking.id} /> : null}
+      {booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
 
+      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still bring your car today during studio hours. If it is not checked in by studio close (7 pm Sunday, 9 pm other days), this booking will be marked missed. Then you can pick a new time or cancel." /> : null}
       {missed ? (
-        <Notice title="This booking time has passed" body="Your car did not arrive for this slot. Pick a new time, or cancel the booking." />
+        <Notice title="Booking missed" body="Your car was not checked in by studio close (7 pm Sunday, 9 pm other days). Pick a new time or cancel this booking. Moving a missed booking does not count towards your three reschedules." />
       ) : null}
 
       {lateToCancel ? (

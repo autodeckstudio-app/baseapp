@@ -1,4 +1,4 @@
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "./firebase";
@@ -20,4 +20,8 @@ export async function requestAccountDeletion(): Promise<void> {
 
 export async function cancelAccountDeletion(): Promise<void> {
   await httpsCallable(functions, "cancelAccountDeletion")({});
+}
+
+export function listenToPickupRequest(bookingId: string, onData: (request: PickupRequest | null) => void, onError: (error: Error) => void): Unsubscribe {
+  return onSnapshot(doc(db, COLLECTIONS.pickupRequests(), bookingId), (snap) => onData(snap.exists() ? snap.data() as PickupRequest : null), onError);
 }

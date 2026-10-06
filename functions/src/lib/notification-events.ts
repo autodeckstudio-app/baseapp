@@ -104,13 +104,13 @@ export async function buildNotification(
         | Booking
         | undefined;
       // Skip if the customer already rescheduled or cancelled before this was processed.
-      if (!booking || !isBookingMissed(booking)) return null;
+      if (!booking || !isBookingMissed(booking) || (log.metadata?.["scheduledAt"] && log.metadata["scheduledAt"] !== booking.scheduledAt)) return null;
       const vehicle = await vehicleLabel(db, booking.vehicleId);
       return {
         userId: booking.customerId,
         type: "booking_missed",
-        title: "Your slot was missed",
-        body: `Your ${vehicle} booking for ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)} passed. Pick a new time or cancel it.`,
+        title: "Booking missed",
+        body: `Your ${vehicle} booking for ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)} was not checked in by studio close. Pick a new time or cancel it.`,
         entityType: "Booking",
         entityId: booking.id,
       };

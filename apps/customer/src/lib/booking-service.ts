@@ -8,6 +8,8 @@ import {
   getDocs,
   doc,
   getDoc,
+  onSnapshot,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
@@ -137,4 +139,8 @@ export async function approveBookingQuote(bookingId: string): Promise<void> {
 export async function getStudioInfo(studioId: string): Promise<LiveStudioInfo> {
   const fn = httpsCallable<{ studioId: string }, LiveStudioInfo>(functions, "getStudioInfo");
   return (await fn({ studioId })).data;
+}
+
+export function listenToBooking(bookingId: string, onData: (booking: Booking | null) => void, onError: (error: Error) => void): Unsubscribe {
+  return onSnapshot(doc(db, COLLECTIONS.bookings(), bookingId), (snap) => onData(snap.exists() ? snap.data() as Booking : null), onError);
 }

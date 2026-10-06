@@ -2,37 +2,46 @@ import { describe, expect, it } from "vitest";
 import type { Firestore } from "firebase-admin/firestore";
 import { flagMissedBookings } from "../../lib/missed-bookings.js";
 
-function fakeDb(bookings: Array<Record<string, unknown> & { id: string }>) {
+function fakeDb(bookings: Array<Record<string, unknown> & { id: string }>, concurrentStatus?: string) {
   const audit = new Map<string, Record<string, unknown>>();
+  const rows = new Map(bookings.map(b => [b.id, { ...b }]));
+  const ref = (name: string, id: string) => ({ name, id });
   const db = {
-    collection: (name: string) => {
-      if (name === "bookings") {
-        return {
-          where: () => ({ where: () => ({ get: async () => ({ docs: bookings.map((b) => ({ id: b.id, data: () => b })) }) }) }),
-        };
-      }
-      return {
-        doc: (id: string) => ({
-          create: async (data: Record<string, unknown>) => {
-            if (audit.has(id)) throw Object.assign(new Error("exists"), { code: 6 });
-            audit.set(id, data);
-          },
-        }),
-      };
-    },
+    collection: (name: string) => ({
+      where: () => ({ get: async () => ({ docs: bookings.map(b => ({ id: b.id, ref: ref(name, b.id), data: () => b })) }) }),
+      doc: (id: string) => ref(name, id),
+    }),
+    runTransaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({
+      get: async (r: { name: string; id: string }) => {
+        const v = r.name === "bookings" ? rows.get(r.id) : audit.get(r.id);
+        return { exists: !!v, data: () => r.name === "bookings" && concurrentStatus ? { ...v, status: concurrentStatus } : v };
+      },
+      update: (r: { id: string }, data: Record<string, unknown>) => Object.assign(rows.get(r.id)!, data),
+      create: (r: { id: string }, data: Record<string, unknown>) => audit.set(r.id, data),
+    }),
   };
-  return { db: db as unknown as Firestore, audit };
+  return { db: db as unknown as Firestore, audit, rows };
 }
-
-const NOW = Date.parse("2026-10-05T12:00:00Z");
+const NOW = Date.parse("2026-10-05T15:30:00Z");
 const base = { tenantId: "t", studioId: "s", scheduledAt: "2026-10-05T06:00:00Z", status: "CONFIRMED" };
-
 describe("flagMissedBookings", () => {
-  it("writes one booking.missed audit entry per missed booking, once", async () => {
-    const { db, audit } = fakeDb([{ id: "b1", ...base }, { id: "b2", ...base, status: "COMPLETED" }, { id: "b3", ...base, scheduledAt: "2026-10-05T10:00:00Z" }]);
-    expect((await flagMissedBookings(db, NOW)).flagged).toBe(1);
-    expect([...audit.values()].map((a) => a["entityId"])).toEqual(["b1"]);
-    expect([...audit.values()][0]?.["action"]).toBe("booking.missed");
+  it("stamps and notifies once per missed slot, including older than 72 hours", async () => {
+    const { db, audit, rows } = fakeDb([{ id: "b1", ...base }, { id: "old", ...base, scheduledAt: "2026-10-01T06:00:00Z" }, { id: "active", ...base, status: "ACTIVE" }, { id: "future", ...base, scheduledAt: "2026-10-06T06:00:00Z" }]);
+    expect((await flagMissedBookings(db, NOW)).flagged).toBe(2);
+    expect(rows.get("b1")?.["missedForScheduledAt"]).toBe(base.scheduledAt);
+    expect(rows.get("b1")?.["status"]).toBe("CONFIRMED");
+    expect(audit.size).toBe(2);
     expect((await flagMissedBookings(db, NOW)).flagged).toBe(0);
+  });
+  it("does nothing before close", async () => {
+    const { db, audit } = fakeDb([{ id: "b1", ...base }]);
+    expect((await flagMissedBookings(db, NOW - 1)).flagged).toBe(0);
+    expect(audit.size).toBe(0);
+  });
+  it("rechecks arrival inside the transaction", async () => {
+    const { db, audit, rows } = fakeDb([{ id: "b1", ...base }], "ACTIVE");
+    expect((await flagMissedBookings(db, NOW)).flagged).toBe(0);
+    expect(audit.size).toBe(0);
+    expect(rows.get("b1")?.["missedAt"]).toBeUndefined();
   });
 });

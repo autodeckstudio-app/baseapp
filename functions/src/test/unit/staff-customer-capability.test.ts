@@ -16,6 +16,7 @@ import { extractCustomerUser, extractUser, assertRole } from "../../middleware/a
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { requestPickupDrop } from "../../functions/booking/pickupRequests.js";
 import { expressInterest, markMyListingSold } from "../../functions/carsale/carsale.js";
+import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 const req = (payload: any, role = "studio"): any => ({ data: payload, auth: { uid: "staff", token: { role, tenantId: "tenant", studioId: "studio", email: "staff@example.com" } } });
 beforeEach(() => { h.docs = {}; h.writes = []; h.next = 0; });
@@ -59,5 +60,19 @@ describe("additive customer capability", () => {
     await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "permission-denied" });
     h.docs["bookings/b"] = { ...h.docs["bookings/b"], customerId: "staff", scheduledAt: new Date(Date.now() + 3600000).toISOString(), scheduledDate: new Date().toISOString().slice(0,10) };
     await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "failed-precondition" });
+  });
+});
+
+describe("missed booking reschedule limits", () => {
+  it("moves a missed slot without spending a reschedule and clears the stamp", async () => {
+    h.docs["bookings/b"] = { id: "b", tenantId: "tenant", customerId: "staff", studioId: "studio", status: "CONFIRMED", scheduledAt: "2026-01-01T04:30:00Z", serviceId: "svc", rescheduleCount: 3, missedAt: "2026-01-01T15:30:00Z" };
+    h.docs["services/svc"] = { requiredBayType: "wash", estimatedDurationMinutes: 30 };
+    h.docs["studioConfig/studio"] = { bays: [{ id: "bay", active: true, bayType: "wash" }], operatingHours: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, open: "09:00", close: "21:00", closed: false })), holidays: [], timezone: "Asia/Kolkata" };
+    const newDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    const result: any = await rescheduleBooking.run(req({ bookingId: "b", newDate, newTime: "11:00", idempotencyKey: "missed", customerContext: true }));
+    expect(result.booking.rescheduleCount).toBe(3);
+    expect(result.booking.missedAt).toBeNull();
+    expect(result.booking.missedForScheduledAt).toBeNull();
+    expect(result.booking.scheduledDate).toBe(newDate);
   });
 });

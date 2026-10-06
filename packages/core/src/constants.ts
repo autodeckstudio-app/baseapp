@@ -18,12 +18,28 @@ export const MAX_ADVANCE_BOOKING_DAYS = 30;
 export const MAX_SERVICE_SPAN_DAYS = 14;
 export const MAX_CUSTOMER_RESCHEDULES = 3;
 export const CANCELLATION_FREE_WINDOW_HOURS = 24;
-/** A confirmed or pending booking is "missed" this long after its start if the car never arrived (status stays CONFIRMED/PENDING). */
-export const MISSED_BOOKING_GRACE_HOURS = 3;
+/** Unarrived bookings remain valid until the daily closing time IST on their scheduled day.
+ * Keep the operational status unchanged so missed bookings remain reschedulable.
+ */
+export function bookingCloseHour(scheduledAt: string): number {
+  const local = new Date(Date.parse(scheduledAt) + 330 * 60000);
+  return local.getUTCDay() === 0 ? 19 : 21;
+}
+export function bookingMissedAt(scheduledAt: string): number {
+  const start = Date.parse(scheduledAt);
+  if (!Number.isFinite(start)) return NaN;
+  // Asia/Kolkata has a fixed UTC+05:30 offset, with no daylight saving time.
+  const offset = 330 * 60000;
+  const dayStart = Math.floor((start + offset) / 86400000) * 86400000 - offset;
+  return dayStart + bookingCloseHour(scheduledAt) * 3600000;
+}
 export function isBookingMissed(b: { status: string; scheduledAt: string }, now: number = Date.now()): boolean {
   if (b.status !== "CONFIRMED" && b.status !== "PENDING") return false;
-  const t = Date.parse(b.scheduledAt);
-  return Number.isFinite(t) && now - t > MISSED_BOOKING_GRACE_HOURS * 3600000;
+  return now >= bookingMissedAt(b.scheduledAt);
+}
+export function isBookingLateToday(b: { status: string; scheduledAt: string }, now: number = Date.now()): boolean {
+  return (b.status === "CONFIRMED" || b.status === "PENDING") &&
+    now >= Date.parse(b.scheduledAt) && now < bookingMissedAt(b.scheduledAt);
 }
 
 export const JOB_STATUS_TRANSITIONS: Record<string, string[]> = {

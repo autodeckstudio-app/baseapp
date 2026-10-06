@@ -52,9 +52,11 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     );
   }
 
+  const missed = isBookingMissed(booking);
+
   // Customer reschedule rules (doc07 §7.8)
   // A missed booking (start time passed, car never came) can always be moved to a new future time.
-  if (isCustomer && !isBookingMissed(booking)) {
+  if (isCustomer && !missed) {
     if (booking.rescheduleCount >= MAX_CUSTOMER_RESCHEDULES) {
       throw new HttpsError(
         "failed-precondition",
@@ -173,7 +175,9 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
       estimatedEndDate: utcToLocalDate(newEstimatedEndAt, config.timezone),
       estimatedEndTime: utcToLocalTime(newEstimatedEndAt, config.timezone),
       bayId: assignedBayId,
-      rescheduleCount: booking.rescheduleCount + 1,
+      rescheduleCount: booking.rescheduleCount + (missed ? 0 : 1),
+      missedAt: null,
+      missedForScheduledAt: null,
       updatedAt: now,
     };
 
@@ -215,7 +219,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
       after: {
         scheduledAt: newStart.toISOString(),
         bayId: assignedBayId,
-        rescheduleCount: booking.rescheduleCount + 1,
+        rescheduleCount: booking.rescheduleCount + (missed ? 0 : 1),
       },
     });
 

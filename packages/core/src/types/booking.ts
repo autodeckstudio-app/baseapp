@@ -62,6 +62,8 @@ export interface Booking {
   notes: string | null;
   idempotencyKey: string;
   rescheduleCount: number; // starts at 0; max enforced by Cloud Function
+  missedAt?: string | null; // persisted by the 9pm scheduler; cleared on reschedule
+  missedForScheduledAt?: string | null; // identifies the missed slot
   confirmedAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;

@@ -20,7 +20,7 @@ export const SHOW_BEFORE_AFTER = false;
 
 const FAQ_COMMON: { q: string; a: string }[] = [
   { q: "How long will my car be with you?", a: "The time shown on the service is our estimate. We confirm it when you book." },
-  { q: "Can I change or cancel my booking?", a: "Yes. You can reschedule or cancel from the Bookings tab." },
+  { q: "Can I change or cancel my booking?", a: "Change or cancel from Bookings at least 24 hours before your slot. Within 24 hours, contact the studio. A missed slot stays valid that day during studio hours until studio close (7 pm Sunday, 9 pm other days); after that, pick a new time or cancel." },
   { q: "Will I see what was done?", a: "Yes. You can follow your car's progress in the app and see the bill once the work is done." },
 ];
 

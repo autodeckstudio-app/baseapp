@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, getAvailability, rescheduleBooking, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Booking } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
@@ -62,8 +62,8 @@ export default function RescheduleBookingScreen() {
   const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
   const eligible =
     booking.status === "CONFIRMED" &&
-    booking.rescheduleCount < MAX_CUSTOMER_RESCHEDULES &&
-    hoursUntil >= CANCELLATION_FREE_WINDOW_HOURS;
+    (isBookingMissed(booking) || (booking.rescheduleCount < MAX_CUSTOMER_RESCHEDULES &&
+    hoursUntil >= CANCELLATION_FREE_WINDOW_HOURS));
 
   if (!eligible) {
     return (
