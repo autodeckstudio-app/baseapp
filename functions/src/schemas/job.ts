@@ -19,8 +19,15 @@ export const createWalkinJobSchema = z.object({
   notes: z.string().max(500).optional(),
 }).strict();
 
+export const standbyBookingSchema = z.object({
+  jobId: z.string().min(1),
+  action: z.enum(["enqueue", "admit"]),
+  bayId: z.string().min(1).optional(),
+}).strict();
+
 export const advanceJobStatusSchema = z.object({
   jobId: z.string().min(1),
+  rework: z.boolean().optional(),
   notes: z.string().max(500).optional(),
 }).strict();
 

@@ -134,7 +134,7 @@ export async function buildNotification(
 
     case "job.status_advanced": {
       const nextStatus = (log.after?.["status"] as string | undefined) ?? null;
-      if (nextStatus !== "IN_PROGRESS" && nextStatus !== "READY_FOR_DELIVERY") return null;
+      if (!["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"].includes(nextStatus ?? "")) return null;
 
       const job = (await db.collection(COLLECTIONS.jobs()).doc(log.entityId).get()).data() as
         | ServiceJob
@@ -142,6 +142,13 @@ export async function buildNotification(
       if (!job) return null;
       const vehicle = await vehicleLabel(db, job.vehicleId);
 
+      const updates: Record<string, { type: NotificationType; title: string; body: string }> = {
+        VEHICLE_RECEIVED: { type: "vehicle_received", title: "Vehicle received", body: `Your ${vehicle} has been checked in at the studio.` },
+        QUALITY_CHECK: { type: "quality_check", title: "Quality check", body: `Your ${vehicle} is now being checked before handover.` },
+        DELIVERED: { type: "vehicle_delivered", title: "Vehicle delivered", body: `Your ${vehicle} has been handed over. Thank you for visiting AutoDeck.` },
+      };
+      const update = nextStatus ? updates[nextStatus] : undefined;
+      if (update) return { userId: job.customerId, ...update, entityType: job.bookingId ? "Booking" : null, entityId: job.bookingId };
       if (nextStatus === "IN_PROGRESS") {
         return {
           userId: job.customerId,

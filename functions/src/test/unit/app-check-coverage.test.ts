@@ -117,6 +117,7 @@ const DEFERRED = [
   "inspection/startInspection.ts",
   "inspection/updateInspection.ts",
   "job/advanceJobStatus.ts",
+  "job/standbyBooking.ts",
   "job/assignBay.ts",
   "job/createWalkinJob.ts",
   "job/getStudioJobs.ts",

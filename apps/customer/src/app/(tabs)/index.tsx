@@ -35,6 +35,7 @@ const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: 
 };
 
 const JOB_STAGE: Record<string, string> = {
+  STANDBY: "Arrived - standby",
   PENDING_VEHICLE: "Waiting for your car",
   VEHICLE_RECEIVED: "Checked in",
   IN_PROGRESS: "Work under way",
@@ -48,6 +49,7 @@ const STAGE_SHORT = ["Booked", "Checked in", "Working", "Final check", "Ready", 
 
 function StatusRail({ status }: { status: string }) {
   const { colors } = useExperienceTheme();
+  if (status === "STANDBY") return <T role="body" tone="tertiary">Arrived - standby. Waiting for a bay, no time reserved.</T>;
   const at = Math.max(0, STAGES.indexOf(status as (typeof STAGES)[number]));
   return (
     <View style={{ gap: 6 }}>
@@ -232,7 +234,7 @@ export default function HomeScreen() {
       <FadeUp>
       <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
       <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", shadowColor: "#EC8638", shadowOpacity: 0.28, shadowRadius: 30, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
-        <HeroImage aspect={5 / 4} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />
+        {car?.photoUrl && !carPhoto ? <View style={{width: "100%", aspectRatio: 5 / 4, backgroundColor: "#161618"}} /> : <HeroImage aspect={5 / 4} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />}
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.45) 0%, rgba(8,8,10,0) 28%, rgba(8,8,10,0.9) 100%)" } as object) }} />
         <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
           <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>

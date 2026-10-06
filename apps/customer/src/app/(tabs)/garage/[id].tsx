@@ -71,7 +71,9 @@ export default function VehicleDetailScreen() {
   useEffect(() => {
     if (!id) return;
     const ref = doc(db, COLLECTIONS.vehicles(), id);
-    const unsubscribe = onSnapshot(ref, (snap) => {
+    setVehicle(null); setLoading(true);
+    const unsubscribe = onSnapshot(ref, { includeMetadataChanges: true }, (snap) => {
+      if (snap.metadata.fromCache) return;
       if (snap.exists()) {
         const v = snap.data() as Vehicle;
         setVehicle(v);

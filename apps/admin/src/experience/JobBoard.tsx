@@ -17,6 +17,7 @@ export interface BoardJob {
 }
 
 export const BOARD_COLUMNS: { status: string; title: string; tone: "wait" | "active" | "done" }[] = [
+  { status: "STANDBY", title: "Arrived - standby", tone: "wait" },
   { status: "PENDING_VEHICLE", title: "Awaiting vehicle", tone: "wait" },
   { status: "VEHICLE_RECEIVED", title: "Checked in", tone: "active" },
   { status: "IN_PROGRESS", title: "In progress", tone: "active" },

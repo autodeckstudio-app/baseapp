@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
-import { advanceJobStatus, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
+import { updateStandby, advanceJobStatus, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
 import {
   recordManualPayment,
   confirmManualPayment,
@@ -49,6 +49,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const JOB_STATUS_LABELS: Record<string, string> = {
+  STANDBY: "Arrived - standby",
   PENDING_VEHICLE: "Awaiting Vehicle",
   VEHICLE_RECEIVED: "Vehicle Received",
   IN_PROGRESS: "In Progress",
@@ -79,6 +80,7 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
+  const [requiredBayType, setRequiredBayType] = useState<string | null>(null);
   const [config, setConfig] = useState<StudioConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
@@ -107,6 +109,7 @@ export default function JobDetailScreen() {
         if (snap.exists()) {
           const j = snap.data() as ServiceJob;
           setJob(j);
+          void getDoc(doc(db, COLLECTIONS.services(), j.serviceId)).then(s => setRequiredBayType((s.data() as Service | undefined)?.requiredBayType ?? null));
           if (!config) {
             void getStudioConfig(j.studioId).then(setConfig);
           }
@@ -285,6 +288,18 @@ export default function JobDetailScreen() {
     return new Date(slot.startAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) + " IST";
   }
 
+  const [staffAction, setStaffAction] = useState<"enqueue" | "admit" | "rework" | null>(null);
+  const [standbyBay, setStandbyBay] = useState("");
+  async function performStaffAction() {
+    if (!id || !staffAction) return;
+    setAdvancing(true);
+    try {
+      if (staffAction === "rework") await advanceJobStatus(id, "QC failed - rework requested", true);
+      else await updateStandby(id, staffAction, staffAction === "admit" ? standbyBay : undefined);
+      setStaffAction(null);
+    } catch (err) { Alert.alert("Error", err instanceof Error ? err.message : "Could not update job."); }
+    finally { setAdvancing(false); }
+  }
   async function handleAdvance() {
     if (!job || !id) return;
     setAdvancing(true);
@@ -313,7 +328,7 @@ export default function JobDetailScreen() {
   if (!job) return <ErrorState title="Job not found" />;
 
   const transitions = JOB_STATUS_TRANSITIONS[job.status] ?? [];
-  const canAdvance = transitions.some((s) => s !== "CANCELLED");
+  const canAdvance = job.status !== "STANDBY" && transitions.some((s) => s !== "CANCELLED");
   const advanceLabel = ADVANCE_ACTION_LABELS[job.status] ?? "Advance";
   const statusLabel = JOB_STATUS_LABELS[job.status] ?? job.status;
 
@@ -342,7 +357,7 @@ export default function JobDetailScreen() {
       ? `~${job.estimatedDurationMinutes} min`
       : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`;
 
-  const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId) ?? [];
+  const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
@@ -352,11 +367,11 @@ export default function JobDetailScreen() {
       </View>
 
       <Section>
-        <Row label="Bay" value={job.bayId} />
+        <Row label="Bay" value={job.status === "STANDBY" ? "No bay reserved" : job.bayId} />
         <Row label="Service" value={job.serviceId} />
-        <Row label="Scheduled" value={scheduledTime} />
+        <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
-        <Row label="Expected ready" value={estimatedEndTime} />
+        <Row label="Expected ready" value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
         <Row label="Payment" value={job.paymentStatus} />
       </Section>
 
@@ -548,8 +563,18 @@ export default function JobDetailScreen() {
         </>
       )}
 
+      {staffAction ? <Section>
+        <Text style={{color: colors.textPrimary}}>{staffAction === "enqueue" ? "Mark arrived - standby? Releases the old bay reservation. No slot or service start is promised." : staffAction === "rework" ? "Send back to Work in progress for QC rework?" : "Admit at the actual time? Queue order, occupancy and upcoming reservations are checked before saving."}</Text>
+        {staffAction === "admit" ? compatibleBays.map(b => <Button key={b.id} label={b.name} variant={standbyBay === b.id ? "primary" : "secondary"} onPress={() => setStandbyBay(b.id)} />) : null}
+        <Button label="Confirm" disabled={staffAction === "admit" && !standbyBay} loading={advancing} onPress={() => void performStaffAction()} />
+        <Button label="Cancel" variant="secondary" onPress={() => setStaffAction(null)} disabled={advancing} />
+      </Section> : null}
+      {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
+      {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
+      {job.status === "QUALITY_CHECK" ? <Button label="QC failed - send for rework" variant="secondary" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
       {canAdvance && (
-        <Button label={advanceLabel} onPress={() => void handleAdvance()} loading={advancing} style={{ marginBottom: spacing.lg }} />
+        <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => void handleAdvance()} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}
 
       {job.status === "PENDING_VEHICLE" && job.bookingId ? (
@@ -573,7 +598,7 @@ export default function JobDetailScreen() {
         </Section>
       ) : null}
 
-      {compatibleBays.length > 0 && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
+      {compatibleBays.length > 0 && job.status !== "STANDBY" && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
         <>
           <Text style={sectionTitle}>Reassign Bay</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.lg }}>

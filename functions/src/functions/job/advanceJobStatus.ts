@@ -69,6 +69,11 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
       }
     }
 
+    if (freshJob.status === "STANDBY") throw new HttpsError("failed-precondition", "Admit from standby into an available bay first.");
+    if (data.rework && freshJob.status !== "QUALITY_CHECK") throw new HttpsError("failed-precondition", "Rework is available only during Quality check.");
+
+    if (freshJob.status === "PENDING_VEHICLE" && Date.parse(freshJob.estimatedEndAt) <= Date.now()) throw new HttpsError("failed-precondition", "The reserved service window has passed. Use Arrived - standby or reschedule before checking in.");
+
     const validTransitions = JOB_STATUS_TRANSITIONS[freshJob.status] ?? [];
     if (validTransitions.length === 0) {
       throw new HttpsError(
@@ -78,7 +83,7 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
     }
     // For forward advancement, pick the first valid non-CANCELLED transition.
     // For CANCELLED specifically, it must be explicitly requested (handled by cancelBooking).
-    const nextStatus = validTransitions.find((s) => s !== "CANCELLED");
+    const nextStatus = data.rework ? "IN_PROGRESS" : validTransitions.find((s) => s !== "CANCELLED");
     if (!nextStatus) {
       throw new HttpsError(
         "failed-precondition",
@@ -102,6 +107,7 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
     let warranty: ReturnType<typeof buildWarranty> = null;
     const warrantyRef = db.collection(COLLECTIONS.warranties()).doc(data.jobId);
     if (nextStatus === "DELIVERED") {
+      if (freshJob.paymentStatus !== "paid") throw new HttpsError("failed-precondition", "Collect and confirm full payment before delivering this vehicle.");
       // A job cannot be delivered while additional work is still awaiting
       // the customer's decision — Phase 3 requirement: prevent the studio
       // from treating unauthorized additional work as complete.

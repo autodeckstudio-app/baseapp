@@ -25,7 +25,7 @@ function addDaysLocal(dateStr: string, days: number): string {
 type GetStudioJobsInput = { studioId: string; date?: string };
 type GetStudioJobsOutput = { jobs: ServiceJob[]; date: string };
 
-type AdvanceJobStatusInput = { jobId: string; notes?: string };
+type AdvanceJobStatusInput = { jobId: string; notes?: string; rework?: boolean };
 type AdvanceJobStatusOutput = { jobId: string; previousStatus: string; newStatus: string };
 
 type CreateWalkinJobInput = {
@@ -58,12 +58,14 @@ export async function getStudioJobs(
 export async function advanceJobStatus(
   jobId: string,
   notes?: string,
+  rework?: boolean,
 ): Promise<AdvanceJobStatusOutput> {
   const fn = httpsCallable<AdvanceJobStatusInput, AdvanceJobStatusOutput>(
     functions,
     "advanceJobStatus",
   );
   const input: AdvanceJobStatusInput = notes !== undefined ? { jobId, notes } : { jobId };
+  if (rework) input.rework = true;
   const result = await fn(input);
   return result.data;
 }
@@ -147,4 +149,11 @@ export async function getReslotOptions(job: ServiceJob): Promise<ReslotOption[]>
 }
 export async function reslotBooking(bookingId: string, slot: ReslotOption): Promise<void> {
   await httpsCallable(functions, "rescheduleBooking")({ bookingId, newDate: slot.date, newTime: slot.startTime, idempotencyKey: `studio-${bookingId}-${slot.startAt}-${Date.now()}` });
+}
+
+export function listenToStandby(tenantId: string, studioId: string, onData: (jobs: ServiceJob[]) => void, onError: (err: Error) => void): Unsubscribe {
+  return onSnapshot(query(collection(db, COLLECTIONS.jobs()), where("tenantId", "==", tenantId), where("studioId", "==", studioId)), snap => onData(snap.docs.map(d => d.data() as ServiceJob).filter(j => j.status === "STANDBY").sort((a,b) => (a.standbyArrivedAt ?? a.createdAt).localeCompare(b.standbyArrivedAt ?? b.createdAt) || a.id.localeCompare(b.id))), onError);
+}
+export async function updateStandby(jobId: string, action: "enqueue" | "admit", bayId?: string): Promise<void> {
+  await httpsCallable(functions, "standbyBooking")({ jobId, action, ...(bayId ? { bayId } : {}) });
 }

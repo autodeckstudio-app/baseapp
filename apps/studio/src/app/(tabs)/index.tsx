@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { View, Text, FlatList, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
-import { listenToJobsByDate } from "../../lib/studio-service";
+import { listenToJobsByDate, listenToStandby } from "../../lib/studio-service";
 import type { ServiceJob } from "@autodeck/core";
 import { colors, spacing, radius, typography, JobCard, LoadingState, Button } from "@autodeck/ui";
 import { Icon, FadeUp } from "@autodeck/ui/native";
@@ -15,6 +15,7 @@ function todayIST(): string {
 export default function TodaysJobsScreen() {
   const router = useRouter();
   const authState = useAuth();
+  const [standby, setStandby] = useState<ServiceJob[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
   const studioId = authState.status === "ready" ? authState.claims.studioId : null;
@@ -36,12 +37,13 @@ export default function TodaysJobsScreen() {
         setLoading(false);
       },
     );
-    return unsub;
+    const queueUnsub = listenToStandby(tenantId, studioId, setStandby, err => Alert.alert("Error", err.message));
+    return () => { unsub(); queueUnsub(); };
   }, [studioId, tenantId]);
 
   if (loading) return <LoadingState />;
 
-  const activeJobs = jobs.filter((j) => j.status !== "DELIVERED" && j.status !== "CANCELLED");
+  const activeJobs = jobs.filter((j) => j.status !== "STANDBY" && j.status !== "DELIVERED" && j.status !== "CANCELLED");
 
   const ready = activeJobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
   const inProgress = activeJobs.filter((j) => j.status === "IN_PROGRESS" || j.status === "QUALITY_CHECK").length;
@@ -70,6 +72,11 @@ export default function TodaysJobsScreen() {
             <Stat label="On the floor" value={activeJobs.length} />
             <Stat label="In progress" value={inProgress} />
             <Stat label="Ready" value={ready} />
+          </View>
+          <View style={{gap: spacing.sm}}>
+            <Text style={{...typography.title, color: colors.textPrimary}}>Arrived - standby ({standby.length})</Text>
+            <Text style={{...typography.caption, color: colors.textMuted}}>Waiting in arrival order. No bay or time reserved. Open the next car to admit when a compatible bay is free.</Text>
+            {standby.length === 0 ? <Text style={{color: colors.textMuted}}>No cars waiting.</Text> : standby.map(j => <JobCard key={j.id} job={j} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
           </View>
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
         </View>

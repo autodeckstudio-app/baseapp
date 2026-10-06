@@ -4,7 +4,12 @@ import { Animated, View, type ImageProps, type StyleProp, type ViewStyle } from 
 type Props = Omit<ImageProps, "style"> & { style?: StyleProp<ViewStyle>; placeholder?: string };
 
 /** Image that fades in once loaded over a soft tinted placeholder, so lists never pop or flash blank. */
-export function FadeImage({ style, placeholder = "rgba(60,40,90,0.06)", onLoad, ...rest }: Props) {
+export function FadeImage(props: Props) {
+  const identity = JSON.stringify(props.source);
+  return <FreshFadeImage key={identity} {...props} />;
+}
+
+function FreshFadeImage({ style, placeholder = "rgba(60,40,90,0.06)", onLoad, ...rest }: Props) {
   const op = useRef(new Animated.Value(0)).current;
   const [done, setDone] = useState(false);
   return (

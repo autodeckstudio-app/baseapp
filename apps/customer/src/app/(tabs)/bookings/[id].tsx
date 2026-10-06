@@ -19,6 +19,7 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
+  STANDBY: "Arrived - standby",
   PENDING_VEHICLE: "Awaiting vehicle drop-off",
   VEHICLE_RECEIVED: "Vehicle received",
   IN_PROGRESS: "Service in progress",
@@ -280,9 +281,9 @@ export default function BookingDetailScreen() {
       ) : null}
 
       <Pane pad="gap">
-        <Row title="Time" detail={`${displayTime} IST`} />
+        <Row title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime} IST`} />
         <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
-        <Row title="Expected ready" detail={`${displayEndDate}, ${booking.estimatedEndTime} IST`} last={!(booking.notes !== null && booking.notes.trim() !== "")} />
+        <Row title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${booking.estimatedEndTime} IST`} last={!(booking.notes !== null && booking.notes.trim() !== "")} />
         {booking.notes !== null && booking.notes.trim() !== "" ? <Row title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
@@ -294,7 +295,7 @@ export default function BookingDetailScreen() {
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>
             <Kicker tone="accent">{translate("Studio status")}</Kicker>
-            {job.status === "CANCELLED" ? (
+            {job.status === "STANDBY" ? <><T role="heading">Arrived - standby</T><T role="body" tone="tertiary">Your car is waiting for an available compatible bay. No service start time is promised. The studio will update this when you are admitted.</T></> : job.status === "CANCELLED" ? (
               <T role="heading">Cancelled</T>
             ) : (
               TRACK_STEPS.map((step, i) => {

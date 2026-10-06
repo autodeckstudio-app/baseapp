@@ -51,6 +51,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   CANCELLED: "neutral",
   EXPIRED: "neutral",
   // Job
+  STANDBY: "warning",
   PENDING_VEHICLE: "warning",
   VEHICLE_RECEIVED: "accent",
   IN_PROGRESS: "accent",

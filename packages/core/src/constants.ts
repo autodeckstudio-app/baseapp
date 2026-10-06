@@ -44,6 +44,7 @@ export function isBookingLateToday(b: { status: string; scheduledAt: string }, n
 
 export const JOB_STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING_VEHICLE: ["VEHICLE_RECEIVED", "CANCELLED"],
+  STANDBY: ["VEHICLE_RECEIVED", "CANCELLED"],
   VEHICLE_RECEIVED: ["IN_PROGRESS", "CANCELLED"],
   IN_PROGRESS: ["QUALITY_CHECK", "CANCELLED"],
   QUALITY_CHECK: ["READY_FOR_DELIVERY", "IN_PROGRESS"],

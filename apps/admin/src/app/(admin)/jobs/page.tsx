@@ -13,7 +13,7 @@ import { useLabels } from "../../../lib/use-labels";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Customer, Vehicle, Service } from "@autodeck/core";
 
-const STATUSES: JobStatus[] = ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
+const STATUSES: JobStatus[] = ["STANDBY", "PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
 
 function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -90,8 +90,8 @@ export default function JobsPage() {
     plate: vehicleRegs[j.vehicleId] ?? "-",
     customer: customerNames[j.customerId] ?? "Customer",
     service: serviceNames[j.serviceId] ?? "Service",
-    bay: j.bayId ? j.bayId.replace(/^bay[-_]?/i, "") : undefined,
-    when: formatDateTime(j.scheduledAt),
+    bay: j.status !== "STANDBY" && j.bayId ? j.bayId.replace(/^bay[-_]?/i, "") : undefined,
+    when: j.status === "STANDBY" ? `Waiting since ${formatDateTime(j.standbyArrivedAt ?? j.createdAt)}` : formatDateTime(j.scheduledAt),
     walkIn: j.isWalkIn,
     payment: j.paymentStatus,
   });
@@ -111,6 +111,11 @@ export default function JobsPage() {
         </div>
       </header>
 
+      <section className="ax-panel" aria-label="Standby waiting queue">
+        <h2>Arrived - standby</h2><p className="ax-note">Waiting in arrival order. No bay or time reserved. Open the next car to admit into an available compatible bay.</p>
+        {jobs.filter(j => j.status === "STANDBY").sort((a,b) => (a.standbyArrivedAt ?? a.createdAt).localeCompare(b.standbyArrivedAt ?? b.createdAt) || a.id.localeCompare(b.id)).map((j,i) => <button key={j.id} className="ax-button" onClick={() => open(j.id)}>{i+1}. {vehicleRegs[j.vehicleId] ?? "Vehicle"} - {serviceNames[j.serviceId] ?? "Service"} - waiting since {formatDateTime(j.standbyArrivedAt ?? j.createdAt)}</button>)}
+        {!jobs.some(j => j.status === "STANDBY") ? <p>No cars waiting.</p> : null}
+      </section>
       <div className="ax-toolbar">
         <div className="ax-seg" role="group" aria-label="View">
           <button type="button" aria-pressed={view === "board"} onClick={() => setView("board")}>Board</button>

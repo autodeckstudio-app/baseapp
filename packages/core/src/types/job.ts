@@ -2,6 +2,7 @@ import type { PriceBreakdown } from "./booking.js";
 
 export type JobStatus =
   | "PENDING_VEHICLE"      // Created from booking; vehicle not yet arrived
+  | "STANDBY"             // Arrived, waiting without a bay reservation
   | "VEHICLE_RECEIVED"     // Vehicle checked in (or walk-in)
   | "IN_PROGRESS"
   | "QUALITY_CHECK"
@@ -24,7 +25,9 @@ export interface ServiceJob {
   customerId: string;
   vehicleId: string;
   serviceId: string;
-  bayId: string;
+  bayId: string; // empty while on standby
+  standbyArrivedAt?: string | null;
+  standbyAdmittedAt?: string | null;
   assignedEmployeeId: string | null;
   status: JobStatus;
   statusHistory: JobStatusHistoryEntry[]; // append-only embedded array

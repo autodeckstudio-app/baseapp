@@ -2,6 +2,7 @@
 // The object path mirrors storage.rules: {tenantId}/vehicles/{vehicleId}/cover.<ext>,
 // with customMetadata.ownerId stamped at upload so the hardened read rule
 // (owner or studio only) applies from the first byte. See doc08 §8.8 pattern.
+import { randomUUID } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -38,7 +39,7 @@ export const issueVehiclePhotoUploadUrl = onCall({ region: "asia-south1" }, asyn
     throw new HttpsError("permission-denied", "You do not own this vehicle.");
   }
 
-  const path = `${vehicle.tenantId}/vehicles/${data.vehicleId}/cover.${EXT[data.contentType]}`;
+  const path = `${vehicle.tenantId}/vehicles/${data.vehicleId}/cover.${randomUUID()}.${EXT[data.contentType]}`;
   const [uploadUrl] = await getStorage()
     .bucket()
     .file(path)

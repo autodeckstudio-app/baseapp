@@ -1,14 +1,19 @@
 "use client";
 import { useState } from "react";
 import { httpsCallable } from "firebase/functions";
-import type { ServiceJob } from "@autodeck/core";
-import { functions } from "../lib/firebase";
+import type { ServiceJob, StudioConfig } from "@autodeck/core";
+import { doc, getDoc } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import { functions, db } from "../lib/firebase";
 
 type Slot = { date: string; startTime: string; startAt: string };
 const NEXT: Record<string, string> = { PENDING_VEHICLE: "Check in vehicle", VEHICLE_RECEIVED: "Start work", IN_PROGRESS: "Send to QC", QUALITY_CHECK: "Mark ready", READY_FOR_DELIVERY: "Mark delivered" };
 const label = (slot: Slot) => new Date(slot.startAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) + " IST";
 
 export function JobControls({ job }: { job: ServiceJob }) {
+  const [bays, setBays] = useState<{id: string; name: string}[]>([]);
+  const [operation, setOperation] = useState<"enqueue" | "admit" | "rework" | null>(null);
+  const [bay, setBay] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -16,6 +21,24 @@ export function JobControls({ job }: { job: ServiceJob }) {
   const [advanceConfirm, setAdvanceConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  async function prepareStandby() {
+    setOperation("admit"); setBusy(true); setError(null);
+    try {
+      const [c, s] = await Promise.all([getDoc(doc(db, COLLECTIONS.studioConfig(), job.studioId)), getDoc(doc(db, COLLECTIONS.services(), job.serviceId))]);
+      const config = c.data() as StudioConfig | undefined;
+      setBays((config?.bays ?? []).filter(b => b.active && b.bayType === s.data()?.requiredBayType));
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not load bays."); }
+    finally { setBusy(false); }
+  }
+  async function perform() {
+    setBusy(true); setError(null);
+    try {
+      if (operation === "rework") await httpsCallable(functions, "advanceJobStatus")({ jobId: job.id, rework: true });
+      else await httpsCallable(functions, "standbyBooking")({ jobId: job.id, action: operation, ...(operation === "admit" ? { bayId: bay } : {}) });
+      setOperation(null);
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not update job."); }
+    finally { setBusy(false); }
+  }
   async function loadSlots() {
     setOpen(true); setBusy(true); setError(null); setPick(null); setDone(null);
     try {
@@ -41,12 +64,22 @@ export function JobControls({ job }: { job: ServiceJob }) {
     finally { setBusy(false); }
   }
   const next = NEXT[job.status];
-  if (!next) return null;
+  if (!next && job.status !== "STANDBY") return null;
   return <section className="ax-card" style={{ display: "grid", gap: 12, padding: 20 }}>
     <h2 className="ax-label">Job controls</h2>
     {error ? <p role="alert">{error}</p> : null}
     {done ? <p role="status">{done}</p> : null}
-    {advanceConfirm ? <div style={{ display: "grid", gap: 8 }}><p>{next}? This updates the studio, admin and customer tracker.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void advance()}>Confirm {next.toLowerCase()}</button><button className="ax-button" disabled={busy} onClick={() => setAdvanceConfirm(false)}>Cancel</button></div> : <button className="ax-button ax-button--primary" disabled={busy} onClick={() => setAdvanceConfirm(true)}>{next}</button>}
+    {operation ? <div style={{display: "grid", gap: 8}}>
+      <p>{operation === "enqueue" ? "Mark arrived - standby? This releases the old bay reservation. No slot or service start is promised." : operation === "rework" ? "Send back to Work in progress for QC rework?" : "Admit the next standby car at the actual time? The server checks queue order, bay occupancy and upcoming reservations."}</p>
+      {operation === "admit" ? <select aria-label="Standby bay" value={bay} onChange={e => setBay(e.target.value)}><option value="">Choose a compatible bay</option>{bays.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select> : null}
+      <button className="ax-button ax-button--primary" disabled={busy || (operation === "admit" && !bay)} onClick={() => void perform()}>Confirm {operation === "enqueue" ? "standby arrival" : operation === "rework" ? "QC rework" : "admission"}</button>
+      <button className="ax-button" disabled={busy} onClick={() => setOperation(null)}>Cancel</button>
+    </div> : null}
+    {job.status === "STANDBY" ? <><p>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void prepareStandby()}>Admit from standby</button></> : null}
+    {job.status === "PENDING_VEHICLE" && job.bookingId ? <button className="ax-button" disabled={busy || Date.parse(job.scheduledAt) > Date.now()} onClick={() => setOperation("enqueue")}>Arrived - standby</button> : null}
+    {job.status === "QUALITY_CHECK" ? <button className="ax-button" disabled={busy} onClick={() => setOperation("rework")}>QC failed - send for rework</button> : null}
+    {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <p role="status">Collect and confirm full payment before marking delivered.</p> : null}
+    {next ? <>{advanceConfirm ? <div style={{ display: "grid", gap: 8 }}><p>{next}? This updates the studio, admin and customer tracker.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void advance()}>Confirm {next.toLowerCase()}</button><button className="ax-button" disabled={busy} onClick={() => setAdvanceConfirm(false)}>Cancel</button></div> : <button className="ax-button ax-button--primary" disabled={busy || (job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid")} onClick={() => setAdvanceConfirm(true)}>{next}</button>}</> : null}
     {job.status === "PENDING_VEHICLE" && job.bookingId ? <>
       <p>Late arrival? Move this booking to an upcoming available slot before checking in. The same booking and job are kept.</p>
       {!open ? <button className="ax-button" disabled={busy} onClick={() => void loadSlots()}>Reschedule</button> : <>

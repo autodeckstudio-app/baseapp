@@ -78,7 +78,10 @@ export function listenToMyVehicles(
 
   return onSnapshot(
     q,
+    { includeMetadataChanges: true },
     (snap: QuerySnapshot) => {
+      // Wait for server confirmation before exposing a cached photo/version.
+      if (snap.metadata.fromCache) return;
       const vehicles = snap.docs.map((doc) => doc.data() as Vehicle);
       onData(vehicles);
     },

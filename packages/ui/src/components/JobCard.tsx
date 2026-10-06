@@ -9,6 +9,7 @@ import { StatusBadge, statusTone } from "./StatusBadge.js";
 import { formatTime } from "../format.js";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
+  STANDBY: "Arrived - standby",
   PENDING_VEHICLE: "Awaiting vehicle",
   VEHICLE_RECEIVED: "Vehicle in",
   IN_PROGRESS: "In progress",
@@ -43,11 +44,11 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName }: JobCar
     <Card onPress={onPress} padding="md">
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs }}>
         <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-          {isOngoingFromEarlierDay ? `Started ${job.scheduledDate}` : formatTime(job.scheduledAt)}
+          {job.status === "STANDBY" ? `Waiting since ${formatTime(job.standbyArrivedAt ?? job.createdAt)}` : isOngoingFromEarlierDay ? `Started ${job.scheduledDate}` : formatTime(job.scheduledAt)}
         </Text>
         <StatusBadge label={JOB_STATUS_LABELS[job.status] ?? job.status} tone={statusTone(job.status)} />
       </View>
-      <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{bayName ?? "Bay"}</Text>
+      <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{job.status === "STANDBY" ? "No bay reserved" : bayName ?? "Bay"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs }}>
         {job.isWalkIn && <Tag label="WALK-IN" />}
         {isMultiDay && <Tag label={`MULTI-DAY · until ${job.estimatedEndDate}`} />}

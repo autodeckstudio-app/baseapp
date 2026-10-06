@@ -32,6 +32,8 @@ export const assignBay = onCall({ region: "asia-south1" }, async (request) => {
     throw new HttpsError("permission-denied", "Job belongs to a different studio.");
   }
 
+  if (job.status === "STANDBY") throw new HttpsError("failed-precondition", "Admit standby through the waiting queue, not bay reassignment.");
+
   if (job.status === "DELIVERED" || job.status === "CANCELLED") {
     throw new HttpsError(
       "failed-precondition",
