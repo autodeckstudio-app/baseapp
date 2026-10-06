@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { View, Text, FlatList, Alert } from "react-native";
+import { View, Text, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import { listenToJobsByDate, listenToStandby } from "../../lib/studio-service";
 import type { ServiceJob } from "@autodeck/core";
-import { colors, spacing, radius, typography, JobCard, LoadingState, Button } from "@autodeck/ui";
+import { colors, spacing, radius, typography, JobCard, LoadingState, ErrorState, Button } from "@autodeck/ui";
 import { Icon, FadeUp } from "@autodeck/ui/native";
 import { useJobLabels } from "../../hooks/useBayNames";
 
@@ -18,12 +18,16 @@ export default function TodaysJobsScreen() {
   const [standby, setStandby] = useState<ServiceJob[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [queueReady, setQueueReady] = useState(false);
   const studioId = authState.status === "ready" ? authState.claims.studioId : null;
   const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
 
   const labels = useJobLabels(studioId);
   useEffect(() => {
     if (!studioId || !tenantId) return undefined;
+    setLoading(true); setQueueReady(false); setError(null);
     const unsub = listenToJobsByDate(
       tenantId,
       studioId,
@@ -33,15 +37,15 @@ export default function TodaysJobsScreen() {
         setLoading(false);
       },
       (err) => {
-        Alert.alert("Error", err.message);
-        setLoading(false);
+        setError(err.message); setLoading(false);
       },
     );
-    const queueUnsub = listenToStandby(tenantId, studioId, setStandby, err => Alert.alert("Error", err.message));
+    const queueUnsub = listenToStandby(tenantId, studioId, data => { setStandby(data); setQueueReady(true); }, err => { setError(err.message); setQueueReady(true); });
     return () => { unsub(); queueUnsub(); };
-  }, [studioId, tenantId]);
+  }, [studioId, tenantId, attempt]);
 
-  if (loading) return <LoadingState />;
+  if (error) return <ErrorState title="Floor unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
+  if (loading || !queueReady) return <LoadingState label="Loading studio floor" />;
 
   const activeJobs = jobs.filter((j) => j.status !== "STANDBY" && j.status !== "DELIVERED" && j.status !== "CANCELLED");
 
@@ -73,11 +77,11 @@ export default function TodaysJobsScreen() {
             <Stat label="In progress" value={inProgress} />
             <Stat label="Ready" value={ready} />
           </View>
-          <View style={{gap: spacing.sm}}>
+          {standby.length > 0 && <View style={{gap: spacing.sm}}>
             <Text style={{...typography.title, color: colors.textPrimary}}>Arrived - standby ({standby.length})</Text>
             <Text style={{...typography.caption, color: colors.textMuted}}>Waiting in arrival order. No bay or time reserved. Open the next car to admit when a compatible bay is free.</Text>
             {standby.length === 0 ? <Text style={{color: colors.textMuted}}>No cars waiting.</Text> : standby.map(j => <JobCard key={j.id} job={j} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
-          </View>
+          </View>}
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
         </View>
       }
