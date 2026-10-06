@@ -9,8 +9,8 @@ export const colors = {
   // dark studio ground, amber light and champagne reflection. Kept under the
   // legacy role names so every existing screen picks it up.
   // Surfaces
-  background: "#ECEBF8", // the room: cool near-black
-  surface: "#FFFFFF", // flat pane for rows/cards (glass is the raised one)
+  background: "#F4F3F0", // the room: cool near-black
+  surface: "rgba(255,255,255,0.86)", // flat pane for rows/cards (glass is the raised one)
   surfaceElevated: "#F2F4FC", // sheets, modals
   surfaceSunken: "#F6F5FC", // inputs, recessed wells
 

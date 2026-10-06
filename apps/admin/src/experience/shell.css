@@ -574,3 +574,17 @@
 
 /* Phone: filter rows scroll sideways instead of clipping */
 @media (max-width: 700px) { .ax-shell .ax-toolbar .ax-filters { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; } .ax-shell .ax-toolbar .ax-filters::-webkit-scrollbar { display: none; } }
+
+/* Frosted white controls: orange remains the primary action, never body text. */
+.ax-shell { background: radial-gradient(ellipse at top right, rgba(242,122,26,0.08), transparent 48%), #f5f4f1; }
+.ax-side { background: rgba(255,255,255,0.76) !important; backdrop-filter: blur(26px) saturate(140%) !important; -webkit-backdrop-filter: blur(26px) saturate(140%) !important; box-shadow: 0 12px 32px rgba(40,35,30,0.08); }
+.ax-shell .ax-panel, .ax-shell .ax-card, .ax-shell .ax-col, .ax-shell .ax-tiles > *, .ax-shell .detail-card { background: rgba(255,255,255,0.78); border: 1px solid rgba(255,255,255,0.95); border-radius: 22px; backdrop-filter: blur(22px) saturate(135%); -webkit-backdrop-filter: blur(22px) saturate(135%); box-shadow: 0 8px 24px rgba(45,38,30,0.06), inset 0 1px 0 rgba(255,255,255,0.9); }
+.ax-shell .ax-button:not(.ax-button--primary):not(.ax-button--danger), .ax-shell .ax-seg { background: rgba(255,255,255,0.8); border: 1px solid rgba(220,218,214,0.7); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-radius: 999px; color: #28251f; }
+.ax-shell .ax-button { min-height: 44px; }
+.ax-shell .ax-button--primary { border-radius: 999px; box-shadow: 0 4px 12px rgba(194,84,10,0.15); }
+.ax-shell .ax-job { background: rgba(255,255,255,0.9); border-radius: 16px; }
+.ax-board { grid-template-columns: repeat(6, minmax(210px, 1fr)); }
+@media (max-width: 700px) { .ax-board { grid-template-columns: repeat(6, 78vw); } }
+@media (prefers-reduced-transparency: reduce) { .ax-shell .ax-panel, .ax-shell .ax-card, .ax-shell .ax-col, .ax-side { background: #fff !important; backdrop-filter: none !important; } }
+
+.ax-shell, .ax-shell * { color-scheme: light; }

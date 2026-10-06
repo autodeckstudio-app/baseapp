@@ -56,7 +56,7 @@ export function Button({
       };
     }
     if (variant === "secondary") {
-      return { boxShadow: pressed ? "0 1px 3px rgba(40,30,60,0.12)" : "4px 6px 14px rgba(40,30,60,0.12), -1px -1px 3px rgba(255,255,255,0.9)" };
+      return { backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)", backgroundColor: "rgba(255,255,255,0.78)", border: "1px solid rgba(255,255,255,0.95)", boxShadow: pressed ? "0 1px 3px rgba(40,30,60,0.12)" : "4px 6px 14px rgba(40,30,60,0.12), -1px -1px 3px rgba(255,255,255,0.9)" };
     }
     return {};
   };

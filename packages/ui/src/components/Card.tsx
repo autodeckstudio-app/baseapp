@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, View, TouchableOpacity, type StyleProp, type ViewStyle } from "react-native";
 import { colors } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
 import { radius } from "../tokens/radius.js";
@@ -16,7 +16,9 @@ export interface CardProps {
 /** Base surface for grouped content - the foundation for the domain cards below. */
 export function Card({ children, onPress, padding = "lg", style, flat = false }: CardProps) {
   const base: ViewStyle = {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(255,255,255,0.82)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.94)",
+    ...(Platform.OS === "web" ? ({backdropFilter: "blur(22px) saturate(140%)", WebkitBackdropFilter: "blur(22px) saturate(140%)"} as ViewStyle) : {}),
     borderRadius: radius.lg,
     padding: spacing[padding],
     ...(flat ? { borderWidth: 1, borderColor: colors.border } : elevation.card),

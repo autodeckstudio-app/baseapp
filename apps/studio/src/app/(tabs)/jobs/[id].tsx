@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Platform, View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -635,7 +635,7 @@ const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBot
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, gap: spacing.sm }}>
+    <View style={{ backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.96)", padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm, ...(Platform.OS === "web" ? {backdropFilter: "blur(22px) saturate(140%)", WebkitBackdropFilter: "blur(22px) saturate(140%)", boxShadow: "0 8px 24px rgba(45,38,30,0.06)"} : {}) }}>
       {children}
     </View>
   );

@@ -147,10 +147,9 @@ export function formatPlate(reg: string): string {
 }
 
 export function Plate({ value }: { value: string }) {
-  const { colors } = useExperienceTheme();
   return (
-    <View style={{ alignSelf: "flex-start", borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-      <T role="data" tone="secondary" style={{ letterSpacing: 1.2 }}>
+    <View style={{ alignSelf: "flex-start", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D1D3D8", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+      <T role="data" style={{ color: "#16181C", fontWeight: "700", letterSpacing: 1.2 }}>
         {formatPlate(value)}
       </T>
     </View>
