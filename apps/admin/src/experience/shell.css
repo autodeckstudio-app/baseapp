@@ -588,3 +588,11 @@
 @media (prefers-reduced-transparency: reduce) { .ax-shell .ax-panel, .ax-shell .ax-card, .ax-shell .ax-col, .ax-side { background: #fff !important; backdrop-filter: none !important; } }
 
 .ax-shell, .ax-shell * { color-scheme: light; }
+/* Shared state and contrast contract. White panels must never inherit white KPI text. */
+.ax-shell .ax-tile--featured .ax-kpi-v { color: var(--ad-accent-strong); }
+.ax-shell .ax-tile--featured .ax-label { color: var(--ad-text-secondary); }
+.ax-shell .ax-tile--featured { background: rgba(255,255,255,0.88); }
+.ax-shell .ax-button:focus-visible, .ax-shell button:focus-visible, .ax-shell input:focus-visible, .ax-shell select:focus-visible { outline: 2px solid var(--ad-accent-strong); outline-offset: 3px; }
+.ax-shell button:disabled { opacity: .5; cursor: not-allowed; }
+.ax-shell .ax-panel, .ax-shell .ax-card, .ax-shell .ax-col { border-radius: var(--ad-radius-pane); }
+@media (max-width:700px) { .ax-tiles { grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px; } .ax-tiles .ax-tile { padding:16px 12px; } .ax-tiles .ax-kpi-v { font-size:28px; } .ax-tiles .ax-label { font-size:12px; letter-spacing:.6px; } .ax-tiles .ax-tile-ico { display:none; } }

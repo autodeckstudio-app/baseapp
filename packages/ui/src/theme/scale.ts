@@ -35,8 +35,8 @@ export const radius = {
 // modal states.
 export const depth = {
   base: { z: 0, shadow: "none", elevation: 0 },
-  raised: { z: 1, shadow: "0 18px 40px -20px rgba(0,0,0,0.9)", elevation: 4 },
-  float: { z: 10, shadow: "0 24px 50px -24px rgba(0,0,0,0.95)", elevation: 8 },
+  raised: { z: 1, shadow: "0 8px 24px -12px rgba(28,24,20,0.20)", elevation: 4 },
+  float: { z: 10, shadow: "0 12px 32px -16px rgba(28,24,20,0.24)", elevation: 8 },
   nav: { z: 20, shadow: "0 1px 0 rgba(255,255,255,0.06)", elevation: 12 },
   sheet: { z: 30, shadow: "0 60px 120px -40px rgba(0,0,0,0.95)", elevation: 16 },
   takeover: { z: 40, shadow: "0 60px 120px -40px rgba(0,0,0,0.95)", elevation: 20 },

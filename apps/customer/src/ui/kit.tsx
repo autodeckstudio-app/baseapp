@@ -199,7 +199,7 @@ export function Button({
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
           ...(Platform.OS === "web" && primary
-            ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 8px 18px rgba(236,134,56,0.38), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
+            ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 4px 12px rgba(194,84,10,0.16), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
             : {}),
         },
         style,
