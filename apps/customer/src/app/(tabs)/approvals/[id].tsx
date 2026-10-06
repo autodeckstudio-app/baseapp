@@ -33,6 +33,7 @@ function formatWhen(iso: string): string {
 export default function ApprovalDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const [retryTick,setRetryTick] = useState(0);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,11 +43,12 @@ export default function ApprovalDetailScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return undefined;
+    if (!id) {setLoading(false);return undefined;}
+    setLoading(true);setError(null);
     return listenToApproval(
       id,
       (data) => {
-        setApproval(data);
+        setError(null);setApproval(data);
         setLoading(false);
       },
       (err) => {
@@ -54,17 +56,17 @@ export default function ApprovalDetailScreen() {
         setLoading(false);
       },
     );
-  }, [id]);
+  }, [id,retryTick]);
 
   useEffect(() => {
     if (!approval?.vehicleId) return;
     void getDoc(doc(db, COLLECTIONS.vehicles(), approval.vehicleId)).then((snap) => {
       if (snap.exists()) setVehicle(snap.data() as Vehicle);
-    });
+    }).catch(()=>setVehicle(null));
   }, [approval?.vehicleId]);
 
   async function handleDecision(decision: "approved" | "rejected") {
-    if (!id) return;
+    if (!id || deciding) return;
     setDeciding(true);
     setActionError(null);
     try {
@@ -81,7 +83,7 @@ export default function ApprovalDetailScreen() {
   if (error) {
     return (
       <Screen>
-        <Notice title="Can't load this request" body={error} action={<Button label="Go back" onPress={() => router.back()} />} />
+        <Notice title="Can't load this request" body={error} action={<Button label="Retry" onPress={() => setRetryTick(n=>n+1)} />} />
       </Screen>
     );
   }

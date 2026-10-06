@@ -13,18 +13,20 @@ export default function InvoiceScreen() {
     customerId: string;
   }>();
   const router = useRouter();
+  const [retryTick,setRetryTick] = useState(0);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!jobId || !tenantId || !customerId) return;
+    if (!jobId || !tenantId || !customerId) {setLoading(false);return;}
+    setLoading(true);setError(null);
     return listenToInvoiceForJob(
       jobId,
       tenantId,
       customerId,
       (inv) => {
-        setInvoice(inv);
+        setError(null);setInvoice(inv);
         setLoading(false);
       },
       (err) => {
@@ -32,7 +34,7 @@ export default function InvoiceScreen() {
         setLoading(false);
       },
     );
-  }, [jobId, tenantId, customerId]);
+  }, [jobId, tenantId, customerId,retryTick]);
 
   if (loading) return <Loading label="Opening the invoice" />;
 
@@ -42,7 +44,7 @@ export default function InvoiceScreen() {
         <Notice
           title={error ? "Couldn't load the invoice" : "No invoice yet"}
           body={error ?? "It's issued once payment is confirmed."}
-          action={<Button label="Go back" onPress={() => router.back()} />}
+          action={error?<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>:<Button label="Go back" onPress={() => router.back()} />}
         />
       </Screen>
     );

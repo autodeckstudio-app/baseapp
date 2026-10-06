@@ -83,6 +83,8 @@ export default function JobDetailScreen() {
   const [serviceName,setServiceName] = useState<string|null>(null);
   const [requiredBayType, setRequiredBayType] = useState<string | null>(null);
   const [config, setConfig] = useState<StudioConfig | null>(null);
+  const [feedError,setFeedError] = useState<string|null>(null);
+  const [attempt,setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [reassigning, setReassigning] = useState(false);
@@ -103,10 +105,12 @@ export default function JobDetailScreen() {
   const [creatingApproval, setCreatingApproval] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {setLoading(false);return;}
+    setFeedError(null);setLoading(true);
     const unsub = onSnapshot(
       doc(db, COLLECTIONS.jobs(), id),
       (snap) => {
+        setFeedError(null);
         if (snap.exists()) {
           const j = snap.data() as ServiceJob;
           setJob(j);
@@ -118,12 +122,12 @@ export default function JobDetailScreen() {
         setLoading(false);
       },
       (err) => {
-        Alert.alert("Error", err.message);
+        setFeedError(err.message);
         setLoading(false);
       },
     );
     return unsub;
-  }, [id]);
+  }, [id,attempt]);
 
   useEffect(() => {
     if (!job) {
@@ -325,6 +329,7 @@ export default function JobDetailScreen() {
     }
   }
 
+  if(feedError) return <ErrorState title="Job unavailable" message={feedError} onRetry={()=>setAttempt(n=>n+1)}/>;
   if (loading) return <LoadingState />;
   if (!job) return <ErrorState title="Job not found" />;
 

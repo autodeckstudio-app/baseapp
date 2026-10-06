@@ -25,7 +25,7 @@ export default function RescheduleBookingScreen() {
   const [doneLabel, setDoneLabel] = useState<string | null>(null);
 
   const loadBooking = useCallback(() => {
-    if (!bookingId) return;
+    if (!bookingId) {setLoading(false);return;}
     setLoading(true);
     setLoadFailed(false);
     void getBookingById(bookingId)
@@ -91,7 +91,7 @@ export default function RescheduleBookingScreen() {
   const currentDisplay = formatSlot(currentScheduledAt);
 
   async function handleConfirm() {
-    if (!booking || !pendingSlot) return;
+    if (!booking || !pendingSlot || submitting) return;
     const newDisplay = formatSlot(new Date(pendingSlot.startAt));
     setSubmitting(true);
     setActionError(null);
@@ -165,7 +165,7 @@ export default function RescheduleBookingScreen() {
                         paddingHorizontal: 14,
                         paddingVertical: 10,
                         opacity: submitting ? 0.4 : pressed ? 0.7 : 1,
-                        minWidth: 76,
+                        minWidth: 76,minHeight:44,justifyContent:"center",
                         alignItems: "center",
                       })}
                     >
