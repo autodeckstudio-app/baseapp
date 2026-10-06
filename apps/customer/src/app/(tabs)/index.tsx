@@ -1,15 +1,15 @@
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Animated, Platform, Pressable, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
-import { Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
+import { FadeUp, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
 import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
-import { sceneImagery, vehicleImagery } from "../../lib/imagery";
+import { sceneImagery, vehicleImagery, serviceImagery } from "../../lib/imagery";
 import { useVehiclePhotoUri } from "../../ui/CarThumb";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
@@ -18,6 +18,7 @@ import type { Service } from "@autodeck/core";
 import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
+import { priceLabel } from "../../lib/catalogue-service";
 import { StoryViewer } from "../../ui/StoryViewer";
 import { HeroImage, Button, Chip, Kicker, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
@@ -60,21 +61,12 @@ function StatusRail({ status }: { status: string }) {
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         {STAGE_SHORT.map((l, i) => (
-          <T key={l} role="caption" tone={i === at ? "accent" : "tertiary"} style={{ fontSize: 10 }}>{l}</T>
+          <T key={l} role="caption" tone={i === at ? "accent" : "tertiary"} style={{ fontSize: 12 }}>{l}</T>
         ))}
       </View>
     </View>
   );
 }
-
-function FadeUp({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
-  const v = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 520, delay, useNativeDriver: Platform.OS !== "web" }).start();
-  }, [v, delay]);
-  return <Animated.View style={{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }}>{children}</Animated.View>;
-}
-
 
 export default function HomeScreen() {
   const auth = useAuth();
@@ -92,7 +84,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!ready) return;
     let alive = true;
-    const loadStories = (tries: number) => void getStories().then((l) => { if (!alive) return; if (l.length === 0 && tries > 0) setTimeout(() => loadStories(tries - 1), 2500); else setGroups(groupStories(l)); });
+    const loadStories = (tries: number) => void getStories().then((l) => { if (!alive) return; if (l.length === 0 && tries > 0) setTimeout(() => loadStories(tries - 1), 2500); else setGroups(groupStories(l)); }).catch(() => undefined);
     loadStories(2);
     const loadCatalogue = (tries: number) => {
       void getServiceCatalogue()
@@ -266,17 +258,38 @@ export default function HomeScreen() {
       {groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
       <StoryViewer group={open} onClose={() => setOpen(null)} />
 
-      <Pane pad="inset">
-        <View style={{gap: space.line}}>
-          <Kicker>Care for your car</Kicker>
-          <T role="heading">What does your car need?</T>
-          <Button label="Browse services" onPress={() => router.push("/(tabs)/catalogue")} />
-          <View style={{flexDirection: "row", gap: space.line}}>
-            <Button kind="quiet" label={m.membership ? "My membership" : "Membership"} onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")} style={{flex: 1}} />
-            <Button kind="quiet" label="Cars for sale" onPress={() => router.push("/(tabs)/cars")} style={{flex: 1}} />
-          </View>
+      <View style={{gap: space.gap}}>
+        <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between"}}>
+          <View style={{gap:4}}><Kicker>Care for your car</Kicker><T role="heading">Keep it at its best</T></View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Browse all services" onPress={() => router.push("/(tabs)/catalogue")} style={{minHeight:44,justifyContent:"center"}}><T tone="accent">See all ›</T></Pressable>
         </View>
-      </Pane>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:12,paddingBottom:8}}>
+          {["washing", "ceramic", "ppf"].map(category => {
+            const candidates = catalogue.filter(x => x.category === category);
+            const service = [...candidates].sort((a,b) => a.basePrice-b.basePrice)[0];
+            if (!service) return null;
+            return <Pressable key={category} accessibilityRole="button" accessibilityLabel={`Explore ${category} services`} onPress={() => router.push({pathname:"/(tabs)/catalogue",params:{cat:category}})} style={{width:216,gap:10}}>
+              <View style={{borderRadius:20,overflow:"hidden"}}><HeroImage aspect={3/2} source={serviceImagery[category as keyof typeof serviceImagery]} /></View>
+              <T role="bodyStrong">{category === "washing" ? "Wash and care" : category === "ceramic" ? "Ceramic protection" : "Paint protection film"}</T>
+              <T role="caption" tone="tertiary">{service.priceOnRequest ? "Explore options" : priceLabel(service)}</T>
+            </Pressable>;
+          })}
+        </ScrollView>
+      </View>
+      <View style={{gap:space.line}}>
+        <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><Kicker>Your garage</Kicker><Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/garage")} style={{minHeight:44,justifyContent:"center"}}><T tone="accent">Manage ›</T></Pressable></View>
+        <Pane pad="gap">
+          {car ? [car,...m.otherVehicles].slice(0,3).map((v,i,vs) => <Row key={v.id} title={`${v.make} ${v.model}`} detail={v.id===car.id ? "Current vehicle · papers and protection" : "Vehicle details and papers"} trailing={<Plate value={v.registrationNumber}/>} onPress={() => router.push(`/(tabs)/garage/${v.id}`)} last={i===vs.length-1}/>) : <Row title="Your cars, together" detail="Add your vehicle to keep visits and papers in one place." onPress={() => router.push("/(tabs)/garage/add")} last/>}
+        </Pane>
+      </View>
+      <View style={{gap:space.line}}>
+        <Kicker>With AutoDeck</Kicker>
+        <Pane pad="gap">
+          <Row title={m.membership ? "Your membership" : "Make regular care simpler"} detail={m.membership ? "Wash benefits and usage" : "Explore wash memberships"} trailing={<T tone="accent">›</T>} onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")}/>
+          <Row title="Find your next car" detail="Browse cars or list yours for studio review" trailing={<T tone="accent">›</T>} onPress={() => router.push("/(tabs)/cars")} last/>
+        </Pane>
+      </View>
+      {m.recentHistory.length > 0 ? <View style={{gap:space.line}}><Kicker>Recent activity</Kicker><Pane pad="gap">{m.recentHistory.slice(0,2).map((job,i,js) => <Row key={job.id} title="Studio visit completed" detail={formatDateShort(job.scheduledDate)} trailing={<Chip label="Delivered"/>} onPress={() => job.bookingId ? router.push(`/(tabs)/bookings/${job.bookingId}`) : router.push("/(tabs)/bookings")} last={i===js.length-1}/>)}</Pane></View> : null}
 
       {catalogue.length === 0 && catalogueFailed ? (
         <Notice title="Services didn't load" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => { setCatalogueFailed(false); setRetryTick((n) => n + 1); }} />} />
@@ -295,9 +308,6 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      {m.otherVehicles.length > 0 ? (
-        <Button kind="quiet" label={`Switch car (${m.otherVehicles.length + 1} in garage)`} onPress={() => router.push("/(tabs)/garage")} />
-      ) : null}
 
       {!car ? (
         <Notice title="Explore first" body="Browse services and prices now. You'll only need a car on file when you book." action={<Button kind="quiet" label="See services" onPress={() => router.push("/(tabs)/catalogue")} />} />

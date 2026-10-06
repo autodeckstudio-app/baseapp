@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { listenToJobsByDate } from "../../lib/studio-service";
 import { useAuth } from "../../hooks/useAuth";
@@ -9,7 +9,7 @@ import type { ServiceJob } from "@autodeck/core";
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
 import { FIRST_STUDIO_ID } from "@autodeck/core";
-import { colors, spacing, radius, typography, EmptyState, LoadingState, JobCard } from "@autodeck/ui";
+import { colors, spacing, radius, typography, EmptyState, ErrorState, LoadingState, JobCard } from "@autodeck/ui";
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00Z`);
@@ -35,6 +35,8 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(todayIST());
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const labels = useJobLabels(auth.status === "ready" ? FIRST_STUDIO_ID : null);
 
   const today = todayIST();
@@ -42,7 +44,7 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     if (auth.status !== "ready") return undefined;
-    setLoading(true);
+    setLoading(true); setError(null);
     const unsub = listenToJobsByDate(
       auth.claims.tenantId,
       FIRST_STUDIO_ID,
@@ -52,13 +54,14 @@ export default function CalendarScreen() {
         setLoading(false);
       },
       (err) => {
-        Alert.alert("Error", err.message);
+        setError(err.message);
         setLoading(false);
       },
     );
     return unsub;
-  }, [selectedDate, auth.status]);
+  }, [selectedDate, auth.status, attempt]);
 
+  if (error) return <ErrorState title="Calendar unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View

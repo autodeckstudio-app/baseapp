@@ -87,9 +87,9 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={v.text} />
+        <ActivityIndicator color={web && variant === "primary" ? "#1A1410" : v.text} />
       ) : (
-        <Text style={{ color: v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
+        <Text style={{ color: web && variant === "primary" ? "#1A1410" : v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
       )}
     </Pressable>
   );

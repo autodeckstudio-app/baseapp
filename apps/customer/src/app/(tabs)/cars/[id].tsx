@@ -1,6 +1,6 @@
 // One car: photos, plain facts, "I'm interested" (goes to the studio, never to the seller) and "Report this listing".
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -10,6 +10,13 @@ import { getCarListings, inr, kmLabel, markListingSold, sendCarLead } from "../.
 export default function CarDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const {width} = useWindowDimensions();
+  const photoWidth = Math.min(width,560)-48;
+  const [photoIndex,setPhotoIndex] = useState(0);
+  const [loadError,setLoadError] = useState(false);
+  const [attempt,setAttempt] = useState(0);
+  const [showEnquiry,setShowEnquiry] = useState(false);
+  const [confirmSold,setConfirmSold] = useState(false);
   const [car, setCar] = useState<CarListingView | null | undefined>(undefined);
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | undefined>();
@@ -20,10 +27,11 @@ export default function CarDetail() {
   const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
+    setLoadError(false);
     Promise.all([getCarListings(false), getCarListings(true)])
       .then(([a, b]) => setCar([...a, ...b].find((x) => x.id === id) ?? null))
-      .catch(() => setCar(null));
-  }, [id]);
+      .catch(() => setLoadError(true));
+  }, [id,attempt]);
 
   async function markSold() {
     if (!car) return;
@@ -53,6 +61,7 @@ export default function CarDetail() {
     } finally { setBusy(false); }
   }
 
+  if (loadError) return <Screen><Notice title="Could not load this car" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n=>n+1)}/>}/></Screen>;
   if (car === undefined) return <Screen><Skeleton height={300} /><Skeleton height={120} /></Screen>;
   if (car === null) return <Screen><Notice title="Car not found" body="It may have been sold or taken down." action={<Button kind="quiet" label="Back to cars" onPress={() => router.replace("/(tabs)/cars")} />} /></Screen>;
 
@@ -60,12 +69,13 @@ export default function CarDetail() {
 
   return (
     <Screen>
-      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ borderRadius: 26 }}>
+      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={e => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / photoWidth))} style={{ borderRadius: 24 }}>
         {car.photoUrls.map((u) => (
-          <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: 340, maxWidth: "100%", aspectRatio: 4 / 3, borderRadius: 26, marginRight: 8 }} />
+          <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: photoWidth, aspectRatio: 3 / 2, borderRadius: 24 }} />
         ))}
       </ScrollView>
-      <View style={{ gap: 4 }}>
+      <View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{car.photoUrls.length ? `${photoIndex+1} / ${car.photoUrls.length} photos · swipe to explore` : "No photos available"}</T><T role="caption" tone="tertiary">{car.area}</T></View>
+      <View style={{ gap: 8 }}>
         <Kicker tone="accent">{car.status === "reserved" ? "Reserved" : car.status === "live" ? "For sale" : car.status}</Kicker>
         <T role="title" numberOfLines={2}>{car.year} {car.make} {car.model}{car.variant ? ` ${car.variant}` : ""}</T>
         <T role="display" tone="accent">{inr(car.askingPrice)}</T>
@@ -80,12 +90,12 @@ export default function CarDetail() {
           ))}
         </View>
       </Pane>
-      {car.description ? <T tone="secondary">{car.description}</T> : null}
+      {car.description ? <View style={{gap:12}}><Kicker>About this car</Kicker><T tone="secondary">{car.description}</T></View> : null}
 
       {car.mine && (car.status === "live" || car.status === "reserved" || car.status === "pending") ? (
         <View style={{ gap: space.line }}>
           {error ? <Notice title="Not done" body={error} /> : null}
-          <Button kind="quiet" label="Mark as sold" busy={busy} onPress={() => void markSold()} />
+          {confirmSold ? <Notice title="Mark this car sold?" body="The listing will stop showing to other buyers." action={<View style={{gap:12}}><Button label="Confirm sold" busy={busy} onPress={() => void markSold()}/><Button kind="quiet" label="Keep listing" onPress={() => setConfirmSold(false)}/></View>}/> : <Button kind="quiet" label="Mark as sold" busy={busy} onPress={() => setConfirmSold(true)} />}
         </View>
       ) : null}
       {car.mine ? (
@@ -95,15 +105,16 @@ export default function CarDetail() {
       ) : sent === "report" ? (
         <Notice title="Thanks, we will look at it" />
       ) : (
-        <View style={{ gap: space.breath }}>
-          <Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
+        <View style={{ gap: space.gap }}>
+          <View style={{gap:8}}><Kicker>Interested?</Kicker><T role="heading">See if this is your next car</T><T tone="secondary">Ask the studio about this car. Your number is not shown to the seller.</T></View>
+          {!showEnquiry ? <Button label="Enquire about this car" onPress={() => setShowEnquiry(true)}/> : <View style={{gap:12}}><Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
           <Field label="Message (optional)" value={note} onChangeText={setNote} maxLength={300} />
           {error ? <Notice title="Not sent" body={error} /> : null}
-          <Button label="I'm interested" busy={busy} onPress={() => void send("interest")} />
+          <Button label="Send enquiry to the studio" busy={busy} onPress={() => void send("interest")} /></View>}
           {showReport ? (
             <Button kind="quiet" label="Send report" busy={busy} onPress={() => void send("report")} />
           ) : (
-            <Pressable accessibilityRole="button" onPress={() => setShowReport(true)}><T role="caption" tone="tertiary">Report this listing</T></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => {setShowReport(true);setShowEnquiry(true);}} style={{minHeight:44,justifyContent:"center"}}><T role="caption" tone="tertiary">Report this listing</T></Pressable>
           )}
         </View>
       )}

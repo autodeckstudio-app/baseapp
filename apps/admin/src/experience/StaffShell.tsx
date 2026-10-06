@@ -2,7 +2,7 @@
 
 // Presentational staff shell: glass sidebar on the studio ground. Holds no
 // auth state; the (admin) layout decides who may see what and passes it in.
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, logoDataUri } from "@autodeck/ui/theme";
 import { Ambient } from "./Ambient";
@@ -92,6 +92,22 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   );
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const sheet = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    sheet.current?.querySelector<HTMLElement>("button,a")?.focus();
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {setMoreOpen(false);return;}
+      if (e.key !== "Tab") return;
+      const controls = Array.from(sheet.current?.querySelectorAll<HTMLElement>("a,button") ?? []);
+      const first=controls[0],last=controls[controls.length-1];
+      if (e.shiftKey && document.activeElement===first) {e.preventDefault();last?.focus();}
+      else if (!e.shiftKey && document.activeElement===last) {e.preventDefault();first?.focus();}
+    };
+    document.addEventListener("keydown",key);
+    return () => {document.removeEventListener("keydown",key);previous?.focus();};
+  },[moreOpen]);
   const groups = GROUPS.filter((g) => office || !g.office);
   const activeGroup = groups.find((g) => g.links.some((l) => isActive(pathname, l.href)));
   const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
@@ -149,7 +165,8 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
           </nav>
           {moreOpen ? (
             <div className="ax-sheet-back" onClick={() => setMoreOpen(false)}>
-              <div className="ax-sheet" role="dialog" aria-label="More" onClick={(e) => e.stopPropagation()}>
+              <div ref={sheet} className="ax-sheet" role="dialog" aria-modal="true" aria-label="More" onClick={(e) => e.stopPropagation()}>
+                <button type="button" className="ax-button" style={{alignSelf:"flex-end"}} onClick={() => setMoreOpen(false)}>Close</button>
                 {moreSections.map((sec) => (
                   <div key={sec.key}>
                     <p className="ax-label">{sec.label}</p>

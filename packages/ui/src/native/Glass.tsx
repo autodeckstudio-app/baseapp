@@ -54,7 +54,7 @@ export function Glass({ children, pad = "gap", round = "card", tone, fill = "bas
     overflow: "hidden",
     backgroundColor: blur ? "transparent" : glass.fallbackFill,
     // Web (the PWA): real gradient glass with backdrop blur and a lit edge, only on the dark theme.
-    ...(Platform.OS === "web" && name === "charcoal"
+    ...(Platform.OS === "web" && name === "charcoal" && !reduce
       ? ({
           backgroundColor: "transparent",
           backgroundImage: glassFill(glass, fill === "warm" ? "warm" : fill === "cool" ? "cool" : "base"),

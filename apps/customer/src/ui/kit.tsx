@@ -88,7 +88,7 @@ function BackBar() {
       accessibilityRole="button"
       accessibilityLabel="Back"
       onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback as never))}
-      style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, height: 36, paddingRight: 12 }}
+      style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingRight: 12 }}
     >
       <Text style={{ color: colors.textSecondary, fontSize: 20, marginTop: -2 }}>‹</Text>
       <T role="label" tone="secondary">Back</T>

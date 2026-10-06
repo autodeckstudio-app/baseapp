@@ -24,7 +24,7 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.18)" }}
+      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 10, minHeight:44,justifyContent:"center", backgroundColor: on ? "#EC8638" : "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(255,255,255,0.18)" }}
     >
       <T role="label" style={{ color: on ? "#1A1410" : "#E4E2DF", textTransform: "capitalize" }}>{label}</T>
     </Pressable>
@@ -32,23 +32,14 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 }
 
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ width: "48%", flexGrow: 1, opacity: pressed ? 0.85 : 1 })}>
-      <View style={{ borderRadius: 28, overflow: "hidden", aspectRatio: 4 / 5, backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-        <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
-        {l.status === "reserved" ? (
-          <View style={{ position: "absolute", left: 8, top: 8, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 4 }}>
-            <T role="caption" tone="accent">Reserved</T>
-          </View>
-        ) : null}
-      </View>
-      <View style={{ paddingTop: 8, gap: 2 }}>
-        <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
-        <T role="caption" tone="tertiary" numberOfLines={1} style={{ textTransform: "capitalize" }}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T>
-        <T role="bodyStrong" tone="accent" numberOfLines={1}>{inr(l.askingPrice)}</T>
-      </View>
-    </Pressable>
-  );
+  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",borderRadius:24,overflow:"hidden",backgroundColor:"#151517",borderWidth:1,borderColor:"rgba(255,255,255,.10)",opacity:pressed?.85:1})}>
+    <View style={{aspectRatio:3/2,backgroundColor:"#202023"}}>{l.photoUrls[0] ? <Image source={{uri:l.photoUrls[0]}} resizeMode="cover" style={{width:"100%",height:"100%"}}/> : <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><T tone="tertiary">Photo unavailable</T></View>}
+      <View style={{position:"absolute",top:14,left:14,backgroundColor:"rgba(10,10,12,.82)",borderRadius:999,paddingHorizontal:12,paddingVertical:6}}><T role="caption">{l.status==="reserved" ? "Reserved" : l.source==="studio" ? "Studio listing" : "Customer listing"}</T></View>
+    </View>
+    <View style={{padding:20,gap:10}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{inr(l.askingPrice)}</T></View>
+      <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area}</T><T role="caption" tone="accent">View car ›</T></View>
+    </View>
+  </Pressable>;
 }
 
 export default function CarsScreen() {
@@ -60,6 +51,8 @@ export default function CarsScreen() {
   const [fuel, setFuel] = useState<string | null>(null);
   const [body, setBody] = useState<string | null>(null);
   const [budget, setBudget] = useState("any");
+  const [filtersOpen,setFiltersOpen] = useState(false);
+  const [attempt,setAttempt] = useState(0);
   const [sort, setSort] = useState<"new" | "low" | "high">("new");
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,7 +62,7 @@ export default function CarsScreen() {
       (!fuel || l.fuel === fuel) && (!body || l.bodyType === body) && l.askingPrice <= max);
     if (sort === "low") return [...list].sort((a, b) => a.askingPrice - b.askingPrice);
     if (sort === "high") return [...list].sort((a, b) => b.askingPrice - a.askingPrice);
-    return list;
+    return [...list].sort((a,b) => b.createdAt.localeCompare(a.createdAt));
   }, [all, query, fuel, body, budget, sort]);
   const searching = query.trim() !== "";
   const suggestions = useMemo(() => {
@@ -79,9 +72,10 @@ export default function CarsScreen() {
   }, [all, query]);
   const filtering = query.trim() !== "" || fuel !== null || body !== null || budget !== "any";
   useEffect(() => {
+    setError(false);
     getCarListings(false).then(setAll).catch(() => setError(true));
     getCarListings(true).then(setMine).catch(() => undefined);
-  }, []);
+  }, [attempt]);
 
   return (
     <Screen
@@ -92,7 +86,8 @@ export default function CarsScreen() {
         </View>
       }
     >
-      <Button label="Sell your car" onPress={() => router.push("/(tabs)/cars/sell")} />
+      <T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T>
+      <View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:8,borderBottomWidth:1,borderBottomColor:"rgba(255,255,255,.12)"}}><T role="caption" tone="tertiary">Have a car to sell?</T><Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/cars/sell")} style={{minHeight:44,justifyContent:"center"}}><T tone="accent">List your car ›</T></Pressable></View>
       {all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
@@ -109,7 +104,8 @@ export default function CarsScreen() {
             ) : null
           ) : (
             <View style={{ gap: space.line }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <Pressable accessibilityRole="button" accessibilityState={{expanded:filtersOpen}} onPress={() => setFiltersOpen(!filtersOpen)} style={{minHeight:44,flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><T role="bodyStrong">{shown.length} car{shown.length===1?"":"s"} to explore</T><T tone="accent">{filtersOpen ? "Close filters" : filtering ? "Edit filters" : "Filter & sort"}</T></Pressable>
+          {filtersOpen && <View style={{gap:12}}><View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {BUDGETS.map((b) => <Pill key={b.id} label={b.label} on={budget === b.id} onPress={() => setBudget(b.id)} />)}
             </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -123,17 +119,18 @@ export default function CarsScreen() {
               <Pill label="Price low to high" on={sort === "low"} onPress={() => setSort("low")} />
               <Pill label="Price high to low" on={sort === "high"} onPress={() => setSort("high")} />
             </View>
-  </View>
+          </View>}
+          </View>
           )}
         </View>
       ) : null}
-      {error ? <Notice title="Can't load cars" body="Check your connection and try again." /> : null}
+      {error ? <Notice title="Can't load cars" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n => n+1)}/>} /> : null}
       {!all && !error ? <View style={{ gap: space.line }}><Skeleton height={200} /><Skeleton height={200} /></View> : null}
       {all && all.length === 0 ? <Notice title="No cars listed yet" body="New cars appear here as soon as the studio lists them." /> : null}
       {all && all.length > 0 && shown.length === 0 && filtering ? (
         <Notice title="No cars match" body="Try a wider budget or clear the search." action={<Button kind="quiet" label="Clear filters" onPress={() => { setQuery(""); setFuel(null); setBody(null); setBudget("any"); }} />} />
       ) : null}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.inset }}>
         {shown.map((l) => <Card key={l.id} l={l} onPress={() => router.push(`/(tabs)/cars/${l.id}`)} />)}
       </View>
 

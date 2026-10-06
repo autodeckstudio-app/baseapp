@@ -7,7 +7,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { listenToJobsByDate, getStudioConfig } from "../../lib/studio-service";
 import { listenToPendingApprovalsForStudio, getActiveServices } from "../../lib/approval-service";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
-import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, jobStatusLabel } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, ErrorState, jobStatusLabel } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 
 const BAY_TYPE_LABELS: Record<BayType, string> = {
@@ -38,33 +38,40 @@ export default function BayBoardScreen() {
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({});
   const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [jobsReady, setJobsReady] = useState(false);
+  const [approvalsReady, setApprovalsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const studioId = auth.status === "ready" ? auth.claims.studioId : null;
 
   useEffect(() => {
     if (!studioId) return;
+    setLoading(true); setError(null);
     void getStudioConfig(studioId).then((c) => {
       setConfig(c);
       setLoading(false);
-    });
-  }, [studioId]);
+    }).catch((err: Error) => { setError(err.message); setLoading(false); });
+  }, [studioId, attempt]);
 
   useEffect(() => {
     if (auth.status !== "ready" || !studioId) return undefined;
-    return listenToJobsByDate(auth.claims.tenantId, studioId, todayIST(), setJobs, () => undefined);
-  }, [auth.status, studioId]);
+    setJobsReady(false);
+    return listenToJobsByDate(auth.claims.tenantId, studioId, todayIST(), data => { setJobs(data); setJobsReady(true); }, err => setError(err.message));
+  }, [auth.status, studioId, attempt]);
 
   useEffect(() => {
     if (auth.status !== "ready" || !studioId) return undefined;
-    return listenToPendingApprovalsForStudio(auth.claims.tenantId, studioId, setPendingApprovals, () => undefined);
-  }, [auth.status, studioId]);
+    setApprovalsReady(false);
+    return listenToPendingApprovalsForStudio(auth.claims.tenantId, studioId, data => { setPendingApprovals(data); setApprovalsReady(true); }, err => setError(err.message));
+  }, [auth.status, studioId, attempt]);
 
   useEffect(() => {
     void getActiveServices().then((services) => {
       const map: Record<string, string> = {};
       for (const s of services) map[s.id] = s.name;
       setServiceNames(map);
-    });
+    }).catch(() => undefined);
   }, []);
 
   // Lazily resolve vehicle/customer display labels for whichever jobs are
@@ -97,11 +104,12 @@ export default function BayBoardScreen() {
     ]).then(([vehiclePairs, customerPairs]) => {
       if (vehiclePairs.length > 0) setVehicleLabels((prev) => ({ ...prev, ...Object.fromEntries(vehiclePairs) }));
       if (customerPairs.length > 0) setCustomerNames((prev) => ({ ...prev, ...Object.fromEntries(customerPairs) }));
-    });
+    }).catch((err: Error) => setError(err.message));
   }, [jobs]);
 
-  if (loading) return <LoadingState />;
-  if (!config) return <LoadingState label="Loading studio configuration…" />;
+  if (error) return <ErrorState title="Bay board unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
+  if (loading || !jobsReady || !approvalsReady) return <LoadingState label="Loading bays and current work" />;
+  if (!config) return <ErrorState title="Studio not configured" message="The studio configuration is missing. Ask the owner to set up bays." onRetry={() => setAttempt(n => n + 1)} />;
 
   const groups = new Map<BayType, Bay[]>();
   for (const bay of config.bays) {

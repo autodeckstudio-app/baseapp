@@ -596,3 +596,14 @@
 .ax-shell button:disabled { opacity: .5; cursor: not-allowed; }
 .ax-shell .ax-panel, .ax-shell .ax-card, .ax-shell .ax-col { border-radius: var(--ad-radius-pane); }
 @media (max-width:700px) { .ax-tiles { grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px; } .ax-tiles .ax-tile { padding:16px 12px; } .ax-tiles .ax-kpi-v { font-size:28px; } .ax-tiles .ax-label { font-size:12px; letter-spacing:.6px; } .ax-tiles .ax-tile-ico { display:none; } }
+
+/* Data controls stay legible and operable independently of the glass layer. */
+.ax-shell, .ax-shell * { color-scheme: light; }
+.ax-shell button, .ax-shell .ax-nav-link, .ax-shell .ax-toolbar input, .ax-shell .ax-toolbar select, .ax-shell .ax-daynav button { min-height:44px; }
+.ax-shell .ax-seg button { min-height:44px; }
+.ax-shell button[type="submit"], .ax-shell .ax-button--primary { color:#1A1410; background:linear-gradient(180deg,#F59A4E,#DC7428); }
+.ax-shell .ax-col, .ax-shell table { backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(255,255,255,.96); box-shadow:none; }
+.ax-shell .ax-sheet { max-height:calc(100dvh - 24px); overflow-y:auto; }
+.ax-shell textarea:focus-visible, .ax-shell a:focus-visible { outline:2px solid var(--ad-accent-strong); outline-offset:3px; }
+@media (prefers-reduced-motion:reduce) { .ax-shell *, .ax-shell *::before, .ax-shell *::after { animation:none !important; transition:none !important; transform:none !important; } }
+@media (prefers-reduced-transparency:reduce) { .ax-shell .ax-panel, .ax-shell .detail-card, .ax-shell .ax-card, .ax-shell .ax-tabbar, .ax-shell .ax-button { backdrop-filter:none; -webkit-backdrop-filter:none; background-color:#fff; } }
