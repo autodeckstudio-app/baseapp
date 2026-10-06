@@ -235,7 +235,7 @@ export default function VehicleDetailScreen() {
               <View style={{ alignSelf: "flex-start" }}><Plate value={vehicle.registrationNumber} /></View>
             </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 4, padding: 4, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
             {TABS.map((t) => {
               const selected = tab === t.key;
               return (
@@ -244,7 +244,7 @@ export default function VehicleDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => setTab(t.key)}
-                  style={{ flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 9999, backgroundColor: selected ? "#F59A45" : "transparent" }}
+                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 16, backgroundColor: selected ? "#F59A45" : "transparent" }}
                 >
                   <T role="label" tone={selected ? "onAccent" : "secondary"}>{t.label}</T>
                 </Pressable>

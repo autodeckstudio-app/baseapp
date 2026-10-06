@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import type { Service, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
+import { resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
@@ -49,7 +49,7 @@ export default function ServiceDetailScreen() {
     if (auth.status !== "ready" || pickedSize) return;
     return listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => {
       const first = vs[0];
-      if (first && !pickedSize) setSelectedCategory(first.category as VehicleCategory);
+      if (first && !pickedSize) setSelectedCategory((current) => resolvePricingCategory(first.category, current));
     }, () => undefined);
   }, [auth.status, pickedSize]);
 
