@@ -193,39 +193,40 @@ export default function JobDetailScreen() {
   }, [job?.id]);
 
   async function handleStartInspection() {
-    if (!job) return;
-    setStartingInspection(true);
+    if (!job || startingInspection) return;
+    setActionError(null);setStartingInspection(true);
     try {
       await startInspection(job.id);
       router.push(`/(tabs)/jobs/inspection/${job.id}`);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to start inspection.");
+      setActionError(err instanceof Error ? err.message : "Failed to start inspection.");
     } finally {
       setStartingInspection(false);
     }
   }
 
   async function handleCreateApproval() {
-    if (!job || !selectedServiceId || !approvalReason.trim()) return;
-    setCreatingApproval(true);
+    if (!job || creatingApproval || !selectedServiceId || !approvalReason.trim()) return;
+    setActionError(null);setCreatingApproval(true);
     try {
       await createApproval({ jobId: job.id, serviceId: selectedServiceId, reason: approvalReason.trim() });
       setShowApprovalForm(false);
       setSelectedServiceId(null);
       setApprovalReason("");
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to request approval.");
+      setActionError(err instanceof Error ? err.message : "Failed to request approval.");
     } finally {
       setCreatingApproval(false);
     }
   }
 
   async function handleCancelApproval(approvalId: string) {
-    setCancellingApprovalId(approvalId);
+    if(cancellingApprovalId) return;
+    setActionError(null);setCancellingApprovalId(approvalId);
     try {
       await cancelApproval(approvalId);
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to cancel approval.");
+      setActionError(err instanceof Error ? err.message : "Failed to cancel approval.");
     } finally {
       setCancellingApprovalId(null);
     }
@@ -236,7 +237,7 @@ export default function JobDetailScreen() {
     if (services.length === 0) {
       void getActiveServices()
         .then(setServices)
-        .catch((err: unknown) => Alert.alert("Error", err instanceof Error ? err.message : "Failed to load services."));
+        .catch((err: unknown) => setActionError(err instanceof Error ? err.message : "Failed to load services."));
     }
   }
 
@@ -303,7 +304,7 @@ export default function JobDetailScreen() {
   const [advanceConfirm,setAdvanceConfirm] = useState(false);
   const [standbyBay, setStandbyBay] = useState("");
   async function performStaffAction() {
-    if (!id || !staffAction) return;
+    if (!id || !staffAction || advancing) return;
     setActionError(null);setAdvancing(true);
     try {
       if (staffAction === "rework") await advanceJobStatus(id, "QC failed - rework requested", true);

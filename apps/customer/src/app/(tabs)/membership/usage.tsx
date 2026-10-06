@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View } from "react-native";
 import type { MembershipUsage } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Kicker, Loading, Notice, Pane, Row, Screen, rupees } from "../../../ui/kit";
+import { Button, Kicker, Loading, Notice, Pane, Row, Screen, rupees } from "../../../ui/kit";
 import { getMyMemberships, getMembershipUsage } from "../../../lib/membership-service";
 
 function formatDate(iso: string): string {
@@ -37,7 +37,7 @@ export default function MembershipUsageScreen() {
   }, [load]);
 
   if (loading) return <Loading label="Opening usage" />;
-  if (error) return <Screen><Notice title="Could not load usage" body={error} /></Screen>;
+  if (error) return <Screen><Notice title="Could not load usage" body={error} action={<Button label="Retry" onPress={()=>void load()}/>} /></Screen>;
 
   return (
     <Screen

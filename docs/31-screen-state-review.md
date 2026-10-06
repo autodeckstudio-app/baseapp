@@ -107,3 +107,11 @@ Pending means not yet visually verified after the unified-system release. A shar
 - 5539021 Customer booking review and existing booking tracker checked read-only at 390px. No request sent. Studio job detail service/bay names checked on existing QA job without changes.
 - 22 isolated staff-workflow tests passed again (standby FIFO/occupancy/reservations, QC rework, paid delivery and milestone mappings). This is mocked unit evidence, not a live backend deployment/transaction check.
 - Pending next-release checks: day-by-day times, automatic car size, Studio owner/vehicle identity and advancement confirmation, populated approval/invoice/error retry states.
+
+## Opening-ready pass, Oct 7 follow-up
+
+- Live 390px Payments normal rows inspected; pickup lists inspected in both staff apps without changing records.
+- Customer Help has no phone/WhatsApp configured. Contact is an opening dependency, not invented.
+- Direct inspection links for QA job return permission-denied in both apps; normal job shows Start Inspection, consistent with no inspection created. No rule changes and no QA inspection created. Existing-inspection flow remains unverified.
+- Local follow-up adds one-day reschedule times, stale-date Daily Close protection, retry states for car/inspection/plan/usage and inline Studio action errors/confirmation. Source checks passed, live verification awaits publication.
+- Membership purchase currently ignores returned payment URL; Razorpay handling is separate scope. No payment execution or payment integration changes made.

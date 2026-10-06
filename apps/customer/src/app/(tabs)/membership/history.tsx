@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View } from "react-native";
 import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Chip, Kicker, Loading, Notice, Pane, Row, Screen } from "../../../ui/kit";
+import { Chip, Button, Kicker, Loading, Notice, Pane, Row, Screen } from "../../../ui/kit";
 import { getMyMemberships } from "../../../lib/membership-service";
 
 function formatDate(iso: string): string {
@@ -31,7 +31,7 @@ export default function MembershipHistoryScreen() {
   }, [load]);
 
   if (loading) return <Loading label="Opening history" />;
-  if (error) return <Screen><Notice title="Could not load history" body={error} /></Screen>;
+  if (error) return <Screen><Notice title="Could not load history" body={error} action={<Button label="Retry" onPress={()=>void load()}/>} /></Screen>;
 
   return (
     <Screen

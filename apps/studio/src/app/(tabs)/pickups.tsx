@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, FlatList, Alert } from "react-native";
+import { View, Text, FlatList } from "react-native";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
@@ -29,12 +29,13 @@ export default function PickupsScreen() {
   useEffect(() => { void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); }, [load]);
 
   async function setStatus(r: Req, status: "CONFIRMED" | "DONE" | "DECLINED") {
+    if(busy) return;
     setBusy(r.id);
     try {
       await httpsCallable(functions, "updatePickupRequest")({ requestId: r.id, status });
       await load();
     } catch (e) {
-      Alert.alert("Could not update", e instanceof Error ? e.message : "Try again.");
+      setError(e instanceof Error ? e.message : "Could not update request. Try again.");
     } finally {
       setBusy(null);
     }
@@ -56,9 +57,9 @@ export default function PickupsScreen() {
           {r.preferredTime ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Preferred: {r.preferredTime}</Text> : null}
           <Text style={{ ...typography.caption, color: colors.textMuted }}>{r.status === "CONFIRMED" ? "Confirmed" : "New request"}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs }}>
-            {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
-            {r.status === "CONFIRMED" ? <Button label="Mark done" size="md" fullWidth={false} loading={busy === r.id} onPress={() => void setStatus(r, "DONE")} /> : null}
-            <Button label="Decline" size="md" variant="secondary" fullWidth={false} loading={busy === r.id} onPress={() => void setStatus(r, "DECLINED")} />
+            {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} disabled={busy!==null} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
+            {r.status === "CONFIRMED" ? <Button label="Mark done" size="md" fullWidth={false} disabled={busy!==null} loading={busy === r.id} onPress={() => void setStatus(r, "DONE")} /> : null}
+            <Button label="Decline" size="md" variant="secondary" fullWidth={false} disabled={busy!==null} loading={busy === r.id} onPress={() => void setStatus(r, "DECLINED")} />
           </View>
         </View>
       )}

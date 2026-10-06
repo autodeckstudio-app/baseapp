@@ -35,7 +35,7 @@ export default function CurrentMembershipScreen() {
   }, [load]);
 
   if (loading) return <Loading label="Opening your membership" />;
-  if (error) return <Screen><Notice title="Could not load membership" body={error} /></Screen>;
+  if (error) return <Screen><Notice title="Could not load membership" body={error} action={<Button label="Retry" onPress={()=>void load()}/>} /></Screen>;
   if (!membership) {
     return (
       <Screen>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   listenToJobsByDate,
@@ -54,6 +54,8 @@ export default function WalkinScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ bayId?: string }>();
 
+  const [actionError,setActionError] = useState<string|null>(null);
+  function showActionError(title:string,message:string){setActionError(`${title}: ${message}`);}
   const [feedError,setFeedError] = useState<string|null>(null);
   const [retryTick,setRetryTick] = useState(0);
   const [phone, setPhone] = useState("");
@@ -131,7 +133,7 @@ export default function WalkinScreen() {
 
   async function handleSearch() {
     if (!auth.status || auth.status !== "ready" || searching || !phone.trim()) return;
-    setSearching(true);
+    setActionError(null);setSearching(true);
     setSearched(false);
     setJustRegistered(false);
     setCustomer(null);
@@ -150,7 +152,7 @@ export default function WalkinScreen() {
         if (custVehicles.length === 1 && custVehicles[0]) setSelectedVehicleId(custVehicles[0].id);
       }
     } catch (err) {
-      Alert.alert("Search failed", err instanceof Error ? err.message : "Please try again.");
+      showActionError("Search failed", err instanceof Error ? err.message : "Please try again.");
     } finally {
       setSearching(false);
       setSearched(true);
@@ -161,10 +163,10 @@ export default function WalkinScreen() {
     if(registering) return;
     const email = newCust.email.trim().toLowerCase();
     if (newCust.name.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      Alert.alert("Missing details", "Enter the customer's name and a valid email.");
+      showActionError("Missing details", "Enter the customer's name and a valid email.");
       return;
     }
-    setRegistering(true);
+    setActionError(null);setRegistering(true);
     try {
       const { customer: c, created } = await registerWalkinCustomer({ name: newCust.name.trim(), email, ...(newCust.phone.trim() ? { phone: newCust.phone.trim() } : {}) });
       setCustomer(c);
@@ -172,7 +174,7 @@ export default function WalkinScreen() {
       setShowNew(false);
       if (auth.status === "ready") setVehicles(await getVehiclesForCustomer(auth.claims.tenantId, c.id));
     } catch (err) {
-      Alert.alert("Could not add customer", err instanceof Error ? err.message : "Please try again.");
+      showActionError("Could not add customer", err instanceof Error ? err.message : "Please try again.");
     } finally {
       setRegistering(false);
     }
@@ -182,10 +184,10 @@ export default function WalkinScreen() {
     if (!customer || addingVehicle) return;
     const yearNum = parseInt(newVehicle.year, 10);
     if (!newVehicle.registrationNumber.trim() || !newVehicle.make.trim() || !newVehicle.model.trim() || isNaN(yearNum)) {
-      Alert.alert("Missing details", "Fill in registration, make, model, and year.");
+      showActionError("Missing details", "Fill in registration, make, model, and year.");
       return;
     }
-    setAddingVehicle(true);
+    setActionError(null);setAddingVehicle(true);
     try {
       const vehicle = await createVehicleForCustomer({
         ownerId: customer.id,
@@ -200,7 +202,7 @@ export default function WalkinScreen() {
       setShowAddVehicle(false);
       setNewVehicle({ registrationNumber: "", make: "", model: "", year: "", color: "" });
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to add vehicle.");
+      showActionError("Error", err instanceof Error ? err.message : "Failed to add vehicle.");
     } finally {
       setAddingVehicle(false);
     }
@@ -208,7 +210,7 @@ export default function WalkinScreen() {
 
   async function handleCreateJob() {
     if (submitting || feedError || !studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
-    setSubmitting(true);
+    setActionError(null);setSubmitting(true);
     try {
       const result = await createWalkinJobCall({
         serviceId: selectedServiceId,
@@ -226,9 +228,9 @@ export default function WalkinScreen() {
       // clear the stale selection so the studio can immediately pick another.
       if (message.toLowerCase().includes("occupied")) {
         setSelectedBayId(null);
-        Alert.alert("Bay no longer available", "That bay was just taken. Please choose another bay below.");
+        showActionError("Bay no longer available", "That bay was just taken. Please choose another bay below.");
       } else {
-        Alert.alert("Couldn't create job", message);
+        showActionError("Couldn't create job", message);
       }
     } finally {
       setSubmitting(false);
@@ -239,6 +241,7 @@ export default function WalkinScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
+      {actionError?<ErrorState title="Check walk-in details" message={actionError} fill={false}/>:null}
       {feedError?<ErrorState title="Walk-in setup unavailable" message={feedError} fill={false} onRetry={()=>setRetryTick(n=>n+1)}/>:null}
 
       <Section title="1. Find customer">
