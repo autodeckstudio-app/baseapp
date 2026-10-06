@@ -54,9 +54,11 @@ export const listCarListingsSchema = z.object({ includeAll: z.boolean().optional
 export const expressInterestSchema = z.object({
   listingId: z.string().min(1),
   kind: z.enum(["interest", "report"]),
-  phone: z.string().min(10).max(15).optional(),
+  phone: z.string().trim().transform((s) => s.replace(/[\s()-]/g, "").replace(/^\+91/, "").replace(/^91(?=\d{10}$)/, "")).refine((s) => /^[6-9]\d{9}$/.test(s), "Enter a valid 10-digit mobile number.").optional(),
   note: z.string().max(300).optional(),
-}).strict();
+}).strict().superRefine((d, ctx) => {
+  if (d.kind === "interest" && !d.phone) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["phone"], message: "Phone number is required for an enquiry." });
+});
 
 export const setLeadStatusSchema = z.object({ leadId: z.string().min(1), status: z.enum(["new", "contacted", "closed"]) }).strict();
 export const listCarLeadsSchema = z.object({}).strict();

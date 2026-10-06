@@ -354,6 +354,7 @@ export default function HomeScreen() {
                 <Kicker tone="accent">Suggested for you</Kicker>
                 <T role="title">{COPY.title}</T>
                 <T role="caption" tone="tertiary">{COPY.line}</T>
+                <T role="caption" tone="secondary">Choose a service below to get started.</T>
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {(["washing", "ceramic", "ppf"] as const).filter((c) => catSvc(c)).map((c) => {
                     const on = c === cat;

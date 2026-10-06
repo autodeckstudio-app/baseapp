@@ -32,7 +32,7 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
-  { key: "passport", label: "Passport" },
+  { key: "passport", label: "Service history" },
   { key: "protection", label: "Documents" },
   { key: "warranty", label: "Warranty" },
 ];

@@ -12,6 +12,7 @@ export default function CarDetail() {
   const router = useRouter();
   const [car, setCar] = useState<CarListingView | null | undefined>(undefined);
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | undefined>();
   const [note, setNote] = useState("");
   const [sent, setSent] = useState<null | "interest" | "report">(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +37,16 @@ export default function CarDetail() {
   }
 
   async function send(kind: "interest" | "report") {
-    if (!car) return;
+    if (!car || busy) return;
+    const digits = phone.replace(/[\s()-]/g, "").replace(/^\+91/, "").replace(/^91(?=\d{10}$)/, "");
+    if (kind === "interest" && !/^[6-9]\d{9}$/.test(digits)) {
+      setPhoneError(phone.trim() ? "Enter a valid 10-digit mobile number." : "Enter your phone number so the studio can call you.");
+      return;
+    }
+    setPhoneError(undefined);
     setBusy(true); setError(null);
     try {
-      await sendCarLead(car.id, kind, phone.trim() || undefined, note.trim() || undefined);
+      await sendCarLead(car.id, kind, (kind === "interest" ? digits : phone.trim()) || undefined, note.trim() || undefined);
       setSent(kind);
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : "That did not go through. Try again.");
@@ -89,7 +96,7 @@ export default function CarDetail() {
         <Notice title="Thanks, we will look at it" />
       ) : (
         <View style={{ gap: space.breath }}>
-          <Field label="Your phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
+          <Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
           <Field label="Message (optional)" value={note} onChangeText={setNote} maxLength={300} />
           {error ? <Notice title="Not sent" body={error} /> : null}
           <Button label="I'm interested" busy={busy} onPress={() => void send("interest")} />

@@ -1,3 +1,4 @@
+import { matchingVehicles } from "../../domain/vehicleIdentity.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Vehicle, Customer } from "@autodeck/core";
@@ -62,16 +63,16 @@ export const createVehicle = onCall({ region: "asia-south1" }, async (request) =
       db
         .collection(COLLECTIONS.vehicles())
         .where("tenantId", "==", vehicle.tenantId)
-        .where("ownerId", "==", ownerId)
-        .where("registrationNumber", "==", vehicle.registrationNumber)
-        .limit(10),
+        .where("ownerId", "==", ownerId),
     );
-    const rows = same.docs.map((d) => d.data() as Vehicle);
-    if (rows.some((v) => v.deletedAt === null)) throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate" });
-    const archived = rows.find((v) => v.deletedAt !== null);
-    if (archived && data.archivedChoice !== "new") {
+    const rows = matchingVehicles(same.docs.map((d) => ({ ...d.data(), id: d.id }) as Vehicle), vehicle.registrationNumber);
+    const active = rows.find((v) => !v.deletedAt);
+    if (active) throw new HttpsError("already-exists", "This car is already added.", { field: "registrationNumber", reason: "duplicate", vehicleId: active.id });
+    const archived = rows.find((v) => !!v.deletedAt);
+    if (archived) {
       throw new HttpsError("failed-precondition", "archived-match", {
         vehicleId: archived.id,
+        registrationNumber: archived.registrationNumber,
         make: archived.make,
         model: archived.model,
         year: archived.year,

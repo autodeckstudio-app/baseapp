@@ -1,3 +1,4 @@
+import { matchingVehicles } from "../../domain/vehicleIdentity.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Vehicle } from "@autodeck/core";
@@ -25,15 +26,13 @@ export const restoreVehicle = onCall({ region: "asia-south1" }, async (request) 
     if (user.claims.role === "customer" && v.ownerId !== user.uid) {
       throw new HttpsError("permission-denied", "You do not own this vehicle.");
     }
-    if (v.deletedAt === null) throw new HttpsError("failed-precondition", "Vehicle is not archived.");
+    if (!v.deletedAt) return;
     const same = await tx.get(
       db.collection(COLLECTIONS.vehicles())
         .where("tenantId", "==", v.tenantId)
-        .where("ownerId", "==", v.ownerId)
-        .where("registrationNumber", "==", v.registrationNumber)
-        .limit(10),
+        .where("ownerId", "==", v.ownerId),
     );
-    if (same.docs.some((d) => d.id !== ref.id && (d.data() as Vehicle).deletedAt === null)) {
+    if (matchingVehicles(same.docs.filter((d) => d.id !== ref.id).map((d) => d.data() as Vehicle), v.registrationNumber).some((v) => !v.deletedAt)) {
       throw new HttpsError("already-exists", "This car is already added.");
     }
     const now = new Date().toISOString();

@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { useAuth } from "../../../hooks/useAuth";
-import { createVehicle, restoreVehicle, hasVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
   registrationNumber: string;
@@ -59,6 +59,7 @@ export default function AddVehicleScreen() {
   }
 
   function update(field: keyof FormState, value: string) {
+    setArchivedMatch(null);
     setForm((prev: FormState) => ({ ...prev, [field]: value }));
   }
 
@@ -94,7 +95,7 @@ export default function AddVehicleScreen() {
     }
   }
 
-  async function handleAdd(archivedChoice?: "new") {
+  async function handleAdd() {
     if (loading || savedId) return;
     const yearNum = parseInt(form.year, 10);
     const plate = normalizePlate(form.registrationNumber);
@@ -108,9 +109,13 @@ export default function AddVehicleScreen() {
     setLoading(true);
     setError(null);
     try {
-      if (auth.status === "ready" && (await hasVehicleWithPlate(auth.user.uid, auth.claims.tenantId, plate))) {
-        setFieldErrors({ registrationNumber: "This car is already added." });
-        return;
+      if (auth.status === "ready") {
+        const existing = await findVehicleWithPlate(auth.user.uid, auth.claims.tenantId, plate);
+        if (existing) {
+          if (existing.deletedAt) setArchivedMatch({ vehicleId: existing.id, label: `${existing.registrationNumber} - ${existing.make} ${existing.model}` });
+          else { setFieldErrors({ registrationNumber: "This car is already in your garage." }); setSavedId(existing.id); }
+          return;
+        }
       }
       const vehicle = await createVehicle({
         registrationNumber: plate,
@@ -118,7 +123,6 @@ export default function AddVehicleScreen() {
         model: form.model.trim(),
         year: yearNum,
         color: form.color.trim(),
-        ...(archivedChoice ? { archivedChoice } : {}),
       });
       setSavedId(vehicle.id);
       if (photo) {
@@ -136,14 +140,20 @@ export default function AddVehicleScreen() {
       const code = (err as { code?: string })?.code ?? "";
       const msg = err instanceof Error ? err.message : "";
       console.warn("add car failed", code, msg);
+      const duplicateId = (err as { details?: { vehicleId?: string } }).details?.vehicleId;
+      if (/already-exists/.test(code) && duplicateId) {
+        setSavedId(duplicateId);
+        setFieldErrors({ registrationNumber: "This car is already in your garage." });
+        return;
+      }
       const fieldHint = (err as { details?: { field?: string } }).details?.field;
       if (fieldHint && fieldHint in form && !/archived-match/.test(msg)) {
         setFieldErrors({ [fieldHint]: /already-exists/.test(code) ? "This car is already added." : "Check this field." });
         return;
       }
-      const details = (err as { details?: { vehicleId?: string; make?: string; model?: string; year?: number; color?: string } }).details;
+      const details = (err as { details?: { vehicleId?: string; make?: string; model?: string; year?: number; color?: string; registrationNumber?: string } }).details;
       if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
-        setArchivedMatch({ vehicleId: details.vehicleId, label: [details.make, details.model, details.year, details.color].filter(Boolean).join(" ") });
+        setArchivedMatch({ vehicleId: details.vehicleId, label: [details.registrationNumber ?? plate, details.make, details.model, details.year, details.color].filter(Boolean).join(" ") });
         return;
       }
       if (/already-exists/.test(code)) {
@@ -201,11 +211,11 @@ export default function AddVehicleScreen() {
         {archivedMatch ? (
           <Notice
             title="We have this car on file"
-            body={`Is it the same car${archivedMatch.label ? ` (${archivedMatch.label})` : ""}? If yes, we bring it back with its details. If no, we add a fresh car with only what you entered.`}
+            body={`Is it the same car${archivedMatch.label ? ` (${archivedMatch.label})` : ""}? If yes, we bring it back with its details. This registration is already saved. Restore it instead of creating another car.`}
             action={
               <View style={{ gap: space.breath }}>
-                <Button label="Yes, same car" busy={loading} onPress={() => void (async () => { setLoading(true); try { await restoreVehicle(archivedMatch.vehicleId); router.back(); } catch { setArchivedMatch(null); setError("We could not restore this car. Please try again."); } finally { setLoading(false); } })()} />
-                <Button label="No, a different car" kind="quiet" onPress={() => { setArchivedMatch(null); void handleAdd("new"); }} />
+                <Button label="Yes, same car" busy={loading} onPress={() => void (async () => { setLoading(true); try { await restoreVehicle(archivedMatch.vehicleId); router.replace(`/(tabs)/garage/${archivedMatch.vehicleId}`); } catch { setArchivedMatch(null); setError("We could not restore this car. Please try again."); } finally { setLoading(false); } })()} />
+                <Button label="Edit registration number" kind="quiet" onPress={() => setArchivedMatch(null)} />
               </View>
             }
           />
@@ -213,7 +223,7 @@ export default function AddVehicleScreen() {
 
         {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}
 
-        {photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.back()} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready"} onPress={() => void handleAdd()} />}
+        {savedId && !photoFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.back()} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

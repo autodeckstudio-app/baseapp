@@ -129,18 +129,12 @@ export function normalizePlate(value: string): string {
   return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
-/** True when this customer already has a saved car with the same plate (spaces and case ignored). */
-export async function hasVehicleWithPlate(uid: string, tenantId: string, plate: string): Promise<boolean> {
-  const snap = await getDocs(
-    query(
-      collection(db, COLLECTIONS.vehicles()),
-      where("ownerId", "==", uid),
-      where("tenantId", "==", tenantId),
-      where("deletedAt", "==", null),
-    ),
-  );
+/** Registration alone identifies a car, including archived cars and old plate formatting. */
+export async function findVehicleWithPlate(uid: string, tenantId: string, plate: string): Promise<Vehicle | null> {
+  const snap = await getDocs(query(collection(db, COLLECTIONS.vehicles()), where("ownerId", "==", uid), where("tenantId", "==", tenantId)));
   const target = normalizePlate(plate);
-  return snap.docs.some((d) => normalizePlate(String((d.data() as Vehicle).registrationNumber ?? "")) === target);
+  const matches = snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Vehicle).filter((v) => normalizePlate(v.registrationNumber ?? "") === target);
+  return matches.find((v) => !v.deletedAt) ?? matches[0] ?? null;
 }
 
 export async function restoreVehicle(vehicleId: string): Promise<void> {
