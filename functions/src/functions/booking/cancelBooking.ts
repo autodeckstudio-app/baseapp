@@ -151,7 +151,7 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
         // no-op
       } else {
         const job = jobDoc.data() as ServiceJob;
-        const cancellableStatuses: string[] = ["PENDING_VEHICLE", "VEHICLE_RECEIVED"];
+        const cancellableStatuses: string[] = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
         if (cancellableStatuses.includes(job.status)) {
           tx.update(db.collection(COLLECTIONS.jobs()).doc(jobDoc.id), {
             status: "CANCELLED",

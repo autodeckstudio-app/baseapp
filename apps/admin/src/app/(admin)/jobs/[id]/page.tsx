@@ -230,8 +230,8 @@ export default function JobDetailPage() {
 
           <section className="ax-panel">
             <span className="ax-label">Bay and timing</span>
-            <div className="kv"><span>Bay</span><span>{job.bayId}</span></div>
-            <div className="kv"><span>Starts</span><span>{formatDateTime(job.scheduledAt)}</span></div>
+            <div className="kv"><span>Bay</span><span>{job.status === "STANDBY" ? "No bay reserved" : job.bayId}</span></div>
+            <div className="kv"><span>Starts</span><span>{job.status === "STANDBY" ? "Waiting - no slot reserved" : formatDateTime(job.scheduledAt)}</span></div>
             <div className="kv"><span>Est. finish</span><span>{formatDateTime(job.estimatedEndAt)}</span></div>
             <div className="kv">
               <span>Work time</span>
