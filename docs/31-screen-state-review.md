@@ -33,11 +33,11 @@ Pending means not yet visually verified after the unified-system release. A shar
 | customer | `apps/customer/src/app/(tabs)/membership/index.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/membership/purchase.tsx` | Pending | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/membership/usage.tsx` | Pending | Pending | Pending |
-| customer | `apps/customer/src/app/(tabs)/notifications/index.tsx` | Pending | Pending | Pending |
+| customer | `apps/customer/src/app/(tabs)/notifications/index.tsx` | Pass 63cc18d, 390px; unread row not opened | Pending | Pending |
 | customer | `apps/customer/src/app/(tabs)/profile.tsx` | Pass 63cc18d, 390px; edit/cancel checked | Pending | Pending |
 | customer | `apps/customer/src/app/index.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/attendance/page.tsx` | Pending | Pending | Pending |
-| admin | `apps/admin/src/app/(admin)/audit/page.tsx` | Pending | Pending | Pending |
+| admin | `apps/admin/src/app/(admin)/audit/page.tsx` | Pass 63cc18d, 390px; filter controls fit | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/bookings/[id]/page.tsx` | Pending | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/bookings/page.tsx` | Pass 63cc18d, 390px; wrapping filters checked | Pending | Pending |
 | admin | `apps/admin/src/app/(admin)/cars/page.tsx` | Pending | Pending | Pending |

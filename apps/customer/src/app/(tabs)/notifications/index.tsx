@@ -28,6 +28,7 @@ export default function NotificationsScreen() {
   const { colors } = useExperienceTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retryTick, setRetryTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -38,6 +39,7 @@ export default function NotificationsScreen() {
       auth.claims.tenantId,
       auth.user.uid,
       (data) => {
+        setError(null);
         setNotifications(data);
         setLoading(false);
       },
@@ -51,7 +53,7 @@ export default function NotificationsScreen() {
   useEffect(() => {
     const unsub = load();
     return unsub;
-  }, [load]);
+  }, [load, retryTick]);
 
   async function handlePress(n: Notification) {
     if (!n.readAt) void markNotificationRead(n.id).catch(() => undefined);
@@ -84,7 +86,7 @@ export default function NotificationsScreen() {
   if (error) {
     return (
       <Screen>
-        <Notice title="Can't load notifications" body={error} action={<Button label="Retry" onPress={() => load()} />} />
+        <Notice title="Can't load notifications" body={error} action={<Button label="Retry" onPress={() => setRetryTick((n) => n + 1)} />} />
       </Screen>
     );
   }
