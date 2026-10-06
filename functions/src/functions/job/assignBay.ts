@@ -68,6 +68,12 @@ export const assignBay = onCall({ region: "asia-south1" }, async (request) => {
   const now = new Date().toISOString();
 
   await db.runTransaction(async (tx) => {
+    const freshSnap = await tx.get(db.collection(COLLECTIONS.jobs()).doc(data.jobId));
+    const fresh = freshSnap.data() as ServiceJob | undefined;
+    if (!fresh || fresh.status === "STANDBY" || fresh.status === "DELIVERED" || fresh.status === "CANCELLED" || fresh.status !== job.status || fresh.bayId !== job.bayId || fresh.scheduledAt !== job.scheduledAt) {
+      throw new HttpsError("failed-precondition", "Job changed. Reload it before assigning a bay.");
+    }
+
     // Deterministic-document touch for the target bay — same bayLocks
     // pattern as createBooking.ts/createWalkinJob.ts (Phase 5B fix).
     const bayLockRef = db
