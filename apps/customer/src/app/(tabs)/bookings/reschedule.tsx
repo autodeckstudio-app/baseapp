@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, getAvailability, rescheduleBooking, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Booking } from "@autodeck/core";
@@ -19,6 +19,8 @@ export default function RescheduleBookingScreen() {
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [selectedDate,setSelectedDate] = useState("");
+  useEffect(()=>{const dates=[...new Set(slots.map(s=>s.date))].sort();setSelectedDate(prev=>dates.includes(prev)?prev:dates[0]??"");},[slots]);
   const [pendingSlot, setPendingSlot] = useState<AvailableSlot | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -143,12 +145,12 @@ export default function RescheduleBookingScreen() {
       ) : Object.keys(slotsByDate).length === 0 ? (
         <Notice title="No free times" body="Nothing available in the next 14 days. Try again tomorrow or call the studio." />
       ) : (
-        Object.entries(slotsByDate).map(([date, daySlots]) => (
+        <View style={{gap:space.line}}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).sort().map(date=><Pressable key={date} accessibilityRole="button" accessibilityState={{selected:date===selectedDate}} accessibilityLabel={`Choose ${date}`} disabled={submitting} onPress={()=>{setSelectedDate(date);setPendingSlot(null);}} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
           <Pane key={date} pad="gap">
             <View style={{ gap: space.line }}>
               <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-                {daySlots.map((slot) => {
+                {[...daySlots].sort((a,b)=>a.startAt.localeCompare(b.startAt)).map((slot) => {
                   const selected = pendingSlot?.startAt === slot.startAt;
                   return (
                     <Pressable
@@ -176,7 +178,7 @@ export default function RescheduleBookingScreen() {
               </View>
             </View>
           </Pane>
-        ))
+        ))}</View>
       )}
 
       {pendingSlot ? (

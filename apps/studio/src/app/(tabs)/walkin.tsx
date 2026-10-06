@@ -130,7 +130,7 @@ export default function WalkinScreen() {
   const freeBays = compatibleBays.filter((b) => !occupiedBayIds.has(b.id));
 
   async function handleSearch() {
-    if (!auth.status || auth.status !== "ready" || !phone.trim()) return;
+    if (!auth.status || auth.status !== "ready" || searching || !phone.trim()) return;
     setSearching(true);
     setSearched(false);
     setJustRegistered(false);
@@ -158,6 +158,7 @@ export default function WalkinScreen() {
   }
 
   async function handleRegister() {
+    if(registering) return;
     const email = newCust.email.trim().toLowerCase();
     if (newCust.name.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       Alert.alert("Missing details", "Enter the customer's name and a valid email.");
@@ -178,7 +179,7 @@ export default function WalkinScreen() {
   }
 
   async function handleAddVehicle() {
-    if (!customer) return;
+    if (!customer || addingVehicle) return;
     const yearNum = parseInt(newVehicle.year, 10);
     if (!newVehicle.registrationNumber.trim() || !newVehicle.make.trim() || !newVehicle.model.trim() || isNaN(yearNum)) {
       Alert.alert("Missing details", "Fill in registration, make, model, and year.");
@@ -206,7 +207,7 @@ export default function WalkinScreen() {
   }
 
   async function handleCreateJob() {
-    if (!studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
+    if (submitting || feedError || !studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
     setSubmitting(true);
     try {
       const result = await createWalkinJobCall({

@@ -89,7 +89,7 @@ export function DailyCloseView(p: {
               <button
                 type="button"
                 className="ax-button ax-button--primary"
-                disabled={p.busy || !countedOk || p.loading}
+                disabled={p.busy || !countedOk || p.loading || !p.live}
                 onClick={() => { p.onClose(Math.round(countedRupees * 100), notes.trim(), p.close !== null); setCounted(""); setNotes(""); }}
               >
                 {p.close ? "Recompute and re-close" : "Close the day"}

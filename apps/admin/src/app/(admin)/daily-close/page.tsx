@@ -25,6 +25,10 @@ export default function DailyClosePage() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setError(null);
+    setMessage(null);
+    setClose(null);
+    setLive(null);
     try {
       const res = await getDailyClose(studioId, date);
       setClose(res.close);
