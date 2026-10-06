@@ -10,7 +10,7 @@ export const STUDIO_INFO = {
 } as const;
 
 export const FAQ: { q: string; a: string }[] = [
-  { q: "How do I book a service?", a: "Open Services, pick one, choose your car and a time, then confirm." },
+  { q: "How do I book a service?", a: "Tap Services below, choose a service, then pick your car and a time. Review the details and request your booking." },
   { q: "Can I change or cancel a booking?", a: "Yes. Open the booking from Bookings to reschedule or cancel." },
   { q: "How will I know my car is ready?", a: "Your booking page shows each step, and you get an update in Notifications." },
   { q: "Where do I find my invoice and warranty?", a: "Invoices are on the booking. Warranties and papers are under your car in Garage." },
