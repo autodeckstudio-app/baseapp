@@ -1,12 +1,11 @@
-// Stamp unarrived bookings and create exactly one notification audit per slot.
-// Transaction reads protect against a concurrent arrival, cancellation or reschedule.
+// Cancel unarrived bookings at studio close. Transaction reads protect arrivals,
+// cancellations and reschedules, and restore an unused membership wash once.
 import type { Firestore } from "firebase-admin/firestore";
-import { isBookingMissed, type Booking } from "@autodeck/core";
+import { isBookingMissed, type Booking, type ServiceJob, type Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
 export async function flagMissedBookings(db: Firestore, nowMs: number = Date.now()): Promise<{ flagged: number }> {
   const now = new Date(nowMs).toISOString();
-  // Single-field range query: no new composite index, and catch up after downtime.
   const snap = await db.collection(COLLECTIONS.bookings()).where("scheduledAt", "<", now).get();
   let flagged = 0;
   for (const doc of snap.docs) {
@@ -16,18 +15,30 @@ export async function flagMissedBookings(db: Firestore, nowMs: number = Date.now
       if (!fresh.exists) return false;
       const b = fresh.data() as Booking;
       if (!isBookingMissed(b, nowMs)) return false;
-      const id = `missed-${doc.id}-${Date.parse(b.scheduledAt)}`;
+      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", doc.id));
+      // STANDBY means the vehicle arrived but has not yet been admitted to a bay.
+      if (jobs.docs.some((d) => d.data()["status"] !== "PENDING_VEHICLE" && d.data()["status"] !== "CANCELLED")) return false;
+      const membershipRef = b.membershipWashUsed && b.membershipId ? db.collection(COLLECTIONS.memberships()).doc(b.membershipId) : null;
+      const membershipSnap = membershipRef ? await tx.get(membershipRef) : null;
+      const id = `auto-cancel-${doc.id}-${Date.parse(b.scheduledAt)}`;
       const auditRef = db.collection(COLLECTIONS.auditLog()).doc(id);
       const existing = await tx.get(auditRef);
-      if (existing.exists && b.missedForScheduledAt === b.scheduledAt && b.missedAt) return false;
-      tx.update(doc.ref, { missedAt: b.missedAt ?? now, missedForScheduledAt: b.scheduledAt, updatedAt: now });
-      if (existing.exists) return false;
-      tx.create(auditRef, {
+      const reason = "Auto-cancelled: vehicle did not arrive by studio close.";
+      tx.update(doc.ref, { status: "CANCELLED", cancelledAt: now, cancellationReason: reason, missedAt: b.missedAt ?? now, missedForScheduledAt: b.scheduledAt, updatedAt: now });
+      for (const jobDoc of jobs.docs) {
+        const job = jobDoc.data() as ServiceJob;
+        if (job.status === "PENDING_VEHICLE") tx.update(jobDoc.ref, { status: "CANCELLED", statusHistory: [...(job.statusHistory ?? []), { status: "CANCELLED", changedAt: now, changedBy: "system", notes: reason }], updatedAt: now });
+      }
+      if (membershipRef && membershipSnap?.exists) {
+        const m = membershipSnap.data() as Membership;
+        tx.update(membershipRef, { washesUsed: Math.max(0, m.washesUsed - 1), updatedAt: now });
+      }
+      if (!existing.exists) tx.create(auditRef, {
         id, tenantId: b.tenantId, studioId: b.studioId ?? null,
-        action: "booking.missed", entityType: "Booking", entityId: doc.id,
+        action: "booking.cancelled", entityType: "Booking", entityId: doc.id,
         performedBy: "system", performedByRole: "system",
-        before: { status: b.status }, after: { status: b.status, missed: true },
-        metadata: { scheduledAt: b.scheduledAt }, createdAt: now,
+        before: { status: b.status }, after: { status: "CANCELLED", cancellationReason: reason },
+        metadata: { scheduledAt: b.scheduledAt, autoCancelled: true }, createdAt: now,
       });
       return true;
     });

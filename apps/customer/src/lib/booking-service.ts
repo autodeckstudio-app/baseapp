@@ -13,7 +13,11 @@ import {
 } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
-import type { Booking } from "@autodeck/core";
+import { isBookingMissed, bookingMissedAt, type Booking } from "@autodeck/core";
+
+export function customerBookingState(booking: Booking): Booking {
+  return isBookingMissed(booking) ? { ...booking, status: "CANCELLED", cancelledAt: new Date(bookingMissedAt(booking.scheduledAt)).toISOString(), cancellationReason: "Auto-cancelled: vehicle did not arrive by studio close." } : booking;
+}
 
 export interface AvailableSlot {
   date: string;
@@ -112,13 +116,13 @@ export async function getMyBookings(uid: string, tenantId: string): Promise<Book
     orderBy("scheduledAt", "desc"),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as Booking);
+  return snap.docs.map((d) => customerBookingState(d.data() as Booking));
 }
 
 export async function getBookingById(bookingId: string): Promise<Booking | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.bookings(), bookingId));
   if (!snap.exists()) return null;
-  return snap.data() as Booking;
+  return customerBookingState(snap.data() as Booking);
 }
 
 // Generates a UUID-like idempotency key on the client.
@@ -142,5 +146,5 @@ export async function getStudioInfo(studioId: string): Promise<LiveStudioInfo> {
 }
 
 export function listenToBooking(bookingId: string, onData: (booking: Booking | null) => void, onError: (error: Error) => void): Unsubscribe {
-  return onSnapshot(doc(db, COLLECTIONS.bookings(), bookingId), (snap) => onData(snap.exists() ? snap.data() as Booking : null), onError);
+  return onSnapshot(doc(db, COLLECTIONS.bookings(), bookingId), (snap) => onData(snap.exists() ? customerBookingState(snap.data() as Booking) : null), onError);
 }

@@ -92,8 +92,8 @@ export async function buildNotification(
       return {
         userId: booking.customerId,
         type: "booking_cancelled",
-        title: "Booking cancelled",
-        body: `Your ${vehicle} booking has been cancelled.`,
+        title: log.metadata?.["autoCancelled"] ? "Booking auto-cancelled" : "Booking cancelled",
+        body: log.metadata?.["autoCancelled"] ? `Your ${vehicle} booking was auto-cancelled because the car did not arrive by studio close. Make a new booking when you are ready.` : `Your ${vehicle} booking has been cancelled.`,
         entityType: "Booking",
         entityId: booking.id,
       };

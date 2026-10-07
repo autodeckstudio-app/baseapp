@@ -75,7 +75,7 @@ function formatDuration(minutes: number): string {
 }
 
 function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason: string | null } {
-  if (booking.status === "CONFIRMED" && isBookingMissed(booking)) return { eligible: true, reason: null };
+  if (isBookingMissed(booking)) return { eligible: false, reason: "This booking was auto-cancelled at studio close. Make a new booking." };
   if (booking.status !== "CONFIRMED") {
     return { eligible: false, reason: NON_RESCHEDULABLE_STATUS_REASONS[booking.status] ?? "This booking can't be rescheduled." };
   }
@@ -210,8 +210,9 @@ export default function BookingDetailScreen() {
 
   const hoursToStart = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
   const missed = isBookingMissed(booking);
-  const withinFreeWindow = missed || hoursToStart >= CANCELLATION_FREE_WINDOW_HOURS;
-  const canCancel = (booking.status === "CONFIRMED" || booking.status === "PENDING") && withinFreeWindow;
+  const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
+  const withinFreeWindow = !missed && hoursToStart >= CANCELLATION_FREE_WINDOW_HOURS;
+  const canCancel = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING") && withinFreeWindow;
   const lateToCancel = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING") && !withinFreeWindow;
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
@@ -420,9 +421,9 @@ export default function BookingDetailScreen() {
 
       {booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
 
-      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still bring your car today during studio hours. If it is not checked in by studio close (7 pm Sunday, 9 pm other days), this booking will be marked missed. Then you can pick a new time or cancel." /> : null}
-      {missed ? (
-        <Notice title="Booking missed" body="Your car was not checked in by studio close (7 pm Sunday, 9 pm other days). Pick a new time or cancel this booking. Moving a missed booking does not count towards your three reschedules." />
+      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still bring your car today during studio hours. If it is not checked in by studio close (7 pm Sunday, 9 pm other days), this booking will be auto-cancelled. You can make a new booking when you are ready." /> : null}
+      {autoCancelled ? (
+        <Notice title="Booking auto-cancelled" body="Your car was not checked in by studio close (7 pm Sunday, 9 pm other days). This booking is closed. Make a new booking when you are ready." />
       ) : null}
 
       {lateToCancel ? (

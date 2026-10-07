@@ -23,6 +23,7 @@ describe("booking close cutoff", () => {
     expect(isBookingMissed({ ...booking, scheduledAt: "bad" })).toBe(false);
   });
   it("never marks arrived or closed bookings missed", () => {
+    expect(isBookingMissed({ ...booking, standbyArrivedAt: "2026-10-05T06:00:00Z" }, Date.parse("2026-10-06T16:00:00Z"))).toBe(false);
     for (const status of ["ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"]) {
       expect(isBookingMissed({ ...booking, status }, Date.parse("2026-10-06T16:00:00Z"))).toBe(false);
     }

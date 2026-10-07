@@ -53,6 +53,8 @@ export default function GarageScreen() {
     setRemoveError(null);
     try {
       await archiveVehicle(removing.id);
+      // Do not wait for the Firestore stream to catch up with the callable.
+      setVehicles((current) => current?.filter((v) => v.id !== removing.id) ?? current);
       setRemoving(null);
     } catch {
       setRemoveError("We could not remove this car. Please try again.");

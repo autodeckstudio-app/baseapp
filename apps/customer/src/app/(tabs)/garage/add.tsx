@@ -152,7 +152,7 @@ export default function AddVehicleScreen() {
         return;
       }
       const details = (err as { details?: { vehicleId?: string; make?: string; model?: string; year?: number; color?: string; registrationNumber?: string } }).details;
-      if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
+      if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId && details.registrationNumber && normalizePlate(details.registrationNumber) === plate) {
         setArchivedMatch({ vehicleId: details.vehicleId, label: [details.registrationNumber ?? plate, details.make, details.model, details.year, details.color].filter(Boolean).join(" ") });
         return;
       }

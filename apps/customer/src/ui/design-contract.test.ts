@@ -10,7 +10,7 @@ describe("unified product design contract",()=>{
     const source=read("src/ui/kit.tsx");expect(source).toContain("accessibilityLabel={label}");expect(source).toContain("minHeight: 44");
   });
   it("does not send or upload before the staged sell review",()=>{
-    const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("photos.length===0");
+    const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("validateSellStep(f, step, photos.length)");expect(read("src/lib/sell-validation.ts")).toContain("if (!photoCount)");
   });
   it("makes critical booking load failures retryable without false rollback claims",()=>{
     const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(selectedVehicle.category)');expect(booking).toContain('label="Retry"');expect(booking).toContain('date===selectedDate');

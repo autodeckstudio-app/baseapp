@@ -19,7 +19,7 @@ export const MAX_SERVICE_SPAN_DAYS = 14;
 export const MAX_CUSTOMER_RESCHEDULES = 3;
 export const CANCELLATION_FREE_WINDOW_HOURS = 24;
 /** Unarrived bookings remain valid until the daily closing time IST on their scheduled day.
- * Keep the operational status unchanged so missed bookings remain reschedulable.
+ * Unarrived bookings auto-cancel at close; late arrivals stay valid during the day.
  */
 export function bookingCloseHour(scheduledAt: string): number {
   const local = new Date(Date.parse(scheduledAt) + 330 * 60000);
@@ -33,11 +33,11 @@ export function bookingMissedAt(scheduledAt: string): number {
   const dayStart = Math.floor((start + offset) / 86400000) * 86400000 - offset;
   return dayStart + bookingCloseHour(scheduledAt) * 3600000;
 }
-export function isBookingMissed(b: { status: string; scheduledAt: string }, now: number = Date.now()): boolean {
-  if (b.status !== "CONFIRMED" && b.status !== "PENDING") return false;
+export function isBookingMissed(b: { status: string; scheduledAt: string; standbyArrivedAt?: string | null }, now: number = Date.now()): boolean {
+  if (b.standbyArrivedAt || (b.status !== "CONFIRMED" && b.status !== "PENDING")) return false;
   return now >= bookingMissedAt(b.scheduledAt);
 }
-export function isBookingLateToday(b: { status: string; scheduledAt: string }, now: number = Date.now()): boolean {
+export function isBookingLateToday(b: { status: string; scheduledAt: string; standbyArrivedAt?: string | null }, now: number = Date.now()): boolean {
   return (b.status === "CONFIRMED" || b.status === "PENDING") &&
     now >= Date.parse(b.scheduledAt) && now < bookingMissedAt(b.scheduledAt);
 }

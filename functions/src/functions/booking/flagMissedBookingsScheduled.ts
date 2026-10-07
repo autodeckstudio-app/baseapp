@@ -1,4 +1,4 @@
-// At daily close IST: mark still-unarrived bookings missed, once per slot.
+// At daily close IST: auto-cancel still-unarrived bookings, once per slot.
 // onSchedule has no public endpoint. See lib/missed-bookings.ts.
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore } from "firebase-admin/firestore";
