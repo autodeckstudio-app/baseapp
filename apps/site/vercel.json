@@ -2,29 +2,99 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "redirects": [
-    { "source": "/login", "destination": "https://app.autodeck.in/login", "permanent": false },
-    { "source": "/setup", "destination": "https://app.autodeck.in/setup", "permanent": false },
-    { "source": "/staff", "destination": "https://app.autodeck.in/staff", "permanent": false },
-    { "source": "/welcome", "destination": "https://app.autodeck.in/welcome", "permanent": false },
-    { "source": "/sell", "destination": "https://app.autodeck.in/sell", "permanent": false },
-    { "source": "/services", "destination": "https://app.autodeck.in/services", "permanent": false },
-    { "source": "/approvals/:path*", "destination": "https://app.autodeck.in/approvals/:path*", "permanent": false },
-    { "source": "/book/:path*", "destination": "https://app.autodeck.in/book/:path*", "permanent": false },
-    { "source": "/bookings/:path*", "destination": "https://app.autodeck.in/bookings/:path*", "permanent": false },
-    { "source": "/cars/:path*", "destination": "https://app.autodeck.in/cars/:path*", "permanent": false },
-    { "source": "/catalogue/:path*", "destination": "https://app.autodeck.in/catalogue/:path*", "permanent": false },
-    { "source": "/garage/:path*", "destination": "https://app.autodeck.in/garage/:path*", "permanent": false },
-    { "source": "/help", "destination": "https://app.autodeck.in/help", "permanent": false },
-    { "source": "/membership/:path*", "destination": "https://app.autodeck.in/membership/:path*", "permanent": false },
-    { "source": "/notifications/:path*", "destination": "https://app.autodeck.in/notifications/:path*", "permanent": false },
-    { "source": "/profile", "destination": "https://app.autodeck.in/profile", "permanent": false }
+    {
+      "source": "/login",
+      "destination": "https://app.autodeck.in/login",
+      "permanent": false
+    },
+    {
+      "source": "/setup",
+      "destination": "https://app.autodeck.in/setup",
+      "permanent": false
+    },
+    {
+      "source": "/staff",
+      "destination": "https://app.autodeck.in/staff",
+      "permanent": false
+    },
+    {
+      "source": "/welcome",
+      "destination": "https://app.autodeck.in/welcome",
+      "permanent": false
+    },
+    {
+      "source": "/sell",
+      "destination": "https://app.autodeck.in/sell",
+      "permanent": false
+    },
+    {
+      "source": "/services",
+      "destination": "https://app.autodeck.in/services",
+      "permanent": false
+    },
+    {
+      "source": "/approvals/:path*",
+      "destination": "https://app.autodeck.in/approvals/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/book/:path*",
+      "destination": "https://app.autodeck.in/book/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/bookings/:path*",
+      "destination": "https://app.autodeck.in/bookings/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/cars/:path*",
+      "destination": "https://app.autodeck.in/cars/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/catalogue/:path*",
+      "destination": "https://app.autodeck.in/catalogue/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/garage/:path*",
+      "destination": "https://app.autodeck.in/garage/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/help",
+      "destination": "https://app.autodeck.in/help",
+      "permanent": false
+    },
+    {
+      "source": "/membership/:path*",
+      "destination": "https://app.autodeck.in/membership/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/notifications/:path*",
+      "destination": "https://app.autodeck.in/notifications/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/profile",
+      "destination": "https://app.autodeck.in/profile",
+      "permanent": false
+    }
   ],
   "headers": [
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     }
-  ]
+  ],
+  "buildCommand": "echo static-site-no-build",
+  "installCommand": "echo static-site-no-install",
+  "outputDirectory": "."
 }
