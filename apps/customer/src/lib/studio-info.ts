@@ -2,7 +2,7 @@
 // studio's real details; any empty value hides its button. No private data here.
 export const STUDIO_INFO = {
   name: "AutoDeck",
-  phone: "", // e.g. "+919800000000"
+  phone: "+919898679711", // e.g. "+919800000000"
   whatsapp: "", // digits only with country code, e.g. "919800000000"
   address: "Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad, Gujarat 380006", // street address shown to the customer
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Sunbeam+Complex%2C+Old+Sharda+Mandir+Rd%2C+Ellisbridge%2C+Ahmedabad%2C+Gujarat+380006", // opens Google Maps at the address
