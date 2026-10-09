@@ -87,7 +87,7 @@ export async function listPendingMemberships(tenantId: string): Promise<PendingM
   for (const d of snap.docs) {
     const membership = d.data() as Membership;
     const [paySnap, custSnap, planSnap] = await Promise.all([
-      getDocs(query(collection(db, COLLECTIONS.payments()), where("membershipId", "==", membership.id))),
+      getDocs(query(collection(db, COLLECTIONS.payments()), where("tenantId", "==", tenantId), where("membershipId", "==", membership.id))),
       getDoc(doc(db, COLLECTIONS.customers(), membership.customerId)),
       getDoc(doc(db, COLLECTIONS.membershipPlans(), membership.planId)),
     ]);

@@ -80,7 +80,7 @@ export default function MembershipsScreen() {
     setError(null);
     const [memSnap, planSnap] = await Promise.all([
       getDocs(query(collection(db, COLLECTIONS.memberships()), where("tenantId", "==", tenantId), where("status", "==", "pending"))),
-      getDocs(collection(db, COLLECTIONS.membershipPlans())),
+      getDocs(query(collection(db, COLLECTIONS.membershipPlans()), where("tenantId", "==", tenantId))),
     ]);
     const planList = planSnap.docs.map((d) => d.data() as MembershipPlan).filter((p) => p.tenantId === tenantId);
     setPlans(planList);
@@ -88,7 +88,7 @@ export default function MembershipsScreen() {
     for (const d of memSnap.docs) {
       const membership = d.data() as Membership;
       const [paySnap, custSnap] = await Promise.all([
-        getDocs(query(collection(db, COLLECTIONS.payments()), where("membershipId", "==", membership.id))),
+        getDocs(query(collection(db, COLLECTIONS.payments()), where("tenantId", "==", tenantId), where("membershipId", "==", membership.id))),
         getDoc(doc(db, COLLECTIONS.customers(), membership.customerId)),
       ]);
       const payments = paySnap.docs.map((p) => p.data() as Payment);

@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── Helper functions ────────────────────────────────────────────────────
+    // âââ Helper functions ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
     function isAuthenticated() {
       return request.auth != null;
@@ -55,15 +55,15 @@ service cloud.firestore {
       return studioId() == doc.studioId;
     }
 
-    // ─── /tenants/{tenantId} ────────────────────────────────────────────────
-    // tenantId is the document ID, not a field — standard ownTenant() does not apply.
+    // âââ /tenants/{tenantId} ââââââââââââââââââââââââââââââââââââââââââââââââ
+    // tenantId is the document ID, not a field â standard ownTenant() does not apply.
     match /tenants/{tid} {
       allow read: if isSuperadmin()
                   || (isAdmin() && tenantId() == tid);
       allow write: if false; // Admin SDK only
     }
 
-    // ─── /customers/{userId} ────────────────────────────────────────────────
+    // âââ /customers/{userId} ââââââââââââââââââââââââââââââââââââââââââââââââ
     match /customers/{userId} {
       allow read: if isAuthenticated()
                   && (request.auth.uid == userId || isStudioOrAbove())
@@ -76,33 +76,33 @@ service cloud.firestore {
                     && ownTenant(resource.data)
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['name', 'notificationPrefs', 'updatedAt']);
-      // Admin updates via Cloud Function — no direct admin write
+      // Admin updates via Cloud Function â no direct admin write
       allow delete: if false;
     }
 
-    // ─── /vehicles/{vehicleId} ──────────────────────────────────────────────
+    // âââ /vehicles/{vehicleId} ââââââââââââââââââââââââââââââââââââââââââââââ
     match /vehicles/{vehicleId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.ownerId == request.auth.uid);
       allow create: if false; // Cloud Function only
-      // Cloud Function only (createVehicle/updateVehicle/archiveVehicle) —
+      // Cloud Function only (createVehicle/updateVehicle/archiveVehicle) â
       // the previous isStudioOrAbove() branch had NO field restriction and
       // NO ownStudio() check, letting any studio/admin/superadmin in the
       // tenant hijack a vehicle's ownerId (reassign to any uid) or move it
       // to a different tenant via a direct client write, bypassing Cloud
       // Function schema validation, rate limiting, and audit logging
       // entirely. The customer self-update branch had no legitimate caller
-      // either (updateVehicle.ts is the real path for customers too) — no
+      // either (updateVehicle.ts is the real path for customers too) â no
       // direct client write of any kind is legitimate here (Phase 6 hostile
-      // audit P0 finding — same defect class as /jobs and /bookings, fixed
+      // audit P0 finding â same defect class as /jobs and /bookings, fixed
       // in 5291c8e, missed here).
       allow update: if false;
       allow delete: if false;
 
-      // ─── /vehicles/{vehicleId}/protections/{protectionId} ─────────────────
+      // âââ /vehicles/{vehicleId}/protections/{protectionId} âââââââââââââââââ
       // Legal/financial protections (insurance/FastTag/PUC/RC/extended
-      // warranty) — Phase 2D. Admin/Cloud-Function-created and -verified
+      // warranty) â Phase 2D. Admin/Cloud-Function-created and -verified
       // only; customer is read-own-vehicle-only, no client write of any kind.
       match /protections/{protectionId} {
         allow read: if isAuthenticated()
@@ -112,7 +112,7 @@ service cloud.firestore {
       }
     }
 
-    // ─── /pickupRequests/{id}: pickup and drop requests, written by Cloud Functions only ───
+    // âââ /pickupRequests/{id}: pickup and drop requests, written by Cloud Functions only âââ
     match /pickupRequests/{requestId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
@@ -120,19 +120,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /accountDeletionRequests/{uid}: written by Cloud Functions only; the customer can read their own ───
+    // âââ /accountDeletionRequests/{uid}: written by Cloud Functions only; the customer can read their own âââ
     match /accountDeletionRequests/{uid} {
       allow read: if isAuthenticated() && (request.auth.uid == uid || isStudioOrAbove());
       allow write: if false;
     }
 
-    // ─── /bookings/{bookingId} ──────────────────────────────────────────────
+    // âââ /bookings/{bookingId} ââââââââââââââââââââââââââââââââââââââââââââââ
     match /bookings/{bookingId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // Cloud Function only
-      // Cloud Function only (rescheduleBooking/cancelBooking/etc.) — no
+      // Cloud Function only (rescheduleBooking/cancelBooking/etc.) â no
       // legitimate client caller exists (every app mutation already goes
       // through a Cloud Function); a permissive rule here has no upside and
       // was previously missing an ownStudio() check, allowing any
@@ -142,25 +142,25 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ─── /jobs/{jobId} ──────────────────────────────────────────────────────
+    // âââ /jobs/{jobId} ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
     match /jobs/{jobId} {
-      // Customer can only read their own job — restricted field set enforced in app layer
+      // Customer can only read their own job â restricted field set enforced in app layer
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // Cloud Function only
       // Cloud Function only (advanceJobStatus/assignBay/confirmManualPayment/
-      // etc.) — the previous rule had no ownStudio() check and no field
+      // etc.) â the previous rule had no ownStudio() check and no field
       // restriction, letting any studio/admin in the tenant directly write
       // ANY field (including totalAmount/paymentStatus/status) on ANY job in
       // the tenant, including another studio's. No legitimate client caller
-      // exists — every real mutation already goes through a Cloud Function
+      // exists â every real mutation already goes through a Cloud Function
       // (Phase 5A security audit P0 finding).
       allow update: if false;
       allow delete: if false; // Jobs are permanent records
     }
 
-    // ─── /approvals/{approvalId} ────────────────────────────────────────────
+    // âââ /approvals/{approvalId} ââââââââââââââââââââââââââââââââââââââââââââ
     match /approvals/{approvalId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
@@ -170,7 +170,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ─── /payments/{paymentId} ──────────────────────────────────────────────
+    // âââ /payments/{paymentId} ââââââââââââââââââââââââââââââââââââââââââââââ
     match /payments/{paymentId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
@@ -180,11 +180,11 @@ service cloud.firestore {
       allow delete: if false; // Immutable
     }
 
-    // ─── /invoices/{invoiceId} ──────────────────────────────────────────────
+    // âââ /invoices/{invoiceId} ââââââââââââââââââââââââââââââââââââââââââââââ
     match /invoices/{invoiceId} {
       // Customer reads own invoice by document ID (app layer validates ownership).
       // Invoice.publicToken is generated but has no consumer anywhere in the
-      // product (Phase 3H audit) — there is no unauthenticated/public invoice
+      // product (Phase 3H audit) â there is no unauthenticated/public invoice
       // view, in this app layer or otherwise. All invoice access requires
       // authentication and passes through the ownership/tenant check below.
       allow read: if isAuthenticated()
@@ -195,14 +195,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ─── /warranties/{warrantyId} ───────────────────────────────────────────
+    // âââ /warranties/{warrantyId} âââââââââââââââââââââââââââââââââââââââââââ
     match /warranties/{warrantyId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
                   && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // System only, on job seal
-      // Phase 2D tightening: warranty terms are historical truth (doc06 §6.4
-      // Rule 3) — admin may only record an exceptional revocation, never
+      // Phase 2D tightening: warranty terms are historical truth (doc06 Â§6.4
+      // Rule 3) â admin may only record an exceptional revocation, never
       // rewrite the sealed terms themselves.
       allow update: if isAdminOrAbove() && ownTenant(resource.data)
                     && request.resource.data.diff(resource.data).affectedKeys()
@@ -210,9 +210,9 @@ service cloud.firestore {
       allow delete: if false; // revokedAt field for exceptional cases
     }
 
-    // ─── /inspections/{jobId} ────────────────────────────────────────────────
+    // âââ /inspections/{jobId} ââââââââââââââââââââââââââââââââââââââââââââââââ
     // Phase 4: structured vehicle-condition inspection report, id == jobId.
-    // Customer is strictly read-own — can never write, even while a studio
+    // Customer is strictly read-own â can never write, even while a studio
     // inspection is still in_progress. All writes are Cloud-Function-only
     // (startInspection/updateInspection/finalizeInspection).
     match /inspections/{jobId} {
@@ -222,16 +222,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /memberships/{membershipId} ────────────────────────────────────────
+    // âââ /memberships/{membershipId} ââââââââââââââââââââââââââââââââââââââââ
     match /memberships/{membershipId} {
+      // Studio front desk approves pending membership payments, so studio staff
+      // read memberships the same way they read payments (tenant-scoped).
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isAdminOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
       allow create: if false; // Cloud Function only
       allow update: if false; // Cloud Function only
       allow delete: if false;
 
-      // ─── /memberships/{membershipId}/usage/{usageId} ──────────────────────
+      // âââ /memberships/{membershipId}/usage/{usageId} ââââââââââââââââââââââ
       match /usage/{usageId} {
         allow read: if isAuthenticated()
                     && (isSuperadmin() || ownTenant(resource.data))
@@ -240,9 +242,9 @@ service cloud.firestore {
       }
     }
 
-    // ─── /membershipPlans/{planId} ──────────────────────────────────────────
+    // âââ /membershipPlans/{planId} ââââââââââââââââââââââââââââââââââââââââââ
     // Admin-managed catalogue (createMembershipPlan/updateMembershipPlan/
-    // setMembershipPlanActive) — mirrors /services: no direct client write,
+    // setMembershipPlanActive) â mirrors /services: no direct client write,
     // even by admin, so every plan change is audited.
     match /membershipPlans/{planId} {
       allow read: if isAuthenticated()
@@ -250,16 +252,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /services/{serviceId} ──────────────────────────────────────────────
+    // âââ /services/{serviceId} ââââââââââââââââââââââââââââââââââââââââââââââ
     // Catalogue mutations are server-authoritative (createService/updateService/
-    // setServiceActive) so they are audited — no direct client write, even by admin.
+    // setServiceActive) so they are audited â no direct client write, even by admin.
     match /services/{serviceId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data));
       allow write: if false;
     }
 
-    // ─── /employees/{employeeId} ────────────────────────────────────────────
+    // âââ /employees/{employeeId} ââââââââââââââââââââââââââââââââââââââââââââ
     // All mutations go through Cloud Functions (addStaffMember/updateStaffRole/
     // deactivateStaffMember) so the Firestore record and the custom claims never
     // drift apart, and every change is audited.
@@ -270,9 +272,9 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /studioConfig/{studioId} ───────────────────────────────────────────
+    // âââ /studioConfig/{studioId} âââââââââââââââââââââââââââââââââââââââââââ
     // All mutations go through Cloud Functions (updateStudioSettings/addHoliday/
-    // removeHoliday/upsertBay) — no direct client write, even by admin, so every
+    // removeHoliday/upsertBay) â no direct client write, even by admin, so every
     // business-configuration change is audited.
     match /studioConfig/{studioId} {
       allow read: if isStudioOrAbove()
@@ -280,7 +282,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /auditLog/{entryId} ────────────────────────────────────────────────
+    // âââ /auditLog/{entryId} ââââââââââââââââââââââââââââââââââââââââââââââââ
     match /auditLog/{entryId} {
       allow read: if isAdminOrAbove()
                   && (isSuperadmin() || ownTenant(resource.data));
@@ -289,7 +291,7 @@ service cloud.firestore {
       allow delete: if false; // Immutable
     }
 
-    // ─── /notifications/{notificationId} ────────────────────────────────────
+    // âââ /notifications/{notificationId} ââââââââââââââââââââââââââââââââââââ
     match /notifications/{notificationId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
@@ -297,7 +299,7 @@ service cloud.firestore {
       allow write: if false; // Cloud Function only
     }
 
-    // ─── /reviews/{bookingId} ───────────────────────────────────────────────
+    // âââ /reviews/{bookingId} âââââââââââââââââââââââââââââââââââââââââââââââ
     match /reviews/{bookingId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
@@ -305,28 +307,28 @@ service cloud.firestore {
       allow write: if false; // Cloud Function only (submitReview)
     }
 
-    // ─── /invoiceCounters/{tenantId} ────────────────────────────────────────
-    // Atomic invoice number counters — Admin SDK only; no client access
+    // âââ /invoiceCounters/{tenantId} ââââââââââââââââââââââââââââââââââââââââ
+    // Atomic invoice number counters â Admin SDK only; no client access
     match /invoiceCounters/{tenantId} {
       allow read, write: if false;
     }
 
-    // ─── /paymentEvents/{eventId} ───────────────────────────────────────────
-    // Idempotency guard for payment webhooks — Admin SDK only; no client access
+    // âââ /paymentEvents/{eventId} âââââââââââââââââââââââââââââââââââââââââââ
+    // Idempotency guard for payment webhooks â Admin SDK only; no client access
     match /paymentEvents/{eventId} {
       allow read, write: if false;
     }
 
-    // ─── /rateLimits/{key} ──────────────────────────────────────────────────
-    // Server-only abuse counters (Phase 3D) — key is server-derived
+    // âââ /rateLimits/{key} ââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // Server-only abuse counters (Phase 3D) â key is server-derived
     // (tenantId__uid__action), never client-supplied. No client access,
     // not even read, so callers cannot time bursts against their own counter.
     match /rateLimits/{key} {
       allow read, write: if false;
     }
 
-    // ─── /bayLocks/{key} ──────────────────────────────────────────────────────
-    // Server-only (Phase 7 hostile audit) — deterministic-document touch used
+    // âââ /bayLocks/{key} ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // Server-only (Phase 7 hostile audit) â deterministic-document touch used
     // solely to give Firestore's transaction conflict detection a reliable
     // signal for bay-assignment races. Carries no meaningful data. No client
     // access of any kind.
@@ -334,7 +336,7 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ─── /attendance/{recordId} ─────────────────────────────────────────────
+    // âââ /attendance/{recordId} âââââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's attendance records; an employee can
     // read their own record via the denormalized employeeAuthUid field. All
     // writes go through Cloud Functions (check-in/out, breaks, admin mark).
@@ -345,7 +347,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /expenses/{expenseId} ──────────────────────────────────────────────
+    // âââ /expenses/{expenseId} ââââââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's expense records. All writes go through
     // Cloud Functions (admin-only create/update/delete).
     match /expenses/{expenseId} {
@@ -353,7 +355,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /inventoryItems/{itemId} ───────────────────────────────────────────
+    // âââ /inventoryItems/{itemId} âââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's items. Writes are function-only:
     // quantities change only inside recordInventoryTxn's transaction.
     match /inventoryItems/{itemId} {
@@ -361,14 +363,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /inventoryTxns/{txnId} ─────────────────────────────────────────────
+    // âââ /inventoryTxns/{txnId} âââââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's stock movement log. Function-only writes.
     match /inventoryTxns/{txnId} {
       allow read: if isStudioOrAbove() && ownTenant(resource.data);
       allow write: if false;
     }
 
-    // ─── /papers/{paperId} ──────────────────────────────────────────────────
+    // âââ /papers/{paperId} ââââââââââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's papers; the vehicle owner reads their
     // own via denormalized customerId. Function-only writes.
     match /papers/{paperId} {
@@ -378,14 +380,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── /dailyClosings/{closeId} ───────────────────────────────────────────
+    // âââ /dailyClosings/{closeId} âââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's close records. Function-only writes.
     match /dailyClosings/{closeId} {
       allow read: if isStudioOrAbove() && ownTenant(resource.data);
       allow write: if false;
     }
 
-    // ─── /gallery/{imageId} ─────────────────────────────────────────────────
+    // âââ /gallery/{imageId} âââââââââââââââââââââââââââââââââââââââââââââââââ
     // Public marketing media (matches the legacy gallery's public-read
     // model): anyone can read ACTIVE images; unpublished ones require staff.
     // Function-only writes. Documents contain no customer data.
@@ -395,7 +397,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── Deny everything else ────────────────────────────────────────────────
+    // âââ Deny everything else ââââââââââââââââââââââââââââââââââââââââââââââââ
     match /{document=**} {
       allow read, write: if false;
     }
