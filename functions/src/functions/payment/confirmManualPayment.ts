@@ -1,9 +1,9 @@
-// Studio/admin confirms an EXISTING pending cash/manual payment — the
+// Studio/admin confirms an EXISTING pending cash/manual payment â the
 // production counterpart to recordManualPayment (which creates a new
 // completed payment from scratch). This closes the gap left when a customer
 // initiates a "Pay at studio" payment via initiatePayment: that payment sits
 // 'pending' until a real member of staff confirms cash was actually received.
-// Online (razorpay_payment_link) payments are explicitly out of scope here —
+// Online (razorpay_payment_link) payments are explicitly out of scope here â
 // those complete only via the (deferred) Razorpay webhook, never manually.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -16,6 +16,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmManualPaymentSchema } from "../../schemas/payment.js";
 import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
 import { buildInvoice } from "../../lib/invoice-builder.js";
+import { resolveServiceName } from "../../lib/service-name.js";
 
 export const confirmManualPayment = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -42,7 +43,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
   if (payment.method === "razorpay_payment_link") {
     throw new HttpsError(
       "failed-precondition",
-      "Online payments cannot be confirmed manually — they complete via the payment provider.",
+      "Online payments cannot be confirmed manually â they complete via the payment provider.",
     );
   }
 
@@ -68,7 +69,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
     if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
     const job = jobSnap.data() as ServiceJob;
 
-    // Re-check status inside the transaction — a concurrent confirmation
+    // Re-check status inside the transaction â a concurrent confirmation
     // (e.g. two staff tapping "Confirm" at once) must not double-complete.
     const freshPaymentSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(payment.id));
     const freshPayment = freshPaymentSnap.data() as Payment;
@@ -82,11 +83,11 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
       );
     }
     // Guard against the job having moved out from under this payment since
-    // it was initiated — e.g. a different payment on the same job already
+    // it was initiated â e.g. a different payment on the same job already
     // completed (recordManualPayment now blocks creating a second in-flight
     // payment, but this is defense-in-depth against that invariant ever
     // being violated), or the job/booking was cancelled while this payment
-    // sat pending (Phase 6 hostile-audit finding — this check was previously
+    // sat pending (Phase 6 hostile-audit finding â this check was previously
     // entirely absent here).
     if (job.paymentStatus === "paid") {
       throw new HttpsError("already-exists", "This job has already been marked as paid.");
@@ -97,6 +98,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
 
     const now = new Date().toISOString();
     const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
+    const serviceName = await resolveServiceName(db, tx, job.tenantId, job.serviceId);
     const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
     const invoice = buildInvoice({
       invoiceId: invoiceRef.id,
@@ -109,7 +111,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
       vehicleId: job.vehicleId,
       priceBreakdown: job.priceBreakdown,
       paymentId: payment.id,
-      serviceName: `Service ${job.serviceId}`,
+      serviceName,
     });
 
     tx.update(db.collection(COLLECTIONS.payments()).doc(payment.id), {

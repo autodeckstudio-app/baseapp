@@ -415,9 +415,15 @@ export default function JobDetailScreen() {
           }}
         >
           <StatusBadge label={`${bookingMembership.membership.tier} member`} tone="accent" />
-          <Text style={{ ...typography.caption, color: colors.accentPressed, flexShrink: 1 }}>
-            {bookingMembership.washUsed ? "Wash credit used" : bookingMembership.discountApplied ? "Membership discount applied" : "Member"}
-          </Text>
+          {bookingMembership.membership.status === "active" ? (
+            <Text style={{ ...typography.caption, color: colors.accentPressed, flexShrink: 1 }}>
+              {bookingMembership.washUsed ? "Wash credit used" : bookingMembership.discountApplied ? "Membership discount applied" : "Member"}
+            </Text>
+          ) : (
+            <Text style={{ ...typography.caption, color: colors.textMuted, flexShrink: 1 }}>
+              Membership not active - no benefits apply yet
+            </Text>
+          )}
         </View>
       )}
 

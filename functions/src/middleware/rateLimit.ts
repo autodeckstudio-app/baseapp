@@ -4,7 +4,7 @@ import type { AuthorizedUser, UserRole } from "@autodeck/auth";
 import { COLLECTIONS } from "@autodeck/database";
 
 /**
- * Fixed-window, per-uid+action abuse counters. Server-side only — no paid
+ * Fixed-window, per-uid+action abuse counters. Server-side only â no paid
  * service, no scheduler. Windows are never physically deleted; a doc past
  * its window is simply overwritten on next use (see design note in Phase
  * 3D HANDOFF: "expired windows can be overwritten/reused safely").
@@ -29,6 +29,8 @@ export type RateLimitAction =
   | "payment.refund"
   | "payment.recordManual"
   | "membership.purchase"
+  | "membership.confirmPayment"
+  | "membership.walkin"
   | "membership.activate"
   | "membership.cancel"
   | "membership.planCreate"
@@ -105,15 +107,15 @@ interface RateLimitConfig {
 // CRITICAL mutations: tight windows for customer-facing/public-risk actions;
 // looser windows for studio/admin-only actions performed by trusted staff at
 // realistic business throughput (a busy front desk can process many jobs per
-// minute — see Phase 3D HANDOFF: raised after the emulator suite proved the
+// minute â see Phase 3D HANDOFF: raised after the emulator suite proved the
 // initial studio/admin limits blocked legitimate rapid sequential usage).
 // MODERATE reads: looser windows still. Deliberately NOT applied to every
-// callable — see Phase 3D HANDOFF audit (LOW-tier: health, onAuditLogCreated
+// callable â see Phase 3D HANDOFF audit (LOW-tier: health, onAuditLogCreated
 // trigger, and the two zero-caller expireStale* ops functions are left
 // unlimited; unauthenticated requests are already rejected by extractUser
 // before any rate-limit code runs). Phase 5B P1-13 hardening review (Batch
 // 4) found health.ts's extractUser/assertRole check had gone missing
-// entirely — it was fixed there specifically to make this LOW-tier
+// entirely â it was fixed there specifically to make this LOW-tier
 // assumption true again, not weakened.
 const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "auth.setupProfile": { limit: 10, windowMs: 60_000 },
@@ -135,6 +137,8 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "payment.refund": { limit: 30, windowMs: 60_000 },
   "payment.recordManual": { limit: 60, windowMs: 60_000 },
   "membership.purchase": { limit: 5, windowMs: 60_000 },
+  "membership.confirmPayment": { limit: 30, windowMs: 60_000 },
+  "membership.walkin": { limit: 30, windowMs: 60_000 },
   "membership.activate": { limit: 60, windowMs: 60_000 },
   "membership.cancel": { limit: 60, windowMs: 60_000 },
   "membership.planCreate": { limit: 30, windowMs: 60_000 },
@@ -223,7 +227,7 @@ function friendlyMessage(role: UserRole | null): string {
 
 /**
  * Atomically checks and increments a per-uid+action fixed-window counter.
- * Throws HttpsError("resource-exhausted", ...) when the limit is exceeded —
+ * Throws HttpsError("resource-exhausted", ...) when the limit is exceeded â
  * fails closed (any Firestore error propagates as a thrown error, denying
  * the request rather than silently allowing it through).
  *

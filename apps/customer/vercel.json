@@ -3,5 +3,9 @@
   "buildCommand": "npx expo export --platform web",
   "outputDirectory": "dist",
   "installCommand": "pnpm install --frozen-lockfile",
+  "redirects": [
+    { "source": "/services", "destination": "/catalogue", "permanent": false },
+    { "source": "/sell", "destination": "/cars/sell", "permanent": false }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

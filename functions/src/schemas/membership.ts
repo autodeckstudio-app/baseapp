@@ -38,7 +38,7 @@ export const cancelMembershipSchema = z.object({
   reason: z.string().min(1).max(500),
 }).strict();
 
-// customerId is honored only for studio/admin callers — a customer caller's
+// customerId is honored only for studio/admin callers â a customer caller's
 // own uid is always used regardless of what is passed (see getMyMemberships.ts).
 export const getMyMembershipsSchema = z.object({
   customerId: z.string().min(1).optional(),
@@ -50,6 +50,19 @@ export const getMembershipUsageSchema = z.object({
 
 export const expireStaleMembershipsSchema = z.object({}).strict();
 
+export const confirmMembershipPaymentSchema = z.object({
+  membershipId: z.string().min(1),
+  method: z.enum(["cash", "upi_manual", "bank_transfer"]),
+  manualReference: z.string().trim().max(100).optional(),
+}).strict();
+
+export const createWalkinMembershipSchema = z.object({
+  customerId: z.string().min(1),
+  planId: z.string().min(1),
+  method: z.enum(["cash", "upi_manual", "bank_transfer"]),
+  manualReference: z.string().trim().max(100).optional(),
+}).strict();
+
 export type CreateMembershipPlanInput = z.infer<typeof createMembershipPlanSchema>;
 export type UpdateMembershipPlanInput = z.infer<typeof updateMembershipPlanSchema>;
 export type SetMembershipPlanActiveInput = z.infer<typeof setMembershipPlanActiveSchema>;
@@ -58,3 +71,5 @@ export type ActivateMembershipInput = z.infer<typeof activateMembershipSchema>;
 export type CancelMembershipInput = z.infer<typeof cancelMembershipSchema>;
 export type GetMyMembershipsInput = z.infer<typeof getMyMembershipsSchema>;
 export type GetMembershipUsageInput = z.infer<typeof getMembershipUsageSchema>;
+export type ConfirmMembershipPaymentInput = z.infer<typeof confirmMembershipPaymentSchema>;
+export type CreateWalkinMembershipInput = z.infer<typeof createWalkinMembershipSchema>;

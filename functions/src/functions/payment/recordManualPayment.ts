@@ -1,9 +1,9 @@
 // Studio/admin records a manual cash or direct UPI payment.
 // Payment is immediately COMPLETED (no provider roundtrip needed for cash/UPI).
-// Amount ALWAYS comes from job.totalAmount — client cannot set it.
+// Amount ALWAYS comes from job.totalAmount â client cannot set it.
 //
 // Keyed by jobId so the same function pays a booking-sourced job or a
-// walk-in job identically — bookingId (nullable) is carried onto the
+// walk-in job identically â bookingId (nullable) is carried onto the
 // Payment/Invoice as a cross-reference only.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -16,6 +16,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { recordManualPaymentSchema } from "../../schemas/payment.js";
 import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
 import { buildInvoice } from "../../lib/invoice-builder.js";
+import { resolveServiceName } from "../../lib/service-name.js";
 
 export const recordManualPayment = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -31,7 +32,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   const jobRef = db.collection(COLLECTIONS.jobs()).doc(data.jobId);
 
   // Fast-fail pre-check (cheap, avoids starting a transaction for an
-  // obviously-invalid request) — NOT the authoritative check, since
+  // obviously-invalid request) â NOT the authoritative check, since
   // paymentStatus is mutable and racy across concurrent calls. See the
   // re-check inside the transaction below.
   const preCheckSnap = await jobRef.get();
@@ -40,7 +41,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   if (preCheckJob.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  // Phase 5B P1-14 fix — previously not checked at all here, letting a
+  // Phase 5B P1-14 fix â previously not checked at all here, letting a
   // studio employee at Studio A record a cash payment for a job belonging
   // to Studio B in the same tenant.
   assertStudio(user, preCheckJob.studioId, "Job");
@@ -50,7 +51,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
 
   const result = await db.runTransaction(async (tx) => {
-    // Authoritative re-read inside the transaction — two concurrent calls
+    // Authoritative re-read inside the transaction â two concurrent calls
     // for the same job (e.g. two staff members both tapping "Record
     // payment") must not both pass the paymentStatus check and each create
     // a separate Payment + Invoice for the same job.
@@ -70,7 +71,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
     }
 
     // Block if ANOTHER payment is already in flight (or completed) for this
-    // job — job.paymentStatus alone is an insufficient guard, since
+    // job â job.paymentStatus alone is an insufficient guard, since
     // initiatePayment creates a "pending" Payment without ever touching
     // job.paymentStatus (which stays "unpaid" for the payment's entire
     // pending window). Without this check, a customer's "pay at studio"
@@ -92,7 +93,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       );
     }
 
-    // Amount ALWAYS from the job's server-computed snapshot — NEVER from client
+    // Amount ALWAYS from the job's server-computed snapshot â NEVER from client
     const amount = job.totalAmount;
 
     const payment: Payment = {
@@ -125,6 +126,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       updatedAt: now,
     };
 
+    const serviceName = await resolveServiceName(db, tx, job.tenantId, job.serviceId);
     const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
     const invoice = buildInvoice({
       invoiceId: invoiceRef.id,
@@ -137,7 +139,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       vehicleId: job.vehicleId,
       priceBreakdown: job.priceBreakdown,
       paymentId: paymentRef.id,
-      serviceName: `Service ${job.serviceId}`,
+      serviceName,
     });
 
     tx.set(paymentRef, payment);

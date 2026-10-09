@@ -80,8 +80,8 @@ export function listenToMyVehicles(
     q,
     { includeMetadataChanges: true },
     (snap: QuerySnapshot) => {
-      // Wait for server confirmation before exposing a cached photo/version.
-      if (snap.metadata.fromCache) return;
+      // Deliver cached snapshots too: a freshly added or restored car must
+      // appear immediately, and the listener reconciles with the server next.
       const vehicles = snap.docs.map((doc) => doc.data() as Vehicle);
       onData(vehicles);
     },
@@ -144,3 +144,4 @@ export async function restoreVehicle(vehicleId: string): Promise<void> {
   const fn = httpsCallable<{ vehicleId: string }, { vehicleId: string; restored: boolean }>(functions, "restoreVehicle");
   await fn({ vehicleId });
 }
+

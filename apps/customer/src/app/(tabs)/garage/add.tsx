@@ -1,9 +1,13 @@
-import { createElement, useState } from "react";
+import { createElement, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
 import { space } from "@autodeck/ui/theme";
+import { COLLECTIONS } from "@autodeck/database";
+import type { Vehicle } from "@autodeck/core";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { useAuth } from "../../../hooks/useAuth";
+import { db } from "../../../lib/firebase";
 import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
@@ -30,6 +34,8 @@ const FIELDS: FieldDef[] = [
   { key: "color", label: "Colour", placeholder: "e.g. White", autoCapitalize: "words" },
 ];
 
+const GARAGE_ROUTE = "/(tabs)/garage";
+
 export default function AddVehicleScreen() {
   const router = useRouter();
   const auth = useAuth();
@@ -47,6 +53,10 @@ export default function AddVehicleScreen() {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
+  // Stale-response guard: every submission bumps the sequence and captures the
+  // plate it was for; async answers from an older submission or plate are dropped.
+  const submitSeq = useRef(0);
+  const currentPlate = useRef("");
 
   function pickPhoto(file: { blob: Blob; type: string } | null) {
     if (!file) return;
@@ -59,7 +69,13 @@ export default function AddVehicleScreen() {
   }
 
   function update(field: keyof FormState, value: string) {
+    // Any edit invalidates an earlier lookup: archived-match popup, duplicate
+    // error target and saved/restore state all belong to the old values.
     setArchivedMatch(null);
+    setSavedId(null);
+    setError(null);
+    setPhotoFailed(false);
+    if (field === "registrationNumber") currentPlate.current = normalizePlate(value);
     setForm((prev: FormState) => ({ ...prev, [field]: value }));
   }
 
@@ -82,12 +98,38 @@ export default function AddVehicleScreen() {
     setFieldErrors((f) => ({ ...f, [key]: msg }));
   }
 
+  function isStale(seq: number, plate: string) {
+    return seq !== submitSeq.current || currentPlate.current !== plate;
+  }
+
+  /**
+   * The restore popup is only offered for a record we re-read and verified:
+   * it must be an ARCHIVED vehicle, owned by this customer, in this tenant,
+   * with exactly the submitted normalised plate. Make/model/colour/year never
+   * trigger it. Returns the verified document, or null when the record does
+   * not check out (never offer restore from an unchecked payload).
+   */
+  async function verifyArchivedMatch(vehicleId: string, plate: string, uid: string, tenantId: string): Promise<Vehicle | null> {
+    try {
+      const snap = await getDoc(doc(db, COLLECTIONS.vehicles(), vehicleId));
+      if (!snap.exists()) return null;
+      const v = { ...snap.data(), id: snap.id } as Vehicle;
+      if (v.ownerId !== uid) return null;
+      if (v.tenantId !== tenantId) return null;
+      if (!v.deletedAt) return null;
+      if (normalizePlate(v.registrationNumber ?? "") !== plate) return null;
+      return v;
+    } catch {
+      return null;
+    }
+  }
+
   async function retryPhoto() {
     if (!savedId || !photo) return;
     setLoading(true);
     try {
       await uploadVehiclePhoto(savedId, photo.blob, photo.contentType);
-      router.back();
+      router.replace(GARAGE_ROUTE);
     } catch {
       setError("The photo still could not be uploaded. Try again, or tap Done to continue without it.");
     } finally {
@@ -99,6 +141,8 @@ export default function AddVehicleScreen() {
     if (loading || savedId) return;
     const yearNum = parseInt(form.year, 10);
     const plate = normalizePlate(form.registrationNumber);
+    currentPlate.current = plate;
+    const seq = ++submitSeq.current;
     const fe = validate(form);
     setFieldErrors(fe);
     if (Object.keys(fe).length > 0) {
@@ -110,10 +154,23 @@ export default function AddVehicleScreen() {
     setError(null);
     try {
       if (auth.status === "ready") {
-        const existing = await findVehicleWithPlate(auth.user.uid, auth.claims.tenantId, plate);
+        const uid = auth.user.uid;
+        const tenantId = auth.claims.tenantId;
+        const existing = await findVehicleWithPlate(uid, tenantId, plate);
+        if (isStale(seq, plate)) return;
         if (existing) {
-          if (existing.deletedAt) setArchivedMatch({ vehicleId: existing.id, label: `${existing.registrationNumber} - ${existing.make} ${existing.model}` });
-          else { setFieldErrors({ registrationNumber: "This car is already in your garage." }); setSavedId(existing.id); }
+          if (existing.deletedAt) {
+            const verified = await verifyArchivedMatch(existing.id, plate, uid, tenantId);
+            if (isStale(seq, plate)) return;
+            if (verified) {
+              setArchivedMatch({ vehicleId: verified.id, label: `${verified.registrationNumber} - ${verified.make} ${verified.model}` });
+            } else {
+              setError("We could not verify the car we have on file. Please try again.");
+            }
+            return;
+          }
+          setFieldErrors({ registrationNumber: "This car is already in your garage." });
+          setSavedId(existing.id);
           return;
         }
       }
@@ -124,19 +181,22 @@ export default function AddVehicleScreen() {
         year: yearNum,
         color: form.color.trim(),
       });
+      if (isStale(seq, plate)) return;
       setSavedId(vehicle.id);
       if (photo) {
         try {
           await uploadVehiclePhoto(vehicle.id, photo.blob, photo.contentType);
         } catch {
+          if (isStale(seq, plate)) return;
           // Stay on this screen so the message is actually seen.
           setPhotoFailed(true);
           setError("Your car is saved, but the photo could not be uploaded. Try again, or tap Done to continue without it.");
           return;
         }
       }
-      router.back();
+      router.replace(GARAGE_ROUTE);
     } catch (err) {
+      if (isStale(seq, plate)) return;
       const code = (err as { code?: string })?.code ?? "";
       const msg = err instanceof Error ? err.message : "";
       console.warn("add car failed", code, msg);
@@ -151,9 +211,17 @@ export default function AddVehicleScreen() {
         setFieldErrors({ [fieldHint]: /already-exists/.test(code) ? "This car is already added." : "Check this field." });
         return;
       }
-      const details = (err as { details?: { vehicleId?: string; make?: string; model?: string; year?: number; color?: string; registrationNumber?: string } }).details;
-      if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId && details.registrationNumber && normalizePlate(details.registrationNumber) === plate) {
-        setArchivedMatch({ vehicleId: details.vehicleId, label: [details.registrationNumber ?? plate, details.make, details.model, details.year, details.color].filter(Boolean).join(" ") });
+      const details = (err as { details?: { vehicleId?: string } }).details;
+      if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
+        if (auth.status === "ready") {
+          const verified = await verifyArchivedMatch(details.vehicleId, plate, auth.user.uid, auth.claims.tenantId);
+          if (isStale(seq, plate)) return;
+          if (verified) {
+            setArchivedMatch({ vehicleId: verified.id, label: `${verified.registrationNumber} - ${verified.make} ${verified.model}` });
+            return;
+          }
+        }
+        setError("We could not verify the car we have on file. Please try again.");
         return;
       }
       if (/already-exists/.test(code)) {
@@ -168,7 +236,34 @@ export default function AddVehicleScreen() {
         : "We could not add this car. Check the details and try again.",
       );
     } finally {
-      setLoading(false);
+      if (!isStale(seq, plate)) setLoading(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (!archivedMatch || loading || auth.status !== "ready") return;
+    const seq = ++submitSeq.current;
+    const plate = normalizePlate(form.registrationNumber);
+    setLoading(true);
+    try {
+      // Re-verify immediately before restoring: the record must still be an
+      // archived car owned by this customer with this exact plate.
+      const verified = await verifyArchivedMatch(archivedMatch.vehicleId, plate, auth.user.uid, auth.claims.tenantId);
+      if (isStale(seq, plate)) return;
+      if (!verified) {
+        setArchivedMatch(null);
+        setError("We could not verify the car we have on file. Please try again.");
+        return;
+      }
+      await restoreVehicle(verified.id);
+      if (isStale(seq, plate)) return;
+      router.replace(GARAGE_ROUTE);
+    } catch {
+      if (isStale(seq, plate)) return;
+      setArchivedMatch(null);
+      setError("We could not restore this car. Please try again.");
+    } finally {
+      if (!isStale(seq, plate)) setLoading(false);
     }
   }
 
@@ -214,7 +309,7 @@ export default function AddVehicleScreen() {
             body={`Is it the same car${archivedMatch.label ? ` (${archivedMatch.label})` : ""}? If yes, we bring it back with its details. This registration is already saved. Restore it instead of creating another car.`}
             action={
               <View style={{ gap: space.breath }}>
-                <Button label="Yes, same car" busy={loading} onPress={() => void (async () => { setLoading(true); try { await restoreVehicle(archivedMatch.vehicleId); router.replace(`/(tabs)/garage/${archivedMatch.vehicleId}`); } catch { setArchivedMatch(null); setError("We could not restore this car. Please try again."); } finally { setLoading(false); } })()} />
+                <Button label="Yes, same car" busy={loading} onPress={() => void handleRestore()} />
                 <Button label="Edit registration number" kind="quiet" onPress={() => setArchivedMatch(null)} />
               </View>
             }
@@ -223,7 +318,7 @@ export default function AddVehicleScreen() {
 
         {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}
 
-        {savedId && !photoFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.back()} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
+        {savedId && !photoFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.replace(GARAGE_ROUTE)} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

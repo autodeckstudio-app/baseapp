@@ -11,6 +11,10 @@ export interface PickupRequestRow {
   kind: "pickup" | "drop" | "both";
   address: string;
   preferredTime: string;
+  requestedPickupTime?: string;
+  requestedDropTime?: string;
+  agreedPickupAt?: string | null;
+  agreedDropAt?: string | null;
   status: "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED";
   staffNote: string;
   createdAt: string;
@@ -21,6 +25,17 @@ export async function listPickupRequests(tenantId: string): Promise<PickupReques
   return snap.docs.map((d) => d.data() as PickupRequestRow).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function setPickupStatus(requestId: string, status: PickupRequestRow["status"], staffNote: string): Promise<void> {
-  await httpsCallable(functions, "updatePickupRequest")({ requestId, status, ...(staffNote.trim() ? { staffNote: staffNote.trim() } : {}) });
+export async function setPickupStatus(
+  requestId: string,
+  status: PickupRequestRow["status"],
+  staffNote: string,
+  agreed: { agreedPickupAt?: string; agreedDropAt?: string } = {},
+): Promise<void> {
+  await httpsCallable(functions, "updatePickupRequest")({
+    requestId,
+    status,
+    ...(staffNote.trim() ? { staffNote: staffNote.trim() } : {}),
+    ...(agreed.agreedPickupAt?.trim() ? { agreedPickupAt: agreed.agreedPickupAt.trim() } : {}),
+    ...(agreed.agreedDropAt?.trim() ? { agreedDropAt: agreed.agreedDropAt.trim() } : {}),
+  });
 }

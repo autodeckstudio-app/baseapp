@@ -97,6 +97,7 @@ export default function AccountScreen() {
         <Row icon="plus" label="New walk-in" hint="Add a car that just arrived" onPress={() => router.push("/(tabs)/walkin")} />
         <Row icon="wrench" label="Bay board" onPress={() => router.push("/(tabs)/bays")} />
         <Row icon="pin" label="Pickup requests" hint="Customers asking for pickup or drop" onPress={() => router.push("/(tabs)/pickups")} />
+        <Row icon="check" label="Memberships" hint="Approve payments and sell plans" onPress={() => router.push("/(tabs)/memberships")} />
         <Row icon="calendar" label="Calendar" onPress={() => router.push("/(tabs)/calendar")} />
         <Row icon="search" label="Lookup" hint="Find a customer or car" onPress={() => router.push("/(tabs)/lookup")} last />
       </Section>

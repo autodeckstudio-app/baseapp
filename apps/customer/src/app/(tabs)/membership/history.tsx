@@ -1,37 +1,44 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { View } from "react-native";
 import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Chip, Button, Kicker, Loading, Notice, Pane, Row, Screen } from "../../../ui/kit";
-import { getMyMemberships } from "../../../lib/membership-service";
+import { listenToMyMemberships } from "../../../lib/home-service";
+import { useAuth } from "../../../hooks/useAuth";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function MembershipHistoryScreen() {
+  const auth = useAuth();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setMemberships(await getMyMemberships());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load membership history.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!uid || !tenantId) return;
+    setLoading(true);
+    setError(null);
+    return listenToMyMemberships(
+      tenantId,
+      uid,
+      (rows) => {
+        setMemberships([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+        setLoading(false);
+      },
+      (e) => {
+        setError(e.message);
+        setLoading(false);
+      },
+    );
+  }, [uid, tenantId]);
 
   if (loading) return <Loading label="Opening history" />;
-  if (error) return <Screen><Notice title="Could not load history" body={error} action={<Button label="Retry" onPress={()=>void load()}/>} /></Screen>;
+  if (error) return <Screen><Notice title="Could not load history" body={error} /></Screen>;
 
   return (
     <Screen
@@ -49,7 +56,11 @@ export default function MembershipHistoryScreen() {
             <Row
               key={m.id}
               title={m.tier}
-              detail={`${m.startDate ? formatDate(m.startDate) : "Not started"}${m.endDate ? ` - ${formatDate(m.endDate)}` : ""}`}
+              detail={
+                m.status === "cancelled"
+                  ? `Cancelled${m.cancellationReason === "pending_payment_expired" ? " - payment not completed in time" : ""} - requested ${formatDate(m.createdAt)}`
+                  : `${m.startDate ? formatDate(m.startDate) : "Not started"}${m.endDate ? ` - ${formatDate(m.endDate)}` : ""}`
+              }
               trailing={<Chip label={m.status} tone={m.status === "active" ? "premium" : "neutral"} />}
               last={i === memberships.length - 1}
             />

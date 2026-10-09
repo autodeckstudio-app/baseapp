@@ -1,4 +1,4 @@
-// Garage: one lead car with its state, the rest compact (spec §6.4).
+// Garage: one lead car with its state, the rest compact (spec Â§6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
@@ -23,15 +23,20 @@ export default function GarageScreen() {
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
+  // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
   useEffect(() => {
-    if (auth.status !== "ready") return;
-    return listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
-  }, [auth.status]);
+    if (!uid || !tenantId) return;
+    return listenToMyVehicles(uid, tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
+  }, [uid, tenantId, retryTick]);
 
   // Watchdog: if the vehicles stream never delivers (no data, no error),
   // show the connection notice instead of spinning forever.
   useEffect(() => {
     if (auth.status !== "ready") return;
+    if (vehicles !== null) return;
     const t = setTimeout(() => {
       setVehicles((v) => {
         if (v !== null) return v;
@@ -40,7 +45,7 @@ export default function GarageScreen() {
       });
     }, 8000);
     return () => clearTimeout(t);
-  }, [auth.status]);
+  }, [auth.status, retryTick, vehicles]);
 
   if (!vehicles && !error) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
@@ -67,7 +72,7 @@ export default function GarageScreen() {
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Garage</Kicker><T role="title">Your cars</T></View>}>
-      {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." /> : null}
+      {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice
           title={`Remove ${removing.registrationNumber} from your garage?`}

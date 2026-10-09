@@ -4,34 +4,59 @@ import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, HeroImage, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
-import { getMembershipPlans, getMyMemberships } from "../../../lib/membership-service";
+import { getMembershipPlans } from "../../../lib/membership-service";
+import { listenToMyMemberships } from "../../../lib/home-service";
+import { useAuth } from "../../../hooks/useAuth";
 import { sceneImagery } from "../../../lib/imagery";
 
 export default function MembershipScreen() {
   const router = useRouter();
+  const auth = useAuth();
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [current, setCurrent] = useState<Membership | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [membershipsLoading, setMembershipsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
+
+  const loadPlans = useCallback(async () => {
+    setPlansLoading(true);
     setError(null);
     try {
-      const [plansData, memberships] = await Promise.all([getMembershipPlans(), getMyMemberships()]);
-      setPlans(plansData);
-      setCurrent(memberships.find((m) => m.status === "active" || m.status === "pending") ?? null);
+      setPlans(await getMembershipPlans());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load membership plans.");
     } finally {
-      setLoading(false);
+      setPlansLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadPlans();
+  }, [loadPlans]);
 
+  // Live membership status: approvals, payment activation, cancellation and
+  // expiry appear here without a reload.
+  useEffect(() => {
+    if (!uid || !tenantId) return;
+    setMembershipsLoading(true);
+    return listenToMyMemberships(
+      tenantId,
+      uid,
+      (memberships) => {
+        setCurrent(memberships.find((m) => m.status === "active" || m.status === "pending") ?? null);
+        setMembershipsLoading(false);
+      },
+      (e) => {
+        setError(e.message);
+        setMembershipsLoading(false);
+      },
+    );
+  }, [uid, tenantId]);
+
+  const loading = plansLoading || membershipsLoading;
   if (loading) return <Loading label="Opening membership" />;
   if (error) {
     return (
@@ -39,7 +64,7 @@ export default function MembershipScreen() {
         <Notice
           title="Could not load membership"
           body={error}
-          action={<Button kind="quiet" label="Retry" onPress={()=>void load()}/>}
+          action={<Button kind="quiet" label="Retry" onPress={()=>void loadPlans()}/>}
         />
       </Screen>
     );
@@ -68,7 +93,7 @@ export default function MembershipScreen() {
         <Pane pad="gap" fill="cool" tone="premium">
           <Row
             title={current.tier}
-            detail="Your membership"
+            detail={current.status === "pending" ? "Payment pending - benefits locked" : "Your membership"}
             trailing={<Chip label={current.status} tone={current.status === "active" ? "premium" : "neutral"} />}
             onPress={() => router.push("/(tabs)/membership/current")}
             last

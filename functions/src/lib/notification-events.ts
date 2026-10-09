@@ -1,8 +1,8 @@
 // Maps an AuditLog entry to a customer-facing Notification, or null if the
 // action has no customer notification (Phase 2C architecture: AuditLog is
-// the sole authoritative event source — no second event bus, no invented
+// the sole authoritative event source â no second event bus, no invented
 // AuditActions). Reads the referenced entity to resolve the recipient
-// (customerId) and to build a concise, human-readable title/body — the
+// (customerId) and to build a concise, human-readable title/body â the
 // AuditLog payload alone does not reliably carry the recipient or display
 // context needed for a notification.
 //
@@ -52,7 +52,37 @@ function formatDateIST(iso: string): string {
 }
 
 function formatPaise(paise: number): string {
-  return `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
+  return `â¹${Math.round(paise / 100).toLocaleString("en-IN")}`;
+}
+
+
+/** "Sat, 11 Oct at 4:30 pm" in the studio's configured timezone. */
+function formatDateTimeTz(iso: string, timeZone: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-IN", { timeZone, weekday: "short", day: "numeric", month: "short" });
+  const time = d.toLocaleTimeString("en-IN", { timeZone, hour: "2-digit", minute: "2-digit", hour12: true });
+  return `${date} at ${time}`;
+}
+
+async function studioTimezone(db: Firestore, studioId: string): Promise<string> {
+  try {
+    const snap = await db.collection(COLLECTIONS.studioConfig()).doc(studioId).get();
+    const tz = (snap.data() as { timezone?: string } | undefined)?.timezone;
+    return tz || "Asia/Kolkata";
+  } catch {
+    return "Asia/Kolkata";
+  }
+}
+
+interface PickupRequestForNotification {
+  bookingId: string;
+  customerId: string;
+  studioId: string;
+  kind: "pickup" | "drop" | "both";
+  status: string;
+  staffNote: string;
+  agreedPickupAt: string | null;
+  agreedDropAt: string | null;
 }
 
 async function vehicleLabel(db: Firestore, vehicleId: string): Promise<string> {
@@ -215,7 +245,7 @@ export async function buildNotification(
         userId: invoice.customerId,
         type: "invoice_issued",
         title: "Invoice ready",
-        body: `Invoice ${invoice.invoiceNumber} is ready — ${formatPaise(invoice.total)} total.`,
+        body: `Invoice ${invoice.invoiceNumber} is ready â ${formatPaise(invoice.total)} total.`,
         entityType: "Invoice",
         entityId: invoice.id,
       };
@@ -294,6 +324,45 @@ export async function buildNotification(
         body: `You declined ${approval.serviceName}. Original work continues as planned.`,
         entityType: "Approval",
         entityId: approval.id,
+      };
+    }
+
+    case "pickup.updated": {
+      const req = (await db.collection(COLLECTIONS.pickupRequests()).doc(log.entityId).get()).data() as
+        | PickupRequestForNotification
+        | undefined;
+      if (!req) return null;
+      const next = (log.after?.["status"] as string | undefined) ?? req.status;
+      if (next !== "CONFIRMED" && next !== "DECLINED") return null;
+
+      const tz = await studioTimezone(db, req.studioId);
+      const wantsPickup = req.kind === "pickup" || req.kind === "both";
+      const wantsDrop = req.kind === "drop" || req.kind === "both";
+      const pickupAt = req.agreedPickupAt ? formatDateTimeTz(req.agreedPickupAt, tz) : null;
+      const dropAt = req.agreedDropAt ? formatDateTimeTz(req.agreedDropAt, tz) : null;
+
+      if (next === "CONFIRMED") {
+        const parts: string[] = [];
+        if (wantsPickup) parts.push(pickupAt ? `Your pickup is confirmed for ${pickupAt}.` : "Your pickup is confirmed.");
+        if (wantsDrop) parts.push(dropAt ? `Your dropoff is confirmed for ${dropAt}.` : "Your dropoff is confirmed.");
+        return {
+          userId: req.customerId,
+          type: "pickup_confirmed",
+          title: wantsPickup && wantsDrop ? "Pickup and dropoff confirmed" : wantsPickup ? "Pickup confirmed" : "Dropoff confirmed",
+          body: parts.join(" "),
+          entityType: "Booking",
+          entityId: req.bookingId,
+        };
+      }
+
+      const what = wantsPickup && wantsDrop ? "pickup and dropoff" : wantsPickup ? "pickup" : "dropoff";
+      return {
+        userId: req.customerId,
+        type: "pickup_declined",
+        title: "Pickup request not confirmed",
+        body: `Your ${what} request was not confirmed.${req.staffNote ? ` Reason: ${req.staffNote}` : ""}`,
+        entityType: "Booking",
+        entityId: req.bookingId,
       };
     }
 
