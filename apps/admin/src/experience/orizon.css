@@ -4,12 +4,12 @@
  * the section pills and every card float on top of it as frosted glass.
  * Hero headline is oversized and sits on the photo. Orange stays #EC8638.
  */
-.ax-shell { position: relative; isolation: isolate; }
+.ax-ambient-root:has(.ax-shell-frame) { position: relative; isolation: isolate; }
 .ax-shell .ax-ambient { display: none; }
 .ax-herobg { display: none !important; }
 
 /* The photo frame: fixed so it never repaints on scroll. */
-.ax-shell::before {
+.ax-ambient-root:has(.ax-shell-frame)::before {
   content: ""; position: fixed; z-index: -1; inset: 12px;
   border-radius: 44px; pointer-events: none;
   border: 2px solid rgba(255,255,255,.92);
@@ -18,19 +18,19 @@
     linear-gradient(180deg, rgba(251,247,241,.38) 0%, rgba(251,247,241,.66) 46%, rgba(251,247,241,.86) 100%),
     url("/hero-studio.jpg") center 38% / cover no-repeat;
 }
-.ax-shell:has(.ax-shell-frame[data-hero="on"])::before {
+.ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::before {
   background:
     linear-gradient(180deg, rgba(20,16,12,.10) 0%, rgba(251,247,241,.10) 30%, rgba(251,247,241,.70) 72%, rgba(251,247,241,.88) 100%),
     url("/hero-studio.jpg") center 36% / cover no-repeat;
 }
-html[data-theme="night"] .ax-shell::before {
+html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame)::before {
   border-color: rgba(255,255,255,.22);
   box-shadow: 0 40px 90px -30px rgba(0,0,0,.8);
   background:
     linear-gradient(180deg, rgba(40,40,38,.50) 0%, rgba(52,52,49,.74) 50%, rgba(62,62,59,.90) 100%),
     url("/hero-studio.jpg") center 38% / cover no-repeat;
 }
-html[data-theme="night"] .ax-shell:has(.ax-shell-frame[data-hero="on"])::before {
+html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::before {
   background:
     linear-gradient(180deg, rgba(20,20,18,.12) 0%, rgba(40,40,38,.20) 30%, rgba(52,52,49,.72) 72%, rgba(60,60,57,.90) 100%),
     url("/hero-studio.jpg") center 36% / cover no-repeat;
@@ -86,7 +86,7 @@ html[data-theme="night"] .ax-shell-frame[data-hero="on"] .ax-hero-side { backgro
 
 /* Phone: frame nearly edge to edge, rounded like a device. */
 @media (max-width: 860px) {
-  .ax-shell::before { inset: 6px; border-radius: 32px; }
+  .ax-ambient-root:has(.ax-shell-frame)::before { inset: 6px; border-radius: 32px; }
   .ax-main { padding-left: 14px; padding-right: 14px; }
   .ax-shell-frame[data-hero="on"] .ax-page-head { min-height: 230px; }
   .ax-shell-frame[data-hero="on"] .ax-page-head h1 { font-size: clamp(44px, 15vw, 72px); letter-spacing: -2px; overflow-wrap: anywhere; }
