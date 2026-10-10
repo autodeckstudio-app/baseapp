@@ -647,3 +647,5 @@
 .ax-cust-facts p { margin: 4px 0 0; font-size: 14px; overflow-wrap: anywhere; }
 .ax-cust-facts a { color: var(--ad-accent-strong, #9C4108); }
 .ax-linkbtn { background: none; border: 0; padding: 0; min-height: 0; color: var(--ad-accent-strong, #9C4108); font: inherit; text-decoration: underline; cursor: pointer; }
+.ax-shell .ax-check { display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
+.ax-shell .ax-check input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; flex: none; padding: 0; margin: 0; }

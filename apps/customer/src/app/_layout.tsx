@@ -11,7 +11,7 @@ import { T } from "../ui/kit";
 installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;
-if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#0B0B0D";
+if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#ECEBF8";
 
 // Any signed-in account may use the customer app. Staff access stays additive.
 function NavigationGuard({ children }: { children: React.ReactNode }) {
@@ -73,10 +73,10 @@ function PushBridge() {
 
 export default function RootLayout() {
   return (
-    <ExperienceThemeProvider name="charcoal">
-      <StatusBar style="light" />
+    <ExperienceThemeProvider name="light">
+      <StatusBar style="dark" />
       <NavigationGuard>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0B0B0D" } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#ECEBF8" } }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>

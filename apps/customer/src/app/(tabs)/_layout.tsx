@@ -13,7 +13,7 @@ export default function TabsLayout() {
   return (
     <View style={{ flex: 1 }}>
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor="#F59A45" inactiveColor="#C9C9CE" floating dark resetOnPress />}
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor="#C2540A" inactiveColor="#625D70" floating resetOnPress />}
       screenOptions={() => ({
         headerShown: false,
         sceneStyle: { backgroundColor: colors.canvas },

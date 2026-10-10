@@ -11,9 +11,9 @@
 import type { ImageSourcePropType } from "react-native";
 import type { ServiceCategory, VehicleCategory } from "@autodeck/core";
 
-import heroHome from "../../assets/imagery/stock/x-black-sunlight.jpg";
+import heroHome from "../../assets/imagery/stock/x-polish-red.jpg";
 import loginHero from "../../assets/imagery/studio-login.jpg";
-import heroAlt from "../../assets/imagery/stock/x-black-sunlight.jpg";
+import heroAlt from "../../assets/imagery/stock/x-polish-red.jpg";
 import membership from "../../assets/imagery/stock/x-white-garage.jpg";
 import serviceWashing from "../../assets/imagery/stock/x-white-garage.jpg";
 import serviceCeramic from "../../assets/imagery/curated/coating.jpg";
@@ -22,7 +22,7 @@ import servicePpf from "../../assets/imagery/stock/ppf-install.jpg";
 import serviceTinting from "../../assets/imagery/stock/tint-install.jpg";
 import serviceInspection from "../../assets/imagery/stock/x-underbody-b.jpg";
 import serviceOther from "../../assets/imagery/curated/care.jpg";
-import vehicleSedan from "../../assets/imagery/stock/x-black-sunlight.jpg";
+import vehicleSedan from "../../assets/imagery/stock/x-polish-red.jpg";
 
 /** One photograph per service category, shown on catalogue cards and detail heroes. */
 export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
