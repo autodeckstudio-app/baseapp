@@ -11,13 +11,14 @@ import { db } from "../../../lib/firebase";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { Button, Loading, Notice, Screen, T, rupees } from "../../../ui/kit";
 import { amountInWords } from "../../../lib/amount-words";
+import { HorizonInvoice } from "../../../ui/HorizonInvoice";
 
 // Ivory invoice palette: off-white paper, one orange accent, thin separators.
-const IVORY = "#FAF6EE";
-const INK = "#20190F";
-const INK_SOFT = "#6B6252";
-const ACCENT = "#D96C1F";
-const HAIRLINE = "#E3DACA";
+const IVORY = "#121413";
+const INK = "#f3f1eb";
+const INK_SOFT = "#aaada5";
+const ACCENT = "#EC8638";
+const HAIRLINE = "#333731";
 
 
 function formatDate(iso: string): string {
@@ -59,18 +60,17 @@ export default function InvoiceScreen() {
     return () => { alive = false; };
   }, []);
 
-  // Bill-to details come from the stored customer and vehicle records.
+  // Immutable invoice snapshots win. Reset between invoices and reject stale reads.
   useEffect(() => {
-    if (!invoice) return;
-    const snapshots=invoice as unknown as {customerSnapshot?:Customer;vehicleSnapshot?:Vehicle};
-    if(snapshots.customerSnapshot)setCustomer(snapshots.customerSnapshot);
-    if(snapshots.vehicleSnapshot)setVehicle(snapshots.vehicleSnapshot);
-    void getDoc(doc(db, COLLECTIONS.customers(), invoice.customerId))
-      .then((s) => { if (s.exists() && !snapshots.customerSnapshot) setCustomer(s.data() as Customer); })
-      .catch(() => undefined);
-    void getDoc(doc(db, COLLECTIONS.vehicles(), invoice.vehicleId))
-      .then((s) => { if (s.exists() && !snapshots.vehicleSnapshot) setVehicle(s.data() as Vehicle); })
-      .catch(() => undefined);
+    let alive = true;
+    setCustomer(null); setVehicle(null);
+    if (!invoice) return () => { alive = false; };
+    const snapshots = invoice as unknown as { customerSnapshot?: Customer; vehicleSnapshot?: Vehicle };
+    setCustomer(snapshots.customerSnapshot ?? null);
+    setVehicle(snapshots.vehicleSnapshot ?? null);
+    if (!snapshots.customerSnapshot) void getDoc(doc(db, COLLECTIONS.customers(), invoice.customerId)).then((s) => { if (alive && s.exists()) setCustomer(s.data() as Customer); }).catch(() => undefined);
+    if (!snapshots.vehicleSnapshot) void getDoc(doc(db, COLLECTIONS.vehicles(), invoice.vehicleId)).then((s) => { if (alive && s.exists()) setVehicle(s.data() as Vehicle); }).catch(() => undefined);
+    return () => { alive = false; };
   }, [invoice]);
 
   if (loading) return <Loading label="Opening the invoice" />;
@@ -89,6 +89,15 @@ export default function InvoiceScreen() {
 
   const { split: gstSplitOn, cgst, sgst } = gstSplit(invoice);
   const statusLabel = invoice.status === "void" ? "Void" : invoice.status === "paid" ? "Paid" : "Issued";
+
+  const docInput = { invoice, catalogue, studio: { name: STUDIO_INFO.name, address: STUDIO_INFO.address, phone: STUDIO_INFO.phone }, customer, vehicle };
+  if (Platform.OS === "web") return (
+    <Screen>
+      <HorizonInvoice html={buildInvoiceHtml({ ...docInput, appearance: "screen" })} />
+      <Button label="Download or print PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
+      <Button label="Go back" kind="quiet" onPress={() => router.back()} />
+    </Screen>
+  );
 
   return (
     <Screen>
@@ -193,9 +202,6 @@ export default function InvoiceScreen() {
         ) : null}
       </View>
 
-      {Platform.OS === "web" ? (
-        <Button label="Download or print PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml({ invoice, catalogue, studio: { name: STUDIO_INFO.name, address: STUDIO_INFO.address, phone: STUDIO_INFO.phone }, customer, vehicle }))} />
-      ) : null}
       <Button label="Go back" kind="quiet" onPress={() => router.back()} />
     </Screen>
   );

@@ -47,3 +47,26 @@ describe("buildInvoiceHtml", () => {
     expect((html.match(/<tr>/g) ?? []).length).toBe(41);
   });
 });
+
+describe("Horizon document", () => {
+  const invoice = { invoiceNumber: "INV-2026-00002", issuedAt: "2026-10-10T10:00:00Z", status: "void", lineItems: [li("Service svc-wash")], subtotal: 1200000, discount: 0, taxRatePercent: 18, taxDescription: "GST 18%", tax: 216000, total: 1416000, voidedReason: "Cancelled <script>", customerSnapshot: { name: "Stored customer" }, vehicleSnapshot: { make: "Stored make", model: "Stored model", registrationNumber: "GJ01AA0001" } } as unknown as Invoice;
+  it("uses immutable snapshots, original money and real app QR", () => {
+    const html = buildInvoiceHtml({ invoice, catalogue: cat, studio: { name: "AutoDeck", address: "Studio" }, customer: { name: "Changed name" } });
+    expect(html).toContain("Stored customer");
+    expect(html).not.toContain("Changed name");
+    expect(html).toContain("Stored make");
+    expect(html).toContain("₹14,160.00");
+    expect(html).toContain('href="https://app.autodeck.in"');
+    expect(html).toContain("QR code for app.autodeck.in");
+    expect(html).not.toContain("placeholder");
+    expect(html).toContain("Cancelled &lt;script&gt;");
+  });
+  it("shares the same data and architecture between screen and print", () => {
+    const input = { invoice, catalogue: cat, studio: { name: "AutoDeck", address: "Studio" } };
+    const screen = buildInvoiceHtml({ ...input, appearance: "screen" });
+    const print = buildInvoiceHtml(input);
+    expect(screen).toContain('body class="screen"');
+    expect(print).toContain('body class="print"');
+    for (const html of [screen, print]) { expect(html).toContain("Signature Wash"); expect(html).toContain("₹14,160.00"); expect(html).not.toMatch(/[\u2013\u2014]/); }
+  });
+});

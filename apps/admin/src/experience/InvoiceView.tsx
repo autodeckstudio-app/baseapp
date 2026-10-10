@@ -3,8 +3,9 @@
 // Invoice: reads like the document the customer receives, with payment and
 // actions beside it. Printing hides the chrome and prints just the document.
 import { LOGO_HORIZONTAL_SVG, logoDataUri } from "@autodeck/ui/theme";
-import { useState } from "react";
-import type { Customer, Invoice, Payment, Vehicle } from "@autodeck/core";
+import { useEffect, useState } from "react";
+import { invoiceServiceLabel, type Customer, type Invoice, type Payment, type Vehicle } from "@autodeck/core";
+import { getServicesIncludingHidden } from "../lib/catalogue-service";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatDateTime, formatPaise } from "../lib/format";
 import { methodLabel } from "../lib/status-label";
@@ -22,6 +23,15 @@ export function InvoiceView(p: {
   onOpen: (href: string) => void;
 }) {
   const inv = p.invoice;
+  const [catalogue, setCatalogue] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let alive = true;
+    void getServicesIncludingHidden().then((services) => { if (alive) setCatalogue(Object.fromEntries(services.map((s) => [s.id, s.name]))); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
+  const snapshots = inv as unknown as { customerSnapshot?: Customer; vehicleSnapshot?: Vehicle };
+  const customer = snapshots.customerSnapshot ?? p.customer;
+  const vehicle = snapshots.vehicleSnapshot ?? p.vehicle;
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -43,14 +53,14 @@ export function InvoiceView(p: {
             </div>
           </header>
           <div className="ax-invoice-meta">
-            <div><span className="ax-label">Billed to</span><p>{p.customer?.name ?? "Customer"}</p><span className="ax-sub">{p.customer?.phone}</span></div>
-            <div><span className="ax-label">Car</span><p className="ax-data">{p.vehicle?.registrationNumber ?? "-"}</p><span className="ax-sub">{[p.vehicle?.make, p.vehicle?.model].filter(Boolean).join(" ")}</span></div>
+            <div><span className="ax-label">Billed to</span><p>{customer?.name ?? "Customer"}</p><span className="ax-sub">{customer?.phone}</span></div>
+            <div><span className="ax-label">Car</span><p className="ax-data">{vehicle?.registrationNumber ?? "-"}</p><span className="ax-sub">{[vehicle?.make, vehicle?.model].filter(Boolean).join(" ")}</span></div>
             <div><span className="ax-label">Issued</span><p>{formatDateTime(inv.issuedAt)}</p></div>
           </div>
           <div className="ax-invoice-lines" role="table">
             <div className="ax-invoice-line is-head" role="row"><span>Item</span><span>Qty</span><span>Rate</span><span>Amount</span></div>
             {inv.lineItems.map((li, i) => (
-              <div key={i} className="ax-invoice-line" role="row"><span>{li.description}</span><span>{li.quantity}</span><span className="ax-data">{formatPaise(li.unitPrice)}</span><span className="ax-data">{formatPaise(li.total)}</span></div>
+              <div key={i} className="ax-invoice-line" role="row"><span>{invoiceServiceLabel(li, catalogue)}</span><span>{li.quantity}</span><span className="ax-data">{formatPaise(li.unitPrice)}</span><span className="ax-data">{formatPaise(li.total)}</span></div>
             ))}
           </div>
           <div className="ax-invoice-totals">
