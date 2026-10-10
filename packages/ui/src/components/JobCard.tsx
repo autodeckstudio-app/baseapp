@@ -1,4 +1,7 @@
-import { View, Text } from "react-native";
+import { View, Text, Platform } from "react-native";
+import type { ViewStyle } from "react-native";
+import { floatCard } from "../theme/float.js";
+import { isNightPalette } from "../tokens/colors.js";
 import type { ServiceJob } from "@autodeck/core";
 import { colors } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
@@ -41,7 +44,7 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName }: JobCar
   const isOngoingFromEarlierDay = viewDate !== undefined && viewDate !== job.scheduledDate;
 
   return (
-    <Card onPress={onPress} padding="md">
+    <Card onPress={onPress} padding="md" flat style={Platform.OS === "web" ? (floatCard(isNightPalette) as unknown as ViewStyle) : undefined}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs }}>
         <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
           {job.status === "STANDBY" ? `Waiting since ${formatTime(job.standbyArrivedAt ?? job.createdAt)}` : isOngoingFromEarlierDay ? `Started ${job.scheduledDate}` : formatTime(job.scheduledAt)}

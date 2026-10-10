@@ -1,6 +1,6 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
+import { nightGroundStyle, floatCard, floatHero } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
 import { View, Text, FlatList } from "react-native";
 import { useRouter } from "expo-router";
@@ -57,23 +57,25 @@ export default function TodaysJobsScreen() {
   const longDate = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
 
   const Stat = ({ label, value }: { label: string; value: number }) => (
-    <View style={{ flex: 1, backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
       <Text style={{ fontSize: 28, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
       <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
     </View>
   );
 
   return (
+    <View style={{ flex: 1 }}>
+    {NightPlatform.OS === "web" ? <View pointerEvents="none" style={floatHero(nightMaterial, colors.background) as never} /> : null}
     <FlatList
-      style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}
-      contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
+      style={{ flex: 1, backgroundColor: "transparent" }}
+      contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
       data={activeJobs}
       keyExtractor={(j) => j.id}
       ListHeaderComponent={
         <View style={{ marginBottom: spacing.lg, gap: spacing.md }}>
           <View>
             <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Today</Text>
-            <Text style={{ fontSize: 26, fontWeight: "700", color: colors.textPrimary }}>{longDate}</Text>
+            <Text style={{ fontSize: 40, lineHeight: 44, fontWeight: "500", letterSpacing: -1.2, color: colors.textPrimary }}>{longDate}</Text>
           </View>
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             <Stat label="On the floor" value={activeJobs.length} />
@@ -89,7 +91,7 @@ export default function TodaysJobsScreen() {
         </View>
       }
       ListEmptyComponent={
-        <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+        <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(240,125,40,0.14)" }}>
             <Icon name="check" color={colors.accent} size={28} />
           </View>
@@ -104,5 +106,6 @@ export default function TodaysJobsScreen() {
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
     />
+    </View>
   );
 }

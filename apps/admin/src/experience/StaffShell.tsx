@@ -8,6 +8,7 @@ import { Icon } from "./Icon";
 import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, logoDataUri } from "@autodeck/ui/theme";
 import { Ambient } from "./Ambient";
 import "./shell.css";
+import "./float.css";
 
 export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },
@@ -60,6 +61,14 @@ const MORE_LINKS = [
 
 const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car", "/pickups": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
 
+const RAIL_ICON: Record<string, string> = {
+  "/dashboard": "home", "/bookings": "calendar", "/pickups": "pickup", "/jobs": "wrench", "/attendance": "check-in",
+  "/customers": "users", "/vehicles": "garage", "/memberships": "membership",
+  "/payments": "payments", "/invoices": "invoice", "/expenses": "check-out", "/daily-close": "check", "/reports": "inspect",
+  "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car",
+  "/staff": "profile", "/studio": "pin", "/papers": "shield", "/audit": "search",
+};
+
 const ROLE_LABEL: Record<string, string> = {
   admin: "Owner",
   studio: "Studio",
@@ -86,9 +95,12 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
       key={l.href}
       href={l.href}
       className="ax-nav-link"
+      title={l.label}
+      aria-label={l.label}
       aria-current={isActive(pathname, l.href) ? "page" : undefined}
     >
-      {l.label}
+      <Icon name={(RAIL_ICON[l.href] ?? "dot") as never} size={22} uid="-rail" />
+      <span className="ax-nav-text">{l.label}</span>
     </Link>
   );
 
@@ -118,7 +130,8 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   return (
     <div className="ax-shell">
       <Ambient>
-        <div className="ax-shell-frame">
+        <div className="ax-shell-frame" data-hero={pathname === "/dashboard" ? "on" : undefined}>
+          {pathname === "/dashboard" ? <div className="ax-herobg" aria-hidden="true" /> : null}
           <aside className="ax-side" aria-label="Main navigation">
             <Link href={home} className="ax-wordmark">
               <img className="ax-logo-full" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 30, width: "auto" }} />
@@ -131,14 +144,9 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
               </nav>
             ))}
             <div className="ax-side-foot">
-              <div className="ax-who">
-                <div>{who}</div>
-                <span className="ax-chip ax-chip--accent" style={{ marginTop: "var(--ad-space-hair)" }}>
-                  {ROLE_LABEL[role] ?? role}
-                </span>
-              </div>
-              <button type="button" className="ax-button" onClick={onSignOut}>
-                Sign out
+              <span className="ax-avatar" title={`${who} - ${ROLE_LABEL[role] ?? role}`} aria-label={`${who}, ${ROLE_LABEL[role] ?? role}`}>{(who.trim()[0] ?? "A").toUpperCase()}</span>
+              <button type="button" className="ax-button ax-rail-out" title="Sign out" aria-label="Sign out" onClick={onSignOut}>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
               </button>
             </div>
           </aside>

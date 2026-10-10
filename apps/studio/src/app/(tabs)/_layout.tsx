@@ -16,7 +16,7 @@ export default function StudioTabsLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         headerStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
         headerShadowVisible: false,
-        headerTitleStyle: { color: colors.textPrimary, fontWeight: "700" },
+        headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: 22, letterSpacing: -0.4 },
         sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
       })}
     >
