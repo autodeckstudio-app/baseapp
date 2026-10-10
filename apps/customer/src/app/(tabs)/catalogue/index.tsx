@@ -134,12 +134,12 @@ export default function CatalogueScreen() {
   const tile = (key: string, title: string, sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
     <Pressable key={key} accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ width: "100%", height: 168, borderRadius: 28, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", transform: [{ scale: pressed ? 0.985 : 1 }] })}>
       {image ? <FadeImage source={image} resizeMode="cover" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} /> : null}
-      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(90deg, rgba(5,5,6,0.88) 0%, rgba(5,5,6,0.45) 60%, rgba(5,5,6,0.1) 100%)" } as object), backgroundColor: "rgba(5,5,6,0.3)" }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 30%, rgba(5,5,6,0.78) 100%)" } as object) }} />
       <View style={{ flex: 1, justifyContent: "flex-end", padding: 18, gap: 4 }}>
         <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{title}</T>
         {sub ? <T role="caption" numberOfLines={2} style={{ color: "#D6D4D1" }}>{sub}</T> : null}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          {meta ? <View style={{ borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.5)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 3 }}><T role="caption" tone="accent" numberOfLines={1}>{meta}</T></View> : <View />}
+          {meta ? <View style={{ borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 10, paddingVertical: 3 }}><T role="caption" tone="accent" numberOfLines={1}>{meta}</T></View> : <View />}
           <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "#F59A45" }}><T style={{ color: "#1A1410" }}>›</T></View>
         </View>
       </View>
