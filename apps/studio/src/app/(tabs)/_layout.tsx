@@ -1,6 +1,6 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
+import { nightGroundStyle, nightSurfaceStyle, floatScene } from "@autodeck/ui/theme";
 import { Tabs } from "expo-router";
 import { colors, isNightPalette } from "@autodeck/ui";
 import { PillTabBar } from "@autodeck/ui/native";
@@ -18,7 +18,7 @@ export default function StudioTabsLayout() {
         headerStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: 22, letterSpacing: -0.4 },
-        sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
+        sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}) },
       })}
     >
       <Tabs.Screen

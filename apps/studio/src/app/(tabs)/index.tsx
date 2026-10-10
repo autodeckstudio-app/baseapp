@@ -57,7 +57,7 @@ export default function TodaysJobsScreen() {
   const longDate = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
 
   const Stat = ({ label, value }: { label: string; value: number }) => (
-    <View style={{ flex: 1, backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 34, paddingVertical: spacing.lg, paddingHorizontal: spacing.md }}>
       <Text style={{ fontSize: 28, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
       <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
     </View>
@@ -68,14 +68,14 @@ export default function TodaysJobsScreen() {
     {NightPlatform.OS === "web" ? <View pointerEvents="none" style={floatHero(nightMaterial, colors.background) as never} /> : null}
     <FlatList
       style={{ flex: 1, backgroundColor: "transparent" }}
-      contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
+      contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
       data={activeJobs}
       keyExtractor={(j) => j.id}
       ListHeaderComponent={
         <View style={{ marginBottom: spacing.lg, gap: spacing.md }}>
-          <View>
-            <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Today</Text>
-            <Text style={{ fontSize: 40, lineHeight: 44, fontWeight: "500", letterSpacing: -1.2, color: colors.textPrimary }}>{longDate}</Text>
+          <View style={{ minHeight: 230, justifyContent: "flex-end" }}>
+            <Text style={{ ...typography.caption, color: "rgba(255,255,255,.92)", textTransform: "uppercase", letterSpacing: 1.6, ...(NightPlatform.OS === "web" ? { textShadow: "0 1px 12px rgba(0,0,0,.5)" } : {}) } as never}>{longDate}</Text>
+            <Text style={{ fontSize: 76, lineHeight: 78, fontWeight: "500", letterSpacing: -3, color: "rgba(255,255,255,.95)", ...(NightPlatform.OS === "web" ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>Today</Text>
           </View>
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             <Stat label="On the floor" value={activeJobs.length} />

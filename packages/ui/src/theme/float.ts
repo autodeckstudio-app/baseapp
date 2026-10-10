@@ -1,7 +1,7 @@
 // Floating glass language for the studio app (web). Pure style values.
 // Cards float over a soft ground, with a fine edge, big radius and a blurred
 // translucent fill. The hero is a studio photo graded to the palette.
-export const floatRadius = 28;
+export const floatRadius = 34;
 
 export function floatCard(night: boolean) {
   return night
@@ -29,20 +29,31 @@ export function floatCard(night: boolean) {
 
 export function floatHero(night: boolean, canvas: string) {
   const wash = night
-    ? `linear-gradient(180deg, rgba(60,60,57,.34) 0%, rgba(70,70,67,.74) 55%, ${canvas} 100%)`
-    : `linear-gradient(180deg, rgba(250,246,240,.50) 0%, rgba(250,246,240,.80) 55%, ${canvas} 100%)`;
+    ? `linear-gradient(180deg, rgba(20,20,18,.10) 0%, rgba(40,40,38,.18) 34%, rgba(54,54,51,.78) 78%, ${canvas} 100%)`
+    : `linear-gradient(180deg, rgba(20,16,12,.08) 0%, rgba(251,247,241,.10) 34%, rgba(251,247,241,.76) 78%, ${canvas} 100%)`;
   return {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 460,
-    backgroundImage: `${wash}, linear-gradient(110deg, rgba(236,134,56,${night ? ".28" : ".18"}), rgba(236,134,56,0) 62%), url(/hero-studio.jpg)`,
+    height: 560,
+    backgroundImage: `${wash}, url(/hero-studio.jpg)`,
     backgroundSize: "cover",
-    backgroundPosition: "center 32%",
+    backgroundPosition: "center 34%",
     backgroundRepeat: "no-repeat",
-    WebkitMaskImage: "linear-gradient(180deg, #000 55%, transparent 100%)",
-    maskImage: "linear-gradient(180deg, #000 55%, transparent 100%)",
     pointerEvents: "none",
+  } as const;
+}
+
+// Full-bleed studio photograph behind every screen, veiled so cards read.
+export function floatScene(night: boolean) {
+  const veil = night
+    ? "linear-gradient(180deg, rgba(40,40,38,.55) 0%, rgba(52,52,49,.78) 50%, rgba(62,62,59,.92) 100%)"
+    : "linear-gradient(180deg, rgba(251,247,241,.45) 0%, rgba(251,247,241,.72) 50%, rgba(251,247,241,.90) 100%)";
+  return {
+    backgroundImage: `${veil}, url(/hero-studio.jpg)`,
+    backgroundSize: "cover",
+    backgroundPosition: "center 38%",
+    backgroundRepeat: "no-repeat",
   } as const;
 }

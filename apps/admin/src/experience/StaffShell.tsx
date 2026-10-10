@@ -9,6 +9,7 @@ import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, logoDataUri } from "@autodeck/ui/th
 import { Ambient } from "./Ambient";
 import "./shell.css";
 import "./float.css";
+import "./orizon.css";
 
 export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },
