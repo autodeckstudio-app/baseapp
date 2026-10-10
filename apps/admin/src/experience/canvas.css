@@ -141,3 +141,43 @@ html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { backgrou
 }
 @media (max-width: 860px) { .ax-shell .ax-kpis .ax-label { font-size: 9.5px; letter-spacing: .4px; overflow-wrap: anywhere; } }
 @media (max-width: 360px) { .ax-shell .ax-kpis .ax-kpi-v { font-size: 18px; } }
+
+/* Featured (solid orange) tile: white number, label and icon in both themes. */
+html .ax-shell .ax-tile--featured .ax-kpi-v,
+html .ax-shell .ax-tile--featured .ax-label,
+html[data-theme="night"] .ax-shell .ax-tile--featured .ax-kpi-v,
+html[data-theme="night"] .ax-shell .ax-tile--featured .ax-label { color: #FFFFFF !important; }
+html[data-theme="day"] .ax-shell .ax-tile--featured { background: linear-gradient(140deg, #F58A2E, #C2540A) !important; }
+
+/* Day: frosted cards get dark ink and a firmer glass so text stays readable on the photo. */
+html[data-theme="day"] .ax-shell .ax-panel,
+html[data-theme="day"] .ax-shell .ax-tile:not(.ax-tile--featured),
+html[data-theme="day"] .ax-shell .ax-col,
+html[data-theme="day"] .ax-shell .ax-card,
+html[data-theme="day"] .ax-shell .detail-card,
+html[data-theme="day"] .ax-shell .stat-tile,
+html[data-theme="day"] .ax-shell .ax-kpis {
+  --ad-text-primary: #26211C;
+  --ad-text-secondary: #4A423A;
+  --ad-text-tertiary: #6B6157;
+  background: rgba(255,255,255,.80) !important;
+  color: #26211C;
+}
+html[data-theme="day"] .ax-shell .ax-tile:not(.ax-tile--featured) .ax-kpi-v,
+html[data-theme="day"] .ax-shell .ax-panel .ax-kpi-v { color: #B8530A; }
+html[data-theme="day"] .ax-shell .ax-side,
+html[data-theme="day"] .ax-shell .ax-notch,
+html[data-theme="day"] .ax-shell .ax-hero-side {
+  --ad-text-primary: #26211C;
+  --ad-text-secondary: #4A423A;
+  --ad-text-tertiary: #6B6157;
+}
+html[data-theme="day"] .ax-shell .ax-hero-side { background: rgba(255,255,255,.80) !important; }
+html[data-theme="day"] .ax-shell .ax-hero-side .ax-label { color: #6B6157; }
+html[data-theme="day"] .ax-shell .ax-hero-side .ax-kpi-v, html[data-theme="day"] .ax-shell .ax-hero-side .ax-data { color: #26211C; }
+html[data-theme="day"] .ax-shell .ax-panel .kv > span:first-child { color: #4A423A; }
+html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data { color: #26211C; }
+html[data-theme="day"] .ax-shell .ax-nav-link, html[data-theme="day"] .ax-shell .ax-chip-link { color: #4A423A; }
+html[data-theme="day"] .ax-shell .ax-nav-link[aria-current="page"], html[data-theme="day"] .ax-shell .ax-chip-link[aria-current="page"] { color: #B8530A; }
+html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data, html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data * { color: #26211C !important; }
+html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; border-color: rgba(60,50,40,.35); background: rgba(255,255,255,.55); }

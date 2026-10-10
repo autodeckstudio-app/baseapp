@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   // Lets the built-in optimizer serve small thumbnails of listing photos.
   images: {
     remotePatterns: [
