@@ -149,3 +149,10 @@ html[data-theme="night"] .ax-shell .ax-kpis > div + div { border-left-color: rgb
   .ax-shell .ax-list-row > [data-col="joined"] { grid-column: 2; grid-row: 1; font-size: 12px; color: var(--ad-text-tertiary); }
   .ax-shell .ax-row-actions { flex-wrap: wrap; justify-content: flex-end; }
 }
+
+@media (max-width: 860px) {
+  /* Filter segments scroll as one row instead of orphaning the last option. */
+  .ax-shell .ax-seg { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; border-radius: 999px; }
+  .ax-shell .ax-seg::-webkit-scrollbar { display: none; }
+  .ax-shell .ax-seg button { flex: 0 0 auto; white-space: nowrap; }
+}
