@@ -82,7 +82,7 @@ export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) =
 
 // Called immediately after the signed upload completes. Only the owner can
 // process the server-recorded object; client expiry/plate cannot approve it.
-export const finalizeMyPaper = onCall({ region: "asia-south1", memory: "1GiB", timeoutSeconds: 120, concurrency: 1, maxInstances: 3 }, async (request) => {
+export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public", memory: "1GiB", timeoutSeconds: 120, concurrency: 1, maxInstances: 3 }, async (request) => {
   const user = extractCustomerUser(request);
   const { paperId } = validate(z.object({ paperId: z.string().min(1).max(120) }).strict(), request.data);
   await enforceRateLimit(subjectFrom(user), "paper.review");
