@@ -10,7 +10,7 @@ export function LoginStage({ title, copy, error, children }: { title: string; co
   const web = Platform.OS === "web";
   return (
     <View style={{ flex: 1, backgroundColor: "#050506", overflow: "hidden", ...(web ? ({ minHeight: "100vh" } as object) : {}) }}>
-      <KenBurns source={sceneImagery.heroHome} />
+      <KenBurns source={sceneImagery.login} />
       <View pointerEvents="none" style={{ ...Fill, ...VEIL(0.55, 0.92) }} />
       <Orb size={340} color="rgba(245,154,69,0.55)" x="55%" y="-8%" />
       <Orb size={260} color="rgba(236,134,56,0.40)" x="-18%" y="62%" dx={24} dy={30} ms={11000} />

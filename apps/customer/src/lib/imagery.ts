@@ -12,6 +12,7 @@ import type { ImageSourcePropType } from "react-native";
 import type { ServiceCategory, VehicleCategory } from "@autodeck/core";
 
 import heroHome from "../../assets/imagery/curated/car.jpg";
+import loginHero from "../../assets/imagery/studio-login.jpg";
 import heroAlt from "../../assets/imagery/curated/car.jpg";
 import membership from "../../assets/imagery/curated/wash.jpg";
 import serviceWashing from "../../assets/imagery/curated/wash.jpg";
@@ -49,6 +50,7 @@ export const sceneImagery = {
   heroHome,
   heroAlt,
   membership,
+  login: loginHero,
 } as const;
 
 // ---------------------------------------------------------------------------

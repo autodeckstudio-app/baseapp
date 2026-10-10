@@ -24,7 +24,7 @@ document.querySelectorAll('[data-scroll]').forEach((a) => {
     const el = document.querySelector(id);
     if (!el) return;
     e.preventDefault();
-    if (lenis) lenis.scrollTo(el, { offset: -20 });
+    if (lenis) lenis.scrollTo(el, { offset: -84 });
     else el.scrollIntoView({ behavior: 'smooth' });
   });
 });
