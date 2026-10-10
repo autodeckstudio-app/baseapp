@@ -32,7 +32,26 @@ export async function listLeads(): Promise<CarLead[]> {
   const fn = httpsCallable<Record<string, never>, { leads: CarLead[] }>(functions, "listCarLeads");
   return (await fn({})).data.leads;
 }
-export async function uploadListingPhoto(file: File): Promise<string> {
+// Shrinks big phone photos (max 1600px wide, JPEG) before upload so lists load fast.
+async function shrink(file: File): Promise<File> {
+  try {
+    if (!file.type.startsWith("image/") || typeof createImageBitmap !== "function") return file;
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / bmp.width);
+    if (scale === 1 && file.size < 500_000) return file;
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * scale);
+    c.height = Math.round(bmp.height * scale);
+    c.getContext("2d")?.drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.82));
+    return blob && blob.size < file.size ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
+}
+
+export async function uploadListingPhoto(original: File): Promise<string> {
+  const file = await shrink(original);
   const issue = httpsCallable<{ contentType: string }, { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }>(functions, "issueListingPhotoUploadUrl");
   const { uploadUrl, path, requiredHeaders } = (await issue({ contentType: file.type })).data;
   const put = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: file });

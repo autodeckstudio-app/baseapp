@@ -37,7 +37,7 @@ function setSessionCookie(response: NextResponse, sessionCookie: string): void {
     value: sessionCookie,
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
   });
@@ -49,7 +49,7 @@ function clearSessionCookie(response: NextResponse): void {
     value: "",
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: 0,
   });

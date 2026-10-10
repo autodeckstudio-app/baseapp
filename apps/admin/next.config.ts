@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Lets the built-in optimizer serve small thumbnails of listing photos.
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "storage.googleapis.com" },
+      { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+    ],
+  },
   // Serves Firebase's sign-in handler from this site so redirect sign-in works in Safari.
   async rewrites() {
     const host = process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"];

@@ -12,6 +12,7 @@ const STATUS: Record<string, string> = { draft: "Draft", pending: "Waiting for r
 
 type Form = { id?: string; make: string; model: string; variant: string; year: string; km: string; fuel: ListingInput["fuel"]; gearbox: ListingInput["gearbox"]; body: string; owners: string; colour: string; area: string; price: string; description: string; insurance: string; status: ListingInput["status"]; sellerName: string; sellerPhone: string; reg: string; reserve: string; notes: string; paths: string[] };
 const blank = (): Form => ({ make: "", model: "", variant: "", year: String(new Date().getFullYear() - 3), km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", insurance: "", status: "live", sellerName: "", sellerPhone: "", reg: "", reserve: "", notes: "", paths: [] });
+const thumb = (u: string): string => (/^https:\/\/(firebasestorage|storage)\.googleapis\.com\//.test(u) ? `/_next/image?url=${encodeURIComponent(u)}&w=640&q=70` : u);
 const fromListing = (l: AdminListing): Form => ({ id: l.id, make: l.make, model: l.model, variant: l.variant ?? "", year: String(l.year), km: String(l.kmDriven), fuel: l.fuel, gearbox: l.gearbox, body: l.bodyType ?? "", owners: String(l.owners), colour: l.colour, area: l.area, price: String(l.askingPrice / 100), description: l.description ?? "", insurance: l.insuranceValidTill ?? "", status: (["draft", "live", "reserved", "sold"].includes(l.status) ? l.status : "draft") as Form["status"], sellerName: l.sellerName ?? "", sellerPhone: l.sellerPhone ?? "", reg: l.registrationNumber ?? "", reserve: l.reservePrice ? String(l.reservePrice / 100) : "", notes: l.adminNotes ?? "", paths: l.photoPaths });
 
 export function CarsView(p: {
@@ -48,7 +49,7 @@ export function CarsView(p: {
   const row = (l: AdminListing, review: boolean) => (
     <li key={l.id} className="ax-car">
       <div className="ax-car-img">
-        {l.photoUrls[0] ? <img src={l.photoUrls[0]} alt="" loading="lazy" /> : null}
+        {l.photoUrls[0] ? <img src={thumb(l.photoUrls[0])} alt="" loading="lazy" decoding="async" /> : null}
         <span className={`ax-car-status ax-car-status--${l.status}`}>{STATUS[l.status]}</span>
       </div>
       <div className="ax-car-body">

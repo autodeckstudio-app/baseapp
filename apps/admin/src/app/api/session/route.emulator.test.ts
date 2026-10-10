@@ -145,7 +145,7 @@ describe("POST /api/session", () => {
     // httpOnly is what makes "session cannot be read by client JavaScript"
     // true - document.cookie never exposes httpOnly cookies to page JS.
     expect(cookie?.httpOnly).toBe(true);
-    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.sameSite).toBe("lax");
     expect(cookie?.path).toBe("/");
     expect(cookie?.maxAge).toBe(Math.floor(SESSION_MAX_AGE_MS / 1000));
     // `secure` is intentionally NODE_ENV-conditional (see route.ts) so it
