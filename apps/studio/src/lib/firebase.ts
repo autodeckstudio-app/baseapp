@@ -14,7 +14,7 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 // to set NODE_ENV.
 if (!__DEV__ && !process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
   throw new Error(
-    "EXPO_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build — refusing to silently fall back to the dev Firebase project.",
+    "EXPO_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build; refusing to silently fall back to the dev Firebase project.",
   );
 }
 
