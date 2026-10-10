@@ -1,3 +1,4 @@
+import { FileUploader, SelectField } from "../../../ui/inputs";
 import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import { createElement, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
@@ -295,24 +296,14 @@ export default function AddVehicleScreen() {
         <View style={{ gap: space.breath }}>
           <Kicker>Size</Kicker>
           <T role="caption" tone="secondary">Saved with your car. Prices will use this size automatically.</T>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {VEHICLE_SIZES.map(({value,label}) => <Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:size===value}} onPress={()=>{setSize(value);setSizeError(false);}} style={{borderRadius:999,borderWidth:1,borderColor:size===value?"#EC8638":"rgba(255,255,255,.14)",backgroundColor:size===value?"rgba(236,134,56,.14)":"rgba(255,255,255,.04)",paddingHorizontal:16,paddingVertical:12}}><T role="caption" tone={size===value?"accent":"secondary"}>{label}</T></Pressable>)}
-          </View>
+          <SelectField label="Car size" value={size ?? ""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>{setSize(v as VehicleCategory);setSizeError(false);}}/>
           {sizeError?<T role="caption" tone="danger">Choose your car's size.</T>:null}
         </View>
 
         {Platform.OS === "web" ? (
           <View style={{ gap: space.hair }}>
             <Kicker>Photo (optional)</Kicker>
-            {createElement("input", {
-              type: "file",
-              accept: "image/jpeg,image/png,image/webp",
-              onChange: (e: { target: { files: unknown } }) => {
-                const files = e.target.files as { item: (i: number) => { blob?: Blob; type?: string } | null } | null;
-                const f = files?.item(0) ?? null;
-                pickPhoto(f ? { blob: f as unknown as Blob, type: f.type ?? "" } : null);
-              },
-            })}
+            <FileUploader files={photo?[{blob:photo.blob,type:photo.contentType}]:[]} onChange={fs=>pickPhoto(fs[0]?{blob:fs[0].blob,type:fs[0].type}:null)}/>
             {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
           </View>
         ) : null}

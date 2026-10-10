@@ -82,6 +82,7 @@ export type RateLimitAction =
   | "pickup.update"
   | "vehicle.update"
   | "vehicle.archive"
+  | "vehicle.delete"
   | "vehicle.restore"
   | "protection.create"
   | "protection.update"
@@ -190,6 +191,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "pickup.update": { limit: 60, windowMs: 60_000 },
   "vehicle.update": { limit: 30, windowMs: 60_000 },
   "vehicle.archive": { limit: 20, windowMs: 60_000 },
+  "vehicle.delete": { limit: 10, windowMs: 60_000 },
   "vehicle.restore": { limit: 20, windowMs: 60_000 },
   "protection.create": { limit: 60, windowMs: 60_000 },
   "protection.update": { limit: 60, windowMs: 60_000 },

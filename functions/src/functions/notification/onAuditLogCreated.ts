@@ -30,8 +30,10 @@ export const onAuditLogCreated = onDocumentCreated(
     const draft = await buildNotification(db, log);
     if (!draft) return;
 
+    // Invoice bills use a per-invoice key so re-issued audit events never duplicate the bill notification.
+    const notificationId = draft.dedupeKey ?? logId;
     const notification: Notification = {
-      id: logId,
+      id: notificationId,
       tenantId: log.tenantId,
       userId: draft.userId,
       auditLogId: logId,
@@ -45,7 +47,7 @@ export const onAuditLogCreated = onDocumentCreated(
     };
 
     try {
-      await db.collection(COLLECTIONS.notifications()).doc(logId).create(notification);
+      await db.collection(COLLECTIONS.notifications()).doc(notificationId).create(notification);
     } catch (err) {
       const code = (err as { code?: number }).code;
       if (code === FIRESTORE_ALREADY_EXISTS) return;

@@ -17,14 +17,14 @@ describe("resolveServiceName", () => {
     await expect(resolveServiceName(db, tx, "t1", "svc1")).resolves.toBe("Premium Wash");
   });
 
-  it("falls back to the service id label on a tenant mismatch", async () => {
+  it("falls back to a generic label (never the raw id) on a tenant mismatch", async () => {
     const { db, tx } = mockDb({ exists: true, row: { tenantId: "other", name: "Premium Wash" } });
-    await expect(resolveServiceName(db, tx, "t1", "svc1")).resolves.toBe("Service svc1");
+    await expect(resolveServiceName(db, tx, "t1", "svc1")).resolves.toBe("Service");
   });
 
   it("falls back when the service is missing", async () => {
     const { db, tx } = mockDb({ exists: false });
-    await expect(resolveServiceName(db, tx, "t1", "svc9")).resolves.toBe("Service svc9");
+    await expect(resolveServiceName(db, tx, "t1", "svc9")).resolves.toBe("Service");
   });
 
   it("trims the display name", async () => {

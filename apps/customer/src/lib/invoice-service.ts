@@ -47,3 +47,33 @@ export function listenToInvoiceForJob(
     onError,
   );
 }
+
+/**
+ * Every invoice for one car, newest first by job. Constrained by tenantId and
+ * customerId equality so the Firestore rule is statically satisfied (see
+ * listenToInvoiceForJob). Drafts are not shown to customers.
+ */
+export function listenToInvoicesForVehicle(
+  vehicleId: string,
+  tenantId: string,
+  customerId: string,
+  onData: (invoices: Invoice[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.invoices()),
+    where("vehicleId", "==", vehicleId),
+    where("tenantId", "==", tenantId),
+    where("customerId", "==", customerId),
+  );
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map((d) => d.data() as Invoice).filter((i) => i.status !== "draft")),
+    onError,
+  );
+}
+
+export function listenToMyInvoices(tenantId:string,customerId:string,onData:(items:Invoice[])=>void,onError:(err:Error)=>void):Unsubscribe {
+ const q=query(collection(db,COLLECTIONS.invoices()),where("tenantId","==",tenantId),where("customerId","==",customerId));
+ return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as Invoice).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))),onError);
+}

@@ -1,4 +1,5 @@
 import type { PriceBreakdown } from "./booking.js";
+import type { VehicleSnapshot } from "./customer.js";
 
 export type JobStatus =
   | "PENDING_VEHICLE"      // Created from booking; vehicle not yet arrived
@@ -24,6 +25,8 @@ export interface ServiceJob {
   bookingId: string | null; // null for walk-ins
   customerId: string;
   vehicleId: string;
+  // Copy of the car, stamped when the vehicle is permanently deleted (and may be set earlier).
+  vehicleSnapshot?: VehicleSnapshot;
   serviceId: string;
   bayId: string; // empty while on standby
   standbyArrivedAt?: string | null;

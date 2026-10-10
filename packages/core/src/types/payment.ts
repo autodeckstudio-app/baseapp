@@ -1,3 +1,4 @@
+import type { VehicleSnapshot } from "./customer.js";
 export type PaymentMethod = "razorpay_payment_link" | "cash" | "upi_manual" | "bank_transfer";
 
 // doc06 statuses + "cancelled" (required by booking lifecycle; flagged in architecture)
@@ -59,11 +60,19 @@ export interface Invoice {
   bookingId: string | null;
   customerId: string;
   vehicleId: string;
+  // One visit == one job == one invoice. visitId always equals jobId; it is the
+  // durable visit identity that survives deletion of the vehicle or catalogue entries.
+  visitId?: string;
+  // Copies taken at issue time so the invoice renders after the car or customer record is gone.
+  vehicleSnapshot?: VehicleSnapshot;
+  customerSnapshot?: { name: string };
   paymentId: string | null; // linked payment (null for draft invoices before payment)
   invoiceNumber: string; // e.g. "INV-2026-00001" — generated atomically server-side
   // All financial fields are SNAPSHOTS from booking.priceBreakdown — immutable after issued
   lineItems: Array<{
-    description: string;
+    description: string; // human-readable service name snapshot; never a raw id
+    serviceId?: string; // reference only, never shown to users
+    serviceName?: string; // same human-readable snapshot as description (additive alias)
     quantity: number;
     unitPrice: number; // paise
     total: number; // paise

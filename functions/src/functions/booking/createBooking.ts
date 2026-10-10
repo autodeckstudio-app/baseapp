@@ -150,6 +150,14 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       return { booking: existingSnap.data() as Booking };
     }
 
+    // Coordinate creation with permanent deletion: a changed/deleted vehicle
+    // invalidates this transaction rather than creating a visit for a gone car.
+    const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
+    if(!currentVehicleSnap.exists)throw new HttpsError("not-found","Vehicle not found.");
+    const currentVehicle=currentVehicleSnap.data() as Vehicle;
+    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==user.uid)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
+    if(currentVehicle.deletedAt)throw new HttpsError("failed-precondition","Restore this car before booking.");
+
     // Re-validate availability inside the transaction to prevent race conditions.
     // Query all active jobs for compatible bays across a MAX_SERVICE_SPAN_DAYS-
     // wide window around the requested date — a same-day-only query would miss

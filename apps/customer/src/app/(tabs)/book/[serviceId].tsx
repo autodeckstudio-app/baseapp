@@ -1,3 +1,6 @@
+import { ensureVehicleSize } from "../../../lib/saved-size";
+import { DateField, SelectField } from "../../../ui/inputs";
+import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -5,7 +8,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
-import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
 import { getAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -36,7 +39,10 @@ export default function BookServiceScreen() {
   const [service, setService] = useState<Service | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
+  const [selectedCategory, setSelectedCategory] = useState<VehicleCategory|null>(null);
+  const [dateError,setDateError]=useState<string|null>(null);
+  const [sizeSaving,setSizeSaving]=useState(false);
+  const [sizeError,setSizeError]=useState<string|null>(null);
   const [selectedDate,setSelectedDate] = useState<string|null>(null);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +55,8 @@ export default function BookServiceScreen() {
   const { colors } = useExperienceTheme();
 
   useEffect(() => {
-    if (!serviceId) return;
     setTotal(null);
+    if (!serviceId || !selectedCategory) return;
     let current=true;
     void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
     return ()=>{current=false;};
@@ -88,7 +94,7 @@ export default function BookServiceScreen() {
     );
   }, [auth.status,retryTick]);
 
-  useEffect(()=>{if(selectedVehicle?.category) setSelectedCategory(selectedVehicle.category);},[selectedVehicle?.id,selectedVehicle?.category]);
+  useEffect(()=>{setSelectedCategory(selectedVehicle?.category??null);setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
   useEffect(() => {
     if (!serviceId || !service) return;
@@ -102,8 +108,15 @@ export default function BookServiceScreen() {
 
   useEffect(()=>{setSelectedDate(cur=>slots.some(s=>s.date===cur)?cur:slots[0]?.date??null);},[slots]);
 
-  function handleSelectSlot(slot: AvailableSlot) {
-    if (!selectedVehicle || !serviceId) return;
+  async function handleSelectSlot(slot: AvailableSlot) {
+    if (!selectedVehicle || !serviceId || !selectedCategory || sizeSaving) return;
+    const vehicleId=selectedVehicle.id;
+    if(!selectedVehicle.category){
+      setSizeSaving(true);setSizeError(null);
+      try{await ensureVehicleSize(selectedVehicle,selectedCategory,updateVehicle);}
+      catch(e){setSizeError(e instanceof Error?e.message:"Could not save the car size. Try again.");setSizeSaving(false);return;}
+      setSizeSaving(false);
+    }
     router.push({
       pathname: "/(tabs)/book/confirm",
       params: {
@@ -147,8 +160,9 @@ export default function BookServiceScreen() {
                   detail={<Plate value={v.registrationNumber} />}
                   trailing={selected ? <Chip label="Selected" tone="accent" /> : null}
                   onPress={() => {
+                    if(sizeSaving)return;
                     setSelectedVehicle(v);
-                    if (v.category) setSelectedCategory(v.category);
+                    setSelectedCategory(v.category??null);
                   }}
                   last={i === vehicles.length - 1}
                 />
@@ -158,28 +172,17 @@ export default function BookServiceScreen() {
         )}
       </View>
 
-      <View style={{ gap: space.line }}>
-        <Kicker>Size</Kicker>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-          {VEHICLE_CATEGORIES.map(({ value, label }) => {
-            const selected = selectedCategory === value;
-            return (
-              <Pressable
-                key={value}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                onPress={() => setSelectedCategory(value)}
-                style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8, minHeight:44, justifyContent:"center" }}
-              >
-                <T role="caption" tone={selected ? "accent" : "secondary"}>{label}</T>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+      {selectedVehicle && !selectedVehicle.category ? <View style={{gap:space.line}}>
+        <Kicker>Save your car size</Kicker>
+        <T role="caption" tone="secondary">Choose once. We save it with this car for future bookings.</T>
+        <SelectField label="Car size" value={selectedCategory??""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>setSelectedCategory(v as VehicleCategory)}/>
+        {sizeError?<T role="caption" tone="danger">{sizeError}</T>:null}
+        {sizeSaving?<T role="caption">Saving your car size...</T>:null}
+      </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{VEHICLE_SIZES.find(x=>x.value===selectedVehicle.category)?.label} · Saved with your car</T>:null}
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>
+        <DateField label="Booking date" value={selectedDate??""} min={Object.keys(slotsByDate).sort()[0]} max={Object.keys(slotsByDate).sort().at(-1)} error={dateError??undefined} onChange={v=>{if(slotsByDate[v]){setSelectedDate(v);setDateError(null);}else setDateError("No available times on that date. Choose an available day.");}}/>
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
           <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
@@ -198,8 +201,8 @@ export default function BookServiceScreen() {
                         key={slot.startAt}
                         accessibilityRole="button"
                         accessibilityLabel={`Book ${slot.startTime}`}
-                        disabled={!selectedVehicle || vehiclesError}
-                        onPress={() => handleSelectSlot(slot)}
+                        disabled={!selectedVehicle || !selectedCategory || vehiclesError || sizeSaving}
+                        onPress={() => void handleSelectSlot(slot)}
                         style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(245,154,69,0.55)", backgroundColor: "rgba(245,154,69,0.12)", paddingHorizontal: 16, paddingVertical: 10, opacity: !selectedVehicle ? 0.4 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
                       >
                         <T role="data" tone="accent">{slot.startTime}</T>

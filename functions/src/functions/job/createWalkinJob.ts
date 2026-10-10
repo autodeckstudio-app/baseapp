@@ -99,6 +99,12 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
   const jobRef = db.collection(COLLECTIONS.jobs()).doc();
 
   await db.runTransaction(async (tx) => {
+    const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
+    if(!currentVehicleSnap.exists)throw new HttpsError("not-found","Vehicle not found.");
+    const currentVehicle=currentVehicleSnap.data() as Vehicle;
+    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==data.customerId)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
+    if(currentVehicle.deletedAt)throw new HttpsError("failed-precondition","Restore this car before starting a visit.");
+
     // Deterministic-document touch for the bay we're about to occupy — see
     // COLLECTIONS.bayLocks' doc comment for why this exists and its HONEST,
     // tested limitation (measurably reduces but does NOT fully eliminate the

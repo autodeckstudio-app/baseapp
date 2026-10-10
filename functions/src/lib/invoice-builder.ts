@@ -4,7 +4,8 @@
 // affect this invoice. The snapshot may originate from a Booking or from a
 // walk-in Job; this function has no dependency on either — it only needs the
 // resolved PriceBreakdown and the entity references to stamp onto the Invoice.
-import type { Invoice, PriceBreakdown } from "@autodeck/core";
+import type { ApprovalRequest, Invoice, PriceBreakdown, VehicleSnapshot } from "@autodeck/core";
+import { calculateTax } from "./pricing.js";
 import { randomUUID } from "node:crypto";
 
 export interface BuildInvoiceParams {
@@ -19,6 +20,22 @@ export interface BuildInvoiceParams {
   priceBreakdown: PriceBreakdown; // immutable snapshot — booking's or job's own
   paymentId: string | null;
   serviceName: string; // snapshotted from context (not re-read from catalogue)
+  serviceId?: string; // reference only
+  // Approved additional-work requests of the SAME job/visit. Each becomes its own
+  // line item on this one invoice; totals include them (matches job.totalAmount).
+  additionalWork?: ApprovalRequest[];
+  vehicleSnapshot?: VehicleSnapshot;
+  customerSnapshot?: { name: string };
+}
+
+// Splits a tax-inclusive per-unit amount (approval.unitPrice) back into net + tax
+// using the same rounding as calculateTax, so the line net + its tax == the gross.
+export function netFromGross(grossPaise: number, taxRatePercent: number): number {
+  const guess = Math.round((grossPaise * 100) / (100 + taxRatePercent));
+  for (const net of [guess, guess - 1, guess + 1, guess - 2, guess + 2]) {
+    if (net + calculateTax(net, taxRatePercent) === grossPaise) return net;
+  }
+  return guess;
 }
 
 export function buildInvoice(params: BuildInvoiceParams): Invoice {
@@ -34,6 +51,10 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     priceBreakdown: pb,
     paymentId,
     serviceName,
+    serviceId,
+    additionalWork = [],
+    vehicleSnapshot,
+    customerSnapshot,
   } = params;
   const now = new Date().toISOString();
 
@@ -41,6 +62,8 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
   const lineItems: Invoice["lineItems"] = [
     {
       description: serviceName,
+      serviceName,
+      ...(serviceId ? { serviceId } : {}),
       quantity: 1,
       unitPrice: pb.basePrice + pb.scopeAdjustment,
       total: pb.basePrice + pb.scopeAdjustment,
@@ -65,6 +88,23 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     });
   }
 
+  // Additional work approved during this visit: one line per approved request.
+  // Amounts are net of tax; their tax is folded into the invoice tax below.
+  let additionalGross = 0;
+  for (const a of additionalWork) {
+    if (a.status !== "approved") continue;
+    const unitNet = netFromGross(a.unitPrice, pb.taxRatePercent);
+    lineItems.push({
+      description: a.serviceName?.trim() || "Additional service",
+      serviceName: a.serviceName?.trim() || "Additional service",
+      serviceId: a.serviceId,
+      quantity: a.quantity,
+      unitPrice: unitNet,
+      total: unitNet * a.quantity,
+    });
+    additionalGross += a.priceImpact;
+  }
+
   const subtotal = lineItems.reduce((sum, li) => sum + li.total, 0);
 
   // Membership benefit, if any (Phase 5B P1-9 fix — see Invoice.discount
@@ -79,6 +119,11 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
         ? `Membership discount (${pb.membershipDiscountPercent}%)`
         : "Membership wash credit";
 
+  // Without additional work this is exactly the snapshot's total and tax.
+  // With it, total == job.totalAmount and tax is whatever closes subtotal - discount + tax = total.
+  const total = pb.total + additionalGross;
+  const tax = additionalGross === 0 ? pb.tax : total - (subtotal - discount);
+
   return {
     id: invoiceId,
     tenantId,
@@ -87,6 +132,9 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     bookingId,
     customerId,
     vehicleId,
+    visitId: jobId,
+    ...(vehicleSnapshot ? { vehicleSnapshot } : {}),
+    ...(customerSnapshot ? { customerSnapshot } : {}),
     paymentId,
     invoiceNumber,
     lineItems,
@@ -95,8 +143,8 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     discountDescription,
     taxRatePercent: pb.taxRatePercent,
     taxDescription: pb.taxDescription,
-    tax: pb.tax,
-    total: pb.total, // must equal the source's totalAmount — never editable
+    tax,
+    total, // must equal the job's totalAmount — never editable
     currency: pb.currency,
     status: paymentId ? "issued" : "draft",
     pdfUrl: null,

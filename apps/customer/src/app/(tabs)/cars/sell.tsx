@@ -1,3 +1,4 @@
+import { FileUploader, SelectField } from "../../../ui/inputs";
 // Sell your car: a short form plus photos. It goes to the studio for review first, then shows to other customers.
 import { createElement, useEffect, useState } from "react";
 import { Image, Platform, View } from "react-native";
@@ -64,7 +65,7 @@ export default function SellScreen() {
     );
   }
   return (
-    <Screen top={<View style={{ gap: space.hair }}><Kicker tone="accent">Sell your car</Kicker><T role="title">Make the next move</T></View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Sell your car</Kicker><T role="title">Make the next move</T></View>}>
       <T tone="secondary">A clear listing starts with your car's story. The studio reviews it before buyers see it.</T>
       <View style={{flexDirection:"row",gap:8}}>{steps.map((label,i)=><View key={label} style={{flex:1,gap:8}}><View style={{height:3,backgroundColor:i<=step?"#F59A45":"#353538",borderRadius:2}}/><T role="caption" tone={i===step?"accent":"tertiary"}>{i+1}. {label}</T></View>)}</View>
       {step===0 && <View style={{ gap: space.line }}>
@@ -76,15 +77,15 @@ export default function SellScreen() {
         <Field label="Kilometres driven" value={f.km} error={fieldErrors.km} onBlur={() => setFieldErrors((p) => ({ ...p, km: validateSellStep(f, step, photos.length).km }))} onChangeText={(v) => up("km", v)} keyboardType="numeric" maxLength={7} />
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Fuel</T>
-          {Platform.OS === "web" ? createElement("select", { "aria-label":"Fuel",value: f.fuel, onChange: (e: { target: { value: string } }) => up("fuel", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, FUELS.map((x) => createElement("option", { key: x, value: x }, x))) : null}
+          <SelectField label="Fuel" value={f.fuel} onChange={v=>up("fuel",v)} options={FUELS.map(x=>({value:x,label:x}))}/>
         </View>
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Gearbox</T>
-          {Platform.OS === "web" ? createElement("select", { "aria-label":"Gearbox",value: f.gearbox, onChange: (e: { target: { value: string } }) => up("gearbox", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, ["manual", "automatic"].map((x) => createElement("option", { key: x, value: x }, x))) : null}
+          <SelectField label="Gearbox" value={f.gearbox} onChange={v=>up("gearbox",v)} options={["manual","automatic"].map(x=>({value:x,label:x}))}/>
         </View>
         <View style={{ gap: space.hair }}>
           <T role="label" tone="tertiary">Body type (optional)</T>
-          {Platform.OS === "web" ? createElement("select", { "aria-label":"Body type",value: f.body, onChange: (e: { target: { value: string } }) => up("body", e.target.value), style: { padding: 14, borderRadius: 12, fontSize: 15, minHeight:48,background:"#1E1E21",color:"#F6F4F1",border:"1px solid #454548",width:"100%" } }, [createElement("option", { key: "", value: "" }, "Not sure"), ...["hatchback", "sedan", "suv", "muv", "coupe", "other"].map((x) => createElement("option", { key: x, value: x }, x))]) : null}
+          <SelectField label="Body type" value={f.body} onChange={v=>up("body",v)} options={[{value:"",label:"Not sure"},...["hatchback","sedan","suv","muv","coupe","other"].map(x=>({value:x,label:x}))]}/>
         </View>
         <Field label="Owners so far" value={f.owners} error={fieldErrors.owners} onBlur={() => setFieldErrors((p) => ({ ...p, owners: validateSellStep(f, step, photos.length).owners }))} onChangeText={(v) => up("owners", v)} keyboardType="numeric" maxLength={2} />
         <Field label="Colour" value={f.colour} error={fieldErrors.colour} onBlur={() => setFieldErrors((p) => ({ ...p, colour: validateSellStep(f, step, photos.length).colour }))} onChangeText={(v) => up("colour", v)} autoCapitalize="words" maxLength={40} />
@@ -92,22 +93,14 @@ export default function SellScreen() {
       </View>}
       {step===1 && <View style={{gap:space.line}}><Kicker>Price and story</Kicker>
         <Field label="Asking price (rupees)" value={f.price} error={fieldErrors.price} onBlur={() => setFieldErrors((p) => ({ ...p, price: validateSellStep(f, step, photos.length).price }))} onChangeText={(v) => up("price", v)} keyboardType="numeric" maxLength={9} />
-        <Field label="About the car (optional, no phone numbers or links)" value={f.description} error={fieldErrors.description} onBlur={() => setFieldErrors((p) => ({ ...p, description: validateSellStep(f, step, photos.length).description }))} onChangeText={(v) => up("description", v)} multiline maxLength={1000} />
+        <Field label="About the car (optional)" placeholder="Service history, owners, accidents, reason for selling - no phone numbers or links" value={f.description} error={fieldErrors.description} onBlur={() => setFieldErrors((p) => ({ ...p, description: validateSellStep(f, step, photos.length).description }))} onChangeText={(v) => up("description", v)} multiline maxLength={1000} />
       </View>}
 
       {step===1 && Platform.OS === "web" ? (
         <View style={{ gap: space.hair }}>
           <Kicker>Photos (up to 12, first is the cover)</Kicker>
-          {createElement("input", {
-            "aria-label":"Choose car photos, up to twelve", style:{color:"#F6F4F1",padding:16,border:"1px dashed #555558",borderRadius:16,width:"100%",boxSizing:"border-box"}, type: "file", multiple: true, accept: "image/jpeg,image/png,image/webp",
-            onChange: (e: { target: { files: ArrayLike<{ type: string }> | null } }) => {
-              const list = Array.from(e.target.files ?? []).filter((x) => ["image/jpeg", "image/png", "image/webp"].includes(x.type)).slice(0, 12);
-              setFieldErrors((p) => ({ ...p, photos: undefined }));
-              setPhotos(list.map((x) => ({ blob: x as unknown as Blob, type: x.type })));
-            },
-          })}
+          <FileUploader files={photos} multiple maxFiles={12} onChange={fs=>{setPhotos(fs);setFieldErrors(p=>({...p,photos:undefined}));}}/>
           {fieldErrors.photos ? <T role="caption" tone="danger">{fieldErrors.photos}</T> : null}
-          {previews.length>0 && <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{previews.map((uri,i)=><View key={uri} style={{width:"30%",gap:4}}><Image source={{uri}} resizeMode="cover" style={{width:"100%",aspectRatio:1,borderRadius:12}}/><T role="caption" tone="tertiary">{i===0?"Cover":`Photo ${i+1}`}</T></View>)}</View>}
           <T role="caption" tone="tertiary">{photos.length} photo{photos.length === 1 ? "" : "s"} selected. Use clear exterior and interior photos. Originals are kept unchanged.</T>
         </View>
       ) : null}

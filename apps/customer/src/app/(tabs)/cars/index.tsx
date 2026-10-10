@@ -1,3 +1,4 @@
+import { SelectField } from "../../../ui/inputs";
 // Cars for sale: studio stock and approved customer cars as a grid of photo cards, plus "Sell your car" and your own listings.
 import { createElement, useEffect, useMemo, useState } from "react";
 import { Image, Platform, Pressable, View } from "react-native";
@@ -33,7 +34,7 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 }
 
 function Choice({label,value,onChange,options}:{label:string;value:string;onChange:(v:string)=>void;options:Array<{value:string;label:string}>}) {
-  if(Platform.OS==="web") return createElement("select",{"aria-label":label,value,onChange:(e:{target:{value:string}})=>onChange(e.target.value),style:{width:"100%",minWidth:0,minHeight:48,padding:"0 14px",borderRadius:14,border:"1px solid #454548",background:"#202023",color:"#F6F4F1",fontSize:15,fontFamily:"Inter,system-ui,sans-serif",colorScheme:"dark"}},options.map(o=>createElement("option",{key:o.value,value:o.value},o.label)));
+  if(Platform.OS==="web") return <SelectField label={label} value={value} onChange={onChange} options={options}/>;
   return <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{options.map(o=><Pill key={o.value} label={o.label} on={value===o.value} onPress={()=>onChange(o.value)}/>)}</View>;
 }
 
@@ -83,7 +84,7 @@ export default function CarsScreen() {
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
           <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#F59A45":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters{[fuel,body,budget!=="any"?budget:null].filter(Boolean).length ? ` · ${[fuel,body,budget!=="any"?budget:null].filter(Boolean).length}`:""} {filtersOpen?"−":"+"}</T></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#F59A45":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters</T></Pressable>
             <View style={{flex:1}}><Choice label="Sort cars" value={sort} onChange={v=>setSort(v as typeof sort)} options={[{value:"new",label:"Newest first"},{value:"low",label:"Price: low to high"},{value:"high",label:"Price: high to low"}]}/></View>
           </View>
           {filtersOpen ? <View style={{padding:18,gap:16,borderRadius:20,borderWidth:1,borderColor:"#3B3B3F",backgroundColor:"#18181B"}}>

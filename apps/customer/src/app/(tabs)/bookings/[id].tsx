@@ -1,3 +1,4 @@
+import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -360,7 +361,7 @@ export default function BookingDetailScreen() {
               <Button
                 label="View invoice"
                 kind="quiet"
-                onPress={() => router.push({ pathname: "/(tabs)/bookings/invoice", params: { jobId: job.id, tenantId: job.tenantId, customerId: job.customerId } })}
+                onPress={() => router.push(invoiceHref(payment.invoiceId as string))}
               />
             </View>
           ) : null}

@@ -65,6 +65,10 @@ export const archiveVehicleSchema = z.object({
   vehicleId: z.string().min(1),
 }).strict();
 
+export const deleteVehicleSchema = z.object({
+  vehicleId: z.string().min(1),
+}).strict();
+
 export const restoreVehicleSchema = z.object({
   vehicleId: z.string().min(1),
 }).strict();

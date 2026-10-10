@@ -112,12 +112,12 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
             bookings,
             jobs,
             approvals,
-            invoices,
+            invoices: [], // bills live in service history, never on Home
             protections,
             memberships,
             now: new Date(),
           }),
-    [vehicles, coreReady, preferred, bookings, jobs, approvals, invoices, protections, memberships, firstName],
+    [vehicles, coreReady, preferred, bookings, jobs, approvals, protections, memberships, firstName],
   );
 
   const activeId = model?.activeVehicle?.id ?? null;

@@ -61,3 +61,8 @@ export function listenToJobsForVehicle(
     onError,
   );
 }
+
+export function listenToMyJobs(tenantId:string,customerId:string,onData:(items:ServiceJob[])=>void,onError:(err:Error)=>void):Unsubscribe {
+ const q=query(collection(db,COLLECTIONS.jobs()),where("tenantId","==",tenantId),where("customerId","==",customerId));
+ return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as ServiceJob).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))),onError);
+}

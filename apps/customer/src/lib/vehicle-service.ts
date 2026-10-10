@@ -147,3 +147,13 @@ export async function restoreVehicle(vehicleId: string): Promise<void> {
   await fn({ vehicleId });
 }
 
+
+/** Archived vehicles remain owner/tenant scoped; history is never filtered by garage state. */
+export function listenToMyArchivedVehicles(uid:string,tenantId:string,onData:(vehicles:Vehicle[])=>void,onError:(err:Error)=>void):Unsubscribe {
+ const q=query(collection(db,COLLECTIONS.vehicles()),where("ownerId","==",uid),where("tenantId","==",tenantId));
+ return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as Vehicle).filter(v=>!!v.deletedAt)),onError);
+}
+
+export async function deleteVehicle(vehicleId:string):Promise<void> {
+ await httpsCallable<{vehicleId:string},{vehicleId:string;deleted:boolean;alreadyDeleted:boolean}>(functions,"deleteVehicle")({vehicleId});
+}

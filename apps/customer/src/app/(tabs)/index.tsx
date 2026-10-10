@@ -29,7 +29,7 @@ const HERO_COPY: Record<CustomerHomeModel["heroState"], { kicker: string; line: 
   booked: { kicker: "Booked", line: "Your next visit is set." },
   inService: { kicker: "In the studio", line: "Your car is being looked after." },
   awaitingApproval: { kicker: "Your call", line: "The studio found extra work and needs your OK." },
-  paymentDue: { kicker: "Bill ready", line: "Your bill is ready to settle." },
+  paymentDue: { kicker: "All good", line: "Nothing needs you right now." }, // unreachable: Home no longer ranks bills
   ready: { kicker: "Ready", line: "Your car is ready for pickup." },
 };
 
@@ -161,10 +161,6 @@ export default function HomeScreen() {
         return router.push(`/(tabs)/bookings/${a.targetId}`);
       case "reviewApproval":
         return router.push(`/(tabs)/approvals/${a.targetId}`);
-      case "payInvoice":
-        return m.dueInvoice
-          ? router.push({ pathname: "/(tabs)/bookings/invoice", params: { jobId: m.dueInvoice.jobId, tenantId: auth.claims.tenantId, customerId: auth.user.uid } })
-          : undefined;
       case "reviewProtection":
         return car ? router.push(`/(tabs)/garage/${car.id}`) : undefined;
     }
@@ -198,8 +194,8 @@ export default function HomeScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
       <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", shadowColor: "#EC8638", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
         {car?.photoUrl && !carPhoto ? <View style={{width: "100%", aspectRatio: 16 / 10, backgroundColor: "#161618"}} /> : <HeroImage aspect={16 / 10} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />}
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.45) 0%, rgba(8,8,10,0) 28%, rgba(8,8,10,0.9) 100%)" } as object) }} />
-        <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.22) 0%, rgba(8,8,10,0.18) 30%, rgba(8,8,10,0.78) 62%, rgba(8,8,10,0.97) 100%)" } as object) }} />
+        <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6, backgroundColor:"rgba(8,8,10,.52)", padding:12, borderRadius:14 }}>
           <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>
             <T role="caption" tone="accent">{home.error && m.heroState === "idle" ? "Checking your car" : copy.kicker}</T>
           </View>
@@ -228,7 +224,7 @@ export default function HomeScreen() {
       </FadeUp>
       <Button label={m.primaryAction.label} onPress={act} testID="home-primary" />
 
-      {m.pendingApproval || m.dueInvoice || m.liveJob || m.upcomingBooking ? (
+      {m.pendingApproval || m.liveJob || m.upcomingBooking ? (
         <Pressable
           accessibilityRole="button"
           onPress={() => {
@@ -240,11 +236,9 @@ export default function HomeScreen() {
         >
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
-            <Kicker tone="accent">{m.liveJob ? "Live now" : m.pendingApproval ? "Needs your OK" : m.dueInvoice ? "Bill ready" : "Next visit"}</Kicker>
+            <Kicker tone="accent">{m.liveJob ? "Live now" : m.pendingApproval ? "Needs your OK" : "Next visit"}</Kicker>
             {m.pendingApproval ? (
               <Row title={m.pendingApproval.serviceName} detail={m.pendingApproval.reason} trailing={<T role="data" tone="accent">+{rupees(m.pendingApproval.priceImpact)}</T>} last />
-            ) : m.dueInvoice ? (
-              <Row title={m.dueInvoice.invoiceNumber} detail="Issued" trailing={<T role="data">{rupees(m.dueInvoice.total)}</T>} last />
             ) : m.liveJob ? (
               <View style={{ gap: space.line }}>
                 <Row title={JOB_STAGE[m.liveJob.status] ?? "In the studio"} detail={`Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`} last />

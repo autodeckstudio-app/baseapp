@@ -23,7 +23,6 @@ export default function HelpScreen() {
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">{t("Help")}</Kicker><T role="title">{t("We are here")}</T></View>}>
-      <Button kind="quiet" label={t("Back")} onPress={() => router.back()} />
       {hasContact ? (
         <View style={{ gap: space.breath }}>
           {s.phone ? <Button label={t("Call the studio")} onPress={() => void Linking.openURL(`tel:${s.phone}`)} /> : null}

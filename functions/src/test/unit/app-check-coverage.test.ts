@@ -133,6 +133,7 @@ const DEFERRED = [
   "service/calculatePrice.ts",
   "service/getServiceCatalogue.ts",
   "vehicle/archiveVehicle.ts",
+  "vehicle/deleteVehicle.ts",
   "vehicle/createVehicle.ts",
   "vehicle/updateVehicle.ts",
   "attendance/checkInAttendance.ts",

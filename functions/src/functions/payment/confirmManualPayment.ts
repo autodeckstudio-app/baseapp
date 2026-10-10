@@ -14,9 +14,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmManualPaymentSchema } from "../../schemas/payment.js";
-import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
-import { buildInvoice } from "../../lib/invoice-builder.js";
-import { resolveServiceName } from "../../lib/service-name.js";
+import { prepareJobInvoice } from "../../lib/job-invoice.js";
 
 export const confirmManualPayment = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -97,22 +95,12 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
     }
 
     const now = new Date().toISOString();
-    const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
-    const serviceName = await resolveServiceName(db, tx, job.tenantId, job.serviceId);
-    const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
-    const invoice = buildInvoice({
-      invoiceId: invoiceRef.id,
-      invoiceNumber,
-      tenantId: job.tenantId,
-      studioId: job.studioId,
-      jobId: job.id,
-      bookingId: job.bookingId,
-      customerId: job.customerId,
-      vehicleId: job.vehicleId,
-      priceBreakdown: job.priceBreakdown,
-      paymentId: payment.id,
-      serviceName,
-    });
+    const prepared = await prepareJobInvoice(db, tx, job, payment.id);
+    if (prepared.existing) {
+      throw new HttpsError("already-exists", "An invoice already exists for this job.");
+    }
+    const { invoiceRef, invoice } = prepared;
+    const invoiceNumber = invoice.invoiceNumber;
 
     tx.update(db.collection(COLLECTIONS.payments()).doc(payment.id), {
       status: "completed",

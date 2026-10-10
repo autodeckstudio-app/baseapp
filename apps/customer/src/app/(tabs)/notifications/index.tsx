@@ -1,7 +1,7 @@
+import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect, useCallback } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
 import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
@@ -11,11 +11,6 @@ import { db } from "../../../lib/firebase";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
 import { useAuth } from "../../../hooks/useAuth";
 
-interface InvoiceRef {
-  jobId: string;
-  tenantId: string;
-  customerId: string;
-}
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -71,14 +66,9 @@ export default function NotificationsScreen() {
       return;
     }
     if (n.entityType === "Invoice" && n.entityId) {
-      const snap = await getDoc(doc(db, COLLECTIONS.invoices(), n.entityId));
-      if (snap.exists()) {
-        const invoice = snap.data() as InvoiceRef;
-        router.push({
-          pathname: "/(tabs)/bookings/invoice",
-          params: { jobId: invoice.jobId, tenantId: invoice.tenantId, customerId: invoice.customerId },
-        });
-      }
+      // entityId is the invoice id: open that exact invoice (the rules still
+      // decide whether this customer may read it).
+      router.push(invoiceHref(n.entityId));
     }
   }
 

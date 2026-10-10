@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
   type ImageSourcePropType,
   type StyleProp,
   type TextStyle,
@@ -19,7 +20,7 @@ import {
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
-import { fontFamily, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+import { fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Archivo, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
@@ -74,7 +75,7 @@ export function T({
 // Sub-screens (anything deeper than a tab root, plus membership and
 // notifications which live under You) get a quiet back control so no screen
 // is a dead end. Falls back to the parent tab when there is no history.
-const SUB_ROOTS: Record<string, string> = { membership: "/(tabs)/profile", notifications: "/(tabs)" };
+const SUB_ROOTS: Record<string, string> = { membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)" };
 function BackBar() {
   const router = useRouter();
   const segs = useSegments() as string[];
@@ -90,7 +91,7 @@ function BackBar() {
       onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback as never))}
       style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingRight: 12 }}
     >
-      <Text style={{ color: colors.textSecondary, fontSize: 20, marginTop: -2 }}>‹</Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 20, lineHeight: 20 }}>‹</Text>
       <T role="label" tone="secondary">Back</T>
     </Pressable>
   );
@@ -109,6 +110,8 @@ export function Screen({
   top?: ReactNode;
 }) {
   const scrollRef = useRef<ScrollView>(null);
+  const {width}=useWindowDimensions();
+  const gutter=width<360?layout.screenInsetCompact:layout.screenInset;
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => {
     setFocused(true);
@@ -118,8 +121,8 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: top ? space.inset : space.section, paddingBottom: 120, gap: space.inset }}>
-      <BackBar />
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.inset : space.section, paddingBottom: 120, gap: space.inset }}>
+      {!top ? <BackBar /> : null}
       {header}
       {children}
     </View>
@@ -127,7 +130,7 @@ export function Screen({
   if (!focused) return null;
   return (
     <Ambient>
-      {top ? <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", paddingHorizontal: space.inset, paddingTop: space.section, gap: space.line, zIndex: 2 }}>{top}</View> : null}
+      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.section, gap: space.line, zIndex: 2 }}><BackBar />{top}</View> : null}
       {scroll ? <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );
@@ -192,6 +195,7 @@ export function Button({
       style={({ pressed }) => [
         {
           minHeight: 48,
+          marginTop: primary ? layout.primaryActionGap : 0,
           borderRadius: radius.pill,
           paddingHorizontal: space.inset,
           alignItems: "center",
@@ -380,7 +384,7 @@ export function Field({
 }) {
   const { colors } = useExperienceTheme();
   return (
-    <View style={{ gap: space.hair }}>
+    <View style={{ gap: space.breath }}>
       <T role="label" tone="tertiary">{label}</T>
       <TextInput
         accessibilityLabel={label}

@@ -9,6 +9,8 @@ export const COLLECTIONS = {
   tenants: () => "tenants",
   customers: () => "customers",
   vehicles: () => "vehicles",
+  // Tombstones for permanently deleted cars (doc id == old vehicleId); Cloud Functions write only.
+  deletedVehicles: () => "deletedVehicles",
   bookings: () => "bookings",
   pickupRequests: () => "pickupRequests",
   accountDeletionRequests: () => "accountDeletionRequests",

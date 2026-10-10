@@ -102,7 +102,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
       ) : (
         <Pane pad="gap">
           {req?.status === "DECLINED" ? <T role="caption" tone="secondary">The studio could not approve this pickup or drop-off request.{req.staffNote ? ` ${req.staffNote}` : ""}</T> : <T role="caption" tone="secondary">Want us to collect or return your car? Send a request and the studio will confirm.</T>}
-          <Button label="Request pickup or drop" kind="quiet" onPress={() => setOpen(true)} />
+          <Button style={{marginTop:space.line}} label="Request pickup or drop" kind="quiet" onPress={() => setOpen(true)} />
         </Pane>
       )}
     </View>

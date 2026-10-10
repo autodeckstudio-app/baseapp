@@ -36,7 +36,7 @@ export default function ServiceDetailScreen() {
   const [loadError, setLoadError] = useState(false);
   const auth = useAuth();
   const pricingVehicle = usePricingVehicle();
-  const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
+  const [selectedCategory, setSelectedCategory] = useState<VehicleCategory|null>(null);
   const [pickedSize, setPickedSize] = useState(false);
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
@@ -48,7 +48,7 @@ export default function ServiceDetailScreen() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!pickedSize && pricingVehicle.category) setSelectedCategory(pricingVehicle.category);
+    if (!pickedSize) setSelectedCategory(pricingVehicle.category);
   }, [pricingVehicle.category, pickedSize]);
 
   useEffect(() => {
@@ -66,11 +66,13 @@ export default function ServiceDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (!id || !service) return;
+    setPriceBreakdown(null);
+    if (!id || !service || !selectedCategory) {setPriceLoading(false);return;}
+    const category=selectedCategory;
     setPriceLoading(true);
     setPriceError(false);
     let stale = false;
-    const ask = () => calculateServicePrice(id, selectedCategory);
+    const ask = () => calculateServicePrice(id, category);
     void ask()
       .catch(() => new Promise<Awaited<ReturnType<typeof ask>>>((resolve, reject) => setTimeout(() => ask().then(resolve, reject), 900)))
       .then(({ breakdown }) => { if (!stale) setPriceBreakdown(breakdown); })
@@ -210,7 +212,7 @@ export default function ServiceDetailScreen() {
 
           {service.priceOnRequest === true ? (
             <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">The studio confirms the price for your car. You approve it before any work starts.</T>} last /></Pane>
-          ) : priceLoading ? (
+          ) : !selectedCategory ? (<T role="caption" tone="secondary">Select a size to preview the price. Your saved car size is used at booking.</T>) : priceLoading ? (
             <T role="caption" tone="tertiary">Working out the price...</T>
           ) : priceError ? (
             <Notice title="Can't get the price" body="Check your connection and try again." />

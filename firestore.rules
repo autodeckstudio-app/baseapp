@@ -112,6 +112,15 @@ service cloud.firestore {
       }
     }
 
+    // /deletedVehicles/{vehicleId}: tombstone + snapshot of a permanently deleted car.
+    // Written only by the deleteVehicle Cloud Function; owner or studio/admin can read.
+    match /deletedVehicles/{vehicleId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+
     // âââ /pickupRequests/{id}: pickup and drop requests, written by Cloud Functions only âââ
     match /pickupRequests/{requestId} {
       allow read: if isAuthenticated()

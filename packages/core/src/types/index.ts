@@ -1,5 +1,5 @@
 export type { Tenant, TenantPlan } from "./tenant.js";
-export type { Customer, Vehicle } from "./customer.js";
+export type { Customer, Vehicle, VehicleSnapshot, DeletedVehicle } from "./customer.js";
 export type {
   Service,
   VehicleCategoryPricing,

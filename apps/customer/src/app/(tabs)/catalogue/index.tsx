@@ -6,7 +6,7 @@ import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS} from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
-import { space, type IconName } from "@autodeck/ui/theme";
+import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, calculateServicePrice, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -165,7 +165,7 @@ export default function CatalogueScreen() {
   );
 
   const crumb = (label: string, onPress: () => void) => (
-    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ alignSelf: "flex-start" }}>
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ alignSelf: "flex-start", marginBottom:layout.secondaryHeadingGap, minHeight:44, justifyContent:"center" }}>
       <T role="caption" tone="accent">‹ {label}</T>
     </Pressable>
   );

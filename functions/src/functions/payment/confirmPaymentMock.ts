@@ -21,9 +21,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmPaymentMockSchema } from "../../schemas/payment.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
-import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
-import { buildInvoice } from "../../lib/invoice-builder.js";
-import { resolveServiceName } from "../../lib/service-name.js";
+import { prepareJobInvoice } from "../../lib/job-invoice.js";
 import { isProductionProject } from "../../lib/environment.js";
 
 export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (request) => {
@@ -160,22 +158,12 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
       }
 
       // Allocate invoice number and build invoice atomically
-      const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
-      const serviceName = await resolveServiceName(db, tx, job.tenantId, job.serviceId);
-      const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
-      const invoice = buildInvoice({
-        invoiceId: invoiceRef.id,
-        invoiceNumber,
-        tenantId: job.tenantId,
-        studioId: job.studioId,
-        jobId: job.id,
-        bookingId: job.bookingId,
-        customerId: job.customerId,
-        vehicleId: job.vehicleId,
-        priceBreakdown: job.priceBreakdown,
-        paymentId: data.paymentId,
-        serviceName,
-      });
+      const prepared = await prepareJobInvoice(db, tx, job, data.paymentId);
+      if (prepared.existing) {
+        throw new HttpsError("already-exists", "An invoice already exists for this job.");
+      }
+      const { invoiceRef, invoice } = prepared;
+      const invoiceNumber = invoice.invoiceNumber;
 
       // Mark event as processed (idempotency) â first write, now that all reads are done
       tx.set(eventRef, { paymentId: data.paymentId, result: data.mockResult, processedAt: now });

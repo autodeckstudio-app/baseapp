@@ -13,6 +13,8 @@ export const space = {
 } as const;
 
 export const layout = {
+  primaryActionGap: 16,
+  secondaryHeadingGap: 32,
   screenInset: 24,
   screenInsetCompact: 16, // below 360px
   readingMeasure: 600,

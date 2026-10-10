@@ -8,6 +8,7 @@ export type AuditAction =
   | "vehicle.updated"
   | "vehicle.archived"
   | "vehicle.restored"
+  | "vehicle.deleted"
   | "booking.created"
   | "booking.confirmed"
   | "booking.cancelled"

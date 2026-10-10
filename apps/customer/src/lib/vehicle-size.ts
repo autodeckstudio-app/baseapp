@@ -6,7 +6,7 @@ import { listenToMyVehicles } from "./vehicle-service";
 import { useAuth } from "../hooks/useAuth";
 export const VEHICLE_SIZES: { value: VehicleCategory; label: string }[] = [
  {value:"hatchback",label:"Hatchback"},{value:"sedan",label:"Sedan"},{value:"suv",label:"SUV"},
- {value:"luxury",label:"Luxury / Premium"},{value:"van",label:"Van / MUV"},{value:"commercial",label:"Commercial"}
+ {value:"luxury",label:"Luxury/Premium"},{value:"van",label:"Van/MUV"},{value:"commercial",label:"Commercial"}
 ];
 export function usePricingVehicle() {
  const auth=useAuth(); const [vehicle,setVehicle]=useState<Vehicle|null>(null);

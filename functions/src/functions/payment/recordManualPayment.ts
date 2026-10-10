@@ -14,9 +14,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { recordManualPaymentSchema } from "../../schemas/payment.js";
-import { allocateInvoiceNumber } from "../../lib/invoice-counter.js";
-import { buildInvoice } from "../../lib/invoice-builder.js";
-import { resolveServiceName } from "../../lib/service-name.js";
+import { prepareJobInvoice } from "../../lib/job-invoice.js";
 
 export const recordManualPayment = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -48,7 +46,6 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
 
   const now = new Date().toISOString();
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
-  const invoiceRef = db.collection(COLLECTIONS.invoices()).doc();
 
   const result = await db.runTransaction(async (tx) => {
     // Authoritative re-read inside the transaction â two concurrent calls
@@ -96,6 +93,13 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
     // Amount ALWAYS from the job's server-computed snapshot â NEVER from client
     const amount = job.totalAmount;
 
+    const prepared = await prepareJobInvoice(db, tx, job, paymentRef.id);
+    if (prepared.existing) {
+      throw new HttpsError("already-exists", "An invoice already exists for this job.");
+    }
+    const { invoiceRef, invoice } = prepared;
+    const invoiceNumber = invoice.invoiceNumber;
+
     const payment: Payment = {
       id: paymentRef.id,
       tenantId: job.tenantId,
@@ -125,22 +129,6 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       createdAt: now,
       updatedAt: now,
     };
-
-    const serviceName = await resolveServiceName(db, tx, job.tenantId, job.serviceId);
-    const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
-    const invoice = buildInvoice({
-      invoiceId: invoiceRef.id,
-      invoiceNumber,
-      tenantId: job.tenantId,
-      studioId: job.studioId,
-      jobId: job.id,
-      bookingId: job.bookingId,
-      customerId: job.customerId,
-      vehicleId: job.vehicleId,
-      priceBreakdown: job.priceBreakdown,
-      paymentId: paymentRef.id,
-      serviceName,
-    });
 
     tx.set(paymentRef, payment);
     tx.set(invoiceRef, invoice);

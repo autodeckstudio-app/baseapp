@@ -16,6 +16,28 @@ export interface Customer {
   deletedAt: string | null;
 }
 
+// Plain copy of a car, stamped onto bookings, jobs and invoices so history still
+// reads correctly after the vehicle record is permanently deleted.
+export interface VehicleSnapshot {
+  registrationNumber: string;
+  make: string;
+  model: string;
+  year: number;
+  color: string;
+  photoUrl: string | null;
+}
+
+// One tombstone per permanently deleted car (doc id == the old vehicleId).
+// Keeps the snapshot and owner so history lists can still label the car.
+export interface DeletedVehicle {
+  id: string; // == former vehicleId
+  tenantId: string;
+  ownerId: string;
+  snapshot: VehicleSnapshot;
+  deletedAt: string;
+  deletedBy: string;
+}
+
 export interface Vehicle {
   id: string;
   tenantId: string;

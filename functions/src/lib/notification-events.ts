@@ -1,8 +1,8 @@
 // Maps an AuditLog entry to a customer-facing Notification, or null if the
 // action has no customer notification (Phase 2C architecture: AuditLog is
-// the sole authoritative event source â no second event bus, no invented
+// the sole authoritative event source - no second event bus, no invented
 // AuditActions). Reads the referenced entity to resolve the recipient
-// (customerId) and to build a concise, human-readable title/body â the
+// (customerId) and to build a concise, human-readable title/body - the
 // AuditLog payload alone does not reliably carry the recipient or display
 // context needed for a notification.
 //
@@ -32,6 +32,8 @@ export interface NotificationDraft {
   body: string;
   entityType: NotificationEntityType | null;
   entityId: string | null;
+  // When set, used as the notification document id so a retried source event cannot create a second one.
+  dedupeKey?: string;
 }
 
 function formatTimeIST(iso: string): string {
@@ -244,10 +246,11 @@ export async function buildNotification(
       return {
         userId: invoice.customerId,
         type: "invoice_issued",
-        title: "Invoice ready",
-        body: `Invoice ${invoice.invoiceNumber} is ready â ${formatPaise(invoice.total)} total.`,
+        title: "Your bill is ready",
+        body: `Invoice ${invoice.invoiceNumber} is ready - ${formatPaise(invoice.total)} total.`,
         entityType: "Invoice",
         entityId: invoice.id,
+        dedupeKey: `invoice-issued-${invoice.id}`,
       };
     }
 

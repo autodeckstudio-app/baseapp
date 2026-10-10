@@ -12,7 +12,7 @@ export interface PurgeSummary {
 
 /**
  * Erases one customer's personal data after the retention rules the owner set:
- * - kept (untouched): invoices, payments, bookings, jobs, warranties, inspections. They only point at the customer id and stay valid for 8 years.
+ * - kept (untouched, except the customer name copy on invoices is anonymised): invoices, payments, bookings, jobs, warranties, inspections. They only point at the customer id and stay valid for 8 years.
  * - anonymised: the customer record (name, phone, email removed) so those records no longer identify a person.
  * - deleted: notifications, the push token, vehicle photos. Plates stay on the vehicle record for warranty.
  * Idempotent: running it again changes nothing. The Auth user is removed by the caller.
@@ -39,6 +39,15 @@ export async function purgeCustomerData(db: Firestore, tenantId: string, custome
     if (d.get("photoUrl")) {
       await d.ref.update({ photoUrl: null, updatedAt: nowIso });
       summary.vehiclesCleared += 1;
+    }
+  }
+
+  // Invoices stay (retention), but the customer name copied onto them is anonymised too.
+  const invs = await db.collection(COLLECTIONS.invoices()).where("customerId", "==", customerId).get();
+  for (const d of invs.docs) {
+    if (d.get("tenantId") !== tenantId) continue;
+    if (d.get("customerSnapshot") && d.get("customerSnapshot").name !== ANONYMISED_NAME) {
+      await d.ref.update({ customerSnapshot: { name: ANONYMISED_NAME } });
     }
   }
 
