@@ -46,15 +46,19 @@ export function CarsView(p: {
   }
 
   const row = (l: AdminListing, review: boolean) => (
-    <li key={l.id} className="ax-list-row">
-      <img src={l.photoUrls[0]} alt="" width={72} height={54} style={{ objectFit: "cover", borderRadius: "var(--ad-radius-chip)" }} />
-      <span className="ax-slot-main">
-        <span className="ax-person-name">{l.year} {l.make} {l.model}{l.variant ? ` ${l.variant}` : ""}</span>
-        <span className="ax-sub">{rupees(l.askingPrice)} · {l.kmDriven.toLocaleString("en-IN")} km · {STATUS[l.status]}{l.source === "customer" ? ` · from ${l.sellerName ?? "a customer"}` : ""}</span>
-        {review && <span className="ax-sub">Seller phone {l.sellerPhone ?? "none"}{l.registrationNumber ? ` · ${l.registrationNumber}` : ""}. Check the RC and any open loan before approving.</span>}
-        {l.status === "rejected" && l.rejectionReason && <span className="ax-sub">Reason: {l.rejectionReason}</span>}
-      </span>
-      <span className="ax-row-actions">
+    <li key={l.id} className="ax-car">
+      <div className="ax-car-img">
+        {l.photoUrls[0] ? <img src={l.photoUrls[0]} alt="" loading="lazy" /> : null}
+        <span className={`ax-car-status ax-car-status--${l.status}`}>{STATUS[l.status]}</span>
+      </div>
+      <div className="ax-car-body">
+        <span className="ax-car-title">{l.year} {l.make} {l.model}{l.variant ? ` ${l.variant}` : ""}</span>
+        <span className="ax-car-price">{rupees(l.askingPrice)}</span>
+        <span className="ax-car-meta">{l.kmDriven.toLocaleString("en-IN")} km{l.source === "customer" ? ` · from ${l.sellerName ?? "a customer"}` : ""}</span>
+        {review && <span className="ax-sub ax-car-note">Seller phone {l.sellerPhone ?? "none"}{l.registrationNumber ? ` · ${l.registrationNumber}` : ""}. Check the RC and any open loan before approving.</span>}
+        {l.status === "rejected" && l.rejectionReason && <span className="ax-sub ax-car-note">Reason: {l.rejectionReason}</span>}
+      </div>
+      <div className="ax-car-actions">
         {review ? (
           rejectId === l.id ? (
             <>
@@ -70,7 +74,7 @@ export function CarsView(p: {
           )
         ) : null}
         <button type="button" className="ax-button" onClick={() => { setForm(fromListing(l)); setFiles([]); }}>Edit</button>
-      </span>
+      </div>
     </li>
   );
 
@@ -90,9 +94,9 @@ export function CarsView(p: {
         <div className="ax-detail-main">
           <section className="ax-panel">
             {p.loading ? [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />) : tab === "listings" ? (
-              others.length === 0 ? <p className="ax-note">No cars yet. Use Add a car to list the first one.</p> : <ul className="ax-list">{others.map((l) => row(l, false))}</ul>
+              others.length === 0 ? <p className="ax-note">No cars yet. Use Add a car to list the first one.</p> : <ul className="ax-cars">{others.map((l) => row(l, false))}</ul>
             ) : tab === "review" ? (
-              pending.length === 0 ? <p className="ax-note">Nothing waiting. Customer cars show here before anyone else can see them.</p> : <ul className="ax-list">{pending.map((l) => row(l, true))}</ul>
+              pending.length === 0 ? <p className="ax-note">Nothing waiting. Customer cars show here before anyone else can see them.</p> : <ul className="ax-cars">{pending.map((l) => row(l, true))}</ul>
             ) : p.leads.length === 0 ? <p className="ax-note">No enquiries yet.</p> : (
               <ul className="ax-list">
                 {p.leads.map((ld) => {
