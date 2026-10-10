@@ -10,12 +10,17 @@ export const createMembershipPlanSchema = z.object({
   discountPercent: z.number().int().min(0).max(100),
 }).strict();
 
+// Optional fields are .nullish() not .optional(): the Firebase JS callable
+// serializer encodes omitted/undefined object keys as null on the wire, so a
+// client that "leaves a field out" can deliver null here (production incident
+// 10 Oct 2026 - confirmMembershipPayment rejected every admin approval with
+// INVALID_ARGUMENT because manualReference arrived as null).
 export const updateMembershipPlanSchema = z.object({
   planId: z.string().min(1),
-  name: z.string().min(1).max(100).trim().optional(),
-  priceInPaise: z.number().int().min(0).optional(),
-  includedWashes: z.number().int().min(0).optional(),
-  discountPercent: z.number().int().min(0).max(100).optional(),
+  name: z.string().min(1).max(100).trim().nullish(),
+  priceInPaise: z.number().int().min(0).nullish(),
+  includedWashes: z.number().int().min(0).nullish(),
+  discountPercent: z.number().int().min(0).max(100).nullish(),
 }).strict();
 
 export const setMembershipPlanActiveSchema = z.object({
@@ -41,7 +46,7 @@ export const cancelMembershipSchema = z.object({
 // customerId is honored only for studio/admin callers â a customer caller's
 // own uid is always used regardless of what is passed (see getMyMemberships.ts).
 export const getMyMembershipsSchema = z.object({
-  customerId: z.string().min(1).optional(),
+  customerId: z.string().min(1).nullish(),
 }).strict();
 
 export const getMembershipUsageSchema = z.object({
@@ -53,14 +58,14 @@ export const expireStaleMembershipsSchema = z.object({}).strict();
 export const confirmMembershipPaymentSchema = z.object({
   membershipId: z.string().min(1),
   method: z.enum(["cash", "upi_manual", "bank_transfer"]),
-  manualReference: z.string().trim().max(100).optional(),
+  manualReference: z.string().trim().max(100).nullish(),
 }).strict();
 
 export const createWalkinMembershipSchema = z.object({
   customerId: z.string().min(1),
   planId: z.string().min(1),
   method: z.enum(["cash", "upi_manual", "bank_transfer"]),
-  manualReference: z.string().trim().max(100).optional(),
+  manualReference: z.string().trim().max(100).nullish(),
 }).strict();
 
 export type CreateMembershipPlanInput = z.infer<typeof createMembershipPlanSchema>;

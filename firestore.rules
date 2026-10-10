@@ -302,9 +302,14 @@ service cloud.firestore {
 
     // âââ /notifications/{notificationId} ââââââââââââââââââââââââââââââââââââ
     match /notifications/{notificationId} {
+      // Studio/admin read tenant notifications too: the admin Customer 360
+      // page subscribes to a customer's notifications, and without the
+      // isStudioOrAbove() branch every such query is denied ("Missing or
+      // insufficient permissions") because no query can prove
+      // resource.data.userId == request.auth.uid for another user's records.
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && resource.data.userId == request.auth.uid;
+                  && (isStudioOrAbove() || resource.data.userId == request.auth.uid);
       allow write: if false; // Cloud Function only
     }
 

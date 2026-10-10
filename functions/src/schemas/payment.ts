@@ -18,7 +18,9 @@ export const confirmPaymentMockSchema = z.object({
 export const recordManualPaymentSchema = z.object({
   jobId: z.string().min(1),
   method: z.enum(["cash", "upi_manual", "bank_transfer"]),
-  manualReference: z.string().optional(),
+  // .nullish(): the Firebase JS callable serializer delivers omitted optional
+  // fields as null (see schemas/membership.ts note).
+  manualReference: z.string().nullish(),
 }).strict();
 
 export const confirmManualPaymentSchema = z.object({

@@ -18,7 +18,7 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
 
   const data = validate(updateMembershipPlanSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "membership.planUpdate");
-  if (data.priceInPaise !== undefined) assertValidMinorUnits(data.priceInPaise, "priceInPaise");
+  if (data.priceInPaise !== undefined && data.priceInPaise !== null) assertValidMinorUnits(data.priceInPaise, "priceInPaise");
 
   const db = getFirestore();
   const ref = db.collection(COLLECTIONS.membershipPlans()).doc(data.planId);
@@ -31,10 +31,12 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
     assertTenant(user, existing.tenantId);
 
     const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-    if (data.name !== undefined) updates["name"] = data.name;
-    if (data.priceInPaise !== undefined) updates["priceInPaise"] = data.priceInPaise;
-    if (data.includedWashes !== undefined) updates["includedWashes"] = data.includedWashes;
-    if (data.discountPercent !== undefined) updates["discountPercent"] = data.discountPercent;
+    // !== undefined && !== null: the wire can deliver omitted fields as null
+    // (see schemas/membership.ts note) - null means "leave unchanged".
+    if (data.name !== undefined && data.name !== null) updates["name"] = data.name;
+    if (data.priceInPaise !== undefined && data.priceInPaise !== null) updates["priceInPaise"] = data.priceInPaise;
+    if (data.includedWashes !== undefined && data.includedWashes !== null) updates["includedWashes"] = data.includedWashes;
+    if (data.discountPercent !== undefined && data.discountPercent !== null) updates["discountPercent"] = data.discountPercent;
 
     tx.update(ref, updates);
     writeAuditLog(tx, {
