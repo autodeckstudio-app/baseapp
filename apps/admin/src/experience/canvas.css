@@ -32,7 +32,7 @@ html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame) { background: #14
 .ax-corner-out:hover { background: rgba(236,134,56,.14); }
 
 /* Top notch: chrome tab hanging from the top edge, concave cutouts either side */
-.ax-notch { position: absolute; z-index: 11; top: 0; left: 50%; transform: translateX(-50%); max-width: calc(100% - 640px); background: var(--ax-chrome); border-radius: 0 0 28px 28px; padding: 12px 18px 14px; box-sizing: border-box; }
+.ax-notch { position: absolute; z-index: 11; top: 0; left: 50%; transform: translateX(-50%); max-width: calc(100% - 560px); background: var(--ax-chrome); border-radius: 0 0 28px 28px; padding: 12px 14px 14px; box-sizing: border-box; }
 .ax-notch::before, .ax-notch::after { content: ""; position: absolute; top: 0; width: var(--ax-cut); height: var(--ax-cut); pointer-events: none; }
 .ax-notch::before { left: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 0 100%, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
 .ax-notch::after { right: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 100% 100%, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
@@ -45,7 +45,7 @@ html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { backgrou
 
 /* Left rail: chrome slab attached to the left edge, cutouts above and below */
 @media (min-width: 861px) {
-  .ax-shell-frame > .ax-side {
+  .ax-shell .ax-shell-frame > .ax-side, html[data-theme="night"] .ax-shell .ax-shell-frame > .ax-side {
     position: absolute !important; display: block !important; left: 0; top: 112px; bottom: 112px; width: 224px; height: auto !important; margin: 0 !important; padding: 0 !important;
     z-index: 10; border-radius: 0 32px 32px 0 !important; border: none !important; box-shadow: none !important;
     background: var(--ax-chrome) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; overflow: visible !important;
@@ -77,6 +77,9 @@ html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { backgrou
   .ax-dash .ax-detail-main > .ax-panel::after { right: calc(var(--ax-cut) * -1); background: radial-gradient(circle at 100% 0, transparent calc(var(--ax-cut) - .5px), var(--ax-chrome) var(--ax-cut)); }
   .ax-dash .ax-detail-side { gap: 16px; padding-bottom: 6px; }
   .ax-dash .ax-setup { display: none; }
+  .ax-dash .ax-detail-side > .ax-panel + .ax-panel { display: none; }
+  .ax-dash .ax-tiles .ax-tile { min-height: 0; padding: 18px 22px; }
+  .ax-dash .ax-detail-side > .ax-panel { margin-bottom: 18px; }
 }
 
 /* Phone: same canvas, notch full width under the corner pills */
