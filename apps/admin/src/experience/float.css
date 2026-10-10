@@ -10,7 +10,8 @@
   --fl-glass-night: linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.045)), rgba(76,76,72,.58);
 }
 .ax-shell-frame { position: relative; }
-.ax-shell-frame > .ax-side, .ax-shell-frame > .ax-main, .ax-shell-frame > .ax-tabbar { position: relative; z-index: 1; }
+.ax-shell-frame > .ax-main { position: relative; z-index: 1; }
+.ax-shell-frame > .ax-side { z-index: 1; }
 
 /* Display type */
 .ax-shell h1, .ax-page-head h1, .ax-hero h1 {
