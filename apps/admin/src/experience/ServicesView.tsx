@@ -67,7 +67,7 @@ export function ServicesView(p: {
 
   return (
     <div className="ax-page">
-      <PageHead eyebrow="Office" title="Services and pricing" kpis={[{ value: p.services.filter((s) => s.active).length, label: "On the menu", tone: "premium" }, { value: p.services.filter((s) => !s.active).length, label: "Hidden" }]}>
+      <PageHead eyebrow="Office" title="Pricing" kpis={[{ value: p.services.filter((s) => s.active).length, label: "On the menu", tone: "premium" }, { value: p.services.filter((s) => !s.active).length, label: "Hidden" }]}>
         <button type="button" className="ax-button ax-button--primary" onClick={() => setDraft(EMPTY_SERVICE)}>New service</button>
       </PageHead>
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}

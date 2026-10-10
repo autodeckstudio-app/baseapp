@@ -9,7 +9,7 @@ import { formatPaise, formatDayLong } from "../lib/format";
 
 const SECTIONS = [
   { href: "/studio", label: "Studio", description: "Opening hours, holidays, bays and booking rules." },
-  { href: "/services", label: "Services and pricing", description: "What you offer and what it costs per car size." },
+  { href: "/services", label: "Pricing", description: "What you offer and what it costs per car size." },
   { href: "/memberships", label: "Memberships", description: "Plans, included washes and member discounts." },
   { href: "/vehicles", label: "Vehicles", description: "Find a car and manage its protection records." },
   { href: "/staff", label: "Team", description: "Who can sign in, and whether they see Studio or Office." },

@@ -93,3 +93,59 @@ html[data-theme="night"] .ax-shell-frame[data-hero="on"] .ax-hero-side { backgro
   .ax-shell-frame[data-hero="on"] .ax-hero-side { margin-left: 0; width: 100%; }
   .ax-shell .ax-chips { border-radius: 28px; }
 }
+
+/* ---- Header system: one pattern for every page ---- */
+.ax-shell .ax-page-head { align-items: flex-end; gap: 16px 24px; margin-bottom: 20px; }
+.ax-shell .ax-page-head > div:first-child { min-width: 0; }
+.ax-shell .ax-page-head .ax-label { display: block; margin: 0 0 6px; line-height: 1.2; }
+.ax-shell .ax-page-head h1 { margin: 0; overflow-wrap: anywhere; }
+.ax-shell-frame:not([data-hero="on"]) .ax-page-head h1 { font-size: clamp(38px, 8vw, 60px); letter-spacing: -1.6px; }
+.ax-shell .ax-label { text-transform: uppercase; }
+
+/* Stats: an aligned grid, equal columns, labels hold two lines. */
+.ax-shell .ax-kpis {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0;
+  padding: 14px 6px; border-radius: 30px;
+  background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 18px 40px -20px rgba(80,50,20,.45);
+  backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+html[data-theme="night"] .ax-shell .ax-kpis { background: linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.04)), rgba(70,70,66,.58); border-color: rgba(255,255,255,.18); }
+.ax-shell .ax-kpis > div { gap: 4px; padding: 2px 16px; align-items: flex-start; min-width: 0; }
+.ax-shell .ax-kpis > div + div { border-left: 1px solid rgba(120,100,80,.18); }
+html[data-theme="night"] .ax-shell .ax-kpis > div + div { border-left-color: rgba(255,255,255,.14); }
+.ax-shell .ax-kpis .ax-kpi-v { font-size: 32px; line-height: 36px; white-space: nowrap; }
+.ax-shell .ax-kpis .ax-label { font-size: 11px; letter-spacing: .9px; line-height: 1.25; min-height: 2.5em; }
+
+/* Empty board columns stay compact. */
+.ax-shell .ax-col:has(.ax-col-empty) { padding: 12px 20px; gap: 0; min-height: 0; }
+.ax-shell .ax-col:has(.ax-col-empty) .ax-col-empty { display: none; }
+.ax-shell .ax-col:has(.ax-col-empty) .ax-col-head { padding: 0; }
+
+@media (max-width: 860px) {
+  /* Section pills: one clean scrolling pill bar, never a wrapped second row. */
+  .ax-shell .ax-chips { display: flex; flex-wrap: nowrap; overflow-x: auto; width: 100%; border-radius: 999px; padding: 5px; gap: 2px; scrollbar-width: none; }
+  .ax-shell .ax-chips::-webkit-scrollbar { display: none; }
+  .ax-shell .ax-chips .ax-chip-link { flex: 0 0 auto; min-height: 36px; padding: 0 16px; font-size: 14px; }
+  .ax-shell .ax-page-head { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 16px; }
+  .ax-shell-frame:not([data-hero="on"]) .ax-page-head h1 { font-size: clamp(36px, 11vw, 48px); }
+  .ax-shell .ax-kpis { width: 100%; box-sizing: border-box; }
+  .ax-shell .ax-kpis > div { padding: 2px 12px; }
+  .ax-shell .ax-kpis .ax-kpi-v { font-size: 28px; line-height: 32px; }
+  .ax-shell .ax-kpis .ax-label { font-size: 10px; letter-spacing: .7px; }
+
+  /* List rows become synced two-column cards. */
+  .ax-shell .ax-list-row[role="row"] { grid-template-columns: minmax(0, 1fr) auto !important; align-items: center; column-gap: 12px; row-gap: 6px; padding: 14px 18px; min-height: 0; }
+  .ax-shell .ax-list-row > span { white-space: normal; overflow: visible; text-overflow: clip; }
+  .ax-shell .ax-list-row > span.is-end { text-align: right; justify-self: end; }
+  .ax-shell .ax-list-row > [data-col="who"], .ax-shell .ax-list-row > [data-col="name"] { grid-column: 1; grid-row: 1; font-size: 16px; font-weight: 600; }
+  .ax-shell .ax-list-row > [data-col="amt"] { grid-column: 2; grid-row: 1; font-size: 16px; font-weight: 600; }
+  .ax-shell .ax-list-row > [data-col="when"] { grid-column: 1; grid-row: 2; font-size: 13px; }
+  .ax-shell .ax-list-row > [data-col="status"] { grid-column: 2; grid-row: 2; justify-self: end; }
+  .ax-shell .ax-list-row > [data-col="how"] { grid-column: 1; grid-row: 3; font-size: 13px; }
+  .ax-shell .ax-list-row > [data-col="act"] { grid-column: 2; grid-row: 3; justify-self: end; }
+  .ax-shell .ax-list-row > [data-col="act"]:empty, .ax-shell .ax-list-row > [data-col="act"]:has(.ax-row-actions:empty) { display: none; }
+  .ax-shell .ax-list-row > [data-col="phone"] { grid-column: 1; grid-row: 2; font-size: 14px; }
+  .ax-shell .ax-list-row > [data-col="joined"] { grid-column: 2; grid-row: 1; font-size: 12px; color: var(--ad-text-tertiary); }
+  .ax-shell .ax-row-actions { flex-wrap: wrap; justify-content: flex-end; }
+}

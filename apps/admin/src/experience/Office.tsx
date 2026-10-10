@@ -116,7 +116,7 @@ export function ListPane<T extends { id: string }>({
       </div>
       {rows.map((row) => {
         const cells = columns.map((c) => (
-          <span key={c.key} role="cell" className={[c.align === "end" ? "is-end" : "", c.kind ? `is-${c.kind}` : ""].join(" ").trim() || undefined}>
+          <span key={c.key} role="cell" data-col={c.key} className={[c.align === "end" ? "is-end" : "", c.kind ? `is-${c.kind}` : ""].join(" ").trim() || undefined}>
             {c.cell(row)}
           </span>
         ));
