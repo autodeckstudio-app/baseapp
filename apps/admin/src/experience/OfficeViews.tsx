@@ -2,6 +2,7 @@
 
 // Presentational office lists. Pages own data and actions; these own the
 // look, so the /design previews render exactly what staff see.
+import { customerMatches, plateIndex } from "../lib/customer-search";
 import Link from "next/link";
 import { auditActor, auditTarget, auditVerb } from "../lib/audit-display";
 import { useState } from "react";
@@ -21,12 +22,14 @@ export function CustomersView(p: {
   error: string | null;
   search: string;
   onSearch: (q: string) => void;
+  vehicles?: { ownerId: string; registrationNumber?: string }[];
   onPlateLookup: (plate: string) => void;
   plateMessage: string | null;
   onOpen: (id: string) => void;
 }) {
   const q = p.search.trim().toLowerCase();
-  const rows = q ? p.customers.filter((c) => c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q)) : p.customers;
+  const plates = plateIndex(p.vehicles ?? []);
+  const rows = q ? p.customers.filter((c) => customerMatches(c, p.search, plates)) : p.customers;
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
   const newThisMonth = p.customers.filter((c) => c.createdAt >= monthAgo).length;
   const cols: Column<Customer>[] = [
@@ -47,7 +50,7 @@ export function CustomersView(p: {
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.customers.length }}>
-        <input className="ax-search" type="search" aria-label="Search customers by name or phone" placeholder="Search name or phone" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
+        <input className="ax-search" type="search" aria-label="Search customers by name, phone, email or number plate" placeholder="Name, phone, email or plate" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
         <PlateLookup onLookup={p.onPlateLookup} />
       </Toolbar>
       {p.plateMessage && <p className="ax-status-msg ax-status-msg--warn">{p.plateMessage}</p>}
@@ -57,7 +60,7 @@ export function CustomersView(p: {
         loading={p.loading}
         error={p.error}
         onOpen={(c) => p.onOpen(c.id)}
-        empty={q ? { title: "No one matches that", body: "Try part of the name or the last digits of the phone number." } : { title: "No customers yet", body: "Customers appear here after their first booking or sign-in." }}
+        empty={q ? { title: "No one matches that", body: "Try part of the name, the phone number, the email or the number plate." } : { title: "No customers yet", body: "Customers appear here after their first booking or sign-in." }}
       />
     </div>
   );
