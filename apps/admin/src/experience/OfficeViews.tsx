@@ -266,7 +266,7 @@ export function AuditView(p: {
     { key: "when", head: "When", kind: "muted", width: "170px", cell: (e) => formatDateTime(e.createdAt) },
     { key: "story", head: "What happened", width: "minmax(0, 1fr)", cell: (e) => {
       const target = auditTarget(e, p.labels);
-      return <span><strong>{auditActor(e, p.who)}</strong> <span className="ax-sub" style={{ display: "inline" }}>({e.metadata?.automatic ? "automatic" : statusLabel(e.performedByRole)})</span> {auditVerb(e)} {target.href ? <Link href={target.href} onClick={(event) => event.stopPropagation()}>{target.label}</Link> : target.label}.<span className="ax-sub">{String(e.after?.reason ?? e.after?.rejectionReason ?? "")}</span></span>;
+      return <span style={{ whiteSpace: "normal", overflowWrap: "anywhere", display: "block", padding: "12px 0" }}><strong>{auditActor(e, p.who)}</strong> <span className="ax-sub" style={{ display: "inline" }}>({e.metadata?.automatic ? "automatic" : statusLabel(e.performedByRole)})</span> {auditVerb(e)} {target.href ? <Link href={target.href} onClick={(event) => event.stopPropagation()}>{target.label}</Link> : target.label}.<span className="ax-sub">{String(e.after?.reason ?? e.after?.rejectionReason ?? "")}</span></span>;
     } },
   ];
   if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;

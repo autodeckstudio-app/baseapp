@@ -12,7 +12,7 @@ export function auditTarget(entry: AuditLog, labels: Record<string, string> = {}
   const type = entry.entityType.toLowerCase().replaceAll("_", "");
   const label = labels[`${type}:${entry.entityId}`] || entry.targetLabel || str("registrationNumber") || str("invoiceNumber") || str("name") || str("reference") || `${entry.entityType} ${entry.entityId.slice(0, 8)}`;
   const routes: Record<string, string> = { customer: "/customers/", booking: "/bookings/", invoice: "/invoices/", job: "/jobs/", servicejob: "/jobs/" };
-  const href = routes[type] ? `${routes[type]}${encodeURIComponent(entry.entityId)}` : type === "vehicle" ? `/vehicles?search=${encodeURIComponent(label)}` : type === "paper" ? `/papers?paper=${encodeURIComponent(entry.entityId)}` : type === "payment" ? `/payments?search=${encodeURIComponent(label)}` : null;
+  const href = routes[type] ? `${routes[type]}${encodeURIComponent(entry.entityId)}` : type === "vehicle" ? `/vehicles?search=${encodeURIComponent(label)}` : type === "paper" ? `/papers?paper=${encodeURIComponent(entry.entityId)}&status=${encodeURIComponent(String(entry.after?.status || "PENDING"))}` : type === "payment" ? `/payments?search=${encodeURIComponent(label)}` : null;
   return { label, href };
 }
 export function auditActor(entry: AuditLog, names: Record<string, string>): string {

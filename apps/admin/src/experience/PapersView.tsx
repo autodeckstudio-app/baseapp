@@ -78,8 +78,8 @@ export function PapersView(p: {
                 {p.papers.map((paper) => {
                   const expired = paper.expiresOn !== null && paper.expiresOn < today;
                   return (
-                    <li key={paper.id} className="ax-list-row" style={{ flexWrap: "wrap", gap: 12 }}>
-                      <span className="ax-slot-main">
+                    <li key={paper.id} className="ax-list-row ax-paper-row">
+                      <span className="ax-slot-main" style={{ whiteSpace: "normal", overflow: "visible" }}>
                         <span className="ax-person-name">
                           {KIND_NAME[paper.kind]} · {paper.reference}
                         </span>
@@ -87,7 +87,7 @@ export function PapersView(p: {
                           {vehicleName(p.vehiclesById.get(paper.vehicleId))} · expires {formatDate(paper.expiresOn)}
                           {paper.rejectionReason ? ` · rejected: ${paper.rejectionReason}` : ""}
                         </span>
-                        <span className="ax-sub">{paper.verificationMode === "automatic" ? paper.status === "VERIFIED" ? "Auto-approved" : "Auto-rejected" : paper.verificationMode === "manual" ? "Reviewed by staff" : "Manual review needed"}{paper.verificationReason ? `: ${paper.verificationReason}` : ": Original document needs a closer look."}</span>
+                        <span className="ax-sub" style={{ whiteSpace: "normal", overflow: "visible" }}>{paper.verificationMode === "automatic" ? paper.status === "VERIFIED" ? "Auto-approved" : "Auto-rejected" : paper.verificationMode === "manual" ? "Reviewed by staff" : "Manual review needed"}{paper.verificationReason ? `: ${paper.verificationReason}` : ": Original document needs a closer look."}</span>
                         {paper.evidenceUrl && <a href={paper.evidenceUrl} target="_blank" rel="noreferrer">Open original document</a>}
                       </span>
                       {expired && <span className="ax-expiry ax-expiry--danger">expired</span>}

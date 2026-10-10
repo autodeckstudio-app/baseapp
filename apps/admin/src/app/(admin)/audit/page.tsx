@@ -11,7 +11,7 @@ import { listStaff } from "../../../lib/staff-service";
 import { AuditView } from "../../../experience/OfficeViews";
 
 export default function AuditPage() {
-  const { claims } = useAdminAuth();
+  const { claims, user } = useAdminAuth();
   const [entries, setEntries] = useState<AuditLog[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [customers, setCustomers] = useState<Record<string, string>>({});
@@ -67,9 +67,10 @@ export default function AuditPage() {
   // Show a person's name where the roster knows their account.
   const who = useMemo(() => {
     const m: Record<string, string> = { ...customers, system: "AutoDeck" };
+    if (user) m[user.uid] = user.displayName || user.email || "Current admin";
     for (const s of staff) if (s.authUid) m[s.authUid] = s.name;
     return m;
-  }, [staff, customers]);
+  }, [staff, customers, user]);
 
   return <AuditView entries={entries} loading={loading} error={error} who={who} labels={labels} />;
 }

@@ -15,6 +15,13 @@ type StatusFilter = "PENDING" | "VERIFIED" | "REJECTED";
 export default function PapersPage() {
   const { claims } = useAdminAuth();
   const [filter, setFilter] = useState<StatusFilter>("PENDING");
+  const [focusedPaper, setFocusedPaper] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "VERIFIED" || status === "REJECTED" || status === "PENDING") setFilter(status);
+    setFocusedPaper(params.get("paper"));
+  }, []);
   const [papers, setPapers] = useState<PaperVerification[]>([]);
   const [vehiclesById, setVehiclesById] = useState<Map<string, Vehicle>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -79,13 +86,13 @@ export default function PapersPage() {
   return (
     <PapersView
       filter={filter}
-      papers={papers}
+      papers={focusedPaper ? papers.filter((paper) => paper.id === focusedPaper) : papers}
       vehiclesById={vehiclesById}
       loading={loading}
       busy={busy}
       error={error}
       message={message}
-      onFilter={setFilter}
+      onFilter={(value) => { setFocusedPaper(null); setFilter(value); }}
       onResolvePlate={resolvePlate}
       onSubmit={(input) =>
         void run(
