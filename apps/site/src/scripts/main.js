@@ -51,29 +51,6 @@ if (glHost && !prefersReduced && !smallScreen) {
   }
 }
 
-/* ---------- countdown ---------- */
-const TARGET = Date.UTC(2026, 9, 11, 4, 30); // 11 Oct 2026, 10:00 IST
-const cdEls = {
-  d: document.querySelectorAll('[data-cd="d"]'),
-  h: document.querySelectorAll('[data-cd="h"]'),
-  m: document.querySelectorAll('[data-cd="m"]'),
-  s: document.querySelectorAll('[data-cd="s"]'),
-};
-const pad = (n) => String(n).padStart(2, '0');
-function tickCountdown() {
-  const diff = Math.max(0, TARGET - Date.now());
-  const d = Math.floor(diff / 864e5);
-  const h = Math.floor((diff % 864e5) / 36e5);
-  const m = Math.floor((diff % 36e5) / 6e4);
-  const s = Math.floor((diff % 6e4) / 1e3);
-  cdEls.d.forEach((el) => (el.textContent = pad(d)));
-  cdEls.h.forEach((el) => (el.textContent = pad(h)));
-  cdEls.m.forEach((el) => (el.textContent = pad(m)));
-  cdEls.s.forEach((el) => (el.textContent = pad(s)));
-}
-tickCountdown();
-setInterval(tickCountdown, 1000);
-
 /* ---------- scroll reveals ---------- */
 document.querySelectorAll('.rv').forEach((el) => {
   gsap.fromTo(el,

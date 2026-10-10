@@ -334,6 +334,16 @@ a { color: inherit; text-decoration: none; }
 .wraps { position: relative; overflow: hidden; border-top: 1px solid var(--line-soft); }
 .wraps-bg { position: absolute; inset: 0; }
 .wraps-bg img { width: 100%; height: 120%; object-fit: cover; opacity: .4; filter: grayscale(.35) contrast(1.1) brightness(.8); }
+.wraps-note {
+  margin-top: 32px;
+  max-width: 420px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--paper-dim);
+}
+.wraps-note a.inline { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
+.wraps-note a.inline:hover { color: var(--orange); }
+
 .wraps-inner {
   position: relative; z-index: 2;
   padding: clamp(110px, 15vw, 210px) var(--gutter);
