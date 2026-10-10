@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
+gsap.defaults({ ease: 'power3.out', duration: 1 });
 
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isTouch = window.matchMedia('(hover: none)').matches;
@@ -118,4 +119,35 @@ if (!isTouch && !prefersReduced) {
       gsap.to(btn, { x: 0, y: 0, duration: 0.7, ease: 'elastic.out(1, 0.4)' });
     });
   });
+}
+
+/* ---------- opening countdown ---------- */
+const cd = document.getElementById('countdown');
+if (cd) {
+  const target = new Date(cd.dataset.target || '').getTime();
+  const cells = {
+    d: cd.querySelector('[data-cd="d"]'),
+    h: cd.querySelector('[data-cd="h"]'),
+    m: cd.querySelector('[data-cd="m"]'),
+    s: cd.querySelector('[data-cd="s"]'),
+  };
+  const pad = (n) => String(n).padStart(2, '0');
+  const tick = () => {
+    const left = target - Date.now();
+    if (!Number.isFinite(target) || left <= 0) {
+      cd.classList.add('done');
+      cells.d.textContent = '00';
+      cells.h.textContent = '00';
+      cells.m.textContent = '00';
+      cells.s.textContent = '00';
+      return;
+    }
+    const sec = Math.floor(left / 1000);
+    cells.d.textContent = pad(Math.floor(sec / 86400));
+    cells.h.textContent = pad(Math.floor((sec % 86400) / 3600));
+    cells.m.textContent = pad(Math.floor((sec % 3600) / 60));
+    cells.s.textContent = pad(sec % 60);
+    setTimeout(tick, 1000 - (Date.now() % 1000));
+  };
+  tick();
 }
