@@ -181,3 +181,12 @@ html[data-theme="day"] .ax-shell .ax-nav-link, html[data-theme="day"] .ax-shell 
 html[data-theme="day"] .ax-shell .ax-nav-link[aria-current="page"], html[data-theme="day"] .ax-shell .ax-chip-link[aria-current="page"] { color: #B8530A; }
 html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data, html[data-theme="day"] .ax-shell .ax-panel .kv .ax-data * { color: #26211C !important; }
 html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; border-color: rgba(60,50,40,.35); background: rgba(255,255,255,.55); }
+@media (max-width: 860px) {
+  .ax-shell .ax-kpis .ax-label { overflow-wrap: normal; word-break: normal; hyphens: none; letter-spacing: .2px; font-size: 9px; }
+  .ax-shell .ax-kpis > div:nth-child(2) { flex: 1.35 1 0; }
+}
+@media (max-width: 360px) {
+  .ax-shell .ax-kpis .ax-kpi-v { font-size: 16px; }
+  .ax-shell .ax-kpis > div:first-child { flex: 1.5 1 0; }
+  .ax-shell .ax-kpis > div:nth-child(3) { flex: .8 1 0; }
+}
