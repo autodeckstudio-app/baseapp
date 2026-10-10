@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { Customer } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { useLabels } from "../../../lib/use-labels";
+import { listenToTenantVehicles } from "../../../lib/customers-service";
 import type { Vehicle, Protection, ProtectionStatus } from "@autodeck/core";
 import { VehiclesView, KIND_LABEL, type ProtectionDraft } from "../../../experience/VehiclesView";
 import { studioToday } from "../../../lib/format";
@@ -19,6 +24,17 @@ export default function VehicleLookupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const router = useRouter();
+  const [fleet, setFleet] = useState<Vehicle[]>([]);
+  useEffect(() => {
+    if (!claims) return undefined;
+    return listenToTenantVehicles(claims.tenantId, setFleet, () => undefined);
+  }, [claims]);
+  const ownerNames = useLabels(COLLECTIONS.customers(), [...fleet.map((v) => v.ownerId), vehicle?.ownerId ?? ""], (d) => (d as Customer).name || (d as Customer).phone || "Customer");
+  async function pick(v: Vehicle) {
+    setError(null); setStatus(null); setVehicle(v);
+    try { await refreshProtections(v.id); } catch { setError("Couldn't load this car's papers."); }
+  }
 
   async function refreshProtections(vehicleId: string) {
     setProtections(await getVehicleProtections(vehicleId));
@@ -81,6 +97,10 @@ export default function VehicleLookupPage() {
     <VehiclesView
       today={studioToday()}
       searching={loading}
+      fleet={fleet}
+      ownerNames={ownerNames}
+      onPick={(v) => void pick(v)}
+      onOpenOwner={(id) => router.push(`/customers/${id}`)}
       vehicle={vehicle}
       protections={protections}
       error={error}

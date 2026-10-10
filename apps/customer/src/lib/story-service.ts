@@ -20,8 +20,7 @@ export function groupStories(list: StoryView[], now = Date.now()): StoryGroup[] 
   const live = asc.filter((s) => Date.parse(s.expiresAt) > now);
   const groups: StoryGroup[] = [];
   if (live.length) groups.push({ key: "live", title: "Today", live: true, cover: live[live.length - 1]!.mediaType === "image" ? live[live.length - 1]!.url : live.find((s) => s.mediaType === "image")?.url ?? null, items: live });
-  const byTitle = new Map<string, StoryView[]>();
-  for (const s of asc) if (s.pinned) byTitle.set(s.highlightTitle ?? "Highlights", [...(byTitle.get(s.highlightTitle ?? "Highlights") ?? []), s]);
-  for (const [title, items] of byTitle) groups.push({ key: `h-${title}`, title, live: false, cover: items.find((s) => s.mediaType === "image")?.url ?? null, items });
+  const pinned = asc.filter((s) => s.pinned);
+  if (pinned.length) groups.push({ key: "highlights", title: "Highlights", live: false, cover: pinned.find((s) => s.mediaType === "image")?.url ?? null, items: pinned });
   return groups;
 }

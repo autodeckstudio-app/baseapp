@@ -45,17 +45,17 @@ export function JobBoard({ jobs, loading, onOpen }: { jobs: BoardJob[]; loading?
               <p className="ax-col-empty">Nothing here</p>
             ) : (
               items.map((j) => (
-                <button key={j.id} type="button" className="ax-job" onClick={() => onOpen(j.id)}>
-                  <span className="ax-job-plate">{j.plate}</span>
-                  <span className="ax-job-who">{j.customer}</span>
-                  <span className="ax-job-what">
-                    {j.service}
-                    {j.bay ? ` · Bay ${j.bay}` : ""}
-                    {j.walkIn ? " · Walk-in" : ""}
-                  </span>
-                  <span className="ax-job-foot">
-                    <span>{j.when}</span>
+                <button key={j.id} type="button" className="ax-jc" onClick={() => onOpen(j.id)}>
+                  <span className="ax-jc-top">
+                    <span className="ax-jc-plate">{j.plate}</span>
                     <StatusBadge label={j.payment} />
+                  </span>
+                  <span className="ax-jc-svc">{j.service}</span>
+                  <span className="ax-jc-who">{j.customer}</span>
+                  <span className="ax-jc-meta">
+                    {j.bay ? <span className="ax-jc-chip">Bay {j.bay}</span> : null}
+                    {j.walkIn ? <span className="ax-jc-chip ax-jc-chip--walk">Walk-in</span> : null}
+                    <span className="ax-jc-time">{j.when}</span>
                   </span>
                 </button>
               ))

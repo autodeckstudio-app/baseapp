@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { MembershipPlan, PaymentMethod } from "@autodeck/core";
+import type { Customer, Membership, MembershipPlan, PaymentMethod } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { useLabels } from "../../../lib/use-labels";
+import { formatDate, formatPaise } from "../../../lib/format";
+import { StatusBadge } from "../../../components/StatusBadge";
 import { MembershipsView, type PlanDraft } from "../../../experience/MembershipsView";
 import {
   getMembershipPlans,
@@ -9,6 +13,7 @@ import {
   updateMembershipPlan,
   setMembershipPlanActive,
   listPendingMemberships,
+  listenToTenantMemberships,
   confirmMembershipPayment,
   createWalkinMembership,
   findCustomerByPhone,
@@ -19,34 +24,34 @@ import {
 import { useAdminAuth } from "../../../lib/auth-context";
 
 const box: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,0.10)",
-  borderRadius: 10,
-  background: "rgba(255,255,255,0.02)",
+  border: "1px solid rgba(29,27,38,0.10)",
+  borderRadius: 14,
+  background: "#fff",
   padding: 16,
   marginBottom: 12,
 };
 const btn: React.CSSProperties = {
   padding: "8px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.25)",
-  background: "rgba(255,255,255,0.06)",
-  color: "#e6e6e6",
+  border: "1px solid rgba(29,27,38,0.22)",
+  background: "#fff",
+  color: "#1D1B26",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
 };
-const btnSuccess: React.CSSProperties = { ...btn, border: "1px solid rgba(74,222,128,0.5)", background: "rgba(74,222,128,0.12)", color: "#4ade80" };
+const btnSuccess: React.CSSProperties = { ...btn, border: "1px solid #1F7A4D", background: "rgba(31,122,77,0.10)", color: "#1F7A4D" };
 const input: React.CSSProperties = {
   padding: "8px 12px",
   borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.15)",
-  background: "rgba(255,255,255,0.05)",
-  color: "#e6e6e6",
+  border: "1px solid rgba(29,27,38,0.18)",
+  background: "#fff",
+  color: "#1D1B26",
   fontSize: 13,
   width: "100%",
 };
-const labelStyle: React.CSSProperties = { fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 };
-const msgStyle: React.CSSProperties = { fontSize: 12, color: "#9ca3af", marginTop: 4 };
+const labelStyle: React.CSSProperties = { fontSize: 11, color: "#625D70", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 };
+const msgStyle: React.CSSProperties = { fontSize: 12, color: "#625D70", marginTop: 4 };
 
 const PAID_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "cash", label: "Cash" },
@@ -59,7 +64,7 @@ function fmtDate(iso: string): string {
   return `${d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" })} ${d.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase()}`;
 }
 
-function PendingQueue({ tenantId, plans, onChanged }: { tenantId: string; plans: MembershipPlan[]; onChanged: () => void }) {
+function PendingQueue({ tenantId, plans, onChanged, tick }: { tenantId: string; plans: MembershipPlan[]; onChanged: () => void; tick: string }) {
   const [rows, setRows] = useState<PendingMembershipRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -80,7 +85,7 @@ function PendingQueue({ tenantId, plans, onChanged }: { tenantId: string; plans:
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, tick]);
 
   async function confirm(row: PendingMembershipRow) {
     setBusyId(row.membership.id);
@@ -103,7 +108,7 @@ function PendingQueue({ tenantId, plans, onChanged }: { tenantId: string; plans:
 
   return (
     <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f4", marginBottom: 4 }}>Pending payment approvals</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1D1B26", marginBottom: 4 }}>Pending payment approvals</h2>
       <p style={msgStyle}>Membership purchases awaiting payment confirmation. Approving one activates it immediately and notifies the customer.</p>
       {loading ? (
         <p style={msgStyle}>Loading...</p>
@@ -114,7 +119,7 @@ function PendingQueue({ tenantId, plans, onChanged }: { tenantId: string; plans:
           <div key={r.membership.id} style={box}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "#f5f5f4" }}>{r.planName} - {r.customerName}</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#1D1B26" }}>{r.planName} - {r.customerName}</p>
                 <p style={msgStyle}>
                   {r.customerPhone} - Requested {fmtDate(r.membership.createdAt)}
                   {r.payment ? ` - ${(r.payment.amount / 100).toFixed(2)} INR (${r.payment.method.replace("_", " ")})` : " - no payment record found"}
@@ -144,7 +149,7 @@ function PendingQueue({ tenantId, plans, onChanged }: { tenantId: string; plans:
           </div>
         ))
       )}
-      {message && <p style={{ ...msgStyle, color: "#a5b4fc", marginTop: 8 }}>{message}</p>}
+      {message && <p style={{ ...msgStyle, color: "#9C4108", marginTop: 8 }}>{message}</p>}
       {plans.length === 0 && <p style={msgStyle}>Create at least one plan to accept walk-in sales.</p>}
     </section>
   );
@@ -215,7 +220,7 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
 
   return (
     <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f4", marginBottom: 4 }}>Walk-in sale</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1D1B26", marginBottom: 4 }}>Walk-in sale</h2>
       <p style={msgStyle}>Sell a membership at the front desk. It activates immediately once payment is taken.</p>
       <div style={{ ...box, marginTop: 8 }}>
         <div style={{ display: "flex", gap: 8 }}>
@@ -254,7 +259,49 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
           </div>
         )}
       </div>
-      {message && <p style={{ ...msgStyle, color: "#a5b4fc", marginTop: 8 }}>{message}</p>}
+      {message && <p style={{ ...msgStyle, color: "#9C4108", marginTop: 8 }}>{message}</p>}
+    </section>
+  );
+}
+
+function MembersPanel({ members, plans }: { members: Membership[]; plans: MembershipPlan[] }) {
+  const names = useLabels(COLLECTIONS.customers(), members.map((m) => m.customerId), (d) => (d as Customer).name || (d as Customer).phone || "Customer");
+  const planName = Object.fromEntries(plans.map((p) => [p.id, p.name]));
+  const priceOf = Object.fromEntries(plans.map((p) => [p.id, p.priceInPaise]));
+  const today = new Date().toISOString().slice(0, 10);
+  const soon = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+  const active = members.filter((m) => m.status === "active");
+  const expiring = active.filter((m) => m.endDate && m.endDate.slice(0, 10) <= soon && m.endDate.slice(0, 10) >= today);
+  const pending = members.filter((m) => m.status === "pending");
+  const washesLeft = active.reduce((n, m) => n + Math.max(0, m.washesTotal - m.washesUsed), 0);
+  const revenue = active.reduce((n, m) => n + (priceOf[m.planId] ?? 0), 0);
+  const sorted = [...members].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || (a.endDate ?? "").localeCompare(b.endDate ?? ""));
+  const kpi = (v: string | number, l: string) => <div><span className="ax-kpi-v">{v}</span><span className="ax-label">{l}</span></div>;
+  return (
+    <section style={{ marginTop: 32 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1D1B26", marginBottom: 4 }}>Members</h2>
+      <p style={msgStyle}>Live list of every membership sold. Updates as customers buy and use washes.</p>
+      <div className="ax-kpis" style={{ margin: "12px 0" }}>
+        {kpi(active.length, "Active")}{kpi(pending.length, "Awaiting payment")}{kpi(expiring.length, "Ending in 7 days")}{kpi(washesLeft, "Washes owed")}{kpi(formatPaise(revenue), "Active plan value")}
+      </div>
+      {sorted.length === 0 ? <p style={msgStyle}>No memberships sold yet.</p> : (
+        <div style={{ overflowX: "auto" }}>
+          <table>
+            <thead><tr><th>Customer</th><th>Plan</th><th>Status</th><th>Washes</th><th>Ends</th></tr></thead>
+            <tbody>
+              {sorted.map((m) => (
+                <tr key={m.id}>
+                  <td><a href={`/customers/${m.customerId}`} style={{ color: "#9C4108" }}>{names[m.customerId] ?? "..."}</a></td>
+                  <td>{planName[m.planId] ?? m.tier}</td>
+                  <td><StatusBadge label={m.status} /></td>
+                  <td>{m.washesUsed} of {m.washesTotal}</td>
+                  <td>{m.endDate ? formatDate(m.endDate) : "Not started"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -267,6 +314,11 @@ export default function MembershipPlansPage() {
   const [busy, setBusy] = useState(false);
   const { claims } = useAdminAuth();
   const tenantId = claims?.tenantId ?? null;
+  const [members, setMembers] = useState<Membership[]>([]);
+  useEffect(() => {
+    if (!tenantId) return undefined;
+    return listenToTenantMemberships(tenantId, setMembers, () => undefined);
+  }, [tenantId]);
 
   async function refresh() {
     setLoading(true);
@@ -327,7 +379,8 @@ export default function MembershipPlansPage() {
       <MembershipsView plans={plans} loading={loading} error={error} message={status} busy={busy} onSave={(d) => void handleSave(d)} onToggle={(pl) => void handleToggleActive(pl)} />
       {tenantId && (
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px 48px" }}>
-          <PendingQueue tenantId={tenantId} plans={plans} onChanged={() => void refresh()} />
+          <PendingQueue tenantId={tenantId} plans={plans} onChanged={() => void refresh()} tick={members.map((m) => `${m.id}:${m.status}`).join("|")} />
+          <MembersPanel members={members} plans={plans} />
           <WalkinSale tenantId={tenantId} plans={plans} onChanged={() => void refresh()} />
         </div>
       )}

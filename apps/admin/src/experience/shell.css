@@ -437,7 +437,7 @@
 .ax-invoice-grand { border-top: 1px solid var(--ad-border-strong); margin-top: 6px; padding-top: 12px !important; font-size: 18px !important; color: var(--ad-text-primary); }
 .ax-invoice-grand span:last-child { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-size: 24px; font-weight: 600; }
 @media print {
-  .ax-side, .ax-noprint { display: none !important; }
+  .ax-side, .ax-noprint, .ax-tabbar, .ax-chips, .ax-sheet-back { display: none !important; }
   .ax-shell-frame { display: block !important; }
   .ax-detail { display: block !important; }
   .ax-invoice { background: #fff !important; color: #111 !important; border: none !important; box-shadow: none !important; }
@@ -616,3 +616,34 @@
 @media(max-width:700px){.ax-shell .ax-seg{max-width:100%;flex-wrap:wrap;border-radius:20px;}.ax-shell .ax-seg button{flex:1 0 auto;}.ax-shell .ax-toolbar .ax-search{max-width:100%;}}
 
 .ax-shell .ax-cash-summary .ax-list-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;}.ax-shell .ax-cash-summary .ax-person-name,.ax-shell .ax-cash-summary .ax-sub{white-space:normal;overflow:visible;word-break:normal;}.ax-shell .ax-cash-summary .ax-slot-amt{white-space:nowrap;}
+
+/* Stories */
+.ax-story-grid { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; }
+.ax-story { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ax-story-media { position: relative; aspect-ratio: 9 / 14; border-radius: 16px; overflow: hidden; background: rgba(29,27,38,.06); }
+.ax-story-media img, .ax-story-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ax-story-tag { position: absolute; left: 8px; top: 8px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; }
+.ax-story-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-story-body .ax-person-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ax-story-actions { display: flex; flex-direction: column; gap: 6px; }
+.ax-story-actions .ax-button { width: 100%; justify-content: center; }
+.ax-check { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.ax-check input { width: 18px; height: 18px; accent-color: #EC8638; }
+
+/* Job cards: plate first, then what and who, then bay and time. */
+.ax-shell .ax-jc { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%; min-height: 0; padding: 14px; text-align: left; background: #fff; border: 1px solid rgba(29,27,38,.08); border-radius: 16px; box-shadow: 0 1px 2px rgba(29,27,38,.04); cursor: pointer; font: inherit; color: inherit; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+.ax-shell .ax-jc:hover { transform: translateY(-1px); border-color: rgba(236,134,56,.45); box-shadow: 0 6px 16px -10px rgba(29,27,38,.25); }
+.ax-shell .ax-jc:focus-visible { outline: 2px solid #EC8638; outline-offset: 2px; }
+.ax-jc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ax-jc-plate { font-weight: 700; font-size: 15px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.ax-jc-svc { font-size: 14px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.ax-jc-who { font-size: 13px; color: var(--ad-text-secondary, #4A4655); overflow-wrap: anywhere; }
+.ax-jc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(29,27,38,.07); }
+.ax-jc-chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(236,134,56,.12); color: #9C4108; }
+.ax-jc-chip--walk { background: rgba(29,27,38,.07); color: #4A4655; }
+.ax-jc-time { font-size: 12px; color: var(--ad-text-tertiary, #625D70); margin-left: auto; }
+
+.ax-cust-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 14px; }
+.ax-cust-facts p { margin: 4px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+.ax-cust-facts a { color: var(--ad-accent-strong, #9C4108); }
+.ax-linkbtn { background: none; border: 0; padding: 0; min-height: 0; color: var(--ad-accent-strong, #9C4108); font: inherit; text-decoration: underline; cursor: pointer; }

@@ -20,7 +20,7 @@ const ROWS = [
 export default function Preview() {
   return (
     <StaffShell pathname="/vehicles" office role="admin" who="studio@autodeck.example" home="/design/vehicles" onSignOut={() => {}}>
-      <VehiclesView today={today} searching={false} vehicle={V} protections={ROWS} error={null} message={null} onSearch={() => {}} onAdd={() => {}} onStatus={() => {}} />
+      <VehiclesView today={today} searching={false} vehicle={V} protections={ROWS} error={null} message={null} fleet={[]} ownerNames={{}} onPick={() => {}} onOpenOwner={() => {}} onSearch={() => {}} onAdd={() => {}} onStatus={() => {}} />
     </StaffShell>
   );
 }

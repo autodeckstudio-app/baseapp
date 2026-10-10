@@ -2,12 +2,12 @@
 
 // Invoice: reads like the document the customer receives, with payment and
 // actions beside it. Printing hides the chrome and prints just the document.
-import { LOGO_HORIZONTAL_SVG, logoDataUri } from "@autodeck/ui/theme";
+import { buildInvoiceHtml, printInvoiceHtml } from "@autodeck/ui/invoice";
 import { useEffect, useState } from "react";
-import { invoiceServiceLabel, type Customer, type Invoice, type Payment, type Vehicle } from "@autodeck/core";
+import { type Customer, type Invoice, type Payment, type Vehicle } from "@autodeck/core";
 import { getServicesIncludingHidden } from "../lib/catalogue-service";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatDateTime, formatPaise } from "../lib/format";
+import { formatPaise } from "../lib/format";
 import { methodLabel } from "../lib/status-label";
 
 export function InvoiceView(p: {
@@ -32,6 +32,14 @@ export function InvoiceView(p: {
   const snapshots = inv as unknown as { customerSnapshot?: Customer; vehicleSnapshot?: Vehicle };
   const customer = snapshots.customerSnapshot ?? p.customer;
   const vehicle = snapshots.vehicleSnapshot ?? p.vehicle;
+  const html = buildInvoiceHtml({
+    invoice: inv,
+    catalogue,
+    studio: { name: p.studioName, address: "Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad, Gujarat 380006", phone: "+919898679711" },
+    customer: customer ?? null,
+    vehicle: vehicle ? { make: vehicle.make, model: vehicle.model, registrationNumber: vehicle.registrationNumber } : null,
+    appearance: "print",
+  });
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -40,36 +48,12 @@ export function InvoiceView(p: {
       <button type="button" className="ax-back ax-noprint" onClick={p.onBack} style={{ background: "none", border: "none", padding: 0, minHeight: 0 }}>‹ Invoices</button>
       {p.message && <p className="ax-status-msg ax-noprint">{p.message}</p>}
       <div className="ax-detail" style={{ marginTop: 16 }}>
-        <article className="ax-panel ax-invoice ax-detail-main">
-          <header className="ax-invoice-head">
-            <div>
-              <img src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 34, width: "auto" }} />
-              <p className="ax-sub">{p.studioName}</p>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p className="ax-label" style={{ margin: 0 }}>Tax invoice</p>
-              <p className="ax-data" style={{ fontSize: 18, margin: "4px 0" }}>{inv.invoiceNumber || "Draft"}</p>
-              <StatusBadge label={inv.status} />
-            </div>
-          </header>
-          <div className="ax-invoice-meta">
-            <div><span className="ax-label">Billed to</span><p>{customer?.name ?? "Customer"}</p><span className="ax-sub">{customer?.phone}</span></div>
-            <div><span className="ax-label">Car</span><p className="ax-data">{vehicle?.registrationNumber ?? "-"}</p><span className="ax-sub">{[vehicle?.make, vehicle?.model].filter(Boolean).join(" ")}</span></div>
-            <div><span className="ax-label">Issued</span><p>{formatDateTime(inv.issuedAt)}</p></div>
-          </div>
-          <div className="ax-invoice-lines" role="table">
-            <div className="ax-invoice-line is-head" role="row"><span>Item</span><span>Qty</span><span>Rate</span><span>Amount</span></div>
-            {inv.lineItems.map((li, i) => (
-              <div key={i} className="ax-invoice-line" role="row"><span>{invoiceServiceLabel(li, catalogue)}</span><span>{li.quantity}</span><span className="ax-data">{formatPaise(li.unitPrice)}</span><span className="ax-data">{formatPaise(li.total)}</span></div>
-            ))}
-          </div>
-          <div className="ax-invoice-totals">
-            <div className="kv"><span>Subtotal</span><span className="ax-data">{formatPaise(inv.subtotal)}</span></div>
-            <div className="kv"><span>{inv.taxDescription}</span><span className="ax-data">{formatPaise(inv.tax)}</span></div>
-            <div className="kv ax-invoice-grand"><span>Total</span><span>{formatPaise(inv.total)}</span></div>
-          </div>
-          {inv.status === "void" && <p className="ax-note" style={{ color: "var(--ad-danger)" }}>Voided {formatDateTime(inv.voidedAt)}{inv.voidedReason ? ` · ${inv.voidedReason}` : ""}</p>}
-        </article>
+        <div className="ax-detail-main ax-invoice-doc">
+          <iframe title="Invoice" srcDoc={html} scrolling="no" onLoad={(e) => {
+            const d = e.currentTarget.contentDocument;
+            if (d) e.currentTarget.style.height = `${Math.ceil(d.body.scrollHeight)}px`;
+          }} style={{ display: "block", width: "100%", maxWidth: 794, height: 1100, border: 0, borderRadius: 18, margin: "0 auto", background: "#f8f6f0" }} />
+        </div>
 
         <aside className="ax-detail-side ax-noprint">
           <section className="ax-panel">
@@ -85,7 +69,7 @@ export function InvoiceView(p: {
           <section className="ax-panel">
             <span className="ax-label">Actions</span>
             <div className="ax-panel-actions" style={{ marginTop: 0 }}>
-              <button type="button" className="ax-button ax-button--primary" onClick={() => window.print()}>Print</button>
+              <button type="button" className="ax-button ax-button--primary" onClick={() => printInvoiceHtml(html)}>Print</button>
               <button type="button" className="ax-button" onClick={() => p.onOpen(`/jobs/${inv.jobId}`)}>Open job</button>
               {inv.bookingId && <button type="button" className="ax-button" onClick={() => p.onOpen(`/bookings/${inv.bookingId}`)}>Open booking</button>}
             </div>

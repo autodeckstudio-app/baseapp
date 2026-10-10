@@ -7,15 +7,15 @@ export const space = {
   breath: 8,
   line: 12,
   gap: 16,
-  inset: 24,
-  section: 48,
-  scene: 96,
+  inset: 20,
+  section: 32,
+  scene: 64,
 } as const;
 
 export const layout = {
   primaryActionGap: 16,
   secondaryHeadingGap: 32,
-  screenInset: 24,
+  screenInset: 20,
   screenInsetCompact: 16, // below 360px
   readingMeasure: 600,
   minimumHitArea: 44,
@@ -72,7 +72,7 @@ export const type = {
   body: { family: "body", size: 15, lineHeight: 22, weight: "400", letterSpacing: 0 },
   bodyStrong: { family: "body", size: 15, lineHeight: 22, weight: "500", letterSpacing: 0 },
   data: { family: "data", size: 14, lineHeight: 20, weight: "500", letterSpacing: 0, tabular: true },
-  label: { family: "body", size: 12, lineHeight: 16, weight: "600", letterSpacing: 1.4, uppercase: true },
+  label: { family: "body", size: 12, lineHeight: 16, weight: "500", letterSpacing: 0.9, uppercase: true },
   // Never below 12px: accessible minimum.
   caption: { family: "body", size: 12, lineHeight: 16, weight: "400", letterSpacing: 0.1 },
 } as const satisfies Record<string, TypeRole>;

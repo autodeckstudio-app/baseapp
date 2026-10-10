@@ -47,6 +47,10 @@ export function VehiclesView(p: {
   protections: Protection[];
   error: string | null;
   message: string | null;
+  fleet: Vehicle[];
+  ownerNames: Record<string, string>;
+  onPick: (v: Vehicle) => void;
+  onOpenOwner: (ownerId: string) => void;
   onSearch: (plate: string) => void;
   onAdd: (draft: ProtectionDraft) => void;
   onStatus: (prot: Protection, status: ProtectionStatus) => void;
@@ -75,7 +79,7 @@ export function VehiclesView(p: {
             <div>
               <p className="ax-label">{[p.vehicle.year, p.vehicle.make].filter(Boolean).join(" ")}</p>
               <h1>{p.vehicle.registrationNumber}</h1>
-              <p className="ax-hero-sub">{[p.vehicle.make, p.vehicle.model].filter(Boolean).join(" ")}</p>
+              <p className="ax-hero-sub">{[p.vehicle.make, p.vehicle.model, p.vehicle.color].filter(Boolean).join(" ")}{p.vehicle.ownerId ? <> · Owner: <button type="button" className="ax-linkbtn" onClick={() => p.onOpenOwner(p.vehicle!.ownerId)}>{p.ownerNames[p.vehicle.ownerId] ?? "Open customer"}</button></> : null}</p>
             </div>
             <div className="ax-kpis">
               <div><span className="ax-kpi-v">{p.protections.length}</span><span className="ax-label">Papers on file</span></div>
@@ -141,6 +145,27 @@ export function VehiclesView(p: {
           </div>
         </>
       )}
+      <section className="ax-panel" style={{ marginTop: "var(--ad-space-inset)" }}>
+        <span className="ax-label">All cars on file ({p.fleet.length})</span>
+        {p.fleet.length === 0 ? <p className="ax-note">No cars yet.</p> : (
+          <div style={{ overflowX: "auto" }}>
+            <table>
+              <thead><tr><th>Plate</th><th>Car</th><th>Colour</th><th>Owner</th><th>Added</th></tr></thead>
+              <tbody>
+                {[...p.fleet].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).map((v) => (
+                  <tr key={v.id} className="row-link" tabIndex={0} role="link" onClick={() => p.onPick(v)} onKeyDown={(e) => { if (e.key === "Enter") p.onPick(v); }}>
+                    <td className="ax-data">{v.registrationNumber}</td>
+                    <td>{[v.year, v.make, v.model].filter(Boolean).join(" ")}</td>
+                    <td>{v.color || "-"}</td>
+                    <td>{p.ownerNames[v.ownerId] ?? "..."}</td>
+                    <td>{v.createdAt ? formatDate(v.createdAt) : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
       {!p.vehicle && !p.error && (
         <div className="ax-panel ax-empty" style={{ marginTop: "var(--ad-space-inset)" }}>
           <p className="ax-title">Type a number plate to start</p>

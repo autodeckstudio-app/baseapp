@@ -14,8 +14,8 @@ import {
   listenToCustomerInvoices,
   listenToCustomerNotifications,
   listenToCustomerAudit,
-  getWarrantiesForVehicles,
-  getProtectionsForVehicles,
+  listenToWarrantiesForVehicles,
+  listenToProtectionsForVehicles,
 } from "../../../../lib/customers-service";
 import { CustomerView } from "../../../../experience/CustomerView";
 
@@ -57,12 +57,16 @@ export default function CustomerDetailPage() {
     return () => unsubs.forEach((u) => u());
   }, [id, claims]);
 
+  const vehicleKey = vehicles.map((v) => v.id).sort().join(",");
   useEffect(() => {
-    if (!id || !claims || vehicles.length === 0) return;
-    const vehicleIds = vehicles.map((v) => v.id);
-    void getWarrantiesForVehicles(vehicleIds, claims.tenantId, id).then(setWarranties);
-    void getProtectionsForVehicles(vehicleIds).then(setProtections);
-  }, [id, claims, vehicles]);
+    if (!id || !claims) return undefined;
+    const ids = vehicleKey ? vehicleKey.split(",") : [];
+    const unsubs = [
+      listenToWarrantiesForVehicles(ids, claims.tenantId, id, setWarranties, () => undefined),
+      listenToProtectionsForVehicles(ids, setProtections, () => undefined),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [id, claims, vehicleKey]);
 
   if (error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Couldn&apos;t load this customer</p><p>{error}</p></div>;
   if (customer === undefined) return <div className="ax-page"><div className="ax-skel" style={{ height: 140, marginBottom: 16 }} /><div className="ax-skel" style={{ height: 320 }} /></div>;

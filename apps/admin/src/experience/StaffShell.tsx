@@ -3,6 +3,7 @@
 // Presentational staff shell: glass sidebar on the studio ground. Holds no
 // auth state; the (admin) layout decides who may see what and passes it in.
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { Icon } from "./Icon";
 import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, logoDataUri } from "@autodeck/ui/theme";
 import { Ambient } from "./Ambient";
@@ -81,14 +82,14 @@ export interface StaffShellProps {
 
 export function StaffShell({ pathname, office, role, who, home, onSignOut, children }: StaffShellProps) {
   const link = (l: { href: string; label: string }) => (
-    <a
+    <Link
       key={l.href}
       href={l.href}
       className="ax-nav-link"
       aria-current={isActive(pathname, l.href) ? "page" : undefined}
     >
       {l.label}
-    </a>
+    </Link>
   );
 
   const [moreOpen, setMoreOpen] = useState(false);
@@ -119,10 +120,10 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
       <Ambient>
         <div className="ax-shell-frame">
           <aside className="ax-side" aria-label="Main navigation">
-            <a href={home} className="ax-wordmark">
+            <Link href={home} className="ax-wordmark">
               <img className="ax-logo-full" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 30, width: "auto" }} />
               <img className="ax-logo-mark" src={logoDataUri(LOGO_MARK_SVG)} alt="AutoDeck" style={{ display: "none", height: 30, width: "auto" }} />
-            </a>
+            </Link>
             {sections.map((sec) => (
               <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>
                 <span className="ax-label">{sec.label}</span>
@@ -145,7 +146,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
             {activeGroup && activeGroup.links.length > 1 ? (
               <nav className="ax-chips" aria-label={activeGroup.label}>
                 {activeGroup.links.map((l) => (
-                  <a key={l.href} href={l.href} className="ax-chip-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</a>
+                  <Link key={l.href} href={l.href} className="ax-chip-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</Link>
                 ))}
               </nav>
             ) : null}
@@ -153,10 +154,10 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
           </main>
           <nav className="ax-tabbar" aria-label="Main">
             {groups.map((g) => (
-              <a key={g.key} href={g.links[0]!.href} className="ax-tab" aria-current={activeGroup?.key === g.key ? "page" : undefined}>
+              <Link key={g.key} href={g.links[0]!.href} className="ax-tab" aria-current={activeGroup?.key === g.key ? "page" : undefined}>
                 <Icon name={g.icon} size={24} />
                 <span>{g.label}</span>
-              </a>
+              </Link>
             ))}
             <button type="button" className="ax-tab" aria-current={moreActive || moreOpen ? "page" : undefined} onClick={() => setMoreOpen((v) => !v)}>
               <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
@@ -172,7 +173,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
                     <p className="ax-label">{sec.label}</p>
                     <div className="ax-sheet-grid">
                       {sec.links.map((l) => (
-                        <a key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}><Icon name={(LINK_ICON[l.href] ?? "dot") as never} size={18} /><span>{l.label}</span></a>
+                        <Link key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}><Icon name={(LINK_ICON[l.href] ?? "dot") as never} size={18} /><span>{l.label}</span></Link>
                       ))}
                     </div>
                   </div>

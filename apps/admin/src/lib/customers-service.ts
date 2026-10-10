@@ -228,3 +228,60 @@ export async function getProtectionsForVehicles(vehicleIds: string[]): Promise<A
   );
   return results.flat();
 }
+
+// Live versions of the two per-vehicle panels: one listener per car, merged,
+// so a new warranty or paper shows up without reloading the page.
+export function listenToWarrantiesForVehicles(
+  vehicleIds: string[],
+  tenantId: string,
+  customerId: string,
+  onData: (warranties: Warranty[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const parts = new Map<string, Warranty[]>();
+  const emit = () => onData([...parts.values()].flat());
+  const unsubs = vehicleIds.map((vehicleId) =>
+    onSnapshot(
+      query(
+        collection(db, COLLECTIONS.warranties()),
+        where("vehicleId", "==", vehicleId),
+        where("tenantId", "==", tenantId),
+        where("customerId", "==", customerId),
+      ),
+      (snap) => {
+        parts.set(vehicleId, snap.docs.map((d) => d.data() as Warranty));
+        emit();
+      },
+      onError,
+    ),
+  );
+  if (vehicleIds.length === 0) onData([]);
+  return () => unsubs.forEach((u) => u());
+}
+
+export function listenToProtectionsForVehicles(
+  vehicleIds: string[],
+  onData: (protections: Array<Protection & { vehicleId: string }>) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const parts = new Map<string, Array<Protection & { vehicleId: string }>>();
+  const emit = () => onData([...parts.values()].flat());
+  const unsubs = vehicleIds.map((vehicleId) =>
+    onSnapshot(
+      collection(db, SUBCOLLECTIONS.vehicleProtections(vehicleId)),
+      (snap) => {
+        parts.set(vehicleId, snap.docs.map((d) => ({ ...(d.data() as Protection), vehicleId })));
+        emit();
+      },
+      onError,
+    ),
+  );
+  if (vehicleIds.length === 0) onData([]);
+  return () => unsubs.forEach((u) => u());
+}
+
+/** Live feed of every car on file (not deleted) for the studio. */
+export function listenToTenantVehicles(tenantId: string, onData: (v: Vehicle[]) => void, onError: (e: Error) => void): Unsubscribe {
+  const q = query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", tenantId), where("deletedAt", "==", null));
+  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Vehicle)), onError);
+}

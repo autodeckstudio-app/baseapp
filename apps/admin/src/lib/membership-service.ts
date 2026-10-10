@@ -1,7 +1,8 @@
 "use client";
 
 import { httpsCallable } from "firebase/functions";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, onSnapshot, query, where, type Unsubscribe } from "firebase/firestore";
+import { getEffectiveMembershipStatus } from "@autodeck/core";
 import type { Customer, Membership, MembershipPlan, MembershipTier, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "./firebase";
@@ -134,4 +135,13 @@ export async function createWalkinCustomer(input: { name: string; email: string;
   const fn = httpsCallable<typeof input, { customer: Customer; created: boolean }>(functions, "createWalkinCustomer");
   const result = await fn(input);
   return result.data;
+}
+
+/** Live tenant-wide membership feed (admin role). Stored status is corrected for expiry on read. */
+export function listenToTenantMemberships(tenantId: string, onData: (m: Membership[]) => void, onError: (e: Error) => void): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, COLLECTIONS.memberships()), where("tenantId", "==", tenantId)),
+    (snap) => onData(snap.docs.map((d) => { const m = d.data() as Membership; return { ...m, status: getEffectiveMembershipStatus(m) }; })),
+    onError,
+  );
 }

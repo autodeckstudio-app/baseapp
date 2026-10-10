@@ -188,14 +188,16 @@ export default function HomeScreen() {
 
   return (
     <Screen header={header}>
+      {groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
+      <StoryViewer group={open} onClose={() => setOpen(null)} />
       {home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh}/>}/> : null}
 
       <FadeUp>
       <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-      <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", shadowColor: "#EC8638", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
-        {car?.photoUrl && !carPhoto ? <View style={{width: "100%", aspectRatio: 16 / 10, backgroundColor: "#161618"}} /> : <HeroImage aspect={16 / 10} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />}
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(20,12,30,0.18)", ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.22) 0%, rgba(8,8,10,0.18) 30%, rgba(8,8,10,0.78) 62%, rgba(8,8,10,0.97) 100%)" } as object) }} />
-        <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6, backgroundColor:"rgba(8,8,10,.52)", padding:12, borderRadius:14 }}>
+      <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#18181C", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", shadowColor: "#EC8638", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
+        {car?.photoUrl && !carPhoto ? <View style={{width: "100%", aspectRatio: 16 / 9, backgroundColor: "#232328"}} /> : <HeroImage aspect={16 / 9} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />}
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0) 0%, rgba(8,8,10,0) 45%, rgba(8,8,10,0.62) 100%)" } as object) }} />
+        <View style={{ position: "absolute", left: space.gap, right: space.gap, bottom: space.gap, gap: 6, backgroundColor:"rgba(8,8,10,.34)", padding:10, borderRadius:14 }}>
           <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>
             <T role="caption" tone="accent">{home.error && m.heroState === "idle" ? "Checking your car" : copy.kicker}</T>
           </View>
@@ -252,8 +254,6 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
-      <StoryViewer group={open} onClose={() => setOpen(null)} />
 
       <View style={{gap: space.gap}}>
         <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between"}}>

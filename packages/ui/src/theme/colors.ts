@@ -86,15 +86,15 @@ export const lightColors: ThemeColors = {
 
 // Customer app: deep black with orange accents (no grey tone, no navy).
 export const charcoalColors: ThemeColors = {
-  canvas: "#0B0B0D",
-  canvasDeep: "#050506",
-  surface: "#151517",
-  surfaceElevated: "#1E1E21",
-  borderSubtle: "rgba(255,255,255,0.09)",
+  canvas: "#18181C",
+  canvasDeep: "#101013",
+  surface: "#232328",
+  surfaceElevated: "#2C2C32",
+  borderSubtle: "rgba(255,255,255,0.12)",
   borderStrong: "rgba(255,255,255,0.30)",
-  textPrimary: "#F6F4F1",
-  textSecondary: "#CDCBC8",
-  textTertiary: "#AAA8A5",
+  textPrimary: "#FAF8F5",
+  textSecondary: "#DAD8D4",
+  textTertiary: "#BDBBB7",
   textOnAccent: "#1A1410",
   accent: "#F59A45",
   accentStrong: "#F9B56E",
@@ -106,8 +106,8 @@ export const charcoalColors: ThemeColors = {
   danger: "#FF8D7A",
   inactive: "#8E8E93",
   scrim: "rgba(0,0,0,0.55)",
-  ink: "#121214",
-  onInk: "#F6F4F1",
+  ink: "#202026",
+  onInk: "#FAF8F5",
 };
 
 export type ThemeName = "dark" | "light" | "charcoal";

@@ -11,18 +11,18 @@
 import type { ImageSourcePropType } from "react-native";
 import type { ServiceCategory, VehicleCategory } from "@autodeck/core";
 
-import heroHome from "../../assets/imagery/curated/car.jpg";
+import heroHome from "../../assets/imagery/stock/x-black-sunlight.jpg";
 import loginHero from "../../assets/imagery/studio-login.jpg";
-import heroAlt from "../../assets/imagery/curated/car.jpg";
-import membership from "../../assets/imagery/curated/wash.jpg";
-import serviceWashing from "../../assets/imagery/curated/wash.jpg";
+import heroAlt from "../../assets/imagery/stock/x-black-sunlight.jpg";
+import membership from "../../assets/imagery/stock/x-white-garage.jpg";
+import serviceWashing from "../../assets/imagery/stock/x-white-garage.jpg";
 import serviceCeramic from "../../assets/imagery/curated/coating.jpg";
 import serviceCoating from "../../assets/imagery/curated/coating.jpg";
-import servicePpf from "../../assets/imagery/curated/ppf.jpg";
-import serviceTinting from "../../assets/imagery/curated/window.jpg";
-import serviceInspection from "../../assets/imagery/curated/inspection.jpg";
+import servicePpf from "../../assets/imagery/stock/ppf-install.jpg";
+import serviceTinting from "../../assets/imagery/stock/tint-install.jpg";
+import serviceInspection from "../../assets/imagery/stock/x-underbody-b.jpg";
 import serviceOther from "../../assets/imagery/curated/care.jpg";
-import vehicleSedan from "../../assets/imagery/curated/car.jpg";
+import vehicleSedan from "../../assets/imagery/stock/x-black-sunlight.jpg";
 
 /** One photograph per service category, shown on catalogue cards and detail heroes. */
 export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
@@ -75,12 +75,12 @@ const BOTTLES: Record<string, { src: ImageSourcePropType; tint: string }> = {
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const TOPICS: Record<string, ImageSourcePropType> = {
-  washExt: require("../../assets/imagery/curated/wash.jpg"), roof: require("../../assets/imagery/curated/roof.jpg"),
-  interior: require("../../assets/imagery/curated/interior.jpg"), polish: require("../../assets/imagery/curated/polish.jpg"),
+  washExt: require("../../assets/imagery/stock/x-white-garage.jpg"), roof: require("../../assets/imagery/curated/roof.jpg"),
+  interior: require("../../assets/imagery/stock/x-white-seats.jpg"), polish: require("../../assets/imagery/stock/x-polish-red.jpg"),
   headlight: require("../../assets/imagery/curated/headlight.jpg"), coating: require("../../assets/imagery/curated/coating.jpg"),
-  ppf: require("../../assets/imagery/curated/ppf.jpg"), tint: require("../../assets/imagery/curated/window.jpg"),
-  wheel: require("../../assets/imagery/curated/wheel.jpg"), engine: require("../../assets/imagery/curated/engine.jpg"),
-  inspection: require("../../assets/imagery/curated/inspection.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
+  ppf: require("../../assets/imagery/stock/ppf-install.jpg"), tint: require("../../assets/imagery/stock/tint-install.jpg"),
+  wheel: require("../../assets/imagery/stock/x-rim-clean.jpg"), engine: require("../../assets/imagery/stock/x-engine-bay.jpg"),
+  inspection: require("../../assets/imagery/stock/x-underbody-b.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 type Svc = { name: string; brand?: string | null; category: string; imageUrl?: string | null };

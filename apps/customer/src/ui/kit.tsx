@@ -23,9 +23,9 @@ import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } fro
 import { fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
-  display: Platform.select({ web: "Archivo, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
-  body: Platform.select({ web: "Archivo, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
-  data: Platform.select({ web: "'Space Mono', 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "Menlo" }) ?? "Menlo",
+  display: Platform.select({ web: "Montserrat, Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
+  body: Platform.select({ web: "Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
+  data: Platform.select({ web: "Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "Menlo" }) ?? "Menlo",
 };
 
 export function textStyle(role: keyof typeof typeScale): TextStyle {
@@ -121,7 +121,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.inset : space.section, paddingBottom: 120, gap: space.inset }}>
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 112, gap: space.gap + 2 }}>
       {!top ? <BackBar /> : null}
       {header}
       {children}
@@ -130,7 +130,7 @@ export function Screen({
   if (!focused) return null;
   return (
     <Ambient>
-      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.section, gap: space.line, zIndex: 2 }}><BackBar />{top}</View> : null}
+      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}><BackBar />{top}</View> : null}
       {scroll ? <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );
