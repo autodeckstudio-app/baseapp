@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
-import { nightButtonStyle, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+import { nightButtonStyle, nightButtonText, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Montserrat, Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
@@ -217,8 +217,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? colors.textOnAccent : colors.textPrimary} /> : null}
-      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"}>
+      {busy ? <ActivityIndicator color={primary ? (night && Platform.OS === "web" ? nightButtonText : colors.textOnAccent) : colors.textPrimary} /> : null}
+      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary && night && Platform.OS === "web" ? { color: nightButtonText } : undefined}>
         {label}
       </T>
     </Pressable>

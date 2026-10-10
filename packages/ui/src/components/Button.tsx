@@ -1,5 +1,5 @@
 import { ActivityIndicator, Platform, Pressable, Text, type StyleProp, type ViewStyle } from "react-native";
-import { nightButtonStyle } from "../theme/night.js";
+import { nightButtonStyle, nightButtonText } from "../theme/night.js";
 import { colors, isNightPalette } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
 import { radius } from "../tokens/radius.js";
@@ -90,9 +90,9 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={web && variant === "primary" ? "#1A1410" : v.text} />
+        <ActivityIndicator color={web && variant === "primary" ? (isNightPalette ? nightButtonText : "#1A1410") : v.text} />
       ) : (
-        <Text style={{ color: web && variant === "primary" ? "#1A1410" : v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
+        <Text style={{ color: web && variant === "primary" ? (isNightPalette ? nightButtonText : "#1A1410") : v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
       )}
     </Pressable>
   );

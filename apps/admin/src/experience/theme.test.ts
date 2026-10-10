@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, darkColors, lightColors, nightColors, nightGround, nightOrange, glass, themeStylesheet, resolveMode, type ThemeColors } from "@autodeck/ui/theme";
+import { contrastRatio, darkColors, lightColors, nightColors, nightGround, nightOrange, nightButtonStyle, nightButtonText, glass, themeStylesheet, resolveMode, type ThemeColors } from "@autodeck/ui/theme";
 
 function textPasses(c: ThemeColors, bg: string) {
   expect(contrastRatio(c.textPrimary, bg)).toBeGreaterThanOrEqual(4.5);
@@ -59,10 +59,20 @@ describe("theme tokens", () => {
   it("night gradients and translucent actions remain readable at every stop", () => {
     expect(nightGround).toContain("#50504D");
     expect(nightGround).toContain("radial-gradient");
-    expect(nightOrange).toContain("rgba(236,134,56,.80)");
+    expect(nightOrange).toContain("rgba(236,134,56,.18)");
+    expect(nightOrange).toContain("rgba(255,255,255,0) 42%");
+    expect(nightButtonStyle.backgroundColor).toBe("transparent");
+    expect(nightButtonStyle.backdropFilter).toContain("blur(18px)");
     for (const bg of ["#60605B", "#64645F", "#575752", "#41413E"]) textPasses(nightColors, bg);
-    // Worst-case orange .80 alpha over black, even darker than any card.
-    expect(contrastRatio(nightColors.textOnAccent, "#BD6B2D")).toBeGreaterThanOrEqual(4.5);
+    // Composite the real orange stops over the brightest ground and card stops.
+    // Label occupies the clear middle; allow 2% residual white reflection.
+    for (const ground of [[100,100,95], [87,87,82], [65,65,62]]) {
+      for (const [orange, alpha] of [[[245,154,78], .22], [[236,134,56], .20], [[236,134,56], .18]] as const) {
+        const bg = ground.map((v, i) => Math.round((v * (1-alpha) + orange[i]! * alpha) * .98 + 255 * .02));
+        const hex = "#" + bg.map(v => v.toString(16).padStart(2,"0")).join("");
+        expect(contrastRatio(nightButtonText, hex)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
     expect(contrastRatio("#FFD0A6", "#575752")).toBeGreaterThanOrEqual(4.5);
   });
 

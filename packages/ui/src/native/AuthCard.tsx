@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
-import { nightGround, nightSurfaceStyle, nightButtonStyle } from "../theme/night.js";
+import { nightGround, nightSurfaceStyle, nightButtonStyle, nightButtonText } from "../theme/night.js";
 import { AUTH, AUTH_FOOTNOTE } from "../theme/auth.js";
 import { currentMode } from "../theme/autoMode.js";
 import { createElement } from "react";
@@ -60,7 +60,7 @@ export function AuthButton({ label, onPress, busy, disabled, testID, dark: darkP
       style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: dark ? "#F59A45" : AUTH.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}), ...(night && Platform.OS === "web" ? nightButtonStyle : {}) })}
     >
       {Platform.OS === "web" ? createElement("svg", { width: 18, height: 18, viewBox: "0 0 48 48", "aria-hidden": true, style: { marginRight: 10 }, dangerouslySetInnerHTML: { __html: G } }) : null}
-      <Text style={{ color: dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
+      <Text style={{ color: night && Platform.OS === "web" ? nightButtonText : dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
     </Pressable>
   );
 }

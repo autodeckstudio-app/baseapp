@@ -707,11 +707,11 @@ html[data-theme="night"] .ax-shell button[type="submit"],
 html[data-theme="night"] .ax-shell button[type="submit"]:hover:not(:disabled),
 html[data-theme="night"] .ax-login button {
   background: var(--ad-accent-grad) !important;
-  border: 1px solid rgba(255,202,155,.55);
+  border: 1px solid rgba(255,202,155,.62);
   backdrop-filter: blur(18px) saturate(125%);
   -webkit-backdrop-filter: blur(18px) saturate(125%);
-  box-shadow: inset 0 1px 0 rgba(255,236,214,.38), 0 5px 16px rgba(0,0,0,.14);
-  color: #1A1410 !important;
+  box-shadow: inset 0 1px 0 rgba(255,244,232,.65), inset 0 -1px 0 rgba(236,134,56,.12), 0 5px 16px rgba(0,0,0,.12);
+  color: #FFFFFF !important;
 }
 html[data-theme="night"] .ax-shell .ax-kpi-v,
 html[data-theme="night"] .ax-shell .ax-linkbtn { color: #FFD0A6; }
