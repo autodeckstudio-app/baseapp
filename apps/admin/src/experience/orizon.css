@@ -156,3 +156,8 @@ html[data-theme="night"] .ax-shell .ax-kpis > div + div { border-left-color: rgb
   .ax-shell .ax-seg::-webkit-scrollbar { display: none; }
   .ax-shell .ax-seg button { flex: 0 0 auto; white-space: nowrap; }
 }
+
+/* Pill bar: items vertically centred with equal padding above and below. */
+.ax-shell .ax-chips { align-items: center; box-sizing: border-box; }
+.ax-shell .ax-chips .ax-chip-link { display: inline-flex; align-items: center; justify-content: center; height: 38px; min-height: 38px; padding-top: 0; padding-bottom: 0; line-height: 1; box-sizing: border-box; }
+.ax-shell .ax-chips .ax-chip-link[aria-current="page"] { margin: 0; }
