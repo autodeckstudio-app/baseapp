@@ -1,3 +1,4 @@
+import { usePricingVehicle, useVehiclePrices } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
 import type { ReactNode } from "react";
@@ -34,24 +35,21 @@ export default function ServiceDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const auth = useAuth();
+  const pricingVehicle = usePricingVehicle();
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory>("hatchback");
   const [pickedSize, setPickedSize] = useState(false);
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState(false);
   const [siblings, setSiblings] = useState<Service[]>([]);
+  const siblingPrices = useVehiclePrices(siblings, selectedCategory);
   const [after, setAfter] = useState(true);
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // Default the price chip to the size of the customer's first saved car (until they pick one).
   useEffect(() => {
-    if (auth.status !== "ready" || pickedSize) return;
-    return listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => {
-      const first = vs[0];
-      if (first && !pickedSize) setSelectedCategory((current) => resolvePricingCategory(first.category, current));
-    }, () => undefined);
-  }, [auth.status, pickedSize]);
+    if (!pickedSize && pricingVehicle.category) setSelectedCategory(pricingVehicle.category);
+  }, [pricingVehicle.category, pickedSize]);
 
   useEffect(() => {
     if (!id) return;
@@ -113,6 +111,7 @@ export default function ServiceDetailScreen() {
           <View style={{ gap: space.hair }}>
             <Kicker tone="accent">{service.category}</Kicker>
             <T role="title">{service.name}</T>
+            {pricingVehicle.label ? <T role="caption" tone="accent">Prices for your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}</T> : null}
             {service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
           </View>
         }
@@ -242,7 +241,7 @@ export default function ServiceDetailScreen() {
                   key={x.id}
                   title={x.id === service.id ? `${x.name} (you're here)` : x.name}
                   detail={<T role="caption" tone="tertiary">{[x.brand, x.warrantyLabel].filter(Boolean).join(" · ") || "No warranty listed"}</T>}
-                  trailing={<T role="bodyStrong" tone={x.id === service.id ? "accent" : "secondary"}>{priceLabel(x)}</T>}
+                  trailing={<T role="bodyStrong" tone={x.id === service.id ? "accent" : "secondary"}>{x.priceOnRequest ? "Quote on request" : siblingPrices[x.id] !== undefined ? rupees(siblingPrices[x.id]!) : "Checking price"}</T>}
                   onPress={x.id === service.id ? undefined : () => router.replace(`/(tabs)/catalogue/${x.id}`)}
                   last={i === siblings.length - 1}
                 />
@@ -284,8 +283,8 @@ export default function ServiceDetailScreen() {
       <View style={{ position: "absolute", left: 0, right: 0, marginHorizontal: "auto" as unknown as number, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#161618", borderRadius: 24, maxWidth: 480, width: "92%", alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
-            <T role="caption" tone="tertiary">From</T>
-            <T role="heading">{priceLabel(service)}</T>
+            <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Selected size"} · incl. GST</T>
+            <T role="heading">{service.priceOnRequest ? "Quote on request" : priceLoading ? "Checking price" : priceBreakdown ? rupees(priceBreakdown.total) : "Price unavailable"}</T>
           </View>
           <View style={{ flex: 1.4 }}>
             <Button label={service.priceOnRequest === true ? "Request a quote" : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />

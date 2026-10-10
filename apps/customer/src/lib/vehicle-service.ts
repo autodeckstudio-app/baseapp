@@ -11,7 +11,7 @@ import { httpsCallable } from "firebase/functions";
 import { getDownloadURL, ref as storageRef } from "firebase/storage";
 import { db, functions, storage } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
-import type { Vehicle } from "@autodeck/core";
+import type { Vehicle, VehicleCategory } from "@autodeck/core";
 
 type CreateVehicleInput = {
   registrationNumber: string;
@@ -19,6 +19,7 @@ type CreateVehicleInput = {
   model: string;
   year: number;
   color: string;
+  category: VehicleCategory;
   archivedChoice?: "new";
 };
 
@@ -29,6 +30,7 @@ type UpdateVehicleInput = {
   model?: string;
   year?: number;
   color?: string;
+  category?: VehicleCategory;
   odometer?: number;
   photoUrl?: string | null;
 };

@@ -1,3 +1,4 @@
+import { usePricingVehicle } from "../../../lib/vehicle-size";
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { type ImageSourcePropType, Pressable, TextInput, View } from "react-native";
@@ -7,7 +8,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import type { Service } from "@autodeck/core";
 import { space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
+import { getServiceCatalogue, calculateServicePrice, priceLabel } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { Button, Kicker, Notice, Screen, Skeleton, T, rupees } from "../../../ui/kit";
@@ -76,6 +77,8 @@ export default function CatalogueScreen() {
   const { need, cat: catParam, brand: brandParam } = useLocalSearchParams<{ need?: string; cat?: string; brand?: string }>();
   const [services, setServices] = useState<Service[] | null>(null);
   const [error, setError] = useState(false);
+  const pricingVehicle = usePricingVehicle();
+  const [prices, setPrices] = useState<Record<string,number>>({});
   const [q, setQ] = useState("");
   const cat = catParam ?? (need ? NEED_TO_CAT[need] : undefined);
   const brand = brandParam;
@@ -90,7 +93,23 @@ export default function CatalogueScreen() {
   }, []);
   useEffect(() => void load(), [load]);
 
+  useEffect(() => {
+    setPrices({});
+    if (!services || !pricingVehicle.category) return;
+    let active=true;
+    void Promise.all(services.filter(s=>!s.priceOnRequest).map(async s=>{
+      try { const {breakdown}=await calculateServicePrice(s.id,pricingVehicle.category!); return [s.id,breakdown.total] as const; }
+      catch {return null;}
+    })).then(rows=>{if(active)setPrices(Object.fromEntries(rows.filter(x=>x!==null)));});
+    return ()=>{active=false;};
+  },[services,pricingVehicle.category]);
   const all = services ?? [];
+  const pricedLabel=(sv:Service)=>sv.priceOnRequest?"Quote on request":pricingVehicle.category?(prices[sv.id]!==undefined?rupees(prices[sv.id]!):"Checking price"):priceLabel(sv);
+  const pricedFrom=(xs:Service[])=>{
+    if(!pricingVehicle.category)return fromPrice(xs);
+    const amounts=xs.filter(s=>!s.priceOnRequest).map(s=>prices[s.id]).filter((x):x is number=>x!==undefined);
+    return amounts.length ? `From ${rupees(Math.min(...amounts))}` : "Checking prices";
+  };
   const cats = ORDER.filter((c) => all.some((x) => x.category === c));
   const byPrice = (a: Service, b: Service) => Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice;
   const groupName = (sv: Service) => sv.brand ?? BRANDS.find((b) => b.items.some((it) => sv.name.toLowerCase().includes(it.name.toLowerCase())))?.name ?? subGroup(sv);
@@ -140,7 +159,7 @@ export default function CatalogueScreen() {
       <View style={{ paddingTop: 8, gap: 2 }}>
         <T role="bodyStrong" numberOfLines={2}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
         <T role="caption" tone="tertiary" numberOfLines={1}>{duration(sv.estimatedDurationMinutes)}</T>
-        <T role="bodyStrong" tone="accent" numberOfLines={1}>{priceLabel(sv)}</T>
+        <T role="bodyStrong" tone="accent" numberOfLines={1}>{pricedLabel(sv)}</T>
       </View>
     </Pressable>
   );
@@ -159,6 +178,7 @@ export default function CatalogueScreen() {
         <T role="title">{level === 3 && groupKey ? groupKey : level === 2 ? "Explore your options" : "What does your car need?"}</T>
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
+      {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label} · incl. GST</T> : null}
       <TextInput
         accessibilityLabel="Search services"
         value={q}
@@ -183,12 +203,12 @@ export default function CatalogueScreen() {
       ) : null}
       {services && !searching && level === 1 ? (
         <View style={{ gap: space.breath }}>
-          {cats.map((c) => tile(c, GROUP[c] ?? c, BLURB[c], fromPrice(all.filter((x) => x.category === c)) ?? undefined, ICON[c] ?? "tools", () => go({ cat: c }), serviceImagery[c as keyof typeof serviceImagery]))}
+          {cats.map((c) => tile(c, GROUP[c] ?? c, BLURB[c], pricedFrom(all.filter((x) => x.category === c)) ?? undefined, ICON[c] ?? "tools", () => go({ cat: c }), serviceImagery[c as keyof typeof serviceImagery]))}
         </View>
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: space.breath }}>
-          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, fromPrice(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name }), brandHero(name) ?? serviceVisual(xs[0] ?? {name,category:cat ?? "other"}).photo))}
+          {groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, pricedFrom(xs)].filter(Boolean).join(" · "), ICON[cat ?? "other"] ?? "tools", () => go({ cat: cat!, brand: name }), brandHero(name) ?? serviceVisual(xs[0] ?? {name,category:cat ?? "other"}).photo))}
         </View>
       ) : null}
       {services && !searching && level === 3 ? (

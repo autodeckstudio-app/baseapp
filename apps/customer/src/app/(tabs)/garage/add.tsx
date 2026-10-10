@@ -1,10 +1,11 @@
+import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import { createElement, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { space } from "@autodeck/ui/theme";
 import { COLLECTIONS } from "@autodeck/database";
-import type { Vehicle } from "@autodeck/core";
+import type { Vehicle, VehicleCategory } from "@autodeck/core";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
@@ -46,6 +47,8 @@ export default function AddVehicleScreen() {
     year: "",
     color: "",
   });
+  const [size, setSize] = useState<VehicleCategory | null>(null);
+  const [sizeError, setSizeError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -145,7 +148,8 @@ export default function AddVehicleScreen() {
     const seq = ++submitSeq.current;
     const fe = validate(form);
     setFieldErrors(fe);
-    if (Object.keys(fe).length > 0) {
+    setSizeError(!size);
+    if (!size || Object.keys(fe).length > 0) {
       setError(null);
       return;
     }
@@ -180,6 +184,7 @@ export default function AddVehicleScreen() {
         model: form.model.trim(),
         year: yearNum,
         color: form.color.trim(),
+        category: size,
       });
       if (isStale(seq, plate)) return;
       setSavedId(vehicle.id);
@@ -285,6 +290,15 @@ export default function AddVehicleScreen() {
               maxLength={key === "registrationNumber" ? 16 : key === "year" ? 4 : 50}
             />
           ))}
+        </View>
+
+        <View style={{ gap: space.breath }}>
+          <Kicker>Size</Kicker>
+          <T role="caption" tone="secondary">Saved with your car. Prices will use this size automatically.</T>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {VEHICLE_SIZES.map(({value,label}) => <Pressable key={value} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected:size===value}} onPress={()=>{setSize(value);setSizeError(false);}} style={{borderRadius:999,borderWidth:1,borderColor:size===value?"#EC8638":"rgba(255,255,255,.14)",backgroundColor:size===value?"rgba(236,134,56,.14)":"rgba(255,255,255,.04)",paddingHorizontal:16,paddingVertical:12}}><T role="caption" tone={size===value?"accent":"secondary"}>{label}</T></Pressable>)}
+          </View>
+          {sizeError?<T role="caption" tone="danger">Choose your car's size.</T>:null}
         </View>
 
         {Platform.OS === "web" ? (

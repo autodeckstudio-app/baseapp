@@ -88,7 +88,7 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
+            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "rgba(255,255,255,.045)", ...({ backgroundImage: "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03))", backdropFilter: "blur(26px) saturate(170%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px -18px rgba(0,0,0,.65)" } as object), borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.85 : 1 })}>
               <CarThumb car={v} height={i === 0 ? 230 : 170} radius={0} />
               <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: i === 0 ? 230 : 170, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.45) 0%, rgba(5,5,6,0) 35%, rgba(5,5,6,0.88) 100%)" } as object) }} />
               <Pressable

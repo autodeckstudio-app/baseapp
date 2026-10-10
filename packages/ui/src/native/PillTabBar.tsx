@@ -45,7 +45,7 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
         shadowRadius: 18,
         shadowOffset: { width: 0, height: 8 },
         elevation: 8,
-        ...(Platform.OS === "web" ? ({ backdropFilter: "saturate(180%) blur(28px)", WebkitBackdropFilter: "saturate(180%) blur(28px)" } as object) : {}),
+        ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(145deg, rgba(255,255,255,.10), rgba(255,255,255,.03))", boxShadow: "0 24px 60px -18px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.22)", backdropFilter: "saturate(170%) blur(26px)", WebkitBackdropFilter: "saturate(180%) blur(28px)" } as object) : {}),
       }}
     >
       {Platform.OS !== "web" ? (

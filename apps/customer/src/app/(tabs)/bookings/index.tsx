@@ -64,7 +64,7 @@ export default function BookingsScreen() {
       {items.map((b) => {
         const car = cars[b.vehicleId] ?? (b.vehicleSnapshot ? { ...b.vehicleSnapshot, photoUrl: null, category: b.vehicleCategory } : undefined);
         return (
-          <Pressable key={b.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.85 : 1 })}>
+          <Pressable key={b.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "rgba(255,255,255,.045)", ...({ backgroundImage: "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03))", backdropFilter: "blur(26px) saturate(170%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px -18px rgba(0,0,0,.65)" } as object), borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.85 : 1 })}>
             <View><CarThumb car={car} height={150} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.25) 0%, rgba(5,5,6,0) 40%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
             <View style={{ gap: space.hair, padding: space.inset }}>
               <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.breath }}>

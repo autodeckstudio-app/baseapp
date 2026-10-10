@@ -1,0 +1,11 @@
+---
+const { image, word, number, tone = "amber", subject = true, class: cls = "" } = Astro.props;
+---
+<section class={`cinema tone-${tone} ${cls}`} style={`--scene-photo: url('/assets/img/${image}');`}>
+ <div class="cinema-photo" aria-hidden="true"></div>
+ <div class="cinema-wash" aria-hidden="true"></div>
+ <div class="cinema-index"><span>{number} / AUTODECK</span><span>ELLISBRIDGE · AHMEDABAD</span></div>
+ <div class="cinema-word" aria-hidden="true">{word}</div>
+ {subject && <div class="cinema-subject" aria-hidden="true"></div>}
+ <div class="cinema-content"><slot /></div>
+</section>

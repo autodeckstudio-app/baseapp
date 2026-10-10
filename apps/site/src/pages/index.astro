@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Scene from '../components/Scene.astro';
 ---
 <Base
   title="AutoDeck · Complete car care. All under one roof."
@@ -7,10 +8,8 @@ import Base from '../layouts/Base.astro';
   page="home"
 >
   <!-- HERO -->
-  <section class="hero">
-    <div class="hero-fallback" aria-hidden="true"></div>
-    <div class="hero-gl" id="hero-gl" aria-hidden="true"></div>
-    <div class="rail">AutoDeck · Ellisbridge, Ahmedabad · Est. 2026</div>
+  <Scene image="car-lights.jpg" word="ONE ROOF." number="01" tone="amber" class="scene-hero">
+
     <div class="hero-inner">
       <p class="hero-eyebrow rv-e">Ellisbridge · Ahmedabad</p>
       <h1 class="hero-title">
@@ -18,7 +17,7 @@ import Base from '../layouts/Base.astro';
         <span class="line"><span>car care.</span></span>
         <span class="line"><span>All under <em>one roof.</em></span></span>
       </h1>
-      <p class="hero-sub rv-e">Detailing, paint protection, ceramic, washing, garage and modification at one address, with your car's whole record in the app you hold.</p>
+      <p class="hero-sub rv-e">Every finish, every fix, every wash. One studio that treats your car like it matters, and an app that remembers all of it.</p>
       <div class="hero-actions rv-e">
         <a class="btn magnetic" href="https://app.autodeck.in"><span class="btn-label">Get the app</span><span class="arr">→</span></a>
         <a class="btn ghost magnetic" href="tel:+919898679711"><span class="btn-label">Call the studio</span></a>
@@ -34,7 +33,7 @@ import Base from '../layouts/Base.astro';
         <span class="value">Garage · Detailing Lab · Wash Studio · Lounge</span>
       </div>
     </div>
-  </section>
+  </Scene>
 
   <!-- MARQUEE -->
   <div class="marquee" aria-hidden="true">
@@ -45,18 +44,18 @@ import Base from '../layouts/Base.astro';
   </div>
 
   <!-- MANIFESTO -->
-  <section class="section manifesto">
+  <Scene image="studio-bay.jpg" word="CAR CARE." number="02" tone="sage" class="scene-manifesto">
     <div class="manifesto-grid">
-      <p class="manifesto-copy" id="manifesto">Your car doesn't need three appointments. One studio details it, protects it, repairs it and washes it. One app holds the job card, the photos, the warranty and the reminders. What was promised at booking is what shows up on the invoice. <span class="hl">That's the whole idea.</span></p>
+      <p class="manifesto-copy" id="manifesto">Your car has been handed around enough. Here, one team perfects it, protects it and keeps its story. Every photo, every warranty, every promise, in your hand. <span class="hl">That's the whole idea.</span></p>
       <figure class="manifesto-figure rv px-img">
         <img src="/assets/img/car-lights.jpg" alt="A car under the linear lights of the AutoDeck Detailing Lab" data-px />
         <figcaption><span>Detailing Lab</span><span>Render · Studio design</span></figcaption>
       </figure>
     </div>
-  </section>
+  </Scene>
 
   <!-- THE FOUR ROOMS · index of pages -->
-  <section class="section doors">
+  <Scene image="studio-orange.jpg" word="THE STUDIO." number="03" tone="amber" class="scene-doors">
     <div class="sec-head rv">
       <span class="sec-index">01 / 04</span>
       <span class="sec-kicker">The studio, in four rooms</span>
@@ -66,7 +65,7 @@ import Base from '../layouts/Base.astro';
         <span class="door-idx">01</span>
         <span class="door-body">
           <span class="door-name">Services</span>
-          <span class="door-hook">Six crafts under one roof. Nothing outsourced, nothing hidden.</span>
+          <span class="door-hook">Six crafts. One standard. Nothing outsourced.</span>
         </span>
         <span class="door-arr" aria-hidden="true">→</span>
         <span class="door-fill" aria-hidden="true"></span>
@@ -75,7 +74,7 @@ import Base from '../layouts/Base.astro';
         <span class="door-idx">02</span>
         <span class="door-body">
           <span class="door-name">The App</span>
-          <span class="door-hook">The job card, the photos, the warranty. The record follows the car.</span>
+          <span class="door-hook">Your car's whole story, in your pocket.</span>
         </span>
         <span class="door-arr" aria-hidden="true">→</span>
         <span class="door-fill" aria-hidden="true"></span>
@@ -84,7 +83,7 @@ import Base from '../layouts/Base.astro';
         <span class="door-idx">03</span>
         <span class="door-body">
           <span class="door-name">The Lounge</span>
-          <span class="door-hook">Merch and studio-approved care. On the shelf from opening day.</span>
+          <span class="door-hook">Wear the studio. Stock the shelf.</span>
         </span>
         <span class="door-arr" aria-hidden="true">→</span>
         <span class="door-fill" aria-hidden="true"></span>
@@ -93,16 +92,16 @@ import Base from '../layouts/Base.astro';
         <span class="door-idx">04</span>
         <span class="door-body">
           <span class="door-name">The Studio</span>
-          <span class="door-hook">Sunbeam Complex, Ellisbridge. Doors open Friday 16 October.</span>
+          <span class="door-hook">Come and see it. Doors open Friday 16 October.</span>
         </span>
         <span class="door-arr" aria-hidden="true">→</span>
         <span class="door-fill" aria-hidden="true"></span>
       </a>
     </div>
-  </section>
+  </Scene>
 
   <!-- OPENING · countdown -->
-  <section class="wraps">
+  <Scene image="covered-car.jpg" word="FIRST LOOK." number="04" tone="copper" class="scene-wraps">
     <div class="wraps-bg px-img"><img src="/assets/img/covered-car.jpg" alt="A car under wraps inside the studio" data-px /></div>
     <div class="wraps-inner">
       <div class="sec-head rv">
@@ -119,5 +118,5 @@ import Base from '../layouts/Base.astro';
       </div>
       <p class="wraps-note rv">The first look lands on <a class="inline" href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a> on 11 October. Doors open Friday 16 October, 10 am.</p>
     </div>
-  </section>
+  </Scene>
 </Base>

@@ -1,23 +1,24 @@
 ---
 import Base from '../layouts/Base.astro';
+import Scene from '../components/Scene.astro';
 ---
 <Base
   title="The Accessory Lounge · AutoDeck"
   description="AutoDeck merch and car-care essentials, curated the same way we pick our coatings. On the shelf from opening day, Friday 16 October."
   page="lounge"
 >
-  <section class="page-hero">
+  <Scene image="studio-orange.jpg" word="WEAR IT." number="01" tone="copper" class="scene-page-hero">
     <div class="page-hero-inner">
       <p class="hero-eyebrow rv-e">03 / The Accessory Lounge</p>
       <h1 class="hero-title">
         <span class="line"><span>Wear the shield.</span></span>
         <span class="line"><span><em>Stock the shelf.</em></span></span>
       </h1>
-      <p class="hero-sub rv-e">Merch and car-care essentials, curated the same way we pick our coatings. On the shelf from opening day, Friday 16 October.</p>
+      <p class="hero-sub rv-e">Merch and care essentials, chosen the way we choose our coatings. On the shelf from Friday 16 October.</p>
     </div>
-  </section>
+  </Scene>
 
-  <section class="section lounge">
+  <Scene image="studio-wide-v2.jpg" word="THE LOUNGE." number="02" tone="copper" class="scene-lounge">
     <figure class="lounge-figure rv px-img wide">
       <img src="/assets/img/studio-wide-v2.jpg" alt="The AutoDeck Accessory Lounge" data-px />
       <figcaption><span>The Accessory Lounge</span><span>Ellisbridge</span></figcaption>
@@ -40,5 +41,5 @@ import Base from '../layouts/Base.astro';
       </li>
     </ul>
     <p class="lounge-note rv">The shelf opens with the studio. First drops are announced on <a class="inline" href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a>.</p>
-  </section>
+  </Scene>
 </Base>

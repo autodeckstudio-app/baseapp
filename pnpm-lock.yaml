@@ -144,6 +144,9 @@ importers:
       '@types/react-native':
         specifier: ^0.73.0
         version: 0.73.0(@babel/core@7.29.7)(@types/react@19.0.14)(react@19.0.0)
+      expo-build-properties:
+        specifier: ~0.14.8
+        version: 0.14.8(expo@53.0.27(@babel/core@7.29.7)(@expo/metro-runtime@5.0.5(react-native@0.79.6(@babel/core@7.29.7)(@types/react@19.0.14)(react@19.0.0)))(react-native@0.79.6(@babel/core@7.29.7)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))
       typescript:
         specifier: ^5.8.3
         version: 5.8.3

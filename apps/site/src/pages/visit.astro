@@ -1,23 +1,24 @@
 ---
 import Base from '../layouts/Base.astro';
+import Scene from '../components/Scene.astro';
 ---
 <Base
   title="Visit · AutoDeck, Sunbeam Complex, Ellisbridge"
   description="AutoDeck, Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad 380006. Mon to Sat 10 am to 9 pm, Sunday 10 am to 7 pm. +91 98986 79711."
   page="visit"
 >
-  <section class="page-hero">
+  <Scene image="storefront.jpg" word="ELLISBRIDGE." number="01" tone="amber" class="scene-page-hero">
     <div class="page-hero-inner">
       <p class="hero-eyebrow rv-e">04 / Visit the studio</p>
       <h1 class="hero-title">
         <span class="line"><span>Sunbeam Complex,</span></span>
         <span class="line"><span><em>Ellisbridge.</em></span></span>
       </h1>
-      <p class="hero-sub rv-e">One address for the garage, the lab, the wash studio and the lounge. Doors open Friday 16 October.</p>
+      <p class="hero-sub rv-e">Garage, lab, wash studio and lounge, under one roof. Come and see where your car will live. Doors open Friday 16 October.</p>
     </div>
-  </section>
+  </Scene>
 
-  <section class="section visit">
+  <Scene image="studio-bay.jpg" word="COME OVER." number="02" tone="sage" class="scene-visit">
     <div class="visit-banner rv px-img">
       <img src="/assets/img/storefront.jpg" alt="The AutoDeck storefront at Sunbeam Complex" data-px />
     </div>
@@ -37,5 +38,5 @@ import Base from '../layouts/Base.astro';
         <p><a class="inline" href="tel:+919898679711">+91 98986 79711</a><br /><a class="inline" href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a></p>
       </div>
     </div>
-  </section>
+  </Scene>
 </Base>

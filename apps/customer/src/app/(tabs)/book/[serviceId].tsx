@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -50,7 +51,9 @@ export default function BookServiceScreen() {
   useEffect(() => {
     if (!serviceId) return;
     setTotal(null);
-    void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => setTotal(breakdown.total)).catch(() => setTotal(null));
+    let current=true;
+    void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
+    return ()=>{current=false;};
   }, [serviceId, selectedCategory]);
 
   useEffect(() => {
@@ -76,10 +79,10 @@ export default function BookServiceScreen() {
       (list) => {
         setVehiclesError(false);
         setVehicles(list);
-        setSelectedVehicle((cur) => {
-          const keep = cur && list.find((v) => v.id === cur.id);
-          return keep ?? list[0] ?? null;
-        });
+        void AsyncStorage.getItem("autodeck.activeVehicle").then(activeId=>setSelectedVehicle(cur=>{
+          const keep=cur&&list.find(v=>v.id===cur.id);
+          return keep??list.find(v=>v.id===activeId)??list[0]??null;
+        }));
       },
       () => setVehiclesError(true),
     );

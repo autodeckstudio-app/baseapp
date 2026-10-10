@@ -1,3 +1,4 @@
+import { usePricingVehicle, useVehiclePrices } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
@@ -81,6 +82,8 @@ export default function HomeScreen() {
   const [catalogueFailed, setCatalogueFailed] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const [catalogue, setCatalogue] = useState<Service[]>([]);
+  const pricingVehicle = usePricingVehicle();
+  const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   useEffect(() => {
     if (!ready) return;
     let alive = true;
@@ -271,7 +274,7 @@ export default function HomeScreen() {
             return <Pressable key={category} accessibilityRole="button" accessibilityLabel={`Explore ${category} services`} onPress={() => router.push({pathname:"/(tabs)/catalogue",params:{cat:category}})} style={{width:216,gap:10}}>
               <View style={{borderRadius:20,overflow:"hidden"}}><HeroImage aspect={3/2} source={serviceImagery[category as keyof typeof serviceImagery]} /></View>
               <T role="bodyStrong">{category === "washing" ? "Wash and care" : category === "ceramic" ? "Ceramic protection" : "Paint protection film"}</T>
-              <T role="caption" tone="tertiary">{service.priceOnRequest ? "Explore options" : `From ${priceLabel(service)}`}</T>
+              <T role="caption" tone="tertiary">{service.priceOnRequest ? "Explore options" : pricingVehicle.category ? (vehiclePrices[service.id] !== undefined ? `${rupees(vehiclePrices[service.id]!)} for your car` : "Checking price") : `From ${priceLabel(service)}`}</T>
             </Pressable>;
           })}
         </ScrollView>

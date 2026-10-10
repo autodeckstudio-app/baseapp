@@ -1,12 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
+import Scene from '../components/Scene.astro';
 ---
 <Base
   title="Services · AutoDeck"
   description="Paint protection film, ceramic coating, detailing, washing, garage and modification, six crafts under one roof in Ellisbridge, Ahmedabad. Nothing outsourced."
   page="services"
 >
-  <section class="page-hero">
+  <Scene image="studio-wide-v2.jpg" word="SIX CRAFTS." number="01" tone="amber" class="scene-page-hero">
     <div class="page-hero-inner">
       <p class="hero-eyebrow rv-e">01 / The six things we do</p>
       <h1 class="hero-title">
@@ -16,66 +17,57 @@ import Base from '../layouts/Base.astro';
       </h1>
       <p class="hero-sub rv-e">Published prices before the car comes in. The work measured, photographed and on record, not claimed.</p>
     </div>
-  </section>
+  </Scene>
 
-  <section class="section services">
-    <div class="svc-list">
-      <article class="svc rv">
+  <Scene image="car-lights.jpg" word="PROTECT." number="02" tone="sage" subject=true class="scene-service"><article class="svc">
         <div class="svc-idx">01</div>
         <div>
           <h2 class="svc-name">Paint Protection Film</h2>
-          <p class="svc-desc">Self-healing film, precision-cut for your panels. From ₹22,000 for a front-end kit.</p>
+          <p class="svc-desc">Self-healing film, cut to your car and nothing else. From ₹22,000 for a front-end kit.</p>
         </div>
         <span class="svc-zone">Detailing Lab</span>
         <div class="svc-fill"></div>
-      </article>
-      <article class="svc rv">
+      </article></Scene><Scene image="product-ceramic.jpg" word="CERAMIC." number="03" tone="violet" subject=false class="scene-service"><article class="svc">
         <div class="svc-idx">02</div>
         <div>
           <h2 class="svc-name">Ceramic Coating</h2>
-          <p class="svc-desc">5-year ceramic with the warranty on record and a 6-monthly inspection included.</p>
+          <p class="svc-desc">Five years of gloss, on record, with a 6-monthly check to keep it honest.</p>
         </div>
         <span class="svc-zone">Detailing Lab</span>
         <div class="svc-fill"></div>
-      </article>
-      <article class="svc rv">
+      </article></Scene><Scene image="car-lights.jpg" word="PERFECT." number="04" tone="amber" subject=true class="scene-service"><article class="svc">
         <div class="svc-idx">03</div>
         <div>
           <h2 class="svc-name">Detailing</h2>
-          <p class="svc-desc">Paint correction under controlled light. Before and after, measured. Not claimed.</p>
+          <p class="svc-desc">Paint corrected under studio light, then measured. Seen, never just promised.</p>
         </div>
         <span class="svc-zone">Detailing Lab</span>
         <div class="svc-fill"></div>
-      </article>
-      <article class="svc rv">
+      </article></Scene><Scene image="studio-wide-v2.jpg" word="FRESH." number="05" tone="blue" subject=true class="scene-service"><article class="svc">
         <div class="svc-idx">04</div>
         <div>
           <h2 class="svc-name">Washing</h2>
-          <p class="svc-desc">Express and premium washes with proper foam, two buckets and clean mitts. Every time.</p>
+          <p class="svc-desc">Foam, two buckets, clean mitts. The wash it should always have been.</p>
         </div>
         <span class="svc-zone">Wash Studio</span>
         <div class="svc-fill"></div>
-      </article>
-      <article class="svc rv">
+      </article></Scene><Scene image="studio-bay.jpg" word="PERFORM." number="06" tone="copper" subject=true class="scene-service"><article class="svc">
         <div class="svc-idx">05</div>
         <div>
           <h2 class="svc-name">Garage</h2>
-          <p class="svc-desc">Repairs and periodic service with a digital job card you can watch from anywhere.</p>
+          <p class="svc-desc">Repairs and service, with a live job card you can watch from anywhere.</p>
         </div>
         <span class="svc-zone">Performance Garage</span>
         <div class="svc-fill"></div>
-      </article>
-      <article class="svc rv">
+      </article></Scene><Scene image="studio-orange.jpg" word="YOUR WAY." number="07" tone="red" subject=true class="scene-service"><article class="svc">
         <div class="svc-idx">06</div>
         <div>
           <h2 class="svc-name">Modification</h2>
-          <p class="svc-desc">Upgrades and accessories, chosen carefully and fitted right the first time.</p>
+          <p class="svc-desc">Upgrades chosen with care, fitted right the first time.</p>
         </div>
         <span class="svc-zone">Accessory Lounge</span>
         <div class="svc-fill"></div>
-      </article>
-    </div>
-    <div class="svc-visual">
+      </article></Scene><Scene image="product-ceramic.jpg" word="LAB APPROVED." number="08" tone="sage" subject={false} class="scene-products"><div class="svc-visual">
       <figure class="rv px-img">
         <img class="tall" src="/assets/img/product-ceramic.jpg" alt="Studio-approved ceramic coating product" data-px />
       </figure>
@@ -84,5 +76,5 @@ import Base from '../layouts/Base.astro';
         <a class="btn magnetic" style="margin-top: 34px;" href="https://app.autodeck.in"><span class="btn-label">See published prices</span><span class="arr">→</span></a>
       </div>
     </div>
-  </section>
+  </Scene>
 </Base>

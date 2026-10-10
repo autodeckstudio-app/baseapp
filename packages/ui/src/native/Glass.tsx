@@ -60,7 +60,7 @@ export function Glass({ children, pad = "gap", round = "card", tone, fill = "bas
           backgroundImage: glassFill(glass, fill === "warm" ? "warm" : fill === "cool" ? "cool" : "base"),
           backdropFilter: `blur(${glass.blur}px) saturate(${glass.saturate})`,
           WebkitBackdropFilter: `blur(${glass.blur}px) saturate(${glass.saturate})`,
-          boxShadow: "0 14px 34px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10)",
+          boxShadow: "0 24px 60px -18px rgba(0,0,0,.65), 0 2px 10px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.04)",
         } as object)
       : {}),
   };
