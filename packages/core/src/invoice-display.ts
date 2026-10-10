@@ -31,7 +31,7 @@ function humanizeId(raw: string): string {
 export function invoiceServiceLabel(li: {description?: string | null; serviceId?: string | null; serviceName?: string | null}, catalogue: Record<string, string>): string {
   const snap = li.serviceName?.trim();
   if (snap) return snap;
-  if (li.serviceId && catalogue[li.serviceId]) return catalogue[li.serviceId]!;
+  if (li.serviceId && catalogue[li.serviceId]) return catalogue[li.serviceId] ?? "";
   const desc = (li.description ?? "").trim();
   const m = RAW_ID.exec(desc);
   if (m) {

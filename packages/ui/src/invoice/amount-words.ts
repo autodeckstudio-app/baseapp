@@ -2,13 +2,13 @@ const ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"
 const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
 function twoDigits(n: number): string {
-  return n < 20 ? ONES[n]! : `${TENS[Math.floor(n / 10)]!}${n % 10 ? ` ${ONES[n % 10]!}` : ""}`;
+  return n < 20 ? ONES[n] ?? "" : `${TENS[Math.floor(n / 10)] ?? ""}${n % 10 ? ` ${ONES[n % 10] ?? ""}` : ""}`;
 }
 
 function threeDigits(n: number): string {
   const h = Math.floor(n / 100);
   const rest = n % 100;
-  return `${h ? `${ONES[h]!} Hundred${rest ? " " : ""}` : ""}${rest ? twoDigits(rest) : ""}`;
+  return `${h ? `${ONES[h] ?? ""} Hundred${rest ? " " : ""}` : ""}${rest ? twoDigits(rest) : ""}`;
 }
 
 /** Indian numbering (lakh/crore) amount-in-words for a paise total. */

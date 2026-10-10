@@ -56,10 +56,13 @@ describe("additive customer capability", () => {
     await expect(markMyListingSold.run(req({ listingId: "l" }))).rejects.toMatchObject({ code: "permission-denied" });
   });
   it("customer context applies ownership and cancellation limits to staff", async () => {
-    h.docs["bookings/b"] = { tenantId: "tenant", customerId: "other", studioId: "studio", status: "CONFIRMED" };
-    await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "permission-denied" });
-    h.docs["bookings/b"] = { ...h.docs["bookings/b"], customerId: "staff", scheduledAt: new Date(Date.now() + 3600000).toISOString(), scheduledDate: new Date().toISOString().slice(0,10) };
-    await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "failed-precondition" });
+    vi.useFakeTimers(); vi.setSystemTime(new Date("2026-01-01T04:00:00.000Z"));
+    try {
+      h.docs["bookings/b"] = { tenantId: "tenant", customerId: "other", studioId: "studio", status: "CONFIRMED" };
+      await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "permission-denied" });
+      h.docs["bookings/b"] = { ...h.docs["bookings/b"], customerId: "staff", scheduledAt: new Date(Date.now() + 3600000).toISOString(), scheduledDate: new Date().toISOString().slice(0,10) };
+      await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "failed-precondition" });
+    } finally { vi.useRealTimers(); }
   });
 });
 
