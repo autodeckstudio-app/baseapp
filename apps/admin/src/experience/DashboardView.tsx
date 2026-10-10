@@ -45,7 +45,7 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
   if (counts.pendingPapers) alerts.push({ tone: "warning", text: `${n(counts.pendingPapers, "document is", "documents are")} waiting for verification`, href: "/papers", action: "Review" });
 
   return (
-    <div className="ax-page">
+    <div className="ax-page ax-dash">
       <header className="ax-page-head">
         <div>
           <p className="ax-label">{formatDayLong(today)}</p>

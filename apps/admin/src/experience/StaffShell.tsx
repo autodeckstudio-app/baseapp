@@ -10,6 +10,7 @@ import { Ambient } from "./Ambient";
 import "./shell.css";
 import "./float.css";
 import "./orizon.css";
+import "./canvas.css";
 
 export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },
@@ -126,6 +127,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   const activeGroup = groups.find((g) => g.links.some((l) => isActive(pathname, l.href)));
   const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
   const sections = SECTIONS.map((sec) => ({ ...sec, links: sec.links.filter((l) => office || !l.office) })).filter((sec) => sec.links.length > 0);
+  const activeSection = sections.find((sec) => sec.links.some((l) => isActive(pathname, l.href)));
   const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "admin");
 
   return (
@@ -133,32 +135,37 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
       <Ambient>
         <div className="ax-shell-frame" data-hero={pathname === "/dashboard" ? "on" : undefined}>
           {pathname === "/dashboard" ? <div className="ax-herobg" aria-hidden="true" /> : null}
+          <Link href={home} className="ax-corner ax-corner--l" aria-label="AutoDeck home">
+            <img className="ax-logo-full" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" />
+            <img className="ax-logo-mark" src={logoDataUri(LOGO_MARK_SVG)} alt="AutoDeck" />
+          </Link>
+          {activeSection && activeSection.links.length > 1 ? (
+            <div className="ax-notch">
+              <nav className="ax-chips" aria-label={activeSection.label}>
+                {activeSection.links.map((l) => (
+                  <Link key={l.href} href={l.href} className="ax-chip-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</Link>
+                ))}
+              </nav>
+            </div>
+          ) : null}
+          <div className="ax-corner ax-corner--r">
+            <span className="ax-avatar" title={`${who} - ${ROLE_LABEL[role] ?? role}`} aria-label={`${who}, ${ROLE_LABEL[role] ?? role}`}>{(who.trim()[0] ?? "A").toUpperCase()}</span>
+            <button type="button" className="ax-corner-out" title="Sign out" aria-label="Sign out" onClick={onSignOut}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span className="ax-corner-out-t">Sign out</span>
+            </button>
+          </div>
           <aside className="ax-side" aria-label="Main navigation">
-            <Link href={home} className="ax-wordmark">
-              <img className="ax-logo-full" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" style={{ display: "block", height: 30, width: "auto" }} />
-              <img className="ax-logo-mark" src={logoDataUri(LOGO_MARK_SVG)} alt="AutoDeck" style={{ display: "none", height: 30, width: "auto" }} />
-            </Link>
+            <div className="ax-side-scroll">
             {sections.map((sec) => (
               <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>
                 <span className="ax-label">{sec.label}</span>
                 {sec.links.map(link)}
               </nav>
             ))}
-            <div className="ax-side-foot">
-              <span className="ax-avatar" title={`${who} - ${ROLE_LABEL[role] ?? role}`} aria-label={`${who}, ${ROLE_LABEL[role] ?? role}`}>{(who.trim()[0] ?? "A").toUpperCase()}</span>
-              <button type="button" className="ax-button ax-rail-out" title="Sign out" aria-label="Sign out" onClick={onSignOut}>
-                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
-              </button>
             </div>
           </aside>
           <main className="ax-main">
-            {activeGroup && activeGroup.links.length > 1 ? (
-              <nav className="ax-chips" aria-label={activeGroup.label}>
-                {activeGroup.links.map((l) => (
-                  <Link key={l.href} href={l.href} className="ax-chip-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</Link>
-                ))}
-              </nav>
-            ) : null}
             {children}
           </main>
           <nav className="ax-tabbar" aria-label="Main">
