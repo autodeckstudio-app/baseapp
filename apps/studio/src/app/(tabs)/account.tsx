@@ -5,7 +5,7 @@ import { httpsCallable } from "firebase/functions";
 import { signOut } from "firebase/auth";
 import { auth, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { colors, spacing, radius, typography, Avatar, LoadingState } from "@autodeck/ui";
+import { colors, isNightPalette, spacing, radius, typography, Avatar, LoadingState } from "@autodeck/ui";
 import { Icon } from "@autodeck/ui/native";
 
 type IconName = "home" | "wrench" | "calendar" | "search" | "profile" | "plus" | "check" | "pin" | "close" | "bell" | "users";
@@ -22,11 +22,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ icon, label, hint, onPress, disabled, last, danger }: { icon: IconName; label: string; hint?: string; onPress: () => void; disabled?: boolean; last?: boolean; danger?: boolean }) {
   return (
     <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} style={{ flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 14, paddingHorizontal: spacing.lg, minHeight: 56, opacity: disabled ? 0.5 : 1, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>
-      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: danger ? "#FDECEA" : "rgba(240,125,40,0.14)" }}>
-        <Icon name={icon} color={danger ? "#C0392B" : colors.accent} size={20} />
+      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: danger ? (isNightPalette ? "rgba(255,150,132,0.18)" : "#FDECEA") : "rgba(240,125,40,0.14)" }}>
+        <Icon name={icon} color={danger ? colors.error : colors.accent} size={20} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ ...typography.body, color: danger ? "#C0392B" : colors.textPrimary, fontWeight: "600" }}>{label}</Text>
+        <Text style={{ ...typography.body, color: danger ? colors.error : colors.textPrimary, fontWeight: "600" }}>{label}</Text>
         {hint ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{hint}</Text> : null}
       </View>
     </Pressable>

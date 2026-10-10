@@ -55,7 +55,7 @@ export default function LoginPage() {
     <div className="ax-shell">
       <Ambient>
         <main className="ax-login" style={{ background: AUTH.ground }}>
-          <div style={{ width: "100%", maxWidth: AUTH.maxWidth, display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: AUTH.cardPad, borderRadius: AUTH.cardRadius, background: AUTH.cardBg, border: `1px solid ${AUTH.cardBorder}`, boxShadow: AUTH.cardShadow, textAlign: "center" }}>
+          <div className="ax-login-card" style={{ width: "100%", maxWidth: AUTH.maxWidth, display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: AUTH.cardPad, borderRadius: AUTH.cardRadius, background: AUTH.cardBg, border: `1px solid ${AUTH.cardBorder}`, boxShadow: AUTH.cardShadow, textAlign: "center" }}>
             <img src={logoDataUri(LOGO_STACKED_SVG)} alt="AutoDeck" style={{ display: "block", height: AUTH.logoHeight, width: "auto" }} />
             <span style={{ color: AUTH.accent, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Office and studio</span>
             <h1 style={{ margin: 0, color: AUTH.text, fontSize: 24, fontWeight: 500 }}>Sign in to AutoDeck Admin</h1>

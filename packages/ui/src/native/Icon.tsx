@@ -9,7 +9,7 @@ const LIGHT_INK = "#F2F0EC";
 
 export function Icon({ name, color, size = 24, filled = false }: { name: IconName; color: string; size?: number; filled?: boolean }) {
   const { name: theme } = useExperienceTheme();
-  const flip = theme === "charcoal";
+  const flip = theme === "night";
   if (Platform.OS === "web") {
     if (duotoneInner(name)) {
       return createElement("svg", { "aria-hidden": true, width: size, height: size, viewBox: DUO_VIEWBOX, style: { flexShrink: 0, display: "block", opacity: filled || color === "#FFFFFF" ? 1 : 0.92 }, dangerouslySetInnerHTML: { __html: flip ? iconInner(name).replace(DARK_INK, LIGHT_INK) : iconInner(name) } });

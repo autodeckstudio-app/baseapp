@@ -1,3 +1,4 @@
+import { colors } from "@autodeck/ui";
 import { Redirect } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { useAuth } from "../hooks/useAuth";
@@ -7,7 +8,7 @@ export default function Index() {
 
   if (auth.status === "loading") {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#ECEBF8" }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
         <ActivityIndicator size="large" />
       </View>
     );

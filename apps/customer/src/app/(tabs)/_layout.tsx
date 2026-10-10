@@ -9,11 +9,11 @@ import { PillTabBar, useExperienceTheme } from "@autodeck/ui/native";
 const TAB_ICON: Record<string, "home" | "services" | "bookings" | "garage" | "profile"> = { index: "home", catalogue: "services", bookings: "bookings", garage: "garage", profile: "profile" };
 
 export default function TabsLayout() {
-  const { colors } = useExperienceTheme();
+  const { colors, name } = useExperienceTheme();
   return (
     <View style={{ flex: 1 }}>
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor="#C2540A" inactiveColor="#625D70" floating resetOnPress />}
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor={name === "night" ? colors.accent : "#C2540A"} inactiveColor={name === "night" ? colors.inactive : "#625D70"} dark={name === "night"} floating resetOnPress />}
       screenOptions={() => ({
         headerShown: false,
         sceneStyle: { backgroundColor: colors.canvas },

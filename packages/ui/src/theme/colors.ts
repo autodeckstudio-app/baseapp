@@ -84,31 +84,33 @@ export const lightColors: ThemeColors = {
   onInk: "#1D1B26",
 };
 
-// Customer app: deep black with orange accents (no grey tone, no navy).
-export const charcoalColors: ThemeColors = {
-  canvas: "#18181C",
-  canvasDeep: "#101013",
-  surface: "#232328",
-  surfaceElevated: "#2C2C32",
-  borderSubtle: "rgba(255,255,255,0.12)",
-  borderStrong: "rgba(255,255,255,0.30)",
+// Night mode (all three apps). Anchored on Asian Paints 8301 Coal Mine
+// (#50504D): that is the page ground; cards step darker so text and the
+// orange keep WCAG contrast. The orange accent is the same in both modes.
+export const nightColors: ThemeColors = {
+  canvas: "#50504D",
+  canvasDeep: "#3A3A38",
+  surface: "#373735",
+  surfaceElevated: "#42423F",
+  borderSubtle: "rgba(255,255,255,0.14)",
+  borderStrong: "rgba(255,255,255,0.34)",
   textPrimary: "#FAF8F5",
-  textSecondary: "#DAD8D4",
-  textTertiary: "#BDBBB7",
+  textSecondary: "#E2E0DC",
+  textTertiary: "#CDCBC6",
   textOnAccent: "#1A1410",
-  accent: "#F59A45",
-  accentStrong: "#F9B56E",
-  accentHaze: "rgba(245,154,69,0.16)",
+  accent: "#EC8638",
+  accentStrong: "#F59A4E",
+  accentHaze: "rgba(236,134,56,0.20)",
   premium: "#F2D3A6",
-  premiumHaze: "rgba(242,211,166,0.12)",
-  success: "#6FD3A0",
+  premiumHaze: "rgba(242,211,166,0.14)",
+  success: "#7DDBAA",
   warning: "#F2B95E",
-  danger: "#FF8D7A",
-  inactive: "#8E8E93",
+  danger: "#FF9684",
+  inactive: "#C4C2BD",
   scrim: "rgba(0,0,0,0.55)",
-  ink: "#202026",
+  ink: "#2E2E2C",
   onInk: "#FAF8F5",
 };
 
-export type ThemeName = "dark" | "light" | "charcoal";
-export const themeColors: Record<ThemeName, ThemeColors> = { dark: darkColors, light: lightColors, charcoal: charcoalColors };
+export type ThemeName = "dark" | "light" | "night";
+export const themeColors: Record<ThemeName, ThemeColors> = { dark: darkColors, light: lightColors, night: nightColors };

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { Alert, Platform, View } from "react-native";
 import { auth } from "../lib/firebase";
-import { colors } from "@autodeck/ui";
+import { colors, isNightPalette, watchMode } from "@autodeck/ui";
 import { installWebFonts } from "@autodeck/ui/native";
 
 installWebFonts();
@@ -45,7 +45,12 @@ export default function RootLayout() {
     if (doc) {
       doc.documentElement.style.backgroundColor = colors.background;
       doc.body.style.backgroundColor = colors.background;
+      (doc.documentElement.style as unknown as { colorScheme: string }).colorScheme = isNightPalette ? "dark" : "light";
+      const meta = (doc as unknown as { querySelector: (s: string) => { setAttribute: (k: string, v: string) => void } | null }).querySelector('meta[name="theme-color"]');
+      meta?.setAttribute("content", colors.background);
     }
+    // Day/night flips by the clock or the device setting: the palette is fixed at load, so reload once on a flip.
+    return watchMode(() => (globalThis as { location?: { reload: () => void } }).location?.reload());
   }, []);
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

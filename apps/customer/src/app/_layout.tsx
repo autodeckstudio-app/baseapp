@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ExperienceThemeProvider, installWebFonts } from "@autodeck/ui/native";
+import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
@@ -11,7 +11,6 @@ import { T } from "../ui/kit";
 installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;
-if (Platform.OS === "web" && bodyDoc) bodyDoc.body.style.backgroundColor = "#ECEBF8";
 
 // Any signed-in account may use the customer app. Staff access stays additive.
 function NavigationGuard({ children }: { children: React.ReactNode }) {
@@ -71,17 +70,34 @@ function PushBridge() {
   );
 }
 
-export default function RootLayout() {
+function ThemedRoot() {
+  const { name, colors } = useExperienceTheme();
+  useEffect(() => {
+    if (Platform.OS !== "web" || !bodyDoc) return;
+    bodyDoc.body.style.backgroundColor = colors.canvas;
+    bodyDoc.documentElement.style.backgroundColor = colors.canvas;
+    bodyDoc.documentElement.style.colorScheme = name === "night" ? "dark" : "light";
+    const meta = bodyDoc.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", colors.canvas);
+  }, [name, colors.canvas]);
   return (
-    <ExperienceThemeProvider name="light">
-      <StatusBar style="dark" />
+    <>
+      <StatusBar style={name === "night" ? "light" : "dark"} />
       <NavigationGuard>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#ECEBF8" } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>
       </NavigationGuard>
       <PushBridge />
-    </ExperienceThemeProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AutoExperienceThemeProvider>
+      <ThemedRoot />
+    </AutoExperienceThemeProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, darkColors, lightColors, glass, themeStylesheet, type ThemeColors } from "@autodeck/ui/theme";
+import { contrastRatio, darkColors, lightColors, nightColors, glass, themeStylesheet, resolveMode, type ThemeColors } from "@autodeck/ui/theme";
 
 function textPasses(c: ThemeColors, bg: string) {
   expect(contrastRatio(c.textPrimary, bg)).toBeGreaterThanOrEqual(4.5);
@@ -43,5 +43,25 @@ describe("theme tokens", () => {
     expect(css).toContain("--ad-ambient:");
     expect(css).toContain('[data-theme="light"]');
     expect(css).toContain("prefers-reduced-motion");
+  });
+
+  it("night mode: Coal Mine ground, readable text, same orange as the brand", () => {
+    expect(nightColors.canvas).toBe("#50504D");
+    textPasses(nightColors, nightColors.canvas);
+    textPasses(nightColors, nightColors.surface);
+    textPasses(nightColors, nightColors.surfaceElevated);
+    expect(contrastRatio(nightColors.accent, nightColors.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(nightColors.textOnAccent, nightColors.accent)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(nightColors.danger, nightColors.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(nightColors.accent).toBe("#EC8638");
+  });
+
+  it("auto mode: night by clock or device preference", () => {
+    const at = (h: number) => new Date(2026, 9, 11, h, 0, 0);
+    expect(resolveMode(at(5), false)).toBe("night");
+    expect(resolveMode(at(6), false)).toBe("light");
+    expect(resolveMode(at(18), false)).toBe("light");
+    expect(resolveMode(at(19), false)).toBe("night");
+    expect(resolveMode(at(12), true)).toBe("night");
   });
 });

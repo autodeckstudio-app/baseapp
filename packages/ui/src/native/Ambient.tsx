@@ -15,8 +15,8 @@ export function Ambient({ children, style }: { children?: ReactNode; style?: Sty
   const { name, colors } = useExperienceTheme();
   const lit = Platform.OS === "ios";
   const webGround =
-    Platform.OS === "web" && name === "charcoal"
-      ? ({ backgroundImage: ambientBackground(ambient.charcoal, "linear-gradient(170deg, #26262C 0%, #18181C 48%, #121215 100%)") } as object)
+    Platform.OS === "web" && name === "night"
+      ? ({ backgroundImage: ambientBackground(ambient.night, "linear-gradient(170deg, #5A5A57 0%, #50504D 45%, #42423F 100%)") } as object)
       : null;
   return (
     <View style={[{ flex: 1, backgroundColor: colors.canvas, overflow: "hidden" }, webGround, style]}>

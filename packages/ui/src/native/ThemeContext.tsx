@@ -1,5 +1,5 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { themeColors, glass, type ThemeColors, type GlassRecipe, type ThemeName } from "../theme/index.js";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { currentMode, watchMode, themeColors, glass, type ThemeColors, type GlassRecipe, type ThemeName } from "../theme/index.js";
 
 export interface ExperienceTheme {
   name: ThemeName;
@@ -20,4 +20,19 @@ export function ExperienceThemeProvider({ name = "dark", children }: { name?: Th
 
 export function useExperienceTheme(): ExperienceTheme {
   return useContext(ThemeContext);
+}
+
+/** Day (light) or night by the device setting and local clock; re-evaluates while the app is open. */
+export function useAutoThemeName(): "light" | "night" {
+  const [mode, setMode] = useState<"light" | "night">(currentMode);
+  useEffect(() => {
+    setMode(currentMode());
+    return watchMode(setMode);
+  }, []);
+  return mode;
+}
+
+export function AutoExperienceThemeProvider({ children }: { children: ReactNode }) {
+  const name = useAutoThemeName();
+  return <ExperienceThemeProvider name={name}>{children}</ExperienceThemeProvider>;
 }

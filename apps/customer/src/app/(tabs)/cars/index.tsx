@@ -2,6 +2,7 @@ import { SelectField } from "../../../ui/inputs";
 // Cars for sale: studio stock and approved customer cars as a grid of photo cards, plus "Sell your car" and your own listings.
 import { createElement, useEffect, useMemo, useState } from "react";
 import { Image, Platform, Pressable, View } from "react-native";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -21,14 +22,15 @@ const BODY_FILTERS = ["hatchback", "sedan", "suv", "muv", "coupe", "other"];
 const FUEL_FILTERS = ["petrol", "diesel", "cng", "electric", "hybrid"];
 
 function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const night = useExperienceTheme().name === "night";
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 10, minHeight:44,justifyContent:"center", backgroundColor: on ? "#EC8638" : "rgba(29,27,38,0.06)", borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(29,27,38,0.16)" }}
+      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 10, minHeight:44,justifyContent:"center", backgroundColor: on ? "#EC8638" : night ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.06)", borderWidth: 1, borderColor: on ? "#EC8638" : night ? "rgba(255,255,255,0.28)" : "rgba(29,27,38,0.16)" }}
     >
-      <T role="label" style={{ color: on ? "#1A1410" : "#1D1B26", textTransform: "capitalize" }}>{label}</T>
+      <T role="label" style={{ color: on ? "#1A1410" : night ? "#FAF8F5" : "#1D1B26", textTransform: "capitalize" }}>{label}</T>
     </Pressable>
   );
 }
@@ -59,6 +61,7 @@ export default function CarsScreen() {
   const [body, setBody] = useState<string | null>(null);
   const [budget, setBudget] = useState("any");
   const [filtersOpen,setFiltersOpen] = useState(false);
+  const themeNight = useExperienceTheme().name === "night";
   const [attempt,setAttempt] = useState(0);
   const [sort, setSort] = useState<"new" | "low" | "high">("new");
   const shown = useMemo(() => filterCars(all??[],{query,fuel,body,maxPrice:BUDGETS.find(b=>b.id===budget)?.max??Infinity,sort}),[all,query,fuel,body,budget,sort]);
@@ -87,7 +90,7 @@ export default function CarsScreen() {
             <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#F59A45":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters</T></Pressable>
             <View style={{flex:1}}><Choice label="Sort cars" value={sort} onChange={v=>setSort(v as typeof sort)} options={[{value:"new",label:"Newest first"},{value:"low",label:"Price: low to high"},{value:"high",label:"Price: high to low"}]}/></View>
           </View>
-          {filtersOpen ? <View style={{padding:18,gap:16,borderRadius:20,borderWidth:1,borderColor:"rgba(29,27,38,0.12)",backgroundColor:"#FFFFFF"}}>
+          {filtersOpen ? <View style={{padding:18,gap:16,borderRadius:20,borderWidth:1,borderColor:"rgba(29,27,38,0.12)",backgroundColor:themeNight?"#373735":"#FFFFFF"}}>
             <View style={{gap:8}}><Kicker>Budget</Kicker><Choice label="Car budget" value={budget} onChange={setBudget} options={BUDGETS.map(b=>({value:b.id,label:b.label}))}/></View>
             <View style={{gap:8}}><Kicker>Fuel</Kicker><Choice label="Car fuel" value={fuel??""} onChange={v=>setFuel(v||null)} options={[{value:"",label:"Any fuel"},...FUEL_FILTERS.map(f=>({value:f,label:f.toUpperCase()==="CNG"?"CNG":f[0]!.toUpperCase()+f.slice(1)}))]}/></View>
             <View style={{gap:8}}><Kicker>Body type</Kicker><Choice label="Car body type" value={body??""} onChange={v=>setBody(v||null)} options={[{value:"",label:"Any body type"},...BODY_FILTERS.map(b=>({value:b,label:["suv","muv"].includes(b)?b.toUpperCase():b[0]!.toUpperCase()+b.slice(1)}))]}/></View>

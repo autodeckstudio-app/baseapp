@@ -1,15 +1,19 @@
 import type { ReactNode } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { AUTH, AUTH_FOOTNOTE } from "../theme/auth.js";
+import { currentMode } from "../theme/autoMode.js";
 import { createElement } from "react";
 import { Logo } from "./Logo.js";
 
 /** The one sign-in layout for every AutoDeck app. Same card, logo, button slot and footnote; only role, title and copy differ. */
-export function AuthCard({ role, title, copy, children, error, dark = false }: { role: string; title: string; copy: string; children: ReactNode; error?: string | null; dark?: boolean }) {
+export function AuthCard({ role, title, copy, children, error, dark: darkProp = false }: { role: string; title: string; copy: string; children: ReactNode; error?: string | null; dark?: boolean }) {
   const web = Platform.OS === "web";
-  const A = dark
+  const night = currentMode() === "night";
+  const dark = darkProp || night;
+  const A0 = dark
     ? { ...AUTH, ground: "radial-gradient(60vmax 60vmax at 100% 0%, rgba(245,154,69,0.18), transparent 70%), linear-gradient(170deg, #141416 0%, #0B0B0D 50%, #050506 100%)", groundFallback: "#0B0B0D", cardBg: "rgba(21,21,23,0.92)", cardBorder: "rgba(255,255,255,0.10)", cardShadow: "0 18px 50px rgba(0,0,0,0.6)", text: "#F6F4F1", muted: "#C4C2BF", accent: "#F59A45", danger: "#FF8D7A" }
     : AUTH;
+  const A = night ? { ...A0, ground: "linear-gradient(170deg, #5A5A57 0%, #50504D 45%, #42423F 100%)", groundFallback: "#50504D", cardBg: "rgba(55,55,53,0.96)", accent: "#EC8638" } : A0;
   return (
     <>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: A.groundFallback, ...(web ? ({ backgroundImage: A.ground, minHeight: "100vh" } as object) : {}) }}>
@@ -41,7 +45,8 @@ export function AuthCard({ role, title, copy, children, error, dark = false }: {
 }
 
 /** The sign-in button, identical in every app. */
-export function AuthButton({ label, onPress, busy, disabled, testID, dark = false }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
+export function AuthButton({ label, onPress, busy, disabled, testID, dark: darkProp = false }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
+  const dark = darkProp || currentMode() === "night";
   return (
     <Pressable
       testID={testID}

@@ -68,13 +68,13 @@ export const glass: Record<ThemeName, GlassRecipe> = {
     nativeIntensity: 60,
     nativeTint: "light",
   },
-  charcoal: {
+  night: {
     fill: "linear-gradient(145deg, rgba(255,255,255,.10), rgba(255,255,255,.03))",
     fillLit: "linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05))",
     fillWarm: "linear-gradient(145deg, rgba(236,134,56,.20), rgba(255,255,255,.04))",
-    fillCool: "linear-gradient(145deg, rgba(120,110,255,.16), rgba(255,255,255,.04))",
-    fallbackFill: "rgba(40,40,46,0.92)",
-    chromeFill: "rgba(24,24,28,.52)",
+    fillCool: "linear-gradient(145deg, rgba(242,211,166,.14), rgba(255,255,255,.04))",
+    fallbackFill: "rgba(55,55,53,0.94)",
+    chromeFill: "rgba(46,46,44,.62)",
     edge: "rgba(255,255,255,.14)",
     sheen: "rgba(255,255,255,.22)",
     blur: 26,
@@ -125,10 +125,10 @@ export const ambient: Record<ThemeName, readonly AmbientLight[]> = {
     { color: "#FFB27A", x: 100, y: 55, size: 65, opacity: 0.45 },
     { color: "#C9D0F5", x: 40, y: 100, size: 70, opacity: 0.4 },
   ],
-  charcoal: [
-    { color: "#E8C9B0", x: 82, y: 8, size: 90, opacity: 0.10 },
-    { color: "#B7B2D1", x: 6, y: 38, size: 80, opacity: 0.12 },
-    { color: "#AEC8CF", x: 70, y: 88, size: 100, opacity: 0.09 },
+  night: [
+    { color: "#EC8638", x: 85, y: 6, size: 80, opacity: 0.07 },
+    { color: "#8A8A85", x: 6, y: 40, size: 80, opacity: 0.12 },
+    { color: "#3A3A38", x: 70, y: 100, size: 100, opacity: 0.35 },
   ],
 };
 

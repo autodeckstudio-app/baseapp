@@ -2,9 +2,11 @@
 // Amber is reserved for primary actions, the active state and price
 // emphasis - never used to flood the UI.
 //
+import { currentMode } from "../theme/autoMode.js";
+
 // Pure values only (no react-native/DOM imports) so this file is safe to
 // import from any app, including the web admin.
-export const colors = {
+const dayColors = {
   // Mobile components share the experience palette (theme/colors.ts): the
   // dark studio ground, amber light and champagne reflection. Kept under the
   // legacy role names so every existing screen picks it up.
@@ -46,4 +48,39 @@ export const colors = {
   overlay: "rgba(29, 27, 38, 0.36)", // modal/sheet backdrop
 } as const;
 
-export type ColorToken = keyof typeof colors;
+type Palette = { [K in keyof typeof dayColors]: string };
+
+// Night: Coal Mine (#50504D) ground, darker cards, the same orange accent.
+const nightPalette: Palette = {
+  background: "#50504D",
+  surface: "#373735",
+  surfaceElevated: "#42423F",
+  surfaceSunken: "#2E2E2C",
+  textPrimary: "#FAF8F5",
+  textSecondary: "#E2E0DC",
+  textMuted: "#CDCBC6",
+  textOnAccent: "#1A1410",
+  border: "rgba(255,255,255,0.16)",
+  borderStrong: "rgba(255,255,255,0.34)",
+  divider: "rgba(255,255,255,0.12)",
+  accent: "#EC8638",
+  accentPressed: "#F59A4E",
+  accentMuted: "rgba(236,134,56,0.22)",
+  success: "#7DDBAA",
+  successMuted: "rgba(125,219,170,0.16)",
+  warning: "#F2B95E",
+  warningMuted: "rgba(242,185,94,0.16)",
+  error: "#FF9684",
+  errorMuted: "rgba(255,150,132,0.16)",
+  info: "#8DB7F0",
+  infoMuted: "rgba(141,183,240,0.16)",
+  white: "#1A1410", // only used for text on an accent fill, so it flips to dark ink
+  black: "#000000",
+  overlay: "rgba(0,0,0,0.55)",
+};
+
+/** Day palette (the bright light theme) or night palette, fixed when the app loads; the studio app reloads itself when day flips to night. */
+export const colors: Palette = currentMode() === "night" ? nightPalette : dayColors;
+export const isNightPalette = colors === nightPalette;
+
+export type ColorToken = keyof Palette;

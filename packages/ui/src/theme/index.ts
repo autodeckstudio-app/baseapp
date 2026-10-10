@@ -1,7 +1,7 @@
 // AutoDeck experience theme: dark studio ground, amber/champagne light,
 // glass panes. Pure values, no react-native or DOM imports; safe for web
 // and native via "@autodeck/ui/theme".
-export { darkColors, lightColors, charcoalColors, themeColors, type ThemeColors, type ThemeName } from "./colors.js";
+export { darkColors, lightColors, nightColors, themeColors, type ThemeColors, type ThemeName } from "./colors.js";
 export {
   glass,
   glassFill,
@@ -18,3 +18,4 @@ export { themeVariables, scaleVariables, themeStylesheet } from "./css.js";
 export * from "./icons.js";
 export * from "./logo.js";
 export * from "./auth.js";
+export * from "./autoMode.js";

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AdminAuthProvider } from "../lib/auth-context";
 import { ThemeStyle } from "../experience/ThemeStyle";
+import { AutoThemeScript } from "../experience/AutoTheme";
 import "./globals.css";
 import "../experience/experience.css";
 
@@ -25,9 +26,10 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="light" className={`${display.variable} ${body.variable} ${data.variable} ${gu.variable} ${hi.variable}`}>
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${display.variable} ${body.variable} ${data.variable} ${gu.variable} ${hi.variable}`}>
       <head>
         <ThemeStyle />
+        <AutoThemeScript />
       </head>
       <body>
         <AdminAuthProvider>{children}</AdminAuthProvider>

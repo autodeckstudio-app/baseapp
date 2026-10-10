@@ -27,6 +27,8 @@ export function themeVariables(name: ThemeName): Record<string, string> {
   vars["--ad-accent-grad"] =
     name === "dark"
       ? "linear-gradient(120deg, #F0C48C 0%, #E0A45C 46%, #E8D9BE 100%)"
+      : name === "night"
+      ? "linear-gradient(120deg, #F59A4E 0%, #EC8638 55%, #DC7428 100%)"
       : "linear-gradient(120deg, #F59A45 0%, #E8731A 55%, #C2540A 100%)";
   return vars;
 }
@@ -61,6 +63,7 @@ export function themeStylesheet(): string {
   return [
     block(":root", { ...scaleVariables(), ...themeVariables("dark") }),
     block('[data-theme="light"]', themeVariables("light")),
+    block('[data-theme="night"]', themeVariables("night")),
     `@media (prefers-reduced-motion: reduce) {\n${block(":root", {
       "--ad-dur-tick": "0ms",
       "--ad-dur-move": "0ms",

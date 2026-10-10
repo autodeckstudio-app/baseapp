@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { colors } from "@autodeck/ui";
+import { colors, isNightPalette } from "@autodeck/ui";
 import { PillTabBar } from "@autodeck/ui/native";
 
 const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "profile"> = { index: "home", bays: "wrench", calendar: "calendar", lookup: "search", account: "profile" };
@@ -7,7 +7,7 @@ const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "prof
 export default function StudioTabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor={colors.accent} inactiveColor={colors.textMuted} floating />}
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} activeColor={colors.accent} inactiveColor={colors.textMuted} dark={isNightPalette} floating />}
       screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
