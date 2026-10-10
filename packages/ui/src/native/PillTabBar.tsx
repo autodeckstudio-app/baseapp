@@ -1,4 +1,4 @@
-import { Pressable, View, Platform } from "react-native";
+import { Pressable, View, Text, Platform } from "react-native";
 import { BlurView } from "expo-blur";
 import { Icon } from "./Icon.js";
 import type { IconName } from "../theme/icons.js";
@@ -17,11 +17,13 @@ type Props = {
   dark?: boolean;
   /** Every press returns the tab to its first screen and the top. */
   resetOnPress?: boolean;
+  /** Optional visible name under each icon, keyed by route name. */
+  labels?: Record<string, string>;
   floating?: boolean; // true = overlay the screen (absolute), false = sits in the layout
 };
 
 /** Floating pill bar: icons only, each centred in an equal slot, active tab in a rounded highlight. */
-export function PillTabBar({ state, descriptors, navigation, icons, activeColor, inactiveColor, badges, floating = false, dark = false, resetOnPress = false }: Props) {
+export function PillTabBar({ state, descriptors, navigation, icons, activeColor, inactiveColor, badges, labels, floating = false, dark = false, resetOnPress = false }: Props) {
   const visible = state.routes.filter((r) => descriptors[r.key]?.options.href !== null && icons[r.name]);
   return (
     <View
@@ -33,8 +35,8 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
         bottom: floating ? ((Platform.OS === "web" ? "calc(12px + env(safe-area-inset-bottom))" : 12) as unknown as number) : undefined,
         marginHorizontal: floating ? 0 : 14,
         marginBottom: floating ? 0 : ((Platform.OS === "web" ? "calc(12px + env(safe-area-inset-bottom))" : 12) as unknown as number),
-        height: 62,
-        borderRadius: 31,
+        height: labels ? 68 : 62,
+        borderRadius: labels ? 34 : 31,
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: dark ? "rgba(12,12,14,0.55)" : Platform.OS === "web" ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.35)",
@@ -70,10 +72,11 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
                 emitTabPressed(route.name);
               } else if (!focused) navigation.navigate(route.name);
             }}
-            style={({ pressed }) => ({ flex: 1, height: 62, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ flex: 1, height: labels ? 68 : 62, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
           >
-            <View style={{ width: 58, height: 46, borderRadius: 23, backgroundColor: focused && !dark ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
+            <View style={{ width: labels ? 70 : 58, height: labels ? 54 : 46, borderRadius: labels ? 27 : 23, backgroundColor: focused && !dark ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
               <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={24} filled={focused} />
+              {labels?.[route.name] ? <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11, fontWeight: focused ? "700" : "500", color: focused ? activeColor : inactiveColor }}>{labels[route.name]}</Text> : null}
               {badges?.[route.name] ? <View style={{ position: "absolute", top: 8, right: 14, width: 9, height: 9, borderRadius: 5, backgroundColor: "#E5484D", borderWidth: 2, borderColor: dark ? "#0B0B0D" : "#fff" }} /> : null}
             </View>
           </Pressable>
