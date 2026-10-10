@@ -44,6 +44,8 @@ export async function submitMyPaper(input: {
   if (photo && res.uploadUrl && res.requiredHeaders) {
     const put = await fetch(res.uploadUrl, { method: "PUT", headers: res.requiredHeaders, body: photo.blob });
     if (!put.ok) throw new Error(`Saved, but the photo did not upload (${put.status}).`);
+    const finalize = httpsCallable<{ paperId: string }, { status: string }>(functions, "finalizeMyPaper");
+    await finalize({ paperId: res.id });
   }
 }
 

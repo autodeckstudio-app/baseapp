@@ -25,7 +25,7 @@ const options = {
   outfile: "lib/index.js",
   sourcemap: true,
   logLevel: "info",
-  external: ["firebase-admin", "firebase-functions", "zod"],
+  external: ["firebase-admin", "firebase-functions", "zod", "tesseract.js", "@tesseract.js-data/eng"],
 };
 
 if (watch) {

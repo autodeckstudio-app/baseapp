@@ -44,3 +44,12 @@ describe("FASTAG", () => {
     expect(submitPaperSchema.safeParse({ ...base, kind: "FASTAG", reference: "x" }).success).toBe(true);
   });
 });
+
+describe("paper rejection reason", () => {
+  it("trims reasons and rejects blank or excessive reasons", async () => {
+    const { reviewPaperSchema } = await import("../../schemas/paper.js");
+    expect(reviewPaperSchema.safeParse({ paperId: "p", decision: "REJECTED", rejectionReason: "   " }).success).toBe(false);
+    expect(reviewPaperSchema.parse({ paperId: "p", decision: "REJECTED", rejectionReason: "  Expired  " }).rejectionReason).toBe("Expired");
+    expect(reviewPaperSchema.safeParse({ paperId: "p", decision: "REJECTED", rejectionReason: "x".repeat(301) }).success).toBe(false);
+  });
+});

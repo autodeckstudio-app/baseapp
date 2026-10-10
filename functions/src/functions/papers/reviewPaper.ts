@@ -39,7 +39,9 @@ export const reviewPaper = onCall({ region: "asia-south1" }, async (request) => 
       status: data.decision,
       reviewedBy: user.uid,
       reviewedAt: now,
-      rejectionReason: data.decision === "REJECTED" ? data.rejectionReason! : null,
+      rejectionReason: data.decision === "REJECTED" ? data.rejectionReason ?? "" : null,
+      verificationMode: "manual",
+      verificationReason: data.decision === "REJECTED" ? data.rejectionReason ?? "" : "Original document verified by staff.",
       updatedAt: now,
     });
     writeAuditLog(tx, {
@@ -49,7 +51,7 @@ export const reviewPaper = onCall({ region: "asia-south1" }, async (request) => 
       user,
       studioId: before.studioId,
       before: { status: before.status },
-      after: { status: data.decision, rejectionReason: data.rejectionReason ?? null },
+      after: { status: data.decision, rejectionReason: data.rejectionReason ?? null, kind: before.kind, reference: before.reference, vehicleId: before.vehicleId },
     });
   });
 

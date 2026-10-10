@@ -100,6 +100,8 @@ export interface AuditLog {
   action: AuditAction;
   entityType: string; // e.g. "Booking", "ServiceJob"
   entityId: string;
+  performedByName?: string;
+  targetLabel?: string;
   performedBy: string; // uid
   performedByRole: string;
   before: Record<string, unknown> | null; // relevant fields before change

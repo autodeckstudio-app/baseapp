@@ -62,8 +62,10 @@ export default function PapersPage() {
     try {
       await action();
       setMessage(ok);
+      return true;
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : fail);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -101,7 +103,7 @@ export default function PapersPage() {
         )
       }
       onReview={(paper, decision, reason) =>
-        void run(
+        run(
           () => reviewPaper({ paperId: paper.id, decision, ...(reason ? { rejectionReason: reason } : {}) }),
           decision === "VERIFIED" ? "Marked verified." : "Marked rejected.",
           "Couldn't save the review.",

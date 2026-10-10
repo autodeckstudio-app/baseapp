@@ -122,7 +122,7 @@ export { submitPaper } from "./functions/papers/submitPaper.js";
 export { reviewPaper } from "./functions/papers/reviewPaper.js";
 export { updatePaper } from "./functions/papers/updatePaper.js";
 export { listPapers } from "./functions/papers/listPapers.js";
-export { submitMyPaper } from "./functions/papers/submitMyPaper.js";
+export { submitMyPaper, finalizeMyPaper } from "./functions/papers/submitMyPaper.js";
 export { getServiceReviews } from "./functions/booking/getServiceReviews.js";
 
 // âââ Daily Close (M6 Automodz Office) ââââââââââââââââââââââââââââââââââââââ

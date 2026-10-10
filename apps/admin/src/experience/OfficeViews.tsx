@@ -2,6 +2,8 @@
 
 // Presentational office lists. Pages own data and actions; these own the
 // look, so the /design previews render exactly what staff see.
+import Link from "next/link";
+import { auditActor, auditTarget, auditVerb } from "../lib/audit-display";
 import { useState } from "react";
 import type { AuditLog, Customer, Invoice, InvoiceStatus, Payment, PaymentStatus } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, ListPane, Drawer, type Column } from "./Office";
@@ -240,27 +242,32 @@ export function AuditView(p: {
   loading: boolean;
   error: string | null;
   who: Names;
+  labels?: Names;
 }) {
   const [search, setSearch] = useState("");
   const [action, setAction] = useState("");
   const [entityType, setEntityType] = useState("");
   const [date, setDate] = useState("");
+  const [actor, setActor] = useState("");
+  const actors = Array.from(new Set(p.entries.map((e) => e.performedBy)));
   const [selected, setSelected] = useState<AuditLog | null>(null);
   const actions = Array.from(new Set(p.entries.map((e) => e.action))).sort();
   const types = Array.from(new Set(p.entries.map((e) => e.entityType))).sort();
   const q = search.trim().toLowerCase();
   const rows = p.entries.filter((e) => {
+    if (actor && e.performedBy !== actor) return false;
     if (action && e.action !== action) return false;
     if (entityType && e.entityType !== entityType) return false;
     if (date && e.createdAt.slice(0, 10) !== date) return false;
-    if (q && ![e.performedBy, p.who[e.performedBy], e.entityId].filter(Boolean).join(" ").toLowerCase().includes(q)) return false;
+    if (q && ![auditActor(e, p.who), auditTarget(e, p.labels).label, auditVerb(e), e.entityId].filter(Boolean).join(" ").toLowerCase().includes(q)) return false;
     return true;
   });
   const cols: Column<AuditLog>[] = [
-    { key: "when", head: "When", kind: "muted", width: "160px", cell: (e) => formatDateTime(e.createdAt) },
-    { key: "what", head: "What happened", kind: "strong", width: "minmax(0, 1.4fr)", cell: (e) => statusLabel(e.action) },
-    { key: "on", head: "Record", width: "minmax(0, 1.4fr)", cell: (e) => <>{statusLabel(e.entityType)} <span className="ax-sub" style={{ display: "inline" }}>{e.entityId}</span></> },
-    { key: "by", head: "By", width: "minmax(0, 1.2fr)", cell: (e) => <>{p.who[e.performedBy] ?? e.performedBy}<span className="ax-sub">{statusLabel(e.performedByRole)}</span></> },
+    { key: "when", head: "When", kind: "muted", width: "170px", cell: (e) => formatDateTime(e.createdAt) },
+    { key: "story", head: "What happened", width: "minmax(0, 1fr)", cell: (e) => {
+      const target = auditTarget(e, p.labels);
+      return <span><strong>{auditActor(e, p.who)}</strong> <span className="ax-sub" style={{ display: "inline" }}>({e.metadata?.automatic ? "automatic" : statusLabel(e.performedByRole)})</span> {auditVerb(e)} {target.href ? <Link href={target.href} onClick={(event) => event.stopPropagation()}>{target.label}</Link> : target.label}.<span className="ax-sub">{String(e.after?.reason ?? e.after?.rejectionReason ?? "")}</span></span>;
+    } },
   ];
   if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
   if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
@@ -269,10 +276,14 @@ export function AuditView(p: {
       <PageHead eyebrow="Office" title="Audit log" kpis={[{ value: p.entries.length, label: "Entries" }]} />
       <p className="ax-note" style={{ marginTop: 0 }}>Every change to bookings, jobs, money and access is written here. Entries can&apos;t be edited or deleted.</p>
       <Toolbar count={{ shown: rows.length, total: p.entries.length }}>
-        <input className="ax-search" type="search" aria-label="Search audit entries" placeholder="Search person or record ID" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="ax-search" type="search" aria-label="Search audit entries" placeholder="Search person, plate, customer or record" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <select value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Actor">
+          <option value="">Everyone</option>
+          {actors.map((id) => <option key={id} value={id}>{p.who[id] || p.entries.find((e) => e.performedBy === id)?.performedByName || `Account ${id.slice(0, 8)}`}</option>)}
+        </select>
         <select value={action} onChange={(e) => setAction(e.target.value)} aria-label="Action">
           <option value="">All actions</option>
-          {actions.map((a) => <option key={a} value={a}>{statusLabel(a)}</option>)}
+          {actions.map((a) => <option key={a} value={a}>{auditVerb({ action: a } as AuditLog)}</option>)}
         </select>
         <select value={entityType} onChange={(e) => setEntityType(e.target.value)} aria-label="Record type">
           <option value="">All records</option>
@@ -289,9 +300,9 @@ export function AuditView(p: {
         empty={p.entries.length ? { title: "Nothing matches these filters", body: "Clear a filter to see more." } : { title: "No entries yet", body: "Changes made by staff and the system will appear here." }}
       />
       {selected && (
-        <Drawer eyebrow={formatDateTime(selected.createdAt)} title={statusLabel(selected.action)} onClose={() => setSelected(null)}>
+        <Drawer eyebrow={formatDateTime(selected.createdAt)} title={`${auditActor(selected, p.who)} ${auditVerb(selected)} ${auditTarget(selected, p.labels).label}`} onClose={() => setSelected(null)}>
           <div className="kv"><span>Record</span><span>{statusLabel(selected.entityType)} · <span className="ax-data">{selected.entityId}</span></span></div>
-          <div className="kv"><span>By</span><span>{p.who[selected.performedBy] ?? selected.performedBy} ({statusLabel(selected.performedByRole)})</span></div>
+          <div className="kv"><span>By</span><span>{auditActor(selected, p.who)} ({statusLabel(selected.performedByRole)})</span></div>
           <div className="kv"><span>Studio</span><span>{selected.studioId ?? "Whole business"}</span></div>
           <p className="ax-label" style={{ marginTop: 20 }}>Before</p>
           <pre className="ax-code">{selected.before ? JSON.stringify(selected.before, null, 2) : "Nothing (new record)"}</pre>

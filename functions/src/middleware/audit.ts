@@ -31,6 +31,8 @@ export function writeAuditLog(tx: Transaction, params: AuditParams): void {
     entityType: params.entityType,
     entityId: params.entityId,
     performedBy: params.user.uid,
+    performedByName: params.user.uid === "system" ? "AutoDeck" : (params.user.displayName || params.user.email || `Account ${params.user.uid.slice(0, 8)}`),
+    targetLabel: String(params.after?.registrationNumber || params.after?.invoiceNumber || params.after?.name || params.after?.reference || params.before?.registrationNumber || params.before?.name || ""),
     performedByRole: params.user.claims.role,
     before: params.before ?? null,
     after: params.after ?? null,

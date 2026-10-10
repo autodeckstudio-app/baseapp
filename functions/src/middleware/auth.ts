@@ -55,6 +55,7 @@ export function extractUser(request: CallableRequest): AuthorizedUser {
     phone: (token.phone_number as string | undefined) ?? null,
     email: (token.email as string | undefined) ?? null,
     claims,
+    displayName: typeof token.name === "string" ? token.name : null,
   };
 }
 

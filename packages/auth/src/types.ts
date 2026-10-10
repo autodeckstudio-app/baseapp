@@ -13,6 +13,7 @@ export interface AutoDeckClaims {
 
 export type AuthorizedUser = {
   uid: string;
+  displayName?: string | null;
   phone: string | null;
   email: string | null;
   claims: AutoDeckClaims;

@@ -29,7 +29,7 @@ export function PapersView(p: {
   onFilter: (f: StatusFilter) => void;
   onResolvePlate: (plate: string) => Promise<Vehicle | null>;
   onSubmit: (input: { vehicleId: string; kind: PaperKind; reference: string; expiresOn: string; notes: string }) => void;
-  onReview: (paper: PaperVerification, decision: "VERIFIED" | "REJECTED", reason: string) => void;
+  onReview: (paper: PaperVerification, decision: "VERIFIED" | "REJECTED", reason: string) => Promise<boolean>;
 }) {
   const [plate, setPlate] = useState("");
   const [found, setFound] = useState<Vehicle | null | "searching" | "missing">(null);
@@ -47,12 +47,13 @@ export function PapersView(p: {
     <div className="ax-page">
       <PageHead
         eyebrow="Office"
-        title="Papers"
+        title="Documents"
         kpis={[
-          { value: p.papers.filter((x) => x.status === "PENDING").length, label: "Awaiting review", tone: "accent" },
+          { value: p.papers.filter((x) => x.status === "PENDING").length, label: "Needs review", tone: "accent" },
           { value: p.papers.filter((x) => x.expiresOn !== null && x.expiresOn < today).length, label: "Expired" },
         ]}
       />
+      <p className="ax-note">Readable documents are checked automatically against the vehicle plate and expiry. Only unclear photos need your review.</p>
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
 
@@ -62,8 +63,8 @@ export function PapersView(p: {
             <Segmented<StatusFilter>
               value={p.filter}
               options={[
-                { value: "PENDING", label: "Pending" },
-                { value: "VERIFIED", label: "Verified" },
+                { value: "PENDING", label: "Needs review" },
+                { value: "VERIFIED", label: "Approved" },
                 { value: "REJECTED", label: "Rejected" },
               ]}
               onChange={p.onFilter}
@@ -77,7 +78,7 @@ export function PapersView(p: {
                 {p.papers.map((paper) => {
                   const expired = paper.expiresOn !== null && paper.expiresOn < today;
                   return (
-                    <li key={paper.id} className="ax-list-row">
+                    <li key={paper.id} className="ax-list-row" style={{ flexWrap: "wrap", gap: 12 }}>
                       <span className="ax-slot-main">
                         <span className="ax-person-name">
                           {KIND_NAME[paper.kind]} · {paper.reference}
@@ -86,11 +87,13 @@ export function PapersView(p: {
                           {vehicleName(p.vehiclesById.get(paper.vehicleId))} · expires {formatDate(paper.expiresOn)}
                           {paper.rejectionReason ? ` · rejected: ${paper.rejectionReason}` : ""}
                         </span>
+                        <span className="ax-sub">{paper.verificationMode === "automatic" ? paper.status === "VERIFIED" ? "Auto-approved" : "Auto-rejected" : paper.verificationMode === "manual" ? "Reviewed by staff" : "Manual review needed"}{paper.verificationReason ? `: ${paper.verificationReason}` : ": Original document needs a closer look."}</span>
+                        {paper.evidenceUrl && <a href={paper.evidenceUrl} target="_blank" rel="noreferrer">Open original document</a>}
                       </span>
                       {expired && <span className="ax-expiry ax-expiry--danger">expired</span>}
                       {paper.status === "PENDING" && (
-                        <span className="ax-row-actions">
-                          <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => p.onReview(paper, "VERIFIED", "")}>
+                        <span className="ax-row-actions" style={{ flexWrap: "wrap", width: rejectId === paper.id ? "100%" : undefined }}>
+                          <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => void p.onReview(paper, "VERIFIED", "")}>
                             Verify
                           </button>
                           {rejectId === paper.id ? (
@@ -98,6 +101,8 @@ export function PapersView(p: {
                               <input
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
+                                style={{ minWidth: 220, flex: 1 }}
+                                maxLength={300}
                                 placeholder="Reason for rejection"
                                 aria-label="Rejection reason"
                               />
@@ -105,10 +110,11 @@ export function PapersView(p: {
                                 type="button"
                                 className="ax-button ax-button--danger"
                                 disabled={p.busy || !rejectReason.trim()}
-                                onClick={() => { p.onReview(paper, "REJECTED", rejectReason.trim()); setRejectId(null); setRejectReason(""); }}
+                                onClick={() => { void p.onReview(paper, "REJECTED", rejectReason.trim()).then((ok) => { if (ok) { setRejectId(null); setRejectReason(""); } }); }}
                               >
-                                Reject
+                                Confirm rejection
                               </button>
+                              <button type="button" className="ax-button" disabled={p.busy} onClick={() => { setRejectId(null); setRejectReason(""); }}>Cancel</button>
                             </>
                           ) : (
                             <button type="button" className="ax-button" onClick={() => setRejectId(paper.id)}>Reject</button>

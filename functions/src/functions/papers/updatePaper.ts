@@ -37,6 +37,8 @@ export const updatePaper = onCall({ region: "asia-south1" }, async (request) => 
       patch.reviewedBy = null;
       patch.reviewedAt = null;
       patch.rejectionReason = null;
+      patch.verificationMode = "review";
+      patch.verificationReason = "Document details changed. Review the original again.";
     }
     tx.update(ref, patch);
     writeAuditLog(tx, {

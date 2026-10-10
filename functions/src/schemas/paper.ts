@@ -42,7 +42,7 @@ export const submitPaperSchema = z.object({
 export const reviewPaperSchema = z.object({
   paperId: z.string().min(1),
   decision: z.enum(["VERIFIED", "REJECTED"]),
-  rejectionReason: z.string().max(300).optional(),
+  rejectionReason: z.string().trim().min(1).max(300).optional(),
 }).strict();
 
 export const updatePaperSchema = z.object({

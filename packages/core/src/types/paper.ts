@@ -19,6 +19,10 @@ export interface PaperVerification {
   expiresOn: string | null; // YYYY-MM-DD
   evidenceUrl: string | null; // photo of the document, if captured
   status: PaperStatus;
+  verificationMode?: "automatic" | "manual" | "review";
+  verificationReason?: string;
+  extractedPlate?: string | null;
+  extractedExpiry?: string | null;
   reviewedBy: string | null; // auth uid
   reviewedAt: string | null; // ISO
   rejectionReason: string | null;
