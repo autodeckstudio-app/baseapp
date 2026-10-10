@@ -698,3 +698,5 @@ html[data-theme="night"] .ax-login .ax-login-card { background: rgba(55,55,53,0.
 html[data-theme="night"] .ax-login h1 { color: #FAF8F5 !important; }
 html[data-theme="night"] .ax-login p, html[data-theme="night"] .ax-login span { color: #E2E0DC !important; }
 html[data-theme="night"] .ax-login button { background: #EC8638 !important; color: #1A1410 !important; }
+html[data-theme="night"] svg [stroke="#2E2E33"] { stroke: #F2F0EC; }
+html[data-theme="night"] svg [fill="#2E2E33"] { fill: #F2F0EC; }

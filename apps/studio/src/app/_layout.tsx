@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth";
 import { Alert, Platform, View } from "react-native";
 import { auth } from "../lib/firebase";
 import { colors, isNightPalette, watchMode } from "@autodeck/ui";
-import { installWebFonts } from "@autodeck/ui/native";
+import { installWebFonts, AutoExperienceThemeProvider } from "@autodeck/ui/native";
 
 installWebFonts();
 import { useAuth } from "../hooks/useAuth";
@@ -53,6 +53,7 @@ export default function RootLayout() {
     return watchMode(() => (globalThis as { location?: { reload: () => void } }).location?.reload());
   }, []);
   return (
+    <AutoExperienceThemeProvider>
     <View style={{ flex: 1, backgroundColor: colors.background }}>
     <NavigationGuard>
       <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
@@ -61,5 +62,6 @@ export default function RootLayout() {
       </Stack>
     </NavigationGuard>
     </View>
+    </AutoExperienceThemeProvider>
   );
 }
