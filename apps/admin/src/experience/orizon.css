@@ -46,7 +46,7 @@ html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::
 
 /* Section pills float as a centred frosted bar (the reference's top pill). */
 .ax-shell .ax-chips {
-  display: inline-flex; flex-wrap: wrap; gap: 4px; max-width: 100%;
+  display: flex; width: fit-content; margin-left: auto; margin-right: auto; flex-wrap: wrap; gap: 4px; max-width: 100%;
   padding: 6px; margin-bottom: 18px; border-radius: 999px;
   background: rgba(255,255,255,.74); border: 1px solid rgba(255,255,255,.92);
   box-shadow: 0 16px 36px -18px rgba(90,55,20,.45);
@@ -124,7 +124,7 @@ html[data-theme="night"] .ax-shell .ax-kpis > div + div { border-left-color: rgb
 
 @media (max-width: 860px) {
   /* Section pills: one clean scrolling pill bar, never a wrapped second row. */
-  .ax-shell .ax-chips { display: flex; flex-wrap: nowrap; overflow-x: auto; width: 100%; border-radius: 999px; padding: 5px; gap: 2px; scrollbar-width: none; }
+  .ax-shell .ax-chips { display: flex; flex-wrap: nowrap; overflow-x: auto; width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; border-radius: 999px; padding: 5px; gap: 2px; scrollbar-width: none; }
   .ax-shell .ax-chips::-webkit-scrollbar { display: none; }
   .ax-shell .ax-chips .ax-chip-link { flex: 0 0 auto; min-height: 36px; padding: 0 16px; font-size: 14px; }
   .ax-shell .ax-page-head { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 16px; }
