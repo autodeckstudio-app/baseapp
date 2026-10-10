@@ -53,7 +53,7 @@ export function PapersView(p: {
           { value: p.papers.filter((x) => x.expiresOn !== null && x.expiresOn < today).length, label: "Expired" },
         ]}
       />
-      <p className="ax-note">Readable documents are checked automatically against the vehicle plate and expiry. Only unclear photos need your review.</p>
+      <p className="ax-note">Readable documents are checked automatically against the vehicle plate and expiry. Anything that is not clearly valid (unreadable, wrong plate, expired) waits here with the reason, for your decision.</p>
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
 

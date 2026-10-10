@@ -31,8 +31,9 @@ export function decidePaper(text: string, confidence: number, kind: PaperKind, v
   }
   const uniqueDates = [...new Set(dates)];
   const plate = plates[0] ?? "";
-  if (plate !== normalizeRcReference(vehiclePlate)) return { status: "REJECTED", reason: `Document plate ${plate} does not match vehicle ${vehiclePlate}.`, extractedPlate: plate, extractedExpiry: uniqueDates[0] ?? null };
+  // Only clearly valid documents are auto-approved. Everything else waits for staff; nothing is auto-rejected.
+  if (plate !== normalizeRcReference(vehiclePlate)) return { status: "PENDING", reason: `Needs review: document plate ${plate} does not match vehicle ${vehiclePlate}.`, extractedPlate: plate, extractedExpiry: uniqueDates[0] ?? null };
   if (uniqueDates.length !== 1) return { ...pending("An unambiguous labelled expiry date could not be read. Please review the original."), extractedPlate: plate };
   const date = uniqueDates[0] ?? "";
-  return { status: date < today ? "REJECTED" : "VERIFIED", reason: date < today ? `Document expired on ${date}.` : `Vehicle plate matches and document is valid until ${date}.`, extractedPlate: plate, extractedExpiry: date };
+  return { status: date < today ? "PENDING" : "VERIFIED", reason: date < today ? `Needs review: document expired on ${date}.` : `Vehicle plate matches and document is valid until ${date}.`, extractedPlate: plate, extractedExpiry: date };
 }

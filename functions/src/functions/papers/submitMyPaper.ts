@@ -129,7 +129,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
       evidenceUrl,
       reviewedBy: decision.status === "PENDING" ? null : "system",
       reviewedAt: decision.status === "PENDING" ? null : now,
-      rejectionReason: decision.status === "REJECTED" ? decision.reason : null,
+      rejectionReason: null,
       updatedAt: now,
     });
     writeAuditLog(tx, { action: "paper.reviewed", entityType: "paper", entityId: paperId, user: { ...user, uid: "system" }, studioId: paper.studioId,

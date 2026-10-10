@@ -30,7 +30,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const go = (i: number) => ref.current?.scrollTo({ x: i * width, animated: true });
   const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => setPage(Math.round(e.nativeEvent.contentOffset.x / width));
   return (
-    <View style={{ flex: 1, backgroundColor: "#050506", overflow: "hidden", ...(Platform.OS === "web" ? ({ minHeight: "100vh" } as object) : {}) }}>
+    <View style={{ flex: 1, backgroundColor: "#050506", overflow: "hidden" }}>
       <Animated.ScrollView
         ref={ref as never}
         horizontal
@@ -48,7 +48,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           const fade = x.interpolate({ inputRange: r, outputRange: [0, 1, 0], extrapolate: "clamp" });
           const zoom = x.interpolate({ inputRange: r, outputRange: [1.25, 1.05, 1.25], extrapolate: "clamp" });
           return (
-            <View key={s.kicker + i} style={{ width, height: Platform.OS === "web" ? ("100vh" as unknown as number) : height, overflow: "hidden" }}>
+            <View key={s.kicker + i} style={{ width, height, overflow: "hidden" }}>
               <Animated.View style={{ ...Fill, transform: [{ translateX: shift }, { scale: zoom }] }}>
                 <Image source={s.image} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
               </Animated.View>

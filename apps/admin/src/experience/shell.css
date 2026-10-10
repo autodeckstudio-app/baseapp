@@ -656,3 +656,10 @@
 .ax-shell .ax-paper-row .ax-row-actions { white-space: normal; overflow: visible; }
 .ax-shell .ax-paper-row .ax-row-actions[style*="100%"] { grid-column: 1 / -1; width: 100%; }
 @media (max-width: 700px) { .ax-shell .ax-paper-row { grid-template-columns: 1fr !important; } }
+
+/* Dynamic viewport heights (iOS Safari / home-screen app report the visible area) and safe-area insets. */
+@supports (height: 100dvh) {
+  .ax-ambient-root, .ax-shell-frame, .ax-login { min-height: 100dvh; }
+  .ax-side { height: calc(100dvh - 32px); }
+}
+.ax-login { padding-top: max(var(--ad-space-inset), env(safe-area-inset-top)); padding-bottom: max(var(--ad-space-inset), env(safe-area-inset-bottom)); }

@@ -27,6 +27,18 @@
         height: 100%;
         flex: 1;
       }
+      /* Dynamic viewport: iOS home-screen and Safari report the visible height, not the tall 100vh. */
+      @supports (height: 100dvh) {
+        html,
+        body,
+        #root {
+          height: 100dvh;
+        }
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        overscroll-behavior: none;
+      }
     </style>
   </head>
   <body>

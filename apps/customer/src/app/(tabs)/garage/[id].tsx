@@ -445,7 +445,7 @@ export default function VehicleDetailScreen() {
       {tab === "protection" ? (
         <>
           {papers.length === 0 && protections.length === 0 ? (
-            <Notice title="No documents yet" body="Add your RC, insurance or PUC. Clear photos are checked automatically for the vehicle plate and expiry. Unclear documents go to the studio for review." />
+            <Notice title="No documents yet" body="Add your RC, insurance or PUC. Clear photos are checked automatically for the vehicle plate and expiry. Anything we cannot confirm is kept safely and checked by the studio." />
           ) : (
             <Pane pad="gap">
               {papers.map((p, i) => {
@@ -456,7 +456,7 @@ export default function VehicleDetailScreen() {
                     key={p.id}
                     title={PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind}
                     detail={[p.reference, expiry, p.verificationReason || p.rejectionReason].filter(Boolean).join(" · ")}
-                    trailing={<Chip label={p.status === "VERIFIED" ? (p.verificationMode === "automatic" ? "Auto-approved" : "Verified") : p.status === "REJECTED" ? "Rejected" : "Needs review"} tone={p.status === "VERIFIED" ? "premium" : "neutral"} />}
+                    trailing={<Chip label={p.status === "VERIFIED" ? (p.verificationMode === "automatic" ? "Auto-approved" : "Verified") : p.status === "REJECTED" ? "Rejected" : "Under studio review"} tone={p.status === "VERIFIED" ? "premium" : "neutral"} />}
                     last={i === papers.length - 1 && protections.length === 0}
                   />
                 );
