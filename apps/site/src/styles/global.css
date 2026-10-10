@@ -366,7 +366,8 @@ section[id] { scroll-margin-top: 84px; }
   background: linear-gradient(90deg, rgba(19,19,22,.82) 0%, rgba(19,19,22,.38) 55%, rgba(19,19,22,.1) 100%);
 }
 .wraps .sec-title { max-width: 14ch; }
-.wraps .countdown { margin-top: 40px; }
+.cd-caption { margin-top: 30px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--paper-mute); }
+.wraps .countdown { margin-top: 14px; }
 .wraps .countdown .num { font-size: clamp(40px, 6vw, 84px); }
 
 /* visit */
