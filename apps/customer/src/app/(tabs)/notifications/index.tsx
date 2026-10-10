@@ -8,6 +8,7 @@ import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
+import { enablePush, pushPermission, type PushPermission } from "../../../lib/push";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -25,6 +26,7 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [retryTick, setRetryTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [pushState, setPushState] = useState<PushPermission>(() => pushPermission());
 
   const load = useCallback(() => {
     if (auth.status !== "ready") return undefined;
@@ -83,6 +85,13 @@ export default function NotificationsScreen() {
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Updates</Kicker><T role="title">Notifications</T></View>}>
+      {pushState === "prompt" ? (
+        <Notice
+          title="Get updates on this device"
+          body="Turn on alerts so booking updates reach you even when the app is closed."
+          action={<Button label="Turn on alerts" onPress={() => void enablePush().then((r) => setPushState(r === "on" ? "on" : r))} />}
+        />
+      ) : null}
       {notifications.length === 0 ? (
         <Notice title="No notifications yet" body="Updates about your bookings and services will show up here." />
       ) : (

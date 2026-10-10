@@ -1,10 +1,12 @@
 import "../lib/webAlert";
-import { useEffect } from "react";
-import { Platform } from "react-native";
+import { useEffect, useState } from "react";
+import { Platform, Pressable } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ExperienceThemeProvider, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
+import { onForegroundPush, syncPushRegistration } from "../lib/push";
+import { T } from "../ui/kit";
 
 installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +38,39 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Web push: once signed in, silently re-register this device's token when
+// permission was granted earlier, and show foreground pushes as an in-app
+// banner (FCM shows no system notification while the tab is focused).
+function PushBridge() {
+  const auth = useAuth();
+  const [banner, setBanner] = useState<{ title: string; body: string } | null>(null);
+
+  useEffect(() => {
+    if (auth.status !== "ready") return undefined;
+    void syncPushRegistration();
+    return onForegroundPush((title, body) => setBanner({ title, body }));
+  }, [auth.status]);
+
+  useEffect(() => {
+    if (!banner) return undefined;
+    const t = setTimeout(() => setBanner(null), 8000);
+    return () => clearTimeout(t);
+  }, [banner]);
+
+  if (!banner) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${banner.title}. Dismiss`}
+      onPress={() => setBanner(null)}
+      style={{ position: "absolute", top: 16, left: 16, right: 16, maxWidth: 460, alignSelf: "center", zIndex: 60, backgroundColor: "rgba(24,22,20,0.97)", borderRadius: 16, padding: 14, borderWidth: 1, borderColor: "rgba(236,134,56,0.45)", gap: 2 }}
+    >
+      <T role="bodyStrong">{banner.title}</T>
+      {banner.body ? <T role="caption" tone="secondary">{banner.body}</T> : null}
+    </Pressable>
+  );
+}
+
 export default function RootLayout() {
   return (
     <ExperienceThemeProvider name="charcoal">
@@ -46,6 +81,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
         </Stack>
       </NavigationGuard>
+      <PushBridge />
     </ExperienceThemeProvider>
   );
 }
