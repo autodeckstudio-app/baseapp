@@ -6,7 +6,7 @@ import { useAdminAuth, MFA_RECAPTCHA_CONTAINER_ID } from "../../lib/auth-context
 import { homeFor } from "../../lib/staff-access";
 import { Ambient } from "../../experience/Ambient";
 import "../../experience/shell.css";
-import { AUTH, AUTH_FOOTNOTE, LOGO_STACKED_SVG, logoDataUri } from "@autodeck/ui/theme";
+import { AUTH, AUTH_FOOTNOTE, LOGO_STACKED_SVG, LOGO_STACKED_ON_DARK_SVG, logoDataUri } from "@autodeck/ui/theme";
 
 // Google-only sign-in. The studio owner's account opens the full app; Gmail
 // addresses on the staff roster open the Studio floor; anyone else is told
@@ -56,7 +56,8 @@ export default function LoginPage() {
       <Ambient>
         <main className="ax-login" style={{ background: AUTH.ground }}>
           <div className="ax-login-card" style={{ width: "100%", maxWidth: AUTH.maxWidth, display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: AUTH.cardPad, borderRadius: AUTH.cardRadius, background: AUTH.cardBg, border: `1px solid ${AUTH.cardBorder}`, boxShadow: AUTH.cardShadow, textAlign: "center" }}>
-            <img src={logoDataUri(LOGO_STACKED_SVG)} alt="AutoDeck" style={{ display: "block", height: AUTH.logoHeight, width: "auto" }} />
+            <img className="ax-lg-l" src={logoDataUri(LOGO_STACKED_SVG)} alt="AutoDeck" style={{ display: "block", height: AUTH.logoHeight, width: "auto" }} />
+            <img className="ax-lg-d" aria-hidden="true" src={logoDataUri(LOGO_STACKED_ON_DARK_SVG)} alt="" style={{ display: "block", height: AUTH.logoHeight, width: "auto" }} />
             <span style={{ color: AUTH.accent, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Office and studio</span>
             <h1 style={{ margin: 0, color: AUTH.text, fontSize: 24, fontWeight: 500 }}>Sign in to AutoDeck Admin</h1>
             <p style={{ margin: 0, color: AUTH.muted, fontSize: 15, lineHeight: "22px" }}>

@@ -6,12 +6,11 @@ import { colors, isNightPalette } from "@autodeck/ui";
 import { PillTabBar } from "@autodeck/ui/native";
 
 const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "profile"> = { index: "home", bays: "wrench", calendar: "calendar", lookup: "search", account: "profile" };
-const TAB_LABEL: Record<string, string> = { index: "Today", bays: "Bays", calendar: "Calendar", lookup: "Lookup", account: "Account" };
 
 export default function StudioTabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} labels={TAB_LABEL} activeColor={colors.accent} inactiveColor={colors.textMuted} dark={isNightPalette} floating />}
+      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} compact activeColor={colors.accent} inactiveColor={colors.textMuted} dark={isNightPalette} floating />}
       screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,

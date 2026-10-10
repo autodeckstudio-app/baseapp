@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "./Icon";
-import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, logoDataUri } from "@autodeck/ui/theme";
+import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, LOGO_HORIZONTAL_ON_DARK_SVG, LOGO_MARK_ON_DARK_SVG, logoDataUri } from "@autodeck/ui/theme";
 import { Ambient } from "./Ambient";
 import "./shell.css";
 import "./float.css";
@@ -136,8 +136,10 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
         <div className="ax-shell-frame" data-hero={pathname === "/dashboard" ? "on" : undefined}>
           {pathname === "/dashboard" ? <div className="ax-herobg" aria-hidden="true" /> : null}
           <Link href={home} className="ax-corner ax-corner--l" aria-label="AutoDeck home">
-            <img className="ax-logo-full" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" />
-            <img className="ax-logo-mark" src={logoDataUri(LOGO_MARK_SVG)} alt="AutoDeck" />
+            <img className="ax-lg ax-lg--full ax-lg-l" src={logoDataUri(LOGO_HORIZONTAL_SVG)} alt="AutoDeck" />
+            <img className="ax-lg ax-lg--full ax-lg-d" src={logoDataUri(LOGO_HORIZONTAL_ON_DARK_SVG)} alt="" aria-hidden="true" />
+            <img className="ax-lg ax-lg--mark ax-lg-l" src={logoDataUri(LOGO_MARK_SVG)} alt="" aria-hidden="true" />
+            <img className="ax-lg ax-lg--mark ax-lg-d" src={logoDataUri(LOGO_MARK_ON_DARK_SVG)} alt="" aria-hidden="true" />
           </Link>
           {activeSection && activeSection.links.length > 1 ? (
             <div className="ax-notch">
@@ -170,12 +172,12 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
           </main>
           <nav className="ax-tabbar" aria-label="Main">
             {groups.map((g) => (
-              <Link key={g.key} href={g.links[0]!.href} className="ax-tab" aria-current={activeGroup?.key === g.key ? "page" : undefined}>
+              <Link key={g.key} href={g.links[0]!.href} className="ax-tab" aria-label={g.label} title={g.label} aria-current={activeGroup?.key === g.key ? "page" : undefined}>
                 <Icon name={g.icon} size={24} />
                 <span>{g.label}</span>
               </Link>
             ))}
-            <button type="button" className="ax-tab" aria-current={moreActive || moreOpen ? "page" : undefined} onClick={() => setMoreOpen((v) => !v)}>
+            <button type="button" className="ax-tab" aria-label="More" title="More" aria-current={moreActive || moreOpen ? "page" : undefined} onClick={() => setMoreOpen((v) => !v)}>
               <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
               <span>More</span>
             </button>

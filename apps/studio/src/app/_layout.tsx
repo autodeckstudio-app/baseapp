@@ -5,7 +5,7 @@ import "../lib/webAlert";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { Alert, Platform, View } from "react-native";
+import { Alert, Platform, View, useWindowDimensions } from "react-native";
 import { auth } from "../lib/firebase";
 import { colors, isNightPalette, watchMode } from "@autodeck/ui";
 import { installWebFonts, AutoExperienceThemeProvider } from "@autodeck/ui/native";
@@ -42,12 +42,26 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Web: the whole app lives in one rounded canvas on a plain backdrop (Orizon layout).
+function canvasFrame(width: number): Record<string, unknown> {
+  if (Platform.OS !== "web") return {};
+  const phone = width <= 860;
+  return {
+    position: "fixed", top: phone ? 6 : 16, left: phone ? 6 : 16, right: phone ? 6 : 16, bottom: phone ? 6 : 16,
+    borderRadius: phone ? 32 : 44, overflow: "hidden", borderWidth: 2,
+    borderColor: isNightPalette ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.92)",
+    boxShadow: isNightPalette ? "0 40px 90px -30px rgba(0,0,0,.8)" : "0 40px 90px -30px rgba(70,45,20,.55)",
+  };
+}
+
 export default function RootLayout() {
+  const { width } = useWindowDimensions();
   useEffect(() => {
     const doc = (globalThis as { document?: { documentElement: { style: { backgroundColor: string } }; body: { style: { backgroundColor: string } } } }).document;
     if (doc) {
-      doc.documentElement.style.backgroundColor = colors.background;
-      doc.body.style.backgroundColor = colors.background;
+      const backdrop = Platform.OS === "web" ? (isNightPalette ? "#141413" : "#E6DFD4") : colors.background;
+      doc.documentElement.style.backgroundColor = backdrop;
+      doc.body.style.backgroundColor = backdrop;
       (doc.documentElement.style as unknown as { colorScheme: string }).colorScheme = isNightPalette ? "dark" : "light";
       const meta = (doc as unknown as { querySelector: (s: string) => { setAttribute: (k: string, v: string) => void } | null }).querySelector('meta[name="theme-color"]');
       meta?.setAttribute("content", colors.background);
@@ -57,7 +71,7 @@ export default function RootLayout() {
   }, []);
   return (
     <AutoExperienceThemeProvider>
-    <View style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, ...canvasFrame(width), ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
     <NavigationGuard>
       <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

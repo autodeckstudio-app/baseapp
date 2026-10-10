@@ -19,11 +19,14 @@ type Props = {
   resetOnPress?: boolean;
   /** Optional visible name under each icon, keyed by route name. */
   labels?: Record<string, string>;
+  /** Thinner bar (studio): 48px tall. */
+  compact?: boolean;
   floating?: boolean; // true = overlay the screen (absolute), false = sits in the layout
 };
 
 /** Floating pill bar: icons only, each centred in an equal slot, active tab in a rounded highlight. */
-export function PillTabBar({ state, descriptors, navigation, icons, activeColor, inactiveColor, badges, labels, floating = false, dark = false, resetOnPress = false }: Props) {
+export function PillTabBar({ state, descriptors, navigation, icons, activeColor, inactiveColor, badges, labels, floating = false, compact = false, dark = false, resetOnPress = false }: Props) {
+  const barH = compact ? 48 : labels ? 68 : 62;
   const visible = state.routes.filter((r) => descriptors[r.key]?.options.href !== null && icons[r.name]);
   return (
     <View
@@ -35,8 +38,8 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
         bottom: floating ? ((Platform.OS === "web" ? "calc(12px + env(safe-area-inset-bottom))" : 12) as unknown as number) : undefined,
         marginHorizontal: floating ? 0 : 14,
         marginBottom: floating ? 0 : ((Platform.OS === "web" ? "calc(12px + env(safe-area-inset-bottom))" : 12) as unknown as number),
-        height: labels ? 68 : 62,
-        borderRadius: labels ? 34 : 31,
+        height: barH,
+        borderRadius: barH / 2,
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: dark ? "rgba(12,12,14,0.55)" : Platform.OS === "web" ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.35)",
@@ -72,10 +75,10 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
                 emitTabPressed(route.name);
               } else if (!focused) navigation.navigate(route.name);
             }}
-            style={({ pressed }) => ({ flex: 1, height: labels ? 68 : 62, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ flex: 1, height: barH, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
           >
-            <View style={{ width: labels ? 70 : 58, height: labels ? 54 : 46, borderRadius: labels ? 27 : 23, backgroundColor: focused && !dark ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
-              <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={24} filled={focused} />
+            <View style={{ width: compact ? 54 : labels ? 70 : 58, height: compact ? 38 : labels ? 54 : 46, borderRadius: compact ? 19 : labels ? 27 : 23, backgroundColor: focused && !dark ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
+              <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={compact ? 22 : 24} filled={focused} />
               {labels?.[route.name] ? <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11, fontWeight: focused ? "700" : "500", color: focused ? activeColor : inactiveColor }}>{labels[route.name]}</Text> : null}
               {badges?.[route.name] ? <View style={{ position: "absolute", top: 8, right: 14, width: 9, height: 9, borderRadius: 5, backgroundColor: "#E5484D", borderWidth: 2, borderColor: dark ? "#0B0B0D" : "#fff" }} /> : null}
             </View>

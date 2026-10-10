@@ -143,3 +143,8 @@
 .ax-glass .ax-muted { color: var(--ad-text-secondary); }
 .ax-ambient-root .ax-label,
 .ax-glass .ax-label { color: var(--ad-text-tertiary); }
+
+/* Logo swap: dark-ink art on day, official white + orange art on night. */
+.ax-lg-d { display: none; }
+html[data-theme="night"] .ax-lg-l { display: none !important; }
+html[data-theme="night"] .ax-lg-d { display: block; }

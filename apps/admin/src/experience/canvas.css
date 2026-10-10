@@ -24,8 +24,9 @@ html[data-theme="night"] .ax-ambient-root:has(.ax-shell-frame) { background: #14
 /* Corner pills */
 .ax-corner { position: absolute; top: 18px; z-index: 12; height: 54px; border-radius: 999px; display: flex; align-items: center; background: var(--ax-chrome); box-shadow: 0 14px 30px -18px rgba(60,35,10,.5); }
 .ax-corner--l { left: 22px; padding: 0 22px; }
-.ax-corner--l img { height: 28px; width: auto; display: block; }
-.ax-corner--l .ax-logo-mark { display: none; }
+.ax-corner--l .ax-lg { height: 28px; width: auto; }
+.ax-corner--l .ax-lg--mark { display: none !important; }
+html[data-theme="night"] .ax-corner--l .ax-lg--mark { display: none !important; }
 .ax-corner--r { right: 22px; padding: 0 8px 0 8px; gap: 6px; }
 .ax-corner--r .ax-avatar { width: 38px; height: 38px; }
 .ax-corner-out { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px 0 12px; border-radius: 999px; border: 1px solid rgba(120,100,80,.25); background: transparent; color: var(--ad-text-primary); font: 500 14px/1 var(--ad-font-body, inherit); cursor: pointer; min-height: 0 !important; }
@@ -88,9 +89,12 @@ html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { backgrou
   .ax-shell-frame { border-radius: 32px; }
   .ax-shell-frame > .ax-main { padding: 80px 14px calc(112px + env(safe-area-inset-bottom)) 14px !important; }
   .ax-corner { top: 12px; height: 44px; }
-  .ax-corner--l { left: 12px; padding: 0 10px; }
-  .ax-corner--l .ax-logo-full { display: none; }
-  .ax-corner--l .ax-logo-mark { display: block; height: 26px; }
+  .ax-corner--l { left: 12px; padding: 0; background: transparent !important; box-shadow: none; width: 52px; justify-content: center; }
+  .ax-corner--l .ax-lg--full, html[data-theme="night"] .ax-corner--l .ax-lg--full { display: none !important; }
+  .ax-corner--l .ax-lg--mark.ax-lg-l { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(255,255,255,.75)); }
+  .ax-corner--l .ax-lg--mark.ax-lg-d { display: none !important; }
+  html[data-theme="night"] .ax-corner--l .ax-lg--mark.ax-lg-l { display: none !important; }
+  html[data-theme="night"] .ax-corner--l .ax-lg--mark.ax-lg-d { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(0,0,0,.6)); }
   .ax-corner--r { right: 12px; padding: 0 3px; }
   .ax-corner--r .ax-avatar, .ax-corner-out-t { display: none; }
   .ax-corner-out { padding: 0; width: 38px; justify-content: center; border: none; }
@@ -98,3 +102,42 @@ html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { backgrou
   .ax-notch .ax-chip-link { height: 36px; min-height: 36px !important; padding: 0 14px !important; font-size: 13px; }
   .ax-dash .ax-hero-side { margin-left: 0; width: 100%; box-sizing: border-box; }
 }
+
+/* Phone tab bar: icon only, thin. */
+@media (max-width: 860px) {
+  .ax-shell .ax-tabbar { padding: 3px; left: 18px; right: 18px; bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .ax-shell .ax-tab { height: 40px !important; gap: 0 !important; }
+  .ax-shell .ax-tab span { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; font-size: 0 !important; }
+  .ax-shell .ax-tab svg { width: 22px; height: 22px; }
+  .ax-shell-frame > .ax-main { padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* One spacing system: 16px between cards, everywhere. */
+.ax-shell { --ax-gap: 16px; }
+.ax-shell .ax-page { display: flex; flex-direction: column; gap: var(--ax-gap); }
+.ax-shell .ax-page > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+.ax-shell .ax-page-head { margin: 0 !important; }
+.ax-shell .ax-tiles, .ax-shell .ax-detail { gap: var(--ax-gap); }
+.ax-shell .ax-detail-main, .ax-shell .ax-detail-side { display: flex; flex-direction: column; gap: var(--ax-gap); min-width: 0; }
+.ax-dash { gap: var(--ax-gap); }
+@media (min-width: 861px) {
+  .ax-dash .ax-detail { margin-top: auto !important; padding-top: 0; gap: 0 var(--ax-gap); }
+  .ax-dash .ax-detail-main { margin-left: 0; }
+  .ax-dash .ax-detail-side > .ax-panel { margin-bottom: 0; }
+  .ax-dash .ax-detail-side { padding-bottom: 0; }
+  .ax-dash .ax-detail-main > .ax-panel { margin-bottom: -36px; }
+}
+@media (max-width: 860px) { .ax-shell { --ax-gap: 14px; } }
+
+/* Stats: long figures (₹11,999) never run into the next stat. */
+.ax-shell .ax-kpis { grid-auto-columns: minmax(0, auto); grid-template-columns: none; }
+.ax-shell .ax-kpis > div { min-width: 0; }
+.ax-shell .ax-kpis .ax-kpi-v { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@media (max-width: 860px) {
+  .ax-shell .ax-kpis { display: flex; }
+  .ax-shell .ax-kpis > div { flex: 1 1 0; }
+  .ax-shell .ax-kpis > div:first-child { flex: 1.5 1 0; }
+  .ax-shell .ax-kpis .ax-kpi-v { font-size: 22px; line-height: 28px; }
+}
+@media (max-width: 860px) { .ax-shell .ax-kpis .ax-label { font-size: 9.5px; letter-spacing: .4px; overflow-wrap: anywhere; } }
+@media (max-width: 360px) { .ax-shell .ax-kpis .ax-kpi-v { font-size: 18px; } }
