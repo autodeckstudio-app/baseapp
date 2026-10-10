@@ -18,6 +18,8 @@ describe("customer search", () => {
     expect(find("07043296549")).toEqual(["a"]);
     expect(find("7043296549")).toEqual(["a"]);
     expect(find("96549")).toEqual(["a"]);
+    expect(find("+91 98986")).toEqual(["b"]);
+    expect(find("0 98986")).toEqual(["b"]);
     expect(find("9898679711")).toEqual(["b"]);
     expect(find("gj01ab1234")).toEqual(["a"]);
     expect(find("GJ 01 AB")).toEqual(["a"]);

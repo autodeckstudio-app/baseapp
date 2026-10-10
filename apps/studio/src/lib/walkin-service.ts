@@ -2,6 +2,7 @@ import { httpsCallable } from "firebase/functions";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
+import { searchCustomersAnyField } from "./lookup-service";
 import type { Customer, Vehicle, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 // Phone-number lookup among EXISTING customers only — doc20 V1 scope
@@ -77,3 +78,5 @@ export async function registerWalkinCustomer(input: { name: string; email: strin
   const result = await fn(input);
   return result.data;
 }
+
+export const findCustomersBySearch = searchCustomersAnyField;

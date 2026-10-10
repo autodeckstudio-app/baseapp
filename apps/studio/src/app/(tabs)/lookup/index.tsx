@@ -5,10 +5,10 @@ import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../hooks/useAuth";
-import { findCustomersByPhone } from "../../../lib/walkin-service";
-import { searchCustomersByName, findVehicleByRegistration } from "../../../lib/lookup-service";
+import { registerWalkinCustomer } from "../../../lib/walkin-service";
+import { searchCustomersAnyField, searchVehiclesByPlate } from "../../../lib/lookup-service";
 import type { Customer, Vehicle } from "@autodeck/core";
-import { colors, spacing, radius, typography, Button, SearchInput, ListRow, EmptyState, ErrorState, LoadingState } from "@autodeck/ui";
+import { colors, spacing, radius, typography, Button, TextInput, SearchInput, ListRow, EmptyState, ErrorState, LoadingState } from "@autodeck/ui";
 
 type SearchMode = "customer" | "vehicle";
 
@@ -21,7 +21,11 @@ export default function LookupScreen() {
   const [error,setError] = useState<string|null>(null);
   const [searched, setSearched] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newCust, setNewCust] = useState({ name: "", email: "", phone: "" });
+  const [addMsg, setAddMsg] = useState<string | null>(null);
 
   async function handleSearch() {
     if (auth.status !== "ready" || !query.trim()) return;
@@ -29,22 +33,12 @@ export default function LookupScreen() {
     setSearching(true);setError(null);
     setSearched(false);
     setCustomers([]);
-    setVehicle(null);
+    setVehicles([]);
     try {
       if (mode === "customer") {
-        const trimmed = query.trim();
-        const looksLikePhone = /^[\d\s+]+$/.test(trimmed);
-        if (looksLikePhone) {
-          const formatted = trimmed.startsWith("+91") ? trimmed : `+91${trimmed.replace(/\s/g, "")}`;
-          const result = await findCustomersByPhone(tenantId, formatted);
-          setCustomers(result);
-        } else {
-          const result = await searchCustomersByName(tenantId, trimmed);
-          setCustomers(result);
-        }
+        setCustomers(await searchCustomersAnyField(tenantId, query));
       } else {
-        const result = await findVehicleByRegistration(tenantId, query.trim());
-        setVehicle(result);
+        setVehicles(await searchVehiclesByPlate(tenantId, query));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Please try again.");
@@ -56,7 +50,7 @@ export default function LookupScreen() {
 
   if (auth.status !== "ready") return <LoadingState />;
 
-  const hasResults = mode === "customer" ? customers.length > 0 : vehicle !== null;
+  const hasResults = mode === "customer" ? customers.length > 0 : vehicles.length > 0;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1 }}>
@@ -72,7 +66,7 @@ export default function LookupScreen() {
                 setQuery("");
                 setSearched(false);
                 setCustomers([]);
-                setVehicle(null);
+                setVehicles([]);
               }}
               style={{
                 flex: 1,
@@ -93,7 +87,7 @@ export default function LookupScreen() {
       <SearchInput
         value={query}
         onChangeText={setQuery}
-        placeholder={mode === "customer" ? "Phone or name" : "Registration number, e.g. GJ01AB1234"}
+        placeholder={mode === "customer" ? "Phone, email, name or plate" : "Number plate, e.g. GJ01AB1234"}
       />
       <View style={{ height: spacing.sm }} />
       <Button label="Search" onPress={() => void handleSearch()} loading={searching} disabled={!query.trim()} />
@@ -104,7 +98,7 @@ export default function LookupScreen() {
       {searched && !error && !hasResults && (
         <EmptyState
           title="No results"
-          message={mode === "customer" ? "No customer matches this phone number or name." : "No vehicle found with that registration number."}
+          message={mode === "customer" ? "No customer matches that phone, email, name or plate." : "No car found with that number plate."}
           fill={false}
         />
       )}
@@ -125,14 +119,49 @@ export default function LookupScreen() {
         </View>
       )}
 
-      {mode === "vehicle" && vehicle && (
+      {mode === "vehicle" && vehicles.length > 0 && (
         <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
-          <ListRow
-            label={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-            value={vehicle.registrationNumber}
-            showChevron
-            onPress={() => router.push(`/(tabs)/lookup/vehicle/${vehicle.id}`)}
-          />
+          {vehicles.map((vehicle, i) => (
+            <View key={vehicle.id}>
+              {i > 0 && <View style={{ height: 1, backgroundColor: colors.divider }} />}
+              <ListRow
+                label={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                value={vehicle.registrationNumber}
+                showChevron
+                onPress={() => router.push(`/(tabs)/lookup/vehicle/${vehicle.id}`)}
+              />
+            </View>
+          ))}
+        </View>
+      )}
+
+      {mode === "customer" && (
+        <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+          {!showAdd ? (
+            <Button label="Add customer" onPress={() => { setShowAdd(true); setAddMsg(null); const q = query.trim(); setNewCust({ name: "", email: q.includes("@") ? q.toLowerCase() : "", phone: /^[\d\s+]+$/.test(q) ? q : "" }); }} />
+          ) : (
+            <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm }}>
+              <Text style={{ ...typography.title, color: colors.textPrimary }}>Add customer</Text>
+              <TextInput label="Name" value={newCust.name} onChangeText={(v) => setNewCust((p) => ({ ...p, name: v }))} />
+              <TextInput label="Email" keyboardType="email-address" autoCapitalize="none" value={newCust.email} onChangeText={(v) => setNewCust((p) => ({ ...p, email: v }))} />
+              <TextInput label="Phone (optional)" keyboardType="phone-pad" value={newCust.phone} onChangeText={(v) => setNewCust((p) => ({ ...p, phone: v }))} />
+              {addMsg ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{addMsg}</Text> : null}
+              <Button
+                label="Save customer"
+                loading={adding}
+                onPress={() => {
+                  const email = newCust.email.trim().toLowerCase();
+                  if (newCust.name.trim().length < 2 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setAddMsg("Enter a name and a valid email."); return; }
+                  setAdding(true); setAddMsg(null);
+                  registerWalkinCustomer({ name: newCust.name.trim(), email, ...(newCust.phone.trim() ? { phone: newCust.phone.trim() } : {}) })
+                    .then(({ customer: c, created }) => { setShowAdd(false); setCustomers([c]); setSearched(true); setQuery(c.name); if (!created) setAddMsg("That email already had an account."); })
+                    .catch((err) => setAddMsg(err instanceof Error ? err.message : "Could not add the customer."))
+                    .finally(() => setAdding(false));
+                }}
+              />
+              <Button label="Cancel" onPress={() => setShowAdd(false)} />
+            </View>
+          )}
         </View>
       )}
     </ScrollView>

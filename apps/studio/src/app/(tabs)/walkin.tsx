@@ -10,8 +10,7 @@ import {
   createWalkinJob as createWalkinJobCall,
 } from "../../lib/studio-service";
 import {
-  findCustomersByPhone,
-  findCustomersByEmail,
+  findCustomersBySearch,
   registerWalkinCustomer,
   getVehiclesForCustomer,
   createVehicleForCustomer,
@@ -135,9 +134,7 @@ export default function WalkinScreen() {
     setSelectedVehicleId(null);
     try {
       const term = phone.trim();
-      const results = term.includes("@")
-        ? await findCustomersByEmail(auth.claims.tenantId, term)
-        : await findCustomersByPhone(auth.claims.tenantId, term.startsWith("+91") ? term : `+91${term.replace(/\s/g, "")}`);
+      const results = await findCustomersBySearch(auth.claims.tenantId, term);
       const found = results[0] ?? null;
       setSearched(true);
       setCustomer(found);
@@ -327,7 +324,7 @@ export default function WalkinScreen() {
       {step === "customer" && (
         <View style={{ gap: spacing.md }}>
           <View style={panel}>
-            <TextInput label="Phone or email" placeholder="98765 43210 or name@gmail.com" keyboardType="email-address" autoCapitalize="none" value={phone} onChangeText={setPhone} />
+            <TextInput label="Phone, email, name or plate" placeholder="98765 43210, name@gmail.com or GJ01AB1234" keyboardType="email-address" autoCapitalize="none" value={phone} onChangeText={setPhone} />
             <Button label="Find customer" onPress={() => void handleSearch()} loading={searching} />
           </View>
           {searched && !customer && !showNew && (

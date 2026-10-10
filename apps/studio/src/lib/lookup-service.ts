@@ -2,6 +2,7 @@ import { collection, query, where, orderBy, limit, getDocs, onSnapshot, type Uns
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Customer, Vehicle, ServiceJob } from "@autodeck/core";
+import { customerMatches, plateIndex, normalizePlate } from "@autodeck/core";
 
 const NAME_SEARCH_LIMIT = 200;
 
@@ -67,4 +68,28 @@ export function listenToJobsForVehicleAtStudio(
     orderBy("createdAt", "desc"),
   );
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as ServiceJob)), onError);
+}
+
+const VEHICLE_SEARCH_LIMIT = 1000;
+
+async function tenantVehicles(tenantId: string): Promise<Vehicle[]> {
+  const snap = await getDocs(query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", tenantId), limit(VEHICLE_SEARCH_LIMIT)));
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Vehicle).filter((v) => !v.deletedAt);
+}
+
+/** One search box: name, phone (+91, 0 or spaced), email or number plate. */
+export async function searchCustomersAnyField(tenantId: string, rawQuery: string): Promise<Customer[]> {
+  const [custSnap, vehicles] = await Promise.all([
+    getDocs(query(collection(db, COLLECTIONS.customers()), where("tenantId", "==", tenantId), limit(500))),
+    tenantVehicles(tenantId),
+  ]);
+  const plates = plateIndex(vehicles);
+  return custSnap.docs.map((d) => ({ ...d.data(), id: d.id }) as Customer).filter((c) => !c.deletedAt && customerMatches(c, rawQuery, plates));
+}
+
+/** Cars whose plate contains the typed text, ignoring spaces, dashes and case. */
+export async function searchVehiclesByPlate(tenantId: string, rawQuery: string): Promise<Vehicle[]> {
+  const target = normalizePlate(rawQuery);
+  if (target.length < 2) return [];
+  return (await tenantVehicles(tenantId)).filter((v) => normalizePlate(v.registrationNumber ?? "").includes(target));
 }
