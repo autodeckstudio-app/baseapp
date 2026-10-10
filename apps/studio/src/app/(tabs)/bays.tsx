@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
@@ -119,7 +122,7 @@ export default function BayBoardScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
           <Text style={{ ...typography.caption, color: colors.textMuted }}>{jobs.filter((j) => ACTIVE_STATUSES.includes(j.status)).length} on the floor</Text>
@@ -153,7 +156,7 @@ export default function BayBoardScreen() {
                     key={bay.id}
                     onPress={() => router.push({ pathname: "/(tabs)/walkin", params: { bayId: bay.id } })}
                     style={{
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}),
                       borderRadius: radius.lg,
                       padding: spacing.md,
                       marginBottom: spacing.sm,
@@ -172,7 +175,7 @@ export default function BayBoardScreen() {
                 <TouchableOpacity
                   key={bay.id}
                   onPress={() => router.push(`/(tabs)/jobs/${job.id}`)}
-                  style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm }}
+                  style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm }}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <View style={{ flex: 1 }}>

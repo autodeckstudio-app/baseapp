@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import "../lib/webAlert";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
@@ -54,9 +57,9 @@ export default function RootLayout() {
   }, []);
   return (
     <AutoExperienceThemeProvider>
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
     <NavigationGuard>
-      <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

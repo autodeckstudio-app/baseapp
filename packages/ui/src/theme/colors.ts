@@ -84,19 +84,17 @@ export const lightColors: ThemeColors = {
   onInk: "#1D1B26",
 };
 
-// Night mode (all three apps). Anchored on Asian Paints 8301 Coal Mine
-// (#50504D): that is the page ground; cards step darker so text and the
-// orange keep WCAG contrast. The orange accent is the same in both modes.
+// Night: Coal Mine anchor with a lighter gradient ground and raised tonal cards.
 export const nightColors: ThemeColors = {
   canvas: "#50504D",
   canvasDeep: "#3A3A38",
-  surface: "#373735",
-  surfaceElevated: "#42423F",
+  surface: "#484845",
+  surfaceElevated: "#575752",
   borderSubtle: "rgba(255,255,255,0.14)",
   borderStrong: "rgba(255,255,255,0.34)",
   textPrimary: "#FAF8F5",
-  textSecondary: "#E2E0DC",
-  textTertiary: "#CDCBC6",
+  textSecondary: "#F4F2ED",
+  textTertiary: "#F0EEE8",
   textOnAccent: "#1A1410",
   accent: "#EC8638",
   accentStrong: "#F59A4E",
@@ -105,7 +103,7 @@ export const nightColors: ThemeColors = {
   premiumHaze: "rgba(242,211,166,0.14)",
   success: "#7DDBAA",
   warning: "#F2B95E",
-  danger: "#FF9684",
+  danger: "#FFBAAD",
   inactive: "#C4C2BD",
   scrim: "rgba(0,0,0,0.55)",
   ink: "#2E2E2C",

@@ -1,5 +1,6 @@
 import { ActivityIndicator, Platform, Pressable, Text, type StyleProp, type ViewStyle } from "react-native";
-import { colors } from "../tokens/colors.js";
+import { nightButtonStyle } from "../theme/night.js";
+import { colors, isNightPalette } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
 import { radius } from "../tokens/radius.js";
 import { typography } from "../tokens/typography.js";
@@ -49,6 +50,8 @@ export function Button({
   const raised = (variant === "primary" || variant === "secondary") && !isDisabled;
   const webLook = (pressed: boolean): Record<string, unknown> => {
     if (!web) return {};
+    if (variant === "primary" && isNightPalette) return nightButtonStyle;
+    if (variant === "secondary" && isNightPalette) return { backgroundColor: "rgba(255,255,255,.08)", borderWidth: 1, borderColor: "rgba(255,255,255,.24)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" };
     if (variant === "primary") {
       return {
         backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)",
@@ -68,7 +71,7 @@ export function Button({
       disabled={isDisabled}
       style={({ pressed }) => [
         {
-          backgroundColor: variant === "secondary" ? "#FFFFFF" : v.bg,
+          backgroundColor: variant === "secondary" ? (isNightPalette ? colors.surface : "#FFFFFF") : v.bg,
           borderRadius: variant === "primary" || variant === "secondary" ? 999 : radius.md,
           paddingVertical: s.paddingVertical,
           paddingHorizontal: s.paddingHorizontal,

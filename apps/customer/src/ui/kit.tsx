@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
-import { fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+import { nightButtonStyle, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Montserrat, Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
@@ -54,12 +54,12 @@ export function T({
   children: ReactNode;
   numberOfLines?: number;
 }) {
-  const { colors } = useExperienceTheme();
+  const { name, colors } = useExperienceTheme();
   const color = {
     primary: colors.textPrimary,
     secondary: colors.textSecondary,
     tertiary: colors.textTertiary,
-    accent: colors.accent,
+    accent: name === "night" ? "#FFD0A6" : colors.accent,
     premium: colors.premium,
     danger: colors.danger,
     onAccent: colors.textOnAccent,
@@ -183,6 +183,7 @@ export function Button({
   testID?: string;
 }) {
   const { colors } = useExperienceTheme();
+  const night = useExperienceTheme().name === "night";
   const primary = kind === "primary";
   const off = disabled || busy;
   return (
@@ -211,6 +212,7 @@ export function Button({
           ...(Platform.OS === "web" && primary
             ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 4px 12px rgba(194,84,10,0.16), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
             : {}),
+          ...(Platform.OS === "web" && primary && night ? nightButtonStyle : {}),
         },
         style,
       ]}

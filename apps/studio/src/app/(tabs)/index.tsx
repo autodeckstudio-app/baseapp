@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
 import { View, Text, FlatList } from "react-native";
 import { useRouter } from "expo-router";
@@ -54,7 +57,7 @@ export default function TodaysJobsScreen() {
   const longDate = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
 
   const Stat = ({ label, value }: { label: string; value: number }) => (
-    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
       <Text style={{ fontSize: 28, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
       <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
     </View>
@@ -62,7 +65,7 @@ export default function TodaysJobsScreen() {
 
   return (
     <FlatList
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
       data={activeJobs}
       keyExtractor={(j) => j.id}
@@ -86,7 +89,7 @@ export default function TodaysJobsScreen() {
         </View>
       }
       ListEmptyComponent={
-        <View style={{ alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+        <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(240,125,40,0.14)" }}>
             <Icon name="check" color={colors.accent} size={28} />
           </View>

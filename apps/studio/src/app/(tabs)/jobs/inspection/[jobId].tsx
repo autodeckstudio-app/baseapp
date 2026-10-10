@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput as RNTextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -102,7 +105,7 @@ export default function InspectionScreen() {
   const areas: InspectionArea[] = ["exterior", "glass", "interior", "service_specific"];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg }}>
         <Text style={{ ...typography.heading, color: colors.textPrimary }}>Inspection</Text>
         <StatusBadge label={readOnly ? "Finalized" : "In Progress"} tone={readOnly ? "success" : "accent"} />
@@ -115,7 +118,7 @@ export default function InspectionScreen() {
         return (
           <View key={area} style={{ marginBottom: spacing.lg }}>
             <Text style={sectionTitle}>{AREA_LABELS[area]}</Text>
-            <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md }}>
+            <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md }}>
               {items.map((item) => (
                 <View key={item.key}>
                   <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>{item.label}</Text>
@@ -179,7 +182,7 @@ export default function InspectionScreen() {
         style={{
           ...typography.body,
           color: colors.textPrimary,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}),
           borderRadius: radius.lg,
           padding: spacing.lg,
           minHeight: 80,

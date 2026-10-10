@@ -6,7 +6,7 @@
 import type { ReactNode } from "react";
 import { Platform, View, type StyleProp, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
-import { ambient, ambientBackground } from "../theme/index.js";
+import { ambient, nightGround } from "../theme/index.js";
 import { useExperienceTheme } from "./ThemeContext.js";
 
 const FILL = { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 } as const;
@@ -16,7 +16,7 @@ export function Ambient({ children, style }: { children?: ReactNode; style?: Sty
   const lit = Platform.OS === "ios";
   const webGround =
     Platform.OS === "web" && name === "night"
-      ? ({ backgroundImage: ambientBackground(ambient.night, "linear-gradient(170deg, #5A5A57 0%, #50504D 45%, #42423F 100%)") } as object)
+      ? ({ backgroundImage: nightGround } as object)
       : null;
   return (
     <View style={[{ flex: 1, backgroundColor: colors.canvas, overflow: "hidden" }, webGround, style]}>

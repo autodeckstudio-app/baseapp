@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { useRouter } from "expo-router";
@@ -63,7 +66,7 @@ export default function CalendarScreen() {
 
   if (error) return <ErrorState title="Calendar unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
       <View
         style={{
           flexDirection: "row",
@@ -72,7 +75,7 @@ export default function CalendarScreen() {
           gap: spacing.xxs,
           borderBottomWidth: 1,
           borderBottomColor: colors.divider,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}),
         }}
       >
         {dateDays.map((d) => {

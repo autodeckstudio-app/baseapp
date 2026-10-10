@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState } from "react";
 import { View, Text, Alert, Platform, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
@@ -14,7 +17,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <View style={{ marginBottom: spacing.xl }}>
       <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: spacing.sm, marginLeft: spacing.xs }}>{title}</Text>
-      <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, overflow: "hidden" }}>{children}</View>
+      <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, overflow: "hidden" }}>{children}</View>
     </View>
   );
 }
@@ -75,8 +78,8 @@ export default function AccountScreen() {
   const email = authState.user.email ?? "Studio staff";
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120, width: "100%", maxWidth: 560, alignSelf: "center" }}>
-      <View style={{ alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.xl, marginBottom: spacing.xl }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120, width: "100%", maxWidth: 560, alignSelf: "center" }}>
+      <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingVertical: spacing.xl, marginBottom: spacing.xl }}>
         <Avatar name={email} size={64} />
         <Text style={{ ...typography.title, color: colors.textPrimary, marginTop: spacing.md }}>{email}</Text>
         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs, textTransform: "capitalize" }}>

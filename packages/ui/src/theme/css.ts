@@ -2,6 +2,7 @@
 // stylesheet reads these variables; values live in the TS tokens.
 import { themeColors, type ThemeName } from "./colors.js";
 import { ambient, ambientBackground, glass } from "./glass.js";
+import { nightGround, nightOrange } from "./night.js";
 import { depth, layout, motion, radius, space, cubicBezier } from "./scale.js";
 
 function kebab(s: string): string {
@@ -23,12 +24,12 @@ export function themeVariables(name: ThemeName): Record<string, string> {
   vars["--ad-glass-sheen"] = g.sheen;
   vars["--ad-glass-blur"] = `blur(${g.blur}px) saturate(${g.saturate})`;
   vars["--ad-glass-chrome-blur"] = `blur(${g.chromeBlur}px) saturate(${g.saturate})`;
-  vars["--ad-ambient"] = ambientBackground(ambient[name], c.canvas);
+  vars["--ad-ambient"] = name === "night" ? nightGround : ambientBackground(ambient[name], c.canvas);
   vars["--ad-accent-grad"] =
     name === "dark"
       ? "linear-gradient(120deg, #F0C48C 0%, #E0A45C 46%, #E8D9BE 100%)"
       : name === "night"
-      ? "linear-gradient(120deg, #F59A4E 0%, #EC8638 55%, #DC7428 100%)"
+      ? nightOrange
       : "linear-gradient(120deg, #F59A45 0%, #E8731A 55%, #C2540A 100%)";
   return vars;
 }

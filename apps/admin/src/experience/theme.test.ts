@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, darkColors, lightColors, nightColors, glass, themeStylesheet, resolveMode, type ThemeColors } from "@autodeck/ui/theme";
+import { contrastRatio, darkColors, lightColors, nightColors, nightGround, nightOrange, glass, themeStylesheet, resolveMode, type ThemeColors } from "@autodeck/ui/theme";
 
 function textPasses(c: ThemeColors, bg: string) {
   expect(contrastRatio(c.textPrimary, bg)).toBeGreaterThanOrEqual(4.5);
@@ -50,10 +50,20 @@ describe("theme tokens", () => {
     textPasses(nightColors, nightColors.canvas);
     textPasses(nightColors, nightColors.surface);
     textPasses(nightColors, nightColors.surfaceElevated);
-    expect(contrastRatio(nightColors.accent, nightColors.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#FFD0A6", nightColors.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(nightColors.textOnAccent, nightColors.accent)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(nightColors.danger, nightColors.surface)).toBeGreaterThanOrEqual(4.5);
     expect(nightColors.accent).toBe("#EC8638");
+  });
+
+  it("night gradients and translucent actions remain readable at every stop", () => {
+    expect(nightGround).toContain("#50504D");
+    expect(nightGround).toContain("radial-gradient");
+    expect(nightOrange).toContain("rgba(236,134,56,.80)");
+    for (const bg of ["#60605B", "#64645F", "#575752", "#41413E"]) textPasses(nightColors, bg);
+    // Worst-case orange .80 alpha over black, even darker than any card.
+    expect(contrastRatio(nightColors.textOnAccent, "#BD6B2D")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#FFD0A6", "#575752")).toBeGreaterThanOrEqual(4.5);
   });
 
   it("auto mode: night by clock or device preference", () => {

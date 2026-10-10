@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -240,7 +243,7 @@ export default function WalkinScreen() {
   const canSubmit = Boolean(customer && selectedVehicleId && selectedServiceId && selectedBayId && !feedError);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130,width:"100%",maxWidth:640,alignSelf:"center" }}>
       {actionError?<ErrorState title="Check walk-in details" message={actionError} fill={false}/>:null}
       {feedError?<ErrorState title="Walk-in setup unavailable" message={feedError} fill={false} onRetry={()=>setRetryTick(n=>n+1)}/>:null}
 
@@ -258,7 +261,7 @@ export default function WalkinScreen() {
           </View>
         )}
         {showNew && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm }}>
+          <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.sm }}>
             <TextInput label="Name" value={newCust.name} onChangeText={(v) => setNewCust((p) => ({ ...p, name: v }))} />
             <TextInput label="Email (their Google account)" keyboardType="email-address" autoCapitalize="none" value={newCust.email} onChangeText={(v) => setNewCust((p) => ({ ...p, email: v }))} />
             <TextInput label="Phone (optional)" keyboardType="phone-pad" value={newCust.phone} onChangeText={(v) => setNewCust((p) => ({ ...p, phone: v }))} />
@@ -306,7 +309,7 @@ export default function WalkinScreen() {
           {!showAddVehicle ? (
             <Button label="+ Add Vehicle" variant="ghost" size="md" onPress={() => setShowAddVehicle(true)} />
           ) : (
-            <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md }}>
+            <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md }}>
               <TextInput
                 label="Registration"
                 placeholder="GJ01AB1234"
@@ -389,7 +392,7 @@ export default function WalkinScreen() {
           {priceLoading ? (
             <LoadingState fill={false} />
           ) : priceBreakdown ? (
-            <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md }}>
+            <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md }}>
               <Text style={{ ...typography.price, color: colors.textPrimary }}>
                 ₹{(priceBreakdown.total / 100).toLocaleString("en-IN")}
               </Text>

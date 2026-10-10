@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, FlatList } from "react-native";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -68,13 +71,13 @@ export default function PickupsScreen() {
   if (rows === null) return <LoadingState />;
   return (
     <FlatList
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120, width: "100%", maxWidth: 640, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
       ListEmptyComponent={<Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xl }}>No pickup or drop requests right now.</Text>}
       renderItem={({ item: r }) => (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs }}>
           <Text style={{ ...typography.title, color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
           <Text style={{ ...typography.body, color: colors.textPrimary }}>{r.address}</Text>
           {r.kind !== "drop" && (r.requestedPickupTime || r.preferredTime) ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Customer asked: {r.requestedPickupTime || r.preferredTime}</Text> : null}
@@ -91,7 +94,7 @@ export default function PickupsScreen() {
                   onChangeText={(v) => setAgreedPickup((s) => ({ ...s, [r.id]: v }))}
                   placeholder="Agreed pickup time, e.g. 2026-10-12 16:30"
                   placeholderTextColor={colors.textMuted}
-                  style={{ ...typography.body, color: colors.textPrimary, backgroundColor: colors.background, borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
+                  style={{ ...typography.body, color: colors.textPrimary, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}), borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
                 />
               ) : null}
               {r.kind !== "pickup" ? (
@@ -100,7 +103,7 @@ export default function PickupsScreen() {
                   onChangeText={(v) => setAgreedDrop((s) => ({ ...s, [r.id]: v }))}
                   placeholder="Agreed dropoff time, e.g. 2026-10-13 18:00"
                   placeholderTextColor={colors.textMuted}
-                  style={{ ...typography.body, color: colors.textPrimary, backgroundColor: colors.background, borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
+                  style={{ ...typography.body, color: colors.textPrimary, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}), borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
                 />
               ) : null}
             </View>

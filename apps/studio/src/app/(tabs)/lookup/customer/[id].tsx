@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -44,7 +47,7 @@ export default function LookupCustomerScreen() {
   if (customer === null) return <ErrorState title="Customer not found" />;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <Text style={{ ...typography.heading, color: colors.textPrimary }}>{customer.name}</Text>
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>{customer.phone}</Text>
 
@@ -52,7 +55,7 @@ export default function LookupCustomerScreen() {
       {vehicles.length === 0 ? (
         <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>No vehicles on file.</Text>
       ) : (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
           {vehicles.map((v, i) => (
             <View key={v.id}>
               {i > 0 && <View style={{ height: 1, backgroundColor: colors.divider }} />}

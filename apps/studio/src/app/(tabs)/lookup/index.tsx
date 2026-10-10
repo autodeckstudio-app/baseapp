@@ -1,3 +1,6 @@
+import { isNightPalette as nightMaterial } from "@autodeck/ui";
+import { Platform as NightPlatform } from "react-native";
+import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
@@ -56,7 +59,7 @@ export default function LookupScreen() {
   const hasResults = mode === "customer" ? customers.length > 0 : vehicle !== null;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1 }}>
 
       <View style={{ flexDirection: "row", backgroundColor: colors.surfaceSunken, borderRadius: radius.md, padding: spacing.xxs, marginBottom: spacing.md }}>
         {(["customer", "vehicle"] as SearchMode[]).map((m) => {
@@ -107,7 +110,7 @@ export default function LookupScreen() {
       )}
 
       {mode === "customer" && customers.length > 0 && (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
           {customers.map((c, i) => (
             <View key={c.id}>
               {i > 0 && <View style={{ height: 1, backgroundColor: colors.divider }} />}
@@ -123,7 +126,7 @@ export default function LookupScreen() {
       )}
 
       {mode === "vehicle" && vehicle && (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
           <ListRow
             label={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
             value={vehicle.registrationNumber}

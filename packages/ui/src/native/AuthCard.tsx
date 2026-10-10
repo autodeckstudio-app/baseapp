@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
+import { nightGround, nightSurfaceStyle, nightButtonStyle } from "../theme/night.js";
 import { AUTH, AUTH_FOOTNOTE } from "../theme/auth.js";
 import { currentMode } from "../theme/autoMode.js";
 import { createElement } from "react";
@@ -13,7 +14,7 @@ export function AuthCard({ role, title, copy, children, error, dark: darkProp = 
   const A0 = dark
     ? { ...AUTH, ground: "radial-gradient(60vmax 60vmax at 100% 0%, rgba(245,154,69,0.18), transparent 70%), linear-gradient(170deg, #141416 0%, #0B0B0D 50%, #050506 100%)", groundFallback: "#0B0B0D", cardBg: "rgba(21,21,23,0.92)", cardBorder: "rgba(255,255,255,0.10)", cardShadow: "0 18px 50px rgba(0,0,0,0.6)", text: "#F6F4F1", muted: "#C4C2BF", accent: "#F59A45", danger: "#FF8D7A" }
     : AUTH;
-  const A = night ? { ...A0, ground: "linear-gradient(170deg, #5A5A57 0%, #50504D 45%, #42423F 100%)", groundFallback: "#50504D", cardBg: "rgba(55,55,53,0.96)", accent: "#EC8638" } : A0;
+  const A = night ? { ...A0, ground: nightGround, groundFallback: "#50504D", cardBg: "rgba(72,72,69,0.96)", accent: "#EC8638" } : A0;
   return (
     <>
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: A.groundFallback, ...(web ? ({ backgroundImage: A.ground, minHeight: "100vh" } as object) : {}) }}>
@@ -28,6 +29,7 @@ export function AuthCard({ role, title, copy, children, error, dark: darkProp = 
             backgroundColor: A.cardBg,
             borderWidth: 1,
             borderColor: A.cardBorder,
+            ...(web && night ? nightSurfaceStyle : {}),
             ...(web ? ({ boxShadow: A.cardShadow } as object) : { shadowColor: "#3C285A", shadowOpacity: 0.16, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }),
           }}
         >
@@ -46,7 +48,8 @@ export function AuthCard({ role, title, copy, children, error, dark: darkProp = 
 
 /** The sign-in button, identical in every app. */
 export function AuthButton({ label, onPress, busy, disabled, testID, dark: darkProp = false }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
-  const dark = darkProp || currentMode() === "night";
+  const night = currentMode() === "night";
+  const dark = darkProp || night;
   return (
     <Pressable
       testID={testID}
@@ -54,7 +57,7 @@ export function AuthButton({ label, onPress, busy, disabled, testID, dark: darkP
       accessibilityLabel={label}
       disabled={busy || disabled}
       onPress={onPress}
-      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: dark ? "#F59A45" : AUTH.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}) })}
+      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: dark ? "#F59A45" : AUTH.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}), ...(night && Platform.OS === "web" ? nightButtonStyle : {}) })}
     >
       {Platform.OS === "web" ? createElement("svg", { width: 18, height: 18, viewBox: "0 0 48 48", "aria-hidden": true, style: { marginRight: 10 }, dangerouslySetInnerHTML: { __html: G } }) : null}
       <Text style={{ color: dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
