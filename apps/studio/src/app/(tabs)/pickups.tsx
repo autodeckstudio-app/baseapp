@@ -4,13 +4,14 @@ import { floatCard } from "@autodeck/ui/theme";
 import { CanvasTitle } from "../../components/CanvasTitle";
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, FlatList } from "react-native";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, spacing, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
 
+type Bk = { plate: string; car: string; when: string; status: string };
 type Req = { id: string; bookingId: string; kind: string; address: string; preferredTime: string; requestedPickupTime?: string; requestedDropTime?: string; agreedPickupAt?: string | null; agreedDropAt?: string | null; note: string; status: string; staffNote: string };
 const KIND: Record<string, string> = { pickup: "Pick up", drop: "Drop back", both: "Pick up and drop back" };
 
@@ -25,6 +26,8 @@ export default function PickupsScreen() {
   const auth = useAuth();
   const [rows, setRows] = useState<Req[] | null>(null);
   const [error,setError] = useState<string|null>(null);
+  const [bookings, setBookings] = useState<Record<string, Bk | null>>({});
+  const [hidden, setHidden] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [agreedPickup, setAgreedPickup] = useState<Record<string, string>>({});
   const [agreedDrop, setAgreedDrop] = useState<Record<string, string>>({});
@@ -36,7 +39,21 @@ export default function PickupsScreen() {
     setError(null);
     const snap = await getDocs(query(collection(db, COLLECTIONS.pickupRequests()), where("tenantId", "==", tenantId), where("studioId", "==", studioId)));
     const list = snap.docs.map((d) => d.data() as Req).filter((r) => r.status === "REQUESTED" || r.status === "CONFIRMED");
-    setRows(list);
+    // Every request must belong to a real booking. Look each one up; requests with no booking behind them are not shown.
+    const found: Record<string, Bk | null> = {};
+    await Promise.all(list.map(async (r) => {
+      try {
+        const b = await getDoc(doc(db, COLLECTIONS.bookings(), r.bookingId));
+        if (!b.exists()) { found[r.id] = null; return; }
+        const d = b.data() as { vehicleSnapshot?: { registrationNumber?: string; make?: string; model?: string }; scheduledAt?: string; status?: string };
+        const v = d.vehicleSnapshot;
+        found[r.id] = { plate: v?.registrationNumber ?? "", car: [v?.make, v?.model].filter(Boolean).join(" "), when: d.scheduledAt ? formatAgreed(d.scheduledAt) : "", status: d.status ?? "" };
+      } catch { found[r.id] = null; }
+    }));
+    setBookings(found);
+    const real = list.filter((r) => found[r.id]);
+    setHidden(list.length - real.length);
+    setRows(real);
   }, [tenantId, studioId]);
 
   useEffect(() => { void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); }, [load]);
@@ -79,6 +96,7 @@ export default function PickupsScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
+      ListFooterComponent={hidden > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginTop: spacing.md }}>{hidden} request{hidden === 1 ? "" : "s"} hidden because no booking exists for {hidden === 1 ? "it" : "them"}.</Text> : null}
       ListEmptyComponent={<View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 24, padding: spacing.xl, alignItems: "center" }}><Text style={{ ...typography.body, color: colors.textMuted }}>No pickup or drop requests right now.</Text></View>}
       renderItem={({ item: r }) => {
         const asked = r.kind !== "drop" ? (r.requestedPickupTime || r.preferredTime) : r.requestedDropTime;
@@ -93,6 +111,7 @@ export default function PickupsScreen() {
               </View>
               {asked ? <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: "auto" }}>Asked for {asked}</Text> : null}
             </View>
+            {bookings[r.id] ? <Text numberOfLines={1} style={{ ...typography.caption, color: colors.textPrimary, fontWeight: "600" }}>{[bookings[r.id]?.plate, bookings[r.id]?.car].filter(Boolean).join(" · ")}{bookings[r.id]?.when ? `  ·  Booking ${bookings[r.id]?.when}` : ""}</Text> : null}
             <Text numberOfLines={2} style={{ ...typography.caption, color: colors.textPrimary, opacity: 0.85 }}>{r.address}</Text>
             {confirmed && agreed ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{agreed}</Text> : null}
             {r.status === "REQUESTED" ? (
