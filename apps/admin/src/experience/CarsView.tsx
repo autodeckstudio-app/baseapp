@@ -91,7 +91,7 @@ export function CarsView(p: {
         <button type="button" className="ax-button" onClick={() => { setForm(blank()); setFiles([]); setTab("listings"); }}>Add a car</button>
       </div>
 
-      <div className="ax-detail">
+      <div className={form ? "ax-detail" : "ax-detail ax-detail--solo"}>
         <div className="ax-detail-main">
           <section className="ax-panel">
             {p.loading ? [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />) : tab === "listings" ? (
