@@ -1,3 +1,4 @@
+import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import type { ReactElement } from "react";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
@@ -166,7 +167,7 @@ export default function CatalogueScreen() {
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
       {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label} · incl. GST</T> : null}
-      <View style={{ height: 48, borderRadius: 24, backgroundColor: "#26262A", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+      <View style={{ height: 48, borderRadius: 24, ...glassInner, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
         <Icon name="search" color="#8C8A86" size={20} />
         <TextInput
           accessibilityLabel="Search services"

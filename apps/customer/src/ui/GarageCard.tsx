@@ -1,4 +1,5 @@
 // One car in the garage list: photo, name over a fade, plate and facts below.
+import { glassSurface, glassInner, glassOrange } from "../lib/glass";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Icon } from "@autodeck/ui/native";
@@ -6,7 +7,7 @@ import { Plate, T } from "./kit";
 
 export function GarageCard({ photo, height, kicker, title, lead, plate, chips, onPress, onRemove }: { photo: ReactNode; height: number; kicker?: string | undefined; title: string; lead: boolean; plate: string; chips: string[]; onPress: () => void; onRemove: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} style={({ pressed }) => ({ width: "100%", borderRadius: 24, overflow: "hidden", backgroundColor: "#1B1B1F", opacity: pressed ? 0.88 : 1 })}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} style={({ pressed }) => ({ width: "100%", borderRadius: 24, overflow: "hidden", ...glassSurface, opacity: pressed ? 0.88 : 1 })}>
       {photo}
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.45) 0%, rgba(5,5,6,0) 35%, rgba(27,27,31,1) 100%)" } as object) }} />
       <Pressable onPress={(e) => { e.stopPropagation?.(); onRemove(); }} accessibilityRole="button" accessibilityLabel={`Remove ${plate} from your garage`} hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF", opacity: pressed ? 0.7 : 1 })}>
@@ -19,7 +20,7 @@ export function GarageCard({ photo, height, kicker, title, lead, plate, chips, o
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", padding: 14 }}>
         <Plate value={plate} />
         {chips.map((t) => (
-          <View key={t} style={{ borderRadius: 9999, backgroundColor: "#26262A", paddingHorizontal: 10, paddingVertical: 4 }}>
+          <View key={t} style={{ borderRadius: 9999, ...glassInner, paddingHorizontal: 10, paddingVertical: 4 }}>
             <T role="caption" tone="secondary" style={{ textTransform: "capitalize" }}>{t}</T>
           </View>
         ))}

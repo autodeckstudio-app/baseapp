@@ -19,8 +19,9 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
+import { glassSurface, glassOrange, glassQuiet } from "../lib/glass";
 import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
-import { floatHero, nightButtonStyle, nightButtonText, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Montserrat, Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
@@ -166,9 +167,9 @@ export function Screen({
 /** Solid dark card in the reference style (replaces the blurred glass pane). */
 export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
   const { colors } = useExperienceTheme();
-  const edge = tone ? colors[tone] : "transparent";
+  const edge = tone ? colors[tone] : "rgba(255,255,255,0.12)";
   return (
-    <View testID={testID} style={[{ borderRadius: 22, overflow: "hidden", backgroundColor: fill === "warm" ? "#231B15" : "#1B1B1F", borderWidth: tone ? 1 : 0, borderColor: edge, padding: pad === "none" ? 0 : space[pad] }, style]}>
+    <View testID={testID} style={[{ borderRadius: 22, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: "rgba(236,134,56,0.14)" } : null), ...(tone ? { borderColor: edge } : null), padding: pad === "none" ? 0 : space[pad] }, style]}>
       {children}
     </View>
   );
@@ -217,7 +218,6 @@ export function Button({
   testID?: string;
 }) {
   const { colors } = useExperienceTheme();
-  const night = useExperienceTheme().name === "night";
   const primary = kind === "primary";
   const off = disabled || busy;
   return (
@@ -237,16 +237,11 @@ export function Button({
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          backgroundColor: primary ? "#EC8638" : "transparent",
-          borderWidth: primary ? 0 : 1,
-          borderColor: kind === "danger" ? colors.danger : colors.borderStrong,
+          ...(primary ? glassOrange : glassQuiet),
+          ...(kind === "danger" ? { borderColor: colors.danger } : null),
           opacity: off ? 0.45 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
-          ...(Platform.OS === "web" && primary
-            ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 4px 12px rgba(194,84,10,0.16), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
-            : {}),
-          ...(Platform.OS === "web" && primary ? ({ backgroundImage: "none", backgroundColor: "#EC8638", boxShadow: "none" } as object) : {}),
         },
         style,
       ]}

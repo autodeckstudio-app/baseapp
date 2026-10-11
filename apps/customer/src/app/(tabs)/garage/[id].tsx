@@ -1,3 +1,4 @@
+import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField } from "../../../ui/inputs";
 import { validateDocument, documentReference } from "../../../lib/document-validation";
 import { useState, useEffect, createElement } from "react";
@@ -254,7 +255,7 @@ export default function VehicleDetailScreen() {
             ]}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 24, backgroundColor: "#1B1B1F" }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 24, ...glassSurface }}>
             {TABS.map((t) => {
               const selected = tab === t.key;
               return (
@@ -263,7 +264,7 @@ export default function VehicleDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => setTab(t.key)}
-                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 20, backgroundColor: selected ? "#EC8638" : "transparent" }}
+                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 20, ...(selected ? glassOrange : null) }}
                 >
                   <T role="label" tone={selected ? "onAccent" : "secondary"}>{t.label}</T>
                 </Pressable>

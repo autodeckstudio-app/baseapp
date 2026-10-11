@@ -183,7 +183,7 @@ export default function HomeScreen() {
         greeting={greetingFor(new Date(), m.customer.firstName)}
         unread={unread}
         cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null }))}
-        services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: priceLabel(s) }))}
+        services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: priceLabel(s), brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}

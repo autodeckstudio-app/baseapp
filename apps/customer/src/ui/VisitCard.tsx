@@ -1,11 +1,12 @@
 // One booking row in the reference style: photo tile, service, car, time, price, status.
+import { glassSurface, glassInner, glassOrange } from "../lib/glass";
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { T } from "./kit";
 
 export function VisitCard({ photo, title, car, when, price, chip, onPress }: { photo: ReactNode; title: string; car: string; when: string; price: string; chip: ReactNode; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", borderRadius: 22, backgroundColor: "#1B1B1F", padding: 10, opacity: pressed ? 0.88 : 1 })}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", borderRadius: 22, ...glassSurface, padding: 10, opacity: pressed ? 0.88 : 1 })}>
       <View style={{ width: 92, height: 92, borderRadius: 16, overflow: "hidden" }}>{photo}</View>
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
         <T role="bodyStrong" numberOfLines={1}>{title}</T>
