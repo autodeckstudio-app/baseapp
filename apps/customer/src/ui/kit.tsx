@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
-import { nightButtonStyle, nightButtonText, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
+import { floatHero, nightButtonStyle, nightButtonText, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
   display: Platform.select({ web: "Montserrat, Inter, 'Noto Sans Gujarati', 'Noto Sans Devanagari', system-ui, sans-serif", default: "System" }) ?? "System",
@@ -97,12 +97,34 @@ function BackBar() {
   );
 }
 
+/** Studio photo behind the top of a screen (web), as on the canvas layout. */
+export function CanvasBackdrop() {
+  const { name, colors } = useExperienceTheme();
+  if (Platform.OS !== "web") return null;
+  return <View pointerEvents="none" style={floatHero(name === "night", colors.canvas) as never} />;
+}
+
+/** Eyebrow and a large heading that sits on the photo. */
+export function CanvasTitle({ eyebrow, title }: { eyebrow?: string; title: string }) {
+  const web = Platform.OS === "web";
+  const shadow = web ? { textShadow: "0 1px 12px rgba(0,0,0,.5)" } : {};
+  return (
+    <View style={{ minHeight: 150, justifyContent: "flex-end" }}>
+      {eyebrow ? <T role="label" style={{ color: "rgba(255,255,255,.92)", ...shadow } as never}>{eyebrow}</T> : null}
+      <T role="display" numberOfLines={1} style={{ fontSize: 52, lineHeight: 56, fontWeight: "500", letterSpacing: -2.2, color: "rgba(255,255,255,.95)", ...(web ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>{title}</T>
+    </View>
+  );
+}
+
 export function Screen({
   children,
   scroll = true,
   header,
   top,
+  canvas = false,
 }: {
+  /** Show the photo backdrop behind the header (use with CanvasTitle). */
+  canvas?: boolean;
   children: ReactNode;
   scroll?: boolean;
   header?: ReactNode;
@@ -130,6 +152,7 @@ export function Screen({
   if (!focused) return null;
   return (
     <Ambient>
+      {canvas ? <CanvasBackdrop /> : null}
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}><BackBar />{top}</View> : null}
       {scroll ? <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>

@@ -13,7 +13,7 @@ import { getMyBookings } from "../../../lib/booking-service";
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
   PENDING: { label: "Awaiting confirm", tone: "accent" },
@@ -84,7 +84,7 @@ export default function BookingsScreen() {
   );
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Bookings</Kicker><T role="title">Visits</T></View>}>
+    <Screen canvas header={<CanvasTitle eyebrow="Bookings" title="Visits" />}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {upcoming.length > 0 ? <View style={{ gap: space.line }}><Kicker>Coming up</Kicker>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 ? (

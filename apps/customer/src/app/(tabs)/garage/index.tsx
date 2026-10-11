@@ -11,7 +11,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { HeroImage, Button, Kicker, Loading, Notice, Pane, Plate, Screen, T } from "../../../ui/kit";
+import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, Pane, Plate, Screen, T } from "../../../ui/kit";
 
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
 
@@ -78,7 +78,7 @@ export default function GarageScreen() {
   const lead = list[0];
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Garage</Kicker><T role="title">Your cars</T></View>}>
+    <Screen canvas header={<CanvasTitle eyebrow="Garage" title="Your cars" />}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice
