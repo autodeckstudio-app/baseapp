@@ -17,23 +17,41 @@ if (cd) {
   tick(); setInterval(tick, 1000);
 }
 
-// Immersive layer: drifting aurora follows the scroll, glass cards catch the pointer, and the hero job card keeps updating.
+// Scroll-driven story: one background that changes with the page, a pinned chapter stage, a timeline that lights up, counters.
 const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (!calm) {
-  const au = document.querySelector('.aurora');
-  let ticking = false;
-  addEventListener('scroll', () => {
-    if (ticking) return; ticking = true;
-    requestAnimationFrame(() => { au && au.style.setProperty('--sy', String(scrollY)); ticking = false; });
-  }, { passive: true });
-  document.addEventListener('pointermove', (e) => {
-    const g = e.target.closest && e.target.closest('.card,.bgroup,.cta-box,.trust .wrap>div,.frame,.chips a');
-    if (!g) return;
-    const r = g.getBoundingClientRect();
-    g.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-    g.style.setProperty('--my', (e.clientY - r.top) + 'px');
-  }, { passive: true });
+const bg = document.querySelector('.stage-bg');
+const layers = bg ? [...bg.querySelectorAll('i')] : [];
+const secs = [...document.querySelectorAll('[data-bg]')];
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const chaps = [...document.querySelectorAll('[data-chap]')], shots = [...document.querySelectorAll('[data-shot]')];
+const num = document.querySelector('[data-num]'), tag = document.querySelector('[data-tag]'), pin = document.querySelector('[data-pin]');
+const tl = [...document.querySelectorAll('[data-tline] li')];
+const kinds = ['Paint Protection Film', 'Detailing and Ceramic', 'Wash Studio', 'Performance Garage'];
+let cur = -1, cc = -1;
+function frame() {
+  const y = scrollY, h = innerHeight;
+  const total = Math.max(1, document.documentElement.scrollHeight - h);
+  bg && bg.style.setProperty('--p', String(clamp(y / total)));
+  bg && bg.style.setProperty('--gx', String(Math.sin(y / 600) * 18));
+  // background follows the section nearest the middle of the screen
+  let best = null, bd = 1e9;
+  secs.forEach((s) => { const r = s.getBoundingClientRect(); const d = Math.abs(r.top + Math.min(r.height, h) / 2 - h / 2); if (r.bottom > 0 && r.top < h && d < bd) { bd = d; best = s; } });
+  if (best) { const k = Number(best.dataset.bg); if (k !== cur) { cur = k; layers.forEach((l, i) => l.classList.toggle('on', i === k)); } }
+  if (pin) {
+    const r = pin.getBoundingClientRect();
+    const p = clamp(-r.top / Math.max(1, r.height - h));
+    pin.style.setProperty('--pp', String(p));
+    const c = Math.min(chaps.length - 1, Math.floor(p * chaps.length));
+    if (c !== cc) { cc = c; chaps.forEach((e, i) => e.classList.toggle('on', i === c)); shots.forEach((e, i) => e.classList.toggle('on', i === c)); if (num) num.textContent = String(c + 1).padStart(2, '0'); if (tag) tag.textContent = kinds[c]; }
+  }
+  if (tl.length) { const r = tl[0].parentElement.getBoundingClientRect(); const p = clamp((h * 0.85 - r.top) / (r.height + h * 0.3)); const n = Math.round(p * tl.length); tl.forEach((e, i) => e.classList.toggle('on', i < n)); }
 }
+if (!calm) { addEventListener('scroll', () => requestAnimationFrame(frame), { passive: true }); addEventListener('resize', frame); }
+frame();
+document.querySelectorAll('[data-count]').forEach((el) => {
+  const to = Number(el.dataset.count); let done = false;
+  new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting && !done) { done = true; o.disconnect(); const t0 = performance.now(); const run = (t) => { const k = clamp((t - t0) / 1400); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(run); }; requestAnimationFrame(run); } }), { threshold: 0.4 }).observe(el);
+});
 const steps = [
   ['Vehicle received', '09:12 am'], ['Photos taken at the bay', '09:20 am'], ['Paint correction in progress', '11:05 am'],
   ['Coating cured, final check', '04:40 pm'], ['Ready for handover', '06:15 pm'],
@@ -48,3 +66,4 @@ if (line && when) {
   }, 3200);
 }
 if (location.hash === '#all') document.querySelectorAll('.rv').forEach((e) => e.classList.add('in'));
+{ const y0 = new URLSearchParams(location.search).get('y'); if (y0) { scrollTo(0, Number(y0)); frame(); } }

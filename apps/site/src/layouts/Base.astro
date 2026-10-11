@@ -1,5 +1,6 @@
 ---
 import '../styles/site.css';
+import '../styles/dark.css';
 interface Props {
   title: string;
   description: string;
@@ -27,10 +28,16 @@ const ogImage = 'https://www.autodeck.in/assets/og.png';
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body class={page}>
-  <div class="aurora" aria-hidden="true"><i class="o1"></i><i class="o2"></i><i class="o3"></i></div>
+  <div class="stage-bg" aria-hidden="true">
+    <i style="background-image:url(/assets/img/studio-wide.jpg)" class="on"></i>
+    <i style="background-image:url(/assets/img/car-lights.jpg)"></i>
+    <i style="background-image:url(/assets/img/covered-car.jpg)"></i>
+    <i style="background-image:url(/assets/img/studio-orange.jpg)"></i>
+    <b class="veil"></b><b class="glow"></b>
+  </div>
   <header class="site-head">
     <div class="wrap">
-      <a class="brand" href="/" aria-label="AutoDeck home"><img src="/assets/logo-horizontal-dark.svg" alt="AutoDeck" /></a>
+      <a class="brand" href="/" aria-label="AutoDeck home"><img src="/assets/logo-horizontal.svg" alt="AutoDeck" /></a>
       <nav aria-label="Pages">
         <a href="/services" aria-current={page === 'services' ? 'page' : undefined}>Services</a>
         <a href="/app" aria-current={page === 'app' ? 'page' : undefined}>The app</a>
@@ -52,7 +59,7 @@ const ogImage = 'https://www.autodeck.in/assets/og.png';
   <footer class="site-foot">
     <div class="wrap">
       <div class="foot-grid">
-        <div><img src="/assets/logo-horizontal-dark.svg" alt="AutoDeck" /><p>Complete car care. All under one roof.</p></div>
+        <div><img src="/assets/logo-horizontal.svg" alt="AutoDeck" /><p>Complete car care. All under one roof.</p></div>
         <div><h4>Studio</h4><p>Sunbeam Complex, Old Sharda Mandir Rd<br />Ellisbridge, Ahmedabad 380006</p><a href="tel:+919898679711">+91 98986 79711</a></div>
         <div><h4>Explore</h4><a href="/services">Services</a><a href="/app">The app</a><a href="/lounge">Lounge</a><a href="/visit">Visit</a><a href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a></div>
       </div>
