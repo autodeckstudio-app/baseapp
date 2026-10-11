@@ -4,7 +4,7 @@ const chapters = [
   { n: '01', t: 'Protect', l: 'Self-healing film, cut to your car.', k: 'Paint Protection Film', from: 'from ₹65,000', img: '/assets/img/covered-car.jpg' },
   { n: '02', t: 'Perfect', l: 'Paint corrected under studio light.', k: 'Detailing and Ceramic', from: 'from ₹3,500', img: '/assets/img/car-lights.jpg' },
   { n: '03', t: 'Keep clean', l: 'The wash it should always have been.', k: 'Wash Studio', from: 'from ₹500', img: '/assets/img/product-ceramic.jpg' },
-  { n: '04', t: 'Keep running', l: 'Repairs and fitting, with a Sample update.', k: 'Performance Garage', from: 'quoted per car', img: '/assets/img/studio-bay.jpg' },
+  { n: '04', t: 'Keep running', l: 'Repairs and fitting, with updates on your car from anywhere.', k: 'Performance Garage', from: 'quoted per car', img: '/assets/img/studio-bay.jpg' },
 ];
 const steps = [['09:12', 'Vehicle received'], ['09:20', 'Photos taken at the bay'], ['11:05', 'Paint correction in progress'], ['04:40', 'Coating cured, final check'], ['06:15', 'Ready for handover']];
 const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
@@ -47,6 +47,11 @@ const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
           {chapters.map((c, i) => (<figure class={`shot${i === 0 ? ' on' : ''}`} data-shot style={`background-image:url(${c.img})`}></figure>))}
           <div class="glass tag"><small>AutoDeck</small><b data-tag>Paint Protection Film</b></div>
         </div>
+      </div>
+      <div class="road" aria-hidden="true">
+        <div class="road-line"><i></i></div>
+        {chapters.map((c, i) => (<span class="stn" data-stn style={`left:${((i + 0.5) / chapters.length) * 100}%`}><b></b><small>{c.k}</small></span>))}
+        <div class="car" data-car><svg viewBox="0 0 220 70" width="132" height="42" fill="none"><path d="M8 48c0-6 3-9 10-11l24-6 26-17c3-2 7-3 11-3h42c6 0 11 2 15 6l22 14 28 5c6 1 9 5 9 11v4H8v-3Z" fill="#E8E6E1"/><path d="M78 17h40l22 16H62l16-16Z" fill="#1b1b1a" opacity=".85"/><rect x="204" y="38" width="8" height="5" rx="2" fill="#EC8638"/><rect x="8" y="40" width="7" height="5" rx="2" fill="#EC8638"/><g class="wh"><circle cx="58" cy="54" r="13" fill="#141413"/><circle cx="58" cy="54" r="6" fill="#8c8a84"/><path d="M58 48v12M52 54h12" stroke="#EC8638" stroke-width="2"/></g><g class="wh"><circle cx="164" cy="54" r="13" fill="#141413"/><circle cx="164" cy="54" r="6" fill="#8c8a84"/><path d="M164 48v12M158 54h12" stroke="#EC8638" stroke-width="2"/></g></svg></div>
       </div>
     </div>
   </section>

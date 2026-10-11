@@ -93,3 +93,16 @@ h1,h2,h3,h4,b{color:var(--ink)}
 .r4 a{transition:transform .45s cubic-bezier(.2,.7,.2,1),background-size .8s cubic-bezier(.2,.7,.2,1),box-shadow .45s;background-size:100% auto;background-size:cover;will-change:transform}
 .r4 a:hover{transform:perspective(900px) translateY(-8px) rotateX(2.5deg) scale(1.015);box-shadow:0 24px 50px rgba(0,0,0,.45)}
 @media(hover:none),(prefers-reduced-motion:reduce){.r4 a:hover{transform:none}}
+
+/* the car drives through the services as you scroll */
+.pin-in{padding-bottom:15svh;box-sizing:border-box}.road{position:absolute;left:50%;transform:translateX(-50%);bottom:11svh;width:min(var(--wrap),100% - 48px);height:78px;pointer-events:none}
+.road-line{position:absolute;left:0;right:0;bottom:14px;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.28) 0 14px,transparent 14px 26px)}
+.road-line i{position:absolute;left:0;top:-1px;height:4px;width:calc(var(--pp,0)*100%);background:var(--orange);border-radius:4px;box-shadow:0 0 14px rgba(236,134,56,.6)}
+.stn{position:absolute;bottom:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(255,255,255,.45);transition:color .4s}
+.stn b{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;background:#141413;order:2;transition:background .4s,border-color .4s,box-shadow .4s}
+.stn small{order:1;font:500 11px Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;position:absolute;bottom:66px}
+.stn.on{color:#fff}.stn.on b{background:var(--orange);border-color:var(--orange);box-shadow:0 0 18px rgba(236,134,56,.8)}
+.car{position:absolute;bottom:14px;left:calc(var(--pp,0)*(100% - 168px));width:168px;height:53px;transform:translateY(8px);filter:drop-shadow(0 10px 14px rgba(0,0,0,.55));will-change:left}
+.car svg{width:100%;height:100%;display:block}.car .wh{transform-box:fill-box;transform-origin:center;transform:rotate(calc(var(--pp,0)*3600deg))}
+@media(max-width:900px){.road{bottom:9svh;height:64px}.pin-in{padding-bottom:13svh}.stn small{display:none!important}.car{width:92px;height:30px;left:calc(var(--pp,0)*(100% - 92px))}.car svg{width:92px;height:30px}}
+@media(prefers-reduced-motion:reduce){.road{display:none}}

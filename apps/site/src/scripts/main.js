@@ -24,6 +24,7 @@ const layers = bg ? [...bg.querySelectorAll('i')] : [];
 const secs = [...document.querySelectorAll('[data-bg]')];
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const chaps = [...document.querySelectorAll('[data-chap]')], shots = [...document.querySelectorAll('[data-shot]')];
+const stns = [...document.querySelectorAll('[data-stn]')];
 const num = document.querySelector('[data-num]'), tag = document.querySelector('[data-tag]'), pin = document.querySelector('[data-pin]');
 const tl = [...document.querySelectorAll('[data-tline] li')];
 const kinds = ['Paint Protection Film', 'Detailing and Ceramic', 'Wash Studio', 'Performance Garage'];
@@ -42,7 +43,7 @@ function frame() {
     const p = clamp(-r.top / Math.max(1, r.height - h));
     pin.style.setProperty('--pp', String(p));
     const c = Math.min(chaps.length - 1, Math.floor(p * chaps.length));
-    if (c !== cc) { cc = c; chaps.forEach((e, i) => e.classList.toggle('on', i === c)); shots.forEach((e, i) => e.classList.toggle('on', i === c)); if (num) num.textContent = String(c + 1).padStart(2, '0'); if (tag) tag.textContent = kinds[c]; }
+    if (c !== cc) { cc = c; chaps.forEach((e, i) => e.classList.toggle('on', i === c)); shots.forEach((e, i) => e.classList.toggle('on', i === c)); stns.forEach((e, i) => e.classList.toggle('on', i <= c)); if (num) num.textContent = String(c + 1).padStart(2, '0'); if (tag) tag.textContent = kinds[c]; }
   }
   if (tl.length) { const r = tl[0].parentElement.getBoundingClientRect(); const p = clamp((h * 0.85 - r.top) / (r.height + h * 0.3)); const n = Math.round(p * tl.length); tl.forEach((e, i) => e.classList.toggle('on', i < n)); }
 }
