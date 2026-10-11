@@ -83,4 +83,23 @@ const nightPalette: Palette = {
 export const colors: Palette = currentMode() === "night" ? nightPalette : dayColors;
 export const isNightPalette = colors === nightPalette;
 
+/**
+ * Customer app only: one near-black, photo-forward palette with the AutoDeck orange,
+ * applied in place to both palettes so it holds whatever the clock or device says.
+ * Call once, before any screen module is evaluated.
+ */
+export function applyCustomerDark(): void {
+  const dark: Partial<Palette> = {
+    background: "#0B0B0C", surface: "#161618", surfaceElevated: "#202023", surfaceSunken: "#111113",
+    textPrimary: "#F5F3EF", textSecondary: "#C4C1BC", textMuted: "#9A9792", textOnAccent: "#1A1410",
+    border: "rgba(255,255,255,0.09)", borderStrong: "rgba(255,255,255,0.24)", divider: "rgba(255,255,255,0.07)",
+    accent: "#EC8638", accentPressed: "#F59A4E", accentMuted: "rgba(236,134,56,0.20)",
+    success: "#7DDBAA", successMuted: "rgba(125,219,170,0.16)", warning: "#F2B95E", warningMuted: "rgba(242,185,94,0.16)",
+    error: "#FFBAAD", errorMuted: "rgba(255,150,132,0.16)", info: "#8DB7F0", infoMuted: "rgba(141,183,240,0.16)",
+    white: "#1A1410", overlay: "rgba(0,0,0,0.62)",
+  };
+  Object.assign(nightPalette, dark);
+  Object.assign(dayColors as unknown as Palette, dark);
+}
+
 export type ColorToken = keyof Palette;

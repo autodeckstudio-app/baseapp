@@ -112,3 +112,17 @@ export const nightColors: ThemeColors = {
 
 export type ThemeName = "dark" | "light" | "night";
 export const themeColors: Record<ThemeName, ThemeColors> = { dark: darkColors, light: lightColors, night: nightColors };
+
+/** Customer app only: same near-black palette as tokens applyCustomerDark, applied to the role-based theme. */
+export function applyCustomerDarkTheme(): void {
+  const dark: Partial<ThemeColors> = {
+    canvas: "#0B0B0C", canvasDeep: "#070708", surface: "#161618", surfaceElevated: "#202023",
+    borderSubtle: "rgba(255,255,255,0.09)", borderStrong: "rgba(255,255,255,0.24)",
+    textPrimary: "#F5F3EF", textSecondary: "#C4C1BC", textTertiary: "#9A9792", textOnAccent: "#1A1410",
+    accent: "#EC8638", accentStrong: "#F59A4E", accentHaze: "rgba(236,134,56,0.20)",
+    inactive: "#8A8884", scrim: "rgba(0,0,0,0.62)", ink: "#202023", onInk: "#F5F3EF",
+  };
+  Object.assign(nightColors, dark);
+  Object.assign(lightColors, dark);
+  Object.assign(darkColors, dark);
+}

@@ -1,9 +1,10 @@
+import "../lib/boot-theme";
 import "../lib/webAlert";
 import { useEffect, useState } from "react";
 import { Platform, Pressable } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
+import { ExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
@@ -97,8 +98,8 @@ function ThemedRoot() {
 
 export default function RootLayout() {
   return (
-    <AutoExperienceThemeProvider>
+    <ExperienceThemeProvider name="night">
       <ThemedRoot />
-    </AutoExperienceThemeProvider>
+    </ExperienceThemeProvider>
   );
 }
