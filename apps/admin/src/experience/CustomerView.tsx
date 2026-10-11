@@ -1,7 +1,7 @@
 "use client";
 
 // One customer, whole relationship: cars and papers, membership, visits,
-// money, messages and change log, on one glass page with tabs.
+// money, and one log of changes and messages sent, on one glass page with tabs.
 import { useState } from "react";
 import type { AuditLog, Booking, Customer, Invoice, Membership, Notification, Payment, Protection, Service, ServiceJob, Vehicle, Warranty } from "@autodeck/core";
 import { Segmented } from "./Office";
@@ -10,7 +10,7 @@ import { formatDate, formatDateTime, formatPaise, studioToday } from "../lib/for
 import { methodLabel, statusLabel } from "../lib/status-label";
 import { KIND_LABEL, daysLeft } from "./VehiclesView";
 
-type Tab = "overview" | "visits" | "money" | "messages" | "log";
+type Tab = "overview" | "visits" | "money" | "log";
 
 export interface CustomerData {
   customer: Customer;
@@ -26,8 +26,9 @@ export interface CustomerData {
   protections: Array<Protection & { vehicleId: string }>;
 }
 
-function Row({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
-  return onClick ? <button type="button" className="ax-crow is-link" onClick={onClick}>{children}</button> : <div className="ax-crow">{children}</div>;
+function Row({ onClick, children, log }: { onClick?: () => void; children: React.ReactNode; log?: boolean }) {
+  const cls = log ? "ax-crow ax-crow--log" : "ax-crow";
+  return onClick ? <button type="button" className={`${cls} is-link`} onClick={onClick}>{children}</button> : <div className={cls}>{children}</div>;
 }
 
 /** Old notifications were stored with a broken rupee sign ("â ¹590"). Repair it for display. */
@@ -88,6 +89,10 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
   const waDigits = (d.customer.phone ?? "").replace(/\D/g, "");
   // One row per visit: a booking that became a job shows once, as the job. Walk-ins are jobs with no booking.
   const jobBookingIds = new Set(d.jobs.map((j) => j.bookingId).filter(Boolean) as string[]);
+  const log = [
+    ...d.audit.map((a) => ({ id: `a-${a.id}`, at: a.createdAt, title: statusLabel(a.action), body: "", who: statusLabel(a.performedByRole) })),
+    ...d.notifications.map((n) => ({ id: `n-${n.id}`, at: n.createdAt, title: `Sent: ${fixRupee(n.title)}`, body: fixRupee(n.body), who: n.readAt ? "Read" : "Not read" })),
+  ].sort((x, y) => (x.at < y.at ? 1 : -1));
   const timeline = [
     ...d.bookings.filter((b) => !jobBookingIds.has(b.id)).map((b) => ({
       id: `b-${b.id}`, at: b.scheduledAt, type: "Booked", status: b.status, amount: b.totalAmount, href: `/bookings/${b.id}`,
@@ -147,8 +152,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
           { value: "overview", label: "Overview" },
           { value: "visits", label: `Visits ${timeline.length}` },
           { value: "money", label: "Money" },
-          { value: "messages", label: `Messages ${d.notifications.length}` },
-          { value: "log", label: "Log" },
+          { value: "log", label: "Activity" },
         ]} />
       </div>
 
@@ -247,25 +251,13 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
         </div>
       )}
 
-      {tab === "messages" && (
-        <section className="ax-panel">
-          {d.notifications.length === 0 ? <p className="ax-note" style={{ margin: 0 }}>No messages sent to this customer.</p> : d.notifications.map((n) => (
-            <Row key={n.id}>
-              <span className="ax-sub ax-vrow-when">{formatDateTime(n.createdAt)}</span>
-              <span className="ax-vrow-main"><strong>{fixRupee(n.title)}</strong><span className="ax-sub">{fixRupee(n.body)}</span></span>
-              <span className="ax-sub ax-vrow-read">{n.readAt ? "Read" : "Not read"}</span>
-            </Row>
-          ))}
-        </section>
-      )}
-
       {tab === "log" && (
         <section className="ax-panel">
-          {d.audit.length === 0 ? <p className="ax-note" style={{ margin: 0 }}>No changes recorded for this profile.</p> : d.audit.map((a) => (
-            <Row key={a.id}>
-              <span className="ax-sub" style={{ width: 150 }}>{formatDateTime(a.createdAt)}</span>
-              <span style={{ flex: 1 }}>{statusLabel(a.action)}</span>
-              <span className="ax-sub">{statusLabel(a.performedByRole)}</span>
+          {log.length === 0 ? <p className="ax-note" style={{ margin: 0 }}>Nothing recorded for this profile yet.</p> : log.map((e) => (
+            <Row key={e.id} log>
+              <span className="ax-sub ax-vrow-when">{formatDateTime(e.at)}</span>
+              <span className="ax-vrow-main"><strong>{e.title}</strong>{e.body ? <span className="ax-sub">{e.body}</span> : null}</span>
+              <span className="ax-sub">{e.who}</span>
             </Row>
           ))}
         </section>

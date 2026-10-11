@@ -350,3 +350,16 @@ html[data-theme="day"] .ax-ocar { border-color: rgba(60,40,20,.12); background: 
 
 .ax-detail.ax-detail--solo, .ax-dash .ax-detail.ax-detail--solo { grid-template-columns: minmax(0, 1fr) !important; }
 .ax-detail--solo .ax-cars { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+
+/* Customer rows: explicit grid so every row lines up, left-aligned text */
+.ax-shell .ax-panel .ax-crow { display: grid; grid-template-columns: 170px minmax(0, 1fr) 110px 96px; align-items: center; column-gap: 18px; width: 100%; text-align: left; justify-items: start; padding: 12px 4px; }
+.ax-shell .ax-panel .ax-crow > * { margin: 0; min-width: 0; flex: none; width: auto; }
+.ax-shell .ax-panel .ax-crow .ax-vrow-main { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
+.ax-shell .ax-panel .ax-crow .ax-vrow-amt { justify-self: end; text-align: right; }
+.ax-shell .ax-panel .ax-crow .ax-vrow-read { justify-self: end; text-align: right; grid-column: 4; }
+.ax-shell .ax-panel .ax-crow--log { grid-template-columns: 170px minmax(0, 1fr) auto; }
+@media (max-width: 860px) {
+  .ax-shell .ax-panel .ax-crow { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
+  .ax-shell .ax-panel .ax-crow .ax-vrow-when { grid-column: 1 / -1; }
+  .ax-shell .ax-panel .ax-crow .ax-vrow-read { grid-column: auto; }
+}
