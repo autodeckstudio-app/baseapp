@@ -1,7 +1,7 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
-import { CanvasBackdrop, CanvasTitle } from "../../components/CanvasTitle";
+import { floatCard } from "@autodeck/ui/theme";
+import { CanvasTitle } from "../../components/CanvasTitle";
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, FlatList } from "react-native";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -9,7 +9,7 @@ import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { colors, spacing, radius, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
+import { colors, spacing, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
 
 type Req = { id: string; bookingId: string; kind: string; address: string; preferredTime: string; requestedPickupTime?: string; requestedDropTime?: string; agreedPickupAt?: string | null; agreedDropAt?: string | null; note: string; status: string; staffNote: string };
 const KIND: Record<string, string> = { pickup: "Pick up", drop: "Drop back", both: "Pick up and drop back" };
@@ -70,57 +70,46 @@ export default function PickupsScreen() {
 
   if (error && rows === null) return <ErrorState title="Requests unavailable" message={error} onRetry={()=>void load().catch(e=>setError(e instanceof Error?e.message:"Try again."))}/>;
   if (rows === null) return <LoadingState />;
+  const input = { ...typography.caption, color: colors.textPrimary, backgroundColor: "rgba(255,255,255,.08)", borderWidth: 1, borderColor: "rgba(255,255,255,.14)", borderRadius: 14, paddingHorizontal: spacing.sm, height: 38, flex: 1, minWidth: 150 } as const;
+  const wide = NightPlatform.OS === "web";
   return (
-    <View style={{ flex: 1 }}>
-    <CanvasBackdrop />
     <FlatList
       style={{ flex: 1, backgroundColor: "transparent" }}
       ListHeaderComponent={<CanvasTitle eyebrow="Pickup and drop" title="Requests" />}
-      contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120, width: "100%", maxWidth: 640, alignSelf: "center", gap: spacing.sm }}
+      contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
-      ListEmptyComponent={<Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xl }}>No pickup or drop requests right now.</Text>}
-      renderItem={({ item: r }) => (
-        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, gap: spacing.xs }}>
-          <Text style={{ ...typography.title, color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
-          <Text style={{ ...typography.body, color: colors.textPrimary }}>{r.address}</Text>
-          {r.kind !== "drop" && (r.requestedPickupTime || r.preferredTime) ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Customer asked: {r.requestedPickupTime || r.preferredTime}</Text> : null}
-          {r.kind !== "pickup" && r.requestedDropTime ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Customer asked (dropoff): {r.requestedDropTime}</Text> : null}
-          {r.status === "CONFIRMED" && r.agreedPickupAt ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Pickup agreed: {formatAgreed(r.agreedPickupAt)}</Text> : null}
-          {r.status === "CONFIRMED" && r.agreedDropAt ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Dropoff agreed: {formatAgreed(r.agreedDropAt)}</Text> : null}
-          <Text style={{ ...typography.caption, color: colors.textMuted }}>{r.status === "CONFIRMED" ? "Confirmed" : "New request"}</Text>
-          {r.status === "REQUESTED" ? (
-            <View style={{ gap: spacing.xs, marginTop: spacing.xs }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Agree the time with the customer by phone call, then enter it here (YYYY-MM-DD HH:mm).</Text>
-              {r.kind !== "drop" ? (
-                <TextInput
-                  value={agreedPickup[r.id] ?? ""}
-                  onChangeText={(v) => setAgreedPickup((s) => ({ ...s, [r.id]: v }))}
-                  placeholder="Agreed pickup time, e.g. 2026-10-12 16:30"
-                  placeholderTextColor={colors.textMuted}
-                  style={{ ...typography.body, color: colors.textPrimary, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}), borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
-                />
-              ) : null}
-              {r.kind !== "pickup" ? (
-                <TextInput
-                  value={agreedDrop[r.id] ?? ""}
-                  onChangeText={(v) => setAgreedDrop((s) => ({ ...s, [r.id]: v }))}
-                  placeholder="Agreed dropoff time, e.g. 2026-10-13 18:00"
-                  placeholderTextColor={colors.textMuted}
-                  style={{ ...typography.body, color: colors.textPrimary, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}), borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
-                />
-              ) : null}
+      ListEmptyComponent={<View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 24, padding: spacing.xl, alignItems: "center" }}><Text style={{ ...typography.body, color: colors.textMuted }}>No pickup or drop requests right now.</Text></View>}
+      renderItem={({ item: r }) => {
+        const asked = r.kind !== "drop" ? (r.requestedPickupTime || r.preferredTime) : r.requestedDropTime;
+        const agreed = [r.agreedPickupAt ? `Pickup ${formatAgreed(r.agreedPickupAt)}` : "", r.agreedDropAt ? `Drop ${formatAgreed(r.agreedDropAt)}` : ""].filter(Boolean).join("  ·  ");
+        const confirmed = r.status === "CONFIRMED";
+        return (
+          <View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 24, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
+              <Text style={{ ...typography.body, fontWeight: "700", color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: confirmed ? "rgba(120,200,140,.2)" : "rgba(236,134,56,.2)" }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: confirmed ? "#8fd6a0" : colors.accent }}>{confirmed ? "Confirmed" : "New"}</Text>
+              </View>
+              {asked ? <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: "auto" }}>Asked for {asked}</Text> : null}
             </View>
-          ) : null}
-          {error && rows !== null ? <Text style={{ ...typography.caption, color: colors.error }}>{error}</Text> : null}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs }}>
-            {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} disabled={busy!==null} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
-            {r.status === "CONFIRMED" ? <Button label="Mark done" size="md" fullWidth={false} disabled={busy!==null} loading={busy === r.id} onPress={() => void setStatus(r, "DONE")} /> : null}
-            <Button label="Decline" size="md" variant="secondary" fullWidth={false} disabled={busy!==null} loading={busy === r.id} onPress={() => void setStatus(r, "DECLINED")} />
+            <Text numberOfLines={2} style={{ ...typography.caption, color: colors.textPrimary, opacity: 0.85 }}>{r.address}</Text>
+            {confirmed && agreed ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{agreed}</Text> : null}
+            {r.status === "REQUESTED" ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+                {r.kind !== "drop" ? <TextInput value={agreedPickup[r.id] ?? ""} onChangeText={(v) => setAgreedPickup((s) => ({ ...s, [r.id]: v }))} placeholder="Pickup time, 2026-10-12 16:30" placeholderTextColor={colors.textMuted} style={input} /> : null}
+                {r.kind !== "pickup" ? <TextInput value={agreedDrop[r.id] ?? ""} onChangeText={(v) => setAgreedDrop((s) => ({ ...s, [r.id]: v }))} placeholder="Drop time, 2026-10-13 18:00" placeholderTextColor={colors.textMuted} style={input} /> : null}
+              </View>
+            ) : null}
+            {error && rows !== null ? <Text style={{ ...typography.caption, color: colors.error }}>{error}</Text> : null}
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
+              {confirmed ? <Button label="Mark done" size="md" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "DONE")} /> : null}
+              <Button label="Decline" size="md" variant="secondary" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "DECLINED")} />
+            </View>
           </View>
-        </View>
-      )}
+        );
+      }}
     />
-    </View>
   );
 }

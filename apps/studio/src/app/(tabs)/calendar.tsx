@@ -116,7 +116,7 @@ export default function CalendarScreen() {
         <LoadingState />
       ) : (
         <FlatList
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1 }}
+          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center" }}
           data={jobs}
           keyExtractor={(j) => j.id}
           ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}

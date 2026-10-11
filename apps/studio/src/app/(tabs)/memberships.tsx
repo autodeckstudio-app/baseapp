@@ -207,7 +207,7 @@ export default function MembershipsScreen() {
   return (
     <View style={{ flex: 1 }}>
     <CanvasBackdrop />
-    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, gap: spacing.lg, width: "100%", maxWidth: 640, alignSelf: "center" }}>
+    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, gap: spacing.lg, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
       <View style={{ gap: spacing.xs }}>
         <CanvasTitle eyebrow="Front desk" title="Memberships" />
         <Text style={{ ...typography.caption, color: colors.textMuted }}>Approve pending purchases and sell plans at the front desk.</Text>

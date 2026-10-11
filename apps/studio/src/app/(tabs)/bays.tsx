@@ -125,7 +125,7 @@ export default function BayBoardScreen() {
   return (
     <View style={{ flex: 1 }}>
       <CanvasBackdrop />
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
         <CanvasTitle eyebrow="Studio floor" title="Bays" />
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
           <Text style={{ ...typography.caption, color: colors.textMuted }}>{jobs.filter((j) => ACTIVE_STATUSES.includes(j.status)).length} on the floor</Text>

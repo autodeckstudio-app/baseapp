@@ -81,7 +81,7 @@ export default function AccountScreen() {
   return (
     <View style={{ flex: 1 }}>
     <CanvasBackdrop />
-    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120, width: "100%", maxWidth: 560, alignSelf: "center" }}>
+    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
       <CanvasTitle eyebrow="Signed in" title="Account" />
       <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.xl, marginBottom: spacing.xl }}>
         <Avatar name={email} size={64} />
