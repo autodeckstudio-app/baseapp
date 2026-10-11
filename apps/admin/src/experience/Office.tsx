@@ -63,7 +63,7 @@ export interface Column<T> {
   key: string;
   head: string;
   cell: (row: T) => ReactNode;
-  align?: "end";
+  align?: "end" | "center";
   kind?: "data" | "strong" | "muted";
   width?: string;
 }
@@ -111,12 +111,12 @@ export function ListPane<T extends { id: string }>({
     <div className="ax-list" role="table">
       <div className="ax-list-head" role="row" style={{ gridTemplateColumns: template }}>
         {columns.map((c) => (
-          <span key={c.key} role="columnheader" className={c.align === "end" ? "is-end" : undefined}>{c.head}</span>
+          <span key={c.key} role="columnheader" className={c.align === "end" ? "is-end" : c.align === "center" ? "is-center" : undefined}>{c.head}</span>
         ))}
       </div>
       {rows.map((row) => {
         const cells = columns.map((c) => (
-          <span key={c.key} role="cell" data-col={c.key} className={[c.align === "end" ? "is-end" : "", c.kind ? `is-${c.kind}` : ""].join(" ").trim() || undefined}>
+          <span key={c.key} role="cell" data-col={c.key} className={[c.align === "end" ? "is-end" : c.align === "center" ? "is-center" : "", c.kind ? `is-${c.kind}` : ""].join(" ").trim() || undefined}>
             {c.cell(row)}
           </span>
         ));

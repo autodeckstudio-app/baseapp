@@ -60,8 +60,8 @@ export function CustomersView(p: {
       return <span className="ax-cust-cars">{cars.slice(0, 2).map((r) => <span key={r} className="ax-plate-chip">{r}</span>)}{cars.length > 2 ? <span className="ax-cust-sub">+{cars.length - 2}</span> : null}</span>;
     } },
     ...(haveJobs ? [
-      { key: "visits", head: "Visits", kind: "data" as const, width: "minmax(0, .6fr)", align: "end" as const, cell: (c: Customer) => stats.get(c.id)?.visits ?? 0 },
-      { key: "last", head: "Last visit", kind: "muted" as const, width: "minmax(0, 1fr)", cell: (c: Customer) => { const l = stats.get(c.id)?.last; return l ? formatDate(l) : "Never"; } },
+      { key: "visits", head: "Visits", kind: "data" as const, width: "minmax(0, .6fr)", align: "center" as const, cell: (c: Customer) => stats.get(c.id)?.visits ?? 0 },
+      { key: "last", head: "Last visit", kind: "muted" as const, align: "center" as const, width: "minmax(0, 1fr)", cell: (c: Customer) => { const l = stats.get(c.id)?.last; return l ? formatDate(l) : "Never"; } },
       { key: "due", head: "To collect", kind: "data" as const, width: "minmax(0, 1fr)", align: "end" as const, cell: (c: Customer) => {
         const st = stats.get(c.id);
         if (st && st.due > 0) return <span className="ax-due">{formatPaise(st.due)}</span>;
