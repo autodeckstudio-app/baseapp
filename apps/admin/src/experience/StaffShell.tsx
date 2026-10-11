@@ -43,7 +43,7 @@ type NavLink = { href: string; label: string; office: boolean };
 const SECTIONS: { key: string; label: string; icon: string; links: NavLink[] }[] = [
   { key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
   { key: "customers", label: "Customers", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
-  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/reports", label: "Reports", office: true }] },
+  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/reports", label: "Reports", office: true }] },
   { key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
   { key: "stories", label: "Stories", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }] },
   { key: "cars", label: "Cars for sale", icon: "car", links: [{ href: "/cars", label: "Cars for sale", office: true }] },
@@ -55,7 +55,7 @@ const GROUPS = [
   { key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard" }], office: true },
   { key: "floor", label: "Floor", icon: "wrench", links: [{ href: "/jobs", label: "Jobs" }, { href: "/bookings", label: "Bookings" }, { href: "/attendance", label: "Attendance" }], office: false },
   { key: "people", label: "People", icon: "users", links: [{ href: "/customers", label: "Customers" }, { href: "/vehicles", label: "Vehicles" }, { href: "/memberships", label: "Memberships" }], office: true },
-  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments" }, { href: "/invoices", label: "Invoices" }, { href: "/expenses", label: "Expenses" }, { href: "/daily-close", label: "Daily Close" }, { href: "/reports", label: "Reports" }], office: true },
+  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments" }, { href: "/expenses", label: "Expenses" }, { href: "/daily-close", label: "Daily close" }, { href: "/invoices", label: "Invoices" }, { href: "/reports", label: "Reports" }], office: true },
 ] as const;
 const MORE_LINKS = [
   { href: "/papers", label: "Papers" }, { href: "/inventory", label: "Inventory" }, { href: "/services", label: "Services" },
