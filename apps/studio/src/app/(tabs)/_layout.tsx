@@ -26,11 +26,11 @@ export default function StudioTabsLayout() {
       />
       <Tabs.Screen
         name="bays"
-        options={{ title: "Bay Board", tabBarLabel: "Bays" }}
+        options={{ title: "Bay Board", tabBarLabel: "Bays", headerShown: false }}
       />
       <Tabs.Screen
         name="calendar"
-        options={{ title: "Calendar", tabBarLabel: "Calendar" }}
+        options={{ title: "Calendar", tabBarLabel: "Calendar", headerShown: false }}
       />
       <Tabs.Screen
         name="lookup"
@@ -42,11 +42,11 @@ export default function StudioTabsLayout() {
       />
       <Tabs.Screen
         name="pickups"
-        options={{ title: "Pickup requests", href: null }}
+        options={{ title: "Pickup requests", href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="memberships"
-        options={{ title: "Memberships", href: null }}
+        options={{ title: "Memberships", href: null, headerShown: false }}
       />
       <Tabs.Screen
         name="walkin"
@@ -54,7 +54,7 @@ export default function StudioTabsLayout() {
       />
       <Tabs.Screen
         name="account"
-        options={{ title: "Account", tabBarLabel: "Account" }}
+        options={{ title: "Account", tabBarLabel: "Account", headerShown: false }}
       />
     </Tabs>
   );

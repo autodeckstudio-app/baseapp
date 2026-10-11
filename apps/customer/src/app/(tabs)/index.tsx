@@ -198,8 +198,8 @@ export default function HomeScreen() {
         {car?.photoUrl && !carPhoto ? <View style={{width: "100%", aspectRatio: 16 / 9, backgroundColor: "#232328"}} /> : <HeroImage aspect={16 / 9} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />}
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0) 0%, rgba(8,8,10,0) 45%, rgba(8,8,10,0.62) 100%)" } as object) }} />
         <View style={{ position: "absolute", left: space.gap, right: space.gap, bottom: space.gap, gap: 6, backgroundColor:"rgba(8,8,10,.34)", padding:10, borderRadius:14 }}>
-          <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 10, paddingVertical: 3 }}>
-            <T role="caption" tone="accent">{home.error && m.heroState === "idle" ? "Checking your car" : copy.kicker}</T>
+          <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(20,20,22,0.62)", borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", paddingHorizontal: 12, paddingVertical: 4 }}>
+            <T role="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>{home.error && m.heroState === "idle" ? "Checking your car" : copy.kicker}</T>
           </View>
           <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.breath }}>
             {car ? (
@@ -216,9 +216,9 @@ export default function HomeScreen() {
           </View>
         </View>
         {car ? (
-          <View style={{ position: "absolute", top: space.inset, right: space.inset, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 6 }}>
-            <T role="caption" tone="accent">Details</T>
-            <T role="caption" tone="accent">›</T>
+          <View style={{ position: "absolute", top: space.inset, right: space.inset, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(20,20,22,0.62)", borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", paddingHorizontal: 14, paddingVertical: 7 }}>
+            <T role="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>Details</T>
+            <T role="caption" style={{ color: "#FFFFFF" }}>›</T>
           </View>
         ) : null}
       </View>
