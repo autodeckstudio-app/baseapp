@@ -10,6 +10,7 @@ import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { Service, Vehicle } from "@autodeck/core";
 import { getMyBookings } from "../../../lib/booking-service";
+import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
@@ -28,13 +29,15 @@ export default function BookingsScreen() {
   const auth = useAuth();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState(false);
+  const [walkIns, setWalkIns] = useState<Booking[]>([]);
   const [cars, setCars] = useState<Record<string, Vehicle>>({});
   const [svcs, setSvcs] = useState<Record<string, Service>>({});
   useEffect(() => {
     if (auth.status !== "ready") return;
     const un = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
+    const unJobs = listenToMyJobs(auth.claims.tenantId, auth.user.uid, (js) => setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)), () => {});
     getServiceCatalogue().then((l) => setSvcs(Object.fromEntries(l.map((x) => [x.id, x])))).catch(() => {});
-    return un;
+    return () => { un(); unJobs(); };
   }, [auth]);
 
   const load = useCallback(async () => {
@@ -55,7 +58,7 @@ export default function BookingsScreen() {
   );
 
   if (!bookings && !error) return <Loading label="Loading bookings" />;
-  const all = bookings ?? [];
+  const all = [...(bookings ?? []), ...walkIns];
   const upcoming = all.filter((b) => b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE").sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
   const past = all.filter((b) => !upcoming.includes(b));
 

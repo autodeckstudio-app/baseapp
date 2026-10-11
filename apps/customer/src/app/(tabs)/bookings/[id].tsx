@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { translate, useLang } from "../../../lib/i18n";
-import { listenToJobForBooking } from "../../../lib/job-service";
+import { listenToJobForBooking, listenToJobById, bookingFromJob } from "../../../lib/job-service";
 import { listenToPaymentForJob } from "../../../lib/payment-service";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { getReview, submitReview } from "../../../lib/review-service";
@@ -105,6 +105,7 @@ export default function BookingDetailScreen() {
   const [retryTick,setRetryTick] = useState(0);
   const [feedError,setFeedError] = useState<string|null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [walkIn, setWalkIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -142,13 +143,30 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     if (!id) {setLoading(false);return;}
     setLoading(true);setFeedError(null);
-    return listenToBooking(id, (value) => { setFeedError(null);setBooking(value); setLoading(false); }, (err) => { setFeedError(err.message);setLoading(false); });
+    setWalkIn(false);
+    let stopJob: (() => void) | undefined;
+    // No booking under this id (or it is not readable): a walk-in visit has only a job, and the link carries the job id.
+    const fallbackToJob = (err: Error | null) => {
+      stopJob?.();
+      stopJob = listenToJobById(
+        id,
+        (j) => {
+          if (j) { setWalkIn(true); setFeedError(null); setJob(j); setBooking(bookingFromJob(j)); }
+          else if (err) setFeedError(err.message);
+          else setBooking(null);
+          setLoading(false);
+        },
+        (e) => { setFeedError((err ?? e).message); setLoading(false); },
+      );
+    };
+    const stopBooking = listenToBooking(id, (value) => { if (value) { stopJob?.(); stopJob = undefined; setWalkIn(false); setFeedError(null); setBooking(value); setLoading(false); } else fallbackToJob(null); }, (err) => fallbackToJob(err));
+    return () => { stopBooking(); stopJob?.(); };
   }, [id,retryTick]);
 
   useEffect(() => {
-    if (!id || !booking) return;
+    if (!id || !booking || walkIn) return;
     return listenToJobForBooking(id, booking.tenantId, booking.customerId, setJob, () => undefined);
-  }, [id, booking?.tenantId, booking?.customerId]);
+  }, [id, booking?.tenantId, booking?.customerId, walkIn]);
 
   useEffect(() => {
     if (!job) {
@@ -217,7 +235,7 @@ export default function BookingDetailScreen() {
   const lateToCancel = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING") && !withinFreeWindow;
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
-  const showRescheduleSection = booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
+  const showRescheduleSection = !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
@@ -420,7 +438,7 @@ export default function BookingDetailScreen() {
         )
       ) : null}
 
-      {booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
+      {!walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
 
       {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still bring your car today during studio hours. If it is not checked in by studio close (7 pm Sunday, 9 pm other days), this booking will be auto-cancelled. You can make a new booking when you are ready." /> : null}
       {autoCancelled ? (

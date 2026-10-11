@@ -1,7 +1,7 @@
-import { collection, query, where, orderBy, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
-import type { ServiceJob } from "@autodeck/core";
+import type { Booking, ServiceJob } from "@autodeck/core";
 
 /**
  * Real-time listener for the operational job linked to a booking.
@@ -65,4 +65,55 @@ export function listenToJobsForVehicle(
 export function listenToMyJobs(tenantId:string,customerId:string,onData:(items:ServiceJob[])=>void,onError:(err:Error)=>void):Unsubscribe {
  const q=query(collection(db,COLLECTIONS.jobs()),where("tenantId","==",tenantId),where("customerId","==",customerId));
  return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as ServiceJob).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))),onError);
+}
+
+/**
+ * A walk-in visit has a job but no booking (job.bookingId is null), so the
+ * app's "follow the visit" link carries the JOB id. Reading bookings/<jobId>
+ * hits a missing document, which the /bookings rule reports as
+ * "Missing or insufficient permissions". Read the job directly instead.
+ */
+export function listenToJobById(jobId: string, onData: (job: ServiceJob | null) => void, onError: (err: Error) => void): Unsubscribe {
+  return onSnapshot(doc(db, COLLECTIONS.jobs(), jobId), (snap) => onData(snap.exists() ? ({ ...(snap.data() as ServiceJob), id: snap.id }) : null), onError);
+}
+
+const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
+
+/** Shapes a booking-less (walk-in) job like a booking so the visit screens can show it. */
+export function bookingFromJob(job: ServiceJob): Booking {
+  const status: Booking["status"] = job.status === "DELIVERED" ? "COMPLETED" : job.status === "CANCELLED" ? "CANCELLED" : "ACTIVE";
+  return {
+    id: job.id,
+    tenantId: job.tenantId,
+    studioId: job.studioId,
+    customerId: job.customerId,
+    vehicleId: job.vehicleId,
+    ...(job.vehicleSnapshot ? { vehicleSnapshot: job.vehicleSnapshot as unknown as NonNullable<Booking["vehicleSnapshot"]> } : {}),
+    serviceId: job.serviceId,
+    vehicleCategory: "" as unknown as Booking["vehicleCategory"],
+    scheduledAt: job.scheduledAt,
+    scheduledDate: job.scheduledDate,
+    scheduledTime: hhmm(job.scheduledAt),
+    estimatedEndAt: job.estimatedEndAt,
+    estimatedEndDate: job.estimatedEndDate,
+    estimatedEndTime: hhmm(job.estimatedEndAt),
+    durationMinutes: job.estimatedDurationMinutes,
+    bayId: job.bayId,
+    assignedEmployeeId: job.assignedEmployeeId,
+    status,
+    priceBreakdown: job.priceBreakdown,
+    totalAmount: job.totalAmount,
+    membershipId: null,
+    membershipDiscountApplied: false,
+    membershipWashUsed: false,
+    paymentStatus: job.paymentStatus,
+    notes: job.studioNotes,
+    idempotencyKey: "",
+    rescheduleCount: 0,
+    confirmedAt: job.createdAt,
+    cancelledAt: null,
+    cancellationReason: null,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+  };
 }
