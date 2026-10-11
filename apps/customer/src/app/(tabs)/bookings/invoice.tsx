@@ -4,7 +4,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Customer, Invoice, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { listenToInvoice, listenToInvoiceForJob } from "../../../lib/invoice-service";
+import { useAuth } from "../../../hooks/useAuth";
+import { listenToInvoice, listenToInvoiceByNumber, listenToInvoiceForJob } from "../../../lib/invoice-service";
 import { buildInvoiceHtml, gstSplit, printInvoiceHtml, serviceLabel } from "../../../lib/invoice-display";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { db } from "../../../lib/firebase";
@@ -28,13 +29,15 @@ function formatDate(iso: string): string {
 export default function InvoiceScreen() {
   // Canonical entry: ?invoiceId=<exact invoice>. jobId/tenantId/customerId is
   // the legacy form, still honoured for old links.
-  const { invoiceId, jobId, tenantId, customerId } = useLocalSearchParams<{
+  const { invoiceId, number, jobId, tenantId, customerId } = useLocalSearchParams<{
     invoiceId?: string;
+    number?: string;
     jobId: string;
     tenantId: string;
     customerId: string;
   }>();
   const router = useRouter();
+  const auth = useAuth();
   const compact=useWindowDimensions().width<600;
   const [retryTick,setRetryTick] = useState(0);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -48,10 +51,23 @@ export default function InvoiceScreen() {
     const onData = (inv: Invoice | null) => { setError(null); setInvoice(inv); setLoading(false); };
     const onErr = (err: Error) => { setError(err.message); setLoading(false); };
     setLoading(true); setError(null);
+    if (number) {
+      if (auth.status === "loading") return undefined;
+      if (auth.status !== "ready") { setLoading(false); return undefined; }
+      return listenToInvoiceByNumber(String(number).toUpperCase(), auth.claims.tenantId, auth.user.uid, onData, onErr);
+    }
     if (invoiceId) return listenToInvoice(invoiceId, onData, onErr);
     if (!jobId || !tenantId || !customerId) { setLoading(false); return; }
     return listenToInvoiceForJob(jobId, tenantId, customerId, onData, onErr);
-  }, [invoiceId, jobId, tenantId, customerId, retryTick]);
+  }, [invoiceId, number, auth.status, jobId, tenantId, customerId, retryTick]);
+
+  // Show the readable address (/invoice/INV-2026-00001) once the invoice is known.
+  // Old ?invoiceId= links keep working and are tidied here on web.
+  useEffect(() => {
+    if (Platform.OS !== "web" || !invoice?.invoiceNumber || number) return;
+    const w = globalThis as unknown as { history?: { replaceState: (a: unknown, b: string, c: string) => void } };
+    try { w.history?.replaceState(null, "", `/invoice/${encodeURIComponent(invoice.invoiceNumber)}`); } catch { /* address bar only */ }
+  }, [invoice?.invoiceNumber, number]);
 
   // Customer-facing service names come from the catalogue (id -> name).
   useEffect(() => {

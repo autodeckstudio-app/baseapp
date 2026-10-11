@@ -50,14 +50,15 @@ describe("buildInvoiceHtml", () => {
 
 describe("Horizon document", () => {
   const invoice = { invoiceNumber: "INV-2026-00002", issuedAt: "2026-10-10T10:00:00Z", status: "void", lineItems: [li("Service svc-wash")], subtotal: 1200000, discount: 0, taxRatePercent: 18, taxDescription: "GST 18%", tax: 216000, total: 1416000, voidedReason: "Cancelled <script>", customerSnapshot: { name: "Stored customer" }, vehicleSnapshot: { make: "Stored make", model: "Stored model", registrationNumber: "GJ01AA0001" } } as unknown as Invoice;
-  it("uses immutable snapshots, original money and real app QR", () => {
+  it("uses immutable snapshots, original money and no URL", () => {
     const html = buildInvoiceHtml({ invoice, catalogue: cat, studio: { name: "AutoDeck", address: "Studio" }, customer: { name: "Changed name" } });
     expect(html).toContain("Stored customer");
     expect(html).not.toContain("Changed name");
     expect(html).toContain("Stored make");
     expect(html).toContain("₹14,160.00");
-    expect(html).toContain('href="https://app.autodeck.in"');
-    expect(html).toContain("QR code for app.autodeck.in");
+    expect(html).not.toContain("app.autodeck.in");
+    expect(html).not.toContain("http://");
+    expect(html).not.toContain("QR code");
     expect(html).not.toContain("placeholder");
     expect(html).toContain("Cancelled &lt;script&gt;");
   });

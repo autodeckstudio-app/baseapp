@@ -20,6 +20,31 @@ export function listenToInvoice(
 }
 
 /**
+ * Invoice by its readable number (INV-2026-00001), the clean /invoice/<number>
+ * link. Numbers are unique per tenant, so tenantId and customerId are part of
+ * the query (this also satisfies the Firestore rule).
+ */
+export function listenToInvoiceByNumber(
+  invoiceNumber: string,
+  tenantId: string,
+  customerId: string,
+  onData: (invoice: Invoice | null) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, COLLECTIONS.invoices()),
+    where("invoiceNumber", "==", invoiceNumber),
+    where("tenantId", "==", tenantId),
+    where("customerId", "==", customerId),
+  );
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.empty ? null : (snap.docs.at(0)?.data() as Invoice | undefined) ?? null),
+    onError,
+  );
+}
+
+/**
  * Real-time listener for the invoice linked to a job (there is at most one) -
  * works identically for a booking-sourced job or a walk-in job.
  *
