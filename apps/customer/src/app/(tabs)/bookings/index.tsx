@@ -1,6 +1,6 @@
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
@@ -11,6 +11,7 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { Service, Vehicle } from "@autodeck/core";
 import { getMyBookings } from "../../../lib/booking-service";
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
+import { VisitCard } from "../../../ui/VisitCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
@@ -63,30 +64,21 @@ export default function BookingsScreen() {
   const past = all.filter((b) => !upcoming.includes(b));
 
   const list = (items: Booking[]) => (
-    <View style={{ gap: space.breath }}>
+    <View style={{ gap: 12 }}>
       {items.map((b) => {
         const car = cars[b.vehicleId] ?? (b.vehicleSnapshot ? { ...b.vehicleSnapshot, photoUrl: null, category: b.vehicleCategory } : undefined);
+        const missed = isBookingMissed(b);
         return (
-          <Pressable key={b.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "rgba(255,255,255,.045)", ...({ backgroundImage: "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03))", backdropFilter: "blur(26px) saturate(170%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px -18px rgba(0,0,0,.65)" } as object), borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.85 : 1 })}>
-            <View><CarThumb car={car} height={150} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.25) 0%, rgba(5,5,6,0) 40%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
-            <View style={{ gap: space.hair, padding: space.inset }}>
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.breath }}>
-                <View style={{ flex: 1, minWidth: 0 }}><T role="bodyStrong" numberOfLines={2}>{svcs[b.serviceId]?.name ?? "Service"}</T></View>
-                <Chip label={isBookingMissed(b) ? "Missed" : STATUS[b.status].label} tone={isBookingMissed(b) ? "danger" : STATUS[b.status].tone} />
-              </View>
-              <T role="caption" tone="secondary" numberOfLines={1}>{car ? `${car.make} ${car.model}` : "Car"}</T>
-              <T role="data" tone="tertiary" numberOfLines={2}>{`${formatDateShort(b.scheduledDate)} · ${b.scheduledTime} · ${rupees(b.totalAmount)}`}</T>
-            </View>
-          </Pressable>
+          <VisitCard key={b.id} onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} photo={<CarThumb car={car} height={92} width={92} radius={0} />} title={svcs[b.serviceId]?.name ?? "Service"} car={car ? `${car.make} ${car.model}` : "Car"} when={`${formatDateShort(b.scheduledDate)} \u00b7 ${b.scheduledTime}`} price={rupees(b.totalAmount)} chip={<Chip label={missed ? "Missed" : STATUS[b.status].label} tone={missed ? "danger" : STATUS[b.status].tone} />} />
         );
       })}
     </View>
   );
 
   return (
-    <Screen canvas header={<CanvasTitle eyebrow="Bookings" title="Visits" />}>
+    <Screen header={<Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
-      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Kicker>Coming up</Kicker>{list(upcoming)}</View> : null}
+      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
@@ -97,7 +89,7 @@ export default function BookingsScreen() {
           </View>
         </Pane>
       ) : null}
-      {past.length > 0 ? <View style={{ gap: space.line }}><Kicker>History</Kicker>{list(past)}</View> : null}
+      {past.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>History</Text>{list(past)}</View> : null}
     </Screen>
   );
 }

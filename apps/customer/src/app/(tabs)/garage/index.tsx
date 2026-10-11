@@ -1,7 +1,7 @@
 // Garage: one lead car with its state, the rest compact (spec Â§6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -76,7 +76,7 @@ export default function GarageScreen() {
   const lead = list[0];
 
   return (
-    <Screen canvas header={<CanvasTitle eyebrow="Garage" title="Your cars" />}>
+    <Screen header={<Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Your cars</Text>}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice
@@ -93,7 +93,7 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 28, overflow: "hidden", backgroundColor: "rgba(255,255,255,.045)", ...({ backgroundImage: "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03))", backdropFilter: "blur(26px) saturate(170%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px -18px rgba(0,0,0,.65)" } as object), borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.85 : 1 })}>
+            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(255,255,255,.045)", ...({ backgroundImage: "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03))", backdropFilter: "blur(26px) saturate(170%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px -18px rgba(0,0,0,.65)" } as object), borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.85 : 1 })}>
               <CarThumb car={v} height={i === 0 ? 230 : 170} radius={0} />
               <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: i === 0 ? 230 : 170, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.45) 0%, rgba(5,5,6,0) 35%, rgba(5,5,6,0.88) 100%)" } as object) }} />
               <Pressable
