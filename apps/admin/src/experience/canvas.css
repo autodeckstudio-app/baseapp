@@ -203,7 +203,7 @@ html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; bor
   .ax-dash .ax-detail-side > .ax-panel { margin-bottom: -36px; padding-bottom: 66px; border-radius: 36px 36px 0 0; }
 }
 @media (max-width: 860px) {
-  .ax-dash .ax-hero-side--row { display: none; }
+  .ax-dash .ax-hero-side--row, .ax-dash .ax-hero-side--head { display: none; }
   .ax-shell-frame[data-hero="on"] .ax-page-head, .ax-dash .ax-page-head { min-height: 0 !important; }
 }
 @media (min-width: 861px) {
@@ -212,4 +212,14 @@ html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; bor
 @media (min-width: 861px) {
   .ax-dash .ax-detail-main, .ax-dash .ax-detail-side { align-self: stretch; }
   .ax-dash .ax-tiles > .ax-tile, .ax-dash .ax-hero-side--row { flex: 1 1 0; width: auto; min-width: 0; }
+}
+
+/* iPad landscape / small desktop: keep every nav pill visible */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .ax-notch { max-width: calc(100% - 440px); }
+  .ax-notch .ax-chip-link { height: 36px; min-height: 36px !important; padding: 0 11px !important; font-size: 13px; }
+}
+@media (min-width: 861px) and (max-width: 1000px) {
+  .ax-notch { max-width: calc(100% - 400px); }
+  .ax-notch .ax-chip-link { padding: 0 9px !important; font-size: 12.5px; }
 }

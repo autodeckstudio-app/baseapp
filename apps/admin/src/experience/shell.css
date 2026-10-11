@@ -469,7 +469,7 @@
   box-shadow: 0 8px 18px rgba(217, 96, 13, 0.32);
 }
 .ax-main .detail-card, .ax-main .stat-tile, .ax-main .ax-panel { box-shadow: 0 6px 20px rgba(122, 111, 208, 0.06); }
-@media (max-width: 900px) {
+@media (max-width: 860px) {
   .ax-shell-frame { padding: 8px; gap: 8px; }
   .ax-side { height: auto; top: 0; border-radius: 20px; position: static; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 12px 14px; }
   .ax-side .ax-wordmark { order: 1; }
