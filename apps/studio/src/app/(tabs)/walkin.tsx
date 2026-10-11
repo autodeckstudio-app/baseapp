@@ -258,8 +258,11 @@ export default function WalkinScreen() {
     tinting: "Tint",
     inspection: "Inspection",
     other: "Other",
+    garage: "Garage",
+    modifications: "Mods",
+    pickup: "Pickup",
   };
-  const CATEGORY_ORDER = ["washing", "coating", "ceramic", "ppf", "tinting", "inspection", "other"];
+  const CATEGORY_ORDER = ["washing", "ceramic", "coating", "ppf", "garage", "modifications", "pickup", "tinting", "inspection", "other"];
   const categoriesPresent = useMemo(() => {
     const set = new Set(services.map((s) => String(s.category)));
     return CATEGORY_ORDER.filter((c) => set.has(c)).concat([...set].filter((c) => !CATEGORY_ORDER.includes(c)));
@@ -274,7 +277,7 @@ export default function WalkinScreen() {
     setStep("customer"); setPhone(""); setSearched(false); setCustomer(null); setVehicles([]);
     setSelectedVehicleId(null); setSelectedServiceId(null); setSelectedBayId(null); setNotes(""); setJustRegistered(false);
   }
-  const priceText = (s: Service) => (typeof s.basePrice === "number" ? `from ₹${(s.basePrice / 100).toLocaleString("en-IN")}` : "");
+  const priceText = (s: Service) => (s.priceOnRequest === true ? "Consult" : typeof s.basePrice === "number" ? `from ₹${(s.basePrice / 100).toLocaleString("en-IN")}` : "");
 
   const titles: Record<Step, string> = {
     customer: "Who's the customer?",

@@ -16,8 +16,12 @@ const serviceCategoryEnum = z.enum([
   "coating",
   "inspection",
   "tinting",
+  "garage",
+  "modifications",
+  "pickup",
   "other",
 ]);
+const coverageLevelEnum = z.enum(["high_impact", "full_front", "full_body"]);
 
 const bayTypeEnum = z.enum(["wash", "protection", "general"]);
 const warrantyDurationUnitEnum = z.enum(["days", "months", "years", "lifetime"]);
@@ -54,6 +58,8 @@ export const createServiceSchema = z.object({
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
+  coverageLevel: coverageLevelEnum.nullable().optional(),
+  priceFrom: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
   imageUrl: z.string().url().max(2000).nullable().optional(),
 }).strict();
@@ -75,6 +81,8 @@ export const updateServiceSchema = z.object({
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
+  coverageLevel: coverageLevelEnum.nullable().optional(),
+  priceFrom: z.boolean().optional(),
   displayOrder: z.number().int().min(0).optional(),
   imageUrl: z.string().url().max(2000).nullable().optional(),
 }).strict();

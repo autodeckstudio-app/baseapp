@@ -5,3 +5,4 @@ export * from "./customer-home.js";
 export * from "./pricing-category.js";
 export * from "./invoice-display.js";
 export * from "./customer-search.js";
+export * from "./menu.js";

@@ -30,18 +30,15 @@ export type HomeViewProps = {
 };
 
 import { glassSurface, glassInner, glassOrange } from "../lib/glass";
+import { MENU_CHIPS, MENU_GROUPS } from "@autodeck/core";
 const ACCENT = "#EC8638";
 // Popular-services groups. Ceramic lives under Coatings; tint is the one
 // modification category today; inspection and other care sit under Garage.
 const GROUPS: Array<{ key: string | null; label: string; cats: string[] }> = [
   { key: null, label: "All", cats: [] },
-  { key: "washing", label: "Washing", cats: ["washing"] },
-  { key: "coatings", label: "Coatings", cats: ["ceramic", "coating"] },
-  { key: "ppf", label: "PPF", cats: ["ppf"] },
-  { key: "garage", label: "Garage", cats: ["inspection", "other"] },
-  { key: "mods", label: "Modifications", cats: ["tinting"] },
+  ...MENU_CHIPS.map((k) => { const g = MENU_GROUPS.find((x) => x.key === k)!; return { key: k as string, label: g.key === "mods" ? "Modifications" : g.label, cats: g.categories as string[] }; }),
 ];
-const TITLES: Record<string, string> = { washing: "Wash and care", ceramic: "Ceramic coating", coating: "Coating", ppf: "Paint protection film", tinting: "Window tint", inspection: "Inspection", other: "Care" };
+const TITLES: Record<string, string> = { washing: "Wash and care", ceramic: "Ceramic coating", coating: "Coating", ppf: "Paint protection film", tinting: "Window tint", inspection: "Inspection", other: "Care", garage: "Garage", modifications: "Modifications", pickup: "Pickup and drop" };
 
 function Heading({ title, action, onAction }: { title: string; action?: string | undefined; onAction?: (() => void) | undefined }) {
   return (

@@ -1,0 +1,510 @@
+{
+  "note": "Final price confirmed after paint inspection.",
+  "coverage": [
+    {
+      "key": "high_impact",
+      "label": "High-impact kit",
+      "blurb": "Bonnet, bumper, mirrors and the panels that take stone chips."
+    },
+    {
+      "key": "full_front",
+      "label": "Full front",
+      "blurb": "Bonnet, bumper, fenders, mirrors and headlights."
+    },
+    {
+      "key": "full_body",
+      "label": "Full body",
+      "blurb": "Every painted panel."
+    }
+  ],
+  "groups": [
+    {
+      "key": "wash",
+      "label": "Wash & Care",
+      "blurb": "Hand washes and interior cleaning, priced by car size.",
+      "byBrand": false,
+      "items": [
+        {
+          "name": "Foam wash",
+          "brand": null,
+          "rupees": 900,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 1,
+          "inspection": false
+        },
+        {
+          "name": "Exterior detail wash",
+          "brand": null,
+          "rupees": 1500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 1.5,
+          "inspection": false
+        },
+        {
+          "name": "Interior deep clean",
+          "brand": null,
+          "rupees": 4500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 3,
+          "inspection": false
+        },
+        {
+          "name": "Full detail wash",
+          "brand": null,
+          "rupees": 6500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 5,
+          "inspection": false
+        }
+      ]
+    },
+    {
+      "key": "coatings",
+      "label": "Coatings",
+      "blurb": "Ceramic and graphene coatings by brand, with add-ons for glass, wheels and interior.",
+      "byBrand": true,
+      "items": [
+        {
+          "name": "AutoDeck Care Ceramic 1-year",
+          "brand": "AutoDeck Care",
+          "rupees": 10000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "1-year coating warranty",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "AutoDeck Care Ceramic 2-year",
+          "brand": "AutoDeck Care",
+          "rupees": 14000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "2-year coating warranty",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Fireball 1-year",
+          "brand": "Fireball",
+          "rupees": 12000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "1-year coating warranty",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Fireball 2-year",
+          "brand": "Fireball",
+          "rupees": 16000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "2-year coating warranty",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Fireball 3-year",
+          "brand": "Fireball",
+          "rupees": 20000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "3-year coating warranty",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Kovalent Prolong",
+          "brand": "Kovalent",
+          "rupees": 22000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Kovalent Graphene 7-year",
+          "brand": "Kovalent",
+          "rupees": 32000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "7-year coating warranty",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Kovalent Borophene",
+          "brand": "Kovalent",
+          "rupees": 50000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "3M Ceramic Coating",
+          "brand": "3M",
+          "rupees": 45000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 8,
+          "inspection": true
+        },
+        {
+          "name": "Glass coating",
+          "brand": "Add-ons",
+          "rupees": 4000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 2,
+          "inspection": true
+        },
+        {
+          "name": "Wheel coating",
+          "brand": "Add-ons",
+          "rupees": 5000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 2,
+          "inspection": true
+        },
+        {
+          "name": "Leather coating",
+          "brand": "Add-ons",
+          "rupees": 6000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 2,
+          "inspection": true
+        },
+        {
+          "name": "Fabric coating",
+          "brand": "Add-ons",
+          "rupees": 5000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 2,
+          "inspection": true
+        },
+        {
+          "name": "Trim restore and coat",
+          "brand": "Add-ons",
+          "rupees": 3500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 2,
+          "inspection": true
+        }
+      ]
+    },
+    {
+      "key": "ppf",
+      "label": "PPF",
+      "blurb": "Paint protection film by brand and coverage.",
+      "byBrand": true,
+      "items": [
+        {
+          "name": "Garware High-impact kit",
+          "brand": "Garware",
+          "rupees": 15000,
+          "consult": false,
+          "from": false,
+          "coverage": "high_impact",
+          "warranty": "8-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "Garware Full front",
+          "brand": "Garware",
+          "rupees": 40000,
+          "consult": false,
+          "from": false,
+          "coverage": "full_front",
+          "warranty": "8-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "Garware Full body",
+          "brand": "Garware",
+          "rupees": 75000,
+          "consult": false,
+          "from": true,
+          "coverage": "full_body",
+          "warranty": "8-year film warranty",
+          "hours": 48,
+          "inspection": true
+        },
+        {
+          "name": "XPEL High-impact kit",
+          "brand": "XPEL",
+          "rupees": 25000,
+          "consult": false,
+          "from": false,
+          "coverage": "high_impact",
+          "warranty": "10-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "XPEL Full front",
+          "brand": "XPEL",
+          "rupees": 80000,
+          "consult": false,
+          "from": false,
+          "coverage": "full_front",
+          "warranty": "10-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "XPEL Full body",
+          "brand": "XPEL",
+          "rupees": 130000,
+          "consult": false,
+          "from": true,
+          "coverage": "full_body",
+          "warranty": "10-year film warranty",
+          "hours": 48,
+          "inspection": true
+        },
+        {
+          "name": "LLumar High-impact kit",
+          "brand": "LLumar",
+          "rupees": 22000,
+          "consult": false,
+          "from": false,
+          "coverage": "high_impact",
+          "warranty": "10-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "LLumar Full front",
+          "brand": "LLumar",
+          "rupees": 70000,
+          "consult": false,
+          "from": false,
+          "coverage": "full_front",
+          "warranty": "10-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "LLumar Full body",
+          "brand": "LLumar",
+          "rupees": 110000,
+          "consult": false,
+          "from": true,
+          "coverage": "full_body",
+          "warranty": "10-year film warranty",
+          "hours": 48,
+          "inspection": true
+        },
+        {
+          "name": "3M High-impact kit",
+          "brand": "3M",
+          "rupees": 22000,
+          "consult": false,
+          "from": false,
+          "coverage": "high_impact",
+          "warranty": "10-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "3M Full front",
+          "brand": "3M",
+          "rupees": 65000,
+          "consult": false,
+          "from": false,
+          "coverage": "full_front",
+          "warranty": "10-year film warranty",
+          "hours": 24,
+          "inspection": true
+        },
+        {
+          "name": "3M Full body",
+          "brand": "3M",
+          "rupees": 100000,
+          "consult": false,
+          "from": true,
+          "coverage": "full_body",
+          "warranty": "10-year film warranty",
+          "hours": 48,
+          "inspection": true
+        },
+        {
+          "name": "Colour and black PPF",
+          "brand": "Colour films",
+          "rupees": 0,
+          "consult": true,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 48,
+          "inspection": true
+        }
+      ]
+    },
+    {
+      "key": "garage",
+      "label": "Garage",
+      "blurb": "Health checks with published prices. Repairs start with an inspection.",
+      "byBrand": false,
+      "items": [
+        {
+          "name": "Multi-point inspection",
+          "brand": null,
+          "rupees": 1000,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 1,
+          "inspection": false
+        },
+        {
+          "name": "Wheel alignment and balancing",
+          "brand": null,
+          "rupees": 1500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 1.5,
+          "inspection": false
+        },
+        {
+          "name": "AC check",
+          "brand": null,
+          "rupees": 800,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 0.8,
+          "inspection": false
+        },
+        {
+          "name": "Battery check",
+          "brand": null,
+          "rupees": 500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 0.5,
+          "inspection": false
+        },
+        {
+          "name": "Repairs and other work (book an inspection)",
+          "brand": null,
+          "rupees": 0,
+          "consult": true,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 1,
+          "inspection": false
+        }
+      ]
+    },
+    {
+      "key": "mods",
+      "label": "Modifications & wraps",
+      "blurb": "Tint, wraps and styling. We quote after seeing the car.",
+      "byBrand": false,
+      "items": [
+        {
+          "name": "Window tint",
+          "brand": null,
+          "rupees": 0,
+          "consult": true,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 3,
+          "inspection": false
+        },
+        {
+          "name": "Vinyl wraps and colour change",
+          "brand": null,
+          "rupees": 0,
+          "consult": true,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 48,
+          "inspection": false
+        },
+        {
+          "name": "Accessories and styling",
+          "brand": null,
+          "rupees": 0,
+          "consult": true,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 2,
+          "inspection": false
+        }
+      ]
+    },
+    {
+      "key": "pickup",
+      "label": "Pickup & drop",
+      "blurb": "Flat-rate pickup and drop for your car.",
+      "byBrand": false,
+      "items": [
+        {
+          "name": "Pickup and drop",
+          "brand": null,
+          "rupees": 500,
+          "consult": false,
+          "from": false,
+          "coverage": null,
+          "warranty": "",
+          "hours": 1,
+          "inspection": false
+        }
+      ]
+    }
+  ]
+}

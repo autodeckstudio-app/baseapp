@@ -25,7 +25,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const segs = segments as string[];
     const group = segs[0];
     const inAuth = group === "(auth)";
-    if (__DEV__ && (group === "preview" || group === "preview-services" || group === "preview-car" || group === "preview-profile" || group === "preview-bookings" || group === "preview-garage" || group === "preview-detail")) return;
+    if (__DEV__ && (group === "preview" || group === "preview-services" || group === "preview-car" || group === "preview-profile" || group === "preview-bookings" || group === "preview-garage" || group === "preview-detail" || group === "preview-catalogue")) return;
     
 
     if (auth.status === "unauthenticated") {

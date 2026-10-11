@@ -78,9 +78,6 @@ export default function YouScreen() {
         </View>
       ) : null}
       {/* Language picker hidden until the whole app is translated (LANGS, setLang kept in lib/i18n). */}
-      <Pane pad="gap">
-        <Row title="Signed in with Google" detail="AutoDeck never stores a password for you." last />
-      </Pane>
       {confirm ? (
         <View style={{ gap: space.breath }}>
           <T tone="secondary">Sign out of AutoDeck on this device?</T>

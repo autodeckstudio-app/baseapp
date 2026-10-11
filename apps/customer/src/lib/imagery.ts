@@ -33,6 +33,9 @@ export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
   tinting: serviceTinting,
   inspection: serviceInspection,
   other: serviceOther,
+  garage: serviceInspection,
+  modifications: serviceTinting,
+  pickup: serviceOther,
 };
 
 /** Fallback portrait per vehicle category until customers add their own car photos. */

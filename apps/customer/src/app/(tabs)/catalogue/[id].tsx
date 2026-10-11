@@ -4,7 +4,7 @@ import { Pressable, View } from "react-native";
 import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import { resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
+import { needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
@@ -208,7 +208,7 @@ export default function ServiceDetailScreen() {
           </View>
 
           {service.priceOnRequest === true ? (
-            <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">The studio confirms the price for your car. You approve it before any work starts.</T>} last /></Pane>
+            <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">{service.category === "garage" || service.category === "modifications" ? "Book an inspection and the studio quotes after seeing the car. You approve it before any work starts." : "The studio confirms the price for your car. You approve it before any work starts."}</T>} last /></Pane>
           ) : !selectedCategory ? (<T role="caption" tone="secondary">Select a size to preview the price. Your saved car size is used at booking.</T>) : priceLoading ? (
             <T role="caption" tone="tertiary">Working out the price...</T>
           ) : priceError ? (
@@ -265,10 +265,10 @@ export default function ServiceDetailScreen() {
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Selected size"} · incl. GST</T>
-            <T role="heading">{service.priceOnRequest ? "Quote on request" : priceLoading ? "Checking price" : priceBreakdown ? rupees(priceBreakdown.total) : "Price unavailable"}</T>
+            <T role="heading">{service.priceOnRequest ? "Consult" : priceLoading ? "Checking price" : priceBreakdown ? `${service.priceFrom === true ? "From " : ""}${rupees(priceBreakdown.total)}` : "Price unavailable"}</T>
           </View>
           <View style={{ flex: 1.4 }}>
-            <Button label={service.priceOnRequest === true ? "Request a quote" : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
+            <Button label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
           </View>
         </View>
       </View>

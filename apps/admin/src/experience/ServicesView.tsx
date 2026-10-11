@@ -11,11 +11,11 @@ import { formatPaise } from "../lib/format";
 import { uploadServiceImage } from "../lib/service-image";
 import { EMPTY_SERVICE, draftFromService, toServicePayload, type ServiceDraft, type ServicePayload } from "./services-draft";
 
-export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash and care", ceramic: "Ceramic", ppf: "Paint film", coating: "Coatings", tinting: "Window film", inspection: "Inspection", other: "More" };
-const CATEGORY_BLURB: Record<ServiceCategory, string> = { washing: "Quick, safe cleans", ceramic: "Deep gloss that lasts", ppf: "Stone-chip armour", coating: "Shine and easy upkeep", tinting: "Heat and privacy", inspection: "Know before you fix", other: "Extras" };
-const CATEGORY_ICON: Record<ServiceCategory, IconName> = { washing: "wash", ceramic: "ceramic", ppf: "ppf", coating: "coating", tinting: "tint", inspection: "inspect", other: "tools" };
+export const CATEGORY_NAME: Record<ServiceCategory, string> = { washing: "Wash and care", ceramic: "Ceramic", ppf: "Paint film", coating: "Coatings", tinting: "Window film", inspection: "Inspection", other: "More", garage: "Garage", modifications: "Modifications and wraps", pickup: "Pickup and drop" };
+const CATEGORY_BLURB: Record<ServiceCategory, string> = { washing: "Quick, safe cleans", ceramic: "Deep gloss that lasts", ppf: "Stone-chip armour", coating: "Shine and easy upkeep", tinting: "Heat and privacy", inspection: "Know before you fix", other: "Extras", garage: "Health checks and repairs", modifications: "Consult only", pickup: "Flat-rate pickup and drop" };
+const CATEGORY_ICON: Record<ServiceCategory, IconName> = { washing: "wash", ceramic: "ceramic", ppf: "ppf", coating: "coating", tinting: "tint", inspection: "inspect", other: "tools", garage: "inspect", modifications: "tools", pickup: "tools" };
 // Same order the customer app shows.
-const CATEGORIES: ServiceCategory[] = ["washing", "ceramic", "ppf", "coating", "tinting", "inspection", "other"];
+const CATEGORIES: ServiceCategory[] = ["washing", "ceramic", "coating", "ppf", "garage", "modifications", "pickup", "tinting", "inspection", "other"];
 const SIZE_NAME: Record<VehicleCategory, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", luxury: "Luxury", commercial: "Commercial", van: "Van" };
 const SIZES = Object.keys(SIZE_NAME) as VehicleCategory[];
 const BAY_NAME: Record<BayType, string> = { wash: "Wash bay", protection: "Protection bay", general: "Any bay" };
@@ -139,6 +139,18 @@ export function ServicesView(p: {
                 <select value={draft.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })}>{CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_NAME[c]}</option>)}</select>
               </label>
               <label className="ax-form-row"><span>Brand (optional)</span><input value={draft.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Gyeon" /></label>
+            </div>
+            <div className="ax-form-pair">
+              <label className="ax-form-row"><span>PPF coverage (PPF only)</span>
+                <select value={draft.coverageLevel} onChange={(e) => set({ coverageLevel: e.target.value as ServiceDraft["coverageLevel"] })}>
+                  <option value="">Not applicable</option><option value="high_impact">High-impact kit</option><option value="full_front">Full front</option><option value="full_body">Full body</option>
+                </select>
+              </label>
+              <label className="ax-form-row"><span>How the price shows</span>
+                <select value={draft.priceMode} onChange={(e) => set({ priceMode: e.target.value as ServiceDraft["priceMode"] })}>
+                  <option value="fixed">Exact price</option><option value="from">From price</option><option value="consult">Consult (no price shown)</option>
+                </select>
+              </label>
             </div>
             <div className="ax-form-row">
               <span>Service photo (optional)</span>

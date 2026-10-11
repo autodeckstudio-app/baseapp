@@ -49,6 +49,8 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
     if (data.requiredBayType !== undefined) updates["requiredBayType"] = data.requiredBayType;
     if (data.membershipWashEligible !== undefined) updates["membershipWashEligible"] = data.membershipWashEligible;
     if (data.priceOnRequest !== undefined) updates["priceOnRequest"] = data.priceOnRequest;
+    if (data.coverageLevel !== undefined) updates["coverageLevel"] = data.coverageLevel;
+    if (data.priceFrom !== undefined) updates["priceFrom"] = data.priceFrom;
     if (data.displayOrder !== undefined) updates["displayOrder"] = data.displayOrder;
     if (data.imageUrl !== undefined) updates["imageUrl"] = data.imageUrl;
 

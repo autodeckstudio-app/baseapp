@@ -1,26 +1,21 @@
 ---
 import Base from '../layouts/Base.astro';
 const items = [
-  ['01','Paint Protection Film','Self-healing film, cut to your car and nothing else. From ₹22,000 for a front-end kit.','Detailing Lab'],
+  ['01','Paint Protection Film','Self-healing film, cut to your car and nothing else. From ₹15,000 for a high-impact kit.','Detailing Lab'],
   ['02','Ceramic Coating','Five years of gloss, on record, with a 6-monthly check to keep it honest.','Detailing Lab'],
   ['03','Detailing','Paint corrected under studio light, then measured. Seen, never just promised.','Detailing Lab'],
   ['04','Washing','Foam, two buckets, clean mitts. The wash it should always have been.','Wash Studio'],
   ['05','Garage','Repairs and service, with updates on your car from anywhere.','Performance Garage'],
   ['06','Modification','Upgrades chosen with care, fitted right the first time.','Accessory Lounge'],
 ];
-import catalogue from '../data/catalogue.json';
-const CRAFTS = [
-  { key: 'ppf', title: 'Paint Protection Film', blurb: 'Self-healing film, cut to your car and nothing else.' },
-  { key: 'ceramic', title: 'Ceramic Coating', blurb: 'Years of gloss, on record, with a check to keep it honest.' },
-  { key: 'coating', title: 'Coatings', blurb: 'Glass, Teflon and maintenance coats for the daily car.' },
-  { key: 'washing', title: 'Washing and care', blurb: 'The wash it should always have been.' },
-];
-const inr = (n: number) => n > 0 ? '₹' + n.toLocaleString('en-IN') : 'On request';
+import menu from '../data/menu.json';
+const inr = (n: number) => '₹' + n.toLocaleString('en-IN');
 const time = (h: number) => h >= 24 ? `${Math.round(h / 8)} working days` : h < 1 ? `${Math.round(h * 60)} min` : `${h % 1 ? h.toFixed(1) : h} hr`;
-const groups = CRAFTS.map((c) => {
-  const rows = catalogue.filter((x) => x.craft === c.key);
-  const brands = [...new Set(rows.map((r) => r.brand || 'AutoDeck'))].sort();
-  return { ...c, count: rows.length, brands: brands.map((b) => ({ name: b, items: rows.filter((r) => (r.brand || 'AutoDeck') === b).sort((a, z) => a.price - z.price) })) };
+const price = (i: { rupees: number; consult: boolean; from: boolean }) => i.consult ? 'Consult' : (i.from ? 'From ' : '') + inr(i.rupees);
+const priced = (g: { key: string }) => g.key === 'coatings' || g.key === 'ppf';
+const groups = menu.groups.map((g) => {
+  const brands = g.byBrand ? [...new Set(g.items.map((r) => r.brand || 'More'))] : [''];
+  return { ...g, count: g.items.length, brands: brands.map((b) => ({ name: b, items: g.items.filter((r) => !g.byBrand || (r.brand || 'More') === b) })) };
 });
 ---
 <Base
@@ -38,24 +33,24 @@ const groups = CRAFTS.map((c) => {
       {items.map(([k,n,d,z]) => <li class="rv"><span class="k">{k}</span><h2>{n}</h2><p>{d}</p><span class="z">{z}</span></li>)}
     </ul>
     <nav class="chips rv" aria-label="Jump to a craft">
-      {groups.map((g) => <a href={`#${g.key}`}>{g.title} <i>{g.count}</i></a>)}
+      {groups.map((g) => <a href={`#${g.key}`}>{g.label} <i>{g.count}</i></a>)}
     </nav>
     {groups.map((g) => (
       <section class="cat" id={g.key}>
-        <div class="cat-head rv"><h2>{g.title}</h2><p>{g.blurb}</p></div>
+        <div class="cat-head rv"><h2>{g.label}</h2><p>{g.blurb}</p></div>
         {g.brands.map((b) => (
           <div class="bgroup rv">
-            <h3>{b.name}</h3>
+            {b.name ? <h3>{b.name}</h3> : null}
             <ul class="plist">
               {b.items.map((i) => (
-                <li><span class="pn">{i.name}{i.warranty ? <em>{i.warranty}</em> : null}</span><span class="pt">{time(i.hours)}</span><span class="pp">{inr(i.price)}</span></li>
+                <li><span class="pn">{i.name}{i.warranty ? <em>{i.warranty}</em> : null}</span><span class="pt">{i.consult ? '' : time(i.hours)}</span><span class="pp">{price(i)}</span></li>
               ))}
             </ul>
           </div>
         ))}
       </section>
     ))}
-    <p class="fine rv">Prices are starting prices for a standard car, in rupees. Larger vehicles are quoted before the car comes in. Garage work and modifications are quoted per car.</p>
+    <p class="fine rv">Prices are for a hatchback, in rupees; sedans, SUVs and luxury cars cost more and the app shows your car's price. {menu.note} Modifications, wraps and garage repairs are quoted after we see the car.</p>
     <div class="cta-box rv" style="margin-top:72px">
       <div><h2>Only products we would put on our own cars.</h2><p>Every coating and consumable is the one the lab uses. Batch on record, warranty in the app.</p></div>
       <div class="actions"><a class="btn dark" href="https://app.autodeck.in">See published prices <span aria-hidden="true">→</span></a></div>

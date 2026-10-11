@@ -22,11 +22,13 @@ export interface ServiceDraft {
   washEligible: boolean;
   sizes: SizeRuleDraft[];
   imageUrl: string;
+  coverageLevel: "" | "high_impact" | "full_front" | "full_body";
+  priceMode: "fixed" | "from" | "consult";
 }
 
 export const EMPTY_SERVICE: ServiceDraft = {
   serviceId: null, name: "", category: "washing", brand: "", description: "", internalNotes: "", priceRupees: "", minutes: "60",
-  warrantyLabel: "", careTips: [], warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [], imageUrl: "",
+  warrantyLabel: "", careTips: [], warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [], imageUrl: "", coverageLevel: "", priceMode: "fixed",
 };
 
 export function draftFromService(s: Service): ServiceDraft {
@@ -47,6 +49,8 @@ export function draftFromService(s: Service): ServiceDraft {
     displayOrder: String(s.displayOrder),
     washEligible: s.membershipWashEligible,
     imageUrl: s.imageUrl ?? "",
+    coverageLevel: s.coverageLevel ?? "",
+    priceMode: s.priceOnRequest === true ? "consult" : s.priceFrom === true ? "from" : "fixed",
     sizes: s.vehicleCategoryPricing.map((r) => ({ vehicleCategory: r.vehicleCategory, extraRupees: String(r.additionalPricePaise / 100), extraMinutes: String(r.additionalMinutes) })),
   };
 }
@@ -68,6 +72,9 @@ export interface ServicePayload {
   vehicleCategoryPricing: VehicleCategoryPricing[];
   // Only sent once a photo has been uploaded, so saves from before the photo feature stay unchanged.
   imageUrl?: string;
+  coverageLevel: "high_impact" | "full_front" | "full_body" | null;
+  priceFrom: boolean;
+  priceOnRequest: boolean;
 }
 
 const paise = (rupees: string) => Math.round(Number(rupees) * 100);
@@ -121,6 +128,9 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
       displayOrder: order,
       membershipWashEligible: d.washEligible,
       vehicleCategoryPricing,
+      coverageLevel: d.coverageLevel || null,
+      priceFrom: d.priceMode === "from",
+      priceOnRequest: d.priceMode === "consult",
       ...(d.imageUrl ? { imageUrl: d.imageUrl } : {}),
     },
   };

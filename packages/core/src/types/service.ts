@@ -15,7 +15,13 @@ export type ServiceCategory =
   | "coating"
   | "inspection"
   | "tinting"
+  | "garage"
+  | "modifications"
+  | "pickup"
   | "other";
+
+// PPF coverage levels, shown under each brand in the menu.
+export type CoverageLevel = "high_impact" | "full_front" | "full_body";
 
 export type BayType = "wash" | "protection" | "general";
 
@@ -58,6 +64,10 @@ export interface Service {
   membershipWashEligible: boolean;
   // true = no fixed price; booking is created as a quote request and the studio sets the price.
   priceOnRequest?: boolean;
+  // PPF only: the coverage level this package covers (menu groups by brand, then coverage).
+  coverageLevel?: CoverageLevel | null;
+  // true = show "from Rs X" instead of an exact price (full-body PPF by size tier).
+  priceFrom?: boolean;
   // Where the price came from (market source/range). Set when a price is market-derived rather than the studio's own.
   // Admin-only notes (sources, original wording). Stripped from non-admin catalogue reads.
   internalNotes?: string;
