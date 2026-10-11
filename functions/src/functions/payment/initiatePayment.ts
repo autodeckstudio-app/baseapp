@@ -12,7 +12,7 @@ import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 // Keyed by jobId — the payable operational job — so the same flow works for a
 // booking-sourced job or a walk-in job. bookingId (nullable) is carried onto
 // the Payment record purely as a cross-reference, never as the lookup key.
-export const initiatePayment = onCall({ region: "asia-south1" }, async (request) => {
+export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (request) => {
   const user = extractUser(request);
   const data = validate(initiatePaymentSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.initiate");

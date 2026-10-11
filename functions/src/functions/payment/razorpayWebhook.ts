@@ -3,14 +3,14 @@
 // retry events we deliberately ignore), 401 for a bad signature, 500 only when processing threw
 // (Razorpay then retries; the handler is idempotent).
 //
-// Needs RAZORPAY_WEBHOOK_SECRET in the function environment. Deploying and pointing Razorpay at the
+// Reads RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET from Secret Manager (bound via `secrets`).
 // URL is a separate, approved step.
 import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 
-export const razorpayWebhook = onRequest({ region: "asia-south1", maxInstances: 5 }, async (req, res) => {
+export const razorpayWebhook = onRequest({ region: "asia-south1", maxInstances: 5, secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).send("method not allowed"); return; }
   const raw = req.rawBody ? req.rawBody.toString("utf8") : "";
   const signature = String(req.header("x-razorpay-signature") ?? "");

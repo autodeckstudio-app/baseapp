@@ -14,7 +14,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiateRefundSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
-export const initiateRefund = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["admin", "superadmin"].includes(user.claims.role)) {
