@@ -83,8 +83,8 @@ export async function processProviderEvent(
     if (evSnap.exists) return "duplicate";
     const paySnap = await tx.get(paymentRef);
     const payment = paySnap.data() as Payment;
-    const record = (outcome: WebhookOutcome) =>
-      tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome, processedAt: now });
+    const record = (o: WebhookOutcome) =>
+      tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome: o, processedAt: now });
 
     if (isPaid) {
       if (payment.status === "completed" || payment.status === "refunded") { record("already_final"); return "already_final"; }
