@@ -51,7 +51,7 @@ export default function PickupsScreen() {
       } catch { found[r.id] = null; }
     }));
     setBookings(found);
-    const real = list.filter((r) => found[r.id]);
+    const real = list.filter((r) => { const b = found[r.id]; return b && !["CANCELLED", "COMPLETED", "NO_SHOW"].includes(b.status); });
     setHidden(list.length - real.length);
     setRows(real);
   }, [tenantId, studioId]);
@@ -96,7 +96,7 @@ export default function PickupsScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
-      ListFooterComponent={hidden > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginTop: spacing.md }}>{hidden} request{hidden === 1 ? "" : "s"} hidden because no booking exists for {hidden === 1 ? "it" : "them"}.</Text> : null}
+      ListFooterComponent={hidden > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginTop: spacing.md }}>{hidden} request{hidden === 1 ? "" : "s"} hidden because {hidden === 1 ? "its booking was" : "their bookings were"} cancelled or completed.</Text> : null}
       ListEmptyComponent={<View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 24, padding: spacing.xl, alignItems: "center" }}><Text style={{ ...typography.body, color: colors.textMuted }}>No pickup or drop requests right now.</Text></View>}
       renderItem={({ item: r }) => {
         const asked = r.kind !== "drop" ? (r.requestedPickupTime || r.preferredTime) : r.requestedDropTime;

@@ -116,8 +116,15 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
         "This booking has a payment on it. Please contact the studio to cancel it and arrange any refund.",
       );
     }
+    // A pickup/drop request belongs to its booking (same id). Cancelling the booking closes any open request.
+    const pickupRef = db.collection(COLLECTIONS.pickupRequests()).doc(data.bookingId);
+    const pickupSnap = await tx.get(pickupRef);
     for (const p of paymentsOnJob?.docs ?? []) {
       tx.update(p.ref, { status: "cancelled", updatedAt: now });
+    }
+    if (pickupSnap.exists) {
+      const st = (pickupSnap.data() as { status?: string }).status;
+      if (st === "REQUESTED" || st === "CONFIRMED") tx.update(pickupRef, { status: "DECLINED", staffNote: "Booking cancelled", updatedAt: now });
     }
 
     tx.update(bookingRef, {
