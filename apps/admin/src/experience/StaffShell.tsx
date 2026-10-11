@@ -40,14 +40,14 @@ export const OFFICE_LINKS = [
 
 // Sidebar and More sheet: sections ordered by daily use. Studio-role staff only see sections with office:false links.
 type NavLink = { href: string; label: string; office: boolean };
-const SECTIONS: { key: string; label: string; icon: string; links: NavLink[] }[] = [
-  { key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
-  { key: "customers", label: "Customers", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
-  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/reports", label: "Reports", office: true }] },
-  { key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
-  { key: "stories", label: "Stories", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }] },
-  { key: "cars", label: "Cars for sale", icon: "car", links: [{ href: "/cars", label: "Cars for sale", office: true }] },
-  { key: "admin", label: "Admin", icon: "profile", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
+const SECTIONS: { group: string; key: string; label: string; icon: string; links: NavLink[] }[] = [
+  { group: "Daily", key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/attendance", label: "Attendance", office: false }] },
+  { group: "Daily", key: "customers", label: "Customers", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
+  { group: "Daily", key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/reports", label: "Reports", office: true }] },
+  { group: "Grow", key: "cars", label: "Cars for sale", icon: "car", links: [{ href: "/cars", label: "Cars for sale", office: true }] },
+  { group: "Grow", key: "stories", label: "Stories", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }] },
+  { group: "Set up", key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
+  { group: "Set up", key: "admin", label: "Admin", icon: "profile", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
 ];
 
 // Phone bottom bar: five groups. A group lights up for any page inside it and shows its sibling pages as chips.
@@ -161,8 +161,9 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
           </div>
           <aside className="ax-side" aria-label="Main navigation">
             <div className="ax-side-scroll">
-            {sections.map((sec) => (
+            {sections.map((sec, i) => (
               <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>
+                {i === 0 || sections[i - 1]!.group !== sec.group ? <span className="ax-label">{sec.group}</span> : null}
                 <Link href={sec.links[0]!.href} className="ax-nav-link" title={sec.label} aria-label={sec.label} aria-current={activeSection?.key === sec.key ? "page" : undefined}>
                   <Icon name={sec.icon as never} size={22} uid="-rail" />
                   <span className="ax-nav-text">{sec.label}</span>
