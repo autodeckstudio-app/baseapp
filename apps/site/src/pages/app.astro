@@ -1,53 +1,24 @@
 ---
 import Base from '../layouts/Base.astro';
-import Scene from '../components/Scene.astro';
 ---
 <Base
   title="The App · AutoDeck"
   description="Digital job cards with photos at every stage, warranty and service history on record, published prices and a maintenance calendar. The record follows the car."
   page="app"
 >
-  <div class="paper-wrap">
-    <Scene image="car-lights.jpg" word="YOUR RECORD." number="01" tone="violet" class="scene-light">
-      <div class="page-hero-inner">
-        <p class="hero-eyebrow rv-e">02 / The AutoDeck app</p>
-        <h1 class="hero-title">
-          <span class="line"><span>The record</span></span>
-          <span class="line"><span>follows <em>the car.</em></span></span>
-        </h1>
-        <p class="hero-sub rv-e">Not a booking form. A living record of your car. Every stage photographed, every document kept, every date remembered.</p>
-        <div class="hero-actions rv-e">
-          <a class="btn magnetic" href="https://app.autodeck.in"><span class="btn-label">Open the app</span><span class="arr">→</span></a>
-        </div>
-        <p class="app-note rv-e">Runs in your browser today. App Store and Play Store soon.</p>
-      </div>
-    </Scene>
-
-    <Scene image="studio-bay.jpg" word="ALWAYS THERE." number="02" tone="violet" class="scene-appsec">
-      <div class="appsec-grid">
-        <div class="app-feats">
-          <div class="rv">
-            <h3>Watch the work</h3>
-            <p>Photos at every stage, as it happens. You never have to wonder.</p>
-          </div>
-          <div class="rv">
-            <h3>Prove it years later</h3>
-            <p>Warranty, history and papers, ready the day you sell.</p>
-          </div>
-          <div class="rv">
-            <h3>Know the price first</h3>
-            <p>Published prices before the car arrives. No surprises.</p>
-          </div>
-          <div class="rv">
-            <h3>Never miss a date</h3>
-            <p>Reminders that arrive before the due date does.</p>
-          </div>
-        </div>
-        <figure class="appsec-figure rv px-img">
-          <img src="/assets/img/studio-bay.jpg" alt="Inside the AutoDeck studio" data-px />
-          <span class="tag">The studio · Ellisbridge</span>
-        </figure>
-      </div>
-    </Scene>
-  </div>
+  <section class="phero"><div class="wrap">
+    <p class="eyebrow">The AutoDeck app</p>
+    <h1>The record follows <em>the car.</em></h1>
+    <p class="lede">Not a booking form. A living record of your car. Every stage photographed, every document kept, every date remembered.</p>
+    <div class="actions"><a class="btn" href="https://app.autodeck.in">Open the app <span aria-hidden="true">→</span></a></div>
+    <p class="fine">Runs in your browser today. App Store and Play Store soon.</p>
+  </div></section>
+  <section class="s"><div class="wrap">
+    <div class="grid3" style="grid-template-columns:repeat(2,1fr)">
+      <div class="card rv"><span class="n">01</span><h3>Watch the work</h3><p>Photos at every stage, as it happens. You never have to wonder.</p></div>
+      <div class="card rv"><span class="n">02</span><h3>Prove it years later</h3><p>Warranty, history and papers, ready the day you sell.</p></div>
+      <div class="card rv"><span class="n">03</span><h3>Know the price first</h3><p>Published prices before the car arrives. No surprises.</p></div>
+      <div class="card rv"><span class="n">04</span><h3>Never miss a date</h3><p>Reminders that arrive before the due date does.</p></div>
+    </div>
+  </div></section>
 </Base>

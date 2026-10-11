@@ -1,7 +1,5 @@
 ---
-import '../styles/global.css';
-import '../styles/glass.css';
-import '../styles/cinema.css';
+import '../styles/site.css';
 interface Props {
   title: string;
   description: string;
@@ -26,31 +24,38 @@ const ogImage = 'https://www.autodeck.in/assets/og.png';
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body class={page}>
-  <div class="grain" aria-hidden="true"></div>
-
   <header class="site-head">
-    <a class="brand" href="/" aria-label="AutoDeck home"><img src="/assets/logo-horizontal.svg" alt="AutoDeck" /></a>
-    <nav aria-label="Pages">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="AutoDeck home"><img src="/assets/logo-horizontal-dark.svg" alt="AutoDeck" /></a>
+      <nav aria-label="Pages">
+        <a href="/services" aria-current={page === 'services' ? 'page' : undefined}>Services</a>
+        <a href="/app" aria-current={page === 'app' ? 'page' : undefined}>The app</a>
+        <a href="/lounge" aria-current={page === 'lounge' ? 'page' : undefined}>Lounge</a>
+        <a href="/visit" aria-current={page === 'visit' ? 'page' : undefined}>Visit</a>
+        <a class="btn sm" href="https://app.autodeck.in">Book a slot</a>
+      </nav>
+    </div>
+    <nav class="mnav" aria-label="Pages">
       <a href="/services" aria-current={page === 'services' ? 'page' : undefined}>Services</a>
-      <a href="/app" aria-current={page === 'app' ? 'page' : undefined}>App</a>
+      <a href="/app" aria-current={page === 'app' ? 'page' : undefined}>The app</a>
       <a href="/lounge" aria-current={page === 'lounge' ? 'page' : undefined}>Lounge</a>
       <a href="/visit" aria-current={page === 'visit' ? 'page' : undefined}>Visit</a>
-      <a class="head-cta" href="https://app.autodeck.in">Book a slot</a>
     </nav>
   </header>
 
-  <main id="top">
-    <slot />
-  </main>
+  <main id="top"><slot /></main>
 
   <footer class="site-foot">
-    <div class="foot-word" aria-hidden="true">AutoDeck</div>
-    <div class="foot-row">
-      <span>Sunbeam Complex, Ellisbridge, Ahmedabad · +91 98986 79711</span>
-      <span>© 2026 AutoDeck · Made in Ahmedabad</span>
+    <div class="wrap">
+      <div class="foot-grid">
+        <div><img src="/assets/logo-horizontal-dark.svg" alt="AutoDeck" /><p>Complete car care. All under one roof.</p></div>
+        <div><h4>Studio</h4><p>Sunbeam Complex, Old Sharda Mandir Rd<br />Ellisbridge, Ahmedabad 380006</p><a href="tel:+919898679711">+91 98986 79711</a></div>
+        <div><h4>Explore</h4><a href="/services">Services</a><a href="/app">The app</a><a href="/lounge">Lounge</a><a href="/visit">Visit</a><a href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a></div>
+      </div>
+      <p class="legal">© 2026 AutoDeck · Made in Ahmedabad</p>
     </div>
   </footer>
 

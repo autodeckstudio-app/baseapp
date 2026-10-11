@@ -1,122 +1,112 @@
 ---
 import Base from '../layouts/Base.astro';
-import Scene from '../components/Scene.astro';
 ---
 <Base
   title="AutoDeck · Complete car care. All under one roof."
   description="Detailing, paint protection, ceramic, washing, garage and modification at one address in Ellisbridge, Ahmedabad, with your car's whole record in the app you hold. Grand opening Friday 16 October 2026."
   page="home"
 >
-  <!-- HERO -->
-  <Scene image="car-lights.jpg" word="ONE ROOF." number="01" tone="amber" class="scene-hero">
-
-    <div class="hero-inner">
-      <p class="hero-eyebrow rv-e">Ellisbridge · Ahmedabad</p>
-      <h1 class="hero-title">
-        <span class="line"><span>Complete</span></span>
-        <span class="line"><span>car care.</span></span>
-        <span class="line"><span>All under <em>one roof.</em></span></span>
-      </h1>
-      <p class="hero-sub rv-e">Every finish, every fix, every wash. One studio that treats your car like it matters, and an app that remembers all of it.</p>
-      <div class="hero-actions rv-e">
-        <a class="btn magnetic" href="https://app.autodeck.in"><span class="btn-label">Get the app</span><span class="arr">→</span></a>
-        <a class="btn ghost magnetic" href="tel:+919898679711"><span class="btn-label">Call the studio</span></a>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow rv">Ellisbridge · Ahmedabad</p>
+        <h1 class="rv">Complete car care. All under <em>one roof.</em></h1>
+        <p class="lede rv">Every finish, every fix, every wash, by one team. And an app that keeps the whole story of your car.</p>
+        <div class="actions rv">
+          <a class="btn" href="https://app.autodeck.in">Book a slot <span aria-hidden="true">→</span></a>
+          <a class="btn ghost" href="tel:+919898679711">Call the studio</a>
+        </div>
+        <p class="fine rv">Published prices. Photos at every stage. Doors open Friday 16 October, 10 am.</p>
       </div>
-    </div>
-    <div class="hero-meta">
-      <div class="cell">
-        <span class="label">Grand opening</span>
-        <span class="value">Friday 16 October</span>
-      </div>
-      <div class="cell">
-        <span class="label">Four zones · one address</span>
-        <span class="value">Garage · Detailing Lab · Wash Studio · Lounge</span>
-      </div>
-    </div>
-  </Scene>
-
-  <!-- MARQUEE -->
-  <div class="marquee" aria-hidden="true">
-    <div class="marquee-track">
-      <span>Performance Garage</span><span class="dot">●</span><span class="hollow">Detailing Lab</span><span class="dot">●</span><span>Wash Studio</span><span class="dot">●</span><span class="hollow">Accessory Lounge</span><span class="dot">●</span>
-      <span>Performance Garage</span><span class="dot">●</span><span class="hollow">Detailing Lab</span><span class="dot">●</span><span>Wash Studio</span><span class="dot">●</span><span class="hollow">Accessory Lounge</span><span class="dot">●</span>
-    </div>
-  </div>
-
-  <!-- MANIFESTO -->
-  <Scene image="studio-bay.jpg" word="CAR CARE." number="02" tone="sage" class="scene-manifesto">
-    <div class="manifesto-grid">
-      <p class="manifesto-copy" id="manifesto">Your car has been handed around enough. Here, one team perfects it, protects it and keeps its story. Every photo, every warranty, every promise, in your hand. <span class="hl">That's the whole idea.</span></p>
-      <figure class="manifesto-figure rv px-img">
-        <img src="/assets/img/car-lights.jpg" alt="A car under the linear lights of the AutoDeck Detailing Lab" data-px />
-        <figcaption><span>Detailing Lab</span><span>Render · Studio design</span></figcaption>
+      <figure class="frame rv" style="margin:0">
+        <img src="/assets/img/studio-orange.jpg" alt="The AutoDeck studio: polished floor, track lighting and a car on the lift" width="896" height="1195" fetchpriority="high" />
+        <figcaption class="cap">
+          <span><b>Doors open in</b>Studio design render</span>
+          <span class="count" id="countdown" data-target="2026-10-16T10:00:00+05:30" role="status">
+            <span><b data-cd="d">00</b><i>days</i></span><span><b data-cd="h">00</b><i>hrs</i></span><span><b data-cd="m">00</b><i>min</i></span>
+            <span style="display:none"><b data-cd="s">00</b></span>
+          </span>
+        </figcaption>
       </figure>
     </div>
-  </Scene>
+  </section>
 
-  <!-- THE FOUR ROOMS · index of pages -->
-  <Scene image="studio-orange.jpg" word="THE STUDIO." number="03" tone="amber" class="scene-doors">
-    <div class="sec-head rv">
-      <span class="sec-index">01 / 04</span>
-      <span class="sec-kicker">The studio, in four rooms</span>
+  <section class="trust">
+    <div class="wrap">
+      <div class="rv"><b>Prices published first</b><span>You know the cost before the car comes in.</span></div>
+      <div class="rv"><b>Photos at every stage</b><span>Watch the work from your phone as it happens.</span></div>
+      <div class="rv"><b>Warranty on record</b><span>Papers and history kept in the app, ready when you sell.</span></div>
+      <div class="rv"><b>Nothing outsourced</b><span>One team, one standard, under one roof.</span></div>
     </div>
-    <div class="door-list">
-      <a class="door rv" href="/services">
-        <span class="door-idx">01</span>
-        <span class="door-body">
-          <span class="door-name">Services</span>
-          <span class="door-hook">Six crafts. One standard. Nothing outsourced.</span>
-        </span>
-        <span class="door-arr" aria-hidden="true">→</span>
-        <span class="door-fill" aria-hidden="true"></span>
-      </a>
-      <a class="door rv" href="/app">
-        <span class="door-idx">02</span>
-        <span class="door-body">
-          <span class="door-name">The App</span>
-          <span class="door-hook">Your car's whole story, in your pocket.</span>
-        </span>
-        <span class="door-arr" aria-hidden="true">→</span>
-        <span class="door-fill" aria-hidden="true"></span>
-      </a>
-      <a class="door rv" href="/lounge">
-        <span class="door-idx">03</span>
-        <span class="door-body">
-          <span class="door-name">The Lounge</span>
-          <span class="door-hook">Wear the studio. Stock the shelf.</span>
-        </span>
-        <span class="door-arr" aria-hidden="true">→</span>
-        <span class="door-fill" aria-hidden="true"></span>
-      </a>
-      <a class="door rv" href="/visit">
-        <span class="door-idx">04</span>
-        <span class="door-body">
-          <span class="door-name">The Studio</span>
-          <span class="door-hook">Come and see it. Doors open Friday 16 October.</span>
-        </span>
-        <span class="door-arr" aria-hidden="true">→</span>
-        <span class="door-fill" aria-hidden="true"></span>
-      </a>
-    </div>
-  </Scene>
+  </section>
 
-  <!-- OPENING · countdown -->
-  <Scene image="covered-car.jpg" word="FIRST LOOK." number="04" tone="copper" class="scene-wraps">
-    <div class="wraps-bg px-img"><img src="/assets/img/covered-car.jpg" alt="A car under wraps inside the studio" data-px /></div>
-    <div class="wraps-inner">
-      <div class="sec-head rv">
-        <span class="sec-index">16 · 10</span>
-        <span class="sec-kicker" style="color: var(--paper-dim);">The opening · Friday 16 October</span>
+  <section class="s">
+    <div class="wrap">
+      <div class="s-head rv">
+        <p class="eyebrow">Six crafts</p>
+        <h2>Everything your car needs, done properly.</h2>
+        <p>Protect it, perfect it, keep it clean, keep it running. One address instead of six.</p>
       </div>
-      <h2 class="sec-title rv">Under wraps<br /><em>until sixteen ten.</em></h2>
-      <p class="cd-caption rv">Grand opening · Friday 16 October</p>
-      <div class="countdown rv" id="countdown" data-target="2026-10-16T10:00:00+05:30" role="status">
-        <span class="unit"><b class="num" data-cd="d">00</b><i class="cap">days</i></span>
-        <span class="unit"><b class="num" data-cd="h">00</b><i class="cap">hours</i></span>
-        <span class="unit"><b class="num" data-cd="m">00</b><i class="cap">min</i></span>
-        <span class="unit"><b class="num" data-cd="s">00</b><i class="cap">sec</i></span>
+      <div class="grid3">
+        <a class="card rv" href="/services" style="text-decoration:none"><span class="n">01</span><h3>Paint Protection Film</h3><p>Self-healing film cut to your car. From ₹22,000 for a front-end kit.</p><span class="z">Detailing Lab</span></a>
+        <a class="card rv" href="/services" style="text-decoration:none"><span class="n">02</span><h3>Ceramic Coating</h3><p>Five years of gloss, on record, with a 6-monthly check.</p><span class="z">Detailing Lab</span></a>
+        <a class="card rv" href="/services" style="text-decoration:none"><span class="n">03</span><h3>Detailing</h3><p>Paint corrected under studio light, then measured.</p><span class="z">Detailing Lab</span></a>
+        <a class="card rv" href="/services" style="text-decoration:none"><span class="n">04</span><h3>Washing</h3><p>Foam, two buckets, clean mitts. The wash it should always have been.</p><span class="z">Wash Studio</span></a>
+        <a class="card rv" href="/services" style="text-decoration:none"><span class="n">05</span><h3>Garage</h3><p>Repairs and service, with a live job card you can watch.</p><span class="z">Performance Garage</span></a>
+        <a class="card rv" href="/services" style="text-decoration:none"><span class="n">06</span><h3>Modification</h3><p>Upgrades chosen with care, fitted right the first time.</p><span class="z">Accessory Lounge</span></a>
       </div>
-      <p class="wraps-note rv">Doors open Friday 16 October, 10 am. Follow <a class="inline" href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a> for the first look.</p>
+      <p class="more rv"><a class="link" href="/services">See all services and prices</a></p>
     </div>
-  </Scene>
+  </section>
+
+  <section class="s split" style="background:var(--ivory)">
+    <div class="wrap">
+      <figure class="frame rv" style="margin:0">
+        <img src="/assets/img/car-lights.jpg" alt="A car under the linear lights of the AutoDeck Detailing Lab" width="1200" height="1600" loading="lazy" />
+        <figcaption class="cap"><span><b>Detailing Lab</b>Studio design render</span></figcaption>
+      </figure>
+      <div>
+        <p class="eyebrow rv">The record follows the car</p>
+        <h2 class="rv" style="font-size:clamp(30px,3.6vw,48px);margin-top:16px">Your car has been handed around enough.</h2>
+        <p class="lede rv" style="margin-top:18px">Here one team perfects it, protects it and keeps its story. Every photo, every warranty, every promise, in your hand.</p>
+        <ul class="points">
+          <li class="rv"><span class="k">01</span><div><b>Watch the work</b><span>Photos at every stage, as it happens.</span></div></li>
+          <li class="rv"><span class="k">02</span><div><b>Prove it years later</b><span>Warranty, history and papers, ready the day you sell.</span></div></li>
+          <li class="rv"><span class="k">03</span><div><b>Never miss a date</b><span>Reminders that arrive before the due date does.</span></div></li>
+        </ul>
+        <div class="actions rv"><a class="btn" href="https://app.autodeck.in">Open the app</a><a class="btn ghost" href="/app">How it works</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="s rooms">
+    <div class="wrap">
+      <div class="s-head rv">
+        <p class="eyebrow">Four zones, one address</p>
+        <h2>The studio, in four rooms.</h2>
+      </div>
+      <div class="room-list">
+        <div class="rv"><h3>Performance Garage</h3><p>Repairs, service and fitting.</p></div>
+        <div class="rv"><h3>Detailing Lab</h3><p>Film, ceramic and paint correction.</p></div>
+        <div class="rv"><h3>Wash Studio</h3><p>The careful wash, every time.</p></div>
+        <div class="rv"><h3>Accessory Lounge</h3><p>Merch and care essentials.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="s cta" style="padding-top:104px">
+    <div class="wrap">
+      <div class="cta-box rv">
+        <div>
+          <h2>Book your first slot.</h2>
+          <p>Pick a service, see the price, choose a time. Doors open Friday 16 October, 10 am.</p>
+          <div class="actions" style="margin-top:28px"><a class="btn dark" href="https://app.autodeck.in">Book a slot <span aria-hidden="true">→</span></a><a class="btn ghost" href="tel:+919898679711">+91 98986 79711</a></div>
+        </div>
+        <div class="facts">
+          <div><b>Find us</b>Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge</div>
+          <div><b>Hours</b>Mon to Sat 10 am to 9 pm · Sun 10 am to 7 pm</div>
+        </div>
+      </div>
+    </div>
+  </section>
 </Base>

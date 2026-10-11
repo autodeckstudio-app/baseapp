@@ -1,80 +1,31 @@
 ---
 import Base from '../layouts/Base.astro';
-import Scene from '../components/Scene.astro';
+const items = [
+  ['01','Paint Protection Film','Self-healing film, cut to your car and nothing else. From ₹22,000 for a front-end kit.','Detailing Lab'],
+  ['02','Ceramic Coating','Five years of gloss, on record, with a 6-monthly check to keep it honest.','Detailing Lab'],
+  ['03','Detailing','Paint corrected under studio light, then measured. Seen, never just promised.','Detailing Lab'],
+  ['04','Washing','Foam, two buckets, clean mitts. The wash it should always have been.','Wash Studio'],
+  ['05','Garage','Repairs and service, with a live job card you can watch from anywhere.','Performance Garage'],
+  ['06','Modification','Upgrades chosen with care, fitted right the first time.','Accessory Lounge'],
+];
 ---
 <Base
   title="Services · AutoDeck"
   description="Paint protection film, ceramic coating, detailing, washing, garage and modification, six crafts under one roof in Ellisbridge, Ahmedabad. Nothing outsourced."
   page="services"
 >
-  <Scene image="studio-wide-v2.jpg" word="SIX CRAFTS." number="01" tone="amber" class="scene-page-hero">
-    <div class="page-hero-inner">
-      <p class="hero-eyebrow rv-e">01 / The six things we do</p>
-      <h1 class="hero-title">
-        <span class="line"><span>Every service.</span></span>
-        <span class="line"><span>One roof.</span></span>
-        <span class="line"><span><em>Nothing outsourced.</em></span></span>
-      </h1>
-      <p class="hero-sub rv-e">Published prices before the car comes in. The work measured, photographed and on record, not claimed.</p>
+  <section class="phero"><div class="wrap">
+    <p class="eyebrow">The six things we do</p>
+    <h1>Every service. One roof. <em>Nothing outsourced.</em></h1>
+    <p class="lede">Published prices before the car comes in. The work measured, photographed and on record, not claimed.</p>
+  </div></section>
+  <section class="s" style="padding-top:56px"><div class="wrap">
+    <ul class="rows">
+      {items.map(([k,n,d,z]) => <li class="rv"><span class="k">{k}</span><h2>{n}</h2><p>{d}</p><span class="z">{z}</span></li>)}
+    </ul>
+    <div class="cta-box rv" style="margin-top:72px">
+      <div><h2>Only products we would put on our own cars.</h2><p>Every coating and consumable is the one the lab uses. Batch on record, warranty in the app.</p></div>
+      <div class="actions"><a class="btn dark" href="https://app.autodeck.in">See published prices <span aria-hidden="true">→</span></a></div>
     </div>
-  </Scene>
-
-  <Scene image="car-lights.jpg" word="PROTECT." number="02" tone="sage" subject=true class="scene-service"><article class="svc">
-        <div class="svc-idx">01</div>
-        <div>
-          <h2 class="svc-name">Paint Protection Film</h2>
-          <p class="svc-desc">Self-healing film, cut to your car and nothing else. From ₹22,000 for a front-end kit.</p>
-        </div>
-        <span class="svc-zone">Detailing Lab</span>
-        <div class="svc-fill"></div>
-      </article></Scene><Scene image="product-ceramic.jpg" word="CERAMIC." number="03" tone="violet" subject=false class="scene-service"><article class="svc">
-        <div class="svc-idx">02</div>
-        <div>
-          <h2 class="svc-name">Ceramic Coating</h2>
-          <p class="svc-desc">Five years of gloss, on record, with a 6-monthly check to keep it honest.</p>
-        </div>
-        <span class="svc-zone">Detailing Lab</span>
-        <div class="svc-fill"></div>
-      </article></Scene><Scene image="car-lights.jpg" word="PERFECT." number="04" tone="amber" subject=true class="scene-service"><article class="svc">
-        <div class="svc-idx">03</div>
-        <div>
-          <h2 class="svc-name">Detailing</h2>
-          <p class="svc-desc">Paint corrected under studio light, then measured. Seen, never just promised.</p>
-        </div>
-        <span class="svc-zone">Detailing Lab</span>
-        <div class="svc-fill"></div>
-      </article></Scene><Scene image="studio-wide-v2.jpg" word="FRESH." number="05" tone="blue" subject=true class="scene-service"><article class="svc">
-        <div class="svc-idx">04</div>
-        <div>
-          <h2 class="svc-name">Washing</h2>
-          <p class="svc-desc">Foam, two buckets, clean mitts. The wash it should always have been.</p>
-        </div>
-        <span class="svc-zone">Wash Studio</span>
-        <div class="svc-fill"></div>
-      </article></Scene><Scene image="studio-bay.jpg" word="PERFORM." number="06" tone="copper" subject=true class="scene-service"><article class="svc">
-        <div class="svc-idx">05</div>
-        <div>
-          <h2 class="svc-name">Garage</h2>
-          <p class="svc-desc">Repairs and service, with a live job card you can watch from anywhere.</p>
-        </div>
-        <span class="svc-zone">Performance Garage</span>
-        <div class="svc-fill"></div>
-      </article></Scene><Scene image="studio-orange.jpg" word="YOUR WAY." number="07" tone="red" subject=true class="scene-service"><article class="svc">
-        <div class="svc-idx">06</div>
-        <div>
-          <h2 class="svc-name">Modification</h2>
-          <p class="svc-desc">Upgrades chosen with care, fitted right the first time.</p>
-        </div>
-        <span class="svc-zone">Accessory Lounge</span>
-        <div class="svc-fill"></div>
-      </article></Scene><Scene image="product-ceramic.jpg" word="LAB APPROVED." number="08" tone="sage" subject={false} class="scene-products"><div class="svc-visual">
-      <figure class="rv px-img">
-        <img class="tall" src="/assets/img/product-ceramic.jpg" alt="Studio-approved ceramic coating product" data-px />
-      </figure>
-      <div class="svc-note rv">
-        <p><strong>Only products we would put on our own cars.</strong> Every coating and consumable on the shelf is the one the lab uses. Batch on record, warranty in the app.</p>
-        <a class="btn magnetic" style="margin-top: 34px;" href="https://app.autodeck.in"><span class="btn-label">See published prices</span><span class="arr">→</span></a>
-      </div>
-    </div>
-  </Scene>
+  </div></section>
 </Base>
