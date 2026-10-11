@@ -54,7 +54,7 @@ async function main() {
       basePrice: base, currency: "INR", estimatedDurationMinutes: m.minutes,
       warrantyLabel: m.warrantyLabel ?? null, warrantyDurationValue: m.warrantyYears ?? null, warrantyDurationUnit: m.warrantyYears ? "years" : null,
       vehicleCategoryPricing: m.consult || m.group === "pickup" || m.group === "garage" ? [] : sizePricingFor(base),
-      requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true,
+      requiredBayType: m.bay, membershipWashEligible: m.group === "wash", priceOnRequest: m.consult === true,
       coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true,
       ...(m.placeholder ? { internalNotes: "Starting price for the owner to tune. No study anchor for this item." } : {}),
       active: true, displayOrder: m.order, createdAt: now, updatedAt: now,
