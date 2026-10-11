@@ -50,27 +50,50 @@ function Heading({ title, action, onAction }: { title: string; action?: string |
   );
 }
 
-function ServiceCard({ s, onPress }: { s: HomeService; onPress: () => void }) {
+export function PhotoCard({ media, title, pill, onPress, hearted = true }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean }) {
   const [liked, setLiked] = useState(false);
-  const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={s.name} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 22, overflow: "hidden", backgroundColor: "#1B1B1F", aspectRatio: 0.82 }}>
-      <Image source={img} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 22, overflow: "hidden", backgroundColor: "#1B1B1F", aspectRatio: 0.82 }}>
+      <View style={{ position: "absolute", width: "100%", height: "100%" }}>{media}</View>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.25)" }) }} />
-      <View style={{ position: "absolute", left: 12, right: 44, top: 12, gap: 2 }}>
-        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>{s.name}</Text>
+      <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: 12 }}>
+        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>{title}</Text>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 15, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
-      </Pressable>
-      <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: ACCENT, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#1A1410", fontSize: 11, fontWeight: "700" }}>{s.price === "Quote on request" ? "Quote" : s.price}</Text></View>
+      {hearted ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 15, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
+        </Pressable>
+      ) : null}
+      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: ACCENT, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#1A1410", fontSize: 11, fontWeight: "700" }}>{pill}</Text></View> : null}
     </Pressable>
   );
 }
 
+function ServiceCard({ s, onPress }: { s: HomeService; onPress: () => void }) {
+  const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
+  return <PhotoCard title={s.name} pill={s.price === "Quote on request" ? "Quote" : s.price} onPress={onPress} media={<Image source={img} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />;
+}
+
+export function GroupChips({ value, onChange }: { value: string | null; onChange: (k: string | null) => void }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingRight: 8 }}>
+      {GROUPS.map((c) => {
+        const on = value === c.key;
+        return (
+          <Pressable key={c.label} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} style={{ paddingVertical: 6 }}>
+            <Text style={{ color: on ? ACCENT : "#B4B2AE", fontSize: 15, fontWeight: on ? "700" : "500" }}>{c.label}</Text>
+            {on ? <View style={{ height: 2, borderRadius: 1, backgroundColor: ACCENT, marginTop: 4 }} /> : <View style={{ height: 2, marginTop: 4 }} />}
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+export const groupCategories = (key: string | null): string[] => GROUPS.find((g) => g.key === key)?.cats ?? [];
+
 export function HomeView(p: HomeViewProps) {
   const [chip, setChip] = useState<string | null>(null);
-  const cats = GROUPS.find((g) => g.key === chip)?.cats ?? [];
+  const cats = groupCategories(chip);
   const shown = p.services.filter((s) => !chip || cats.includes(s.category));
   const rows: HomeService[][] = [];
   for (let i = 0; i < shown.length; i += 2) rows.push(shown.slice(i, i + 2));
@@ -130,18 +153,7 @@ export function HomeView(p: HomeViewProps) {
 
       <View style={{ gap: 12 }}>
         <Heading title="Popular services" action="View all" onAction={p.onAllServices} />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingRight: 8 }}>
-        {GROUPS.map((c) => {
-          const on = chip === c.key;
-          return (
-            <Pressable key={c.label} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setChip(c.key); p.onCategory(c.key); }} style={{ paddingVertical: 6 }}>
-              <Text style={{ color: on ? ACCENT : "#B4B2AE", fontSize: 15, fontWeight: on ? "700" : "500" }}>{c.label}</Text>
-              {on ? <View style={{ height: 2, borderRadius: 1, backgroundColor: ACCENT, marginTop: 4 }} /> : <View style={{ height: 2, marginTop: 4 }} />}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
+        <GroupChips value={chip} onChange={(k) => { setChip(k); p.onCategory(k); }} />
         {rows.map((r, i) => (
           <View key={i} style={{ flexDirection: "row", gap: 12 }}>
             {r.map((s) => <ServiceCard key={s.id} s={s} onPress={() => p.onService(s)} />)}

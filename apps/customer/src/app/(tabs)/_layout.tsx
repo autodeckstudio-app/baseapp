@@ -17,7 +17,8 @@ export default function TabsLayout() {
       tabBar={(props) => <RaisedTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} />}
       screenOptions={() => ({
         headerShown: false,
-        sceneStyle: { backgroundColor: colors.canvas },
+        sceneStyle: { backgroundColor: "transparent" },
+        animation: "fade",
       })}
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />

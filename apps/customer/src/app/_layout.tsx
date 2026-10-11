@@ -1,7 +1,8 @@
 import "../lib/boot-theme";
 import "../lib/webAlert";
 import { useEffect, useState } from "react";
-import { Platform, Pressable } from "react-native";
+import { View, Platform, Pressable } from "react-native";
+import { GROUND_COLOR, COALMINE } from "../lib/ground";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
@@ -24,7 +25,8 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const segs = segments as string[];
     const group = segs[0];
     const inAuth = group === "(auth)";
-    if (__DEV__ && group === "preview") return;
+    if (__DEV__ && (group === "preview" || group === "preview-services")) return;
+    
 
     if (auth.status === "unauthenticated") {
       const browsingCars = group === "(tabs)" && segs[1] === "cars" && segs[2] !== "sell";
@@ -77,23 +79,30 @@ function ThemedRoot() {
   const { name, colors } = useExperienceTheme();
   useEffect(() => {
     if (Platform.OS !== "web" || !bodyDoc) return;
-    bodyDoc.body.style.backgroundColor = colors.canvas;
-    bodyDoc.documentElement.style.backgroundColor = colors.canvas;
+    bodyDoc.body.style.backgroundColor = GROUND_COLOR;
+    bodyDoc.documentElement.style.backgroundColor = GROUND_COLOR;
     bodyDoc.documentElement.style.colorScheme = name === "night" ? "dark" : "light";
+    if (!bodyDoc.getElementById("ad-ground-fix")) {
+      // React Navigation paints its light default theme behind every scene on web; let the root ground show through.
+      const st = bodyDoc.createElement("style");
+      st.id = "ad-ground-fix";
+      st.textContent = '#root div[style*="rgb(242, 242, 242)"], #root div[style*="rgb(1, 1, 1)"] { background-color: transparent !important; }';
+      bodyDoc.head.appendChild(st);
+    }
     const meta = bodyDoc.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", colors.canvas);
   }, [name, colors.canvas]);
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: GROUND_COLOR, ...(Platform.OS === "web" ? ({ backgroundImage: COALMINE } as object) : null) }}>
       <StatusBar style={name === "night" ? "light" : "dark"} />
       <NavigationGuard>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" }, animation: "fade", animationDuration: 180 }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>
       </NavigationGuard>
       <PushBridge />
-    </>
+    </View>
   );
 }
 

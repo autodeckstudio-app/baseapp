@@ -97,10 +97,8 @@ function BackBar() {
   );
 }
 
-/** Coalmine ground: near-black charcoal with a faint warm glow top and bottom. */
-export const COALMINE = "radial-gradient(120% 60% at 85% -5%, rgba(236,134,56,.13) 0%, rgba(236,134,56,0) 60%), radial-gradient(110% 55% at 0% 105%, rgba(236,134,56,.08) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #202022 0%, #121214 38%, #0A0A0B 72%, #050506 100%)";
 function Ambient({ children }: { children?: ReactNode }) {
-  return <BaseAmbient style={{ backgroundColor: "#0B0B0C", ...(Platform.OS === "web" ? ({ backgroundImage: COALMINE } as object) : null) }}>{children}</BaseAmbient>;
+  return <BaseAmbient style={{ backgroundColor: "transparent", ...(Platform.OS === "web" ? ({ backgroundImage: "none" } as object) : null) }}>{children}</BaseAmbient>;
 }
 
 /** Studio photo behind the top of a screen (web), as on the canvas layout. */
