@@ -56,6 +56,16 @@ function canvasFrame(width: number): Record<string, unknown> {
 
 export default function RootLayout() {
   const { width } = useWindowDimensions();
+  // react-navigation paints every nested screen and header with its theme background (a light grey, rgb(242,242,242)).
+  // On web that hid the shared ambient photo on stacked pages such as Lookup. Clear exactly that colour, once, for every page.
+  useEffect(() => {
+    const doc = (globalThis as { document?: { createElement: (t: string) => { setAttribute: (k: string, v: string) => void; textContent: string }; head: { appendChild: (n: unknown) => void }; getElementById: (i: string) => unknown } }).document;
+    if (!doc || doc.getElementById("ad-clear-scene")) return;
+    const el = doc.createElement("style");
+    el.setAttribute("id", "ad-clear-scene");
+    el.textContent = 'div[style*="background-color: rgb(242, 242, 242)"]{background-color:transparent!important}';
+    doc.head.appendChild(el);
+  }, []);
   useEffect(() => {
     const doc = (globalThis as { document?: { documentElement: { style: { backgroundColor: string } }; body: { style: { backgroundColor: string } } } }).document;
     if (doc) {

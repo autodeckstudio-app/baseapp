@@ -18,7 +18,7 @@ export default function LookupLayout() {
         contentStyle: { backgroundColor: "transparent" },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Lookup" }} />
+      <Stack.Screen name="index" options={{ title: "Lookup", headerShown: false }} />
       <Stack.Screen name="customer/[id]" options={{ title: "Customer" }} />
       <Stack.Screen name="vehicle/[id]" options={{ title: "Vehicle" }} />
     </Stack>
