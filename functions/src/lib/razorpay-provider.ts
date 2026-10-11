@@ -13,7 +13,7 @@ import type {
   VerifyWebhookParams,
   ProviderWebhookEvent,
 } from "./payment-provider.js";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { isProductionProject } from "./environment.js";
 import { mockProvider } from "./mock-payment-provider.js";
 
@@ -31,9 +31,9 @@ interface RazorpayWebhookPayload {
   id: string;
   event: string;
   payload?: {
-    payment?: { entity?: { id?: string; amount?: number; currency?: string } };
+    payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } };
     refund?: { entity?: { id?: string; payment_id?: string; amount?: number } };
-    payment_link?: { entity?: { id?: string } };
+    payment_link?: { entity?: { id?: string; reference_id?: string; order_id?: string; amount?: number } };
   };
 }
 
@@ -67,9 +67,10 @@ export class RazorpayProvider implements PaymentProvider {
         amount: params.amount,
         currency: params.currency,
         description: params.description,
+        // An empty contact is rejected by Razorpay, so only send it when we have one.
         customer: {
           name: params.customerName,
-          contact: params.customerPhone,
+          ...(params.customerPhone ? { contact: params.customerPhone } : {}),
         },
         reference_id: params.referenceId,
         notes: { bookingId: params.bookingId },
@@ -79,7 +80,10 @@ export class RazorpayProvider implements PaymentProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`Razorpay createPaymentLink failed: ${response.status}`);
+      const detail = await response.text().catch(() => "");
+      let reason = "";
+      try { reason = (JSON.parse(detail) as { error?: { description?: string } }).error?.description ?? ""; } catch { /* non-JSON body */ }
+      throw new Error(`Razorpay createPaymentLink failed: ${response.status}${reason ? ` (${reason})` : ""}`);
     }
 
     const data = (await response.json()) as RazorpayPaymentLinkResponse;
@@ -91,10 +95,14 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   verifyWebhookSignature(params: VerifyWebhookParams): boolean {
+    // An unset secret must never validate: HMAC with an empty key is guessable.
+    if (!this.webhookSecret || !params.signature) return false;
     const expected = createHmac("sha256", this.webhookSecret)
       .update(params.rawBody)
       .digest("hex");
-    return expected === params.signature;
+    const a = Buffer.from(expected);
+    const b = Buffer.from(params.signature);
+    return a.length === b.length && timingSafeEqual(a, b);
   }
 
   parseWebhookEvent(rawBody: string): ProviderWebhookEvent {
@@ -106,11 +114,15 @@ export class RazorpayProvider implements PaymentProvider {
 
     return {
       eventType,
-      providerEventId: body.id,
+      // Razorpay sends the event id in the X-Razorpay-Event-Id header, not the body;
+      // the handler overrides this with the header. A body hash is the stable fallback.
+      providerEventId: body.id ?? createHash("sha256").update(rawBody).digest("hex"),
       providerPaymentId: payment?.id ?? refund?.payment_id ?? "",
       providerPaymentLinkId: plink?.id ?? null,
       providerRefundId: refund?.id ?? null,
-      amount: payment?.amount ?? refund?.amount ?? 0,
+      providerOrderId: payment?.order_id ?? plink?.order_id ?? null,
+      referenceId: plink?.reference_id ?? null,
+      amount: payment?.amount ?? plink?.amount ?? refund?.amount ?? 0,
       currency: payment?.currency ?? "INR",
     };
   }

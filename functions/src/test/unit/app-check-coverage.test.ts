@@ -92,6 +92,7 @@ const EXCLUDED_NON_CALLABLE = [
   "notification/onAuditLogCreated.ts",
   "push/onNotificationPush.ts",
   "auth/processAccountDeletionsScheduled.ts",
+  "payment/razorpayWebhook.ts",
 ].sort();
 
 // Reachable by the customer and/or studio Expo apps. Deliberately NOT

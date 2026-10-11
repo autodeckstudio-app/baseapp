@@ -46,6 +46,8 @@ export interface ProviderWebhookEvent {
   providerPaymentId: string;
   providerPaymentLinkId: string | null;
   providerRefundId: string | null;
+  providerOrderId?: string | null;
+  referenceId?: string | null; // our payment doc id, set as reference_id on the payment link
   amount: number; // paise
   currency: string;
 }

@@ -43,6 +43,7 @@ export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
 export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
 export { confirmManualPayment } from "./functions/payment/confirmManualPayment.js";
 export { initiateRefund } from "./functions/payment/initiateRefund.js";
+export { razorpayWebhook } from "./functions/payment/razorpayWebhook.js";
 
 // âââ Invoices âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { voidInvoice } from "./functions/invoice/voidInvoice.js";
