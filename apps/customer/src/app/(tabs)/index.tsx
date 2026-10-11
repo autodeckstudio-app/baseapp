@@ -20,6 +20,7 @@ import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { priceLabel } from "../../lib/catalogue-service";
+import { HomeView } from "../../ui/HomeView";
 import { StoryViewer } from "../../ui/StoryViewer";
 import { HeroImage, Button, Chip, Kicker, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
@@ -166,149 +167,37 @@ export default function HomeScreen() {
     }
   };
 
-  const header = (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
-      <View style={{ flex: 1, gap: space.hair }}>
-        <View style={{ alignSelf: "flex-start" }}><Logo variant="mark" height={26} /></View>
-        <T role="title">{greetingFor(new Date(), m.customer.firstName)}</T>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-        onPress={() => router.push("/(tabs)/notifications")}
-        style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: "center", justifyContent: "center" }}
-      >
-        <Icon name="bell" color={colors.textSecondary} size={22} />
-        {unread > 0 ? (
-          <View style={{ position: "absolute", top: 8, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent }} />
-        ) : null}
-      </Pressable>
-    </View>
-  );
+  const bookingId = (m.liveJob as { bookingId?: string } | undefined)?.bookingId ?? m.upcomingBooking?.id;
+  const live = m.pendingApproval
+    ? { kicker: "Needs your OK", title: m.pendingApproval.serviceName, detail: m.pendingApproval.reason, onPress: () => router.push(`/(tabs)/approvals/${m.pendingApproval!.id}`) }
+    : m.liveJob
+      ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: `Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`, onPress: () => (bookingId ? router.push(`/(tabs)/bookings/${bookingId}`) : undefined) }
+      : m.upcomingBooking
+        ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => (bookingId ? router.push(`/(tabs)/bookings/${bookingId}`) : undefined) }
+        : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act };
+  const vehicles = [m.activeVehicle, ...m.otherVehicles].filter(Boolean) as NonNullable<typeof m.activeVehicle>[];
 
   return (
-    <Screen header={header}>
-      {groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
+    <Screen>
+      <HomeView
+        greeting={greetingFor(new Date(), m.customer.firstName)}
+        unread={unread}
+        cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null }))}
+        services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: priceLabel(s) }))}
+        reminders={reminders}
+        live={live}
+        stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
+        banner={home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh} />} /> : null}
+        onSearch={() => router.push("/(tabs)/catalogue")}
+        onBell={() => router.push("/(tabs)/notifications")}
+        onAllServices={() => router.push("/(tabs)/catalogue")}
+        onCategory={() => undefined}
+        onService={(sv) => router.push(`/(tabs)/catalogue/${sv.id}`)}
+        onCar={(c) => router.push(`/(tabs)/garage/${c.id}`)}
+        onAddCar={() => router.push("/(tabs)/garage/add")}
+        onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}
+      />
       <StoryViewer group={open} onClose={() => setOpen(null)} />
-      {home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh}/>}/> : null}
-
-      <FadeUp>
-      <Pressable accessibilityRole="button" accessibilityLabel={car ? `Open ${car.make} ${car.model}` : "Add your car"} onPress={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-      <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#18181C", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", shadowColor: "#EC8638", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 14 }, elevation: 8 }}>
-        {car?.photoUrl && !carPhoto ? <View style={{width: "100%", aspectRatio: 16 / 9, backgroundColor: "#232328"}} /> : <HeroImage aspect={16 / 9} source={carPhoto ? { uri: carPhoto } : car ? (car.category ? vehicleImagery[car.category] ?? sceneImagery.heroAlt : sceneImagery.heroAlt) : sceneImagery.heroHome} />}
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0) 0%, rgba(8,8,10,0) 45%, rgba(8,8,10,0.62) 100%)" } as object) }} />
-        <View style={{ position: "absolute", left: space.gap, right: space.gap, bottom: space.gap, gap: 6, backgroundColor:"rgba(8,8,10,.34)", padding:10, borderRadius:14 }}>
-          <View style={{ alignSelf: "flex-start", borderRadius: 9999, backgroundColor: "rgba(20,20,22,0.62)", borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", paddingHorizontal: 12, paddingVertical: 4 }}>
-            <T role="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>{home.error && m.heroState === "idle" ? "Checking your car" : copy.kicker}</T>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.breath }}>
-            {car ? (
-              <View style={{ flex: 1, gap: 4 }}>
-                <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{car.make} {car.model}</T>
-                <View style={{ flexDirection: "row", gap: space.breath, alignItems: "center" }}>
-                  <View style={{ borderRadius: 10, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 6 }}><Plate value={car.registrationNumber} /></View>
-                </View>
-              </View>
-            ) : (
-              <T role="heading" style={{ color: "#FFFFFF", flex: 1 }}>Your garage is empty</T>
-            )}
-            
-          </View>
-        </View>
-        {car ? (
-          <View style={{ position: "absolute", top: space.inset, right: space.inset, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(20,20,22,0.62)", borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", paddingHorizontal: 14, paddingVertical: 7 }}>
-            <T role="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>Details</T>
-            <T role="caption" style={{ color: "#FFFFFF" }}>›</T>
-          </View>
-        ) : null}
-      </View>
-      </Pressable>
-      </FadeUp>
-      <Button label={m.primaryAction.label} onPress={act} testID="home-primary" />
-
-      {m.pendingApproval || m.liveJob || m.upcomingBooking ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            const bid = (m.liveJob as { bookingId?: string } | undefined)?.bookingId ?? m.upcomingBooking?.id;
-            if (m.pendingApproval) router.push(`/(tabs)/approvals/${m.pendingApproval.id}`);
-            else if (bid) router.push(`/(tabs)/bookings/${bid}`);
-            else if (car) router.push(`/(tabs)/garage/${car.id}`);
-          }}
-        >
-        <Pane pad="inset">
-          <View style={{ gap: space.line }}>
-            <Kicker tone="accent">{m.liveJob ? "Live now" : m.pendingApproval ? "Needs your OK" : "Next visit"}</Kicker>
-            {m.pendingApproval ? (
-              <Row title={m.pendingApproval.serviceName} detail={m.pendingApproval.reason} trailing={<T role="data" tone="accent">+{rupees(m.pendingApproval.priceImpact)}</T>} last />
-            ) : m.liveJob ? (
-              <View style={{ gap: space.line }}>
-                <Row title={JOB_STAGE[m.liveJob.status] ?? "In the studio"} detail={`Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`} last />
-                <StatusRail status={m.liveJob.status} />
-              </View>
-            ) : m.upcomingBooking ? (
-              <Row title={`${formatDateShort(m.upcomingBooking.scheduledDate)} · ${m.upcomingBooking.scheduledTime}`} detail={m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed"} last />
-            ) : null}
-          </View>
-        </Pane>
-        </Pressable>
-      ) : null}
-
-
-      <View style={{gap: space.gap}}>
-        <View style={{flexDirection: "row", alignItems: "center", justifyContent: "space-between"}}>
-          <View style={{gap:4}}><Kicker>Care for your car</Kicker><T role="heading">Keep it at its best</T></View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Browse all services" onPress={() => router.push("/(tabs)/catalogue")} style={{minHeight:44,justifyContent:"center"}}><T tone="accent">See all ›</T></Pressable>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:12,paddingBottom:8}}>
-          {["washing", "ceramic", "ppf"].map(category => {
-            const candidates = catalogue.filter(x => x.category === category);
-            const service = [...candidates].sort((a,b) => a.basePrice-b.basePrice)[0];
-            if (!service) return null;
-            return <Pressable key={category} accessibilityRole="button" accessibilityLabel={`Explore ${category} services`} onPress={() => router.push({pathname:"/(tabs)/catalogue",params:{cat:category}})} style={{width:216,gap:10}}>
-              <View style={{borderRadius:20,overflow:"hidden"}}><HeroImage aspect={3/2} source={serviceImagery[category as keyof typeof serviceImagery]} /></View>
-              <T role="bodyStrong">{category === "washing" ? "Wash and care" : category === "ceramic" ? "Ceramic protection" : "Paint protection film"}</T>
-              <T role="caption" tone="tertiary">{service.priceOnRequest ? "Explore options" : pricingVehicle.category ? (vehiclePrices[service.id] !== undefined ? `${rupees(vehiclePrices[service.id]!)} for your car` : "Checking price") : `From ${priceLabel(service)}`}</T>
-            </Pressable>;
-          })}
-        </ScrollView>
-      </View>
-      <View style={{gap:space.line}}>
-        <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><Kicker>Your garage</Kicker><Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/garage")} style={{minHeight:44,justifyContent:"center"}}><T tone="accent">Manage ›</T></Pressable></View>
-        <Pane pad="gap">
-          {car ? [car,...m.otherVehicles].slice(0,3).map((v,i,vs) => <Row key={v.id} title={`${v.make} ${v.model}`} detail={v.id===car.id ? "Current vehicle · papers and protection" : "Vehicle details and papers"} trailing={<Plate value={v.registrationNumber}/>} onPress={() => router.push(`/(tabs)/garage/${v.id}`)} last={i===vs.length-1}/>) : <Row title="Your cars, together" detail="Add your vehicle to keep visits and papers in one place." onPress={() => router.push("/(tabs)/garage/add")} last/>}
-        </Pane>
-      </View>
-      <View style={{gap:space.line}}>
-        <Kicker>With AutoDeck</Kicker>
-        <Pane pad="gap">
-          <Row title={m.membership ? "Your membership" : "Make regular care simpler"} detail={m.membership ? "Wash benefits and usage" : "Explore wash memberships"} onPress={() => router.push(m.membership ? "/(tabs)/membership/current" : "/(tabs)/membership")}/>
-          <Row title="Find your next car" detail="Browse cars or list yours for studio review" onPress={() => router.push("/(tabs)/cars")} last/>
-        </Pane>
-      </View>
-      {m.recentHistory.length > 0 ? <View style={{gap:space.line}}><Kicker>Recent activity</Kicker><Pane pad="gap">{m.recentHistory.slice(0,2).map((job,i,js) => <Row key={job.id} title={catalogue.find(x=>x.id===job.serviceId)?.name ?? "Studio visit completed"} detail={formatDateShort(job.scheduledDate)} trailing={<Chip label="Delivered"/>} onPress={() => job.bookingId ? router.push(`/(tabs)/bookings/${job.bookingId}`) : router.push("/(tabs)/bookings")} last={i===js.length-1}/>)}</Pane></View> : null}
-
-      {catalogue.length === 0 && catalogueFailed ? (
-        <Notice title="Services didn't load" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => { setCatalogueFailed(false); setRetryTick((n) => n + 1); }} />} />
-      ) : catalogue.length === 0 ? (
-        <View style={{ gap: space.line }}><Skeleton height={28} width="50%" /><Skeleton height={220} /></View>
-      ) : null}
-
-      {reminders.length > 0 ? (
-        <View style={{ gap: space.line }}>
-          <Kicker>Reminders</Kicker>
-          <Pane pad="gap">
-            {reminders.map((r, i) => (
-              <Row key={r.title} title={r.title} detail={r.detail} trailing={<Chip label={r.chip} tone={r.danger ? "danger" : "accent"} />} onPress={() => router.push(`/(tabs)/garage/${carId}`)} last={i === reminders.length - 1} />
-            ))}
-          </Pane>
-        </View>
-      ) : null}
-
-
-      {!car ? (
-        <Notice title="Explore first" body="Browse services and prices now. You'll only need a car on file when you book." action={<Button kind="quiet" label="See services" onPress={() => router.push("/(tabs)/catalogue")} />} />
-      ) : null}
     </Screen>
   );
 }
