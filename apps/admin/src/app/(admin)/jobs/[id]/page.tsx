@@ -28,6 +28,7 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<ServiceJob | null | undefined>(undefined);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [payment, setPayment] = useState<Payment | null>(null);
+  const [linking, setLinking] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [warranty, setWarranty] = useState<Warranty | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
@@ -90,6 +91,37 @@ export default function JobDetailPage() {
     } finally {
       setRecording(false);
     }
+  }
+
+  async function handleCreateLink() {
+    if (!job) return;
+    setStatus(null);
+    setLinking(true);
+    try {
+      const fn = httpsCallable<{ jobId: string; method: PaymentMethod }, { paymentId: string; paymentUrl: string | null; status: string }>(functions, "initiatePayment");
+      const res = await fn({ jobId: job.id, method: "razorpay_payment_link" });
+      setStatus(res.data.paymentUrl ? "Payment link ready. Copy it or send it on WhatsApp." : "A payment is already in progress for this job.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Could not create the payment link.");
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus("Link copied.");
+    } catch {
+      setStatus("Could not copy. Select the link and copy it.");
+    }
+  }
+
+  function whatsappHref(url: string): string {
+    const digits = (customer?.phone ?? "").replace(/\D/g, "");
+    const first = (customer?.name ?? "").split(" ")[0] || "there";
+    const text = `Hi ${first}, here is your AutoDeck bill of ${formatPaise(job?.totalAmount ?? 0)}. Pay securely: ${url}`;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
 
   async function handleConfirmCashPayment() {
@@ -273,7 +305,15 @@ export default function JobDetailPage() {
                 <div className="kv"><span>Amount</span><span className="ax-data">{formatPaise(payment.amount)}</span></div>
                 {(payment.status === "pending" || payment.status === "processing") &&
                   (payment.method === "razorpay_payment_link" ? (
-                    <p className="ax-note">Waiting for the payment provider to confirm the online payment.</p>
+                    <>
+                      <p className="ax-note">Waiting for the customer to pay online.</p>
+                      {payment.paymentUrl && (
+                        <div className="ax-panel-actions">
+                          <button type="button" className="ax-button" onClick={() => void copyLink(payment.paymentUrl as string)}>Copy link</button>
+                          <a className="ax-button ax-button--primary" href={whatsappHref(payment.paymentUrl)} target="_blank" rel="noreferrer">Send on WhatsApp</a>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="ax-panel-actions">
                       <button type="button" className="ax-button ax-button--primary" onClick={() => void handleConfirmCashPayment()} disabled={confirming}>
@@ -292,6 +332,13 @@ export default function JobDetailPage() {
                   <button type="button" className="ax-button" onClick={() => router.push(`/invoices/${invoice.id}`)}>Open invoice</button>
                 </div>
               </>
+            )}
+            {job.paymentStatus === "unpaid" && (!payment || payment.status === "failed" || payment.status === "cancelled") && (
+              <div className="ax-panel-actions" style={{ marginTop: 12 }}>
+                <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
+                  {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
+                </button>
+              </div>
             )}
             {job.paymentStatus === "unpaid" && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>

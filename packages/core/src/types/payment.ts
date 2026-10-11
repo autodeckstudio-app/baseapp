@@ -30,6 +30,7 @@ export interface Payment {
   method: PaymentMethod;
   status: PaymentStatus;
   // Provider references (null for cash/manual)
+  paymentUrl?: string | null; // hosted checkout link for razorpay_payment_link payments
   razorpayPaymentLinkId: string | null;
   razorpayPaymentId: string | null;
   razorpayOrderId: string | null;

@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { ServiceJob, Payment } from "@autodeck/core";
+import type { ServiceJob, Payment, Customer } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -60,7 +60,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     if (existing?.status === "completed") {
       throw new HttpsError("already-exists", "This job has already been paid.");
     }
-    return { paymentId: existing.id, paymentUrl: null, status: existing.status };
+    return { paymentId: existing.id, paymentUrl: existing.paymentUrl ?? null, status: existing.status };
   }
 
   const now = new Date().toISOString();
@@ -133,7 +133,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     if (existing.status === "completed") {
       throw new HttpsError("already-exists", "This job has already been paid.");
     }
-    return { paymentId: existing.id, paymentUrl: null, status: existing.status };
+    return { paymentId: existing.id, paymentUrl: existing.paymentUrl ?? null, status: existing.status };
   }
 
   // Call the provider exactly once, now that this call has exclusive claim
@@ -143,19 +143,23 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   if (data.method === "razorpay_payment_link") {
     try {
       const provider = getPaymentProvider();
+      // The link is for the CUSTOMER, so use their name and number, never the staff caller's.
+      const customerSnap = await db.collection(COLLECTIONS.customers()).doc(job.customerId).get();
+      const customer = customerSnap.exists ? (customerSnap.data() as Customer) : null;
       const result = await provider.createPaymentLink({
         amount,
         currency: job.priceBreakdown.currency,
         bookingId: job.bookingId ?? job.id,
         description: `AutoDeck Job ${job.id}`,
-        customerName: user.email ?? user.phone ?? "Customer",
-        customerPhone: user.phone ?? "",
+        customerName: customer?.name || "Customer",
+        customerPhone: customer?.phone ?? "",
         referenceId: paymentRef.id,
       });
       paymentUrl = result.paymentUrl;
       await paymentRef.update({
         razorpayPaymentLinkId: result.providerPaymentLinkId,
         razorpayOrderId: result.providerOrderId,
+        paymentUrl: result.paymentUrl,
         updatedAt: new Date().toISOString(),
       });
     } catch (err) {

@@ -53,8 +53,12 @@ function formatDateIST(iso: string): string {
   });
 }
 
+function cap(t: string): string {
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+}
+
 function formatPaise(paise: number): string {
-  return `â¹${Math.round(paise / 100).toLocaleString("en-IN")}`;
+  return `\u20b9${Math.round(paise / 100).toLocaleString("en-IN")}`;
 }
 
 
@@ -108,8 +112,8 @@ export async function buildNotification(
       return {
         userId: booking.customerId,
         type: "booking_confirmed",
-        title: "Booking confirmed",
-        body: `Your ${vehicle} booking is confirmed for ${formatTimeIST(booking.scheduledAt)}.`,
+        title: "You are booked",
+        body: `${cap(vehicle)}, ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)}. We will have the bay ready.`,
         entityType: "Booking",
         entityId: booking.id,
       };
@@ -124,8 +128,8 @@ export async function buildNotification(
       return {
         userId: booking.customerId,
         type: "booking_cancelled",
-        title: log.metadata?.["autoCancelled"] ? "Booking auto-cancelled" : "Booking cancelled",
-        body: log.metadata?.["autoCancelled"] ? `Your ${vehicle} booking was auto-cancelled because the car did not arrive by studio close. Make a new booking when you are ready.` : `Your ${vehicle} booking has been cancelled.`,
+        title: log.metadata?.["autoCancelled"] ? "We missed you today" : "Booking cancelled",
+        body: log.metadata?.["autoCancelled"] ? `Your ${vehicle} did not make it in, so we released the slot. Pick a new time whenever you like.` : `Your ${vehicle} booking is cancelled. Rebook whenever it suits you.`,
         entityType: "Booking",
         entityId: booking.id,
       };
@@ -141,8 +145,8 @@ export async function buildNotification(
       return {
         userId: booking.customerId,
         type: "booking_missed",
-        title: "Booking missed",
-        body: `Your ${vehicle} booking for ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)} was not checked in by studio close. Pick a new time or cancel it.`,
+        title: "We missed you",
+        body: `Your ${vehicle} slot on ${formatDateIST(booking.scheduledAt)} went unused. Pick a new time when you are ready.`,
         entityType: "Booking",
         entityId: booking.id,
       };
@@ -157,8 +161,8 @@ export async function buildNotification(
       return {
         userId: booking.customerId,
         type: "booking_rescheduled",
-        title: "Booking rescheduled",
-        body: `Your ${vehicle} booking has been moved to ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)}.`,
+        title: "New time confirmed",
+        body: `${cap(vehicle)} is now booked for ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)}.`,
         entityType: "Booking",
         entityId: booking.id,
       };
@@ -175,9 +179,9 @@ export async function buildNotification(
       const vehicle = await vehicleLabel(db, job.vehicleId);
 
       const updates: Record<string, { type: NotificationType; title: string; body: string }> = {
-        VEHICLE_RECEIVED: { type: "vehicle_received", title: "Vehicle received", body: `Your ${vehicle} has been checked in at the studio.` },
-        QUALITY_CHECK: { type: "quality_check", title: "Quality check", body: `Your ${vehicle} is now being checked before handover.` },
-        DELIVERED: { type: "vehicle_delivered", title: "Vehicle delivered", body: `Your ${vehicle} has been handed over. Thank you for visiting AutoDeck.` },
+        VEHICLE_RECEIVED: { type: "vehicle_received", title: "Your car is in", body: `${cap(vehicle)} is checked in and in good hands.` },
+        QUALITY_CHECK: { type: "quality_check", title: "Final checks", body: `${cap(vehicle)} is getting its last inspection.` },
+        DELIVERED: { type: "vehicle_delivered", title: "Thank you", body: `Enjoy your ${vehicle}. See you next time.` },
       };
       const update = nextStatus ? updates[nextStatus] : undefined;
       if (update) return { userId: job.customerId, ...update, entityType: job.bookingId ? "Booking" : null, entityId: job.bookingId };
@@ -185,8 +189,8 @@ export async function buildNotification(
         return {
           userId: job.customerId,
           type: "job_started",
-          title: "Work started",
-          body: `Work has started on your ${vehicle}.`,
+          title: "Work has begun",
+          body: `${cap(vehicle)} is on the bay now.`,
           entityType: job.bookingId ? "Booking" : null,
           entityId: job.bookingId,
         };
@@ -194,8 +198,8 @@ export async function buildNotification(
       return {
         userId: job.customerId,
         type: "job_completed",
-        title: "Your vehicle is ready",
-        body: `Your ${vehicle} is ready for pickup.`,
+        title: "Ready for you",
+        body: `${cap(vehicle)} is ready. Come collect it.`,
         entityType: job.bookingId ? "Booking" : null,
         entityId: job.bookingId,
       };
@@ -209,16 +213,19 @@ export async function buildNotification(
       if (!payment) return null;
 
       const type: NotificationType = log.action === "payment.completed" ? "payment_successful" : "payment_failed";
-      const title = log.action === "payment.completed" ? "Payment received" : "Payment failed";
+      const title =
+        log.action === "payment.completed"
+          ? payment.targetType === "membership" ? "You are in" : "Payment received"
+          : "Payment did not go through";
       const amount = formatPaise(payment.amount);
       const body =
         log.action === "payment.completed"
           ? payment.targetType === "membership"
-            ? `Your membership payment of ${amount} was successful.`
-            : `We've received your payment of ${amount}.`
+            ? `${amount} received. Welcome to the AutoDeck membership.`
+            : `${amount} received. Thank you.`
           : payment.targetType === "membership"
-            ? `Your membership payment of ${amount} could not be processed. Please try again.`
-            : `Your payment of ${amount} could not be processed. Please try again.`;
+            ? `Your ${amount} membership payment did not complete. Please try again, or ask us at the studio.`
+            : `Your ${amount} payment did not complete. Please try again, or ask us at the studio.`;
 
       let entityType: NotificationEntityType | null = null;
       let entityId: string | null = null;
@@ -247,7 +254,7 @@ export async function buildNotification(
         userId: invoice.customerId,
         type: "invoice_issued",
         title: "Your bill is ready",
-        body: `Invoice ${invoice.invoiceNumber} is ready - ${formatPaise(invoice.total)} total.`,
+        body: `${invoice.invoiceNumber}, ${formatPaise(invoice.total)}. Tap to view.`,
         entityType: "Invoice",
         entityId: invoice.id,
         dedupeKey: `invoice-issued-${invoice.id}`,
@@ -262,8 +269,8 @@ export async function buildNotification(
       return {
         userId: membership.customerId,
         type: "membership_activated",
-        title: "Membership activated",
-        body: `Your ${membership.tier} membership is now active.`,
+        title: `Welcome to ${cap(membership.tier)}`,
+        body: `Your ${cap(membership.tier)} membership is active.`,
         entityType: "Membership",
         entityId: membership.id,
       };
@@ -277,8 +284,8 @@ export async function buildNotification(
       return {
         userId: membership.customerId,
         type: "membership_expired",
-        title: "Membership expired",
-        body: `Your ${membership.tier} membership has expired.`,
+        title: `${cap(membership.tier)} has ended`,
+        body: "Renew to keep your member benefits.",
         entityType: "Membership",
         entityId: membership.id,
       };
@@ -293,8 +300,8 @@ export async function buildNotification(
       return {
         userId: approval.customerId,
         type: "approval_requested",
-        title: "Approval needed",
-        body: `Your ${vehicle} needs your approval: ${approval.serviceName} (+${formatPaise(approval.priceImpact)}).`,
+        title: "Quick approval needed",
+        body: `We found something on your ${vehicle}: ${approval.serviceName}, +${formatPaise(approval.priceImpact)}. Approve or decline in the app.`,
         entityType: "Approval",
         entityId: approval.id,
       };
@@ -308,8 +315,8 @@ export async function buildNotification(
       return {
         userId: approval.customerId,
         type: "approval_approved",
-        title: "Approval confirmed",
-        body: `You approved ${approval.serviceName} (+${formatPaise(approval.priceImpact)}). New total: ${formatPaise(approval.newTotal)}.`,
+        title: "Approved",
+        body: `${approval.serviceName} is added. New total ${formatPaise(approval.newTotal)}.`,
         entityType: "Approval",
         entityId: approval.id,
       };
@@ -323,8 +330,8 @@ export async function buildNotification(
       return {
         userId: approval.customerId,
         type: "approval_rejected",
-        title: "Approval declined",
-        body: `You declined ${approval.serviceName}. Original work continues as planned.`,
+        title: "Noted",
+        body: `We will skip ${approval.serviceName} and carry on with the rest.`,
         entityType: "Approval",
         entityId: approval.id,
       };
@@ -351,7 +358,7 @@ export async function buildNotification(
         return {
           userId: req.customerId,
           type: "pickup_confirmed",
-          title: wantsPickup && wantsDrop ? "Pickup and dropoff confirmed" : wantsPickup ? "Pickup confirmed" : "Dropoff confirmed",
+          title: wantsPickup && wantsDrop ? "Pickup and drop confirmed" : wantsPickup ? "Pickup confirmed" : "Drop confirmed",
           body: parts.join(" "),
           entityType: "Booking",
           entityId: req.bookingId,
@@ -362,8 +369,8 @@ export async function buildNotification(
       return {
         userId: req.customerId,
         type: "pickup_declined",
-        title: "Pickup request not confirmed",
-        body: `Your ${what} request was not confirmed.${req.staffNote ? ` Reason: ${req.staffNote}` : ""}`,
+        title: "Pickup not available",
+        body: `We could not take your ${what} request this time.${req.staffNote ? ` ${req.staffNote}` : ""} Choose another time?`,
         entityType: "Booking",
         entityId: req.bookingId,
       };
