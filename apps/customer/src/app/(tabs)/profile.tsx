@@ -12,6 +12,7 @@ import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-
 import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
+import { ProfileHero } from "../../ui/ProfileHero";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function YouScreen() {
@@ -53,12 +54,18 @@ export default function YouScreen() {
   const name = savedName ?? auth.user.displayName ?? "AutoDeck member";
 
   return (
-    <Screen header={<View style={{ flexDirection: "row", alignItems: "center", gap: space.inset }}>
-      <View style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: "#F59A45", ...({ backgroundImage: "linear-gradient(160deg,#F9B060,#EC8638)", boxShadow: "0 10px 26px rgba(236,134,56,0.35)" } as object) }}>
-        <T role="title" style={{ color: "#1A1410" }}>{(name.trim()[0] ?? "A").toUpperCase()}</T>
-      </View>
-      <View style={{ flex: 1, gap: space.hair }}><Kicker tone="accent">{t("You")}</Kicker><T role="title" numberOfLines={1}>{name}</T>{auth.user.email ? <T role="caption" tone="tertiary" numberOfLines={1}>{auth.user.email}</T> : null}</View>
-    </View>}>
+    <Screen>
+      <ProfileHero
+        name={name}
+        email={auth.user.email}
+        onEdit={() => { setDraft(name === "AutoDeck member" ? "" : name); setSaveError(null); setEditing(true); }}
+        tiles={[
+          { icon: "club", label: t("Membership"), onPress: () => router.push("/(tabs)/membership") },
+          { icon: "bell", label: t("Notifications"), onPress: () => router.push("/(tabs)/notifications") },
+          { icon: "garage", label: "My cars", onPress: () => router.push("/(tabs)/garage") },
+          { icon: "users", label: t("Help and contact"), onPress: () => router.push("/(tabs)/help") },
+        ]}
+      />
       {actionMessage?<Notice title="Account update" body={actionMessage}/>:null}
       {editing ? (
         <View style={{ gap: space.breath }}>
@@ -69,15 +76,7 @@ export default function YouScreen() {
             <Button kind="quiet" label={t("Cancel")} onPress={() => setEditing(false)} style={{ flex: 1 }} />
           </View>
         </View>
-      ) : (
-        <Button kind="quiet" label={t("Edit name")} onPress={() => { setDraft(name === "AutoDeck member" ? "" : name); setSaveError(null); setEditing(true); }} />
-      )}
-      <Pane pad="gap">
-        <Row title={t("Membership")} detail={t("Plans, washes left, history")} onPress={() => router.push("/(tabs)/membership")} />
-        <Row title={t("Notifications")} detail={t("Updates from the studio")} onPress={() => router.push("/(tabs)/notifications")} />
-        {pushAvailable() ? <Row title="Booking alerts" detail="Get a notification when the studio updates your booking" onPress={() => void enablePush().then((r) => showActionMessage(r === "on" ? "Alerts on" : "Not enabled", r === "on" ? "You will get booking updates on this device." : "Allow notifications in your browser settings to turn this on."))} /> : null}
-        <Row title={t("Help and contact")} detail={t("Call, WhatsApp, FAQ")} onPress={() => router.push("/(tabs)/help")} last />
-      </Pane>
+      ) : null}
       {/* Language picker hidden until the whole app is translated (LANGS, setLang kept in lib/i18n). */}
       <Pane pad="gap">
         <Row title="Signed in with Google" detail="AutoDeck never stores a password for you." last />

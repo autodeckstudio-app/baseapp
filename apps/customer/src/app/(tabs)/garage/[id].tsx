@@ -12,6 +12,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { listenToVehicleProtections } from "../../../lib/protection-service";
@@ -240,20 +241,20 @@ export default function VehicleDetailScreen() {
     <Screen
       header={
         <View style={{ gap: space.breath }}>
-          <View style={{ borderRadius: 30, overflow: "hidden", backgroundColor: "#121214", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-            {newPhoto ? (
-              createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 250, objectFit: "cover", display: "block" } })
-            ) : (
-              <CarThumb car={vehicle} height={250} radius={0} />
-            )}
-            <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 250, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.35) 0%, rgba(5,5,6,0) 35%, rgba(5,5,6,0.9) 100%)" } as object) }} />
-            <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, gap: 6 }}>
-              <T role="label" tone="accent">Vehicle room</T>
-              <T role="title" style={{ color: "#FFFFFF" }} numberOfLines={1}>{vehicle.year} {vehicle.make} {vehicle.model}</T>
-              <View style={{ alignSelf: "flex-start" }}><Plate value={vehicle.registrationNumber} /></View>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+          <CarHero
+            photo={newPhoto ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 300, objectFit: "cover", display: "block" } }) : <CarThumb car={vehicle} height={300} radius={0} />}
+            title={`${vehicle.make} ${vehicle.model}`}
+            subtitle={[vehicle.year, vehicle.color].filter(Boolean).join(" \u00b7 ")}
+            plate={vehicle.registrationNumber}
+            facts={[
+              { label: "Year", value: String(vehicle.year ?? "-") },
+              { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
+              { label: "Type", value: vehicle.category ? vehicle.category.toUpperCase() : "-" },
+              { label: "Protection", value: verifiedProtections.length > 0 ? `${verifiedProtections.length} on file` : "None" },
+            ]}
+            onBook={() => router.push("/(tabs)/catalogue")}
+          />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 24, backgroundColor: "#1B1B1F" }}>
             {TABS.map((t) => {
               const selected = tab === t.key;
               return (
@@ -262,7 +263,7 @@ export default function VehicleDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => setTab(t.key)}
-                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 16, backgroundColor: selected ? "#F59A45" : "transparent" }}
+                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 20, backgroundColor: selected ? "#EC8638" : "transparent" }}
                 >
                   <T role="label" tone={selected ? "onAccent" : "secondary"}>{t.label}</T>
                 </Pressable>

@@ -25,7 +25,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const segs = segments as string[];
     const group = segs[0];
     const inAuth = group === "(auth)";
-    if (__DEV__ && (group === "preview" || group === "preview-services")) return;
+    if (__DEV__ && (group === "preview" || group === "preview-services" || group === "preview-car" || group === "preview-profile")) return;
     
 
     if (auth.status === "unauthenticated") {
