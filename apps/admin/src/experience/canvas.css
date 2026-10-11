@@ -190,3 +190,26 @@ html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; bor
   .ax-shell .ax-kpis > div:first-child { flex: 1.5 1 0; }
   .ax-shell .ax-kpis > div:nth-child(3) { flex: .8 1 0; }
 }
+
+/* Dashboard alignment (desktop/iPad): "Taken today" sits in the stat row, same top and bottom as the three tiles;
+   the two bottom cards share one top and one bottom edge. */
+@media (min-width: 861px) {
+  .ax-dash .ax-hero-side--head { display: none; }
+  .ax-dash .ax-tiles { max-width: none; display: flex; align-items: stretch; }
+  .ax-dash .ax-tiles > .ax-tile { flex: 0 0 auto; width: 214px; }
+  .ax-dash .ax-hero-side--row { position: static; margin-left: auto; flex: 0 0 auto; width: 214px; box-sizing: border-box; align-items: flex-start; justify-content: center; }
+  .ax-dash .ax-detail { align-items: stretch; }
+  .ax-dash .ax-detail-side { justify-content: flex-end; }
+  .ax-dash .ax-detail-side > .ax-panel { margin-bottom: -36px; padding-bottom: 66px; border-radius: 36px 36px 0 0; }
+}
+@media (max-width: 860px) {
+  .ax-dash .ax-hero-side--row { display: none; }
+  .ax-shell-frame[data-hero="on"] .ax-page-head, .ax-dash .ax-page-head { min-height: 0 !important; }
+}
+@media (min-width: 861px) {
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { flex: 1 1 auto; }
+}
+@media (min-width: 861px) {
+  .ax-dash .ax-detail-main, .ax-dash .ax-detail-side { align-self: stretch; }
+  .ax-dash .ax-tiles > .ax-tile, .ax-dash .ax-hero-side--row { flex: 1 1 0; width: auto; min-width: 0; }
+}

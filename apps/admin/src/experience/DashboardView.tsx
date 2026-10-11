@@ -51,7 +51,7 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
           <p className="ax-label">{formatDayLong(today)}</p>
           <h1>{greeting(now)}</h1>
         </div>
-        <div className="ax-hero-side">
+        <div className="ax-hero-side ax-hero-side--head">
           <span className="ax-label">Taken today</span>
           <span className="ax-hero-total">{formatPaise(revenueToday)}</span>
         </div>
@@ -61,6 +61,10 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
         <Tile icon="calendar" featured value={tiles.bookings} label="Bookings today" onClick={() => onOpen("/bookings")} />
         <Tile icon="wrench" value={tiles.active} label="Cars in progress" tone="accent" onClick={() => onOpen("/jobs")} />
         <Tile icon="check" value={tiles.delivered} label="Delivered today" tone="premium" onClick={() => onOpen("/jobs")} />
+        <div className="ax-hero-side ax-hero-side--row">
+          <span className="ax-label">Taken today</span>
+          <span className="ax-hero-total">{formatPaise(revenueToday)}</span>
+        </div>
       </div>
 
       <div className="ax-detail" style={{ marginTop: "var(--ad-space-inset)" }}>
