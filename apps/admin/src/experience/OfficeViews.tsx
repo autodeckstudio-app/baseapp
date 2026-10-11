@@ -123,6 +123,7 @@ const PAYMENT_FILTERS: { value: PaymentStatus | ""; label: string }[] = [
 export function PaymentsView(p: {
   payments: Payment[];
   names: Names;
+  invoiceNos?: Names;
   loading: boolean;
   error: string | null;
   status: PaymentStatus | "";
@@ -141,7 +142,7 @@ export function PaymentsView(p: {
   const rows = p.payments.filter((x) => {
     if (p.status === "pending" ? !(x.status === "pending" || x.status === "processing") : p.status && x.status !== p.status) return false;
     if (!q) return true;
-    return [x.id, x.customerId, x.jobId, x.bookingId, p.names[x.customerId]].filter(Boolean).join(" ").toLowerCase().includes(q);
+    return [x.id, x.customerId, x.jobId, x.bookingId, p.names[x.customerId], x.invoiceId ? p.invoiceNos?.[x.invoiceId] : ""].filter(Boolean).join(" ").toLowerCase().includes(q);
   });
   const done = p.payments.filter((x) => x.status === "completed");
   const takenToday = done.filter((x) => studioToday(new Date(x.createdAt)) === p.today).reduce((s, x) => s + x.amount, 0);
@@ -151,6 +152,7 @@ export function PaymentsView(p: {
   const cols: Column<Payment>[] = [
     { key: "when", head: "When", kind: "muted", width: "150px", cell: (x) => formatDateTime(x.createdAt) },
     { key: "who", head: "Customer", kind: "strong", width: "minmax(0, 1.6fr)", cell: (x) => p.names[x.customerId] ?? "Customer" },
+    { key: "inv", head: "Invoice", kind: "data", width: "minmax(0, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Draft") : "-") },
     { key: "how", head: "Method", width: "110px", cell: (x) => methodLabel(x.method) },
     { key: "status", head: "Status", width: "120px", cell: (x) => <StatusBadge label={x.status} /> },
     { key: "amt", head: "Amount", kind: "data", align: "end", width: "110px", cell: (x) => formatPaise(x.amount) },

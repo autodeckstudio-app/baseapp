@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Payment, PaymentStatus, Customer } from "@autodeck/core";
+import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToPayments, refundPayment } from "../../../lib/payments-service";
@@ -40,6 +40,8 @@ export default function PaymentsPage() {
 
   const names = useLabels(COLLECTIONS.customers(), payments.map((p) => p.customerId), (d) => (d as Customer).name);
 
+  const invoiceNos = useLabels(COLLECTIONS.invoices(), payments.map((p) => p.invoiceId ?? "").filter(Boolean), (d) => (d as Invoice).invoiceNumber ?? "");
+
   async function handleRefund(paymentId: string, reason: string) {
     setRefundingId(paymentId);
     setMessage(null);
@@ -58,6 +60,7 @@ export default function PaymentsPage() {
     <PaymentsView
       payments={payments}
       names={names}
+      invoiceNos={invoiceNos}
       loading={loading}
       error={error}
       status={status}

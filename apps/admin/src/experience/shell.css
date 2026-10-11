@@ -763,3 +763,25 @@ html[data-theme="night"] .ax-due { color: #F5A15C; }
 .ax-car-img.is-empty { aspect-ratio: auto; height: 84px; display: flex; align-items: center; justify-content: center; }
 .ax-car-nophoto { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ad-text-secondary); opacity: .8; }
 .ax-car-img.is-empty .ax-car-status { top: 10px; left: 10px; }
+
+/* Cancelled bookings: one collapsed group under the live list */
+.ax-cancelled { margin-top: 16px; }
+.ax-cancelled > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--ad-border-subtle, rgba(127,127,127,.3)); }
+.ax-cancelled > summary::-webkit-details-marker { display: none; }
+.ax-cancelled > summary::after { content: "+"; font-weight: 700; }
+.ax-cancelled[open] > summary::after { content: "-"; }
+.ax-cancelled[open] > summary { margin-bottom: 12px; }
+
+/* Reports: proportional bars beside amounts */
+.ax-bar { min-width: 40px; height: 6px; border-radius: 999px; background: rgba(127,127,127,.18); overflow: hidden; }
+.ax-bar > span { display: block; height: 100%; border-radius: 999px; background: #EC8638; }
+.rp-month-wrap { margin: 0 0 var(--ad-space-gap, 16px); }
+.rp-month { display: inline-flex; align-items: center; gap: 12px; }
+.rp-month .ax-button { width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+.rp-month-label { min-width: 160px; text-align: center; font-family: Montserrat, Inter, system-ui, sans-serif; font-weight: 600; font-size: 18px; }
+.rp-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.rp-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(48px, 120px) auto; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--ad-border-subtle, rgba(127,127,127,.25)); font-size: 14px; }
+.rp-row:last-child { border-bottom: none; }
+.rp-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-amt { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+@media (max-width: 430px) { html .ax-shell .ax-kpis > div { flex: 1 1 auto !important; } html .ax-shell .ax-kpis .ax-kpi-v { font-size: 16px !important; } .rp-row { grid-template-columns: minmax(0, 1fr) 44px auto; gap: 10px; } }

@@ -70,7 +70,11 @@ export default function BookingsPage() {
 
   if (loading) return <div className="ax-panel" role="status">Loading studio bookings...</div>;
   const dayMode = date !== "";
-  const sorted = [...filtered].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  const allSorted = [...filtered].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  // Cancelled bookings sit in their own collapsed group so the live list stays clean.
+  const groupCancelled = status !== "CANCELLED";
+  const sorted = groupCancelled ? allSorted.filter((b) => b.status !== "CANCELLED") : allSorted;
+  const cancelled = groupCancelled ? allSorted.filter((b) => b.status === "CANCELLED") : [];
   const dayCount = bookings.filter((b) => b.scheduledDate === date && b.status !== "CANCELLED" && b.status !== "EXPIRED").length;
   const pending = bookings.filter((b) => b.status === "PENDING").length;
   const upcoming = bookings.filter((b) => b.scheduledDate > today && (b.status === "CONFIRMED" || b.status === "PENDING")).length;
@@ -87,6 +91,37 @@ export default function BookingsPage() {
     payment: b.paymentStatus,
     amount: formatPaise(b.totalAmount),
   });
+
+  const bookingTable = (rows: Booking[]) => (
+        <table>
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Status</th>
+              <th>Vehicle</th>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Bay</th>
+              <th>Payment</th>
+              <th style={{ textAlign: "right" }}>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((b) => (
+              <tr key={b.id} className="row-link" onClick={() => open(b.id)}>
+                <td>{formatDateTime(b.scheduledAt)}</td>
+                <td><StatusBadge label={isBookingMissed(b) ? "MISSED" : b.status} /></td>
+                <td className="ax-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
+                <td>{customerNames[b.customerId] ?? "-"}</td>
+                <td>{serviceNames[b.serviceId] ?? "-"}</td>
+                <td>{b.bayId}</td>
+                <td><StatusBadge label={b.paymentStatus} /></td>
+                <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+  );
 
   return (
     <div className="ax-page">
@@ -141,34 +176,14 @@ export default function BookingsPage() {
       ) : sorted.length === 0 ? (
         <div className="ax-empty"><p className="ax-title">No matches</p><p>Try another status, service or search.</p></div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Status</th>
-              <th>Vehicle</th>
-              <th>Customer</th>
-              <th>Service</th>
-              <th>Bay</th>
-              <th>Payment</th>
-              <th style={{ textAlign: "right" }}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((b) => (
-              <tr key={b.id} className="row-link" onClick={() => open(b.id)}>
-                <td>{formatDateTime(b.scheduledAt)}</td>
-                <td><StatusBadge label={isBookingMissed(b) ? "MISSED" : b.status} /></td>
-                <td className="ax-data">{vehicleRegs[b.vehicleId] ?? "-"}</td>
-                <td>{customerNames[b.customerId] ?? "-"}</td>
-                <td>{serviceNames[b.serviceId] ?? "-"}</td>
-                <td>{b.bayId}</td>
-                <td><StatusBadge label={b.paymentStatus} /></td>
-                <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        bookingTable(sorted)
+      )}
+
+      {cancelled.length > 0 && (
+        <details className="ax-cancelled">
+          <summary>Cancelled ({cancelled.length})</summary>
+          {dayMode ? <DayAgenda items={cancelled.map(toItem)} loading={false} onOpen={open} /> : bookingTable(cancelled)}
+        </details>
       )}
     </div>
   );

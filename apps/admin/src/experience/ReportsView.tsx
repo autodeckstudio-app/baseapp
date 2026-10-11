@@ -18,6 +18,20 @@ const CATEGORY_NAME: Record<string, string> = {
   OTHER: "Other",
 };
 
+function shiftMonth(m: string, delta: number): string {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(y!, (mo! - 1) + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthLabel(m: string): string {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(y!, mo! - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
+function Bar({ value, max }: { value: number; max: number }) {
+  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  return <span className="ax-bar" aria-hidden="true"><span style={{ width: `${value > 0 ? pct : 0}%` }} /></span>;
+}
+
 export function ReportsView(p: {
   month: string;
   report: OfficeReport | null;
@@ -28,6 +42,10 @@ export function ReportsView(p: {
   const r = p.report;
   const days = r ? Object.entries(r.revenueByDay).sort(([a], [b]) => a.localeCompare(b)) : [];
   const categories = r ? Object.entries(r.expensesByCategory).sort(([, a], [, b]) => b - a) : [];
+  const maxDay = days.reduce((m, d) => Math.max(m, d[1]), 0);
+  const methods = r ? [["Cash", r.cashPaise], ["UPI (manual)", r.upiPaise], ["Online (Razorpay)", r.razorpayPaise], ["Bank transfer", r.bankTransferPaise]] as [string, number][] : [];
+  const maxMethod = methods.reduce((m, d) => Math.max(m, d[1]), 0);
+  const maxCat = categories.reduce((m, d) => Math.max(m, d[1]), 0);
   const bestDay = days.length ? days.reduce((best, d) => (d[1] > best[1] ? d : best)) : null;
 
   return (
@@ -43,9 +61,12 @@ export function ReportsView(p: {
       />
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
 
-      <div className="ax-form-pair" style={{ maxWidth: 320, marginBottom: "var(--ad-space-gap)" }}>
-        <span className="ax-label">Month</span>
-        <input type="month" value={p.month} onChange={(e) => e.target.value && p.onMonthChange(e.target.value)} aria-label="Month" />
+      <div className="rp-month-wrap">
+        <div className="rp-month" role="group" aria-label="Month">
+          <button type="button" className="ax-button" aria-label="Previous month" onClick={() => p.onMonthChange(shiftMonth(p.month, -1))}>‹</button>
+          <span className="rp-month-label" aria-live="polite">{monthLabel(p.month)}</span>
+          <button type="button" className="ax-button" aria-label="Next month" onClick={() => p.onMonthChange(shiftMonth(p.month, 1))}>›</button>
+        </div>
       </div>
 
       {p.loading ? (
@@ -58,14 +79,15 @@ export function ReportsView(p: {
               {days.length === 0 ? (
                 <p className="ax-note">No completed payments this month.</p>
               ) : (
-                <ul className="ax-list">
+                <ul className="rp-list">
                   {days.map(([date, amount]) => (
-                    <li key={date} className="ax-list-row">
-                      <span className="ax-slot-main">
+                    <li key={date} className="rp-row">
+                      <span className="rp-name">
                         <span className="ax-person-name">{formatDate(date)}</span>
                         {bestDay && date === bestDay[0] && <span className="ax-sub">best day</span>}
                       </span>
-                      <span className="ax-slot-amt">{formatPaise(amount)}</span>
+                      <Bar value={amount} max={maxDay} />
+                      <span className="rp-amt">{formatPaise(amount)}</span>
                     </li>
                   ))}
                 </ul>
@@ -76,11 +98,10 @@ export function ReportsView(p: {
           <div className="ax-detail-side">
             <section className="ax-panel">
               <span className="ax-label">Revenue by method</span>
-              <ul className="ax-list">
-                <li className="ax-list-row"><span className="ax-slot-main">Cash</span><span className="ax-slot-amt">{formatPaise(r.cashPaise)}</span></li>
-                <li className="ax-list-row"><span className="ax-slot-main">UPI (manual)</span><span className="ax-slot-amt">{formatPaise(r.upiPaise)}</span></li>
-                <li className="ax-list-row"><span className="ax-slot-main">Online (Razorpay)</span><span className="ax-slot-amt">{formatPaise(r.razorpayPaise)}</span></li>
-                <li className="ax-list-row"><span className="ax-slot-main">Bank transfer</span><span className="ax-slot-amt">{formatPaise(r.bankTransferPaise)}</span></li>
+              <ul className="rp-list">
+                {methods.map(([name, amt]) => (
+                  <li key={name} className="rp-row"><span className="rp-name">{name}</span><Bar value={amt} max={maxMethod} /><span className="rp-amt">{formatPaise(amt)}</span></li>
+                ))}
               </ul>
               <p className="ax-note">{r.paymentCount} completed payments</p>
             </section>
@@ -90,9 +111,9 @@ export function ReportsView(p: {
               {categories.length === 0 ? (
                 <p className="ax-note">No expenses recorded this month.</p>
               ) : (
-                <ul className="ax-list">
+                <ul className="rp-list">
                   {categories.map(([cat, amount]) => (
-                    <li key={cat} className="ax-list-row"><span className="ax-slot-main">{CATEGORY_NAME[cat] ?? cat}</span><span className="ax-slot-amt">{formatPaise(amount)}</span></li>
+                    <li key={cat} className="rp-row"><span className="rp-name">{CATEGORY_NAME[cat] ?? cat}</span><Bar value={amount} max={maxCat} /><span className="rp-amt">{formatPaise(amount)}</span></li>
                   ))}
                 </ul>
               )}
@@ -100,10 +121,10 @@ export function ReportsView(p: {
 
             <section className="ax-panel">
               <span className="ax-label">Jobs</span>
-              <ul className="ax-list">
-                <li className="ax-list-row"><span className="ax-slot-main">Booked in</span><span className="ax-slot-amt">{r.jobsCreated}</span></li>
-                <li className="ax-list-row"><span className="ax-slot-main">Delivered</span><span className="ax-slot-amt ax-success">{r.jobsCompleted}</span></li>
-                <li className="ax-list-row"><span className="ax-slot-main">Cancelled</span><span className="ax-slot-amt ax-danger">{r.jobsCancelled}</span></li>
+              <ul className="rp-list">
+                <li className="rp-row"><span className="rp-name">Booked in</span><span className="rp-amt">{r.jobsCreated}</span></li>
+                <li className="rp-row"><span className="rp-name">Delivered</span><span className="rp-amt ax-success">{r.jobsCompleted}</span></li>
+                <li className="rp-row"><span className="rp-name">Cancelled</span><span className="rp-amt ax-danger">{r.jobsCancelled}</span></li>
               </ul>
             </section>
           </div>
