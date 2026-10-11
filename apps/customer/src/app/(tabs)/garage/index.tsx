@@ -9,6 +9,7 @@ import { Icon } from "@autodeck/ui/native";
 import { archiveVehicle, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
+import { GarageCard } from "../../../ui/GarageCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, Pane, Plate, Screen, T } from "../../../ui/kit";
@@ -93,31 +94,7 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <Pressable key={v.id} onPress={() => open(v)} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} style={({ pressed }) => ({ width: "100%", borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(255,255,255,.045)", ...({ backgroundImage: "linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.03))", backdropFilter: "blur(26px) saturate(170%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22),0 24px 60px -18px rgba(0,0,0,.65)" } as object), borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.85 : 1 })}>
-              <CarThumb car={v} height={i === 0 ? 230 : 170} radius={0} />
-              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: i === 0 ? 230 : 170, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.45) 0%, rgba(5,5,6,0) 35%, rgba(5,5,6,0.88) 100%)" } as object) }} />
-              <Pressable
-                onPress={(e) => { e.stopPropagation?.(); setRemoveError(null); setRemoving(v); }}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${v.registrationNumber} from your garage`}
-                hitSlop={8}
-                style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", opacity: pressed ? 0.7 : 1 })}
-              >
-                <Icon name="close" color="#F6F4F1" size={16} />
-              </Pressable>
-              <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: (i === 0 ? 230 : 170) - 64, gap: 4 }}>
-                {i === 0 && list.length > 1 ? <T role="label" tone="accent">Most recent</T> : null}
-                <T role={i === 0 ? "heading" : "bodyStrong"} numberOfLines={1} style={{ color: "#FFFFFF" }}>{v.make} {v.model}</T>
-              </View>
-              <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", padding: space.line }}>
-                <Plate value={v.registrationNumber} />
-                {[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map((t) => (
-                  <View key={String(t)} style={{ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <T role="caption" tone="secondary" style={{ textTransform: "capitalize" }}>{String(t)}</T>
-                  </View>
-                ))}
-              </View>
-            </Pressable>
+            <GarageCard key={v.id} photo={<CarThumb car={v} height={i === 0 ? 230 : 170} radius={0} />} height={i === 0 ? 230 : 170} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
           ))}
         </View>
       ) : !error ? (

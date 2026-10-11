@@ -25,9 +25,9 @@ function Step({ n, icon, text }: { n: number; icon: "share" | "plus" | "check"; 
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
       <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(245,154,69,0.16)" }}>
-        {icon === "share" ? <ShareGlyph /> : icon === "plus" ? <PlusGlyph /> : <Icon name="check" color="#F59A45" size={20} />}
+        {icon === "share" ? <ShareGlyph /> : icon === "plus" ? <PlusGlyph /> : <Icon name="check" color="#EC8638" size={20} />}
       </View>
-      <Text style={{ flex: 1, color: "#F6F4F1", fontSize: 15, lineHeight: 21 }}><Text style={{ color: "#F59A45", fontWeight: "700" }}>{n}.  </Text>{text}</Text>
+      <Text style={{ flex: 1, color: "#F6F4F1", fontSize: 15, lineHeight: 21 }}><Text style={{ color: "#EC8638", fontWeight: "700" }}>{n}.  </Text>{text}</Text>
     </View>
   );
 }
@@ -35,17 +35,17 @@ function Step({ n, icon, text }: { n: number; icon: "share" | "plus" | "check"; 
 function ShareGlyph() {
   return (
     <View style={{ width: 18, height: 22, alignItems: "center" }}>
-      <View style={{ width: 2, height: 11, backgroundColor: "#F59A45", borderRadius: 1 }} />
-      <View style={{ position: "absolute", top: 0, width: 8, height: 8, borderLeftWidth: 2, borderTopWidth: 2, borderColor: "#F59A45", transform: [{ rotate: "45deg" }] }} />
-      <View style={{ position: "absolute", bottom: 0, width: 18, height: 12, borderWidth: 2, borderColor: "#F59A45", borderTopWidth: 0, borderBottomLeftRadius: 4, borderBottomRightRadius: 4 }} />
+      <View style={{ width: 2, height: 11, backgroundColor: "#EC8638", borderRadius: 1 }} />
+      <View style={{ position: "absolute", top: 0, width: 8, height: 8, borderLeftWidth: 2, borderTopWidth: 2, borderColor: "#EC8638", transform: [{ rotate: "45deg" }] }} />
+      <View style={{ position: "absolute", bottom: 0, width: 18, height: 12, borderWidth: 2, borderColor: "#EC8638", borderTopWidth: 0, borderBottomLeftRadius: 4, borderBottomRightRadius: 4 }} />
     </View>
   );
 }
 function PlusGlyph() {
   return (
-    <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: "#F59A45", alignItems: "center", justifyContent: "center" }}>
-      <View style={{ position: "absolute", width: 10, height: 2, backgroundColor: "#F59A45" }} />
-      <View style={{ position: "absolute", width: 2, height: 10, backgroundColor: "#F59A45" }} />
+    <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: "#EC8638", alignItems: "center", justifyContent: "center" }}>
+      <View style={{ position: "absolute", width: 10, height: 2, backgroundColor: "#EC8638" }} />
+      <View style={{ position: "absolute", width: 2, height: 10, backgroundColor: "#EC8638" }} />
     </View>
   );
 }
@@ -82,7 +82,7 @@ export function InstallPrompt() {
       <Pressable accessibilityLabel="Close" onPress={() => close("dismissed")} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)" }} />
       <View style={{ width: "100%", maxWidth: 520, alignSelf: "center", padding: 22, paddingBottom: 30, gap: 14, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: "rgba(20,20,22,0.94)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", ...({ backdropFilter: "blur(26px)", WebkitBackdropFilter: "blur(26px)", boxShadow: "0 -20px 60px rgba(0,0,0,0.6)" } as object) }}>
         <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" }} />
-        <Text style={{ color: "#F59A45", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>Get the app</Text>
+        <Text style={{ color: "#EC8638", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>Get the app</Text>
         <Text style={{ color: "#FFFFFF", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, lineHeight: 30, fontWeight: "700" }}>Add AutoDeck to your home screen</Text>
         <Text style={{ color: "#CDCBC8", fontSize: 15, lineHeight: 22 }}>Opens full screen like an app, faster, with one tap from your phone.</Text>
         {mode === "ios" ? (

@@ -19,7 +19,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
-import { Ambient as BaseAmbient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
+import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, nightButtonStyle, nightButtonText, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
@@ -163,8 +163,15 @@ export function Screen({
   );
 }
 
-export function Pane(props: GlassProps) {
-  return <Glass {...props} />;
+/** Solid dark card in the reference style (replaces the blurred glass pane). */
+export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
+  const { colors } = useExperienceTheme();
+  const edge = tone ? colors[tone] : "transparent";
+  return (
+    <View testID={testID} style={[{ borderRadius: 22, overflow: "hidden", backgroundColor: fill === "warm" ? "#231B15" : "#1B1B1F", borderWidth: tone ? 1 : 0, borderColor: edge, padding: pad === "none" ? 0 : space[pad] }, style]}>
+      {children}
+    </View>
+  );
 }
 
 export function Kicker({ children, tone = "tertiary" }: { children: ReactNode; tone?: "tertiary" | "accent" | "premium" }) {
@@ -230,7 +237,7 @@ export function Button({
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          backgroundColor: primary ? colors.accent : "transparent",
+          backgroundColor: primary ? "#EC8638" : "transparent",
           borderWidth: primary ? 0 : 1,
           borderColor: kind === "danger" ? colors.danger : colors.borderStrong,
           opacity: off ? 0.45 : 1,
@@ -239,13 +246,13 @@ export function Button({
           ...(Platform.OS === "web" && primary
             ? ({ backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)", boxShadow: pressed ? "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)" : "0 4px 12px rgba(194,84,10,0.16), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" } as object)
             : {}),
-          ...(Platform.OS === "web" && primary && night ? nightButtonStyle : {}),
+          ...(Platform.OS === "web" && primary ? ({ backgroundImage: "none", backgroundColor: "#EC8638", boxShadow: "none" } as object) : {}),
         },
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? (night && Platform.OS === "web" ? nightButtonText : colors.textOnAccent) : colors.textPrimary} /> : null}
-      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary && night && Platform.OS === "web" ? { color: nightButtonText } : undefined}>
+      {busy ? <ActivityIndicator color={primary ? "#1A1410" : colors.textPrimary} /> : null}
+      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: "#1A1410", fontWeight: "700" } : undefined}>
         {label}
       </T>
     </Pressable>

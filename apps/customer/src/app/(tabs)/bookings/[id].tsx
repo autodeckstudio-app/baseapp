@@ -327,7 +327,7 @@ export default function BookingDetailScreen() {
                 const active = i === cur && job.status !== "DELIVERED";
                 return (
                   <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: space.line }}>
-                    <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: done || active ? "#F59A45" : "rgba(255,255,255,0.3)", backgroundColor: done ? "#F59A45" : "#161618" }} />
+                    <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: done || active ? "#EC8638" : "rgba(255,255,255,0.3)", backgroundColor: done ? "#EC8638" : "#161618" }} />
                     <T role={active ? "bodyStrong" : "body"} tone={done || active ? "primary" : "tertiary"}>{translate(JOB_STATUS_LABELS[step] ?? step)}</T>
                   </View>
                 );

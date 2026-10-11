@@ -87,7 +87,7 @@ export default function CarsScreen() {
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
           <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#F59A45":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters</T></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#EC8638":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters</T></Pressable>
             <View style={{flex:1}}><Choice label="Sort cars" value={sort} onChange={v=>setSort(v as typeof sort)} options={[{value:"new",label:"Newest first"},{value:"low",label:"Price: low to high"},{value:"high",label:"Price: high to low"}]}/></View>
           </View>
           {filtersOpen ? <View style={{padding:18,gap:16,borderRadius:20,borderWidth:1,borderColor:"rgba(29,27,38,0.12)",backgroundColor:themeNight?"#373735":"#FFFFFF"}}>

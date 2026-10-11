@@ -53,7 +53,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               </Animated.View>
               <View pointerEvents="none" style={{ ...Fill, ...VEIL(0.35, 0.94) }} />
               <Animated.View style={{ position: "absolute", left: 28, right: 110, bottom: 56, gap: 12, opacity: fade, transform: [{ translateX: textShift }] }}>
-                <Text style={{ color: "#F59A45", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>{s.kicker}</Text>
+                <Text style={{ color: "#EC8638", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>{s.kicker}</Text>
                 <Text style={{ color: "#FFFFFF", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 32, lineHeight: 38, fontWeight: "700" }}>{s.title}</Text>
                 <Text style={{ color: "#DAD8D5", fontSize: 16, lineHeight: 24 }}>{s.line}</Text>
                 {s.chips ? (
