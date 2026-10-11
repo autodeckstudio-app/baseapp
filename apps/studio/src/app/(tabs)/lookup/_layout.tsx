@@ -3,6 +3,7 @@ import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { Stack } from "expo-router";
 import { colors } from "@autodeck/ui";
+import { BackButton } from "../../../components/BackButton";
 
 export default function LookupLayout() {
   return (
@@ -12,6 +13,8 @@ export default function LookupLayout() {
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "700" },
         headerTintColor: colors.accent,
+        headerBackVisible: false,
+        headerLeft: () => <BackButton fallback="/(tabs)/lookup" />,
         contentStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
       }}
     >

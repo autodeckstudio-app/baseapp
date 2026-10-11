@@ -162,8 +162,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
           <aside className="ax-side" aria-label="Main navigation">
             <div className="ax-side-scroll">
             {sections.map((sec, i) => (
-              <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>
-                {i === 0 || sections[i - 1]!.group !== sec.group ? <span className="ax-label">{sec.group}</span> : null}
+              <nav key={sec.key} className="ax-nav-group" aria-label={sec.label} data-tier={sec.group === "Daily" ? "1" : sec.group === "Grow" ? "2" : "3"} data-first={i === 0 || sections[i - 1]!.group !== sec.group ? "1" : undefined}>
                 <Link href={sec.links[0]!.href} className="ax-nav-link" title={sec.label} aria-label={sec.label} aria-current={activeSection?.key === sec.key ? "page" : undefined}>
                   <Icon name={sec.icon as never} size={22} uid="-rail" />
                   <span className="ax-nav-text">{sec.label}</span>
