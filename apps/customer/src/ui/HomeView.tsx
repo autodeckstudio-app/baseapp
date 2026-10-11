@@ -29,13 +29,15 @@ export type HomeViewProps = {
 };
 
 const ACCENT = "#EC8638";
-const CHIPS: Array<{ key: string | null; label: string }> = [
-  { key: null, label: "All" },
-  { key: "washing", label: "Wash" },
-  { key: "ceramic", label: "Ceramic" },
-  { key: "ppf", label: "PPF" },
-  { key: "tinting", label: "Tint" },
-  { key: "inspection", label: "Inspect" },
+// Popular-services groups. Ceramic lives under Coatings; tint is the one
+// modification category today; inspection and other care sit under Garage.
+const GROUPS: Array<{ key: string | null; label: string; cats: string[] }> = [
+  { key: null, label: "All", cats: [] },
+  { key: "washing", label: "Washing", cats: ["washing"] },
+  { key: "coatings", label: "Coatings", cats: ["ceramic", "coating"] },
+  { key: "ppf", label: "PPF", cats: ["ppf"] },
+  { key: "garage", label: "Garage", cats: ["inspection", "other"] },
+  { key: "mods", label: "Modifications", cats: ["tinting"] },
 ];
 const TITLES: Record<string, string> = { washing: "Wash and care", ceramic: "Ceramic coating", coating: "Coating", ppf: "Paint protection film", tinting: "Window tint", inspection: "Inspection", other: "Care" };
 
@@ -68,7 +70,8 @@ function ServiceCard({ s, onPress }: { s: HomeService; onPress: () => void }) {
 
 export function HomeView(p: HomeViewProps) {
   const [chip, setChip] = useState<string | null>(null);
-  const shown = p.services.filter((s) => !chip || s.category === chip);
+  const cats = GROUPS.find((g) => g.key === chip)?.cats ?? [];
+  const shown = p.services.filter((s) => !chip || cats.includes(s.category));
   const rows: HomeService[][] = [];
   for (let i = 0; i < shown.length; i += 2) rows.push(shown.slice(i, i + 2));
   return (
@@ -96,18 +99,6 @@ export function HomeView(p: HomeViewProps) {
 
       {p.stories}
       {p.banner}
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingRight: 8 }}>
-        {CHIPS.map((c) => {
-          const on = chip === c.key;
-          return (
-            <Pressable key={c.label} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setChip(c.key); p.onCategory(c.key); }} style={{ paddingVertical: 6 }}>
-              <Text style={{ color: on ? ACCENT : "#B4B2AE", fontSize: 15, fontWeight: on ? "700" : "500" }}>{c.label}</Text>
-              {on ? <View style={{ height: 2, borderRadius: 1, backgroundColor: ACCENT, marginTop: 4 }} /> : <View style={{ height: 2, marginTop: 4 }} />}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
 
       {p.live ? (
         <Pressable accessibilityRole="button" onPress={p.live.onPress} style={{ borderRadius: 22, backgroundColor: "#1B1B1F", borderWidth: 1, borderColor: "rgba(236,134,56,.4)", padding: 16, gap: 4 }}>
@@ -139,6 +130,18 @@ export function HomeView(p: HomeViewProps) {
 
       <View style={{ gap: 12 }}>
         <Heading title="Popular services" action="View all" onAction={p.onAllServices} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingRight: 8 }}>
+        {GROUPS.map((c) => {
+          const on = chip === c.key;
+          return (
+            <Pressable key={c.label} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setChip(c.key); p.onCategory(c.key); }} style={{ paddingVertical: 6 }}>
+              <Text style={{ color: on ? ACCENT : "#B4B2AE", fontSize: 15, fontWeight: on ? "700" : "500" }}>{c.label}</Text>
+              {on ? <View style={{ height: 2, borderRadius: 1, backgroundColor: ACCENT, marginTop: 4 }} /> : <View style={{ height: 2, marginTop: 4 }} />}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
         {rows.map((r, i) => (
           <View key={i} style={{ flexDirection: "row", gap: 12 }}>
             {r.map((s) => <ServiceCard key={s.id} s={s} onPress={() => p.onService(s)} />)}

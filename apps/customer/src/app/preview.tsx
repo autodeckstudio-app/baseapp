@@ -15,6 +15,7 @@ export default function Preview() {
           { id: "a", category: "ppf", name: "Full body PPF", price: "Quote on request" },
           { id: "b", category: "ceramic", name: "Ceramic coating", price: "Quote on request" },
           { id: "c", category: "washing", name: "Detailing wash", price: "\u20b91,500" },
+          { id: "e", category: "inspection", name: "Health check", price: "\u20b9999" },
           { id: "d", category: "tinting", name: "Window tint", price: "\u20b94,500" },
         ]}
         reminders={[{ title: "Insurance", detail: "Expires 3 Nov", chip: "22 days", danger: false }]}
