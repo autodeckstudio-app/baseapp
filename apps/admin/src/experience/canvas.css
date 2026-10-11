@@ -375,3 +375,4 @@ html[data-theme="day"] .ax-ocar { border-color: rgba(60,40,20,.12); background: 
   .ax-side .ax-nav-group[data-tier="3"] .ax-nav-link[aria-current="page"], .ax-side .ax-nav-group[data-tier="3"] .ax-nav-link:hover { opacity: 1; }
   .ax-side .ax-nav-group[data-tier="3"][data-first] { margin-top: auto; padding-top: 22px !important; }
 }
+@media (max-width: 860px) { .ax-corner--l .ax-lg--mark.ax-lg-d { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(0,0,0,.6)); } .ax-corner--l .ax-lg--mark.ax-lg-l { display: none !important; } }

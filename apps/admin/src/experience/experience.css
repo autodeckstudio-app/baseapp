@@ -149,3 +149,7 @@
 .ax-lg-d { display: none; }
 html[data-theme="night"] .ax-lg-l { display: none !important; }
 html[data-theme="night"] .ax-lg-d { display: block; }
+
+/* Admin always uses the white logo (studio and customer keep the black one). */
+.ax-lg-l { display: none !important; }
+.ax-lg-d { display: block !important; }
