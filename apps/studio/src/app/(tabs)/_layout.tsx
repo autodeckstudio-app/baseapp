@@ -4,20 +4,24 @@ import { nightGroundStyle, nightSurfaceStyle, floatScene } from "@autodeck/ui/th
 import { Tabs } from "expo-router";
 import { colors, isNightPalette } from "@autodeck/ui";
 import { PillTabBar } from "@autodeck/ui/native";
+import { useWindowDimensions } from "react-native";
+import { SideRail } from "../../components/SideRail";
 
 const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "profile"> = { index: "home", bays: "wrench", calendar: "calendar", lookup: "search", account: "profile" };
 
 export default function StudioTabsLayout() {
+  const { width } = useWindowDimensions();
+  const wide = NightPlatform.OS === "web" && width >= 900;
   return (
     <Tabs
-      tabBar={(props) => <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} compact activeColor={colors.accent} inactiveColor={colors.textMuted} dark={isNightPalette} floating />}
+      tabBar={(props) => wide ? <SideRail state={props.state as never} navigation={props.navigation as never} /> : <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} compact activeColor={colors.accent} inactiveColor={colors.textMuted} dark={isNightPalette} floating />}
       screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
         headerStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: 22, letterSpacing: -0.4 },
-        sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}) },
+        sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}), ...(wide ? { marginLeft: 252 } : {}) },
       })}
     >
       <Tabs.Screen
