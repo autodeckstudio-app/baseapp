@@ -1,8 +1,14 @@
 import { httpsCallable } from "firebase/functions";
 import type { CarListingView } from "@autodeck/core";
-import { functions } from "./firebase";
+import { auth, functions } from "./firebase";
 
 export async function getCarListings(mine = false): Promise<CarListingView[]> {
+  // Browsing is open: signed-out visitors see the public list. Their own listings need a sign-in.
+  if (!auth.currentUser) {
+    if (mine) return [];
+    const pub = httpsCallable<Record<string, never>, { listings: CarListingView[] }>(functions, "listPublicCarListings");
+    return (await pub({})).data.listings;
+  }
   const fn = httpsCallable<{ mine: boolean }, { listings: CarListingView[] }>(functions, "listCarListings");
   return (await fn({ mine })).data.listings;
 }

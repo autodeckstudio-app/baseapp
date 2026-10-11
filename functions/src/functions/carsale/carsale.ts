@@ -4,7 +4,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { randomUUID } from "node:crypto";
-import { FIRST_STUDIO_ID, type CarLead, type CarListing, type CarListingView } from "@autodeck/core";
+import { FIRST_STUDIO_ID, FIRST_TENANT_ID, type CarLead, type CarListing, type CarListingView } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -235,4 +235,18 @@ export const setCarLeadStatus = onCall({ region: "asia-south1" }, async (request
   assertTenant(user, (snap.data() as CarLead).tenantId);
   await ref.update({ status: d.status, updatedAt: new Date().toISOString() });
   return { id: ref.id };
+});
+
+// Public browsing: anyone, signed in or not, can see live and reserved cars. Public fields only, never seller details.
+export const listPublicCarListings = onCall({ region: "asia-south1", cors: true }, async (request) => {
+  const ip = String(request.rawRequest?.headers?.["x-forwarded-for"] ?? request.rawRequest?.ip ?? "anon").split(",")[0]?.trim() ?? "anon";
+  await enforceRateLimit({ uid: `ip:${ip}`, tenantId: "public", role: null }, "gallery.read");
+  const snap = await col().where("tenantId", "==", FIRST_TENANT_ID).limit(300).get();
+  const now = Date.now();
+  const keep = snap.docs.map((x) => x.data() as CarListing)
+    .filter((l) => (l.status === "live" || l.status === "reserved") && (!l.expiresAt || Date.parse(l.expiresAt) > now))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 60);
+  const listings = await Promise.all(keep.map(async (l) => ({ ...(await view(l, "")), mine: false, rejectionReason: null })));
+  return { listings };
 });

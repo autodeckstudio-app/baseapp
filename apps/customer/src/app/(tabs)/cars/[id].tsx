@@ -6,10 +6,12 @@ import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Pane, Screen, Skeleton, T } from "../../../ui/kit";
 import { getCarListings, inr, kmLabel, markListingSold, sendCarLead } from "../../../lib/carsale-service";
+import { useAuth } from "../../../hooks/useAuth";
 
 export default function CarDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const authState = useAuth();
   const {width} = useWindowDimensions();
   const photoWidth = Math.min(width,560)-48;
   const [photoIndex,setPhotoIndex] = useState(0);
@@ -107,7 +109,7 @@ export default function CarDetail() {
       ) : (
         <View style={{ gap: space.gap }}>
           <View style={{gap:8}}><Kicker>Interested?</Kicker><T role="heading">See if this is your next car</T><T tone="secondary">Ask the studio about this car. Your number is not shown to the seller.</T></View>
-          {!showEnquiry ? <Button label="Enquire about this car" onPress={() => setShowEnquiry(true)}/> : <View style={{gap:12}}><Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
+          {authState.status === "unauthenticated" ? <Button label="Sign in to enquire" onPress={() => router.push("/(auth)/login")}/> : !showEnquiry ? <Button label="Enquire about this car" onPress={() => setShowEnquiry(true)}/> : <View style={{gap:12}}><Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
           <Field label="Message (optional)" value={note} onChangeText={setNote} maxLength={300} />
           {error ? <Notice title="Not sent" body={error} /> : null}
           <Button label="Send enquiry to the studio" busy={busy} onPress={() => void send("interest")} /></View>}

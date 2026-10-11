@@ -25,7 +25,8 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const inAuth = group === "(auth)";
 
     if (auth.status === "unauthenticated") {
-      if (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome")) router.replace("/(auth)/login");
+      const browsingCars = group === "(tabs)" && segs[1] === "cars" && segs[2] !== "sell";
+      if (!browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) router.replace("/(auth)/login");
     } else if (auth.status === "authenticated_no_claims") {
       if (!inAuth || segs[1] !== "setup") router.replace("/(auth)/setup");
 
