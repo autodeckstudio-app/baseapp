@@ -32,7 +32,8 @@ function Row({ onClick, children, log }: { onClick?: () => void; children: React
 }
 
 /** Old notifications were stored with a broken rupee sign ("â ¹590"). Repair it for display. */
-export function fixRupee(text: string): string {
+export function fixRupee(text?: string | null): string {
+  if (!text) return "";
   return text.replace(/â[\u0080-\u00bf\s]{0,4}(?=\d)/g, "\u20b9");
 }
 
@@ -91,7 +92,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
   const jobBookingIds = new Set(d.jobs.map((j) => j.bookingId).filter(Boolean) as string[]);
   const log = [
     ...d.audit.map((a) => ({ id: `a-${a.id}`, at: a.createdAt, title: statusLabel(a.action), body: "", who: statusLabel(a.performedByRole) })),
-    ...d.notifications.map((n) => ({ id: `n-${n.id}`, at: n.createdAt, title: `Sent: ${fixRupee(n.title)}`, body: fixRupee(n.body), who: n.readAt ? "Read" : "Not read" })),
+    ...d.notifications.map((n) => ({ id: `n-${n.id}`, at: n.createdAt, title: `Sent: ${fixRupee(n.title) || "message"}`, body: fixRupee(n.body), who: n.readAt ? "Read" : "Not read" })),
   ].sort((x, y) => (x.at < y.at ? 1 : -1));
   const timeline = [
     ...d.bookings.filter((b) => !jobBookingIds.has(b.id)).map((b) => ({
