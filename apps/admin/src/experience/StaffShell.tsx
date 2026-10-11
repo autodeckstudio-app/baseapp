@@ -40,12 +40,14 @@ export const OFFICE_LINKS = [
 
 // Sidebar and More sheet: sections ordered by daily use. Studio-role staff only see sections with office:false links.
 type NavLink = { href: string; label: string; office: boolean };
-const SECTIONS: { key: string; label: string; links: NavLink[] }[] = [
-  { key: "today", label: "Today", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
-  { key: "customers", label: "Customers", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/vehicles", label: "Vehicles", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
-  { key: "money", label: "Money", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily Close", office: true }, { href: "/reports", label: "Reports", office: true }] },
-  { key: "catalogue", label: "Catalogue", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }, { href: "/stories", label: "Stories", office: true }, { href: "/cars", label: "Cars for sale", office: true }] },
-  { key: "admin", label: "Admin", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
+const SECTIONS: { key: string; label: string; icon: string; links: NavLink[] }[] = [
+  { key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/attendance", label: "Attendance", office: false }] },
+  { key: "customers", label: "Customers", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
+  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/reports", label: "Reports", office: true }] },
+  { key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
+  { key: "stories", label: "Stories", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }] },
+  { key: "cars", label: "Cars for sale", icon: "car", links: [{ href: "/cars", label: "Cars for sale", office: true }] },
+  { key: "admin", label: "Admin", icon: "profile", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
 ];
 
 // Phone bottom bar: five groups. A group lights up for any page inside it and shows its sibling pages as chips.
@@ -128,7 +130,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
   const sections = SECTIONS.map((sec) => ({ ...sec, links: sec.links.filter((l) => office || !l.office) })).filter((sec) => sec.links.length > 0);
   const activeSection = sections.find((sec) => sec.links.some((l) => isActive(pathname, l.href)));
-  const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "admin");
+  const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "stories" || sec.key === "cars" || sec.key === "admin");
 
   return (
     <div className="ax-shell">
@@ -161,8 +163,10 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
             <div className="ax-side-scroll">
             {sections.map((sec) => (
               <nav key={sec.key} className="ax-nav-group" aria-label={sec.label}>
-                <span className="ax-label">{sec.label}</span>
-                {sec.links.map(link)}
+                <Link href={sec.links[0]!.href} className="ax-nav-link" title={sec.label} aria-label={sec.label} aria-current={activeSection?.key === sec.key ? "page" : undefined}>
+                  <Icon name={sec.icon as never} size={22} uid="-rail" />
+                  <span className="ax-nav-text">{sec.label}</span>
+                </Link>
               </nav>
             ))}
             </div>
