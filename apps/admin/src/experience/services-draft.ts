@@ -14,6 +14,7 @@ export interface ServiceDraft {
   priceRupees: string;
   minutes: string;
   warrantyLabel: string;
+  careTips: string[];
   warrantyUnit: WarrantyDurationUnit | "";
   warrantyValue: string;
   bay: BayType;
@@ -25,7 +26,7 @@ export interface ServiceDraft {
 
 export const EMPTY_SERVICE: ServiceDraft = {
   serviceId: null, name: "", category: "washing", brand: "", description: "", internalNotes: "", priceRupees: "", minutes: "60",
-  warrantyLabel: "", warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [], imageUrl: "",
+  warrantyLabel: "", careTips: [], warrantyUnit: "", warrantyValue: "", bay: "wash", displayOrder: "0", washEligible: false, sizes: [], imageUrl: "",
 };
 
 export function draftFromService(s: Service): ServiceDraft {
@@ -39,6 +40,7 @@ export function draftFromService(s: Service): ServiceDraft {
     priceRupees: String(s.basePrice / 100),
     minutes: String(s.estimatedDurationMinutes),
     warrantyLabel: s.warrantyLabel ?? "",
+    careTips: s.careTips ?? [],
     warrantyUnit: s.warrantyDurationUnit ?? "",
     warrantyValue: s.warrantyDurationValue?.toString() ?? "",
     bay: s.requiredBayType,
@@ -57,6 +59,7 @@ export interface ServicePayload {
   basePrice: number;
   estimatedDurationMinutes: number;
   warrantyLabel: string | null;
+  careTips: string[];
   warrantyDurationValue: number | null;
   warrantyDurationUnit: WarrantyDurationUnit | null;
   requiredBayType: BayType;
@@ -111,6 +114,7 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
       basePrice: paise(d.priceRupees),
       estimatedDurationMinutes: minutes,
       warrantyLabel: d.warrantyLabel.trim() || null,
+      careTips: d.careTips.map((t) => t.trim()).filter(Boolean),
       warrantyDurationValue,
       warrantyDurationUnit,
       requiredBayType: d.bay,

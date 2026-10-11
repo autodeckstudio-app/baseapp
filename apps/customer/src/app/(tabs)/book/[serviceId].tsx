@@ -1,5 +1,6 @@
 import { ensureVehicleSize } from "../../../lib/saved-size";
-import { DateField, SelectField } from "../../../ui/inputs";
+import { CarThumb } from "../../../ui/CarThumb";
+import { SelectField } from "../../../ui/inputs";
 import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
@@ -42,6 +43,7 @@ export default function BookServiceScreen() {
   const [selectedCategory, setSelectedCategory] = useState<VehicleCategory|null>(null);
   const [dateError,setDateError]=useState<string|null>(null);
   const [sizeSaving,setSizeSaving]=useState(false);
+  const [pickedSlot,setPickedSlot]=useState<AvailableSlot|null>(null);
   const [sizeError,setSizeError]=useState<string|null>(null);
   const [selectedDate,setSelectedDate] = useState<string|null>(null);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
@@ -109,7 +111,8 @@ export default function BookServiceScreen() {
   useEffect(()=>{setSelectedDate(cur=>slots.some(s=>s.date===cur)?cur:slots[0]?.date??null);},[slots]);
 
   async function handleSelectSlot(slot: AvailableSlot) {
-    if (!selectedVehicle || !serviceId || !selectedCategory || sizeSaving) return;
+    if (!selectedVehicle || !serviceId || sizeSaving) return;
+    if (!selectedCategory) { setSizeError("Choose your car size before continuing."); return; }
     const vehicleId=selectedVehicle.id;
     if(!selectedVehicle.category){
       setSizeSaving(true);setSizeError(null);
@@ -143,10 +146,11 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="caption" tone="accent">Total {rupees(total)} incl. tax</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
       <View style={{ borderRadius: 28, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={16 / 9} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
-        <Kicker>Your car</Kicker>
+        <Kicker>Booking for</Kicker>
+        {selectedVehicle ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}><CarThumb car={selectedVehicle} height={60} width={84} radius={12}/><View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View></Pane> : null}
         {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : (
@@ -182,30 +186,32 @@ export default function BookServiceScreen() {
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>
-        <DateField label="Booking date" value={selectedDate??""} min={Object.keys(slotsByDate).sort()[0]} max={Object.keys(slotsByDate).sort().at(-1)} error={dateError??undefined} onChange={v=>{if(slotsByDate[v]){setSelectedDate(v);setDateError(null);}else setDateError("No available times on that date. Choose an available day.");}}/>
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
           <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
         ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (
           <Notice title="Fully booked this week" body="No free times in the next 7 days. Try again tomorrow or call the studio." />
         ) : (
-          <View style={{gap:space.line}}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).map(date=><Pressable key={date} accessibilityRole="button" accessibilityLabel={`Choose ${date}`} accessibilityState={{selected:date===selectedDate}} onPress={()=>setSelectedDate(date)} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
+          <View style={{gap:space.line}}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).map(date=><Pressable key={date} accessibilityRole="button" accessibilityLabel={`Choose ${date}`} accessibilityState={{selected:date===selectedDate}} onPress={()=>{setSelectedDate(date);setPickedSlot(null);}} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
             <Pane key={date} pad="gap">
               <View style={{ gap: space.line }}>
                 <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
                   {[...daySlots].sort((a,b)=>a.startAt.localeCompare(b.startAt)).map((slot) => {
                     const multiDay = slot.estimatedEndDate !== slot.date;
+                    const past = Date.parse(slot.startAt) < Date.now();
+                    const on = pickedSlot?.startAt === slot.startAt;
                     return (
                       <Pressable
                         key={slot.startAt}
                         accessibilityRole="button"
-                        accessibilityLabel={`Book ${slot.startTime}`}
-                        disabled={!selectedVehicle || !selectedCategory || vehiclesError || sizeSaving}
-                        onPress={() => void handleSelectSlot(slot)}
-                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: "rgba(245,154,69,0.55)", backgroundColor: "rgba(245,154,69,0.12)", paddingHorizontal: 16, paddingVertical: 10, opacity: !selectedVehicle ? 0.4 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
+                        accessibilityLabel={`Time ${slot.startTime}${past ? ", already passed" : ""}`}
+                        accessibilityState={{ selected: on, disabled: past }}
+                        disabled={past}
+                        onPress={() => { setPickedSlot(slot); setSizeError(null); }}
+                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(245,154,69,0.55)", backgroundColor: on ? "#EC8638" : "rgba(245,154,69,0.12)", paddingHorizontal: 16, paddingVertical: 10, opacity: past ? 0.3 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
                       >
-                        <T role="data" tone="accent">{slot.startTime}</T>
+                        <T role="data" tone={on ? "onAccent" : "accent"}>{slot.startTime}</T>
                         {multiDay ? (
                           <T role="caption" tone="tertiary">ready {new Date(`${slot.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</T>
                         ) : null}
@@ -217,6 +223,8 @@ export default function BookServiceScreen() {
             </Pane>
           ))}</View>
         )}
+        {sizeError ? <T role="caption" tone="danger">{sizeError}</T> : null}
+        <Button label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
       </View>
     </Screen>
   );

@@ -46,6 +46,7 @@ export interface Service {
   currency: string; // ISO 4217 — "INR" for V1
   estimatedDurationMinutes: number;
   warrantyLabel: string | null; // e.g. "5-year film warranty"
+  careTips?: string[]; // short aftercare tips shown to customers, edited in admin
   // Structured duration — paired with warrantyLabel, read once at job seal
   // and snapshotted onto the issued Warranty (see warranty-builder.ts).
   // Both null = unconfigured; unit 'lifetime' always yields a null Warranty

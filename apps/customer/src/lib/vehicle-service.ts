@@ -154,6 +154,3 @@ export function listenToMyArchivedVehicles(uid:string,tenantId:string,onData:(ve
  return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as Vehicle).filter(v=>!!v.deletedAt)),onError);
 }
 
-export async function deleteVehicle(vehicleId:string):Promise<void> {
- await httpsCallable<{vehicleId:string},{vehicleId:string;deleted:boolean;alreadyDeleted:boolean}>(functions,"deleteVehicle")({vehicleId});
-}

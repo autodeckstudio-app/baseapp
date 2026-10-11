@@ -45,6 +45,7 @@ export const createServiceSchema = z.object({
   // registration is unaffected (its bay-conflict check is duration-agnostic).
   estimatedDurationMinutes: z.number().int().min(1).max(20160),
   warrantyLabel: z.string().max(200).trim().nullable(),
+  careTips: z.array(z.string().min(1).max(200).trim()).max(12).optional(),
   // Optional: existing callers (e.g. the current admin catalogue form) don't
   // send these yet — omitted means unconfigured (null), never guessed.
   warrantyDurationValue: z.number().int().min(1).nullable().optional(),
@@ -67,6 +68,7 @@ export const updateServiceSchema = z.object({
   currency: z.string().length(3).optional(),
   estimatedDurationMinutes: z.number().int().min(1).max(20160).optional(),
   warrantyLabel: z.string().max(200).trim().nullable().optional(),
+  careTips: z.array(z.string().min(1).max(200).trim()).max(12).optional(),
   warrantyDurationValue: z.number().int().min(1).nullable().optional(),
   warrantyDurationUnit: warrantyDurationUnitEnum.nullable().optional(),
   vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),

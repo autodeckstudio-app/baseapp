@@ -38,6 +38,7 @@ export const createService = onCall({ region: "asia-south1", enforceAppCheck: sh
     currency: data.currency ?? "INR",
     estimatedDurationMinutes: data.estimatedDurationMinutes,
     warrantyLabel: data.warrantyLabel,
+    ...(data.careTips ? { careTips: data.careTips } : {}),
     warrantyDurationValue: data.warrantyDurationValue ?? null,
     warrantyDurationUnit: data.warrantyDurationUnit ?? null,
     vehicleCategoryPricing,

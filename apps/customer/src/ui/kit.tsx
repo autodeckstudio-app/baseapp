@@ -75,7 +75,7 @@ export function T({
 // Sub-screens (anything deeper than a tab root, plus membership and
 // notifications which live under You) get a quiet back control so no screen
 // is a dead end. Falls back to the parent tab when there is no history.
-const SUB_ROOTS: Record<string, string> = { membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)" };
+const SUB_ROOTS: Record<string, string> = { catalogue: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)" };
 function BackBar() {
   const router = useRouter();
   const segs = useSegments() as string[];

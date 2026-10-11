@@ -24,29 +24,6 @@ function formatDuration(minutes: number): string {
   return `~${hours} hrs of service time`;
 }
 
-function PricePane({ breakdown: pb }: { breakdown: PriceBreakdownData }) {
-  return (
-    <Pane pad="gap">
-      <Row title="Base" trailing={<T role="data">{rupees(pb.basePrice)}</T>} />
-      {pb.scopeAdjustment > 0 ? (
-        <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(pb.scopeAdjustment)}</T>} />
-      ) : null}
-      {pb.addOns.map((addOn) => (
-        <Row key={addOn.id} title={addOn.name} trailing={<T role="data">{rupees(addOn.price)}</T>} />
-      ))}
-      {pb.membershipDiscount !== null && pb.membershipDiscount > 0 ? (
-        <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(pb.membershipDiscount)}</T>} />
-      ) : null}
-      <Row title={pb.taxDescription} trailing={<T role="data">{rupees(pb.tax)}</T>} />
-      <Row
-        title={<T role="heading">Total</T>}
-        trailing={<T role="heading">{rupees(pb.total)}</T>}
-        last
-      />
-    </Pane>
-  );
-}
-
 export default function BookingConfirmScreen() {
   const params = useLocalSearchParams<{
     serviceId: string;
@@ -132,7 +109,7 @@ export default function BookingConfirmScreen() {
   const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "-";
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : breakdown !== null ? <T role="caption" tone="accent">Total {rupees(breakdown.total)} incl. tax</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
       {service ? (
         <View style={{ borderRadius: 28, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
           <ServicePhoto service={service} aspect={16 / 9} radius={0} />
@@ -162,7 +139,7 @@ export default function BookingConfirmScreen() {
         />
       ) : null}
 
-      {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : breakdown !== null ? <PricePane breakdown={breakdown} /> : null}
+      {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         The studio confirms your slot after you send this. Price may vary based on final work.

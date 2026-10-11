@@ -9,5 +9,4 @@ describe('Round 2 safeguards',()=>{
 describe('retained history routing contracts',()=>{
  it('global history does not require a garage car and shows orphan invoices',()=>{const s=source('app/(tabs)/garage/history.tsx');expect(s).toContain('listenToMyJobs');expect(s).toContain('listenToMyInvoices');expect(s).toContain('invoices.filter(inv=>!jobs.some');expect(s).not.toContain('if (!vehicleId || auth.status');});
  it('invoice uses immutable snapshots after vehicle removal',()=>{const s=source('app/(tabs)/bookings/invoice.tsx');expect(s).toContain('snapshots.vehicleSnapshot');expect(s).toContain('snapshots.customerSnapshot');});
- it('permanent delete is separate, confirmed and callable only',()=>{const s=source('app/(tabs)/garage/index.tsx');expect(s).toContain('if(!deleting)return');expect(s).toContain('await deleteVehicle(deleting.id)');expect(s).toContain('Past services and invoices remain');expect(s).toContain('Open bookings to cancel');});
 });

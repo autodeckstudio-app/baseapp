@@ -171,6 +171,20 @@ export function ServicesView(p: {
             ))}
             <button type="button" className="ax-button" onClick={() => set({ sizes: [...draft.sizes, { vehicleCategory: SIZES.find((z) => !draft.sizes.some((x) => x.vehicleCategory === z)) ?? "suv", extraRupees: "", extraMinutes: "" }] })}>Add a size rule</button>
 
+            <p className="ax-label ax-form-section">Care tips</p>
+            <p className="ax-note">Short aftercare lines customers see on this service. Leave empty to hide the card.</p>
+            {draft.careTips.map((tip, i) => (
+              <div key={i} className="ax-form-pair">
+                <label className="ax-form-row"><span>Tip {i + 1}</span><input value={tip} maxLength={200} onChange={(e) => set({ careTips: draft.careTips.map((t, j) => (j === i ? e.target.value : t)) })} placeholder="e.g. Wipe bird droppings off early." /></label>
+                <div className="ax-form-row">
+                  <button type="button" className="ax-button" disabled={i === 0} aria-label={`Move tip ${i + 1} up`} onClick={() => { const n = [...draft.careTips]; [n[i - 1], n[i]] = [n[i]!, n[i - 1]!]; set({ careTips: n }); }}>Up</button>
+                  <button type="button" className="ax-button" disabled={i === draft.careTips.length - 1} aria-label={`Move tip ${i + 1} down`} onClick={() => { const n = [...draft.careTips]; [n[i + 1], n[i]] = [n[i]!, n[i + 1]!]; set({ careTips: n }); }}>Down</button>
+                  <button type="button" className="ax-button" aria-label={`Remove tip ${i + 1}`} onClick={() => set({ careTips: draft.careTips.filter((_, j) => j !== i) })}>Remove</button>
+                </div>
+              </div>
+            ))}
+            {draft.careTips.length < 12 ? <button type="button" className="ax-button" onClick={() => set({ careTips: [...draft.careTips, ""] })}>Add a tip</button> : null}
+
             <p className="ax-label ax-form-section">Warranty</p>
             <label className="ax-form-row"><span>What it&apos;s called</span><input value={draft.warrantyLabel} onChange={(e) => set({ warrantyLabel: e.target.value })} placeholder="e.g. 5-year film warranty" /></label>
             <div className="ax-form-pair">

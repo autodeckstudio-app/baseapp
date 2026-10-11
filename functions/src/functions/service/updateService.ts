@@ -41,6 +41,7 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
     if (data.basePrice !== undefined) updates["basePrice"] = data.basePrice;
     if (data.currency !== undefined) updates["currency"] = data.currency;
     if (data.estimatedDurationMinutes !== undefined) updates["estimatedDurationMinutes"] = data.estimatedDurationMinutes;
+    if (data.careTips !== undefined) updates["careTips"] = data.careTips;
     if (data.warrantyLabel !== undefined) updates["warrantyLabel"] = data.warrantyLabel;
     if (data.warrantyDurationValue !== undefined) updates["warrantyDurationValue"] = data.warrantyDurationValue;
     if (data.warrantyDurationUnit !== undefined) updates["warrantyDurationUnit"] = data.warrantyDurationUnit;

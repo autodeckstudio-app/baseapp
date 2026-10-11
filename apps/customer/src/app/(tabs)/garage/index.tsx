@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
-import { archiveVehicle, deleteVehicle, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
+import { archiveVehicle, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
@@ -19,7 +19,6 @@ export default function GarageScreen() {
   const auth = useAuth();
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
-  const [deleting,setDeleting]=useState<Vehicle|null>(null);
   const [archived,setArchived]=useState<Vehicle[]>([]);
   const [archiveActionError,setArchiveActionError]=useState<string|null>(null);
   const [archiveActionBusy,setArchiveActionBusy]=useState<string|null>(null);
@@ -38,7 +37,6 @@ export default function GarageScreen() {
 
   useEffect(()=>{if(!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
   async function restore(v:Vehicle){setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not restore the car.");}finally{setArchiveActionBusy(null);}}
-  async function confirmDelete(){if(!deleting)return;setArchiveActionBusy(deleting.id);setArchiveActionError(null);try{await deleteVehicle(deleting.id);setArchived(vs=>vs.filter(v=>v.id!==deleting.id));setDeleting(null);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not delete the car.");}finally{setArchiveActionBusy(null);}}
   // Watchdog: if the vehicles stream never delivers (no data, no error),
   // show the connection notice instead of spinning forever.
   useEffect(() => {
@@ -132,9 +130,8 @@ export default function GarageScreen() {
         </Pane>
       ) : null}
       <Button kind={lead ? "quiet" : "primary"} label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
-      {deleting?<Notice title={`Delete ${deleting.registrationNumber} permanently?`} body="The car record will be removed. Past services and invoices remain in service history. This cannot be undone." action={<View style={{gap:space.line}}><Button label="Delete permanently" kind="danger" busy={archiveActionBusy===deleting.id} onPress={()=>void confirmDelete()}/><Button label="Keep archived" kind="quiet" disabled={!!archiveActionBusy} onPress={()=>{setDeleting(null);setArchiveActionError(null);}}/></View>}/>:null}
       <Button label="Service history and invoices" kind="quiet" onPress={()=>router.push("/(tabs)/garage/history")}/>
-      {archived.length ? <View style={{gap:space.line}}><Kicker>Archived cars</Kicker><T role="caption" tone="secondary">Removed from the garage, not deleted. Past services and invoices remain in history.</T>{archived.map(v=><Pane key={v.id} pad="inset"><View style={{gap:space.line}}><T role="heading">{v.make} {v.model}</T><Plate value={v.registrationNumber}/><Button kind="quiet" label="View service history" onPress={()=>router.push({pathname:"/(tabs)/garage/history",params:{vehicleId:v.id}})}/><Button kind="danger" label="Delete permanently" disabled={!!archiveActionBusy} onPress={()=>{setDeleting(v);setArchiveActionError(null);}}/><Button kind="quiet" label="Restore to garage" busy={archiveActionBusy===v.id} onPress={()=>void restore(v)}/></View></Pane>)}</View>:null}
+      {archived.length ? <View style={{gap:space.line}}><Kicker>Archived cars</Kicker><T role="caption" tone="secondary">Removed from the garage, not deleted. Past services and invoices remain in history.</T>{archived.map(v=><Pane key={v.id} pad="inset"><View style={{gap:space.line}}><T role="heading">{v.make} {v.model}</T><Plate value={v.registrationNumber}/><Button kind="quiet" label="View service history" onPress={()=>router.push({pathname:"/(tabs)/garage/history",params:{vehicleId:v.id}})}/><Button kind="quiet" label="Restore to garage" busy={archiveActionBusy===v.id} onPress={()=>void restore(v)}/></View></Pane>)}</View>:null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
     </Screen>
   );

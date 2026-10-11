@@ -57,6 +57,7 @@ export interface CreateServiceInput {
   currency?: string;
   estimatedDurationMinutes: number;
   warrantyLabel: string | null;
+  careTips?: string[];
   warrantyDurationValue: number | null;
   warrantyDurationUnit: WarrantyDurationUnit | null;
   vehicleCategoryPricing?: VehicleCategoryPricing[];

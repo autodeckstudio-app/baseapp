@@ -1,4 +1,4 @@
-import { usePricingVehicle, useVehiclePrices } from "../../../lib/vehicle-size";
+import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
 import type { ReactNode } from "react";
@@ -41,8 +41,6 @@ export default function ServiceDetailScreen() {
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState(false);
-  const [siblings, setSiblings] = useState<Service[]>([]);
-  const siblingPrices = useVehiclePrices(siblings, selectedCategory);
   const [after, setAfter] = useState(true);
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -83,7 +81,6 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     if (!service) return;
-    void getServiceCatalogue().then((all) => setSiblings(all.filter((x) => x.category === service.category).sort((a, b) => a.basePrice - b.basePrice))).catch(() => undefined);
   }, [service]);
 
   useEffect(() => {
@@ -234,30 +231,12 @@ export default function ServiceDetailScreen() {
           ) : null}
         </View>
 
-        {siblings.length > 1 ? (
-          <View style={{ gap: space.breath }}>
-            {H("Compare options")}
-            <Pane pad="gap">
-              {siblings.map((x, i) => (
-                <Row
-                  key={x.id}
-                  title={x.id === service.id ? `${x.name} (you're here)` : x.name}
-                  detail={<T role="caption" tone="tertiary">{[x.brand, x.warrantyLabel].filter(Boolean).join(" · ") || "No warranty listed"}</T>}
-                  trailing={<T role="bodyStrong" tone={x.id === service.id ? "accent" : "secondary"}>{x.priceOnRequest ? "Quote on request" : siblingPrices[x.id] !== undefined ? rupees(siblingPrices[x.id]!) : "Checking price"}</T>}
-                  onPress={x.id === service.id ? undefined : () => router.replace(`/(tabs)/catalogue/${x.id}`)}
-                  last={i === siblings.length - 1}
-                />
-              ))}
-            </Pane>
-          </View>
-        ) : null}
-
-        {sc.care.length > 0 ? (
+        {(service.careTips ?? []).length > 0 ? (
           <View style={{ gap: space.breath }}>
             {H("Care tips")}
             <Pane pad="gap">
-              {sc.care.map((x, i) => (
-                <Row key={x} title={x} last={i === sc.care.length - 1} />
+              {(service.careTips ?? []).map((x, i, arr) => (
+                <Row key={`${i}-${x}`} title={x} last={i === arr.length - 1} />
               ))}
             </Pane>
           </View>
