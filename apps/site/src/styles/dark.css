@@ -80,7 +80,7 @@ h1,h2,h3,h4,b{color:var(--ink)}
 .carcard:hover{transform:translateY(-6px)}
 .carimg{position:relative;aspect-ratio:3/2;background:rgba(255,255,255,.05)}.carimg img{width:100%;height:100%;object-fit:cover;display:block}
 .cartag{position:absolute;top:14px;left:14px;background:rgba(10,10,12,.8);border-radius:999px;padding:6px 12px;font:600 12px Inter,sans-serif}
-.carbody{display:flex;justify-content:space-between;gap:12px;padding:20px 22px 6px}.carbody h3{margin:0;font:600 20px Montserrat,sans-serif}.carbody p{margin:4px 0 0;color:var(--ink2);font:14px Inter,sans-serif}.carbody b{color:var(--orange);font:600 18px Montserrat,sans-serif;white-space:nowrap}
+.carbody{display:flex;justify-content:space-between;gap:12px;padding:20px 22px 6px}.carbody h3{margin:0;font:600 20px Montserrat,sans-serif}.carbody p{margin:4px 0 0;color:var(--ink2);font:14px Inter,sans-serif}.carprice{color:var(--ink2);font:500 13px Inter,sans-serif;white-space:nowrap;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 12px;align-self:flex-start}.carbody b{color:var(--orange);font:600 18px Montserrat,sans-serif;white-space:nowrap}
 .carmeta{margin:0;padding:0 22px;color:var(--ink2);font:13px Inter,sans-serif;text-transform:capitalize}.carcta{display:block;padding:14px 22px 22px;color:var(--orange);font:500 14px Inter,sans-serif}
 .carnote{color:var(--ink2);grid-column:1/-1;padding:40px 0}
 @media(max-width:900px){.cargrid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.cargrid{grid-template-columns:1fr}}

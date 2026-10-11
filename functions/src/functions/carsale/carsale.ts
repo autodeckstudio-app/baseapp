@@ -247,6 +247,7 @@ export const listPublicCarListings = onCall({ region: "asia-south1", cors: true 
     .filter((l) => (l.status === "live" || l.status === "reserved") && (!l.expiresAt || Date.parse(l.expiresAt) > now))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 60);
-  const listings = await Promise.all(keep.map(async (l) => ({ ...(await view(l, "")), mine: false, rejectionReason: null })));
+  // The asking price is never part of the anonymous response: customers sign in and request it.
+  const listings = await Promise.all(keep.map(async (l) => { const { askingPrice: _hidden, ...rest } = await view(l, ""); return { ...rest, mine: false, rejectionReason: null }; }));
   return { listings };
 });

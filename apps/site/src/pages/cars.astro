@@ -3,13 +3,13 @@ import Base from '../layouts/Base.astro';
 ---
 <Base
   title="Cars for sale · AutoDeck"
-  description="Cars listed through AutoDeck, checked by the studio. Browse freely, sign in when you are interested."
+  description="Cars listed through AutoDeck, checked by the studio. Browse freely, sign in to request a price."
   page="cars"
 >
   <section class="phero"><div class="wrap">
     <p class="eyebrow">Cars for sale</p>
     <h1>Find your <em>next car.</em></h1>
-    <p class="lede">Checked by the studio. Real photos, plain facts. Browse freely, sign in only when you want to ask.</p>
+    <p class="lede">Checked by the studio. Real photos, plain facts. Browse freely. Prices are shared once you sign in and ask.</p>
   </div></section>
   <section class="sec"><div class="wrap">
     <div id="cars" class="cargrid" aria-live="polite"><p class="carnote">Loading cars...</p></div>
@@ -17,7 +17,6 @@ import Base from '../layouts/Base.astro';
   <script is:inline>
     (function () {
       var box = document.getElementById('cars');
-      var inr = function (p) { return '\u20B9' + (p / 100).toLocaleString('en-IN'); };
       var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); };
       fetch('https://asia-south1-autodeck-studio.cloudfunctions.net/listPublicCarListings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: {} })
@@ -27,8 +26,8 @@ import Base from '../layouts/Base.astro';
         box.innerHTML = list.map(function (l) {
           var img = l.photoUrls && l.photoUrls[0] ? '<img src="' + esc(l.photoUrls[0]) + '" alt="' + esc(l.year + ' ' + l.make + ' ' + l.model) + '" loading="lazy" />' : '';
           return '<a class="carcard glass" href="https://app.autodeck.in/cars/' + esc(l.id) + '"><div class="carimg">' + img +
-            (l.status === 'reserved' ? '<span class="cartag">Reserved</span>' : '') + '</div><div class="carbody"><div><h3>' + esc(l.make + ' ' + l.model) + '</h3><p>' + esc(l.year) + (l.variant ? ' \u00B7 ' + esc(l.variant) : '') + '</p></div><b>' + inr(l.askingPrice) + '</b></div><p class="carmeta">' +
-            esc((l.kmDriven || 0).toLocaleString('en-IN')) + ' km \u00B7 ' + esc(l.fuel) + ' \u00B7 ' + esc(l.gearbox) + ' \u00B7 ' + esc(l.area) + '</p><span class="carcta">Sign in to ask the studio \u203A</span></a>';
+            (l.status === 'reserved' ? '<span class="cartag">Reserved</span>' : '') + '</div><div class="carbody"><div><h3>' + esc(l.make + ' ' + l.model) + '</h3><p>' + esc(l.year) + (l.variant ? ' \u00B7 ' + esc(l.variant) : '') + '</p></div><span class="carprice">Price on request</span></div><p class="carmeta">' +
+            esc((l.kmDriven || 0).toLocaleString('en-IN')) + ' km \u00B7 ' + esc(l.fuel) + ' \u00B7 ' + esc(l.gearbox) + ' \u00B7 ' + esc(l.area) + '</p><span class="carcta">Sign in to request the price \u203A</span></a>';
         }).join('');
       }).catch(function () { box.innerHTML = '<p class="carnote">Cars could not load. Check your connection and refresh.</p>'; });
     })();
