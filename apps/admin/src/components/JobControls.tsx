@@ -74,14 +74,14 @@ export function JobControls({ job }: { job: ServiceJob }) {
     {error ? <p role="alert">{error}</p> : null}
     {done ? <p role="status">{done}</p> : null}
     {operation ? <div style={{display: "grid", gap: 8}}>
-      <p>{operation === "enqueue" ? "Mark arrived - standby? This releases the old bay reservation. No slot or service start is promised." : operation === "rework" ? "Send back to Work in progress for QC rework?" : "Admit the next standby car at the actual time? The server checks queue order, bay occupancy and upcoming reservations."}</p>
+      <p>{operation === "enqueue" ? "Mark arrived - standby? This releases the old bay reservation. No slot or service start is promised." : operation === "rework" ? "Send this car back to Work in progress so it can be redone?" : "Admit the next standby car at the actual time? The server checks queue order, bay occupancy and upcoming reservations."}</p>
       {operation === "admit" ? <select aria-label="Standby bay" value={bay} onChange={e => setBay(e.target.value)}><option value="">Choose a compatible bay</option>{bays.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select> : null}
-      <button className="ax-button ax-button--primary" disabled={busy || (operation === "admit" && !bay)} onClick={() => void perform()}>Confirm {operation === "enqueue" ? "standby arrival" : operation === "rework" ? "QC rework" : "admission"}</button>
+      <button className="ax-button ax-button--primary" disabled={busy || (operation === "admit" && !bay)} onClick={() => void perform()}>Confirm {operation === "enqueue" ? "standby arrival" : operation === "rework" ? "send back" : "admission"}</button>
       <button className="ax-button" disabled={busy} onClick={() => setOperation(null)}>Cancel</button>
     </div> : null}
     {job.status === "STANDBY" ? <><p>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void prepareStandby()}>Admit from standby</button></> : null}
     {job.status === "PENDING_VEHICLE" && job.bookingId ? <button className="ax-button" disabled={busy || Date.parse(job.scheduledAt) > Date.now()} onClick={() => setOperation("enqueue")}>Arrived - standby</button> : null}
-    {job.status === "QUALITY_CHECK" ? <button className="ax-button" disabled={busy} onClick={() => setOperation("rework")}>QC failed - send for rework</button> : null}
+    {job.status === "QUALITY_CHECK" ? <button type="button" className="ax-inline-add" style={{ justifySelf: "start" }} disabled={busy} onClick={() => setOperation("rework")}>Not up to standard? Send back for rework</button> : null}
     {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <p role="status">Collect and confirm full payment before marking delivered.</p> : null}
     {next ? <>{advanceConfirm ? <div style={{ display: "grid", gap: 8 }}><p>{next}? This updates the studio, admin and customer tracker.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void advance()}>Confirm {next.toLowerCase()}</button><button className="ax-button" disabled={busy} onClick={() => setAdvanceConfirm(false)}>Cancel</button></div> : <button className="ax-button ax-button--primary" disabled={busy || (job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid")} onClick={() => setAdvanceConfirm(true)}>{next}</button>}</> : null}
     {job.status === "PENDING_VEHICLE" && job.bookingId ? <>

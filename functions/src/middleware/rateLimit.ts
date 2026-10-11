@@ -76,6 +76,7 @@ export type RateLimitAction =
   | "office.report"
   | "vehicle.create"
   | "customer.walkin"
+  | "customer.update"
   | "account.deletion"
   | "account.deletion.cancel"
   | "pickup.request"
@@ -185,6 +186,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },
   "customer.walkin": { limit: 30, windowMs: 60_000 },
+  "customer.update": { limit: 60, windowMs: 60_000 },
   "account.deletion": { limit: 5, windowMs: 60_000 },
   "account.deletion.cancel": { limit: 5, windowMs: 60_000 },
   "pickup.request": { limit: 10, windowMs: 60_000 },

@@ -311,7 +311,7 @@ export default function JobDetailScreen() {
     if (!id || !staffAction || advancing) return;
     setActionError(null);setAdvancing(true);
     try {
-      if (staffAction === "rework") await advanceJobStatus(id, "QC failed - rework requested", true);
+      if (staffAction === "rework") await advanceJobStatus(id, "Sent back for rework", true);
       else await updateStandby(id, staffAction, staffAction === "admit" ? standbyBay : undefined);
       setStaffAction(null);
     } catch (err) { setActionError(err instanceof Error ? err.message : "Could not update job."); }
@@ -599,7 +599,7 @@ export default function JobDetailScreen() {
       </Section> : null}
       {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
-      {job.status === "QUALITY_CHECK" ? <Button label="QC failed - send for rework" variant="secondary" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
       {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
       {canAdvance && (

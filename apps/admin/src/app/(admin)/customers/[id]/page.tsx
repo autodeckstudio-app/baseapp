@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import type { Customer, Vehicle, Booking, ServiceJob, Membership, Payment, Invoice, Warranty, Protection, Notification, AuditLog } from "@autodeck/core";
+import type { Service, Customer, Vehicle, Booking, ServiceJob, Membership, Payment, Invoice, Warranty, Protection, Notification, AuditLog } from "@autodeck/core";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import {
   listenToCustomer,
@@ -17,7 +17,10 @@ import {
   listenToWarrantiesForVehicles,
   listenToProtectionsForVehicles,
 } from "../../../../lib/customers-service";
-import { CustomerView } from "../../../../experience/CustomerView";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../../../lib/firebase";
+import { getServicesIncludingHidden } from "../../../../lib/catalogue-service";
+import { CustomerView, type ContactPatch } from "../../../../experience/CustomerView";
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +38,10 @@ export default function CustomerDetailPage() {
   const [audit, setAudit] = useState<AuditLog[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [protections, setProtections] = useState<Array<Protection & { vehicleId: string }>>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { void getServicesIncludingHidden().then(setServices).catch(() => setServices([])); }, []);
 
   useEffect(() => {
     if (!id) return undefined;
@@ -75,6 +81,10 @@ export default function CustomerDetailPage() {
   return (
     <CustomerView
       d={{ customer, vehicles, bookings, jobs, memberships, payments, invoices, notifications, audit, warranties, protections }}
+      services={services}
+      onSave={async (patch: ContactPatch) => {
+        await httpsCallable<{ customerId: string } & ContactPatch, { updated: boolean }>(functions, "updateCustomerContact")({ customerId: id, ...patch });
+      }}
       onBack={() => router.push("/customers")}
       onOpen={(href) => router.push(href)}
     />

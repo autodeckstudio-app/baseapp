@@ -106,6 +106,7 @@ const DEFERRED = [
   "approval/createApproval.ts",
   "approval/respondToApproval.ts",
   "auth/createWalkinCustomer.ts",
+  "auth/updateCustomerContact.ts",
   "auth/requestAccountDeletion.ts",
   "booking/pickupRequests.ts",
   "auth/resolveClaims.ts",

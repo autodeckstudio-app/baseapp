@@ -316,3 +316,27 @@ html[data-theme="night"] .ax-shell input[type="date"]::-webkit-calendar-picker-i
 /* Save / Cancel pairs: Cancel is quiet glass, Save is the one orange action, same height. */
 .ax-shell .ax-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .ax-shell .ax-button--primary { color: #fff; }
+
+/* ---- Customer page: aligned header, one row grammar for visits and messages, inline edit ---- */
+.ax-crow { display: flex; align-items: center; gap: 16px; width: 100%; text-align: left; }
+.ax-vrow-when { flex: 0 0 150px; }
+.ax-vrow-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; white-space: normal; }
+.ax-vrow-main strong { font-weight: 600; color: var(--ad-text-primary); }
+.ax-vrow-amt { flex: 0 0 96px; text-align: right; }
+.ax-vrow-read { flex: 0 0 72px; text-align: right; }
+.ax-hero { align-items: flex-start; }
+.ax-hero > div:first-child { display: flex; flex-direction: column; justify-content: flex-end; }
+.ax-cust-facts .ax-cust-edit { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ax-cust-facts .ax-cust-edit input { width: 100%; }
+.ax-cust-edit-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; }
+.ax-cust-facts-end { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.ax-inline-add { background: none; border: none; padding: 0; min-height: 0; color: var(--ad-accent-strong); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 860px) {
+  .ax-crow { flex-wrap: wrap; gap: 4px 12px; }
+  .ax-vrow-when { flex: 1 0 100%; }
+  .ax-vrow-main { flex: 1 1 60%; }
+  .ax-vrow-amt, .ax-vrow-read { flex: 0 0 auto; }
+}
+@media (min-width: 1100px) { .ax-cust-facts:not(:has(.ax-cust-edit)) { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.ax-cust-facts:has(.ax-cust-edit) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) { .ax-cust-facts:has(.ax-cust-edit) { grid-template-columns: 1fr; } }
