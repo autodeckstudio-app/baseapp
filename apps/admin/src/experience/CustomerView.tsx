@@ -160,7 +160,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
               {d.vehicles.length === 0 ? <p className="ax-note" style={{ marginTop: 0 }}>No cars on file.</p> : d.vehicles.map((v) => {
                 const papers = d.protections.filter((p) => p.vehicleId === v.id);
                 return (
-                  <div key={v.id} className="ax-car">
+                  <div key={v.id} className="ax-ocar">
                     <div className="ax-car-head">
                       <span className="ax-job-plate" style={{ fontSize: 18 }}>{v.registrationNumber}</span>
                       <span className="ax-sub">{[v.year, v.make, v.model, v.color].filter(Boolean).join(" ")}{v.category ? ` · ${v.category === "suv" ? "SUV" : statusLabel(v.category)}` : ""}</span>

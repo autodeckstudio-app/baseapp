@@ -1,8 +1,8 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, floatCard, floatHero } from "@autodeck/ui/theme";
+import { floatCard } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
-import { View, Text, FlatList } from "react-native";
+import { View, Text, ScrollView, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import { listenToJobsByDate, listenToStandby } from "../../lib/studio-service";
@@ -27,6 +27,7 @@ export default function TodaysJobsScreen() {
   const studioId = authState.status === "ready" ? authState.claims.studioId : null;
   const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
 
+  const { width } = useWindowDimensions();
   const labels = useJobLabels(studioId);
   useEffect(() => {
     if (!studioId || !tenantId) return undefined;
@@ -56,56 +57,85 @@ export default function TodaysJobsScreen() {
   const inProgress = activeJobs.filter((j) => j.status === "IN_PROGRESS" || j.status === "QUALITY_CHECK").length;
   const longDate = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
 
+  const STATE: Record<string, string> = { PENDING_VEHICLE: "Expected", VEHICLE_RECEIVED: "Arrived", IN_PROGRESS: "Working", QUALITY_CHECK: "Finishing", READY_FOR_DELIVERY: "Ready" };
+  const glass = { backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}) };
   const Stat = ({ label, value }: { label: string; value: number }) => (
-    <View style={{ flex: 1, backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 34, paddingVertical: spacing.lg, paddingHorizontal: spacing.md }}>
-      <Text style={{ fontSize: 28, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
+    <View style={{ flex: 1, ...glass, borderRadius: 28, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, alignItems: "center" }}>
+      <Text style={{ fontSize: 34, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
       <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
+    </View>
+  );
+  const bayIds = Object.keys(labels.bays);
+  const wide = width >= 900;
+  const jobsList = (
+    <View style={{ flex: 1, gap: spacing.sm }}>
+      <Text style={{ ...typography.title, color: colors.textPrimary }}>On the floor</Text>
+      {activeJobs.length === 0 ? (
+        <View style={{ alignItems: "center", ...glass, borderRadius: 28, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(236,134,56,0.16)" }}>
+            <Icon name="check" color={colors.accent} size={28} />
+          </View>
+          <Text style={{ ...typography.title, color: colors.textPrimary }}>All clear</Text>
+          <Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center" }}>No cars on the floor. Bookings and walk-ins land here the moment they arrive.</Text>
+        </View>
+      ) : activeJobs.map((item, index) => (
+        <FadeUp key={item.id} delay={Math.min(index, 5) * 50}>
+          <JobCard job={item} viewDate={todayIST()} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+        </FadeUp>
+      ))}
+    </View>
+  );
+  const baysBoard = bayIds.length === 0 ? null : (
+    <View style={{ width: wide ? 340 : "100%", gap: spacing.sm }}>
+      <Text style={{ ...typography.title, color: colors.textPrimary }}>Bays</Text>
+      {bayIds.map((id) => {
+        const j = activeJobs.find((x) => x.bayId === id);
+        const plate = j?.vehicleSnapshot?.registrationNumber;
+        return (
+          <View key={id} style={{ ...glass, borderRadius: 24, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.body, fontWeight: "600", color: colors.textPrimary }}>{labels.bays[id]}</Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted }} numberOfLines={1}>{j ? [plate, labels.services[j.serviceId]].filter(Boolean).join(" · ") || "In use" : "Free"}</Text>
+            </View>
+            <View style={{ paddingVertical: 4, paddingHorizontal: 12, borderRadius: 999, backgroundColor: j ? "rgba(236,134,56,0.18)" : "rgba(120,200,140,0.16)" }}>
+              <Text style={{ ...typography.caption, color: j ? colors.accent : "#8fd4a0", fontWeight: "600" }}>{j ? STATE[j.status] ?? "Busy" : "Free"}</Text>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 
   return (
     <View style={{ flex: 1 }}>
-    {NightPlatform.OS === "web" ? <View pointerEvents="none" style={floatHero(nightMaterial, colors.background) as never} /> : null}
-    <FlatList
-      style={{ flex: 1, backgroundColor: "transparent" }}
-      contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 640, alignSelf: "center" }}
-      data={activeJobs}
-      keyExtractor={(j) => j.id}
-      ListHeaderComponent={
-        <View style={{ marginBottom: spacing.lg, gap: spacing.md }}>
-          <View style={{ minHeight: 230, justifyContent: "flex-end" }}>
-            <Text style={{ ...typography.caption, color: "rgba(255,255,255,.92)", textTransform: "uppercase", letterSpacing: 1.6, ...(NightPlatform.OS === "web" ? { textShadow: "0 1px 12px rgba(0,0,0,.5)" } : {}) } as never}>{longDate}</Text>
-            <Text style={{ fontSize: 76, lineHeight: 78, fontWeight: "500", letterSpacing: -3, color: "rgba(255,255,255,.95)", ...(NightPlatform.OS === "web" ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>Today</Text>
-          </View>
-          <View style={{ flexDirection: "row", gap: spacing.sm }}>
-            <Stat label="On the floor" value={activeJobs.length} />
-            <Stat label="In progress" value={inProgress} />
-            <Stat label="Ready" value={ready} />
-          </View>
-          {standby.length > 0 && <View style={{gap: spacing.sm}}>
-            <Text style={{...typography.title, color: colors.textPrimary}}>Arrived - standby ({standby.length})</Text>
-            <Text style={{...typography.caption, color: colors.textMuted}}>Waiting in arrival order. No bay or time reserved. Open the next car to admit when a compatible bay is free.</Text>
-            {standby.length === 0 ? <Text style={{color: colors.textMuted}}>No cars waiting.</Text> : standby.map(j => <JobCard key={j.id} job={j} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
-          </View>}
+    {NightPlatform.OS === "web" ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "linear-gradient(180deg, rgba(20,20,18,.18) 0%, rgba(30,30,28,.45) 45%, rgba(40,40,38,.82) 100%), url(/hero-studio.jpg)", backgroundSize: "cover", backgroundPosition: "center 40%", backgroundRepeat: "no-repeat" } as never} /> : null}
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.lg }}>
+      <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "flex-start", justifyContent: "space-between", gap: spacing.md, minHeight: wide ? 180 : 150 }}>
+        <View style={{ justifyContent: "flex-end" }}>
+          <Text style={{ ...typography.caption, color: "rgba(255,255,255,.92)", textTransform: "uppercase", letterSpacing: 1.6, ...(NightPlatform.OS === "web" ? { textShadow: "0 1px 12px rgba(0,0,0,.5)" } : {}) } as never}>{longDate}</Text>
+          <Text style={{ fontSize: wide ? 72 : 56, lineHeight: wide ? 74 : 58, fontWeight: "500", letterSpacing: -3, color: "rgba(255,255,255,.95)", ...(NightPlatform.OS === "web" ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>Today</Text>
+        </View>
+        <View style={{ width: wide ? 260 : "100%" }}>
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
         </View>
-      }
-      ListEmptyComponent={
-        <View style={{ alignItems: "center", backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-          <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(240,125,40,0.14)" }}>
-            <Icon name="check" color={colors.accent} size={28} />
-          </View>
-          <Text style={{ ...typography.title, color: colors.textPrimary }}>All clear</Text>
-          <Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center" }}>No cars on the floor right now. New bookings and walk-ins show up here.</Text>
+      </View>
+      <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        <Stat label="On the floor" value={activeJobs.length} />
+        <Stat label="In progress" value={inProgress} />
+        <Stat label="Ready" value={ready} />
+        <Stat label="Waiting" value={standby.length} />
+      </View>
+      {standby.length > 0 && (
+        <View style={{ gap: spacing.sm }}>
+          <Text style={{ ...typography.title, color: colors.textPrimary }}>Waiting for a bay ({standby.length})</Text>
+          {standby.map((j) => <JobCard key={j.id} job={j} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
         </View>
-      }
-      renderItem={({ item, index }) => (
-        <FadeUp delay={Math.min(index, 5) * 50}>
-          <JobCard job={item} viewDate={todayIST()} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
-        </FadeUp>
       )}
-      ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-    />
+      <View style={{ flexDirection: wide ? "row" : "column", gap: spacing.lg, alignItems: "flex-start" }}>
+        {jobsList}
+        {baysBoard}
+      </View>
+    </ScrollView>
     </View>
   );
 }

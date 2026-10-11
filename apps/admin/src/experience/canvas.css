@@ -342,3 +342,8 @@ html[data-theme="night"] .ax-shell input[type="date"]::-webkit-calendar-picker-i
 @media (max-width: 700px) { .ax-cust-facts:has(.ax-cust-edit) { grid-template-columns: 1fr; } }
 
 .ax-list .is-center, .ax-shell .ax-list-row > span.is-center { text-align: center; justify-self: center; }
+
+/* A customer's own car inside the profile (not the for-sale card) */
+.ax-ocar { margin-top: 10px; padding: 14px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); min-width: 0; }
+html[data-theme="day"] .ax-ocar { border-color: rgba(60,40,20,.12); background: rgba(255,255,255,.55); }
+.ax-ocar .ax-car-head { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
