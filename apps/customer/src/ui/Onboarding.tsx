@@ -5,15 +5,14 @@ import { useRef, useState } from "react";
 import type { ScrollView } from "react-native";
 import { Animated, Image, Platform, Pressable, Text, View, useWindowDimensions, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Logo } from "@autodeck/ui/native";
 import { sceneImagery, serviceImagery } from "../lib/imagery";
-import { Fill, Orb, Rise, VEIL } from "./Drift";
+import { Fill, Orb, VEIL } from "./Drift";
 
 export const ONBOARDED_KEY = "autodeck.onboarded";
 
 type Slide = { image: ImageSourcePropType; kicker: string; title: string; line: string; chips?: string[] };
 const SLIDES: Slide[] = [
-  { image: sceneImagery.heroHome, kicker: "AutoDeck", title: "Your car's studio, in your pocket", line: "Premium car care, booked in a minute and tracked from drop-off to delivery." },
+  { image: sceneImagery.heroHome, kicker: "AutoDeck", title: "Everything About Your Car, In One App", line: "From booking care and tracking the work to bills, papers and warranty, easy to manage all your car needs in one place." },
   { image: serviceImagery.washing, kicker: "Book", title: "Pick a service. Pick a time.", line: "Washing, ceramic coating, paint protection film and more, with open slots you can see." },
   { image: serviceImagery.ceramic, kicker: "Follow", title: "Watch the work happen", line: "Live status, photos and approvals. Pay at the studio when you collect your car." },
   { image: require("../../assets/imagery/brands/xpel-hero.jpg"), kicker: "Brands we fit", title: "Products you can trust", line: "Only the names the industry relies on, with their own warranties.", chips: ["XPEL", "Garware", "Kovalent"] },
@@ -53,7 +52,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 <Image source={s.image} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
               </Animated.View>
               <View pointerEvents="none" style={{ ...Fill, ...VEIL(0.35, 0.94) }} />
-              <Animated.View style={{ position: "absolute", left: 28, right: 28, bottom: 168, gap: 12, opacity: fade, transform: [{ translateX: textShift }] }}>
+              <Animated.View style={{ position: "absolute", left: 28, right: 110, bottom: 56, gap: 12, opacity: fade, transform: [{ translateX: textShift }] }}>
                 <Text style={{ color: "#F59A45", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>{s.kicker}</Text>
                 <Text style={{ color: "#FFFFFF", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 32, lineHeight: 38, fontWeight: "700" }}>{s.title}</Text>
                 <Text style={{ color: "#DAD8D5", fontSize: 16, lineHeight: 24 }}>{s.line}</Text>
@@ -74,7 +73,12 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
       <Orb size={300} color="rgba(245,154,69,0.35)" x="60%" y="-10%" />
       <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, top: 0, paddingTop: 22, paddingHorizontal: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Logo onDark variant="mark" height={30} />
+        <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+          {SLIDES.map((_, i) => {
+            const r = [(i - 1) * width, i * width, (i + 1) * width];
+            return <Animated.View key={i} style={{ height: 4, borderRadius: 2, backgroundColor: "#EC8638", width: x.interpolate({ inputRange: r, outputRange: [6, 22, 6], extrapolate: "clamp" }), opacity: x.interpolate({ inputRange: r, outputRange: [0.4, 1, 0.4], extrapolate: "clamp" }) }} />;
+          })}
+        </View>
         {!last ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={finish} hitSlop={10} style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "rgba(0,0,0,0.4)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
             <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>Skip</Text>
@@ -82,21 +86,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         ) : null}
       </View>
 
-      <Rise style={{ position: "absolute", left: 24, right: 24, bottom: 36, gap: 22, alignItems: "center" }}>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {SLIDES.map((_, i) => {
-            const r = [(i - 1) * width, i * width, (i + 1) * width];
-            return <Animated.View key={i} style={{ height: 6, borderRadius: 3, backgroundColor: "#F59A45", width: x.interpolate({ inputRange: r, outputRange: [6, 26, 6], extrapolate: "clamp" }), opacity: x.interpolate({ inputRange: r, outputRange: [0.35, 1, 0.35], extrapolate: "clamp" }) }} />;
-          })}
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => (last ? finish() : go(page + 1))}
-          style={({ pressed }) => ({ width: "100%", maxWidth: 420, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", backgroundColor: "#F59A45", opacity: pressed ? 0.88 : 1, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg,#F9B060,#EC8638)", boxShadow: "0 10px 30px rgba(236,134,56,0.4)" } as object) : {}) })}
-        >
-          <Text style={{ color: "#1A1410", fontWeight: "700", fontSize: 16 }}>{last ? "Get started" : "Next"}</Text>
-        </Pressable>
-      </Rise>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={last ? "Get started" : "Next"}
+        onPress={() => (last ? finish() : go(page + 1))}
+        style={({ pressed }) => ({ position: "absolute", right: 26, bottom: 48, width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center", backgroundColor: "#EC8638", opacity: pressed ? 0.88 : 1, ...(Platform.OS === "web" ? ({ boxShadow: "0 10px 30px rgba(236,134,56,0.45)" } as object) : {}) })}
+      >
+        <Text style={{ color: "#1A1410", fontWeight: "700", fontSize: 26, marginTop: -2 }}>{last ? "\u2713" : "\u2197"}</Text>
+      </Pressable>
     </View>
   );
 }

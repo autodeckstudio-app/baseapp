@@ -785,3 +785,18 @@ html[data-theme="night"] .ax-due { color: #F5A15C; }
 .rp-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rp-amt { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 @media (max-width: 430px) { html .ax-shell .ax-kpis > div { flex: 1 1 auto !important; } html .ax-shell .ax-kpis .ax-kpi-v { font-size: 16px !important; } .rp-row { grid-template-columns: minmax(0, 1fr) 44px auto; gap: 10px; } }
+
+/* Attendance roster: one card per person, stats in a fixed 3-column strip. */
+.ax-roster { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ax-roster-row { display: grid; gap: 10px; padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.04); border: 1px solid var(--ad-border-subtle); min-width: 0; }
+.ax-roster-head { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
+.ax-roster-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--ad-border-subtle); }
+.ax-roster-dot--ok { background: #4CC38A; } .ax-roster-dot--warning { background: #EC8638; } .ax-roster-dot--danger { background: #E5484D; }
+.ax-roster-name { font-size: 16px; font-weight: 600; color: var(--ad-text-primary); min-width: 0; overflow-wrap: anywhere; }
+.ax-roster-role { font-size: 12px; text-transform: capitalize; color: var(--ad-text-secondary); }
+.ax-roster-pill { margin-left: auto; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; border: 1px solid var(--ad-border-subtle); color: var(--ad-text-secondary); }
+.ax-roster-pill--ok { color: #4CC38A; border-color: rgba(76,195,138,.4); } .ax-roster-pill--warning { color: #EC8638; border-color: rgba(236,134,56,.45); } .ax-roster-pill--danger { color: #E5484D; border-color: rgba(229,72,77,.45); }
+.ax-roster-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.ax-roster-stats div { display: grid; gap: 2px; }
+.ax-roster-stats dt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ad-text-secondary); }
+.ax-roster-stats dd { margin: 0; font-size: 15px; font-weight: 600; color: var(--ad-text-primary); font-variant-numeric: tabular-nums; }

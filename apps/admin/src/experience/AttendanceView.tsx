@@ -71,31 +71,26 @@ export function AttendanceView(p: {
             ) : activeStaff.length === 0 ? (
               <p className="ax-note">No one on the roster yet. Add people from Office → Team.</p>
             ) : (
-              <ul className="ax-people">
+              <ul className="ax-roster">
                 {activeStaff.map((emp) => {
                   const rec = byEmployee.get(emp.id);
                   const empOnBreak = rec?.breaks.some((b) => b.endedAt === null) ?? false;
+                  const tone = !rec ? "idle" : rec.status === "ABSENT" ? "danger" : rec.status === "HALF_DAY" || rec.status === "ON_LEAVE" ? "warning" : "ok";
                   return (
-                    <li key={emp.id} className="ax-person">
-                      <span className={`ax-avatar ax-avatar--${emp.role}`} aria-hidden="true">
-                        {emp.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?"}
-                      </span>
-                      <span className="ax-person-main">
-                        <span className="ax-person-name">
-                          {emp.name}
-                          {empOnBreak ? " · on break" : ""}
+                    <li key={emp.id} className="ax-roster-row">
+                      <div className="ax-roster-head">
+                        <span className={`ax-roster-dot ax-roster-dot--${tone}`} aria-hidden="true" />
+                        <span className="ax-roster-name">{emp.name}</span>
+                        <span className="ax-roster-role">{emp.role}</span>
+                        <span className={`ax-roster-pill ax-roster-pill--${tone}`}>
+                          {empOnBreak ? "On break" : rec ? STATUS_NAME[rec.status] : "Not marked"}
                         </span>
-                        <span className="ax-sub">
-                          {rec
-                            ? `${STATUS_NAME[rec.status]} · in ${formatTime(rec.checkInAt)} · out ${formatTime(rec.checkOutAt)} · ${workedLabel(rec.workedMinutes)}`
-                            : "Not marked today"}
-                        </span>
-                      </span>
-                      {rec && (
-                        <span className={`ax-expiry ${rec.status === "ABSENT" ? "ax-expiry--danger" : rec.status === "HALF_DAY" ? "ax-expiry--warning" : "ax-expiry--ok"}`}>
-                          {STATUS_NAME[rec.status]}
-                        </span>
-                      )}
+                      </div>
+                      <dl className="ax-roster-stats">
+                        <div><dt>In</dt><dd>{rec ? formatTime(rec.checkInAt) : "-"}</dd></div>
+                        <div><dt>Out</dt><dd>{rec ? formatTime(rec.checkOutAt) : "-"}</dd></div>
+                        <div><dt>Worked</dt><dd>{rec ? workedLabel(rec.workedMinutes) : "-"}</dd></div>
+                      </dl>
                     </li>
                   );
                 })}
