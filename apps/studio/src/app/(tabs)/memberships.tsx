@@ -1,6 +1,7 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
+import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
+import { CanvasBackdrop, CanvasTitle } from "../../components/CanvasTitle";
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, ScrollView } from "react-native";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
@@ -193,7 +194,7 @@ export default function MembershipsScreen() {
   if (!pending) return <LoadingState label="Loading memberships" />;
 
   const inputStyle = {
-    backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}),
+    backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}),
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -204,9 +205,11 @@ export default function MembershipsScreen() {
   } as const;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, gap: spacing.lg, width: "100%", maxWidth: 640, alignSelf: "center" }}>
+    <View style={{ flex: 1 }}>
+    <CanvasBackdrop />
+    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, gap: spacing.lg, width: "100%", maxWidth: 640, alignSelf: "center" }}>
       <View style={{ gap: spacing.xs }}>
-        <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Memberships</Text>
+        <CanvasTitle eyebrow="Front desk" title="Memberships" />
         <Text style={{ ...typography.caption, color: colors.textMuted }}>Approve pending purchases and sell plans at the front desk.</Text>
       </View>
 
@@ -216,7 +219,7 @@ export default function MembershipsScreen() {
           <Text style={{ ...typography.caption, color: colors.textMuted }}>No pending requests.</Text>
         ) : (
           pending.map((r) => (
-            <View key={r.membership.id} style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm }}>
+            <View key={r.membership.id} style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, gap: spacing.sm }}>
               <Text style={{ ...typography.title, color: colors.textPrimary }}>{r.planName} - {r.customerName}</Text>
               <Text style={{ ...typography.caption, color: colors.textMuted }}>
                 {r.customerPhone} - Requested {fmtDate(r.membership.createdAt)}
@@ -248,7 +251,7 @@ export default function MembershipsScreen() {
       <View style={{ gap: spacing.sm }}>
         <Text style={{ ...typography.title, color: colors.textPrimary }}>Walk-in sale</Text>
         <Text style={{ ...typography.caption, color: colors.textMuted }}>Sell a membership at the front desk. It activates immediately once payment is taken.</Text>
-        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, gap: spacing.sm }}>
           <TextInput
             style={inputStyle}
             placeholder="Customer mobile number"
@@ -290,5 +293,6 @@ export default function MembershipsScreen() {
 
       {message && <Text style={{ ...typography.caption, color: colors.accent }}>{message}</Text>}
     </ScrollView>
+    </View>
   );
 }

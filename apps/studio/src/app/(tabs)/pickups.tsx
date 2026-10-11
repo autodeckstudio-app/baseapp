@@ -1,6 +1,7 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
+import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
+import { CanvasBackdrop, CanvasTitle } from "../../components/CanvasTitle";
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, FlatList } from "react-native";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -70,14 +71,17 @@ export default function PickupsScreen() {
   if (error && rows === null) return <ErrorState title="Requests unavailable" message={error} onRetry={()=>void load().catch(e=>setError(e instanceof Error?e.message:"Try again."))}/>;
   if (rows === null) return <LoadingState />;
   return (
+    <View style={{ flex: 1 }}>
+    <CanvasBackdrop />
     <FlatList
-      style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}
+      style={{ flex: 1, backgroundColor: "transparent" }}
+      ListHeaderComponent={<CanvasTitle eyebrow="Pickup and drop" title="Requests" />}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120, width: "100%", maxWidth: 640, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
       ListEmptyComponent={<Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xl }}>No pickup or drop requests right now.</Text>}
       renderItem={({ item: r }) => (
-        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, gap: spacing.xs }}>
           <Text style={{ ...typography.title, color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
           <Text style={{ ...typography.body, color: colors.textPrimary }}>{r.address}</Text>
           {r.kind !== "drop" && (r.requestedPickupTime || r.preferredTime) ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Customer asked: {r.requestedPickupTime || r.preferredTime}</Text> : null}
@@ -117,5 +121,6 @@ export default function PickupsScreen() {
         </View>
       )}
     />
+    </View>
   );
 }
