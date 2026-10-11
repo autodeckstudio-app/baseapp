@@ -48,8 +48,8 @@ export function CarsView(p: {
 
   const row = (l: AdminListing, review: boolean) => (
     <li key={l.id} className="ax-car">
-      <div className="ax-car-img">
-        {l.photoUrls[0] ? <img src={thumb(l.photoUrls[0])} alt="" loading="lazy" decoding="async" /> : null}
+      <div className={`ax-car-img${l.photoUrls[0] ? "" : " is-empty"}`}>
+        {l.photoUrls[0] ? <img src={thumb(l.photoUrls[0])} alt="" loading="lazy" decoding="async" /> : <span className="ax-car-nophoto">No photo yet</span>}
         <span className={`ax-car-status ax-car-status--${l.status}`}>{STATUS[l.status]}</span>
       </div>
       <div className="ax-car-body">

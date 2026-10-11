@@ -41,6 +41,7 @@ export function MembershipsView(p: {
   busy: boolean;
   onSave: (d: PlanDraft) => void;
   onToggle: (plan: MembershipPlan) => void;
+  children?: React.ReactNode;
 }) {
   const [draft, setDraft] = useState<PlanDraft | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -124,6 +125,7 @@ export function MembershipsView(p: {
           </aside>
         )}
       </div>
+      {p.children}
     </div>
   );
 }

@@ -24,18 +24,18 @@ import {
 import { useAdminAuth } from "../../../lib/auth-context";
 
 const box: React.CSSProperties = {
-  border: "1px solid rgba(29,27,38,0.10)",
-  borderRadius: 14,
-  background: "#fff",
+  border: "1px solid var(--ad-border-subtle)",
+  borderRadius: 16,
+  background: "transparent",
   padding: 16,
   marginBottom: 12,
 };
 const btn: React.CSSProperties = {
   padding: "8px 14px",
   borderRadius: 8,
-  border: "1px solid rgba(29,27,38,0.22)",
-  background: "#fff",
-  color: "#1D1B26",
+  border: "1px solid var(--ad-border-subtle)",
+  background: "transparent",
+  color: "var(--ad-text-primary)",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
@@ -44,14 +44,14 @@ const btnSuccess: React.CSSProperties = { ...btn, border: "1px solid #1F7A4D", b
 const input: React.CSSProperties = {
   padding: "8px 12px",
   borderRadius: 8,
-  border: "1px solid rgba(29,27,38,0.18)",
-  background: "#fff",
-  color: "#1D1B26",
+  border: "1px solid var(--ad-border-subtle)",
+  background: "transparent",
+  color: "var(--ad-text-primary)",
   fontSize: 13,
   width: "100%",
 };
-const labelStyle: React.CSSProperties = { fontSize: 11, color: "#625D70", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 };
-const msgStyle: React.CSSProperties = { fontSize: 12, color: "#625D70", marginTop: 4 };
+const labelStyle: React.CSSProperties = { fontSize: 11, color: "var(--ad-text-secondary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 };
+const msgStyle: React.CSSProperties = { fontSize: 13, color: "var(--ad-text-secondary)", margin: "4px 0 0" };
 
 const PAID_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "cash", label: "Cash" },
@@ -107,8 +107,8 @@ function PendingQueue({ tenantId, plans, onChanged, tick }: { tenantId: string; 
   }
 
   return (
-    <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1D1B26", marginBottom: 4 }}>Pending payment approvals</h2>
+    <section className="ax-panel ax-mem-sec">
+      <h2 className="ax-mem-h">Pending payment approvals</h2>
       <p style={msgStyle}>Membership purchases awaiting payment confirmation. Approving one activates it immediately and notifies the customer.</p>
       {loading ? (
         <p style={msgStyle}>Loading...</p>
@@ -119,7 +119,7 @@ function PendingQueue({ tenantId, plans, onChanged, tick }: { tenantId: string; 
           <div key={r.membership.id} style={box}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "#1D1B26" }}>{r.planName} - {r.customerName}</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ad-text-primary)" }}>{r.planName} - {r.customerName}</p>
                 <p style={msgStyle}>
                   {r.customerPhone} - Requested {fmtDate(r.membership.createdAt)}
                   {r.payment ? ` - ${(r.payment.amount / 100).toFixed(2)} INR (${r.payment.method.replace("_", " ")})` : " - no payment record found"}
@@ -149,7 +149,7 @@ function PendingQueue({ tenantId, plans, onChanged, tick }: { tenantId: string; 
           </div>
         ))
       )}
-      {message && <p style={{ ...msgStyle, color: "#9C4108", marginTop: 8 }}>{message}</p>}
+      {message && <p style={{ ...msgStyle, color: "var(--ad-accent-strong)", marginTop: 8 }}>{message}</p>}
       {plans.length === 0 && <p style={msgStyle}>Create at least one plan to accept walk-in sales.</p>}
     </section>
   );
@@ -219,8 +219,8 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
   }
 
   return (
-    <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1D1B26", marginBottom: 4 }}>Walk-in sale</h2>
+    <section className="ax-panel ax-mem-sec">
+      <h2 className="ax-mem-h">Walk-in sale</h2>
       <p style={msgStyle}>Sell a membership at the front desk. It activates immediately once payment is taken.</p>
       <div style={{ ...box, marginTop: 8 }}>
         <div style={{ display: "flex", gap: 8 }}>
@@ -259,7 +259,7 @@ function WalkinSale({ tenantId, plans, onChanged }: { tenantId: string; plans: M
           </div>
         )}
       </div>
-      {message && <p style={{ ...msgStyle, color: "#9C4108", marginTop: 8 }}>{message}</p>}
+      {message && <p style={{ ...msgStyle, color: "var(--ad-accent-strong)", marginTop: 8 }}>{message}</p>}
     </section>
   );
 }
@@ -278,8 +278,8 @@ function MembersPanel({ members, plans }: { members: Membership[]; plans: Member
   const sorted = [...members].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || (a.endDate ?? "").localeCompare(b.endDate ?? ""));
   const kpi = (v: string | number, l: string) => <div><span className="ax-kpi-v">{v}</span><span className="ax-label">{l}</span></div>;
   return (
-    <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1D1B26", marginBottom: 4 }}>Members</h2>
+    <section className="ax-panel ax-mem-sec">
+      <h2 className="ax-mem-h">Members</h2>
       <p style={msgStyle}>Live list of every membership sold. Updates as customers buy and use washes.</p>
       <div className="ax-kpis" style={{ margin: "12px 0" }}>
         {kpi(active.length, "Active")}{kpi(pending.length, "Awaiting payment")}{kpi(expiring.length, "Ending in 7 days")}{kpi(washesLeft, "Washes owed")}{kpi(formatPaise(revenue), "Active plan value")}
@@ -291,7 +291,7 @@ function MembersPanel({ members, plans }: { members: Membership[]; plans: Member
             <tbody>
               {sorted.map((m) => (
                 <tr key={m.id}>
-                  <td><a href={`/customers/${m.customerId}`} style={{ color: "#9C4108" }}>{names[m.customerId] ?? "..."}</a></td>
+                  <td><a href={`/customers/${m.customerId}`} style={{ color: "var(--ad-accent-strong)" }}>{names[m.customerId] ?? "..."}</a></td>
                   <td>{planName[m.planId] ?? m.tier}</td>
                   <td><StatusBadge label={m.status} /></td>
                   <td>{m.washesUsed} of {m.washesTotal}</td>
@@ -375,15 +375,14 @@ export default function MembershipPlansPage() {
   }
 
   return (
-    <>
-      <MembershipsView plans={plans} loading={loading} error={error} message={status} busy={busy} onSave={(d) => void handleSave(d)} onToggle={(pl) => void handleToggleActive(pl)} />
+    <MembershipsView plans={plans} loading={loading} error={error} message={status} busy={busy} onSave={(d) => void handleSave(d)} onToggle={(pl) => void handleToggleActive(pl)}>
       {tenantId && (
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px 48px" }}>
+        <>
           <PendingQueue tenantId={tenantId} plans={plans} onChanged={() => void refresh()} tick={members.map((m) => `${m.id}:${m.status}`).join("|")} />
           <MembersPanel members={members} plans={plans} />
           <WalkinSale tenantId={tenantId} plans={plans} onChanged={() => void refresh()} />
-        </div>
+        </>
       )}
-    </>
+    </MembershipsView>
   );
 }

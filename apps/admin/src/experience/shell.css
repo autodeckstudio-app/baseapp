@@ -747,3 +747,19 @@ html[data-theme="night"] .ax-shell .ax-linkbtn { color: #FFD0A6; }
 .ax-due { font-weight: 700; color: #C2540A; }
 html[data-theme="night"] .ax-due { color: #F5A15C; }
 @media (max-width: 700px) { .ax-list-head [role="columnheader"]:nth-child(n+4), .ax-list-row [data-col="visits"], .ax-list-row [data-col="last"] { display: none; } }
+/* Memberships: every section is one card in the page, same width as the plans above */
+.ax-mem-sec { padding: 22px 24px; display: block; }
+.ax-mem-h { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--ad-text-primary); }
+.ax-mem-sec .ax-kpis { margin: 14px 0; flex-wrap: wrap; row-gap: 12px; }
+.ax-mem-sec table { background: transparent; }
+.ax-mem-sec input, .ax-mem-sec select { box-sizing: border-box; }
+.ax-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--ax-gap, 16px); }
+
+/* Cars for sale: cards without a photo stay compact and tidy; every card in a row is the same height with its action at the bottom */
+.ax-cars { align-items: stretch; }
+.ax-car { height: 100%; }
+.ax-car-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px; }
+.ax-car-actions { margin-top: auto; padding-top: 10px; }
+.ax-car-img.is-empty { aspect-ratio: auto; height: 84px; display: flex; align-items: center; justify-content: center; }
+.ax-car-nophoto { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ad-text-secondary); opacity: .8; }
+.ax-car-img.is-empty .ax-car-status { top: 10px; left: 10px; }
