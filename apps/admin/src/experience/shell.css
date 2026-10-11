@@ -738,3 +738,12 @@ html[data-theme="night"] .ax-shell .ax-linkbtn { color: #FFD0A6; }
 .ax-pu-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: auto; }
 .ax-pu-actions { display: flex; gap: 8px; margin-left: auto; }
 @media (max-width: 480px) { .ax-pu-card { padding: 16px; } .ax-pu-actions { width: 100%; } .ax-pu-actions .ax-button { flex: 1 1 0; } }
+/* Customers list: name over phone, car plates as chips, money to collect stands out */
+.ax-cust-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ax-cust-name { font-size: 15px; font-weight: 600; color: var(--ad-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ax-cust-sub { font-size: 13px; color: var(--ad-text-secondary); font-weight: 400; }
+.ax-cust-cars { display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; white-space: nowrap; }
+.ax-plate-chip { display: inline-block; padding: 3px 9px; border-radius: 8px; border: 1px solid var(--ad-border-subtle); font: 600 12px/1.3 var(--ad-font-mono, ui-monospace, monospace); letter-spacing: .04em; color: var(--ad-text-primary); }
+.ax-due { font-weight: 700; color: #C2540A; }
+html[data-theme="night"] .ax-due { color: #F5A15C; }
+@media (max-width: 700px) { .ax-list-head [role="columnheader"]:nth-child(n+4), .ax-list-row [data-col="visits"], .ax-list-row [data-col="last"] { display: none; } }

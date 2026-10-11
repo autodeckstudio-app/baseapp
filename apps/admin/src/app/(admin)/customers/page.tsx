@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Customer, Vehicle } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { listenToJobs } from "../../../lib/jobs-service";
+import type { ServiceJob } from "@autodeck/core";
 import { listenToCustomers, listenToTenantVehicles, findCustomerIdByRegistration } from "../../../lib/customers-service";
 import { customerIdsForPlate } from "../../../lib/customer-search";
 import { CustomersView } from "../../../experience/OfficeViews";
@@ -14,6 +16,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [jobs, setJobs] = useState<ServiceJob[] | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [plateMessage, setPlateMessage] = useState<string | null>(null);
@@ -40,6 +43,11 @@ export default function CustomersPage() {
     return listenToTenantVehicles(claims.tenantId, setVehicles, () => setVehicles([]));
   }, [claims]);
 
+  useEffect(() => {
+    if (!claims) return undefined;
+    return listenToJobs(claims.tenantId, setJobs, () => setJobs(undefined));
+  }, [claims]);
+
   async function handlePlate(reg: string) {
     setPlateMessage(null);
     if (!claims || reg.trim().length < 4) return;
@@ -61,6 +69,7 @@ export default function CustomersPage() {
       loading={loading}
       error={error}
       vehicles={vehicles}
+      jobs={jobs}
       search={search}
       onSearch={setSearch}
       onPlateLookup={(r) => void handlePlate(r)}

@@ -6,7 +6,7 @@ import { customerMatches, plateIndex } from "../lib/customer-search";
 import Link from "next/link";
 import { auditActor, auditTarget, auditVerb } from "../lib/audit-display";
 import { useState } from "react";
-import type { AuditLog, Customer, Invoice, InvoiceStatus, Payment, PaymentStatus } from "@autodeck/core";
+import type { AuditLog, Customer, Invoice, InvoiceStatus, Payment, PaymentStatus, ServiceJob } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, ListPane, Drawer, type Column } from "./Office";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatPaise, formatDate, formatDateTime, studioToday } from "../lib/format";
@@ -23,6 +23,7 @@ export function CustomersView(p: {
   search: string;
   onSearch: (q: string) => void;
   vehicles?: { ownerId: string; registrationNumber?: string }[];
+  jobs?: Pick<ServiceJob, "customerId" | "createdAt" | "status" | "paymentStatus" | "totalAmount">[] | undefined;
   onPlateLookup: (plate: string) => void;
   plateMessage: string | null;
   onOpen: (id: string) => void;
@@ -32,11 +33,43 @@ export function CustomersView(p: {
   const rows = q ? p.customers.filter((c) => customerMatches(c, p.search, plates)) : p.customers;
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
   const newThisMonth = p.customers.filter((c) => c.createdAt >= monthAgo).length;
+  // Per-customer facts staff actually need: cars, visits, last visit, money to collect.
+  const stats = new Map<string, { visits: number; last: string; due: number; partial: boolean }>();
+  for (const j of p.jobs ?? []) {
+    if (j.status === "CANCELLED") continue;
+    const st = stats.get(j.customerId) ?? { visits: 0, last: "", due: 0, partial: false };
+    st.visits += 1;
+    if (j.createdAt > st.last) st.last = j.createdAt;
+    if (j.status === "DELIVERED" && j.paymentStatus === "unpaid") st.due += j.totalAmount;
+    if (j.status === "DELIVERED" && j.paymentStatus === "partial") st.partial = true;
+    stats.set(j.customerId, st);
+  }
+  const carsOf = new Map<string, string[]>();
+  for (const v of p.vehicles ?? []) {
+    if (!v.registrationNumber) continue;
+    carsOf.set(v.ownerId, [...(carsOf.get(v.ownerId) ?? []), v.registrationNumber]);
+  }
+  const haveJobs = p.jobs !== undefined;
   const cols: Column<Customer>[] = [
-    { key: "name", head: "Customer", kind: "strong", width: "minmax(0, 2fr)", cell: (c) => c.name || "Unnamed customer" },
-    { key: "phone", head: "Phone", kind: "data", width: "minmax(0, 1.2fr)", cell: (c) => c.phone || "Not added" },
-    { key: "joined", head: "Customer since", kind: "muted", width: "minmax(0, 1fr)", align: "end", cell: (c) => formatDate(c.createdAt) },
+    { key: "name", head: "Customer", kind: "strong", width: "minmax(0, 1.7fr)", cell: (c) => (
+      <span className="ax-cust-cell"><span className="ax-cust-name">{c.name || "Unnamed customer"}</span><span className="ax-cust-sub">{c.phone || "No phone"}</span></span>
+    ) },
+    { key: "cars", head: "Cars", kind: "data", width: "minmax(0, 1.9fr)", cell: (c) => {
+      const cars = carsOf.get(c.id) ?? [];
+      if (cars.length === 0) return <span className="ax-cust-sub">None added</span>;
+      return <span className="ax-cust-cars">{cars.slice(0, 2).map((r) => <span key={r} className="ax-plate-chip">{r}</span>)}{cars.length > 2 ? <span className="ax-cust-sub">+{cars.length - 2}</span> : null}</span>;
+    } },
+    ...(haveJobs ? [
+      { key: "visits", head: "Visits", kind: "data" as const, width: "minmax(0, .6fr)", align: "end" as const, cell: (c: Customer) => stats.get(c.id)?.visits ?? 0 },
+      { key: "last", head: "Last visit", kind: "muted" as const, width: "minmax(0, 1fr)", cell: (c: Customer) => { const l = stats.get(c.id)?.last; return l ? formatDate(l) : "Never"; } },
+      { key: "due", head: "To collect", kind: "data" as const, width: "minmax(0, 1fr)", align: "end" as const, cell: (c: Customer) => {
+        const st = stats.get(c.id);
+        if (st && st.due > 0) return <span className="ax-due">{formatPaise(st.due)}</span>;
+        return st?.partial ? <span className="ax-cust-sub">Part paid</span> : <span className="ax-cust-sub">Clear</span>;
+      } },
+    ] : []),
   ];
+  const owing = Array.from(stats.values()).filter((x) => x.due > 0).length;
   if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
   if (p.loading) return <div className="ax-panel" role="status">Loading records...</div>;
   return (
@@ -47,6 +80,7 @@ export function CustomersView(p: {
         kpis={[
           { value: p.customers.length, label: "Customers" },
           { value: newThisMonth, label: "New in 30 days", tone: "premium" },
+          ...(haveJobs ? [{ value: owing, label: "Owe money", tone: "accent" as const }] : []),
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.customers.length }}>
