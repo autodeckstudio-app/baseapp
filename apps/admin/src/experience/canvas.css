@@ -266,3 +266,53 @@ html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; bor
   .ax-notch { left: 236px; right: 160px; max-width: calc(100% - 236px - 160px); }
 }
 @media (max-width: 860px) { .ax-shell { --ax-top: 72px; } .ax-shell-frame > .ax-main { padding-top: 6px !important; } }
+
+/* ---- Dashboard v3: one radius, one glass, a headline that sits on the photo instead of shouting. ---- */
+.ax-shell { --ax-card-r: 28px; }
+@media (min-width: 861px) {
+  .ax-dash .ax-page-head h1 { font-size: clamp(44px, 5.4vw, 80px) !important; line-height: 1 !important; letter-spacing: -1.5px !important; font-weight: 400 !important; margin-top: 4px !important; }
+  .ax-dash .ax-tiles .ax-tile, .ax-dash .ax-tiles .ax-hero-side--row,
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { border-radius: var(--ax-card-r) !important; }
+  html[data-theme="night"] .ax-dash .ax-detail-main > .ax-panel,
+  html[data-theme="night"] .ax-dash .ax-detail-side > .ax-panel {
+    background: var(--fl-glass-night) !important;
+    border: 1px solid rgba(255,255,255,.17) !important;
+    box-shadow: 0 24px 54px -22px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22) !important;
+    backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%);
+  }
+  /* Cards hug their content and sit at the bottom of the canvas; no tall empty slabs. */
+  .ax-dash .ax-detail { align-items: stretch; margin-top: auto !important; flex: 0 0 auto; }
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { flex: 1 1 auto; }
+}
+@media (max-width: 860px) {
+  .ax-dash .ax-page-head h1 { font-size: clamp(34px, 10vw, 48px) !important; letter-spacing: -1px !important; line-height: 1.05 !important; font-weight: 400 !important; }
+}
+
+/* ---- Shared form and control rules (one place, applies to every admin page) ----
+   Fields: one height, text centred vertically, one radius family.
+   Selects: same custom chevron everywhere, optically centred, never the browser default.
+   Buttons: one inline-flex box so glyphs and labels centre on the same line. */
+.ax-shell { --ax-field-h: 44px; --ax-field-r: 22px; }
+.ax-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+.ax-shell select { min-height: var(--ax-field-h); height: var(--ax-field-h); line-height: 1.2; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: block; }
+.ax-shell textarea {
+  box-sizing: border-box; border-radius: var(--ax-field-r); padding: 12px 18px; min-height: var(--ax-field-h); line-height: 20px; resize: vertical; display: block;
+}
+.ax-shell textarea:not([rows]), .ax-shell textarea[rows="1"] { height: var(--ax-field-h); padding-top: 11px; padding-bottom: 11px; resize: none; }
+.ax-shell textarea[rows="2"], .ax-shell textarea[rows="3"], .ax-shell textarea[rows="4"] { height: auto; padding-top: 12px; padding-bottom: 12px; resize: vertical; }
+.ax-shell input::placeholder, .ax-shell textarea::placeholder { line-height: inherit; opacity: .6; }
+.ax-shell input[type="date"], .ax-shell input[type="datetime-local"], .ax-shell input[type="time"] { padding-right: 14px; }
+.ax-shell input[type="date"]::-webkit-calendar-picker-indicator, .ax-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; opacity: .8; }
+html[data-theme="night"] .ax-shell input[type="date"]::-webkit-calendar-picker-indicator, html[data-theme="night"] .ax-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+.ax-shell select {
+  appearance: none; -webkit-appearance: none; padding-right: 42px; cursor: pointer;
+  background-repeat: no-repeat; background-position: right 16px center; background-size: 12px 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23999' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.ax-shell .ax-toolbar select, .ax-shell .ax-person select, .ax-shell .ax-paper select { height: 36px; min-height: 36px; }
+.ax-shell .ax-button, .ax-shell button.ax-button, .ax-shell a.ax-button { display: inline-flex; align-items: center; justify-content: center; line-height: 1; gap: 8px; box-sizing: border-box; }
+.ax-shell .ax-button[aria-label="Next day"], .ax-shell .ax-button[aria-label="Previous day"] { width: 44px; padding: 0; font-size: 22px; padding-bottom: 3px; }
+.ax-shell summary { display: flex; align-items: center; gap: 8px; }
+/* Save / Cancel pairs: Cancel is quiet glass, Save is the one orange action, same height. */
+.ax-shell .ax-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ax-shell .ax-button--primary { color: #fff; }

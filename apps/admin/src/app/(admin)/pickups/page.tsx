@@ -152,7 +152,7 @@ export default function PickupsPage() {
                 ) : null}
 
                 {open ? (
-                  <textarea rows={2} aria-label="Note or charge for the customer" placeholder={`Note for the customer. Charge if beyond 5 km, e.g. Rs ${r.kind === "both" ? 200 : 100}`} value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} className="ax-pu-note" />
+                  <textarea rows={1} aria-label="Note or charge for the customer" placeholder={`Note or extra charge, e.g. Rs ${r.kind === "both" ? 200 : 100}`} value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} className="ax-pu-note" />
                 ) : r.staffNote ? <p className="ax-pu-staffnote">{r.staffNote}</p> : null}
 
                 <div className="ax-pu-foot">
