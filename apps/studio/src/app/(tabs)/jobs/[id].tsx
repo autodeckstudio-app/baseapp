@@ -64,9 +64,9 @@ const JOB_STATUS_LABELS: Record<string, string> = {
 };
 
 const ADVANCE_ACTION_LABELS: Record<string, string> = {
-  PENDING_VEHICLE: "Check In Vehicle",
+  PENDING_VEHICLE: "Car arrived, start work",
   VEHICLE_RECEIVED: "Start Work",
-  IN_PROGRESS: "Send to QC",
+  IN_PROGRESS: "Done, ready for handover",
   QUALITY_CHECK: "Mark Ready",
   READY_FOR_DELIVERY: "Mark Delivered",
 };
@@ -321,7 +321,8 @@ export default function JobDetailScreen() {
     if (!job || !id || advancing) return;
     setActionError(null);setAdvancing(true);
     try {
-      await advanceJobStatus(id);
+      const steps = job.status === "PENDING_VEHICLE" || job.status === "IN_PROGRESS" ? 2 : 1;
+      for (let i = 0; i < steps; i++) await advanceJobStatus(id);
       setAdvanceConfirm(false);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to advance status.");
@@ -441,7 +442,7 @@ export default function JobDetailScreen() {
         ))}
       </Section>
 
-      <Text style={sectionTitle}>Inspection</Text>
+      <Text style={sectionTitle}>Photos and damage note (optional)</Text>
       <Section>
         {inspection ? (
           <>
@@ -453,9 +454,9 @@ export default function JobDetailScreen() {
             />
           </>
         ) : job.status === "CANCELLED" || job.status === "DELIVERED" ? (
-          <Text style={{ ...typography.caption, color: colors.textMuted }}>No inspection was recorded for this job.</Text>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>No photos or damage note were recorded.</Text>
         ) : (
-          <Button label="Start Inspection" onPress={() => void handleStartInspection()} loading={startingInspection} />
+          <Button label="Add photos or a damage note" onPress={() => void handleStartInspection()} loading={startingInspection} />
         )}
       </Section>
 
@@ -603,7 +604,7 @@ export default function JobDetailScreen() {
       {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
       {canAdvance && (
-        <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => setAdvanceConfirm(true)} loading={advancing} style={{ marginBottom: spacing.lg }} />
+        <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => (job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm(true) : void handleAdvance())} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}
 
       {job.status === "PENDING_VEHICLE" && job.bookingId ? (
