@@ -227,3 +227,42 @@ html[data-theme="day"] .ax-shell .ax-corner-out { color: #26211C !important; bor
   .ax-dash .ax-detail { grid-template-columns: minmax(0, 1fr); gap: 16px 0; align-items: stretch; }
   .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel { margin-bottom: 0 !important; padding-bottom: 24px; border-radius: 28px; flex: 0 0 auto; }
 }
+/* ---- Scaffold fixes (root causes) ---------------------------------------------------------
+   1. Content scrolls in a viewport that starts BELOW the top chrome row, so a heading or a
+      button can never slide behind or beside the floating nav.
+   2. The notch is centred over the content column (not the whole frame) and always has room
+      between the logo pill and the account pill.
+   3. Dashboard bottom cards share one shape: same radius on all four corners, same height,
+      no flush edge, no concave cutouts, no dead band between the tiles and the cards. */
+.ax-shell { --ax-top: 88px; }
+.ax-shell-frame > .ax-main {
+  inset: var(--ax-top) 0 0 0 !important;
+  padding-top: 6px !important;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+}
+.ax-dash .ax-hero-side { top: 6px; }
+@media (min-width: 861px) {
+  .ax-notch {
+    left: 258px; right: 246px; transform: none; width: fit-content; margin: 0 auto;
+    max-width: calc(100% - 258px - 246px);
+  }
+  .ax-notch .ax-chips { overflow-x: auto; }
+  .ax-dash .ax-detail { margin-top: 0 !important; flex: 1 1 auto; align-items: stretch; }
+  .ax-dash .ax-detail-main > .ax-panel, .ax-dash .ax-detail-side > .ax-panel {
+    border-radius: 28px !important; margin-bottom: 0 !important; padding: 24px 28px !important;
+    background: var(--ax-chrome) !important; flex: 1 1 auto;
+  }
+  .ax-dash .ax-detail-main > .ax-panel::before, .ax-dash .ax-detail-main > .ax-panel::after { display: none; }
+  .ax-dash .ax-detail-side { justify-content: stretch; }
+}
+@media (min-width: 861px) and (max-width: 1400px) {
+  .ax-corner-out { width: 38px; padding: 0; justify-content: center; }
+  .ax-corner-out-t { display: none; }
+  .ax-notch { right: 170px; max-width: calc(100% - 258px - 170px); }
+  .ax-notch .ax-chip-link { padding: 0 13px !important; font-size: 13.5px; }
+}
+@media (min-width: 861px) and (max-width: 1000px) {
+  .ax-notch { left: 236px; right: 160px; max-width: calc(100% - 236px - 160px); }
+}
+@media (max-width: 860px) { .ax-shell { --ax-top: 72px; } .ax-shell-frame > .ax-main { padding-top: 6px !important; } }

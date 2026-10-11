@@ -1,32 +1,56 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { listPickupRequests, setPickupStatus, type PickupRequestRow } from "../../../lib/pickup-service";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { listenToPickupRequests, setPickupStatus, type PickupRequestRow } from "../../../lib/pickup-service";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { StatusBadge } from "../../../components/StatusBadge";
+
+type Status = PickupRequestRow["status"];
+type Tab = Status | "ALL";
 
 const KIND = { pickup: "Pick up", drop: "Drop back", both: "Pick up and drop back" } as const;
-const STATUS = { REQUESTED: "Waiting for approval", CONFIRMED: "Approved", DONE: "Done", DECLINED: "Declined" } as const;
-const box = { background: "var(--ad-surface)", border: "1px solid var(--ad-border-subtle)", borderRadius: 20, padding: 16, display: "grid", gap: 8 } as const;
-const btn = { borderRadius: 9999, padding: "10px 18px", border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: "inherit", cursor: "pointer", font: "inherit" } as const;
+const STATUS_LABEL: Record<Status, string> = { REQUESTED: "Waiting", CONFIRMED: "Approved", DONE: "Done", DECLINED: "Declined" };
+const TABS: { id: Tab; label: string }[] = [
+  { id: "REQUESTED", label: "Waiting" },
+  { id: "CONFIRMED", label: "Approved" },
+  { id: "DONE", label: "Done" },
+  { id: "DECLINED", label: "Declined" },
+  { id: "ALL", label: "All" },
+];
+
+function formatAgreed(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}, ${d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+}
 
 export default function PickupsPage() {
   const { claims } = useAdminAuth();
   const [rows, setRows] = useState<PickupRequestRow[] | null>(null);
+  const [tab, setTab] = useState<Tab>("REQUESTED");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [agreedPickup, setAgreedPickup] = useState<Record<string, string>>({});
   const [agreedDrop, setAgreedDrop] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
     if (!claims) return;
-    setError(null);
-    try { setRows(await listPickupRequests(claims.tenantId)); } catch { setError("Couldn't load pickup requests."); setRows([]); }
+    setLoadError(null);
+    return listenToPickupRequests(claims.tenantId, setRows, () => { setLoadError("Couldn't load pickup requests."); setRows([]); });
   }, [claims]);
-  useEffect(() => { void load(); }, [load]);
 
-  async function act(r: PickupRequestRow, status: PickupRequestRow["status"]) {
-    if(busy) return;
+  const counts = useMemo(() => {
+    const c: Record<Tab, number> = { REQUESTED: 0, CONFIRMED: 0, DONE: 0, DECLINED: 0, ALL: 0 };
+    for (const r of rows ?? []) { c[r.status] += 1; c.ALL += 1; }
+    return c;
+  }, [rows]);
+  const shown = (rows ?? []).filter((r) => tab === "ALL" || r.status === tab);
+
+  async function act(r: PickupRequestRow, status: Status) {
+    if (busy) return;
     setBusy(r.id); setError(null);
     try {
       const agreed: { agreedPickupAt?: string; agreedDropAt?: string } = {};
@@ -34,73 +58,119 @@ export default function PickupsPage() {
         // Timing is agreed with the customer by phone call; it must be entered here.
         if (r.kind !== "drop") {
           const v = (agreedPickup[r.id] ?? "").trim();
-          if (!v) { setError("Enter the pickup time agreed with the customer on the call."); setBusy(null); return; }
+          if (!v) { setError("Enter the pickup time agreed with the customer on the call."); return; }
           agreed.agreedPickupAt = v;
         }
         if (r.kind !== "pickup") {
           const v = (agreedDrop[r.id] ?? "").trim();
-          if (!v) { setError("Enter the dropoff time agreed with the customer on the call."); setBusy(null); return; }
+          if (!v) { setError("Enter the dropoff time agreed with the customer on the call."); return; }
           agreed.agreedDropAt = v;
         }
       }
       await setPickupStatus(r.id, status, notes[r.id] ?? r.staffNote, agreed);
-      await load();
-    }
-    catch (e) { setError(e instanceof Error && e.message ? e.message : "Couldn't update the request."); }
-    finally { setBusy(null); }
-  }
-
-  const dtInput = { padding: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,0.2)", background: "var(--ad-surface)", color: "inherit", font: "inherit", colorScheme: "dark" } as const;
-
-  function formatAgreed(iso: string): string {
-    const d = new Date(iso);
-    return `${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} at ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "Couldn't update the request.");
+    } finally { setBusy(null); }
   }
 
   return (
-    <main style={{ display: "grid", gap: 16, maxWidth: 720, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ margin: 0 }}>Pickup and drop</h1>
-      <p style={{ margin: 0, opacity: 0.7 }}>Free up to 5 km. Beyond 5 km it is Rs 100 per pickup and Rs 100 per drop. Write the charge in the note when you approve. The customer sees it on their booking and pays at the studio.</p>
-      {error ? <div><p role="alert" style={{color:"var(--ad-danger)"}}>{error}</p><button className="ax-button" onClick={()=>void load()}>Retry</button></div> : null}
-      {rows === null ? <p>Loading...</p> : rows.length === 0 ? <p>No pickup or drop requests yet.</p> : rows.map((r) => (
-        <section key={r.id} style={box}>
-          <strong>{KIND[r.kind]} - {STATUS[r.status]}</strong>
-          <span>{r.address}</span>
-          {r.kind !== "drop" && (r.requestedPickupTime || r.preferredTime) ? <span style={{ opacity: 0.7 }}>Customer asked{r.kind === "both" ? " (pickup)" : ""}: {r.requestedPickupTime || r.preferredTime}</span> : null}
-          {r.kind !== "pickup" && r.requestedDropTime ? <span style={{ opacity: 0.7 }}>Customer asked (dropoff): {r.requestedDropTime}</span> : null}
-          {r.status !== "REQUESTED" && r.agreedPickupAt ? <span style={{ opacity: 0.7 }}>Pickup agreed: {formatAgreed(r.agreedPickupAt)}</span> : null}
-          {r.status !== "REQUESTED" && r.agreedDropAt ? <span style={{ opacity: 0.7 }}>Dropoff agreed: {formatAgreed(r.agreedDropAt)}</span> : null}
-          <span style={{ opacity: 0.5, fontSize: 12 }}>Booking {r.bookingId}</span>
-          {r.status === "REQUESTED" || r.status === "CONFIRMED" ? (
-            <>
-              {r.status === "REQUESTED" ? (
-                <div style={{ display: "grid", gap: 6 }}>
-                  <span style={{ opacity: 0.7, fontSize: 13 }}>Agree the time with the customer by phone call, then enter it here.</span>
-                  {r.kind !== "drop" ? (
-                    <label style={{ display: "grid", gap: 4, fontSize: 13, opacity: 0.9 }}>
-                      Agreed pickup time
-                      <input type="datetime-local" aria-label="Agreed pickup time" value={agreedPickup[r.id] ?? ""} onChange={(e) => setAgreedPickup({ ...agreedPickup, [r.id]: e.target.value })} style={dtInput} />
-                    </label>
-                  ) : null}
-                  {r.kind !== "pickup" ? (
-                    <label style={{ display: "grid", gap: 4, fontSize: 13, opacity: 0.9 }}>
-                      Agreed dropoff time
-                      <input type="datetime-local" aria-label="Agreed dropoff time" value={agreedDrop[r.id] ?? ""} onChange={(e) => setAgreedDrop({ ...agreedDrop, [r.id]: e.target.value })} style={dtInput} />
-                    </label>
+    <div className="ax-page ax-pu">
+      <header className="ax-page-head">
+        <div>
+          <p className="ax-label">Studio service</p>
+          <h1>Pickup and drop</h1>
+        </div>
+        <div className="ax-kpis" aria-label="At a glance">
+          <div><span className="ax-kpi-v ax-kpi-v--accent">{counts.REQUESTED}</span><span className="ax-label">Waiting</span></div>
+          <div><span className="ax-kpi-v">{counts.CONFIRMED}</span><span className="ax-label">Approved</span></div>
+          <div><span className="ax-kpi-v ax-kpi-v--premium">{counts.DONE}</span><span className="ax-label">Done</span></div>
+        </div>
+      </header>
+
+      <div className="ax-toolbar">
+        <div className="ax-seg" role="group" aria-label="Show">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {counts[t.id]}</button>
+          ))}
+        </div>
+        <p className="ax-pu-policy">Free up to 5 km. Beyond that, Rs 100 for each pickup and each drop. Put the charge in the note when you approve.</p>
+      </div>
+
+      {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}
+      {error ? <p role="alert" className="ax-pu-error">{error}</p> : null}
+
+      {rows === null ? (
+        <div className="ax-panel" role="status">Loading requests...</div>
+      ) : shown.length === 0 ? (
+        <div className="ax-empty"><p className="ax-title">{tab === "REQUESTED" ? "Nothing waiting" : "No requests here"}</p><p>{tab === "REQUESTED" ? "New pickup and drop requests from customers show up here." : "Try another tab."}</p></div>
+      ) : (
+        <div className="ax-pu-grid">
+          {shown.map((r) => {
+            const open = r.status === "REQUESTED" || r.status === "CONFIRMED";
+            const askedPickup = r.requestedPickupTime || r.preferredTime;
+            const asked: [string, string][] = [];
+            if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
+            if (r.kind !== "pickup" && r.requestedDropTime) asked.push([r.kind === "both" ? "Drop" : "Time", r.requestedDropTime]);
+            const agreed: [string, string][] = [];
+            if (r.status !== "REQUESTED" && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
+            if (r.status !== "REQUESTED" && r.agreedDropAt) agreed.push(["Drop", formatAgreed(r.agreedDropAt)]);
+            return (
+              <section key={r.id} className="ax-panel ax-pu-card">
+                <div className="ax-pu-top">
+                  <h2>{KIND[r.kind]}</h2>
+                  <StatusBadge label={STATUS_LABEL[r.status]} />
+                </div>
+                <p className="ax-pu-addr">{r.address}</p>
+
+                {asked.length > 0 || agreed.length > 0 ? (
+                  <dl className="ax-pu-facts">
+                    {asked.length > 0 ? (
+                      <div><dt>Customer asked</dt>{asked.map(([k, v]) => <dd key={k}>{asked.length > 1 ? <span>{k}</span> : null}{v}</dd>)}</div>
+                    ) : null}
+                    {agreed.length > 0 ? (
+                      <div><dt>Agreed</dt>{agreed.map(([k, v]) => <dd key={k}>{agreed.length > 1 ? <span>{k}</span> : null}{v}</dd>)}</div>
+                    ) : null}
+                  </dl>
+                ) : null}
+
+                {r.status === "REQUESTED" ? (
+                  <div className="ax-pu-form">
+                    <p className="ax-pu-hint">Call the customer, agree the time, then enter it here.</p>
+                    <div className="ax-pu-times">
+                      {r.kind !== "drop" ? (
+                        <label>Pickup time
+                          <input type="datetime-local" aria-label="Agreed pickup time" value={agreedPickup[r.id] ?? ""} onChange={(e) => setAgreedPickup({ ...agreedPickup, [r.id]: e.target.value })} />
+                        </label>
+                      ) : null}
+                      {r.kind !== "pickup" ? (
+                        <label>Drop time
+                          <input type="datetime-local" aria-label="Agreed dropoff time" value={agreedDrop[r.id] ?? ""} onChange={(e) => setAgreedDrop({ ...agreedDrop, [r.id]: e.target.value })} />
+                        </label>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {open ? (
+                  <textarea rows={2} aria-label="Note or charge for the customer" placeholder={`Note for the customer. Charge if beyond 5 km, e.g. Rs ${r.kind === "both" ? 200 : 100}`} value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} className="ax-pu-note" />
+                ) : r.staffNote ? <p className="ax-pu-staffnote">{r.staffNote}</p> : null}
+
+                <div className="ax-pu-foot">
+                  <Link href={`/bookings/${r.bookingId}`} className="ax-linkbtn">Open booking</Link>
+                  {open ? (
+                    <div className="ax-pu-actions">
+                      <button type="button" className="ax-button" disabled={busy !== null} onClick={() => void act(r, "DECLINED")}>Decline</button>
+                      {r.status === "REQUESTED"
+                        ? <button type="button" className="ax-button ax-button--primary" disabled={busy !== null} onClick={() => void act(r, "CONFIRMED")}>Approve</button>
+                        : <button type="button" className="ax-button ax-button--primary" disabled={busy !== null} onClick={() => void act(r, "DONE")}>Mark done</button>}
+                    </div>
                   ) : null}
                 </div>
-              ) : null}
-              <textarea rows={3} aria-label="Note or charge for the customer" placeholder={`Charge if beyond 5 km (e.g. Rs ${r.kind === "both" ? 200 : 100})`} value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} style={{ padding: 10, borderRadius: 12, border: "1px solid rgba(255,255,255,0.2)", background: "var(--ad-surface)", color: "inherit", font: "inherit", width:"100%",boxSizing:"border-box",resize:"vertical" }} />
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {r.status === "REQUESTED" ? <button style={{ ...btn, background: "#EC8638", color: "#1A1410", borderColor: "#EC8638" }} disabled={busy !== null} onClick={() => void act(r, "CONFIRMED")}>Approve</button> : null}
-                {r.status === "CONFIRMED" ? <button style={{ ...btn, background: "#EC8638", color: "#1A1410", borderColor: "#EC8638" }} disabled={busy !== null} onClick={() => void act(r, "DONE")}>Mark done</button> : null}
-                <button style={btn} disabled={busy !== null} onClick={() => void act(r, "DECLINED")}>Decline</button>
-              </div>
-            </>
-          ) : r.staffNote ? <span style={{ opacity: 0.7 }}>Note: {r.staffNote}</span> : null}
-        </section>
-      ))}
-    </main>
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
-

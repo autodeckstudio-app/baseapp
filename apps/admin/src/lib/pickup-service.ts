@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, type Unsubscribe } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "./firebase";
@@ -20,9 +20,17 @@ export interface PickupRequestRow {
   createdAt: string;
 }
 
-export async function listPickupRequests(tenantId: string): Promise<PickupRequestRow[]> {
-  const snap = await getDocs(query(collection(db, COLLECTIONS.pickupRequests()), where("tenantId", "==", tenantId)));
-  return snap.docs.map((d) => d.data() as PickupRequestRow).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+/** Live feed, newest first, so a customer's new request or a status change made elsewhere shows up without a reload. */
+export function listenToPickupRequests(
+  tenantId: string,
+  onData: (rows: PickupRequestRow[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, COLLECTIONS.pickupRequests()), where("tenantId", "==", tenantId)),
+    (snap) => onData(snap.docs.map((d) => ({ ...(d.data() as PickupRequestRow), id: d.id })).sort((x, y) => y.createdAt.localeCompare(x.createdAt))),
+    onError,
+  );
 }
 
 export async function setPickupStatus(
