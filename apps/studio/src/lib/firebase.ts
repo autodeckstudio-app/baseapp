@@ -12,7 +12,10 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 // __DEV__ is false in a production RN/Expo bundle regardless of how the
 // build was invoked, so this check can't be bypassed by simply forgetting
 // to set NODE_ENV.
-if (!__DEV__ && !process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
+// Also enforced in development: a missing project id used to fall back to
+// "autodeck-dev", so one app could read and write a different database from the
+// others and jobs would look unsynced between apps.
+if (!process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
   throw new Error(
     "EXPO_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build; refusing to silently fall back to the dev Firebase project.",
   );

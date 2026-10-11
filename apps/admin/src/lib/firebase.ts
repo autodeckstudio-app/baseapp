@@ -3,7 +3,7 @@
 import { getStorage } from "firebase/storage";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getFirestore, initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 // In a real production build (`next build`/`next start`, NODE_ENV set by
@@ -12,7 +12,10 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 // "autodeck-dev" instead of the actual production Firebase project, with no
 // error or warning anywhere - a genuine deploy-safety hole (Phase 6 hostile
 // audit finding).
-if (process.env.NODE_ENV === "production" && !process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"]) {
+// Same rule in development: a missing project id used to fall back to "autodeck-dev",
+// so one app could read and write a different database from the others and jobs
+// would look unsynced. Fail loudly instead (emulator runs are exempt).
+if (!process.env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"] && process.env["NEXT_PUBLIC_USE_FIREBASE_EMULATOR"] !== "true") {
   throw new Error(
     "NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set in a production build - refusing to silently fall back to the dev Firebase project.",
   );
@@ -31,7 +34,17 @@ const firebaseConfig = {
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Live listeners must keep streaming behind proxies, VPNs and some Safari/mobile
+// networks, where the default WebChannel stream can stall and leave a screen showing
+// stale jobs until reload. Auto-detect falls back to long polling only when needed.
+function openFirestore() {
+  try {
+    return initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+  } catch {
+    return getFirestore(app); // already initialised (fast refresh)
+  }
+}
+export const db = openFirestore();
 export const functions = getFunctions(app, "asia-south1");
 export const storage = getStorage(app);
 
