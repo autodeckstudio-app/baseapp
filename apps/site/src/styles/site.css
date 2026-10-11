@@ -117,3 +117,45 @@ section.s{padding:104px 0}
 }
 .site-head .mnav{display:none;overflow-x:auto;gap:22px;padding:12px 20px;border-bottom:1px solid var(--line);background:#fff;scrollbar-width:none}
 .site-head .mnav a{font:500 14px Inter,sans-serif;text-decoration:none;color:var(--ink2);white-space:nowrap}.site-head .mnav a[aria-current]{color:var(--ink);box-shadow:0 2px 0 var(--orange)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin:48px 0 8px}.chips a{padding:10px 18px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:var(--ink);font:600 14px Montserrat,sans-serif;background:rgba(255,255,255,.7);backdrop-filter:blur(10px)}.chips a i{font-style:normal;color:var(--ink3);margin-left:6px}.chips a:hover{border-color:var(--orange)}
+.cat{padding-top:72px;scroll-margin-top:90px}.cat-head h2{font:600 clamp(28px,3.4vw,44px)/1.1 Montserrat,sans-serif;margin:0 0 8px}.cat-head p{color:var(--ink2);margin:0 0 24px}
+.bgroup{margin-top:18px;padding:22px 26px;border-radius:var(--r);background:rgba(255,255,255,.72);border:1px solid var(--line);backdrop-filter:blur(14px)}.bgroup h3{margin:0 0 10px;font:600 13px Montserrat,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--orange-ink)}
+.plist{list-style:none;margin:0;padding:0}.plist li{display:grid;grid-template-columns:1fr 110px 130px;gap:14px;align-items:baseline;padding:13px 0;border-top:1px solid var(--line)}.plist li:first-child{border-top:0}
+.pn{font:600 16px Montserrat,sans-serif}.pn em{display:block;font:400 13px Inter,sans-serif;font-style:normal;color:var(--ink3);margin-top:2px}.pt{color:var(--ink3);font-size:14px}.pp{text-align:right;font:600 16px Montserrat,sans-serif}
+@media(max-width:640px){.plist li{grid-template-columns:1fr auto}.pt{display:none}.bgroup{padding:18px}}
+
+/* ---- immersive layer: aurora, glass, gloss, motion ---- */
+body{background:linear-gradient(180deg,#fbf8f2 0%,#f4efe6 100%);position:relative}
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.aurora i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;will-change:transform}
+.aurora .o1{width:46vw;height:46vw;left:-8vw;top:-10vw;background:radial-gradient(circle,#ec8638 0%,rgba(236,134,56,0) 68%);animation:drift1 22s ease-in-out infinite alternate;translate:0 calc(var(--sy,0)*-.06px)}
+.aurora .o2{width:40vw;height:40vw;right:-10vw;top:22vh;background:radial-gradient(circle,#ffd3a8 0%,rgba(255,211,168,0) 70%);animation:drift2 28s ease-in-out infinite alternate;translate:0 calc(var(--sy,0)*-.1px)}
+.aurora .o3{width:50vw;height:50vw;left:25vw;bottom:-22vw;background:radial-gradient(circle,#b9bcc4 0%,rgba(185,188,196,0) 70%);animation:drift3 34s ease-in-out infinite alternate;opacity:.4}
+@keyframes drift1{to{transform:translate(14vw,10vh) scale(1.15)}}
+@keyframes drift2{to{transform:translate(-12vw,-8vh) scale(1.1)}}
+@keyframes drift3{to{transform:translate(-10vw,-12vh) scale(1.2)}}
+.aurora::after{content:"";position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+.site-head{margin:14px auto 0;width:min(var(--wrap),100% - 28px);border:1px solid rgba(255,255,255,.7);border-radius:999px;background:rgba(255,255,255,.55);backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);box-shadow:0 10px 40px rgba(60,40,20,.10),inset 0 1px 0 rgba(255,255,255,.9)}
+.site-head .wrap{width:auto;padding-inline:22px}
+.card,.bgroup,.cta-box,.trust .wrap>div,.frame .cap,.live{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.46));border:1px solid rgba(255,255,255,.75);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);box-shadow:0 18px 50px rgba(60,40,20,.10),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.3);transition:transform .45s cubic-bezier(.2,.8,.2,1),box-shadow .45s}
+.card::before,.bgroup::before,.cta-box::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(320px circle at var(--mx,50%) var(--my,0%),rgba(236,134,56,.16),transparent 60%);opacity:0;transition:opacity .35s}
+.card:hover::before,.bgroup:hover::before,.cta-box:hover::before{opacity:1}
+.card:hover{transform:translateY(-6px);box-shadow:0 28px 70px rgba(60,40,20,.16),inset 0 1px 0 #fff}
+.trust{background:transparent;border-block:0}.trust .wrap>div{border-radius:var(--r);margin:0;border-left:1px solid rgba(255,255,255,.75)}.trust .wrap>div:first-child{padding-left:26px}
+.trust .wrap{gap:6px;padding-block:18px}
+.frame{animation:floaty 7s ease-in-out infinite;box-shadow:0 40px 90px rgba(60,40,20,.28)}
+@keyframes floaty{50%{transform:translateY(-12px)}}
+.frame img{transform:scale(1.06);animation:kb 26s ease-in-out infinite alternate}
+@keyframes kb{to{transform:scale(1.16) translate(-1.5%,-1%)}}
+.live{position:absolute;top:18px;left:18px;display:flex;gap:12px;align-items:center;padding:12px 18px 12px 14px;border-radius:20px;animation:floaty 5.5s ease-in-out -2s infinite}
+.live small{display:block;font:600 10px Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.live b{display:block;font:600 15px Montserrat,sans-serif;color:var(--ink);transition:opacity .26s,transform .26s}
+.live em{display:block;font:500 12px Inter,sans-serif;font-style:normal;color:var(--ink2);transition:opacity .26s,transform .26s}
+.live .swap{opacity:0;transform:translateY(6px)}
+.dot{width:10px;height:10px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 0 rgba(47,191,113,.6);animation:pulse 1.8s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 12px rgba(47,191,113,0)}100%{box-shadow:0 0 0 0 rgba(47,191,113,0)}}
+.js .rv{opacity:0;transform:translateY(28px) scale(.985);filter:blur(8px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.8,.2,1),filter .9s}
+.js .rv.in{opacity:1;transform:none;filter:none}
+.btn{box-shadow:0 10px 30px rgba(236,134,56,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+@media (prefers-reduced-motion:reduce){.aurora i,.frame,.frame img,.live,.dot{animation:none}.js .rv{opacity:1;transform:none;filter:none}}
+@media(max-width:760px){.aurora i{filter:blur(60px)}.site-head{border-radius:28px}.live{top:12px;left:12px}}

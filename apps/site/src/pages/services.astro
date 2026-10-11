@@ -8,6 +8,20 @@ const items = [
   ['05','Garage','Repairs and service, with a live job card you can watch from anywhere.','Performance Garage'],
   ['06','Modification','Upgrades chosen with care, fitted right the first time.','Accessory Lounge'],
 ];
+import catalogue from '../data/catalogue.json';
+const CRAFTS = [
+  { key: 'ppf', title: 'Paint Protection Film', blurb: 'Self-healing film, cut to your car and nothing else.' },
+  { key: 'ceramic', title: 'Ceramic Coating', blurb: 'Years of gloss, on record, with a check to keep it honest.' },
+  { key: 'coating', title: 'Coatings', blurb: 'Glass, Teflon and maintenance coats for the daily car.' },
+  { key: 'washing', title: 'Washing and care', blurb: 'The wash it should always have been.' },
+];
+const inr = (n: number) => n > 0 ? '₹' + n.toLocaleString('en-IN') : 'On request';
+const time = (h: number) => h >= 24 ? `${Math.round(h / 8)} working days` : h < 1 ? `${Math.round(h * 60)} min` : `${h % 1 ? h.toFixed(1) : h} hr`;
+const groups = CRAFTS.map((c) => {
+  const rows = catalogue.filter((x) => x.craft === c.key);
+  const brands = [...new Set(rows.map((r) => r.brand || 'AutoDeck'))].sort();
+  return { ...c, count: rows.length, brands: brands.map((b) => ({ name: b, items: rows.filter((r) => (r.brand || 'AutoDeck') === b).sort((a, z) => a.price - z.price) })) };
+});
 ---
 <Base
   title="Services · AutoDeck"
@@ -23,6 +37,25 @@ const items = [
     <ul class="rows">
       {items.map(([k,n,d,z]) => <li class="rv"><span class="k">{k}</span><h2>{n}</h2><p>{d}</p><span class="z">{z}</span></li>)}
     </ul>
+    <nav class="chips rv" aria-label="Jump to a craft">
+      {groups.map((g) => <a href={`#${g.key}`}>{g.title} <i>{g.count}</i></a>)}
+    </nav>
+    {groups.map((g) => (
+      <section class="cat" id={g.key}>
+        <div class="cat-head rv"><h2>{g.title}</h2><p>{g.blurb}</p></div>
+        {g.brands.map((b) => (
+          <div class="bgroup rv">
+            <h3>{b.name}</h3>
+            <ul class="plist">
+              {b.items.map((i) => (
+                <li><span class="pn">{i.name}{i.warranty ? <em>{i.warranty}</em> : null}</span><span class="pt">{time(i.hours)}</span><span class="pp">{inr(i.price)}</span></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    ))}
+    <p class="fine rv">Prices are starting prices for a standard car, in rupees. Larger vehicles are quoted before the car comes in. Garage work and modifications are quoted per car.</p>
     <div class="cta-box rv" style="margin-top:72px">
       <div><h2>Only products we would put on our own cars.</h2><p>Every coating and consumable is the one the lab uses. Batch on record, warranty in the app.</p></div>
       <div class="actions"><a class="btn dark" href="https://app.autodeck.in">See published prices <span aria-hidden="true">→</span></a></div>

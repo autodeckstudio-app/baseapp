@@ -20,6 +20,10 @@ import Base from '../layouts/Base.astro';
       </div>
       <figure class="frame rv" style="margin:0">
         <img src="/assets/img/studio-orange.jpg" alt="The AutoDeck studio: polished floor, track lighting and a car on the lift" width="896" height="1195" fetchpriority="high" />
+        <div class="live" aria-live="off">
+          <span class="dot"></span>
+          <div><small>Live job card</small><b id="live-line">Vehicle received</b><em id="live-time">09:12 am</em></div>
+        </div>
         <figcaption class="cap">
           <span><b>Doors open in</b>Studio design render</span>
           <span class="count" id="countdown" data-target="2026-10-16T10:00:00+05:30" role="status">

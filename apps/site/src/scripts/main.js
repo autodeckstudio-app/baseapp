@@ -16,3 +16,35 @@ if (cd) {
   };
   tick(); setInterval(tick, 1000);
 }
+
+// Immersive layer: drifting aurora follows the scroll, glass cards catch the pointer, and the hero job card keeps updating.
+const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!calm) {
+  const au = document.querySelector('.aurora');
+  let ticking = false;
+  addEventListener('scroll', () => {
+    if (ticking) return; ticking = true;
+    requestAnimationFrame(() => { au && au.style.setProperty('--sy', String(scrollY)); ticking = false; });
+  }, { passive: true });
+  document.addEventListener('pointermove', (e) => {
+    const g = e.target.closest && e.target.closest('.card,.bgroup,.cta-box,.trust .wrap>div,.frame,.chips a');
+    if (!g) return;
+    const r = g.getBoundingClientRect();
+    g.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    g.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive: true });
+}
+const steps = [
+  ['Vehicle received', '09:12 am'], ['Photos taken at the bay', '09:20 am'], ['Paint correction in progress', '11:05 am'],
+  ['Coating cured, final check', '04:40 pm'], ['Ready for handover', '06:15 pm'],
+];
+const line = document.getElementById('live-line'), when = document.getElementById('live-time');
+if (line && when) {
+  let i = 0;
+  setInterval(() => {
+    i = (i + 1) % steps.length;
+    line.classList.add('swap'); when.classList.add('swap');
+    setTimeout(() => { line.textContent = steps[i][0]; when.textContent = steps[i][1]; line.classList.remove('swap'); when.classList.remove('swap'); }, 260);
+  }, 3200);
+}
+if (location.hash === '#all') document.querySelectorAll('.rv').forEach((e) => e.classList.add('in'));

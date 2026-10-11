@@ -1,0 +1,474 @@
+[
+  {
+    "craft": "ceramic",
+    "name": "3M Ceramic Boost",
+    "price": 6000,
+    "brand": "3M",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "3M Ceramic Coating",
+    "price": 9999,
+    "brand": "3M",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "3M Scotchgard Paint Protection Film Pro Series 200",
+    "price": 115000,
+    "brand": "3M",
+    "hours": 8,
+    "warranty": "10-year consumer warranty"
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Aegis",
+    "price": 26000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Butterfly",
+    "price": 14000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Butterfly Graphene",
+    "price": 18000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Devil's Blood",
+    "price": 22000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Dok Do",
+    "price": 30000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Silla",
+    "price": 10000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Talon",
+    "price": 15000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Fireball Typhoon",
+    "price": 12000,
+    "brand": "Fireball",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Garware Ceramic Coating",
+    "price": 12000,
+    "brand": "Garware",
+    "hours": 8,
+    "warranty": "3-year warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Coloured PPF",
+    "price": 210000,
+    "brand": "Garware",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Matte",
+    "price": 125000,
+    "brand": "Garware",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Protect PPF",
+    "price": 65000,
+    "brand": "Garware",
+    "hours": 8,
+    "warranty": "3-year warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Titanium",
+    "price": 165000,
+    "brand": "Garware",
+    "hours": 8,
+    "warranty": "Lifetime e-warranty (first-time ownership)"
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Borophene",
+    "price": 0,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": "Brand site says 9 years durability"
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Fabric",
+    "price": 4000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Glass",
+    "price": 4500,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Graphene",
+    "price": 11000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": "7-year warranty"
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Graphene Matrix",
+    "price": 0,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Matte",
+    "price": 11000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Overlay",
+    "price": 6000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent PowerShield",
+    "price": 13000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Prolong Light",
+    "price": 8000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Restore",
+    "price": 5000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Revive",
+    "price": 12000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Gloss and Matte",
+    "price": 145000,
+    "brand": "LLumar",
+    "hours": 8,
+    "warranty": "5-year manufacturer's limited warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Platinum Extra",
+    "price": 225000,
+    "brand": "LLumar",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Platinum Gloss",
+    "price": 205000,
+    "brand": "LLumar",
+    "hours": 8,
+    "warranty": "10-year manufacturer's limited warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Platinum Matte",
+    "price": 240000,
+    "brand": "LLumar",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Select Black",
+    "price": 205000,
+    "brand": "LLumar",
+    "hours": 8,
+    "warranty": "10-year limited warranty"
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Classic",
+    "price": 18000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Glass",
+    "price": 4500,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Lite",
+    "price": 14000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Paint & PPF",
+    "price": 20000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Plastic & Trim",
+    "price": 3500,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Premium v2",
+    "price": 28000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "XPEL Fusion Plus Satin",
+    "price": 16000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "ppf",
+    "name": "XPEL Stealth",
+    "price": 175000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": "10-year limited warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "XPEL Ultimate Plus",
+    "price": 145000,
+    "brand": "XPEL",
+    "hours": 8,
+    "warranty": "10-year limited warranty"
+  },
+  {
+    "craft": "ceramic",
+    "name": "Borophene",
+    "price": 14000,
+    "brand": "",
+    "hours": 14,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Graphene Matrix",
+    "price": 12000,
+    "brand": "",
+    "hours": 12,
+    "warranty": ""
+  },
+  {
+    "craft": "ceramic",
+    "name": "Kovalent Prolong",
+    "price": 10000,
+    "brand": "Kovalent",
+    "hours": 8,
+    "warranty": ""
+  },
+  {
+    "craft": "coating",
+    "name": "Glass Coating",
+    "price": 1200,
+    "brand": "",
+    "hours": 1,
+    "warranty": "3-Month Glass Coating Warranty"
+  },
+  {
+    "craft": "coating",
+    "name": "Maintenance Coat",
+    "price": 4500,
+    "brand": "",
+    "hours": 1.5,
+    "warranty": "1-Year Maintenance Coat Warranty"
+  },
+  {
+    "craft": "coating",
+    "name": "Teflon",
+    "price": 5000,
+    "brand": "",
+    "hours": 2,
+    "warranty": "6-Month Teflon Warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Platinum",
+    "price": 145000,
+    "brand": "Garware",
+    "hours": 60,
+    "warranty": "Lifetime PPF Film Warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Plus",
+    "price": 85000,
+    "brand": "Garware",
+    "hours": 48,
+    "warranty": "5-Year PPF Film Warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "Garware Premium",
+    "price": 105000,
+    "brand": "Garware",
+    "hours": 48,
+    "warranty": "8-Year PPF Film Warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Gloss",
+    "price": 145000,
+    "brand": "LLumar",
+    "hours": 48,
+    "warranty": "5-Year PPF Film Warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Platinum",
+    "price": 205000,
+    "brand": "LLumar",
+    "hours": 60,
+    "warranty": "10-Year PPF Film Warranty"
+  },
+  {
+    "craft": "ppf",
+    "name": "LLumar Valor",
+    "price": 220000,
+    "brand": "LLumar",
+    "hours": 72,
+    "warranty": "12-Year PPF Film Warranty"
+  },
+  {
+    "craft": "washing",
+    "name": "Detail SPA",
+    "price": 2500,
+    "brand": "",
+    "hours": 1.5,
+    "warranty": ""
+  },
+  {
+    "craft": "washing",
+    "name": "Dry Clean",
+    "price": 4000,
+    "brand": "",
+    "hours": 2,
+    "warranty": ""
+  },
+  {
+    "craft": "washing",
+    "name": "Headlight Buffing",
+    "price": 400,
+    "brand": "",
+    "hours": 0.3333333333333333,
+    "warranty": ""
+  },
+  {
+    "craft": "washing",
+    "name": "Premium Wash",
+    "price": 1000,
+    "brand": "",
+    "hours": 1,
+    "warranty": ""
+  },
+  {
+    "craft": "washing",
+    "name": "Regular Wash",
+    "price": 500,
+    "brand": "",
+    "hours": 0.75,
+    "warranty": ""
+  },
+  {
+    "craft": "washing",
+    "name": "Roof Cleaning",
+    "price": 800,
+    "brand": "",
+    "hours": 0.5,
+    "warranty": ""
+  }
+]
