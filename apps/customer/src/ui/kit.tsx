@@ -19,7 +19,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
-import { Ambient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
+import { Ambient as BaseAmbient, Glass, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, nightButtonStyle, nightButtonText, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
 const FALLBACK: Record<TypeRole["family"], string> = {
@@ -95,6 +95,12 @@ function BackBar() {
       <T role="label" tone="secondary">Back</T>
     </Pressable>
   );
+}
+
+/** Coalmine ground: near-black charcoal with a faint warm glow top and bottom. */
+export const COALMINE = "radial-gradient(120% 60% at 85% -5%, rgba(236,134,56,.13) 0%, rgba(236,134,56,0) 60%), radial-gradient(110% 55% at 0% 105%, rgba(236,134,56,.08) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #202022 0%, #121214 38%, #0A0A0B 72%, #050506 100%)";
+function Ambient({ children }: { children?: ReactNode }) {
+  return <BaseAmbient style={{ backgroundColor: "#0B0B0C", ...(Platform.OS === "web" ? ({ backgroundImage: COALMINE } as object) : null) }}>{children}</BaseAmbient>;
 }
 
 /** Studio photo behind the top of a screen (web), as on the canvas layout. */
