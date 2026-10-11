@@ -286,7 +286,7 @@ export default function WalkinScreen() {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      style={{ flex: 1, backgroundColor: colors.background, ...(night ? nightGroundStyle : {}) }}
+      style={{ flex: 1, backgroundColor: "transparent" }}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 640, alignSelf: "center" }}
     >
       {/* progress */}

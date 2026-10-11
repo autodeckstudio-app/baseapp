@@ -9,13 +9,13 @@ export default function LookupLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
+        headerStyle: { backgroundColor: "transparent" },
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "700" },
         headerTintColor: colors.accent,
         headerBackVisible: false,
         headerLeft: () => <BackButton fallback="/(tabs)/lookup" />,
-        contentStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
+        contentStyle: { backgroundColor: "transparent" },
       }}
     >
       <Stack.Screen name="index" options={{ title: "Lookup" }} />

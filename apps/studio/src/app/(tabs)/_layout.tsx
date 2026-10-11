@@ -18,7 +18,7 @@ export default function StudioTabsLayout() {
       screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
-        headerStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) },
+        headerStyle: { backgroundColor: "transparent" },
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: 22, letterSpacing: -0.4 },
         sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}), ...(wide ? { marginLeft: 252 } : {}) },

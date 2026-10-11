@@ -381,7 +381,7 @@ export default function JobDetailScreen() {
   const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth:640,alignSelf:"center" }}>
+    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width:"100%",maxWidth: 1040,alignSelf:"center" }}>
       <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
         <View style={{gap:spacing.xs}}><Text style={{...typography.title,color:colors.textPrimary}}>{vehicle?.registrationNumber??"Vehicle details"}</Text><Text style={{...typography.body,color:colors.textMuted}}>{vehicle?`${vehicle.make} ${vehicle.model}`:"Loading vehicle..."}{customerName?` · ${customerName}`:""}</Text></View>
       <StatusBadge label={statusLabel} tone={statusTone(job.status)} />

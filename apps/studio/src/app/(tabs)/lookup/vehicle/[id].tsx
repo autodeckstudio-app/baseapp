@@ -46,7 +46,7 @@ export default function LookupVehicleScreen() {
   if (vehicle === null) return <ErrorState title="Vehicle not found" />;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <Text style={{ ...typography.heading, color: colors.textPrimary }}>
         {vehicle.year} {vehicle.make} {vehicle.model}
       </Text>
