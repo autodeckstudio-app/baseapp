@@ -30,7 +30,7 @@ export const MENU_GROUPS: MenuGroup[] = [
 ];
 
 export function menuGroupOf(category: ServiceCategory): MenuGroup {
-  return MENU_GROUPS.find((g) => g.categories.includes(category)) ?? MENU_GROUPS[3]!;
+  return MENU_GROUPS.find((g) => g.categories.includes(category)) ?? (MENU_GROUPS[3] as MenuGroup);
 }
 
 /** Popular-services chips: the six menu groups except pickup. */
@@ -60,7 +60,7 @@ export function sizeTierOf(vehicle: VehicleCategory | null | undefined): SizeTie
 /** Paise surcharge per vehicle category for a hatchback base price, per the size tiers above. */
 export function sizePricingFor(basePaise: number) {
   return (["hatchback", "sedan", "suv", "luxury", "commercial", "van"] as VehicleCategory[]).map((v) => {
-    const tier = SIZE_TIERS.find((t) => t.vehicles.includes(v))!;
+    const tier = SIZE_TIERS.find((t) => t.vehicles.includes(v)) ?? (SIZE_TIERS[0] as (typeof SIZE_TIERS)[number]);
     return { vehicleCategory: v, additionalPricePaise: Math.round((basePaise * tier.uplift) / 100) * 100, additionalMinutes: 0 };
   });
 }
@@ -118,7 +118,7 @@ const coat = (id: string, name: string, brand: string, rupees: number, years: nu
 });
 const addon = (id: string, name: string, rupees: number, description: string, order: number): MenuSeed => ({ id: `menu-coat-${id}`, name, group: "coatings", category: "coating", brand: "Add-ons", description, rupees, minutes: 120, bay: "protection", order, placeholder: true });
 const ppf = (brand: string, level: CoverageLevel, rupees: number, minutes: number, years: number, order: number): MenuSeed => {
-  const label = COVERAGE_LEVELS.find((c) => c.key === level)!.label;
+  const label = COVERAGE_LEVELS.find((c) => c.key === level)?.label ?? level;
   return {
     id: `menu-ppf-${brand.toLowerCase()}-${level.replace("_", "-")}`, name: `${brand} ${label}`, group: "ppf", category: "ppf", brand, description: `${brand} paint protection film, ${label.toLowerCase()} coverage.`,
     rupees, minutes, bay: "protection", coverageLevel: level, priceFrom: level === "full_body", warrantyLabel: `${years}-year film warranty`, warrantyYears: years, order,
