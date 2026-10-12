@@ -2,7 +2,7 @@
 // tiles for the things people open most. All data comes from the caller.
 import { glassSurface, glassInner, glassOrange } from "../lib/glass";
 import { Platform, Pressable, Text, View } from "react-native";
-import { Icon } from "@autodeck/ui/native";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 
 const ACCENT = "#EC8638";
@@ -10,6 +10,7 @@ const ACCENT = "#EC8638";
 export type ProfileTile = { icon: IconName; label: string; onPress: () => void };
 
 export function ProfileHero({ name, email, tiles, onEdit }: { name: string; email?: string | null | undefined; tiles: ProfileTile[]; onEdit: () => void }) {
+  const { colors: ink } = useExperienceTheme();
   const web = Platform.OS === "web";
   return (
     <View style={{ gap: 18 }}>
@@ -32,7 +33,7 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
             </View>
             <View style={{ flex: 1, gap: 3 }}>
               <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "700" }}>{name}</Text>
-              {email ? <Text numberOfLines={1} style={{ color: "#9D9B97", fontSize: 13 }}>{email}</Text> : null}
+              {email ? <Text numberOfLines={1} style={{ color: "#B4B2AE", fontSize: 13 }}>{email}</Text> : null}
             </View>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -51,7 +52,7 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
             <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(236,134,56,0.16)", alignItems: "center", justifyContent: "center" }}>
               <Icon name={t.icon} color={ACCENT} size={22} />
             </View>
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "600" }}>{t.label}</Text>
+            <Text style={{ color: ink.textPrimary, fontSize: 15, fontWeight: "600" }}>{t.label}</Text>
           </Pressable>
         ))}
       </View>

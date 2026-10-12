@@ -1,3 +1,4 @@
+import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -26,6 +27,7 @@ const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premi
 };
 
 export default function BookingsScreen() {
+  const { colors: ink } = useExperienceTheme();
   const router = useRouter();
   const auth = useAuth();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
@@ -76,9 +78,9 @@ export default function BookingsScreen() {
   );
 
   return (
-    <Screen header={<Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
+    <Screen header={<Text style={{ color: ink.textPrimary, fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
-      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
+      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
@@ -89,7 +91,7 @@ export default function BookingsScreen() {
           </View>
         </Pane>
       ) : null}
-      {past.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>History</Text>{list(past)}</View> : null}
+      {past.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>History</Text>{list(past)}</View> : null}
     </Screen>
   );
 }

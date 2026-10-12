@@ -60,7 +60,7 @@ export function T({
     primary: colors.textPrimary,
     secondary: colors.textSecondary,
     tertiary: colors.textTertiary,
-    accent: name === "night" ? "#FFD0A6" : colors.accent,
+    accent: name === "night" ? "#F5A25A" : colors.accentStrong,
     premium: colors.premium,
     danger: colors.danger,
     onAccent: colors.textOnAccent,
@@ -167,9 +167,9 @@ export function Screen({
 /** Solid dark card in the reference style (replaces the blurred glass pane). */
 export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
   const { colors } = useExperienceTheme();
-  const edge = tone ? colors[tone] : "rgba(255,255,255,0.12)";
+  const edge = tone ? colors[tone] : "transparent";
   return (
-    <View testID={testID} style={[{ borderRadius: 22, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: "rgba(236,134,56,0.14)" } : null), ...(tone ? { borderColor: edge } : null), padding: pad === "none" ? 0 : space[pad] }, style as never]}>
+    <View testID={testID} style={[{ borderRadius: 26, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), ...(tone ? { borderColor: edge, borderWidth: 1 } : null), padding: pad === "none" ? 0 : space[pad] }, style as never]}>
       {children}
     </View>
   );
@@ -289,7 +289,7 @@ export function Row({
         {detail ? typeof detail === "string" ? <T role="caption" tone="tertiary">{detail}</T> : detail : null}
       </View>
       {trailing}
-      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.10)" : "rgba(29,27,38,0.07)" }}><T tone="secondary">›</T></View> : null}
+      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
     </Pressable>
   );
 }

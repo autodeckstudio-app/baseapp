@@ -3,11 +3,17 @@
 export type IconName =
   | "home" | "services" | "bookings" | "garage" | "profile" | "wash" | "ceramic" | "coating" | "ppf" | "tint" | "inspect"
   | "search" | "wrench" | "check" | "star" | "pin" | "club" | "bell" | "users" | "plus" | "calendar" | "car" | "tools" | "shield" | "dot" | "close"
-  | "bay" | "break" | "check-in" | "check-out" | "detailing" | "invoice" | "membership" | "notifications" | "payments" | "photos" | "pickup" | "ppf-film" | "settings" | "walk-in" | "window-tint";
+  | "bay" | "break" | "check-in" | "check-out" | "detailing" | "invoice" | "membership" | "notifications" | "payments" | "photos" | "pickup" | "ppf-film" | "settings" | "walk-in" | "window-tint" | "phone" | "chat" | "menu" | "gift" | "sun" | "moon";
 
 import { DUOTONE, DUOTONE_ALIAS } from "./glyphs.js";
 
 const P: Partial<Record<IconName, string>> = {
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h10"/>',
+  gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   services: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/>',

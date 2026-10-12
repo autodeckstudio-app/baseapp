@@ -5,7 +5,7 @@ import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Icon } from "@autodeck/ui/native";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { archiveVehicle, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
@@ -17,6 +17,7 @@ import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, Pane, Plate, S
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
 
 export default function GarageScreen() {
+  const { colors: ink } = useExperienceTheme();
   const auth = useAuth();
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
@@ -77,7 +78,7 @@ export default function GarageScreen() {
   const lead = list[0];
 
   return (
-    <Screen header={<Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Your cars</Text>}>
+    <Screen header={<Text style={{ color: ink.textPrimary, fontSize: 26, fontWeight: "700" }}>Your cars</Text>}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice

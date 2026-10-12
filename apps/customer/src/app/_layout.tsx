@@ -2,10 +2,11 @@ import "../lib/boot-theme";
 import "../lib/webAlert";
 import { useEffect, useState } from "react";
 import { View, Platform, Pressable } from "react-native";
-import { GROUND_COLOR, COALMINE } from "../lib/ground";
+import { groundFor, groundImageFor } from "../lib/ground";
+import { setSurfaceMode } from "../lib/glass";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
+import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
@@ -77,6 +78,9 @@ function PushBridge() {
 
 function ThemedRoot() {
   const { name, colors } = useExperienceTheme();
+  setSurfaceMode(name);
+  const GROUND_COLOR = groundFor(name);
+  const COALMINE = groundImageFor(name);
   useEffect(() => {
     if (Platform.OS !== "web" || !bodyDoc) return;
     bodyDoc.body.style.backgroundColor = GROUND_COLOR;
@@ -91,11 +95,11 @@ function ThemedRoot() {
     }
     const meta = bodyDoc.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", colors.canvas);
-  }, [name, colors.canvas]);
+  }, [name, colors.canvas, GROUND_COLOR]);
   return (
     <View style={{ flex: 1, backgroundColor: GROUND_COLOR, ...(Platform.OS === "web" ? ({ backgroundImage: COALMINE } as object) : null) }}>
       <StatusBar style={name === "night" ? "light" : "dark"} />
-      <NavigationGuard>
+      <NavigationGuard key={name}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" }, animation: "fade", animationDuration: 180 }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
@@ -108,8 +112,8 @@ function ThemedRoot() {
 
 export default function RootLayout() {
   return (
-    <ExperienceThemeProvider name="night">
+    <AutoExperienceThemeProvider>
       <ThemedRoot />
-    </ExperienceThemeProvider>
+    </AutoExperienceThemeProvider>
   );
 }

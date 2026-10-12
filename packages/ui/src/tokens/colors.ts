@@ -103,3 +103,21 @@ export function applyCustomerDark(): void {
 }
 
 export type ColorToken = keyof Palette;
+
+/** Customer app "Raised" palette for the token colours (same values as the theme roles). */
+export function applyCustomerRaised(): void {
+  Object.assign(dayColors as unknown as Palette, {
+    background: "#E8EAED", surface: "#F3F4F6", surfaceElevated: "#FAFBFC", surfaceSunken: "#E1E4E8",
+    textPrimary: "#16181C", textSecondary: "#4B5058", textMuted: "#767C85", textOnAccent: "#1A1410",
+    border: "rgba(20,22,26,0.07)", borderStrong: "rgba(20,22,26,0.22)", divider: "rgba(20,22,26,0.07)",
+    accent: "#EC8638", accentPressed: "#B8500A", accentMuted: "rgba(236,134,56,0.16)",
+    white: "#1A1410", overlay: "rgba(20,22,26,0.40)",
+  } satisfies Partial<Palette>);
+  Object.assign(nightPalette, {
+    background: "#0F1013", surface: "#1A1C20", surfaceElevated: "#24272C", surfaceSunken: "#121316",
+    textPrimary: "#F3F1ED", textSecondary: "#BEBCB7", textMuted: "#8F8D89", textOnAccent: "#1A1410",
+    border: "rgba(255,255,255,0.07)", borderStrong: "rgba(255,255,255,0.24)", divider: "rgba(255,255,255,0.07)",
+    accent: "#EC8638", accentPressed: "#F59A4E", accentMuted: "rgba(236,134,56,0.20)",
+    white: "#1A1410", overlay: "rgba(0,0,0,0.62)",
+  } satisfies Partial<Palette>);
+}

@@ -126,3 +126,23 @@ export function applyCustomerDarkTheme(): void {
   Object.assign(lightColors, dark);
   Object.assign(darkColors, dark);
 }
+
+/** Customer app "Raised" palette: soft grey day, deep charcoal night, raised cards, the one AutoDeck orange. */
+export function applyCustomerRaisedTheme(): void {
+  Object.assign(lightColors, {
+    canvas: "#E8EAED", canvasDeep: "#DCDFE4", surface: "#F3F4F6", surfaceElevated: "#FAFBFC",
+    borderSubtle: "rgba(20,22,26,0.07)", borderStrong: "rgba(20,22,26,0.22)",
+    textPrimary: "#16181C", textSecondary: "#4B5058", textTertiary: "#767C85", textOnAccent: "#1A1410",
+    accent: "#EC8638", accentStrong: "#B8500A", accentHaze: "rgba(236,134,56,0.16)",
+    inactive: "#9AA0A8", scrim: "rgba(20,22,26,0.40)", ink: "#16181C", onInk: "#FFFFFF",
+  } satisfies Partial<ThemeColors>);
+  const night: Partial<ThemeColors> = {
+    canvas: "#0F1013", canvasDeep: "#09090B", surface: "#1A1C20", surfaceElevated: "#24272C",
+    borderSubtle: "rgba(255,255,255,0.07)", borderStrong: "rgba(255,255,255,0.24)",
+    textPrimary: "#F3F1ED", textSecondary: "#BEBCB7", textTertiary: "#8F8D89", textOnAccent: "#1A1410",
+    accent: "#EC8638", accentStrong: "#F59A4E", accentHaze: "rgba(236,134,56,0.20)",
+    inactive: "#8A8884", scrim: "rgba(0,0,0,0.62)", ink: "#F3F1ED", onInk: "#16181C",
+  };
+  Object.assign(nightColors, night);
+  Object.assign(darkColors, night);
+}

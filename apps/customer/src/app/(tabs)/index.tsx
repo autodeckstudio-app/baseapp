@@ -2,7 +2,8 @@ import { usePricingVehicle, useVehiclePrices } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Linking, Pressable, ScrollView, Share, View } from "react-native";
+import { STUDIO_INFO } from "../../lib/studio-info";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { FadeUp, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
@@ -181,6 +182,22 @@ export default function HomeScreen() {
     <Screen>
       <HomeView
         greeting={greetingFor(new Date(), m.customer.firstName)}
+        initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
+        progress={m.liveJob ? ({ PENDING_VEHICLE: 10, VEHICLE_RECEIVED: 25, IN_PROGRESS: 55, QUALITY_CHECK: 85, READY_FOR_DELIVERY: 100, DELIVERED: 100 } as Record<string, number>)[m.liveJob.status] ?? 10 : null}
+        stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
+        health={m.protections.length === 0 ? { label: "Excellent", ok: true } : { label: `${m.protections.length} to review`, ok: false }}
+        membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
+        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours }}
+        onMenu={() => router.push("/(tabs)/profile")}
+        onAvatar={() => router.push("/(tabs)/profile")}
+        onCareMap={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))}
+        onBook={() => router.push("/(tabs)/catalogue")}
+        onCall={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)}
+        onWhatsApp={() => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`)}
+        onStudio={() => router.push("/(tabs)/help")}
+        onMembership={() => router.push("/(tabs)/membership")}
+        onVisits={() => router.push("/(tabs)/bookings")}
+        onShare={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)}
         unread={unread}
         cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null }))}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: priceLabel(s), brand: s.brand ?? null }))}

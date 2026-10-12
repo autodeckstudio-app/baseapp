@@ -24,6 +24,10 @@ export function deviceWantsDark(): boolean {
 }
 
 export function currentMode(): "light" | "night" {
+  // Dev only: ?theme=light or ?theme=night on web pins the mode so both can be checked at any hour.
+  const q = (globalThis as { location?: { search?: string } }).location?.search ?? "";
+  const m = /[?&]theme=(light|night)/.exec(q);
+  if (m && (globalThis as { __DEV__?: boolean }).__DEV__ !== false) return m[1] as "light" | "night";
   return resolveMode(new Date(), deviceWantsDark());
 }
 

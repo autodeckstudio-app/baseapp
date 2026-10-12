@@ -1,9 +1,10 @@
-// Customer tab bar in the reference style: dark floating bar, each tab a round
-// button, the active one a raised orange disc.
-import { Platform, Pressable, View } from "react-native";
+// Customer tab bar in the reference style: one soft raised bar across the
+// bottom, icons with small labels, the active tab a pressed well with an orange icon.
+import { Platform, Pressable, Text, View } from "react-native";
 import { Icon } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
-import { emitTabPressed } from "@autodeck/ui/native";
+import { emitTabPressed, useExperienceTheme } from "@autodeck/ui/native";
+import { raised } from "../lib/raised";
 
 type Route = { key: string; name: string };
 type Props = {
@@ -14,43 +15,24 @@ type Props = {
 };
 
 export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
-  const visible = state.routes.filter((r) => descriptors[r.key]?.options.href !== null && icons[r.name]);
+  const { name, colors } = useExperienceTheme();
+  const r = raised(name);
+  const visible = state.routes.filter((r2) => descriptors[r2.key]?.options.href !== null && icons[r2.name]);
   const activeKey = state.routes[state.index]?.key;
   return (
     <View
       pointerEvents="box-none"
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: (Platform.OS === "web" ? "calc(10px + env(safe-area-inset-bottom))" : 10) as unknown as number,
-        alignItems: "center",
-      }}
+      style={{ position: "absolute", left: 0, right: 0, bottom: (Platform.OS === "web" ? "calc(10px + env(safe-area-inset-bottom))" : 10) as unknown as number, alignItems: "center", paddingHorizontal: 12 }}
     >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-          width: "100%",
-          maxWidth: 360,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderRadius: 40,
-          backgroundColor: "rgba(10,10,12,0.92)",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)",
-          ...(Platform.OS === "web" ? ({ boxShadow: "0 18px 40px -10px rgba(0,0,0,.8)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" } as object) : { elevation: 10 }),
-        }}
-      >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", maxWidth: 440, paddingHorizontal: 8, paddingVertical: 8, ...r.sheet, borderRadius: 32, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" } as object) : {}) }}>
         {visible.map((route) => {
           const focused = activeKey === route.key;
+          const label = descriptors[route.key]?.options.title ?? route.name;
           return (
             <Pressable
               key={route.key}
               accessibilityRole="button"
-              accessibilityLabel={descriptors[route.key]?.options.title ?? route.name}
+              accessibilityLabel={label}
               accessibilityState={focused ? { selected: true } : {}}
               onPress={() => {
                 const ev = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
@@ -58,19 +40,12 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
                 navigation.navigate(route.name, { screen: "index", params: { cat: undefined, brand: undefined, need: undefined } });
                 emitTabPressed(route.name);
               }}
-              style={({ pressed }) => ({
-                width: focused ? 58 : 48,
-                height: focused ? 58 : 48,
-                marginTop: focused ? -14 : 0,
-                borderRadius: 30,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: focused ? "#EC8638" : "#3A3A3E",
-                opacity: pressed ? 0.8 : 1,
-                ...(Platform.OS === "web" && focused ? ({ boxShadow: "0 10px 24px rgba(236,134,56,.45)" } as object) : {}),
-              })}
+              style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", gap: 3, paddingVertical: 6, opacity: pressed ? 0.7 : 1 })}
             >
-              <Icon name={icons[route.name] ?? "home"} color={focused ? "#1A1410" : "#D9D7D3"} size={focused ? 26 : 22} filled={focused} />
+              <View style={{ width: 44, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", ...(focused ? r.well : null) }}>
+                <Icon name={icons[route.name] ?? "home"} color={focused ? "#EC8638" : colors.inactive} size={22} filled={focused} />
+              </View>
+              <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: focused ? "700" : "500", color: focused ? colors.textPrimary : colors.inactive }}>{label}</Text>
             </Pressable>
           );
         })}

@@ -1,0 +1,58 @@
+// "Raised" surfaces for the customer app: soft cards that sit on the ground
+// with a light and a dark shadow (day), or a deep shadow and a faint rim
+// (night). Orange is the only colour fill. One recipe per theme so every page
+// matches. Use raised(name) with the name from useExperienceTheme().
+import { Platform, type ViewStyle } from "react-native";
+import { lightColors, nightColors } from "@autodeck/ui/theme";
+
+const web = Platform.OS === "web";
+export type Mode = "light" | "night" | "dark";
+const isNight = (m: Mode) => m !== "light";
+
+export type Raised = {
+  card: ViewStyle;
+  well: ViewStyle;
+  round: ViewStyle;
+  roundOn: ViewStyle;
+  primary: ViewStyle;
+  quiet: ViewStyle;
+  dark: ViewStyle;
+  sheet: ViewStyle;
+  ground: string;
+  groundImage: string;
+};
+
+const SH = {
+  light: {
+    card: "10px 12px 26px rgba(150,158,170,0.38), -8px -8px 20px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.9)",
+    small: "6px 8px 16px rgba(150,158,170,0.36), -5px -5px 12px rgba(255,255,255,0.95), inset 0 1px 0 rgba(255,255,255,0.9)",
+    well: "inset 5px 6px 12px rgba(150,158,170,0.34), inset -5px -5px 10px rgba(255,255,255,0.9)",
+  },
+  night: {
+    card: "12px 16px 30px rgba(0,0,0,0.60), -6px -6px 18px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.07)",
+    small: "7px 9px 18px rgba(0,0,0,0.58), -4px -4px 12px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.07)",
+    well: "inset 6px 7px 14px rgba(0,0,0,0.55), inset -4px -4px 10px rgba(255,255,255,0.04)",
+  },
+};
+
+export function raised(mode: Mode): Raised {
+  const night = isNight(mode);
+  const c = night ? nightColors : lightColors;
+  const s = night ? SH.night : SH.light;
+  const native = (elev: number): ViewStyle => ({ shadowColor: "#000", shadowOpacity: night ? 0.5 : 0.18, shadowRadius: elev * 1.6, shadowOffset: { width: 0, height: elev }, elevation: elev });
+  const grad = (a: string, b: string) => (web ? ({ backgroundImage: `linear-gradient(145deg, ${a}, ${b})` } as object) : {});
+  return {
+    card: { backgroundColor: c.surface, borderRadius: 26, ...(web ? ({ boxShadow: s.card, ...grad(night ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0.75)", night ? "rgba(255,255,255,0.0)" : "rgba(255,255,255,0.0)") } as object) : native(8)) },
+    well: { backgroundColor: night ? "#131417" : "#E2E5E9", borderRadius: 18, ...(web ? ({ boxShadow: s.well } as object) : {}) },
+    round: { backgroundColor: c.surface, borderRadius: 999, ...(web ? ({ boxShadow: s.small, ...grad(night ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)", "rgba(255,255,255,0)") } as object) : native(5)) },
+    roundOn: { backgroundColor: "#EC8638", borderRadius: 999, ...(web ? ({ boxShadow: "0 10px 22px -6px rgba(236,134,56,0.65), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -6px 10px rgba(160,70,10,0.25)", backgroundImage: "linear-gradient(180deg, #F7A257, #EC8638 55%, #D9712A)" } as object) : native(6)) },
+    primary: { backgroundColor: "#EC8638", ...(web ? ({ boxShadow: "0 12px 24px -8px rgba(236,134,56,0.6), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -8px 12px rgba(160,70,10,0.25)", backgroundImage: "linear-gradient(180deg, #F7A257 0%, #EC8638 52%, #D9712A 100%)" } as object) : native(6)) },
+    quiet: { backgroundColor: c.surface, ...(web ? ({ boxShadow: s.small } as object) : native(4)) },
+    dark: { backgroundColor: night ? "#F3F1ED" : "#16181C", ...(web ? ({ boxShadow: night ? "0 10px 22px -8px rgba(0,0,0,0.7)" : "0 12px 22px -8px rgba(22,24,28,0.55), inset 0 1px 0 rgba(255,255,255,0.18)" } as object) : native(6)) },
+    sheet: { backgroundColor: c.surfaceElevated, borderRadius: 30, ...(web ? ({ boxShadow: s.card } as object) : native(10)) },
+    ground: c.canvas,
+    groundImage: night
+      ? "radial-gradient(120% 50% at 80% -10%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #14151A 0%, #0F1013 60%, #0B0B0E 100%)"
+      : "radial-gradient(110% 45% at 85% -8%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #EEF0F3 0%, #E8EAED 60%, #E1E4E8 100%)",
+  };
+}

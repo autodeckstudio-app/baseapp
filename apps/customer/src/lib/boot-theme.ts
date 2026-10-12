@@ -1,7 +1,7 @@
-// One near-black, orange-accent palette for the whole customer app. Imported first in the root layout
-// so it is in place before any screen module reads the colour tokens.
-import { applyCustomerDark } from "@autodeck/ui/tokens";
-import { applyCustomerDarkTheme } from "@autodeck/ui/theme";
+// Customer "Raised" palette: soft grey by day, deep charcoal by night, the one AutoDeck orange.
+// Imported first in the root layout so it is in place before any screen module reads colour tokens.
+import { applyCustomerRaised } from "@autodeck/ui/tokens";
+import { applyCustomerRaisedTheme } from "@autodeck/ui/theme";
 
-applyCustomerDark();
-applyCustomerDarkTheme();
+applyCustomerRaised();
+applyCustomerRaisedTheme();
