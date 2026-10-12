@@ -22,7 +22,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "invalid-request" }, { status: 400 });
   }
 
-  const auth = getAdminAuth();
+  let auth: ReturnType<typeof getAdminAuth>;
+  try {
+    auth = getAdminAuth();
+  } catch {
+    // No usable server credential (typical on a fresh local checkout). Say so instead of crashing.
+    return NextResponse.json({ error: "server-credentials-missing" }, { status: 503 });
+  }
   let decoded;
   try {
     decoded = await auth.verifyIdToken(idToken, true);

@@ -55,9 +55,16 @@ function initAdminApp(): App {
   //     account - no explicit credential needed there.
   const serviceAccountJson = process.env["FIREBASE_SERVICE_ACCOUNT_KEY"];
   if (serviceAccountJson) {
-    return initializeApp({
-      credential: cert(JSON.parse(serviceAccountJson) as object),
-    });
+    let parsed: object;
+    try {
+      parsed = JSON.parse(serviceAccountJson) as object;
+    } catch {
+      // Usually the .env.example placeholder left in place. Name the variable only, never its value.
+      throw new Error(
+        "FIREBASE_SERVICE_ACCOUNT_KEY is set but is not valid service-account JSON (is it still the placeholder?). Paste the real key as one line in .env.local and restart.",
+      );
+    }
+    return initializeApp({ credential: cert(parsed) });
   }
   if (isGcpNativeCompute()) {
     return initializeApp({ credential: applicationDefault() });

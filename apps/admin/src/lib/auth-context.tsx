@@ -92,7 +92,9 @@ async function fetchSessionClaims(): Promise<AutoDeckClaims | null> {
 
 // Asks the server to set this account's role claims from its verified
 // email and the staff roster. Returns whether the claims changed.
+let lastResolveStatus = 0;
 async function resolveClaims(idToken: string): Promise<{ changed: boolean } | null> {
+  lastResolveStatus = 0;
   try {
     const res = await fetch("/api/auth/resolve-claims", {
       method: "POST",
@@ -100,6 +102,7 @@ async function resolveClaims(idToken: string): Promise<{ changed: boolean } | nu
       body: JSON.stringify({ idToken }),
       credentials: "same-origin",
     });
+    lastResolveStatus = res.status;
     if (!res.ok) return null;
     return (await res.json()) as { changed: boolean };
   } catch {
@@ -218,7 +221,11 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       setClaims(null);
       setError(
         nextUser.emailVerified
-          ? "Could not check this account's access. Please try again."
+          ? lastResolveStatus === 503 || lastResolveStatus === 500
+            ? process.env.NODE_ENV === "production"
+              ? "Access check is unavailable right now. Please try again in a minute."
+              : "The admin server has no Firebase credentials. Put the service-account key in .env.local as FIREBASE_SERVICE_ACCOUNT_KEY (one line of JSON) and restart."
+            : "Could not check this account's access. Please try again."
           : "This Google account's email is not verified.",
       );
       setLoading(false);
