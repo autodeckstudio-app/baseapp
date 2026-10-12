@@ -52,6 +52,18 @@ export default function NotificationsScreen() {
     return unsub;
   }, [load, retryTick]);
 
+  // Opening the list reads everything on it: mark each unread item read once,
+  // and show it read right away instead of waiting for the server round trip.
+  const [asked] = useState(() => new Set<string>());
+  useEffect(() => {
+    const fresh = notifications.filter((n) => n.readAt === null && !asked.has(n.id));
+    if (fresh.length === 0) return;
+    for (const n of fresh) {
+      asked.add(n.id);
+      void markNotificationRead(n.id).catch(() => asked.delete(n.id));
+    }
+  }, [notifications, asked]);
+
   async function handlePress(n: Notification) {
     if (!n.readAt) void markNotificationRead(n.id).catch(() => undefined);
 
@@ -85,11 +97,11 @@ export default function NotificationsScreen() {
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Updates</Kicker><T role="title">Notifications</T></View>}>
-      {pushState === "prompt" ? (
+      {pushState === "prompt" && pushPermission() === "prompt" ? (
         <Notice
           title="Get updates on this device"
           body="Turn on alerts so booking updates reach you even when the app is closed."
-          action={<Button label="Turn on alerts" onPress={() => void enablePush().then((r) => setPushState(r === "on" ? "on" : r))} />}
+          action={<Button label="Turn on alerts" onPress={() => void enablePush().then((r) => setPushState(r)).catch(() => setPushState(pushPermission()))} />}
         />
       ) : null}
       {notifications.length === 0 ? (
@@ -97,7 +109,7 @@ export default function NotificationsScreen() {
       ) : (
         <View style={{ gap: space.line }}>
           {notifications.map((item) => {
-            const unread = item.readAt === null;
+            const unread = item.readAt === null && !asked.has(item.id);
             return (
               <Pressable key={item.id} accessibilityRole="button" onPress={() => void handlePress(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
                 <Pane pad="inset">

@@ -18,7 +18,7 @@ export const onNotificationPush = onDocumentCreated(
       tokens,
       notification: { title: n.title, body: n.body ?? "" },
       data: { entityType: n.entityType ?? "", entityId: n.entityId ?? "" },
-      webpush: { fcmOptions: { link: n.entityType === "booking" && n.entityId ? `/bookings/${n.entityId}` : "/" } },
+      webpush: { notification: { icon: "/icon-192.png", badge: "/icon-192.png" }, fcmOptions: { link: n.entityType === "booking" && n.entityId ? `/bookings/${n.entityId}` : "/" } },
     });
     const dead = tokens.filter((_, i) => {
       const c = res.responses[i]?.error?.code;

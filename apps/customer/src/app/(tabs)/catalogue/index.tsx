@@ -98,6 +98,10 @@ export default function CatalogueScreen() {
   const groupKey = brand ?? groups[0]?.[0];
   const products = level === 3 ? (groups.find(([k]) => k === groupKey)?.[1] ?? []) : [];
 
+  // A category with exactly one service has nothing to choose from: open it directly.
+  const soleId = !searching && level === 3 && !brand && products.length === 1 ? products[0]?.id : undefined;
+  useEffect(() => { if (soleId) router.replace(`/(tabs)/catalogue/${soleId}`); }, [soleId, router]);
+
   const tile = (key: string, title: string, _sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
     <PhotoCard key={key} title={title} pill={meta?.replace(/^From /, "From ")} hearted={false} onPress={onPress} media={image ? <FadeImage source={image} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : null} />
   );
@@ -158,7 +162,17 @@ export default function CatalogueScreen() {
         grid(visibleGroups.map((g) => tile(g.key, g.label, g.blurb, g.pricing === "consult" ? "Consult" : pricedFrom(inGroup(g)) ?? undefined, "tools", () => go({ cat: g.key }), serviceImagery[GROUP_IMAGE[g.key] ?? "other"])))
       ) : null}
       {services && !searching && level === 2 ? (
-        grid(groups.map(([name, xs]) => tile(name, name, BRANDS.find((b) => b.name === name)?.blurb, [`${xs.length} ${xs.length === 1 ? "option" : "options"}`, pricedFrom(xs)].filter(Boolean).join(" · "), "tools", () => go({ cat: cat!, brand: name }), serviceImagery[GROUP_IMAGE[cat!] ?? "other"])))
+        <View style={{ gap: 22 }}>
+          {groups.map(([name, xs]) => (
+            <View key={name} style={{ gap: 10 }}>
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: palette.accent, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{name}</Text>
+                {BRANDS.find((b) => b.name === name)?.blurb ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === name)?.blurb}</T> : null}
+              </View>
+              {grid(xs.map(card))}
+            </View>
+          ))}
+        </View>
       ) : null}
       {services && !searching && level >= 2 && cat && (cat === "ppf" || cat === "coatings") ? <T role="caption" tone="secondary">{PAINT_INSPECTION_NOTE}</T> : null}
       {services && !searching && level === 3 ? (
