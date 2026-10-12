@@ -1,3 +1,4 @@
+import "../lib/boot-theme";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AdminAuthProvider } from "../lib/auth-context";
@@ -5,6 +6,7 @@ import { ThemeStyle } from "../experience/ThemeStyle";
 import { AutoThemeScript } from "../experience/AutoTheme";
 import "./globals.css";
 import "../experience/experience.css";
+import "../experience/garage.css";
 
 // Experience type faces (OFL). Exposed as CSS variables; screens opt in
 // through the ax- type classes as they migrate.

@@ -1,3 +1,4 @@
+import "../lib/boot-theme";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
