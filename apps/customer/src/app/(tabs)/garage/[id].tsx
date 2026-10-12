@@ -289,9 +289,9 @@ export default function VehicleDetailScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => setTab(t.key)}
-                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 20, ...(selected ? glassOrange : null) }}
+                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 20, ...(selected ? glassInner : null) }}
                 >
-                  <T role="label" tone={selected ? "onAccent" : "secondary"}>{t.label}</T>
+                  <T role="label" tone={selected ? "accent" : "secondary"}>{t.label}</T>
                 </Pressable>
               );
             })}
@@ -443,7 +443,7 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
-      {tab === "care" ? <CareMap done={careDone} onBook={(cat) => router.push({ pathname: "/(tabs)/catalogue", params: { cat } })} /> : null}
+      {tab === "care" ? <CareMap done={careDone} category={vehicle.category ?? null} make={vehicle.make} model={vehicle.model} colour={vehicle.color ?? null} onBook={(cat) => router.push({ pathname: "/(tabs)/catalogue", params: { cat } })} /> : null}
       {tab === "passport" ? (
         jobs.length === 0 ? (
           <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />

@@ -1,7 +1,7 @@
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Car detail head in the reference layout: full-bleed photo, then a rounded
 // sheet that overlaps it with name, plate, key facts and the primary action.
-import { glassSurface, glassInner, glassOrange } from "../lib/glass";
+import { glassSurface, glassInner, glassQuiet } from "../lib/glass";
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { Plate, T } from "./kit";
@@ -30,8 +30,8 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
             </View>
           ))}
         </View>
-        <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 54, borderRadius: 27, ...glassOrange, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
-          <T role="bodyStrong" style={{ color: "#1A1410", fontWeight: "700" }}>Book a service</T>
+        <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 54, borderRadius: 27, ...glassQuiet, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
+          <T role="bodyStrong" style={{ color: ink.textPrimary, fontWeight: "700" }}>Book a service</T>
         </Pressable>
       </View>
     </View>

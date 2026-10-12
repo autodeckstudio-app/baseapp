@@ -19,7 +19,9 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
-import { glassSurface, glassOrange, glassQuiet } from "../lib/glass";
+import { glassSurface, glassQuiet } from "../lib/glass";
+import { raised } from "../lib/raised";
+const inkButton = (mode: string) => raised(mode as never).dark;
 import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
@@ -217,7 +219,7 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
-  const { colors } = useExperienceTheme();
+  const { colors, name } = useExperienceTheme();
   const primary = kind === "primary";
   const off = disabled || busy;
   return (
@@ -237,7 +239,7 @@ export function Button({
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
-          ...(primary ? glassOrange : glassQuiet),
+          ...(primary ? inkButton(name) : glassQuiet),
           ...(kind === "danger" ? { borderColor: colors.danger } : null),
           opacity: off ? 0.45 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
@@ -246,8 +248,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? "#1A1410" : colors.textPrimary} /> : null}
-      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: "#1A1410", fontWeight: "700" } : undefined}>
+      {busy ? <ActivityIndicator color={primary ? (name === "light" ? "#FFFFFF" : "#16181C") : colors.textPrimary} /> : null}
+      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: name === "light" ? "#FFFFFF" : "#16181C", fontWeight: "700" } : undefined}>
         {label}
       </T>
     </Pressable>

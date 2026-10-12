@@ -1,21 +1,22 @@
 // Care map: a top-down car with tappable zones. Each zone shows whether the
 // paint or glass there has protection from past AutoDeck visits, and offers
 // the matching service. Built from plain views so it works on every phone.
-import { useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { createElement, useMemo, useRef, useState } from "react";
+import { Image, PanResponder, Platform, Pressable, Text, View } from "react-native";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { raised } from "../lib/raised";
+import { VIEW, bodyColour, carSvg, shapeFor, shapeLabel, svgUri, zonesFor, type ZoneKey } from "../lib/car-models";
 
 export type CareDone = { ppf: string | null; coating: string | null; tint: string | null };
-type Zone = { key: string; label: string; kind: "paint" | "glass"; x: number; y: number };
+type Zone = { key: ZoneKey; label: string; kind: "paint" | "glass" };
 const ZONES: Zone[] = [
-  { key: "hood", label: "Bonnet", kind: "paint", x: 140, y: 78 },
-  { key: "windshield", label: "Windshield", kind: "glass", x: 140, y: 150 },
-  { key: "roof", label: "Roof", kind: "paint", x: 140, y: 212 },
-  { key: "rear", label: "Rear glass", kind: "glass", x: 140, y: 276 },
-  { key: "trunk", label: "Boot", kind: "paint", x: 140, y: 334 },
-  { key: "left", label: "Left doors", kind: "paint", x: 76, y: 212 },
-  { key: "right", label: "Right doors", kind: "paint", x: 204, y: 212 },
+  { key: "hood", label: "Bonnet", kind: "paint" },
+  { key: "windshield", label: "Windshield", kind: "glass" },
+  { key: "roof", label: "Roof", kind: "paint" },
+  { key: "rear", label: "Rear glass", kind: "glass" },
+  { key: "trunk", label: "Boot", kind: "paint" },
+  { key: "left", label: "Left doors", kind: "paint" },
+  { key: "right", label: "Right doors", kind: "paint" },
 ];
 const CHIPS = [{ key: "all", label: "All" }, { key: "paint", label: "Paint" }, { key: "glass", label: "Glass" }] as const;
 
@@ -23,13 +24,23 @@ function fmt(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 }
 
-export function CareMap({ done, onBook }: { done: CareDone; onBook: (category: "ppf" | "coating" | "tinting") => void }) {
+export function CareMap({ done, onBook, category, make, model, colour }: { done: CareDone; onBook: (category: "ppf" | "coating" | "tinting") => void; category?: string | null; make?: string | null; model?: string | null; colour?: string | null }) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
   const night = name !== "light";
   const web = Platform.OS === "web";
   const [chip, setChip] = useState<(typeof CHIPS)[number]["key"]>("all");
-  const [sel, setSel] = useState<string>("hood");
+  const [sel, setSel] = useState<ZoneKey>("hood");
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const shape = shapeFor(category, make, model);
+  const zp = useMemo(() => zonesFor(shape), [shape]);
+  const uri = useMemo(() => svgUri(carSvg(shape, bodyColour(colour), night, sel)), [shape, colour, night, sel]);
+  const pan = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderMove: (_e, g) => setTilt({ x: Math.max(-14, Math.min(14, -g.dy / 8)), y: Math.max(-28, Math.min(28, g.dx / 5)) }),
+    onPanResponderRelease: () => setTilt({ x: 0, y: 0 }),
+    onPanResponderTerminate: () => setTilt({ x: 0, y: 0 }),
+  })).current;
   const zones = ZONES.filter((z) => chip === "all" || z.kind === chip);
   const zone = ZONES.find((z) => z.key === sel) ?? ZONES[0]!;
   const status = (z: Zone): { ok: boolean; text: string; when: string; cta: string; cat: "ppf" | "coating" | "tinting" } => {
@@ -51,23 +62,17 @@ export function CareMap({ done, onBook }: { done: CareDone; onBook: (category: "
         ))}
       </View>
 
-      <View style={{ alignItems: "center", paddingVertical: 8, borderRadius: 30, ...r.sheet }}>
-        <View style={{ width: 280, height: 400, ...(web ? ({ transform: "perspective(900px) rotateX(14deg)", transformOrigin: "50% 60%" } as object) : {}) }}>
-          {[ [34, 76], [228, 76], [34, 262], [228, 262] ].map(([x, y], i) => (
-            <View key={i} style={{ position: "absolute", left: x, top: y, width: 18, height: 54, borderRadius: 9, backgroundColor: night ? "#08090A" : "#2A2D33" }} />
-          ))}
-          <View style={{ position: "absolute", left: 48, top: 14, width: 184, height: 372, borderRadius: 86, ...(web ? ({ backgroundImage: `linear-gradient(90deg, ${body[1]}, ${body[0]} 38%, ${body[0]} 62%, ${body[1]})`, boxShadow: night ? "0 26px 40px rgba(0,0,0,.65), inset 0 2px 0 rgba(255,255,255,.12)" : "0 26px 40px rgba(110,118,130,.55), inset 0 2px 0 rgba(255,255,255,.7)" } as object) : { backgroundColor: body[0] ?? "#999" }) }} />
-          <View style={{ position: "absolute", left: 66, top: 118, width: 148, height: 58, borderRadius: 22, backgroundColor: glass, opacity: 0.9 }} />
-          <View style={{ position: "absolute", left: 66, top: 252, width: 148, height: 50, borderRadius: 20, backgroundColor: glass, opacity: 0.9 }} />
-          <View style={{ position: "absolute", left: 76, top: 184, width: 128, height: 62, borderRadius: 18, backgroundColor: night ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.35)" }} />
-          <View style={{ position: "absolute", left: 22, top: 150, width: 30, height: 14, borderRadius: 7, backgroundColor: body[1] }} />
-          <View style={{ position: "absolute", left: 228, top: 150, width: 30, height: 14, borderRadius: 7, backgroundColor: body[1] }} />
+      <View {...pan.panHandlers} style={{ alignItems: "center", paddingVertical: 14, borderRadius: 30, ...r.sheet }}>
+        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600", marginBottom: 6 }}>{shapeLabel(shape)} view. Drag sideways to tilt.</Text>
+        <View style={{ width: VIEW.w, height: VIEW.h, ...(web ? ({ transform: `perspective(900px) rotateX(${12 + tilt.x}deg) rotateY(${tilt.y}deg)`, transformOrigin: "50% 55%", transition: "transform 160ms ease-out" } as object) : {}) }}>
+          {web ? createElement("img", { src: uri, width: VIEW.w, height: VIEW.h, alt: "", draggable: false, style: { display: "block", pointerEvents: "none" } }) : <Image source={{ uri }} resizeMode="contain" style={{ width: VIEW.w, height: VIEW.h }} />}
           {zones.map((z) => {
-            const s = status(z);
+            const s2 = status(z);
             const on = z.key === sel;
+            const [px, py] = zp[z.key];
             return (
-              <Pressable key={z.key} accessibilityRole="button" accessibilityLabel={`${z.label}, ${s.text}`} onPress={() => setSel(z.key)} hitSlop={6} style={{ position: "absolute", left: z.x - 19, top: z.y - 19, width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", ...(on ? r.roundOn : r.round) }}>
-                <Icon name={s.ok ? "check" : "plus"} color={on ? "#1A1410" : s.ok ? "#2E9E6B" : "#EC8638"} size={18} />
+              <Pressable key={z.key} accessibilityRole="button" accessibilityLabel={`${z.label}, ${s2.text}`} onPress={() => setSel(z.key)} hitSlop={8} style={{ position: "absolute", left: (px / 100) * VIEW.w - 17, top: (py / 100) * VIEW.h - 17, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: on ? 2 : 0, borderColor: "#EC8638", ...r.round }}>
+                <Icon name={s2.ok ? "check" : "plus"} color={s2.ok ? "#2E9E6B" : colors.textSecondary} size={16} />
               </Pressable>
             );
           })}

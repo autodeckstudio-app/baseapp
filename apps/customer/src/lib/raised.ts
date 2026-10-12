@@ -46,7 +46,7 @@ export function raised(mode: Mode): Raised {
     well: { backgroundColor: night ? "#131417" : "#E2E5E9", borderRadius: 18, ...(web ? ({ boxShadow: s.well } as object) : {}) },
     round: { backgroundColor: c.surface, borderRadius: 999, ...(web ? ({ boxShadow: s.small, ...grad(night ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)", "rgba(255,255,255,0)") } as object) : native(5)) },
     roundOn: { backgroundColor: "#EC8638", borderRadius: 999, ...(web ? ({ boxShadow: "0 10px 22px -6px rgba(236,134,56,0.65), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -6px 10px rgba(160,70,10,0.25)", backgroundImage: "linear-gradient(180deg, #F7A257, #EC8638 55%, #D9712A)" } as object) : native(6)) },
-    primary: { backgroundColor: "#EC8638", ...(web ? ({ boxShadow: "0 12px 24px -8px rgba(236,134,56,0.6), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -8px 12px rgba(160,70,10,0.25)", backgroundImage: "linear-gradient(180deg, #F7A257 0%, #EC8638 52%, #D9712A 100%)" } as object) : native(6)) },
+    primary: { backgroundColor: "rgba(236,134,56,0.88)", ...(web ? ({ boxShadow: "0 6px 14px -8px rgba(236,134,56,0.5), inset 0 1px 0 rgba(255,255,255,0.35)" } as object) : native(3)) },
     quiet: { backgroundColor: c.surface, ...(web ? ({ boxShadow: s.small } as object) : native(4)) },
     dark: { backgroundColor: night ? "#F3F1ED" : "#16181C", ...(web ? ({ boxShadow: night ? "0 10px 22px -8px rgba(0,0,0,0.7)" : "0 12px 22px -8px rgba(22,24,28,0.55), inset 0 1px 0 rgba(255,255,255,0.18)" } as object) : native(6)) },
     sheet: { backgroundColor: c.surfaceElevated, borderRadius: 30, ...(web ? ({ boxShadow: s.card } as object) : native(10)) },

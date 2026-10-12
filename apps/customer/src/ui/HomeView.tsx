@@ -100,13 +100,13 @@ function Brand({ title, body, cta, image, onPress, tint }: { title: string; body
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ width: 262, height: 150, borderRadius: 26, overflow: "hidden", opacity: pressed ? 0.9 : 1, backgroundColor: "#16181C" })}>
       <Image source={image} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%", opacity: 0.85 }} />
-      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: tint ? "linear-gradient(100deg, rgba(185,90,20,.92) 0%, rgba(22,24,28,.35) 100%)" : "linear-gradient(100deg, rgba(10,10,12,.9) 0%, rgba(10,10,12,.2) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,.45)" }) }} />
+      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: tint ? "linear-gradient(100deg, rgba(60,34,18,.92) 0%, rgba(22,24,28,.30) 100%)" : "linear-gradient(100deg, rgba(10,10,12,.9) 0%, rgba(10,10,12,.2) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,.45)" }) }} />
       <View style={{ flex: 1, padding: 16, justifyContent: "space-between" }}>
         <View style={{ gap: 4, maxWidth: 170 }}>
           <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{title}</Text>
           <Text style={{ color: "rgba(255,255,255,.82)", fontSize: 12, lineHeight: 16 }}>{body}</Text>
         </View>
-        <View style={{ alignSelf: "flex-start", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: "#EC8638" }}><Text style={{ color: "#1A1410", fontSize: 12, fontWeight: "800" }}>{cta}</Text></View>
+        <View style={{ alignSelf: "flex-start", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.28)" }}><Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "700" }}>{cta}</Text></View>
       </View>
     </Pressable>
   );
@@ -189,8 +189,8 @@ export function HomeView(p: HomeViewProps) {
           <Icon name="bell" color={colors.textPrimary} size={21} />
           {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.roundOn }}>
-          <Text style={{ color: "#1A1410", fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
+          <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
       </View>
 
@@ -228,7 +228,7 @@ export function HomeView(p: HomeViewProps) {
       </View>
 
       <View style={{ flexDirection: "row", gap: 6 }}>
-        <Round icon="calendar" label="Book" on onPress={p.onBook} />
+        <Round icon="calendar" label="Book" onPress={p.onBook} />
         <Round icon="phone" label="Call" onPress={p.onCall} />
         <Round icon="chat" label="WhatsApp" onPress={p.onWhatsApp} />
         <Round icon="bookings" label="Visits" onPress={p.onVisits} />
