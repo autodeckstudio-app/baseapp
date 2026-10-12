@@ -178,7 +178,7 @@ export default function BayBoardScreen() {
                 <TouchableOpacity
                   key={bay.id}
                   onPress={() => router.push(`/(tabs)/jobs/${job.id}`)}
-                  style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, marginBottom: spacing.sm }}
+                  style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 20, padding: spacing.md, marginBottom: spacing.sm }}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <View style={{ flex: 1 }}>

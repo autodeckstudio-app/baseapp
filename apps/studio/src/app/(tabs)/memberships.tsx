@@ -219,7 +219,7 @@ export default function MembershipsScreen() {
           <Text style={{ ...typography.caption, color: colors.textMuted }}>No pending requests.</Text>
         ) : (
           pending.map((r) => (
-            <View key={r.membership.id} style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, gap: spacing.sm }}>
+            <View key={r.membership.id} style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 20, padding: spacing.md, gap: spacing.sm }}>
               <Text style={{ ...typography.title, color: colors.textPrimary }}>{r.planName} - {r.customerName}</Text>
               <Text style={{ ...typography.caption, color: colors.textMuted }}>
                 {r.customerPhone} - Requested {fmtDate(r.membership.createdAt)}
@@ -251,7 +251,7 @@ export default function MembershipsScreen() {
       <View style={{ gap: spacing.sm }}>
         <Text style={{ ...typography.title, color: colors.textPrimary }}>Walk-in sale</Text>
         <Text style={{ ...typography.caption, color: colors.textMuted }}>Sell a membership at the front desk. It activates immediately once payment is taken.</Text>
-        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, gap: spacing.sm }}>
+        <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 20, padding: spacing.md, gap: spacing.sm }}>
           <TextInput
             style={inputStyle}
             placeholder="Customer mobile number"

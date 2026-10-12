@@ -66,66 +66,45 @@ export default function CalendarScreen() {
   }, [selectedDate, auth.status, attempt]);
 
   if (error) return <ErrorState title="Calendar unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
+  const glass = NightPlatform.OS === "web" ? (floatCard(nightMaterial) as object) : { backgroundColor: colors.surface };
   return (
     <View style={{ flex: 1 }}>
-      <CanvasBackdrop />
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}><CanvasTitle eyebrow="Schedule" title="Calendar" /></View>
-      <View
-        style={{
-          flexDirection: "row",
-          paddingHorizontal: spacing.sm,
-          paddingVertical: spacing.sm,
-          gap: spacing.xxs,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.divider,
-          backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}),
-        }}
-      >
-        {dateDays.map((d) => {
-          const [weekday, dayMonth] = formatDisplayDate(d).split(", ");
-          const selected = selectedDate === d;
-          return (
-            <TouchableOpacity
-              key={d}
-              accessibilityRole="button"
-              accessibilityLabel={`Choose ${formatDisplayDate(d)}`}
-              accessibilityState={{selected}}
-              onPress={() => setSelectedDate(d)}
-              style={{
-                flex: 1,
-                minHeight:48,
-                justifyContent:"center",
-                alignItems: "center",
-                paddingVertical: spacing.xs,
-                borderRadius: radius.sm,
-                borderWidth: 1,
-                borderColor: selected ? colors.textPrimary : colors.border,
-                backgroundColor: selected ? colors.textPrimary : colors.surface,
-              }}
-            >
-              <Text style={{ ...typography.captionMedium, color: selected ? colors.white : colors.textPrimary }}>{weekday}</Text>
-              <Text style={{ ...typography.caption, color: selected ? colors.white : colors.textMuted, marginTop: 2 }}>
-                {dayMonth}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={{ flex: 1, width: "100%", maxWidth: 1040, alignSelf: "center", paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+        <CanvasTitle eyebrow="Schedule" title="Calendar" />
+        <View style={{ flexDirection: "row", gap: spacing.xs, padding: spacing.xs, borderRadius: 20, marginBottom: spacing.md, ...glass }}>
+          {dateDays.map((d) => {
+            const [weekday, dayMonth] = formatDisplayDate(d).split(", ");
+            const selected = selectedDate === d;
+            return (
+              <TouchableOpacity
+                key={d}
+                accessibilityRole="button"
+                accessibilityLabel={`Choose ${formatDisplayDate(d)}`}
+                accessibilityState={{ selected }}
+                onPress={() => setSelectedDate(d)}
+                style={{ flex: 1, minHeight: 52, justifyContent: "center", alignItems: "center", paddingVertical: spacing.xs, borderRadius: 14, ...(selected ? ({ backgroundImage: "linear-gradient(180deg, #F08A3C, #D9701F)", boxShadow: "0 10px 22px -10px rgba(217,112,31,.7)" } as object) : {}) }}
+              >
+                <Text style={{ ...typography.captionMedium, color: selected ? "#FFFFFF" : colors.textPrimary }}>{weekday}</Text>
+                <Text style={{ ...typography.caption, color: selected ? "#FFFFFF" : colors.textMuted, marginTop: 2 }}>{dayMonth}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {loading ? (
+          <LoadingState />
+        ) : (
+          <FlatList
+            contentContainerStyle={{ paddingBottom: 130, flexGrow: 1 }}
+            data={jobs}
+            keyExtractor={(j) => j.id}
+            ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
+            renderItem={({ item }) => (
+              <JobCard job={item} viewDate={selectedDate} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+            )}
+            ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          />
+        )}
       </View>
-
-      {loading ? (
-        <LoadingState />
-      ) : (
-        <FlatList
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center" }}
-          data={jobs}
-          keyExtractor={(j) => j.id}
-          ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
-          renderItem={({ item }) => (
-            <JobCard job={item} viewDate={selectedDate} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-        />
-      )}
     </View>
   );
 }

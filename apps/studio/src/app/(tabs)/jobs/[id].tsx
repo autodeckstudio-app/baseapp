@@ -661,7 +661,7 @@ const sectionTitle = { ...typography.title, color: colors.textPrimary, marginBot
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <View style={{ backgroundColor: isNightPalette ? "rgba(55,55,53,0.92)" : "rgba(255,255,255,0.8)", borderRadius: 22, borderWidth: 1, borderColor: isNightPalette ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.96)", padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm, ...(Platform.OS === "web" ? {backdropFilter: "blur(22px) saturate(140%)", WebkitBackdropFilter: "blur(22px) saturate(140%)", boxShadow: "0 8px 24px rgba(45,38,30,0.06)"} : {}) }}>
+    <View style={{ backgroundColor: isNightPalette ? "rgba(55,55,53,0.92)" : "rgba(255,255,255,0.8)", borderRadius: 20, borderWidth: 1, borderColor: isNightPalette ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.96)", padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.sm, ...(Platform.OS === "web" ? {backdropFilter: "blur(22px) saturate(140%)", WebkitBackdropFilter: "blur(22px) saturate(140%)", boxShadow: "0 8px 24px rgba(45,38,30,0.06)"} : {}) }}>
       {children}
     </View>
   );

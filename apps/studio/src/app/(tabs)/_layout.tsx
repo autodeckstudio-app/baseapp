@@ -21,7 +21,7 @@ export default function StudioTabsLayout() {
         headerStyle: { backgroundColor: "transparent" },
         headerShadowVisible: false,
         headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: 22, letterSpacing: -0.4 },
-        sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}), ...(wide ? { marginLeft: 252 } : {}) },
+        sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}), ...(wide ? { paddingLeft: 252 } : {}) },
       })}
     >
       <Tabs.Screen

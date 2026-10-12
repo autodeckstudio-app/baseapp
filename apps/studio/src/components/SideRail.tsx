@@ -1,5 +1,5 @@
 import { Pressable, View, Text } from "react-native";
-import { colors } from "@autodeck/ui";
+import { colors, isNightPalette } from "@autodeck/ui";
 import { Icon } from "@autodeck/ui/native";
 
 type Route = { key: string; name: string };
@@ -32,16 +32,16 @@ export function SideRail({ state, navigation }: Props) {
         accessibilityRole="button"
         accessibilityLabel={label}
         onPress={() => navigation.navigate(name)}
-        style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: big ? 48 : 34, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: on ? "rgba(236,134,56,.6)" : "transparent", backgroundColor: on ? "rgba(236,134,56,.20)" : "transparent" }}
+        style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: big ? 48 : 38, paddingHorizontal: 14, borderRadius: 14, ...(on ? ({ backgroundImage: "linear-gradient(180deg, #F08A3C, #D9701F)", boxShadow: "0 10px 22px -10px rgba(217,112,31,.7)" } as object) : {}) }}
       >
-        {icon ? <Icon name={icon} size={20} color={on ? colors.accent : colors.textMuted} /> : null}
-        <Text style={{ fontSize: big ? 16 : 13, fontWeight: big ? "600" : "500", color: on ? colors.accent : colors.textPrimary, opacity: big || on ? 1 : 0.62 }}>{label}</Text>
+        {icon ? <Icon name={icon} size={20} color={on ? "#FFFFFF" : colors.textPrimary} /> : null}
+        <Text style={{ fontSize: big ? 16 : 13, fontWeight: big ? "600" : "500", color: on ? "#FFFFFF" : colors.textPrimary, opacity: big || on ? 1 : 0.82 }}>{label}</Text>
       </Pressable>
     );
   };
   return (
     <View
-      style={{ position: "absolute", top: 14, left: 14, bottom: 14, width: 224, borderRadius: 28, paddingVertical: 20, paddingHorizontal: 12, justifyContent: "space-between", backgroundColor: "rgba(34,34,32,.72)", borderWidth: 1, borderColor: "rgba(255,255,255,.14)", zIndex: 20, ...({ backdropFilter: "saturate(160%) blur(24px)", WebkitBackdropFilter: "saturate(160%) blur(24px)" } as object) }}
+      style={{ position: "absolute", top: 14, left: 14, bottom: 14, width: 224, borderRadius: 20, paddingVertical: 20, paddingHorizontal: 12, justifyContent: "space-between", zIndex: 20, ...({ backgroundColor: isNightPalette ? "rgba(34,34,32,.46)" : "rgba(255,255,255,.40)", backgroundImage: isNightPalette ? "linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.04))" : "linear-gradient(160deg, rgba(255,255,255,.70), rgba(255,255,255,.18))", boxShadow: isNightPalette ? "0 24px 54px -22px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.22)" : "0 22px 48px -22px rgba(110,70,30,.34), inset 0 1px 0 rgba(255,255,255,.9)", backdropFilter: "saturate(170%) blur(28px)", WebkitBackdropFilter: "saturate(170%) blur(28px)" } as object) }}
     >
       <View style={{ gap: 6 }}>
         <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: 2, color: colors.textPrimary, paddingHorizontal: 14, marginBottom: 18 }}>AUTODECK</Text>

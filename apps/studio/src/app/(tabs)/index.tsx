@@ -60,7 +60,7 @@ export default function TodaysJobsScreen() {
   const STATE: Record<string, string> = { PENDING_VEHICLE: "Expected", VEHICLE_RECEIVED: "Arrived", IN_PROGRESS: "Working", QUALITY_CHECK: "Finishing", READY_FOR_DELIVERY: "Ready" };
   const glass = { backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}) };
   const Stat = ({ label, value }: { label: string; value: number }) => (
-    <View style={{ flex: 1, ...glass, borderRadius: 28, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, alignItems: "center" }}>
+    <View style={{ flex: 1, ...glass, borderRadius: 20, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, alignItems: "center" }}>
       <Text style={{ fontSize: 34, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
       <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
     </View>
@@ -71,8 +71,8 @@ export default function TodaysJobsScreen() {
     <View style={{ flex: 1, gap: spacing.sm }}>
       <Text style={{ ...typography.title, color: colors.textPrimary }}>On the floor</Text>
       {activeJobs.length === 0 ? (
-        <View style={{ alignItems: "center", ...glass, borderRadius: 28, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-          <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(236,134,56,0.16)" }}>
+        <View style={{ alignItems: "center", ...glass, borderRadius: 20, paddingVertical: spacing.xxl, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          <View style={{ width: 56, height: 56, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(236,134,56,0.16)" }}>
             <Icon name="check" color={colors.accent} size={28} />
           </View>
           <Text style={{ ...typography.title, color: colors.textPrimary }}>All clear</Text>
@@ -92,7 +92,7 @@ export default function TodaysJobsScreen() {
         const j = activeJobs.find((x) => x.bayId === id);
         const plate = j?.vehicleSnapshot?.registrationNumber;
         return (
-          <View key={id} style={{ ...glass, borderRadius: 24, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }}>
+          <View key={id} style={{ ...glass, borderRadius: 20, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }}>
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.body, fontWeight: "600", color: colors.textPrimary }}>{labels.bays[id]}</Text>
               <Text style={{ ...typography.caption, color: colors.textMuted }} numberOfLines={1}>{j ? [plate, labels.services[j.serviceId]].filter(Boolean).join(" · ") || "In use" : "Free"}</Text>
@@ -108,12 +108,11 @@ export default function TodaysJobsScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-    {NightPlatform.OS === "web" ? <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "linear-gradient(180deg, rgba(20,20,18,.18) 0%, rgba(30,30,28,.45) 45%, rgba(40,40,38,.82) 100%), url(/hero-studio.jpg)", backgroundSize: "cover", backgroundPosition: "center 40%", backgroundRepeat: "no-repeat" } as never} /> : null}
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.lg }}>
       <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "flex-start", justifyContent: "space-between", gap: spacing.md, minHeight: wide ? 180 : 150 }}>
         <View style={{ justifyContent: "flex-end" }}>
-          <Text style={{ ...typography.caption, color: "rgba(255,255,255,.92)", textTransform: "uppercase", letterSpacing: 1.6, ...(NightPlatform.OS === "web" ? { textShadow: "0 1px 12px rgba(0,0,0,.5)" } : {}) } as never}>{longDate}</Text>
-          <Text style={{ fontSize: wide ? 72 : 56, lineHeight: wide ? 74 : 58, fontWeight: "500", letterSpacing: -3, color: "rgba(255,255,255,.95)", ...(NightPlatform.OS === "web" ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>Today</Text>
+          <Text style={{ ...typography.caption, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 1.6, fontWeight: "600" } as never}>{longDate}</Text>
+          <Text style={{ fontSize: wide ? 72 : 56, lineHeight: wide ? 74 : 58, fontWeight: "500", letterSpacing: -3, color: colors.textPrimary } as never}>Today</Text>
         </View>
         <View style={{ width: wide ? 260 : "100%" }}>
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
