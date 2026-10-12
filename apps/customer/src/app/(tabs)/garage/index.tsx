@@ -13,7 +13,6 @@ import { GarageCard } from "../../../ui/GarageCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, Pane, Plate, Screen, T } from "../../../ui/kit";
-import { colors as palette } from "@autodeck/ui/tokens";
 
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
 
@@ -78,7 +77,7 @@ export default function GarageScreen() {
   const lead = list[0];
 
   return (
-    <Screen header={<Text style={{ color: palette.textPrimary, fontSize: 26, fontWeight: "700" }}>Your cars</Text>}>
+    <Screen header={<Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Your cars</Text>}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice

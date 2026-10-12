@@ -1,7 +1,7 @@
 // Floating glass language for the studio app (web). Pure style values.
 // Cards float over a soft ground, with a fine edge, big radius and a blurred
 // translucent fill. The hero is a studio photo graded to the palette.
-export const floatRadius = 20;
+export const floatRadius = 28;
 
 export function floatCard(night: boolean) {
   return night

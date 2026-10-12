@@ -5,7 +5,6 @@
 import { useEffect, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { Icon } from "@autodeck/ui/native";
-import { colors as palette } from "@autodeck/ui/tokens";
 
 const KEY = "autodeck.installPrompt";
 type LS = { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void };
@@ -24,11 +23,11 @@ function isIos(): boolean {
 
 function Step({ n, icon, text }: { n: number; icon: "share" | "plus" | "check"; text: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 14, backgroundColor: palette.surfaceSunken }}>
-      <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(245,154,69,0.16)" }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+      <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(245,154,69,0.16)" }}>
         {icon === "share" ? <ShareGlyph /> : icon === "plus" ? <PlusGlyph /> : <Icon name="check" color="#EC8638" size={20} />}
       </View>
-      <Text style={{ flex: 1, color: palette.textPrimary, fontSize: 15, lineHeight: 21 }}><Text style={{ color: "#EC8638", fontWeight: "700" }}>{n}.  </Text>{text}</Text>
+      <Text style={{ flex: 1, color: "#F6F4F1", fontSize: 15, lineHeight: 21 }}><Text style={{ color: "#EC8638", fontWeight: "700" }}>{n}.  </Text>{text}</Text>
     </View>
   );
 }
@@ -69,7 +68,7 @@ export function InstallPrompt() {
     return () => { if (timer) clearTimeout(timer); w.removeEventListener("beforeinstallprompt", onBip); w.removeEventListener("appinstalled", onInstalled); };
   }, []);
 
-  if (!mode || (__DEV__ && /noprompt=1/.test((globalThis as { location?: { search?: string } }).location?.search ?? ""))) return null;
+  if (!mode) return null;
   const close = (why: string) => { (globalThis as unknown as { localStorage?: LS }).localStorage?.setItem(KEY, why); setMode(null); };
   const install = async () => {
     if (!evt) return close("dismissed");
@@ -81,11 +80,11 @@ export function InstallPrompt() {
   return (
     <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 50, justifyContent: "flex-end" }}>
       <Pressable accessibilityLabel="Close" onPress={() => close("dismissed")} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)" }} />
-      <View style={{ width: "100%", maxWidth: 520, alignSelf: "center", padding: 22, paddingBottom: 30, gap: 14, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: palette.surface, ...({ backdropFilter: "blur(26px)", WebkitBackdropFilter: "blur(26px)", boxShadow: "0 -20px 60px rgba(0,0,0,0.6)" } as object) }}>
-        <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: palette.borderStrong }} />
-        <Text style={{ color: palette.accent, fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>Get the app</Text>
-        <Text style={{ color: palette.textPrimary, fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, lineHeight: 30, fontWeight: "700" }}>Add AutoDeck to your home screen</Text>
-        <Text style={{ color: palette.textSecondary, fontSize: 15, lineHeight: 22 }}>Opens full screen like an app, faster, with one tap from your phone.</Text>
+      <View style={{ width: "100%", maxWidth: 520, alignSelf: "center", padding: 22, paddingBottom: 30, gap: 14, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: "rgba(20,20,22,0.94)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", ...({ backdropFilter: "blur(26px)", WebkitBackdropFilter: "blur(26px)", boxShadow: "0 -20px 60px rgba(0,0,0,0.6)" } as object) }}>
+        <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" }} />
+        <Text style={{ color: "#EC8638", fontSize: 12, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" }}>Get the app</Text>
+        <Text style={{ color: "#FFFFFF", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, lineHeight: 30, fontWeight: "700" }}>Add AutoDeck to your home screen</Text>
+        <Text style={{ color: "#CDCBC8", fontSize: 15, lineHeight: 22 }}>Opens full screen like an app, faster, with one tap from your phone.</Text>
         {mode === "ios" ? (
           <View style={{ gap: 10 }}>
             <Step n={1} icon="share" text="Tap the Share button in Safari's toolbar" />
@@ -93,11 +92,11 @@ export function InstallPrompt() {
             <Step n={3} icon="check" text="Tap Add. AutoDeck appears on your home screen" />
           </View>
         ) : null}
-        <Pressable accessibilityRole="button" onPress={() => (mode === "android" ? void install() : close("dismissed"))} style={({ pressed }) => ({ height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, ...({ backgroundImage: "linear-gradient(180deg,#F08A45,#E8742A)" } as object) })}>
-          <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>{mode === "android" ? "Install app" : "Got it"}</Text>
+        <Pressable accessibilityRole="button" onPress={() => (mode === "android" ? void install() : close("dismissed"))} style={({ pressed }) => ({ height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, ...({ backgroundImage: "linear-gradient(180deg,#F9B060,#EC8638)" } as object) })}>
+          <Text style={{ color: "#1A1410", fontWeight: "700", fontSize: 16 }}>{mode === "android" ? "Install app" : "Got it"}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => close("dismissed")} style={{ alignItems: "center", paddingVertical: 6 }}>
-          <Text style={{ color: palette.textMuted, fontSize: 14 }}>Not now</Text>
+          <Text style={{ color: "#A9A7A4", fontSize: 14 }}>Not now</Text>
         </Pressable>
       </View>
     </View>

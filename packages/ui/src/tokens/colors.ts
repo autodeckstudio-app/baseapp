@@ -103,27 +103,3 @@ export function applyCustomerDark(): void {
 }
 
 export type ColorToken = keyof Palette;
-
-/**
- * Customer app "Garage Light": warm off-white day, flat charcoal night, one orange.
- * Applied in place to the day and night palettes so the clock and device setting pick between them.
- * Call once, before any screen module is evaluated. Other apps never call it.
- */
-export function applyCustomerGarage(): void {
-  const day: Partial<Palette> = {
-    background: "#F6F3EF", surface: "#FFFFFF", surfaceElevated: "#FFFFFF", surfaceSunken: "#EFEBE5",
-    textPrimary: "#1B1A19", textSecondary: "#4F4C48", textMuted: "#6B6762", textOnAccent: "#FFFFFF",
-    border: "rgba(27,26,25,0.10)", borderStrong: "rgba(27,26,25,0.24)", divider: "rgba(27,26,25,0.07)",
-    accent: "#C4550A", accentPressed: "#9C4108", accentMuted: "rgba(232,116,42,0.12)",
-    white: "#FFFFFF", overlay: "rgba(27,26,25,0.40)",
-  };
-  const night: Partial<Palette> = {
-    background: "#1E1E1D", surface: "#2A2A29", surfaceElevated: "#333332", surfaceSunken: "#181817",
-    textPrimary: "#F2EFEA", textSecondary: "#CBC7C0", textMuted: "#A29E97", textOnAccent: "#FFFFFF",
-    border: "rgba(255,255,255,0.10)", borderStrong: "rgba(255,255,255,0.26)", divider: "rgba(255,255,255,0.07)",
-    accent: "#F59A45", accentPressed: "#E8742A", accentMuted: "rgba(245,154,69,0.18)",
-    white: "#1A1410", overlay: "rgba(0,0,0,0.60)",
-  };
-  Object.assign(dayColors as unknown as Palette, day);
-  Object.assign(nightPalette, night);
-}

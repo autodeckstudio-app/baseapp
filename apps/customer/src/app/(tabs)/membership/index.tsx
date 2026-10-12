@@ -118,7 +118,7 @@ export default function MembershipScreen() {
                         <T role="heading">{p.name}</T>
                       </View>
                       <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 8 }}>
-                        <T role="bodyStrong" style={{ color: "#FFFFFF" }}>{rupees(p.priceInPaise)}</T>
+                        <T role="bodyStrong" style={{ color: "#1A1410" }}>{rupees(p.priceInPaise)}</T>
                       </View>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>

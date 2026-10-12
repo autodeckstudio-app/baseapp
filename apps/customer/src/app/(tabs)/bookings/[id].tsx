@@ -18,7 +18,6 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
-import { colors as palette } from "@autodeck/ui/tokens";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
   STANDBY: "Arrived - standby",
@@ -260,13 +259,13 @@ export default function BookingDetailScreen() {
   return (
     <Screen
       header={
-        <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: palette.surface, }}>
+        <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
           {svc ? <ServicePhoto service={svc} aspect={16 / 10} radius={0} /> : <View style={{ aspectRatio: 16 / 10 }} />}
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>
             <View style={{ alignSelf: "flex-start" }}><Chip label={missed ? "Missed" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
             {svc ? <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc.name}</T> : null}
-            <T role="caption" style={{ color: palette.textSecondary }}>{displayDate} · {displayTime}</T>
+            <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
           </View>
         </View>
       }

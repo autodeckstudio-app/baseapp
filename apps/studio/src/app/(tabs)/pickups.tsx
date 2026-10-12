@@ -97,13 +97,13 @@ export default function PickupsScreen() {
       data={rows}
       keyExtractor={(r) => r.id}
       ListFooterComponent={hidden > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginTop: spacing.md }}>{hidden} request{hidden === 1 ? "" : "s"} hidden because {hidden === 1 ? "its booking was" : "their bookings were"} cancelled or completed.</Text> : null}
-      ListEmptyComponent={<View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 20, padding: spacing.xl, alignItems: "center" }}><Text style={{ ...typography.body, color: colors.textMuted }}>No pickup or drop requests right now.</Text></View>}
+      ListEmptyComponent={<View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.xl, alignItems: "center" }}><Text style={{ ...typography.body, color: colors.textMuted }}>No pickup or drop requests right now.</Text></View>}
       renderItem={({ item: r }) => {
         const asked = r.kind !== "drop" ? (r.requestedPickupTime || r.preferredTime) : r.requestedDropTime;
         const agreed = [r.agreedPickupAt ? `Pickup ${formatAgreed(r.agreedPickupAt)}` : "", r.agreedDropAt ? `Drop ${formatAgreed(r.agreedDropAt)}` : ""].filter(Boolean).join("  ·  ");
         const confirmed = r.status === "CONFIRMED";
         return (
-          <View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 20, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          <View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
               <Text style={{ ...typography.body, fontWeight: "700", color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
               <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: confirmed ? "rgba(120,200,140,.2)" : "rgba(236,134,56,.2)" }}>

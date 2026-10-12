@@ -7,7 +7,6 @@ import { space } from "@autodeck/ui/theme";
 import { ServicePhoto } from "./ServicePhoto";
 import { T } from "./kit";
 import { priceLabel } from "../lib/catalogue-service";
-import { colors as palette } from "@autodeck/ui/tokens";
 
 const reduce = (): boolean => Platform.OS === "web" && !!(globalThis as { matchMedia?: (q: string) => { matches: boolean } }).matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const GRAD = (a: number, b: number): object => ({ backgroundImage: `linear-gradient(180deg, rgba(5,5,6,${a}) 0%, rgba(5,5,6,${b}) 100%)` });
@@ -25,7 +24,7 @@ export function Stage({ service, children }: { service?: Service | undefined; ch
     return () => loop.stop();
   }, [t]);
   return (
-    <View style={{ borderRadius: 20, overflow: "hidden", backgroundColor: palette.surface, ...(Platform.OS === "web" ? ({ boxShadow: "0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(245,154,69,0.06)" } as object) : {}) }}>
+    <View style={{ borderRadius: 32, overflow: "hidden", backgroundColor: "#111113", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", ...(Platform.OS === "web" ? ({ boxShadow: "0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(245,154,69,0.06)" } as object) : {}) }}>
       {service ? (
         <Animated.View pointerEvents="none" key={service.id} style={{ position: "absolute", left: -20, right: -20, top: -20, bottom: -20, transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) }, { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [-8, 8] }) }] }}>
           <ServicePhoto service={service} height={900} radius={0} />
@@ -63,17 +62,17 @@ export function DepthCarousel({ items, carName, onOpen }: { items: Service[]; ca
         const lift = x.interpolate({ inputRange: r, outputRange: [10, 0, 10], extrapolate: "clamp" });
         return (
           <Animated.View key={sv.id} style={{ width: CARD, opacity, transform: [{ perspective: 900 }, { translateY: lift }, { rotateY: rot }, { scale }] }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={sv.name} onPress={() => onOpen(sv)} style={({ pressed }) => ({ borderRadius: 20, overflow: "hidden", backgroundColor: palette.surface, transform: [{ scale: pressed ? 0.97 : 1 }], ...(Platform.OS === "web" ? ({ boxShadow: "0 18px 40px rgba(0,0,0,0.55)" } as object) : {}) })}>
+            <Pressable accessibilityRole="button" accessibilityLabel={sv.name} onPress={() => onOpen(sv)} style={({ pressed }) => ({ borderRadius: 30, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "#111113", transform: [{ scale: pressed ? 0.97 : 1 }], ...(Platform.OS === "web" ? ({ boxShadow: "0 18px 40px rgba(0,0,0,0.55)" } as object) : {}) })}>
               <ServicePhoto service={sv} height={320} radius={0} />
               <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...GRAD(0, 0.9) }} />
-              <View pointerEvents="none" style={{ position: "absolute", left: 14, top: 14, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 10, paddingVertical: 4 }}>
+              <View pointerEvents="none" style={{ position: "absolute", left: 14, top: 14, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.5)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 4 }}>
                 <T role="caption" tone="accent">{carName ? `For your ${carName}` : String(i + 1).padStart(2, "0")}</T>
               </View>
               <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, bottom: 16, gap: 8 }}>
                 <T role="heading" numberOfLines={2} style={{ color: "#FFFFFF" }}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <T role="bodyStrong" style={{ color: palette.textSecondary }} numberOfLines={1}>{priceLabel(sv)}</T>
-                  <View style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg,#F9B060,#EC8638)" } as object) : {}) }}><T role="caption" style={{ color: "#FFFFFF" }}>Book</T></View>
+                  <T role="bodyStrong" style={{ color: "#F4F2EF" }} numberOfLines={1}>{priceLabel(sv)}</T>
+                  <View style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg,#F9B060,#EC8638)" } as object) : {}) }}><T role="caption" style={{ color: "#1A1410" }}>Book</T></View>
                 </View>
               </View>
             </Pressable>

@@ -1,4 +1,3 @@
-import "../lib/boot-theme";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AdminAuthProvider } from "../lib/auth-context";

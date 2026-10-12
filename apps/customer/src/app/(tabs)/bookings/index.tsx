@@ -15,7 +15,6 @@ import { VisitCard } from "../../../ui/VisitCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
-import { colors as palette } from "@autodeck/ui/tokens";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
   PENDING: { label: "Awaiting confirm", tone: "accent" },
@@ -77,9 +76,9 @@ export default function BookingsScreen() {
   );
 
   return (
-    <Screen header={<Text style={{ color: palette.textPrimary, fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
+    <Screen header={<Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
-      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: palette.textPrimary, fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
+      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
@@ -90,7 +89,7 @@ export default function BookingsScreen() {
           </View>
         </Pane>
       ) : null}
-      {past.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: palette.textPrimary, fontSize: 19, fontWeight: "700" }}>History</Text>{list(past)}</View> : null}
+      {past.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "700" }}>History</Text>{list(past)}</View> : null}
     </Screen>
   );
 }

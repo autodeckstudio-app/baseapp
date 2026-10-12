@@ -143,20 +143,3 @@ export function ambientBackground(lights: readonly AmbientLight[], base: string)
   });
   return [...layers, base].join(", ");
 }
-
-/**
- * Customer app "Garage Light": cards are solid (no glass, no edge line); only floating chrome
- * (tab bar, sheet headers) stays translucent. Mutates the recipes in place. Other apps never call it.
- */
-export function applyCustomerGarageGlass(): void {
-  const day = "#FFFFFF";
-  const night = "#2A2A29";
-  Object.assign(glass.light, {
-    fill: day, fillLit: day, fillWarm: "#FFF4EA", fillCool: day, fallbackFill: day,
-    chromeFill: "rgba(255,255,255,0.78)", edge: "transparent", sheen: "transparent", blur: 22, saturate: 1.4, chromeBlur: 24,
-  });
-  Object.assign(glass.night, {
-    fill: night, fillLit: "#333332", fillWarm: "#34302B", fillCool: night, fallbackFill: night,
-    chromeFill: "rgba(42,42,41,0.78)", edge: "transparent", sheen: "transparent", blur: 22, saturate: 1.3, chromeBlur: 24,
-  });
-}

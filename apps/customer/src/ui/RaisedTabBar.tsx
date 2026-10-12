@@ -1,11 +1,9 @@
 // Customer tab bar in the reference style: dark floating bar, each tab a round
 // button, the active one a raised orange disc.
-import { colors as palette } from "@autodeck/ui/tokens";
 import { Platform, Pressable, View } from "react-native";
 import { Icon } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { emitTabPressed } from "@autodeck/ui/native";
-import { glassChrome } from "../lib/glass";
 
 type Route = { key: string; name: string };
 type Props = {
@@ -39,9 +37,11 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
           maxWidth: 360,
           paddingHorizontal: 14,
           paddingVertical: 10,
-          borderRadius: 24,
-          ...glassChrome,
-          ...(Platform.OS === "web" ? {} : { elevation: 10 }),
+          borderRadius: 40,
+          backgroundColor: "rgba(10,10,12,0.92)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.08)",
+          ...(Platform.OS === "web" ? ({ boxShadow: "0 18px 40px -10px rgba(0,0,0,.8)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" } as object) : { elevation: 10 }),
         }}
       >
         {visible.map((route) => {
@@ -59,16 +59,18 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
                 emitTabPressed(route.name);
               }}
               style={({ pressed }) => ({
-                width: 52,
-                height: 44,
-                borderRadius: 14,
+                width: focused ? 58 : 48,
+                height: focused ? 58 : 48,
+                marginTop: focused ? -14 : 0,
+                borderRadius: 30,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: focused ? "#E8742A" : "transparent",
+                backgroundColor: focused ? "#EC8638" : "#3A3A3E",
                 opacity: pressed ? 0.8 : 1,
+                ...(Platform.OS === "web" && focused ? ({ boxShadow: "0 10px 24px rgba(236,134,56,.45)" } as object) : {}),
               })}
             >
-              <Icon name={icons[route.name] ?? "home"} color={focused ? "#FFFFFF" : palette.textSecondary} size={22} filled={focused} />
+              <Icon name={icons[route.name] ?? "home"} color={focused ? "#1A1410" : "#D9D7D3"} size={focused ? 26 : 22} filled={focused} />
             </Pressable>
           );
         })}

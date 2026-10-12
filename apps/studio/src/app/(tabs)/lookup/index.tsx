@@ -59,7 +59,7 @@ export default function LookupScreen() {
   const initials = (n: string) => n.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 
   const customerRow = (c: Customer) => (
-    <Pressable key={c.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/lookup/customer/${c.id}`)} style={{ ...glass, borderRadius: 20, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+    <Pressable key={c.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/lookup/customer/${c.id}`)} style={{ ...glass, borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md }}>
       <View style={{ width: 44, height: 44, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(236,134,56,.18)" }}>
         <Text style={{ color: colors.accent, fontWeight: "700" }}>{initials(c.name)}</Text>
       </View>
@@ -71,7 +71,7 @@ export default function LookupScreen() {
     </Pressable>
   );
   const vehicleRow = (v: Vehicle) => (
-    <Pressable key={v.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/lookup/vehicle/${v.id}`)} style={{ ...glass, borderRadius: 20, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+    <Pressable key={v.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/lookup/vehicle/${v.id}`)} style={{ ...glass, borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md }}>
       <View style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10, backgroundColor: "rgba(255,255,255,.94)" }}>
         <Text style={{ color: "#18181C", fontWeight: "700", letterSpacing: 1 }}>{v.registrationNumber}</Text>
       </View>
@@ -87,7 +87,7 @@ export default function LookupScreen() {
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.lg }}>
         <CanvasTitle eyebrow="Customers and cars" title="Lookup" />
-        <View style={{ ...glass, borderRadius: 20, padding: spacing.md, gap: spacing.sm }}>
+        <View style={{ ...glass, borderRadius: 28, padding: spacing.md, gap: spacing.sm }}>
           <SearchInput value={query} onChangeText={setQuery} placeholder="Name, phone, email or number plate" />
           <Text style={{ ...typography.caption, color: colors.textMuted, paddingHorizontal: spacing.sm }}>{searching ? "Searching..." : "Results appear as you type. Cars and customers are searched together."}</Text>
         </View>
@@ -95,7 +95,7 @@ export default function LookupScreen() {
         {error ? <ErrorState title="Search unavailable" message={error} onRetry={() => setQuery((q) => q + " ")} fill={false} /> : null}
 
         {none ? (
-          <View style={{ ...glass, borderRadius: 20, padding: spacing.xl, alignItems: "center", gap: spacing.sm }}>
+          <View style={{ ...glass, borderRadius: 28, padding: spacing.xl, alignItems: "center", gap: spacing.sm }}>
             <Text style={{ ...typography.title, color: colors.textPrimary }}>No match for "{query.trim()}"</Text>
             <Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center" }}>Check the spelling or try the plate. If they are new, add them below.</Text>
           </View>
@@ -123,7 +123,7 @@ export default function LookupScreen() {
           {!showAdd ? (
             <Button label="Add customer" onPress={() => { setShowAdd(true); setAddMsg(null); const q = query.trim(); setNewCust({ name: "", email: q.includes("@") ? q.toLowerCase() : "", phone: /^[\d\s+]+$/.test(q) ? q : "" }); }} />
           ) : (
-            <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 20, padding: spacing.lg, gap: spacing.sm }}>
+            <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.lg, gap: spacing.sm }}>
               <Text style={{ ...typography.title, color: colors.textPrimary }}>Add customer</Text>
               <TextInput label="Name" value={newCust.name} onChangeText={(v) => setNewCust((p) => ({ ...p, name: v }))} />
               <TextInput label="Email" keyboardType="email-address" autoCapitalize="none" value={newCust.email} onChangeText={(v) => setNewCust((p) => ({ ...p, email: v }))} />
