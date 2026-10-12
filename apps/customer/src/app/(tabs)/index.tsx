@@ -194,7 +194,7 @@ export default function HomeScreen() {
         onBook={() => router.push("/(tabs)/catalogue")}
         onCall={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)}
         onWhatsApp={() => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`)}
-        onStudio={() => router.push("/(tabs)/help")}
+        onStudio={() => router.push("/(tabs)/studio")}
         onMembership={() => router.push("/(tabs)/membership")}
         onVisits={() => router.push("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)}

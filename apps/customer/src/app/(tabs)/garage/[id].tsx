@@ -24,8 +24,9 @@ import { listenToInvoicesForVehicle } from "../../../lib/invoice-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { CareMap, type CareDone } from "../../../ui/CareMap";
 
-type TabKey = "overview" | "passport" | "protection" | "warranty";
+type TabKey = "overview" | "care" | "passport" | "protection" | "warranty";
 
 const PROTECTION_KIND_LABELS: Record<string, string> = {
   insurance: "Insurance",
@@ -38,6 +39,7 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "care", label: "Care map" },
   { key: "passport", label: "Service history" },
   { key: "protection", label: "Documents" },
   { key: "warranty", label: "Warranty" },
@@ -69,6 +71,7 @@ export default function VehicleDetailScreen() {
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
+  const [serviceCats, setServiceCats] = useState<Record<string, string>>({});
   const [protections, setProtections] = useState<Protection[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
@@ -156,8 +159,10 @@ export default function VehicleDetailScreen() {
     void getServiceCatalogue()
       .then((services) => {
         const map: Record<string, string> = {};
-        for (const s of services) map[s.id] = s.name;
+        const cats: Record<string, string> = {};
+        for (const s of services) { map[s.id] = s.name; cats[s.id] = s.category; }
         setServiceNames(map);
+        setServiceCats(cats);
       })
       .catch(()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [retryTick]);
@@ -233,6 +238,15 @@ export default function VehicleDetailScreen() {
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
   const mostRecentJob = jobs[0] ?? null;
+  const careDone: CareDone = { ppf: null, coating: null, tint: null };
+  for (const j of jobs) {
+    if (j.status !== "DELIVERED" && j.status !== "READY_FOR_DELIVERY" && j.status !== "QUALITY_CHECK") continue;
+    const c = serviceCats[j.serviceId];
+    const when = j.sealedAt ?? j.createdAt;
+    if (c === "ppf" && (!careDone.ppf || when > careDone.ppf)) careDone.ppf = when;
+    if ((c === "ceramic" || c === "coating") && (!careDone.coating || when > careDone.coating)) careDone.coating = when;
+    if (c === "tinting" && (!careDone.tint || when > careDone.tint)) careDone.tint = when;
+  }
   const reminders: string[] = [];
   for (const p of papers) {
     const left = daysUntil(p.expiresOn);
@@ -429,6 +443,7 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
+      {tab === "care" ? <CareMap done={careDone} onBook={(cat) => router.push({ pathname: "/(tabs)/catalogue", params: { cat } })} /> : null}
       {tab === "passport" ? (
         jobs.length === 0 ? (
           <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />

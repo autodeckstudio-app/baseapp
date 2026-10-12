@@ -31,6 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="approvals" options={{ href: null }} />
       <Tabs.Screen name="help" options={{ href: null }} />
+      <Tabs.Screen name="studio" options={{ href: null }} />
       <Tabs.Screen name="invoice" options={{ href: null }} />
       <Tabs.Screen name="cars" options={{ href: null }} />
     </Tabs>
