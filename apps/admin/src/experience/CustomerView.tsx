@@ -41,7 +41,7 @@ export interface VehiclePatch { registrationNumber?: string; make?: string; mode
 
 export interface ContactPatch { name?: string; email?: string; phone?: string }
 
-export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicle }: { d: CustomerData; onSaveVehicle?: (vehicleId: string, patch: VehiclePatch) => Promise<void>; services?: Service[]; onBack: () => void; onOpen: (href: string) => void; onSave?: (patch: ContactPatch) => Promise<void> }) {
+export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicle, onResolveDoc }: { d: CustomerData; onResolveDoc?: (doc: { kind: "rc"; vehicleId: string; path: string } | { kind: "licence"; path: string }) => Promise<string>; onSaveVehicle?: (vehicleId: string, patch: VehiclePatch) => Promise<void>; services?: Service[]; onBack: () => void; onOpen: (href: string) => void; onSave?: (patch: ContactPatch) => Promise<void> }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,6 +50,14 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
   const [fEmail, setFEmail] = useState("");
   const [fPhone, setFPhone] = useState("");
   const [carEdit, setCarEdit] = useState<{ id: string; reg: string; make: string; model: string; year: string; color: string; category: string } | null>(null);
+  const [docMsg, setDocMsg] = useState<string | null>(null);
+  async function openDoc(doc: { kind: "rc"; vehicleId: string; path: string } | { kind: "licence"; path: string }) {
+    if (!onResolveDoc) return;
+    setDocMsg(null);
+    const win = window.open("", "_blank");
+    try { const url = await onResolveDoc(doc); if (win) win.location.href = url; else window.location.href = url; }
+    catch { win?.close(); setDocMsg("Could not open that photo."); }
+  }
   const [carMsg, setCarMsg] = useState<string | null>(null);
   const [carBusy, setCarBusy] = useState(false);
   async function saveCar() {
@@ -185,6 +193,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
           <div className="ax-detail-main">
             <section className="ax-panel">
               <span className="ax-label">Cars</span>
+              <p className="ax-sub" style={{ margin: "4px 0 8px" }}>{d.customer.licensePhotoUrl ? <button type="button" className="ax-button" onClick={() => void openDoc({ kind: "licence", path: d.customer.licensePhotoUrl as string })}>View driving licence</button> : "No driving licence on file"}{docMsg ? ` · ${docMsg}` : ""}</p>
               {d.vehicles.length === 0 ? <p className="ax-note" style={{ marginTop: 0 }}>No cars on file.</p> : d.vehicles.map((v) => {
                 const papers = d.protections.filter((p) => p.vehicleId === v.id);
                 return (
@@ -193,6 +202,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
                       <span className="ax-job-plate" style={{ fontSize: 18 }}>{v.registrationNumber}</span>
                       <span className="ax-sub">{[v.year, v.make, v.model, v.color].filter(Boolean).join(" ")}{v.category ? ` · ${v.category === "suv" ? "SUV" : statusLabel(v.category)}` : ""}</span>
                     </div>
+                    <p className="ax-sub" style={{ margin: "6px 0 0" }}>{v.rcPhotoUrl ? <button type="button" className="ax-button" onClick={() => void openDoc({ kind: "rc", vehicleId: v.id, path: v.rcPhotoUrl as string })}>View RC photo</button> : "No RC photo"}</p>
                     {onSaveVehicle && carEdit?.id !== v.id ? <button type="button" className="ax-button" style={{ marginTop: 8 }} onClick={() => { setCarMsg(null); setCarEdit({ id: v.id, reg: v.registrationNumber ?? "", make: v.make ?? "", model: v.model ?? "", year: v.year ? String(v.year) : "", color: v.color ?? "", category: v.category ?? "" }); }}>Edit car</button> : null}
                     {carEdit?.id === v.id ? (
                       <form onSubmit={(e) => { e.preventDefault(); void saveCar(); }} style={{ marginTop: 10, display: "grid", gap: 8 }}>

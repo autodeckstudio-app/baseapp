@@ -25,7 +25,7 @@ const D = {
 export default function Preview() {
   return (
     <StaffShell pathname="/customers" office role="admin" who="studio@autodeck.example" home="/design/customer" onSignOut={() => {}}>
-      <CustomerView d={D} onSaveVehicle={async () => {}} onBack={() => {}} onOpen={() => {}} />
+      <CustomerView d={D} onSaveVehicle={async () => {}} onResolveDoc={async () => ""} onBack={() => {}} onOpen={() => {}} />
     </StaffShell>
   );
 }

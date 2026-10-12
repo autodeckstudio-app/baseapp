@@ -30,7 +30,8 @@ export const publishVehiclePhoto = onCall({ region: "asia-south1" }, async (requ
   if (user.claims.role === "customer" && vehicle.ownerId !== user.uid) {
     throw new HttpsError("permission-denied", "You do not own this vehicle.");
   }
-  const prefix = `${vehicle.tenantId}/vehicles/${data.vehicleId}/cover.`;
+  const isRc = data.kind === "rc";
+  const prefix = `${vehicle.tenantId}/vehicles/${data.vehicleId}/${isRc ? "rc" : "cover"}.`;
   if (!data.path.startsWith(prefix) || data.path.includes("..")) {
     throw new HttpsError("invalid-argument", "That is not this car's photo.");
   }
@@ -49,7 +50,7 @@ export const publishVehiclePhoto = onCall({ region: "asia-south1" }, async (requ
   const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(data.path)}?alt=media&token=${token}`;
 
   if (data.publish) {
-    await ref.update({ photoUrl: data.path, updatedAt: new Date().toISOString() });
+    await ref.update({ [isRc ? "rcPhotoUrl" : "photoUrl"]: data.path, updatedAt: new Date().toISOString() });
   }
   return { path: data.path, url };
 });

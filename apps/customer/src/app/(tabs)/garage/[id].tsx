@@ -12,7 +12,7 @@ import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
-import { updateVehicle, archiveVehicle, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
 import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
@@ -58,6 +58,7 @@ export default function VehicleDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newRc, setNewRc] = useState<{ blob: Blob; contentType: string } | null>(null);
   const [newPhoto, setNewPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   useEffect(()=>()=>{if(newPhoto?.previewUrl)URL.revokeObjectURL(newPhoto.previewUrl);},[newPhoto]);
   const [form, setForm] = useState({ make: "", model: "", color: "", odometer: "" });
@@ -195,6 +196,16 @@ export default function VehicleDetailScreen() {
           return;
         }
         setNewPhoto(null);
+      }
+      if (newRc) {
+        try {
+          await uploadVehicleRc(id, newRc.blob, newRc.contentType);
+        } catch (e) {
+          setActionError(e instanceof Error ? e.message : "The RC photo could not be uploaded. Your other changes are saved.");
+          setNewRc(null);
+          return;
+        }
+        setNewRc(null);
       }
       setEditing(false);
     } catch (err) {
@@ -369,13 +380,20 @@ export default function VehicleDetailScreen() {
                   <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
                 </View>
               ) : null}
+              {Platform.OS === "web" ? (
+                <View style={{ gap: space.hair }}>
+                  <Kicker>RC photo</Kicker>
+                  <FileUploader files={newRc ? [{ blob: newRc.blob, type: newRc.contentType }] : []} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
+                  <T role="caption" tone="tertiary">{newRc ? "RC photo ready. It uploads when you save." : vehicle.rcPhotoUrl ? "An RC photo is on file. Choose a JPEG, PNG or WebP to replace it." : "Add a clear photo of the registration certificate (JPEG, PNG or WebP)."}</T>
+                </View>
+              ) : null}
               <Field label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
               <Field label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
               <Field label="Colour" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
               <Field label="Odometer (km)" value={form.odometer} onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))} keyboardType="numeric" />
               <View style={{ gap: space.breath }}>
                 <Button label="Save changes" busy={saving} onPress={() => void handleSave()} />
-                <Button label="Cancel" kind="quiet" onPress={() => { setNewPhoto(null); setEditing(false); }} />
+                <Button label="Cancel" kind="quiet" onPress={() => { setNewPhoto(null); setNewRc(null); setEditing(false); }} />
               </View>
             </View>
           ) : (

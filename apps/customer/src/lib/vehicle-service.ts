@@ -154,3 +154,29 @@ export function listenToMyArchivedVehicles(uid:string,tenantId:string,onData:(ve
  return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as Vehicle).filter(v=>!!v.deletedAt)),onError);
 }
 
+
+/** Uploads the car's RC (registration certificate) photo and records it as rcPhotoUrl. Returns the storage path. */
+export async function uploadVehicleRc(vehicleId: string, blob: Blob, contentType: string): Promise<string> {
+  const fn = httpsCallable<
+    { vehicleId: string; contentType: string; kind: "rc" },
+    { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
+  >(functions, "issueVehiclePhotoUploadUrl");
+  const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType, kind: "rc" })).data;
+  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
+  if (!res.ok) throw new Error(`RC photo upload failed (${res.status}).`);
+  await httpsCallable<{ vehicleId: string; path: string; publish: boolean; kind: "rc" }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path, publish: true, kind: "rc" });
+  return path;
+}
+
+/** Uploads the signed-in customer's driving licence photo and records it as licensePhotoUrl. Returns the storage path. */
+export async function uploadLicensePhoto(blob: Blob, contentType: string): Promise<string> {
+  const fn = httpsCallable<
+    { contentType: string },
+    { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
+  >(functions, "issueLicensePhotoUploadUrl");
+  const { uploadUrl, path, requiredHeaders } = (await fn({ contentType })).data;
+  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
+  if (!res.ok) throw new Error(`Licence upload failed (${res.status}).`);
+  await httpsCallable<{ path: string; publish: boolean }, { url: string }>(functions, "publishLicensePhoto")({ path, publish: true });
+  return path;
+}

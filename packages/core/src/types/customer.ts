@@ -13,6 +13,8 @@ export interface Customer {
   };
   createdAt: string;
   updatedAt: string;
+  /** Storage path of the driving licence photo (private to the customer and studio staff). */
+  licensePhotoUrl?: string | null;
   deletedAt: string | null;
 }
 
@@ -49,6 +51,8 @@ export interface Vehicle {
   color: string;
   category: VehicleCategory | null; // used for service pricing; null if not yet set
   photoUrl: string | null;
+  /** Storage path of the registration certificate (RC) photo. */
+  rcPhotoUrl?: string | null;
   odometer: number | null; // km
   createdAt: string;
   updatedAt: string;

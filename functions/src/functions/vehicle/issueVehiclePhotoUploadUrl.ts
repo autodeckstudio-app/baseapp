@@ -39,7 +39,7 @@ export const issueVehiclePhotoUploadUrl = onCall({ region: "asia-south1" }, asyn
     throw new HttpsError("permission-denied", "You do not own this vehicle.");
   }
 
-  const path = `${vehicle.tenantId}/vehicles/${data.vehicleId}/cover.${randomUUID()}.${EXT[data.contentType]}`;
+  const path = `${vehicle.tenantId}/vehicles/${data.vehicleId}/${data.kind === "rc" ? "rc" : "cover"}.${randomUUID()}.${EXT[data.contentType]}`;
   const [uploadUrl] = await getStorage()
     .bucket()
     .file(path)

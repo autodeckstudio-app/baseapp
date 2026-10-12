@@ -51,11 +51,14 @@ export const updateVehicleSchema = z.object({
 
 export const issueVehiclePhotoUploadUrlSchema = z.object({
   vehicleId: z.string().min(1),
+  /** "cover" (default) is the car's picture; "rc" is the registration certificate photo. */
+  kind: z.enum(["cover", "rc"]).optional(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
 }).strict();
 
 export const publishVehiclePhotoSchema = z.object({
   vehicleId: z.string().min(1),
+  kind: z.enum(["cover", "rc"]).optional(),
   path: z.string().min(1).max(500),
   /** true right after an upload: also point the vehicle at this file and bump updatedAt. */
   publish: z.boolean().optional(),

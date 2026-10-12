@@ -1,6 +1,6 @@
 // You: account, membership, notifications, sign out.
 import { useState } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { updateProfile } from "firebase/auth";
@@ -9,6 +9,8 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { useLang } from "../../lib/i18n";
 import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-service";
+import { uploadLicensePhoto } from "../../lib/vehicle-service";
+import { FileUploader } from "../../ui/inputs";
 import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
@@ -28,6 +30,16 @@ export default function YouScreen() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [lic, setLic] = useState<{ blob: Blob; contentType: string } | null>(null);
+  const [licBusy, setLicBusy] = useState(false);
+  const [licMsg, setLicMsg] = useState<string | null>(null);
+  async function saveLicense() {
+    if (!lic || licBusy) return;
+    setLicBusy(true); setLicMsg(null);
+    try { await uploadLicensePhoto(lic.blob, lic.contentType); setLic(null); setLicMsg("Licence saved."); }
+    catch (e) { setLicMsg(e instanceof Error ? e.message : "Could not save your licence. Try again."); }
+    finally { setLicBusy(false); }
+  }
   const [savedName, setSavedName] = useState<string | null>(null);
 
   async function saveName() {
@@ -75,6 +87,14 @@ export default function YouScreen() {
             <Button label={t("Save")} busy={saving} onPress={() => void saveName()} style={{ flex: 1 }} />
             <Button kind="quiet" label={t("Cancel")} onPress={() => setEditing(false)} style={{ flex: 1 }} />
           </View>
+        </View>
+      ) : null}
+      {Platform.OS === "web" ? (
+        <View style={{ gap: space.hair }}>
+          <Kicker>Driving licence</Kicker>
+          <FileUploader files={lic ? [{ blob: lic.blob, type: lic.contentType }] : []} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
+          {lic ? <Button label="Save licence photo" busy={licBusy} onPress={() => void saveLicense()} /> : null}
+          <T role="caption" tone={licMsg && !licMsg.endsWith("saved.") ? "danger" : "tertiary"}>{licMsg ?? "Add a clear photo of your licence (JPEG, PNG or WebP). Only you and the studio can see it."}</T>
         </View>
       ) : null}
       {/* Language picker hidden until the whole app is translated (LANGS, setLang kept in lib/i18n). */}

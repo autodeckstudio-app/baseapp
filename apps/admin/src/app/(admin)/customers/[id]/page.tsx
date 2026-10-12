@@ -88,6 +88,10 @@ export default function CustomerDetailPage() {
       onSaveVehicle={async (vehicleId: string, patch: VehiclePatch) => {
         await httpsCallable(functions, "updateVehicle")({ vehicleId, ...patch });
       }}
+      onResolveDoc={async (doc) => {
+        if (doc.kind === "rc") return (await httpsCallable<{ vehicleId: string; path: string; kind: "rc" }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId: doc.vehicleId, path: doc.path, kind: "rc" })).data.url;
+        return (await httpsCallable<{ customerId: string; path: string }, { url: string }>(functions, "publishLicensePhoto")({ customerId: id, path: doc.path })).data.url;
+      }}
       onBack={() => router.push("/customers")}
       onOpen={(href) => router.push(href)}
     />

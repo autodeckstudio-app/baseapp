@@ -180,6 +180,7 @@ const DEFERRED = [
   "story/issueStoryUploadUrl.ts",
   "story/listStories.ts",
   "story/updateStory.ts",
+  "customer/licensePhoto.ts",
   "vehicle/issueVehiclePhotoUploadUrl.ts",
   "vehicle/publishVehiclePhoto.ts",
   "vehicle/restoreVehicle.ts",
