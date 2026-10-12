@@ -9,6 +9,7 @@ import { PageHead } from "./Office";
 const MAX_MB = 50;
 
 const HIGHLIGHTS = "Highlights";
+const MAX_TITLE = 30;
 
 function timeLeft(s: StoryView): string {
   const left = Date.parse(s.expiresAt) - Date.now();
@@ -37,12 +38,17 @@ export function StoriesView(p: {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [keep, setKeep] = useState(false);
+  const [collection, setCollection] = useState(HIGHLIGHTS);
+  const [pickFor, setPickFor] = useState<string | null>(null);
+  const [pickTitle, setPickTitle] = useState(HIGHLIGHTS);
   const input = useRef<HTMLInputElement>(null);
   const now = Date.now();
   const byNewest = [...p.stories].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const live = byNewest.filter((s) => !s.hidden && Date.parse(s.expiresAt) > now);
   const highlights = byNewest.filter((s) => s.pinned && !s.hidden);
   const earlier = byNewest.filter((s) => !s.pinned && (s.hidden || Date.parse(s.expiresAt) <= now));
+  const titles = Array.from(new Set(p.stories.filter((s) => s.pinned).map((s) => s.highlightTitle?.trim() || HIGHLIGHTS)));
+  const collections = titles.length ? titles : [HIGHLIGHTS];
   const bad = file && (!/^(image\/(jpeg|png|webp)|video\/mp4)$/.test(file.type) || file.size > MAX_MB * 1024 * 1024);
 
   const card = (s: StoryView, mode: "live" | "highlight" | "earlier") => (
@@ -54,11 +60,21 @@ export function StoriesView(p: {
       </div>
       <div className="ax-story-actions">
         {s.pinned ? (
-          <button type="button" className="ax-button" disabled={p.busy} onClick={() => p.onPin(s, null)}>Remove from Highlights</button>
+          <>
+            <span className="ax-sub">{s.highlightTitle?.trim() || HIGHLIGHTS}</span>
+            <button type="button" className="ax-button" disabled={p.busy} onClick={() => { setPickFor(pickFor === s.id ? null : s.id); setPickTitle(s.highlightTitle?.trim() || HIGHLIGHTS); }}>Move</button>
+            <button type="button" className="ax-button" disabled={p.busy} onClick={() => p.onPin(s, null)}>Remove</button>
+          </>
         ) : (
-          <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => p.onPin(s, HIGHLIGHTS)}>Add to Highlights</button>
+          <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => { setPickFor(pickFor === s.id ? null : s.id); setPickTitle(collections[0] ?? HIGHLIGHTS); }}>Add to Highlights</button>
         )}
         <button type="button" className="ax-button" disabled={p.busy} onClick={() => p.onHide(s)}>{s.hidden ? "Show" : "Hide"}</button>
+        {pickFor === s.id ? (
+          <div className="ax-form-section" style={{ width: "100%" }}>
+            <input list="ax-collections" value={pickTitle} maxLength={MAX_TITLE} onChange={(e) => setPickTitle(e.target.value)} placeholder="Collection name" aria-label="Collection name" />
+            <button type="button" className="ax-button ax-button--primary" disabled={p.busy || !pickTitle.trim()} onClick={() => { p.onPin(s, pickTitle.trim()); setPickFor(null); }}>Save to collection</button>
+          </div>
+        ) : null}
       </div>
     </li>
   );
@@ -72,14 +88,14 @@ export function StoriesView(p: {
 
   return (
     <div className="ax-page">
-      <PageHead eyebrow="Studio" title="Stories" kpis={[{ value: live.length, label: "Live today" }, { value: highlights.length, label: "In Highlights" }]} />
+      <PageHead eyebrow="Studio" title="Stories" kpis={[{ value: live.length, label: "Live today" }, { value: highlights.length, label: "In Highlights" }, { value: titles.length, label: "Collections" }]} />
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
 
       <div className="ax-detail">
         <div className="ax-detail-main">
           {section("Today", "Shown in the Today circle at the top of the customer Home for 24 hours, then they leave on their own.", live, "live", "Nothing live. Post a photo or video.")}
-          {section("Highlights", "One circle on Home. Add any post here to keep it as long as you want, and remove it when you are done.", highlights, "highlight", "Nothing in Highlights yet. Use Add to Highlights on any post.")}
+          {section("Highlights", "Each collection is its own circle on Home. Add a post to a collection to keep it as long as you want, and move or remove it any time.", highlights, "highlight", "Nothing in Highlights yet. Use Add to Highlights on any post.")}
           {earlier.length > 0 ? section("Earlier", "Expired or hidden posts. Add one to Highlights to bring it back.", earlier, "earlier", "") : null}
         </div>
 
@@ -91,11 +107,13 @@ export function StoriesView(p: {
               {bad && <p className="ax-note" role="alert">Use a JPG, PNG, WebP or MP4 under {MAX_MB} MB.</p>}
               <input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Caption (optional)" aria-label="Caption" maxLength={200} disabled={p.busy} />
               <label className="ax-check"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> <span>Also keep in Highlights</span></label>
+              {keep ? <input list="ax-collections" value={collection} maxLength={MAX_TITLE} onChange={(e) => setCollection(e.target.value)} placeholder="Collection name" aria-label="Collection name" disabled={p.busy} /> : null}
+              <datalist id="ax-collections">{collections.map((t) => <option key={t} value={t} />)}</datalist>
               <button
                 type="button"
                 className="ax-button ax-button--primary"
                 disabled={p.busy || !file || !!bad}
-                onClick={() => { if (!file) return; p.onPublish({ file, caption: caption.trim(), highlightTitle: keep ? HIGHLIGHTS : "" }); setFile(null); setCaption(""); setKeep(false); if (input.current) input.current.value = ""; }}
+                onClick={() => { if (!file) return; p.onPublish({ file, caption: caption.trim(), highlightTitle: keep ? (collection.trim() || HIGHLIGHTS) : "" }); setFile(null); setCaption(""); setKeep(false); if (input.current) input.current.value = ""; }}
               >
                 Post story
               </button>
