@@ -10,6 +10,7 @@ import { useAuth } from "../../../../hooks/useAuth";
 import { listenToJobsForVehicleAtStudio } from "../../../../lib/lookup-service";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle, Customer, ServiceJob } from "@autodeck/core";
+import { DocPhoto } from "../../../../components/DocPhoto";
 import { colors, spacing, radius, typography, ListRow, JobCard, LoadingState, ErrorState } from "@autodeck/ui";
 
 export default function LookupVehicleScreen() {
@@ -61,6 +62,8 @@ export default function LookupVehicleScreen() {
           <ListRow label="Owner" value="-" />
         )}
       </View>
+
+      <DocPhoto label="RC photo" doc={{ kind: "rc", vehicleId: id as string, path: vehicle.rcPhotoUrl }} />
 
       <Text style={sectionTitle}>Jobs at this studio ({jobs.length})</Text>
       {jobs.length === 0 ? (

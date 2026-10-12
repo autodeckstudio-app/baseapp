@@ -11,6 +11,7 @@ import { getVehiclesForCustomer } from "../../../../lib/walkin-service";
 import { listenToJobsForCustomerAtStudio } from "../../../../lib/lookup-service";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Customer, Vehicle, ServiceJob } from "@autodeck/core";
+import { DocPhoto } from "../../../../components/DocPhoto";
 import { colors, spacing, radius, typography, ListRow, JobCard, LoadingState, ErrorState } from "@autodeck/ui";
 
 export default function LookupCustomerScreen() {
@@ -50,6 +51,8 @@ export default function LookupCustomerScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: "transparent" }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130 }}>
       <Text style={{ ...typography.heading, color: colors.textPrimary }}>{customer.name}</Text>
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>{customer.phone}</Text>
+
+      <DocPhoto label="Driving licence" doc={{ kind: "licence", customerId: id as string, path: customer.licensePhotoUrl }} />
 
       <Text style={sectionTitle}>Vehicles ({vehicles.length})</Text>
       {vehicles.length === 0 ? (
