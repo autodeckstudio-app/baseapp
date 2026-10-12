@@ -5,10 +5,11 @@ import { View, Platform, Pressable } from "react-native";
 import { GROUND_COLOR, COALMINE } from "../lib/ground";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
+import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
+import { watchMode } from "@autodeck/ui/theme";
 
 installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,6 +78,8 @@ function PushBridge() {
 
 function ThemedRoot() {
   const { name, colors } = useExperienceTheme();
+  // Palettes are fixed when the app loads, so reload once when day flips to night (or back).
+  useEffect(() => (Platform.OS === "web" ? watchMode(() => (globalThis as { location?: { reload: () => void } }).location?.reload()) : undefined), []);
   useEffect(() => {
     if (Platform.OS !== "web" || !bodyDoc) return;
     bodyDoc.body.style.backgroundColor = GROUND_COLOR;
@@ -108,8 +111,8 @@ function ThemedRoot() {
 
 export default function RootLayout() {
   return (
-    <ExperienceThemeProvider name="night">
+    <AutoExperienceThemeProvider>
       <ThemedRoot />
-    </ExperienceThemeProvider>
+    </AutoExperienceThemeProvider>
   );
 }

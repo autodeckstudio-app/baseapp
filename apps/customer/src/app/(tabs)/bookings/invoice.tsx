@@ -13,12 +13,13 @@ import { STUDIO_INFO } from "../../../lib/studio-info";
 import { Button, Loading, Notice, Screen, T, rupees } from "../../../ui/kit";
 import { amountInWords } from "../../../lib/amount-words";
 import { HorizonInvoice } from "../../../ui/HorizonInvoice";
+import { colors as palette } from "@autodeck/ui/tokens";
 
 // Ivory invoice palette: off-white paper, one orange accent, thin separators.
 const IVORY = "#121413";
 const INK = "#f3f1eb";
 const INK_SOFT = "#aaada5";
-const ACCENT = "#EC8638";
+const ACCENT = palette.accent;
 const HAIRLINE = "#333731";
 
 

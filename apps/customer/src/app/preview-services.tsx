@@ -5,6 +5,7 @@ import { Screen } from "../ui/kit";
 import { PhotoCard, GroupChips } from "../ui/HomeView";
 import { serviceImagery } from "../lib/imagery";
 import { Image } from "react-native";
+import { colors as palette } from "@autodeck/ui/tokens";
 
 const items = [["Washing", "washing", "From \u20b91,500"], ["Ceramic", "ceramic", "Quote"], ["Paint film", "ppf", "Quote"], ["Coatings", "coating", "From \u20b94,000"], ["Window film", "tinting", "From \u20b94,500"], ["Inspection", "inspection", "From \u20b9999"]] as const;
 export default function PreviewServices() {
@@ -14,9 +15,9 @@ export default function PreviewServices() {
   return (
     <Screen>
       <View style={{ gap: 16 }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>Services</Text>
-        <View style={{ height: 48, borderRadius: 24, backgroundColor: "#26262A", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
-          <Icon name="search" color="#8C8A86" size={20} /><Text style={{ color: "#8C8A86", fontSize: 15 }}>Search services</Text>
+        <Text style={{ color: palette.textPrimary, fontSize: 26, fontWeight: "700" }}>Services</Text>
+        <View style={{ height: 48, borderRadius: 14, backgroundColor: palette.surface, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+          <Icon name="search" color="#8A8680" size={20} /><Text style={{ color: "#8A8680", fontSize: 15 }}>Search services</Text>
         </View>
         <GroupChips value={null} onChange={() => undefined} />
         <View style={{ gap: 12 }}>{rows}</View>

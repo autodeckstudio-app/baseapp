@@ -4,6 +4,7 @@ import { glassSurface, glassInner, glassOrange } from "../lib/glass";
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { Plate, T } from "./kit";
+import { colors as palette } from "@autodeck/ui/tokens";
 
 export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { photo: ReactNode; title: string; subtitle: string; plate: string; facts: Array<{ label: string; value: string }>; onBook: () => void }) {
   return (
@@ -15,7 +16,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
       <View style={{ marginTop: -34, borderTopLeftRadius: 34, borderTopRightRadius: 34, ...glassSurface, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20, gap: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
-            <T role="title" style={{ color: "#FFFFFF" }} numberOfLines={2}>{title}</T>
+            <T role="title" style={{ color: palette.textPrimary }} numberOfLines={2}>{title}</T>
             <T role="caption" tone="secondary">{subtitle}</T>
           </View>
           <Plate value={plate} />
@@ -29,7 +30,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
           ))}
         </View>
         <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 54, borderRadius: 27, ...glassOrange, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
-          <T role="bodyStrong" style={{ color: "#1A1410", fontWeight: "700" }}>Book a service</T>
+          <T role="bodyStrong" style={{ color: "#FFFFFF", fontWeight: "700" }}>Book a service</T>
         </Pressable>
       </View>
     </View>

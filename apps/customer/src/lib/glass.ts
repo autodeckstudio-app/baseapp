@@ -1,56 +1,50 @@
-// Glass surfaces for the customer app: translucent fill, soft gradient, lit
-// top edge, backdrop blur on web. One recipe so every page feels the same.
+// "Garage Light" surfaces for the customer app. Cards are solid with a soft shadow and no border.
+// Glass is kept only for floating chrome (tab bar, sheet headers): see glassChrome.
+// The names stay (glassSurface etc.) so every screen picks the new look up.
 import { Platform, type ViewStyle } from "react-native";
+import { isNightPalette } from "@autodeck/ui/tokens";
 
 const web = Platform.OS === "web";
+const night = isNightPalette;
 
-/** Panels, cards, rows, search bar. */
+const CARD = night ? "#2A2A29" : "#FFFFFF";
+const SHADOW = night ? "0 10px 28px -14px rgba(0,0,0,0.55)" : "0 8px 24px -12px rgba(40,30,20,0.16)";
+
+/** Panels, cards, rows, search bar: solid, borderless, soft shadow. */
 export const glassSurface: ViewStyle = {
-  backgroundColor: "rgba(255,255,255,0.06)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.12)",
-  ...(web
-    ? ({
-        backgroundImage: "linear-gradient(145deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.04) 55%, rgba(255,255,255,0.02) 100%)",
-        backdropFilter: "blur(22px) saturate(160%)",
-        WebkitBackdropFilter: "blur(22px) saturate(160%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(255,255,255,0.03), 0 18px 40px -16px rgba(0,0,0,0.65)",
-      } as object)
-    : {}),
+  backgroundColor: CARD,
+  ...(web ? ({ boxShadow: SHADOW } as object) : { elevation: 2, shadowColor: "#000", shadowOpacity: night ? 0.3 : 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }),
 };
 
-/** Tiny chips and inner tiles sitting on a glass surface. */
+/** Chips and inner tiles sitting on a card: a quiet tint, no outline. */
 export const glassInner: ViewStyle = {
-  backgroundColor: "rgba(255,255,255,0.07)",
-  ...(web ? ({ backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)" } as object) : {}),
+  backgroundColor: night ? "rgba(255,255,255,0.06)" : "rgba(27,26,25,0.045)",
 };
 
-/** Primary action: translucent glossy orange. */
+/** Primary action: glossy orange (one per screen). */
 export const glassOrange: ViewStyle = {
-  backgroundColor: "rgba(236,134,56,0.82)",
-  borderWidth: 1,
-  borderColor: "rgba(255,200,150,0.55)",
+  backgroundColor: "#E8742A",
   ...(web
     ? ({
-        backgroundImage: "linear-gradient(180deg, rgba(255,190,130,0.95) 0%, rgba(236,134,56,0.80) 48%, rgba(200,98,26,0.78) 100%)",
-        backdropFilter: "blur(14px) saturate(150%)",
-        WebkitBackdropFilter: "blur(14px) saturate(150%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -8px 14px rgba(160,70,10,0.28), 0 10px 24px -8px rgba(236,134,56,0.55)",
+        backgroundImage: "linear-gradient(180deg, #F08A45 0%, #E8742A 52%, #D4651C 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.45), 0 8px 18px -8px rgba(232,116,42,0.55)",
       } as object)
     : {}),
 };
 
-/** Secondary action: clear glass. */
+/** Secondary action: a solid tinted button, no outline. */
 export const glassQuiet: ViewStyle = {
-  backgroundColor: "rgba(255,255,255,0.07)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.20)",
+  backgroundColor: night ? "rgba(255,255,255,0.09)" : "rgba(27,26,25,0.06)",
+};
+
+/** Floating chrome over photos (tab bar, sheet headers): the only place glass is used. */
+export const glassChrome: ViewStyle = {
+  backgroundColor: night ? "rgba(42,42,41,0.78)" : "rgba(255,255,255,0.78)",
   ...(web
     ? ({
-        backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 100%)",
-        backdropFilter: "blur(14px) saturate(150%)",
-        WebkitBackdropFilter: "blur(14px) saturate(150%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28), 0 8px 18px -10px rgba(0,0,0,0.6)",
+        backdropFilter: "blur(22px) saturate(140%)",
+        WebkitBackdropFilter: "blur(22px) saturate(140%)",
+        boxShadow: night ? "0 10px 30px -12px rgba(0,0,0,0.6)" : "0 10px 30px -12px rgba(40,30,20,0.22)",
       } as object)
     : {}),
 };

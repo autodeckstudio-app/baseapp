@@ -7,14 +7,14 @@ import { Plate, T } from "./kit";
 
 export function GarageCard({ photo, height, kicker, title, lead, plate, chips, onPress, onRemove }: { photo: ReactNode; height: number; kicker?: string | undefined; title: string; lead: boolean; plate: string; chips: string[]; onPress: () => void; onRemove: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} style={({ pressed }) => ({ width: "100%", borderRadius: 24, overflow: "hidden", ...glassSurface, opacity: pressed ? 0.88 : 1 })}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} style={({ pressed }) => ({ width: "100%", borderRadius: 20, overflow: "hidden", ...glassSurface, opacity: pressed ? 0.88 : 1 })}>
       {photo}
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.45) 0%, rgba(5,5,6,0) 35%, rgba(27,27,31,1) 100%)" } as object) }} />
-      <Pressable onPress={(e) => { e.stopPropagation?.(); onRemove(); }} accessibilityRole="button" accessibilityLabel={`Remove ${plate} from your garage`} hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF", opacity: pressed ? 0.7 : 1 })}>
-        <Icon name="close" color="#1A1410" size={16} />
+      <Pressable onPress={(e) => { e.stopPropagation?.(); onRemove(); }} accessibilityRole="button" accessibilityLabel={`Remove ${plate} from your garage`} hitSlop={8} style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)", opacity: pressed ? 0.7 : 1 })}>
+        <Icon name="close" color="#FFFFFF" size={16} />
       </Pressable>
       <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: height - 60, gap: 2 }}>
-        {kicker ? <T role="label" tone="accent">{kicker}</T> : null}
+        {kicker ? <T role="label" style={{ color: "rgba(255,255,255,.85)" }}>{kicker}</T> : null}
         <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: lead ? 22 : 18, fontWeight: "700" }}>{title}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", padding: 14 }}>

@@ -93,3 +93,8 @@ export const motion = {
 export function cubicBezier(e: readonly [number, number, number, number]): string {
   return `cubic-bezier(${e.join(", ")})`;
 }
+
+/** Customer app "Garage Light" radius scale: cards 20, images inside cards 12, buttons 14, pills only for status chips. */
+export function applyCustomerGarageScale(): void {
+  Object.assign(radius as unknown as Record<string, number>, { chip: 12, card: 20, pane: 20, sheet: 20, hero: 20 });
+}

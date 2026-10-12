@@ -16,6 +16,7 @@ import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, GroupChips, groupCategories } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
 import { Button, Kicker, Notice, Screen, Skeleton, T, rupees } from "../../../ui/kit";
+import { colors as palette } from "@autodeck/ui/tokens";
 
 // Old "?need=" deep links map onto a menu group.
 const NEED_TO_GROUP: Record<string, string> = { wash: "wash", shine: "coatings", ceramic: "coatings", ppf: "ppf", tint: "mods", check: "garage" };
@@ -123,19 +124,19 @@ export default function CatalogueScreen() {
     <View style={{ gap: 16 }}>
       <View style={{ gap: 4 }}>
         {level === 3 && groups.length > 1 && cat ? crumb(catGroup?.label ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
-        <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "700" }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "Services"}</Text>
+        <Text style={{ color: palette.textPrimary, fontSize: 26, fontWeight: "700" }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "Services"}</Text>
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
       {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label} · incl. GST</T> : null}
-      <View style={{ height: 48, borderRadius: 24, ...glassInner, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
-        <Icon name="search" color="#8C8A86" size={20} />
+      <View style={{ height: 48, borderRadius: 14, ...glassInner, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+        <Icon name="search" color={palette.textMuted} size={20} />
         <TextInput
           accessibilityLabel="Search services"
           value={q}
           onChangeText={setQ}
           placeholder="Search services"
           placeholderTextColor="#8C8A86"
-          style={{ flex: 1, color: "#FFFFFF", fontSize: 15, outlineStyle: "none" } as never}
+          style={{ flex: 1, color: palette.textPrimary, fontSize: 15, outlineStyle: "none" } as never}
         />
       </View>
       {!cat && !searching ? <GroupChips value={grp} onChange={setGrp} /> : null}
@@ -169,7 +170,7 @@ export default function CatalogueScreen() {
               .map(({ lv, xs }) => (
                 <View key={lv.key} style={{ gap: 10 }}>
                   <View style={{ gap: 2 }}>
-                    <Text style={{ color: "#F3B27A", fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{lv.label}</Text>
+                    <Text style={{ color: palette.accent, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{lv.label}</Text>
                     {lv.blurb ? <T role="caption" tone="secondary">{lv.blurb}</T> : null}
                   </View>
                   {grid(xs.map(card))}

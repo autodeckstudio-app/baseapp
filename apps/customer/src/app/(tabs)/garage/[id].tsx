@@ -266,7 +266,7 @@ export default function VehicleDetailScreen() {
             ]}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 24, ...glassSurface }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 20, ...glassSurface }}>
             {TABS.map((t) => {
               const selected = tab === t.key;
               return (

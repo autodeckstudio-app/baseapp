@@ -72,9 +72,9 @@ export default function CarDetail() {
 
   return (
     <Screen>
-      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={e => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / photoWidth))} style={{ borderRadius: 24 }}>
+      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={e => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / photoWidth))} style={{ borderRadius: 20 }}>
         {car.photoUrls.map((u) => (
-          <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: photoWidth, aspectRatio: 3 / 2, borderRadius: 24 }} />
+          <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: photoWidth, aspectRatio: 3 / 2, borderRadius: 20 }} />
         ))}
       </ScrollView>
       <View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{car.photoUrls.length ? `${photoIndex+1} / ${car.photoUrls.length} photos · swipe to explore` : "No photos available"}</T><T role="caption" tone="tertiary">{car.area}</T></View>

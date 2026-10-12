@@ -60,7 +60,7 @@ export function T({
     primary: colors.textPrimary,
     secondary: colors.textSecondary,
     tertiary: colors.textTertiary,
-    accent: name === "night" ? "#FFD0A6" : colors.accent,
+    accent: colors.accent,
     premium: colors.premium,
     danger: colors.danger,
     onAccent: colors.textOnAccent,
@@ -167,9 +167,8 @@ export function Screen({
 /** Solid dark card in the reference style (replaces the blurred glass pane). */
 export function Pane({ children, pad = "gap", tone, fill, style, testID }: GlassProps) {
   const { colors } = useExperienceTheme();
-  const edge = tone ? colors[tone] : "rgba(255,255,255,0.12)";
   return (
-    <View testID={testID} style={[{ borderRadius: 22, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: "rgba(236,134,56,0.14)" } : null), ...(tone ? { borderColor: edge } : null), padding: pad === "none" ? 0 : space[pad] }, style]}>
+    <View testID={testID} style={[{ borderRadius: radius.card, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), padding: pad === "none" ? 0 : space[pad] }, style as never]}>
       {children}
     </View>
   );
@@ -177,7 +176,7 @@ export function Pane({ children, pad = "gap", tone, fill, style, testID }: Glass
 
 export function Kicker({ children, tone = "tertiary" }: { children: ReactNode; tone?: "tertiary" | "accent" | "premium" }) {
   return (
-    <T role="label" tone={tone}>
+    <T role="label" tone={tone === "accent" ? "tertiary" : tone}>
       {children}
     </T>
   );
@@ -231,14 +230,13 @@ export function Button({
         {
           minHeight: 48,
           marginTop: primary ? layout.primaryActionGap : 0,
-          borderRadius: radius.pill,
+          borderRadius: 14,
           paddingHorizontal: space.inset,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
           gap: space.breath,
           ...(primary ? glassOrange : glassQuiet),
-          ...(kind === "danger" ? { borderColor: colors.danger } : null),
           opacity: off ? 0.45 : 1,
           transform: pressed && !off ? [{ scale: 0.97 }] : [],
           ...(Platform.OS === "web" ? ({ transition: "transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease", cursor: "pointer" } as object) : {}),
@@ -246,8 +244,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? "#1A1410" : colors.textPrimary} /> : null}
-      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: "#1A1410", fontWeight: "700" } : undefined}>
+      {busy ? <ActivityIndicator color={primary ? "#FFFFFF" : colors.textPrimary} /> : null}
+      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: "#FFFFFF", fontWeight: "700" } : undefined}>
         {label}
       </T>
     </Pressable>
@@ -289,7 +287,7 @@ export function Row({
         {detail ? typeof detail === "string" ? <T role="caption" tone="tertiary">{detail}</T> : detail : null}
       </View>
       {trailing}
-      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.10)" : "rgba(29,27,38,0.07)" }}><T tone="secondary">›</T></View> : null}
+      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.10)" : "rgba(29,27,38,0.07)" }}><T tone="secondary">›</T></View> : null}
     </Pressable>
   );
 }
@@ -357,7 +355,7 @@ export function Chip({ label, tone = "neutral" }: { label: string; tone?: "neutr
   const { colors, name } = useExperienceTheme();
   const c = tone === "accent" ? colors.accent : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
   return (
-    <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
+    <View style={{ borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
       <T role="label" style={{ color: c }}>
         {label}
       </T>

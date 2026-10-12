@@ -126,3 +126,24 @@ export function applyCustomerDarkTheme(): void {
   Object.assign(lightColors, dark);
   Object.assign(darkColors, dark);
 }
+
+/** Customer app "Garage Light" for the role-based theme: day and night are different on purpose. */
+export function applyCustomerGarageTheme(): void {
+  const day: Partial<ThemeColors> = {
+    canvas: "#F6F3EF", canvasDeep: "#EFEBE5", surface: "#FFFFFF", surfaceElevated: "#FFFFFF",
+    borderSubtle: "rgba(27,26,25,0.08)", borderStrong: "rgba(27,26,25,0.24)",
+    textPrimary: "#1B1A19", textSecondary: "#4F4C48", textTertiary: "#6B6762", textOnAccent: "#FFFFFF",
+    accent: "#C4550A", accentStrong: "#9C4108", accentHaze: "rgba(232,116,42,0.12)",
+    inactive: "#8A8680", scrim: "rgba(27,26,25,0.40)", ink: "#FFFFFF", onInk: "#1B1A19",
+  };
+  const night: Partial<ThemeColors> = {
+    canvas: "#1E1E1D", canvasDeep: "#181817", surface: "#2A2A29", surfaceElevated: "#333332",
+    borderSubtle: "rgba(255,255,255,0.08)", borderStrong: "rgba(255,255,255,0.26)",
+    textPrimary: "#F2EFEA", textSecondary: "#CBC7C0", textTertiary: "#A29E97", textOnAccent: "#FFFFFF",
+    accent: "#F59A45", accentStrong: "#E8742A", accentHaze: "rgba(245,154,69,0.18)",
+    inactive: "#8F8B85", scrim: "rgba(0,0,0,0.60)", ink: "#333332", onInk: "#F2EFEA",
+  };
+  Object.assign(lightColors, day);
+  Object.assign(nightColors, night);
+  Object.assign(darkColors, night);
+}
