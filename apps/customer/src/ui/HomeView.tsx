@@ -231,7 +231,7 @@ export function HomeView(p: HomeViewProps) {
         <Round icon="calendar" label="Book" onPress={p.onBook} />
         <Round icon="phone" label="Call" onPress={p.onCall} />
         <Round icon="chat" label="WhatsApp" onPress={p.onWhatsApp} />
-        <Round icon="bookings" label="Visits" onPress={p.onVisits} />
+        <Round icon="wrench" label="Visits" onPress={p.onVisits} />
       </View>
 
       <View style={{ flexDirection: "row", gap: 14, alignItems: "stretch" }}>
@@ -241,7 +241,7 @@ export function HomeView(p: HomeViewProps) {
           <Text numberOfLines={2} style={{ color: colors.textTertiary, fontSize: 11 }}>{p.studio.hours}</Text>
         </Tile>
         <Tile title={p.membership ? "Membership" : "Join the club"} style={{ flex: 1 }} onPress={p.onMembership}>
-          <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: "800" }} numberOfLines={1}>{p.membership ? p.membership.title : "Wash plans"}</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{p.membership ? p.membership.title : "Wash plans"}</Text>
           <Text numberOfLines={3} style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 16 }}>{p.membership ? p.membership.detail : "Regular washes at a better rate."}</Text>
           <View style={{ alignSelf: "flex-start", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, ...r.quiet }}><Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800" }}>{p.membership ? "Open" : "See plans"}</Text></View>
         </Tile>
