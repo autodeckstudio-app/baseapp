@@ -60,6 +60,8 @@ export interface CarListingView {
   colour: string;
   area: string;
   askingPrice: number;
+  /** True when the buyer has not asked for the price yet; askingPrice is then 0 and must not be shown. */
+  priceHidden?: boolean;
   description: string | null;
   insuranceValidTill: string | null;
   photoUrls: string[];

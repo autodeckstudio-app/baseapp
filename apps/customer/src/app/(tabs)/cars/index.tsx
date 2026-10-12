@@ -41,11 +41,11 @@ function Choice({label,value,onChange,options}:{label:string;value:string;onChan
 }
 
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",borderRadius:24,overflow:"hidden",backgroundColor:"#151517",borderWidth:1,borderColor:"rgba(255,255,255,.10)",opacity:pressed?.85:1})}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${l.priceHidden ? "price on request" : inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",borderRadius:24,overflow:"hidden",backgroundColor:"#151517",borderWidth:1,borderColor:"rgba(255,255,255,.10)",opacity:pressed?.85:1})}>
     <View style={{aspectRatio:3/2,backgroundColor:"#202023"}}>{l.photoUrls[0] ? <Image source={{uri:l.photoUrls[0]}} resizeMode="cover" style={{width:"100%",height:"100%"}}/> : <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><T tone="tertiary">Photo unavailable</T></View>}
       <View style={{position:"absolute",top:14,left:14,backgroundColor:"rgba(10,10,12,.82)",borderRadius:999,paddingHorizontal:12,paddingVertical:6}}><T role="caption">{l.status==="reserved" ? "Reserved" : l.source==="studio" ? "Studio listing" : "Customer listing"}</T></View>
     </View>
-    <View style={{padding:20,gap:10}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{inr(l.askingPrice)}</T></View>
+    <View style={{padding:20,gap:10}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{l.priceHidden ? "Ask price" : inr(l.askingPrice)}</T></View>
       <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area}</T><T role="caption" tone="accent">View car ›</T></View>
     </View>
   </Pressable>;
@@ -117,7 +117,7 @@ export default function CarsScreen() {
               <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 14 }} />
               <View style={{ flex: 1, gap: 2 }}>
                 <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
-                <T role="caption" tone="tertiary">{inr(l.askingPrice)}</T>
+                <T role="caption" tone="tertiary">{l.priceHidden ? "Price on request" : inr(l.askingPrice)}</T>
                 {l.status === "rejected" && l.rejectionReason ? <T role="caption" tone="secondary" numberOfLines={2}>{l.rejectionReason}</T> : null}
               </View>
               <Chip label={STATE[l.status] ?? l.status} tone={l.status === "live" ? "accent" : l.status === "rejected" ? "danger" : "neutral"} />

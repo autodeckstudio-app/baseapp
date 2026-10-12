@@ -168,6 +168,12 @@ async function view(l: CarListing, uid: string): Promise<CarListingView> {
   return { id: l.id, source: l.source, status: l.status, make: l.make, model: l.model, variant: l.variant, year: l.year, kmDriven: l.kmDriven, fuel: l.fuel, gearbox: l.gearbox, bodyType: l.bodyType ?? null, owners: l.owners, colour: l.colour, area: l.area, askingPrice: l.askingPrice, description: l.description, insuranceValidTill: l.insuranceValidTill, photoUrls, mine: l.sellerId === uid, rejectionReason: l.sellerId === uid ? l.rejectionReason : null, createdAt: l.createdAt };
 }
 
+/** A customer sees the asking price only on their own listing, or after asking the studio for it. Staff always see it. */
+export function gatePrice(v: CarListingView, who: { role: string; uid: string; sellerId: string | null | undefined; asked: Set<string> }): CarListingView {
+  if (who.role !== "customer" || who.sellerId === who.uid || who.asked.has(v.id)) return v;
+  return { ...v, askingPrice: 0, priceHidden: true };
+}
+
 // Customers: live and reserved listings (not expired), plus their own in any status. Staff with includeAll get private fields too.
 export const listCarListings = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -187,7 +193,17 @@ export const listCarListings = onCall({ region: "asia-south1" }, async (request)
     .filter((l) => (d.mine === true ? l.sellerId === user.uid : (l.status === "live" || l.status === "reserved") && (!l.expiresAt || Date.parse(l.expiresAt) > now)))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 100);
-  return { listings: await Promise.all(keep.map((l) => view(l, user.uid))) };
+  // A customer sees an asking price only for their own listings, or after they asked the studio for it (an "interest" lead).
+  const asked = new Set<string>();
+  if (user.claims.role === "customer") {
+    const leads = await getFirestore().collection(COLLECTIONS.carLeads()).where("buyerId", "==", user.uid).get();
+    for (const x of leads.docs) { const ld = x.data() as CarLead; if (ld.kind === "interest") asked.add(ld.listingId); }
+  }
+  return {
+    listings: await Promise.all(keep.map(async (l) => {
+      return gatePrice(await view(l, user.uid), { role: user.claims.role, uid: user.uid, sellerId: l.sellerId, asked });
+    })),
+  };
 });
 
 // Customer: "I'm interested" or "Report this listing". Goes to the admin inbox; seller details are never shared.
