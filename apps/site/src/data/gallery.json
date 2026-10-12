@@ -1,0 +1,44 @@
+[
+  {
+    "src": "/assets/img/covered-car.jpg",
+    "alt": "A car covered and ready for paint protection film",
+    "caption": "Film, cut to the car",
+    "size": "wide"
+  },
+  {
+    "src": "/assets/img/car-lights.jpg",
+    "alt": "Headlights of a car under studio light",
+    "caption": "Paint under studio light",
+    "size": "tall"
+  },
+  {
+    "src": "/assets/img/studio-bay.jpg",
+    "alt": "A work bay in the AutoDeck studio",
+    "caption": "The bay",
+    "size": "std"
+  },
+  {
+    "src": "/assets/img/product-ceramic.jpg",
+    "alt": "Ceramic coating product on the shelf",
+    "caption": "Products we trust",
+    "size": "std"
+  },
+  {
+    "src": "/assets/img/storefront.jpg",
+    "alt": "The AutoDeck storefront in Ellisbridge",
+    "caption": "Ellisbridge",
+    "size": "std"
+  },
+  {
+    "src": "/assets/img/studio-orange.jpg",
+    "alt": "The studio with orange lighting",
+    "caption": "The studio",
+    "size": "wide"
+  },
+  {
+    "src": "/assets/img/studio-wide.jpg",
+    "alt": "Wide view of the AutoDeck studio",
+    "caption": "One roof",
+    "size": "std"
+  }
+]

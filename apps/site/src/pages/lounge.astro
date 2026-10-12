@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import merch from '../data/merch.json';
 ---
 <Base
   title="The Accessory Lounge · AutoDeck"
@@ -12,10 +13,13 @@ import Base from '../layouts/Base.astro';
     <p class="lede">Merch and care essentials, chosen the way we choose our coatings. On the shelf from Friday 16 October.</p>
   </div></section>
   <section class="s"><div class="wrap">
-    <div class="grid3">
-      <div class="card rv"><span class="n">01</span><h3>Studio Tee</h3><p>Opening collection.</p></div>
-      <div class="card rv"><span class="n">02</span><h3>Shield Cap</h3><p>Opening collection.</p></div>
-      <div class="card rv"><span class="n">03</span><h3>Care Kit</h3><p>Studio-approved products.</p></div>
+    <div class="shop">
+      {merch.map((m) => (
+        <article class="item glass rv">
+          <div class="ph">{m.image ? <img src={m.image} alt={m.name} loading="lazy" /> : <span>Photo soon</span>}</div>
+          <div class="tx"><h3>{m.name}</h3><p>{m.blurb}</p>{m.price != null && <span class="pr">{'\u20B9' + m.price.toLocaleString('en-IN')}</span>}</div>
+        </article>
+      ))}
     </div>
     <p class="more rv">The shelf opens with the studio. First drops are announced on <a class="link" href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a>.</p>
   </div></section>
