@@ -86,7 +86,7 @@ export function CareMap({ done, onBook, category, make, model, colour }: { done:
         </View>
         <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{st.text}{st.when ? `, ${st.when}` : ""}</Text>
         <Pressable accessibilityRole="button" onPress={() => onBook(st.cat)} style={({ pressed }) => ({ height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, ...(st.ok ? r.quiet : r.primary) })}>
-          <Text style={{ color: st.ok ? colors.textPrimary : "#1A1410", fontSize: 14, fontWeight: "800" }}>{st.ok ? "Book again" : st.cta}</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800" }}>{st.ok ? "Book again" : st.cta}</Text>
         </Pressable>
       </View>
     </View>

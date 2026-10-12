@@ -92,8 +92,8 @@ export function InstallPrompt() {
             <Step n={3} icon="check" text="Tap Add. AutoDeck appears on your home screen" />
           </View>
         ) : null}
-        <Pressable accessibilityRole="button" onPress={() => (mode === "android" ? void install() : close("dismissed"))} style={({ pressed }) => ({ height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, ...({ backgroundImage: "linear-gradient(180deg,#F9B060,#EC8638)" } as object) })}>
-          <Text style={{ color: "#1A1410", fontWeight: "700", fontSize: 16 }}>{mode === "android" ? "Install app" : "Got it"}</Text>
+        <Pressable accessibilityRole="button" onPress={() => (mode === "android" ? void install() : close("dismissed"))} style={({ pressed }) => ({ height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.32)" })}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>{mode === "android" ? "Install app" : "Got it"}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => close("dismissed")} style={{ alignItems: "center", paddingVertical: 6 }}>
           <Text style={{ color: "#A9A7A4", fontSize: 14 }}>Not now</Text>

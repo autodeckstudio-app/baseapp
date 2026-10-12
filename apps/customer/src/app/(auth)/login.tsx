@@ -44,7 +44,7 @@ export default function LoginScreen() {
 function WebGoogleButton({ onError }: { onError: (m: string | null) => void }) {
   const [busy, setBusy] = useState(false);
   return (
-    <AuthButton dark
+    <AuthButton dark soft
       testID="google-sign-in"
       label="Continue with Google"
       busy={busy}
@@ -83,7 +83,7 @@ function GoogleButton({ onError }: { onError: (m: string | null) => void }) {
   }, [response]);
 
   return (
-    <AuthButton dark
+    <AuthButton dark soft
       label="Continue with Google"
       busy={busy}
       disabled={!request}

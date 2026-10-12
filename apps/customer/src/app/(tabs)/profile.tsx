@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Platform, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
+import { getThemePref, setThemePref, type ThemePref } from "@autodeck/ui/theme";
 import { updateProfile } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
@@ -40,6 +41,7 @@ export default function YouScreen() {
     catch (e) { setLicMsg(e instanceof Error ? e.message : "Could not save your licence. Try again."); }
     finally { setLicBusy(false); }
   }
+  const [pref, setPref] = useState<ThemePref>(getThemePref());
   const [savedName, setSavedName] = useState<string | null>(null);
 
   async function saveName() {
@@ -79,6 +81,14 @@ export default function YouScreen() {
         ]}
       />
       {actionMessage?<Notice title="Account update" body={actionMessage}/>:null}
+      <View style={{ gap: space.hair }}>
+        <Kicker>Appearance</Kicker>
+        <View style={{ flexDirection: "row", gap: space.line }}>
+          {(["auto", "light", "night"] as const).map((m) => (
+            <Button key={m} kind={pref === m ? "primary" : "quiet"} label={m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1 }} />
+          ))}
+        </View>
+      </View>
       {editing ? (
         <View style={{ gap: space.breath }}>
           <Field label="Your name" value={draft} onChangeText={setDraft} autoCapitalize="words" maxLength={100} />

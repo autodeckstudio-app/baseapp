@@ -117,8 +117,8 @@ export default function MembershipScreen() {
                         {topTier ? <Chip label="More included" tone="premium" /> : null}
                         <T role="heading">{p.name}</T>
                       </View>
-                      <View style={{ borderRadius: 9999, backgroundColor: "#EC8638", paddingHorizontal: 14, paddingVertical: 8 }}>
-                        <T role="bodyStrong" style={{ color: "#1A1410" }}>{rupees(p.priceInPaise)}</T>
+                      <View style={{ borderRadius: 9999, borderWidth: 1, borderColor: "#EC8638", backgroundColor: "rgba(236,134,56,0.12)", paddingHorizontal: 14, paddingVertical: 8 }}>
+                        <T role="bodyStrong" tone="accent">{rupees(p.priceInPaise)}</T>
                       </View>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>

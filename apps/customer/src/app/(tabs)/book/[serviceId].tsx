@@ -209,9 +209,9 @@ export default function BookServiceScreen() {
                         accessibilityState={{ selected: on, disabled: past }}
                         disabled={past}
                         onPress={() => { setPickedSlot(slot); setSizeError(null); }}
-                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(245,154,69,0.55)", backgroundColor: on ? "#EC8638" : "rgba(245,154,69,0.12)", paddingHorizontal: 16, paddingVertical: 10, opacity: past ? 0.3 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
+                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(128,128,128,0.28)", backgroundColor: on ? "rgba(236,134,56,0.14)" : "rgba(128,128,128,0.08)", paddingHorizontal: 16, paddingVertical: 10, opacity: past ? 0.3 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
                       >
-                        <T role="data" tone={on ? "onAccent" : "accent"}>{slot.startTime}</T>
+                        <T role="data" tone={on ? "accent" : "primary"}>{slot.startTime}</T>
                         {multiDay ? (
                           <T role="caption" tone="tertiary">ready {new Date(`${slot.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</T>
                         ) : null}

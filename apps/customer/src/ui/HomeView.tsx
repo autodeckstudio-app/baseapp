@@ -49,7 +49,7 @@ export type HomeViewProps = {
   onShare: () => void;
 };
 
-import { glassSurface, glassInner, glassOrange } from "../lib/glass";
+import { glassSurface, glassInner } from "../lib/glass";
 import { MENU_CHIPS, MENU_GROUPS } from "@autodeck/core";
 const ACCENT = "#EC8638";
 void ACCENT;
@@ -126,7 +126,7 @@ export function PhotoCard({ media, title, pill, onPress, hearted = true }: { med
           <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
         </Pressable>
       ) : null}
-      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, ...glassOrange, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#1A1410", fontSize: 11, fontWeight: "700" }}>{pill}</Text></View> : null}
+      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#F59A4E", fontSize: 11, fontWeight: "700" }}>{pill}</Text></View> : null}
     </Pressable>
   );
 }

@@ -23,11 +23,37 @@ export function deviceWantsDark(): boolean {
   }
 }
 
+export type ThemePref = "auto" | "light" | "night";
+const PREF_KEY = "autodeck.theme";
+let memPref: ThemePref = "auto";
+const prefListeners = new Set<() => void>();
+export function getThemePref(): ThemePref {
+  try {
+    const v = (globalThis as { localStorage?: { getItem: (k: string) => string | null } }).localStorage?.getItem(PREF_KEY);
+    if (v === "light" || v === "night" || v === "auto") return v;
+  } catch {
+    /* storage unavailable */
+  }
+  return memPref;
+}
+/** Manual override: "auto" follows the device and clock, otherwise pins day or night. */
+export function setThemePref(pref: ThemePref): void {
+  memPref = pref;
+  try {
+    (globalThis as { localStorage?: { setItem: (k: string, v: string) => void } }).localStorage?.setItem(PREF_KEY, pref);
+  } catch {
+    /* storage unavailable */
+  }
+  prefListeners.forEach((f) => f());
+}
+
 export function currentMode(): "light" | "night" {
   // Dev only: ?theme=light or ?theme=night on web pins the mode so both can be checked at any hour.
   const q = (globalThis as { location?: { search?: string } }).location?.search ?? "";
   const m = /[?&]theme=(light|night)/.exec(q);
   if (m && (globalThis as { __DEV__?: boolean }).__DEV__ !== false) return m[1] as "light" | "night";
+  const pref = getThemePref();
+  if (pref !== "auto") return pref;
   return resolveMode(new Date(), deviceWantsDark());
 }
 
@@ -42,6 +68,7 @@ export function watchMode(onChange: (mode: "light" | "night") => void): () => vo
     }
   };
   const timer = setInterval(check, 30_000);
+  prefListeners.add(check);
   const g = globalThis as { matchMedia?: (q: string) => { addEventListener?: (t: string, f: () => void) => void; removeEventListener?: (t: string, f: () => void) => void } };
   const mq = g.matchMedia?.("(prefers-color-scheme: dark)");
   mq?.addEventListener?.("change", check);
@@ -49,6 +76,7 @@ export function watchMode(onChange: (mode: "light" | "night") => void): () => vo
   doc?.addEventListener("visibilitychange", check);
   return () => {
     clearInterval(timer);
+    prefListeners.delete(check);
     mq?.removeEventListener?.("change", check);
     doc?.removeEventListener("visibilitychange", check);
   };

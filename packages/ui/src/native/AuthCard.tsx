@@ -33,7 +33,7 @@ export function AuthCard({ role, title, copy, children, error }: { role: string;
 }
 
 /** The sign-in button, identical in every app. */
-export function AuthButton({ label, onPress, busy, disabled, testID, dark: _darkProp = true }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
+export function AuthButton({ label, onPress, busy, disabled, testID, dark: _darkProp = true, soft = false }: { dark?: boolean; soft?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
   const night = false; // the sign-in button is the same orange in every mode
   const dark = true;
   return (
@@ -43,10 +43,10 @@ export function AuthButton({ label, onPress, busy, disabled, testID, dark: _dark
       accessibilityLabel={label}
       disabled={busy || disabled}
       onPress={onPress}
-      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: dark ? "#F59A45" : AUTH.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}), ...(night && Platform.OS === "web" ? nightButtonStyle : {}) })}
+      style={({ pressed }) => ({ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, backgroundColor: soft ? "rgba(255,255,255,0.16)" : dark ? "#F59A45" : AUTH.accent, ...(soft ? { borderWidth: 1, borderColor: "rgba(255,255,255,0.32)" } : null), flexDirection: "row", alignItems: "center", justifyContent: "center", opacity: busy || disabled ? 0.6 : pressed ? 0.88 : 1, ...(dark && !soft && Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)" } as object) : {}), ...(night && Platform.OS === "web" ? nightButtonStyle : {}) })}
     >
       {Platform.OS === "web" ? createElement("svg", { width: 18, height: 18, viewBox: "0 0 48 48", "aria-hidden": true, style: { marginRight: 10 }, dangerouslySetInnerHTML: { __html: G } }) : null}
-      <Text style={{ color: night && Platform.OS === "web" ? nightButtonText : dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
+      <Text style={{ color: soft ? "#FFFFFF" : night && Platform.OS === "web" ? nightButtonText : dark ? "#1A1410" : "#fff", fontSize: 16, fontWeight: "600" }}>{busy ? "Please wait..." : label}</Text>
     </Pressable>
   );
 }

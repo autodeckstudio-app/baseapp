@@ -28,9 +28,9 @@ function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () 
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 10, minHeight:44,justifyContent:"center", backgroundColor: on ? "#EC8638" : night ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.06)", borderWidth: 1, borderColor: on ? "#EC8638" : night ? "rgba(255,255,255,0.28)" : "rgba(29,27,38,0.16)" }}
+      style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 10, minHeight:44,justifyContent:"center", backgroundColor: on ? "rgba(236,134,56,0.16)" : night ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.06)", borderWidth: 1, borderColor: on ? "#EC8638" : night ? "rgba(255,255,255,0.28)" : "rgba(29,27,38,0.16)" }}
     >
-      <T role="label" style={{ color: on ? "#1A1410" : night ? "#FAF8F5" : "#1D1B26", textTransform: "capitalize" }}>{label}</T>
+      <T role="label" style={{ color: on ? (night ? "#F59A4E" : "#B8500A") : night ? "#FAF8F5" : "#1D1B26", textTransform: "capitalize" }}>{label}</T>
     </Pressable>
   );
 }

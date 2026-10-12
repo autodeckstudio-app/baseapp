@@ -72,7 +72,7 @@ export function DepthCarousel({ items, carName, onOpen }: { items: Service[]; ca
                 <T role="heading" numberOfLines={2} style={{ color: "#FFFFFF" }}>{sv.name.replace(/^Kovalent\s+/i, "")}</T>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                   <T role="bodyStrong" style={{ color: "#F4F2EF" }} numberOfLines={1}>{priceLabel(sv)}</T>
-                  <View style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: "#EC8638", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg,#F9B060,#EC8638)" } as object) : {}) }}><T role="caption" style={{ color: "#1A1410" }}>Book</T></View>
+                  <View style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" }}><T role="caption" style={{ color: "#FFFFFF" }}>Book</T></View>
                 </View>
               </View>
             </Pressable>

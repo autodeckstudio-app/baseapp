@@ -90,9 +90,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         accessibilityRole="button"
         accessibilityLabel={last ? "Get started" : "Next"}
         onPress={() => (last ? finish() : go(page + 1))}
-        style={({ pressed }) => ({ position: "absolute", right: 26, bottom: 48, width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center", backgroundColor: "#EC8638", opacity: pressed ? 0.88 : 1, ...(Platform.OS === "web" ? ({ boxShadow: "0 10px 30px rgba(236,134,56,0.45)" } as object) : {}) })}
+        style={({ pressed }) => ({ position: "absolute", right: 26, bottom: 48, width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.32)", opacity: pressed ? 0.88 : 1 })}
       >
-        <Text style={{ color: "#1A1410", fontWeight: "700", fontSize: 26, marginTop: -2 }}>{last ? "\u2713" : "\u2197"}</Text>
+        <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 26, marginTop: -2 }}>{last ? "\u2713" : "\u2197"}</Text>
       </Pressable>
     </View>
   );

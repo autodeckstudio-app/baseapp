@@ -1,5 +1,5 @@
 // One booking row in the reference style: photo tile, service, car, time, price, status.
-import { glassSurface, glassInner, glassOrange } from "../lib/glass";
+import { glassSurface, glassInner, glassQuiet } from "../lib/glass";
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { T } from "./kit";
