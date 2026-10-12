@@ -37,9 +37,11 @@ export function fixRupee(text?: string | null): string {
   return text.replace(/â[\u0080-\u00bf\s]{0,4}(?=\d)/g, "\u20b9");
 }
 
+export interface VehiclePatch { registrationNumber?: string; make?: string; model?: string; year?: number; color?: string; category?: "hatchback" | "sedan" | "suv" | "luxury" | "commercial" | "van" }
+
 export interface ContactPatch { name?: string; email?: string; phone?: string }
 
-export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: CustomerData; services?: Service[]; onBack: () => void; onOpen: (href: string) => void; onSave?: (patch: ContactPatch) => Promise<void> }) {
+export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicle }: { d: CustomerData; onSaveVehicle?: (vehicleId: string, patch: VehiclePatch) => Promise<void>; services?: Service[]; onBack: () => void; onOpen: (href: string) => void; onSave?: (patch: ContactPatch) => Promise<void> }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,6 +49,27 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
   const [fName, setFName] = useState("");
   const [fEmail, setFEmail] = useState("");
   const [fPhone, setFPhone] = useState("");
+  const [carEdit, setCarEdit] = useState<{ id: string; reg: string; make: string; model: string; year: string; color: string; category: string } | null>(null);
+  const [carMsg, setCarMsg] = useState<string | null>(null);
+  const [carBusy, setCarBusy] = useState(false);
+  async function saveCar() {
+    if (!carEdit || !onSaveVehicle) return;
+    const year = carEdit.year.trim() ? Number(carEdit.year) : undefined;
+    if (year !== undefined && (!Number.isInteger(year) || year < 1980)) { setCarMsg("Year must be a number like 2021."); return; }
+    setCarBusy(true); setCarMsg(null);
+    try {
+      await onSaveVehicle(carEdit.id, {
+        ...(carEdit.reg.trim() ? { registrationNumber: carEdit.reg.trim().toUpperCase().replace(/\s+/g, "") } : {}),
+        ...(carEdit.make.trim() ? { make: carEdit.make.trim() } : {}),
+        ...(carEdit.model.trim() ? { model: carEdit.model.trim() } : {}),
+        ...(year !== undefined ? { year } : {}),
+        ...(carEdit.color.trim() ? { color: carEdit.color.trim() } : {}),
+        ...(carEdit.category ? { category: carEdit.category as NonNullable<VehiclePatch["category"]> } : {}),
+      });
+      setCarEdit(null);
+    } catch (e) { setCarMsg(e instanceof Error ? e.message : "Could not save the car."); }
+    finally { setCarBusy(false); }
+  }
   const serviceName = (id: string) => services?.find((sv) => sv.id === id)?.name ?? "Service";
   const carLabel = (vehicleId: string, snap?: { registrationNumber?: string; make?: string; model?: string }) => {
     const v = d.vehicles.find((x) => x.id === vehicleId) ?? snap;
@@ -170,6 +193,32 @@ export function CustomerView({ d, services, onBack, onOpen, onSave }: { d: Custo
                       <span className="ax-job-plate" style={{ fontSize: 18 }}>{v.registrationNumber}</span>
                       <span className="ax-sub">{[v.year, v.make, v.model, v.color].filter(Boolean).join(" ")}{v.category ? ` · ${v.category === "suv" ? "SUV" : statusLabel(v.category)}` : ""}</span>
                     </div>
+                    {onSaveVehicle && carEdit?.id !== v.id ? <button type="button" className="ax-button" style={{ marginTop: 8 }} onClick={() => { setCarMsg(null); setCarEdit({ id: v.id, reg: v.registrationNumber ?? "", make: v.make ?? "", model: v.model ?? "", year: v.year ? String(v.year) : "", color: v.color ?? "", category: v.category ?? "" }); }}>Edit car</button> : null}
+                    {carEdit?.id === v.id ? (
+                      <form onSubmit={(e) => { e.preventDefault(); void saveCar(); }} style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                        <div className="ax-form-pair">
+                          <label className="ax-form-row"><span>Plate</span><input value={carEdit.reg} onChange={(e) => setCarEdit({ ...carEdit, reg: e.target.value })} /></label>
+                          <label className="ax-form-row"><span>Size</span>
+                            <select value={carEdit.category} onChange={(e) => setCarEdit({ ...carEdit, category: e.target.value })}>
+                              <option value="">Not set</option>{["hatchback", "sedan", "suv", "luxury", "commercial", "van"].map((c) => <option key={c} value={c}>{c === "suv" ? "SUV" : statusLabel(c)}</option>)}
+                            </select>
+                          </label>
+                        </div>
+                        <div className="ax-form-pair">
+                          <label className="ax-form-row"><span>Make</span><input value={carEdit.make} onChange={(e) => setCarEdit({ ...carEdit, make: e.target.value })} /></label>
+                          <label className="ax-form-row"><span>Model</span><input value={carEdit.model} onChange={(e) => setCarEdit({ ...carEdit, model: e.target.value })} /></label>
+                        </div>
+                        <div className="ax-form-pair">
+                          <label className="ax-form-row"><span>Year</span><input inputMode="numeric" value={carEdit.year} onChange={(e) => setCarEdit({ ...carEdit, year: e.target.value })} /></label>
+                          <label className="ax-form-row"><span>Colour</span><input value={carEdit.color} onChange={(e) => setCarEdit({ ...carEdit, color: e.target.value })} /></label>
+                        </div>
+                        {carMsg ? <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{carMsg}</p> : null}
+                        <div className="ax-panel-actions">
+                          <button type="submit" className="ax-button ax-button--primary" disabled={carBusy}>{carBusy ? "Saving" : "Save car"}</button>
+                          <button type="button" className="ax-button" onClick={() => setCarEdit(null)}>Cancel</button>
+                        </div>
+                      </form>
+                    ) : null}
                     <p className="ax-sub" style={{ margin: "6px 0 0" }}>{d.jobs.filter((j) => j.vehicleId === v.id).length} jobs · {d.jobs.filter((j) => j.vehicleId === v.id && j.status === "DELIVERED").length} delivered</p>
                     {papers.length > 0 && (
                       <ul className="ax-chips-list" style={{ marginTop: 8 }}>

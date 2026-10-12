@@ -20,7 +20,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../../../lib/firebase";
 import { getServicesIncludingHidden } from "../../../../lib/catalogue-service";
-import { CustomerView, type ContactPatch } from "../../../../experience/CustomerView";
+import { CustomerView, type ContactPatch, type VehiclePatch } from "../../../../experience/CustomerView";
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +84,9 @@ export default function CustomerDetailPage() {
       services={services}
       onSave={async (patch: ContactPatch) => {
         await httpsCallable<{ customerId: string } & ContactPatch, { updated: boolean }>(functions, "updateCustomerContact")({ customerId: id, ...patch });
+      }}
+      onSaveVehicle={async (vehicleId: string, patch: VehiclePatch) => {
+        await httpsCallable(functions, "updateVehicle")({ vehicleId, ...patch });
       }}
       onBack={() => router.push("/customers")}
       onOpen={(href) => router.push(href)}

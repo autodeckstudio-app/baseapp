@@ -275,7 +275,10 @@ function MembersPanel({ members, plans }: { members: Membership[]; plans: Member
   const pending = members.filter((m) => m.status === "pending");
   const washesLeft = active.reduce((n, m) => n + Math.max(0, m.washesTotal - m.washesUsed), 0);
   const revenue = active.reduce((n, m) => n + (priceOf[m.planId] ?? 0), 0);
-  const sorted = [...members].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || (a.endDate ?? "").localeCompare(b.endDate ?? ""));
+  const [filter, setFilter] = useState<string>("all");
+  const statuses = Array.from(new Set(members.map((m) => m.status)));
+  const shown = filter === "all" ? members : members.filter((m) => m.status === filter);
+  const sorted = [...shown].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || (a.endDate ?? "").localeCompare(b.endDate ?? ""));
   const kpi = (v: string | number, l: string) => <div><span className="ax-kpi-v">{v}</span><span className="ax-label">{l}</span></div>;
   return (
     <section className="ax-panel ax-mem-sec">
@@ -284,7 +287,12 @@ function MembersPanel({ members, plans }: { members: Membership[]; plans: Member
       <div className="ax-kpis" style={{ margin: "12px 0" }}>
         {kpi(active.length, "Active")}{kpi(pending.length, "Awaiting payment")}{kpi(expiring.length, "Ending in 7 days")}{kpi(washesLeft, "Washes owed")}{kpi(formatPaise(revenue), "Active plan value")}
       </div>
-      {sorted.length === 0 ? <p style={msgStyle}>No memberships sold yet.</p> : (
+      {statuses.length > 1 ? (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "0 0 10px" }}>
+          {["all", ...statuses].map((st) => <button key={st} type="button" className={`ax-button${filter === st ? " ax-button--primary" : ""}`} onClick={() => setFilter(st)}>{st === "all" ? "All" : st.charAt(0).toUpperCase() + st.slice(1)}</button>)}
+        </div>
+      ) : null}
+      {sorted.length === 0 ? <p style={msgStyle}>{members.length === 0 ? "No memberships sold yet." : "No memberships with this status."}</p> : (
         <div style={{ overflowX: "auto" }}>
           <table>
             <thead><tr><th>Customer</th><th>Plan</th><th>Status</th><th>Washes</th><th>Ends</th></tr></thead>
