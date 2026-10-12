@@ -78,3 +78,33 @@ html:root:root:root .ax-shell .ax-login .ax-login-card > span:first-of-type { co
 html:root:root:root .ax-shell .ax-login button:not(.zz):not(.yy):not(.xx) { background: linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%) !important; color: #1A1410 !important; border: 0 !important; border-radius: 26px !important; box-shadow: none !important; opacity: 1; }
 html:root:root:root .ax-shell .ax-login button:disabled { opacity: .6; }
 html:root:root:root .ax-shell .ax-login input { background: rgba(255,255,255,0.08) !important; color: #F6F4F1 !important; border: 1px solid rgba(255,255,255,0.18) !important; }
+
+
+/* ---- unification pass: logo, active nav icon, back link, buttons, stat strip ---- */
+/* Active nav: icon turns white with the label so it reads on the orange pill */
+html:root .ax-shell .ax-nav-link svg { flex: none; }
+html:root .ax-shell .ax-nav-link { display: flex; align-items: center; gap: 12px; }
+/* Back link is a quiet text link, never a bar */
+html:root .ax-shell .ax-back { background: transparent !important; box-shadow: none !important; width: auto !important; align-self: flex-start; display: inline-flex !important; padding: 6px 4px !important; min-height: 32px !important; color: var(--ad-text-secondary) !important; }
+/* Secondary buttons size to their label and never spill out of the card */
+html:root .ax-shell .ax-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; max-width: 100%; box-sizing: border-box; padding: 0 16px; min-height: 40px; font-size: 14px; line-height: 1.2; }
+html:root .ax-shell button.ax-linkbtn, html:root .ax-shell .ax-detail-head button { min-height: 36px; padding: 0 14px; }
+/* Stat strip: one row of equal tiles with air, not a card holding cards */
+html:root .ax-shell .ax-kpis { background: transparent !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px !important; padding: 0 !important; }
+html:root .ax-shell .ax-kpis > * { padding: 16px 18px !important; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+@media (max-width: 900px) { html:root .ax-shell .ax-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Rows inside panels get the same inset everywhere */
+html:root .ax-shell .ax-car { padding: 16px 18px !important; margin-bottom: 12px; }
+/* Segmented tabs: one look everywhere, selected = orange */
+html:root .ax-shell .ax-seg { background: var(--gl-glass) !important; border: none !important; border-radius: 14px !important; padding: 4px !important; gap: 4px !important; box-shadow: 0 1px 2px rgba(27,26,25,.05), 0 8px 24px -8px rgba(27,26,25,.12) !important; }
+html:root .ax-shell .ax-seg button { background: transparent !important; border-radius: 12px !important; min-height: 38px !important; padding: 0 16px !important; font-weight: 600 !important; color: var(--gl-text) !important; }
+html:root .ax-shell .ax-seg button[aria-pressed="true"] { background: linear-gradient(180deg, #F08A45, #E8742A) !important; color: #fff !important; box-shadow: 0 8px 18px -8px rgba(232,116,42,.7) !important; }
+/* Rows inside a panel: the panel is the card, rows are flat with a hairline */
+html:root .ax-shell .ax-panel .ax-car { background: transparent !important; box-shadow: none !important; border-radius: 0 !important; padding: 14px 0 !important; margin: 0 !important; border-top: 1px solid var(--gl-divider) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html:root .ax-shell .ax-panel .ax-car:first-of-type { border-top: none !important; }
+
+/* Active nav icon: solid white on the orange pill */
+html:root .ax-shell .ax-nav-link[aria-current="page"] svg, html:root .ax-shell .ax-sheet-link[aria-current="page"] svg { opacity: 1 !important; }
+html:root .ax-shell .ax-nav-link[aria-current="page"] svg *, html:root .ax-shell .ax-sheet-link[aria-current="page"] svg * { fill: #fff !important; stroke: none !important; opacity: 1 !important; }
+html:root .ax-shell .ax-nav-link[aria-current="page"] svg mask rect { fill: #fff !important; }
+html:root .ax-shell .ax-side [aria-current="page"] svg, html:root .ax-shell .ax-side [aria-current="page"] svg * { fill-opacity: 1 !important; stroke-opacity: 1 !important; }
