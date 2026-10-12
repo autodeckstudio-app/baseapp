@@ -1,15 +1,12 @@
 /* Garage Light: flat ground, solid cards with soft shadow, no card borders, one radius scale, orange rationed.
    Loaded last so it settles the older glass and photo rules. Glass stays on floating chrome only. */
-.ax-ambient, .ax-ambient::before, .ax-ambient::after { background: none !important; background-image: none !important; animation: none !important; }
-.ax-ambient-root, .ax-ambient-root:has(.ax-shell-frame), html[data-theme="night"]:root .ax-ambient-root:has(.ax-shell-frame) { background: var(--gl-ground) !important; }
-html[data-theme="night"]:root .ax-ambient-root { background: var(--gl-ground) !important; }
 
 html:root .ax-shell .ax-panel, html:root .ax-shell .ax-tile, html:root .ax-shell .ax-col, html:root .ax-shell .ax-card, html:root .ax-shell .detail-card,
 html:root .ax-shell .stat-tile, html:root .ax-shell .ax-kpis, html:root .ax-shell .ax-list, html:root .ax-shell .ax-track, html:root .ax-shell .ax-empty,
 html:root .ax-shell .ax-sheet, html:root .ax-shell .ax-job, html:root .ax-shell .ax-paper-row, html:root .ax-shell table, html:root .ax-shell .ax-car {
-  background: var(--gl-card) !important; background-image: none !important;
+  background: var(--gl-glass) !important; background-image: none !important;
   border: none !important; outline: none !important;
-  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%) !important; backdrop-filter: blur(18px) saturate(140%) !important;
   border-radius: 20px !important;
   box-shadow: 0 1px 2px rgba(27,26,25,.05), 0 8px 24px -8px rgba(27,26,25,.12) !important;
 }
@@ -18,13 +15,13 @@ html[data-theme="night"]:root .ax-shell .ax-card, html[data-theme="night"]:root 
 html[data-theme="night"]:root .ax-shell .ax-kpis, html[data-theme="night"]:root .ax-shell .ax-list, html[data-theme="night"]:root .ax-shell .ax-track,
 html[data-theme="night"]:root .ax-shell .ax-empty, html[data-theme="night"]:root .ax-shell .ax-sheet, html[data-theme="night"]:root .ax-shell .ax-job,
 html[data-theme="night"]:root .ax-shell .ax-paper-row, html[data-theme="night"]:root .ax-shell table, html[data-theme="night"]:root .ax-shell .ax-car {
-  background: var(--gl-card) !important; box-shadow: 0 8px 24px -10px rgba(0,0,0,.5) !important;
+  background: var(--gl-glass) !important; box-shadow: 0 8px 24px -10px rgba(0,0,0,.5) !important;
 }
 /* tables inside cards stay flat */
 html:root .ax-shell .ax-panel table, html:root .ax-shell .ax-col table, html:root .ax-shell .ax-list table { box-shadow: none !important; background: transparent !important; border-radius: 0 !important; }
 /* the featured tile no longer shouts: orange is for the primary button, live status and the active tab */
 html:root .ax-shell .ax-tile--featured, html[data-theme="day"]:root .ax-shell .ax-tile--featured, html[data-theme="night"]:root .ax-shell .ax-tile--featured {
-  background: var(--gl-card) !important; background-image: none !important;
+  background: var(--gl-glass) !important; background-image: none !important;
 }
 html:root .ax-shell .ax-tile--featured .ax-kpi-v, html:root .ax-shell .ax-tile--featured .ax-label,
 html[data-theme="night"]:root .ax-shell .ax-tile--featured .ax-kpi-v, html[data-theme="night"]:root .ax-shell .ax-tile--featured .ax-label { color: var(--gl-text) !important; }
@@ -55,26 +52,19 @@ html:root .ax-shell .ax-avatar, html:root .ax-shell [class*="avatar"] { border-r
 html:root .ax-shell .badge, html:root .ax-shell [class*="chip"]:not(.ax-chip-link):not(.ax-chips) { border: none !important; box-shadow: none !important; }
 html:root .ax-shell td, html:root .ax-shell th { border-color: var(--gl-divider) !important; }
 
-/* the room is flat: no photo behind the app */
-html:root .ax-herobg, html[data-theme="night"]:root .ax-herobg { background: none !important; background-image: none !important; display: none !important; }
-html:root .ax-ambient-root::before, html:root .ax-ambient-root:has(.ax-shell-frame)::before, html:root .ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::before,
-html[data-theme="night"]:root .ax-ambient-root:has(.ax-shell-frame)::before, html[data-theme="night"]:root .ax-ambient-root:has(.ax-shell-frame[data-hero="on"])::before {
-  background: var(--gl-ground) !important; background-image: none !important; border: none !important; box-shadow: none !important; border-radius: 0 !important;
-}
 
-html:root { --gl-ground: #F6F3EF; --gl-card: #FFFFFF; --gl-sunken: #EFEBE5; --gl-text: #1B1A19; --gl-divider: rgba(27,26,25,.08); --ad-canvas: #F6F3EF; --ax-chrome: rgba(255,255,255,.96); }
-html[data-theme="night"]:root { --gl-ground: #1E1E1D; --gl-card: #2A2A29; --gl-sunken: #181817; --gl-text: #F2EFEA; --gl-divider: rgba(255,255,255,.08); --ad-canvas: #1E1E1D; --ax-chrome: rgba(42,42,41,.96); }
-html:root body, html:root .ax-shell-frame, html:root .ax-ambient-content { background: var(--gl-ground) !important; color: var(--gl-text); }
+
+html:root { --gl-glass: rgba(255,255,255,.74); --gl-ground: #F6F3EF; --gl-card: #FFFFFF; --gl-sunken: #EFEBE5; --gl-text: #1B1A19; --gl-divider: rgba(27,26,25,.08); --ad-canvas: #F6F3EF; --ax-chrome: rgba(255,255,255,.96); }
+html[data-theme="night"]:root { --gl-glass: rgba(42,42,41,.62); --gl-ground: #1E1E1D; --gl-card: #2A2A29; --gl-sunken: #181817; --gl-text: #F2EFEA; --gl-divider: rgba(255,255,255,.08); --ad-canvas: #1E1E1D; --ax-chrome: rgba(42,42,41,.96); }
 /* tile rows: every tile is a card */
-html:root .ax-shell .ax-tiles > *, html:root .ax-shell .ax-kpis > * { background: var(--gl-card) !important; border-radius: 20px !important; box-shadow: 0 1px 2px rgba(27,26,25,.05), 0 8px 24px -8px rgba(27,26,25,.12) !important; border: none !important; }
+html:root .ax-shell .ax-tiles > *, html:root .ax-shell .ax-kpis > * { background: var(--gl-glass) !important; border-radius: 20px !important; box-shadow: 0 1px 2px rgba(27,26,25,.05), 0 8px 24px -8px rgba(27,26,25,.12) !important; border: none !important; }
 html:root .ax-shell .ax-side::before, html:root .ax-shell .ax-side::after, html:root .ax-shell .ax-notch::before, html:root .ax-shell .ax-notch::after { display: none !important; }
 
 html:root .ax-shell h1, html:root .ax-shell .ax-hero-total { color: var(--gl-text) !important; text-shadow: none !important; }
 html:root .ax-shell .ax-label { color: var(--color-text-muted, inherit); text-shadow: none !important; }
 html:root:root .ax-dash .ax-detail-main > .ax-panel, html:root:root .ax-dash .ax-detail-side > .ax-panel,
 html[data-theme="night"]:root:root .ax-dash .ax-detail-main > .ax-panel, html[data-theme="night"]:root:root .ax-dash .ax-detail-side > .ax-panel {
-  background: var(--gl-card) !important; background-image: none !important; border: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  background: var(--gl-glass) !important; background-image: none !important; border: none !important; backdrop-filter: blur(18px) saturate(140%) !important; -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
   box-shadow: 0 1px 2px rgba(27,26,25,.05), 0 8px 24px -8px rgba(27,26,25,.12) !important;
 }
 html:root .ax-shell .ax-nav-link[aria-current="page"], html[data-theme="night"]:root .ax-shell .ax-nav-link[aria-current="page"] { background: #E8742A !important; background-image: none !important; box-shadow: none !important; color: #fff !important; }
-html:root { background: var(--gl-ground) !important; }
