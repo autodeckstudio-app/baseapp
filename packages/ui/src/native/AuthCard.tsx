@@ -1,55 +1,41 @@
 import type { ReactNode } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
-import { nightGround, nightSurfaceStyle, nightButtonStyle, nightButtonText } from "../theme/night.js";
+import { nightButtonStyle, nightButtonText } from "../theme/night.js";
 import { AUTH, AUTH_FOOTNOTE } from "../theme/auth.js";
-import { currentMode } from "../theme/autoMode.js";
 import { createElement } from "react";
 import { Logo } from "./Logo.js";
 
-/** The one sign-in layout for every AutoDeck app. Same card, logo, button slot and footnote; only role, title and copy differ. */
-export function AuthCard({ role, title, copy, children, error, dark: darkProp = false }: { role: string; title: string; copy: string; children: ReactNode; error?: string | null; dark?: boolean }) {
+/** The one sign-in layout for every AutoDeck app: static studio photo, dark veil, logo, one glass card. Same in day and night; only role, title and copy differ. */
+export const AUTH_PHOTO_GROUND = "linear-gradient(180deg, rgba(5,5,6,0.55) 0%, rgba(5,5,6,0.92) 100%), url(/hero-studio.jpg)";
+export function AuthCard({ role, title, copy, children, error }: { role: string; title: string; copy: string; children: ReactNode; error?: string | null; dark?: boolean }) {
   const web = Platform.OS === "web";
-  const night = currentMode() === "night";
-  const dark = darkProp || night;
-  const A0 = dark
-    ? { ...AUTH, ground: "radial-gradient(60vmax 60vmax at 100% 0%, rgba(245,154,69,0.18), transparent 70%), linear-gradient(170deg, #141416 0%, #0B0B0D 50%, #050506 100%)", groundFallback: "#0B0B0D", cardBg: "rgba(21,21,23,0.92)", cardBorder: "rgba(255,255,255,0.10)", cardShadow: "0 18px 50px rgba(0,0,0,0.6)", text: "#F6F4F1", muted: "#C4C2BF", accent: "#F59A45", danger: "#FF8D7A" }
-    : AUTH;
-  const A = night ? { ...A0, ground: nightGround, groundFallback: "#50504D", cardBg: "rgba(72,72,69,0.96)", accent: "#EC8638" } : A0;
   return (
-    <>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: A.groundFallback, ...(web ? ({ backgroundImage: A.ground, minHeight: "100vh" } as object) : {}) }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: "#050506", ...(web ? ({ backgroundImage: AUTH_PHOTO_GROUND, backgroundSize: "cover", backgroundPosition: "center", minHeight: "100vh" } as object) : {}) }}>
+      <View style={{ width: "100%", maxWidth: 420, alignItems: "center", gap: 18 }}>
+        <Logo onDark variant="stacked" height={84} />
         <View
           style={{
-            width: "100%",
-            maxWidth: A.maxWidth,
-            alignItems: "center",
-            gap: 14,
-            padding: A.cardPad,
-            borderRadius: A.cardRadius,
-            backgroundColor: A.cardBg,
-            borderWidth: 1,
-            borderColor: A.cardBorder,
-            ...(web && night ? nightSurfaceStyle : {}),
-            ...(web ? ({ boxShadow: A.cardShadow } as object) : { shadowColor: "#3C285A", shadowOpacity: 0.16, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }),
+            width: "100%", borderRadius: 32, padding: 24, gap: 14, alignItems: "center",
+            backgroundColor: "rgba(18,18,20,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)",
+            ...(web ? ({ backdropFilter: "blur(26px) saturate(140%)", WebkitBackdropFilter: "blur(26px) saturate(140%)", boxShadow: "0 18px 50px rgba(0,0,0,0.5)" } as object) : {}),
           }}
         >
-          <Logo onDark={dark} variant="stacked" height={A.logoHeight} />
-          <Text style={{ color: A.accent, fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "600" }}>{role}</Text>
-          <Text style={{ color: A.text, fontFamily: "Montserrat, Inter, sans-serif", fontSize: 24, fontWeight: "600", textAlign: "center" }}>{title}</Text>
-          <Text style={{ color: A.muted, fontSize: 15, lineHeight: 22, textAlign: "center" }}>{copy}</Text>
+          <Text style={{ color: "#F59A45", fontSize: 12, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "600" }}>{role}</Text>
+          <Text style={{ color: "#F6F4F1", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 26, fontWeight: "700", textAlign: "center" }}>{title}</Text>
+          <Text style={{ color: "#CDCBC8", fontSize: 15, lineHeight: 22, textAlign: "center" }}>{copy}</Text>
           <View style={{ width: "100%", gap: 10, marginTop: 6 }}>{children}</View>
-          {error ? <Text style={{ color: A.danger, fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
-          <Text style={{ color: A.muted, fontSize: 12, textAlign: "center", opacity: 0.8 }}>{AUTH_FOOTNOTE}</Text>
+          {error ? <Text style={{ color: "#FF8D7A", fontSize: 13, textAlign: "center" }}>{error}</Text> : null}
+          <Text style={{ color: "#A9A7A4", fontSize: 12, textAlign: "center" }}>{AUTH_FOOTNOTE}</Text>
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
 /** The sign-in button, identical in every app. */
-export function AuthButton({ label, onPress, busy, disabled, testID, dark: darkProp = false }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
-  const night = currentMode() === "night";
-  const dark = darkProp || night;
+export function AuthButton({ label, onPress, busy, disabled, testID, dark: _darkProp = true }: { dark?: boolean; label: string; onPress: () => void; busy?: boolean; disabled?: boolean; testID?: string }) {
+  const night = false; // the sign-in button is the same orange in every mode
+  const dark = true;
   return (
     <Pressable
       testID={testID}

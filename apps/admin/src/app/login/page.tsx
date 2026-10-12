@@ -54,13 +54,13 @@ export default function LoginPage() {
   return (
     <div className="ax-shell">
       <Ambient>
-        <main className="ax-login" style={{ background: AUTH.ground }}>
-          <div className="ax-login-card" style={{ width: "100%", maxWidth: AUTH.maxWidth, display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: AUTH.cardPad, borderRadius: AUTH.cardRadius, background: AUTH.cardBg, border: `1px solid ${AUTH.cardBorder}`, boxShadow: AUTH.cardShadow, textAlign: "center" }}>
-            <img className="ax-lg-l" src={logoDataUri(LOGO_STACKED_SVG)} alt="AutoDeck" style={{ height: AUTH.logoHeight, width: "auto" }} />
-            <img className="ax-lg-d" aria-hidden="true" src={logoDataUri(LOGO_STACKED_ON_DARK_SVG)} alt="" style={{ height: AUTH.logoHeight, width: "auto" }} />
-            <span style={{ color: AUTH.accent, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Office and studio</span>
-            <h1 style={{ margin: 0, color: AUTH.text, fontSize: 24, fontWeight: 500 }}>Sign in to AutoDeck Admin</h1>
-            <p style={{ margin: 0, color: AUTH.muted, fontSize: 15, lineHeight: "22px" }}>
+        <main className="ax-login" style={{ background: "linear-gradient(180deg, rgba(5,5,6,0.55) 0%, rgba(5,5,6,0.92) 100%), url(/hero-studio.jpg) center / cover no-repeat" }}>
+          <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+            <img src={logoDataUri(LOGO_STACKED_ON_DARK_SVG)} alt="AutoDeck" style={{ height: 84, width: "auto" }} />
+            <div className="ax-login-card" style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: 24, borderRadius: 32, background: "rgba(18,18,20,0.55)", border: "1px solid rgba(255,255,255,0.16)", backdropFilter: "blur(26px) saturate(140%)", WebkitBackdropFilter: "blur(26px) saturate(140%)", boxShadow: "0 18px 50px rgba(0,0,0,0.5)", textAlign: "center" }}>
+            <span style={{ color: "#F59A45", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Office and studio</span>
+            <h1 style={{ margin: 0, color: "#F6F4F1", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 26, fontWeight: 700 }}>Sign in to AutoDeck Admin</h1>
+            <p style={{ margin: 0, color: "#CDCBC8", fontSize: 15, lineHeight: "22px" }}>
               {mfaRequired ? "Enter the verification code sent to your phone." : "Bookings, payments and the team, for the people who run the studio."}
             </p>
             <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
@@ -98,7 +98,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => void handleGoogle()}
                   disabled={submitting || loading}
-                  style={{ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, background: AUTH.accent, color: "#fff", border: 0, fontFamily: "inherit", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: submitting || loading ? 0.6 : 1 }}
+                  style={{ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, background: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)", color: "#1A1410", border: 0, fontFamily: "inherit", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: submitting || loading ? 0.6 : 1 }}
                 >
                   <GoogleMark />
                   {submitting ? "Opening Google…" : "Continue with Google"}
@@ -114,7 +114,8 @@ export default function LoginPage() {
                 that enrolled one. Never visibly rendered. */}
             <div id={MFA_RECAPTCHA_CONTAINER_ID} />
             </div>
-            <span style={{ color: AUTH.muted, fontSize: 12, opacity: 0.8 }}>{AUTH_FOOTNOTE}</span>
+            <span style={{ color: "#A9A7A4", fontSize: 12 }}>{AUTH_FOOTNOTE}</span>
+            </div>
           </div>
         </main>
       </Ambient>
