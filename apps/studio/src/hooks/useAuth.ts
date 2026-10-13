@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onIdTokenChanged, type User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "../lib/firebase";
@@ -22,7 +22,7 @@ export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onIdTokenChanged(auth, async (user) => {
       if (!user) {
         setState({ status: "unauthenticated" });
         return;

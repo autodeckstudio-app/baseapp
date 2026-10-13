@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, getDocs, query, where } from "firebase/firestore";
-import type { Employee } from "@autodeck/core";
+import type { Employee, StaffAccessRequest } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { db } from "./firebase";
 
@@ -23,8 +23,8 @@ interface AddStaffMemberInput {
 // Roster changes go through the admin app's own server route (Admin SDK,
 // session-cookie gated) so they work before Cloud Functions are deployed.
 // The matching callables stay in functions/ for the mobile apps.
-async function callStaffRoute<T>(method: "POST" | "PATCH" | "DELETE", body: unknown): Promise<T> {
-  const res = await fetch("/api/staff", {
+async function callStaffRoute<T>(method: "POST" | "PATCH" | "DELETE", body: unknown, url = "/api/staff"): Promise<T> {
+  const res = await fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -49,4 +49,14 @@ export async function updateStaffRole(
 
 export async function deactivateStaffMember(employeeId: string): Promise<void> {
   await callStaffRoute("DELETE", { employeeId });
+}
+
+export async function listAccessRequests(tenantId: string): Promise<StaffAccessRequest[]> {
+  const q = query(collection(db, COLLECTIONS.staffAccessRequests()), where("tenantId", "==", tenantId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data() as StaffAccessRequest).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function decideAccessRequest(uid: string, decision: "approve" | "reject", role: "studio" | "admin" = "studio", note?: string): Promise<void> {
+  await callStaffRoute("POST", { uid, decision, role, note }, "/api/staff/requests");
 }

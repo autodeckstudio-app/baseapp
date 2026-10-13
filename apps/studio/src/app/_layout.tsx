@@ -4,8 +4,7 @@ import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import "../lib/webAlert";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
-import { signOut } from "firebase/auth";
-import { Alert, Platform, View, useWindowDimensions } from "react-native";
+import { Platform, View, useWindowDimensions } from "react-native";
 import { auth } from "../lib/firebase";
 import { colors, isNightPalette, watchMode } from "@autodeck/ui";
 import { installWebFonts, AutoExperienceThemeProvider } from "@autodeck/ui/native";
@@ -26,14 +25,8 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     if (authState.status === "unauthenticated" && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (authState.status === "unauthorized") {
-      // Signed in with a non-studio account, or claims were revoked
-      // (e.g. deactivateStaffMember) — sign out and bounce to login rather
-      // than leaving the user stuck on a screen where every call 403s.
-      void signOut(auth).then(() => {
-        const msg = "Your studio access has been removed. Please contact your admin.";
-        if (Platform.OS === "web") (globalThis as { alert?: (m: string) => void }).alert?.(msg);
-        else Alert.alert("Access removed", msg);
-      });
+      // Signed in without studio access (new person, or access removed): ask the admin for it.
+      if ((segments as string[])[1] !== "access") router.replace("/(auth)/access");
     } else if (authState.status === "ready" && inAuthGroup) {
       router.replace("/(tabs)");
     }

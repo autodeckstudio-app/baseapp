@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
-import type { Employee } from "@autodeck/core";
-import { listStaff, addStaffMember, updateStaffRole, deactivateStaffMember } from "../../../lib/staff-service";
+import type { Employee, StaffAccessRequest } from "@autodeck/core";
+import { listStaff, listAccessRequests, decideAccessRequest, addStaffMember, updateStaffRole, deactivateStaffMember } from "../../../lib/staff-service";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { TeamView } from "../../../experience/TeamView";
 
 export default function StaffPage() {
   const { claims } = useAdminAuth();
   const [staff, setStaff] = useState<Employee[]>([]);
+  const [requests, setRequests] = useState<StaffAccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export default function StaffPage() {
     if (!claims) return;
     try {
       setStaff(await listStaff(claims.tenantId));
+      setRequests(await listAccessRequests(claims.tenantId).catch(() => []));
     } catch {
       setError("Couldn't load the team.");
     } finally {
@@ -50,6 +52,8 @@ export default function StaffPage() {
   return (
     <TeamView
       staff={staff}
+      requests={requests}
+      onDecide={(r, decision, role) => void run(() => decideAccessRequest(r.uid, decision, role), decision === "approve" ? `${r.name} approved. They can open the studio app now.` : `${r.name} declined.`, "Couldn't save that decision.")}
       loading={loading}
       error={error}
       message={message}

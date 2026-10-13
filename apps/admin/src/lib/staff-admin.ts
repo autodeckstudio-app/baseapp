@@ -216,3 +216,57 @@ export async function deactivate(auth: Auth, db: Firestore, user: AuthorizedUser
   });
   return { employeeId, alreadyTerminated: false };
 }
+
+export interface DecideAccessInput {
+  uid: string;
+  decision: "approve" | "reject";
+  role: StaffRole;
+  note: string | null;
+}
+
+export function parseDecideAccess(body: unknown): DecideAccessInput {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const uid = typeof b["uid"] === "string" ? b["uid"] : "";
+  if (!uid) throw new StaffError(400, "invalid-argument", "uid is required.");
+  const decision = b["decision"];
+  if (decision !== "approve" && decision !== "reject") throw new StaffError(400, "invalid-argument", "decision must be approve or reject.");
+  const role = b["role"] === undefined ? "studio" : parseRole(b["role"]);
+  const note = typeof b["note"] === "string" && b["note"].trim() ? b["note"].trim().slice(0, 200) : null;
+  return { uid, decision, role, note };
+}
+
+/**
+ * Approve or decline a studio access request. Approval adds the person to the
+ * roster (same rules as addStaff) using the name and email they submitted, then
+ * marks the request approved. The tenant always comes from the admin's claims.
+ */
+export async function decideAccessRequest(auth: Auth, db: Firestore, user: AuthorizedUser, input: DecideAccessInput, studioId: string) {
+  const ref = db.collection("staffAccessRequests").doc(input.uid);
+  const snap = await ref.get();
+  if (!snap.exists) throw new StaffError(404, "not-found", "Request not found.");
+  const req = snap.data() as { tenantId: string; email: string; name: string; phone: string; status: string };
+  if (user.claims.role !== "superadmin" && req.tenantId !== user.claims.tenantId) throw new StaffError(404, "not-found", "Request not found.");
+  if (req.status !== "pending") throw new StaffError(409, "failed-precondition", "This request was already handled.");
+  const now = new Date().toISOString();
+  if (input.decision === "approve") {
+    await addStaff(auth, db, user, {
+      name: req.name, email: req.email.toLowerCase(), phone: req.phone ?? "",
+      role: input.role, studioId: input.role === "studio" ? studioId : null,
+    });
+    // The person asked with this uid: link and promote that exact account now.
+    const emp = await db.collection("employees").where("email", "==", req.email.toLowerCase()).where("active", "==", true).limit(1).get();
+    const doc = emp.docs[0];
+    if (doc && !(doc.data() as Employee).authUid) {
+      await doc.ref.update({ authUid: input.uid, updatedAt: now });
+      await auth
+        .setCustomUserClaims(input.uid, { role: input.role, tenantId: user.claims.tenantId, studioId: input.role === "studio" ? studioId : null })
+        .then(() => auth.revokeRefreshTokens(input.uid))
+        .catch(() => undefined);
+    }
+  }
+  await db.runTransaction(async (tx) => {
+    tx.update(ref, { status: input.decision === "approve" ? "approved" : "rejected", decidedAt: now, decidedBy: user.uid, decisionNote: input.note, updatedAt: now });
+    audit(db, tx, user, input.decision === "approve" ? "staffAccess.approved" : "staffAccess.rejected", input.uid, null, { status: "pending" }, { status: input.decision, email: req.email });
+  });
+  return { uid: input.uid, status: input.decision === "approve" ? "approved" : "rejected" };
+}

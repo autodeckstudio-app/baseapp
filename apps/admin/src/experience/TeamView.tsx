@@ -3,7 +3,7 @@
 // Team: who can sign in and what they see. Studio staff get the floor app;
 // Office staff get everything. Access is by Google account on this roster.
 import { useState } from "react";
-import type { Employee } from "@autodeck/core";
+import type { Employee, StaffAccessRequest } from "@autodeck/core";
 import { PageHead } from "./Office";
 
 type Role = "studio" | "admin";
@@ -23,6 +23,8 @@ export function TeamView(p: {
   onAdd: (input: { name: string; email: string; role: Role }) => void;
   onRole: (emp: Employee, role: Role) => void;
   onRemove: (emp: Employee) => void;
+  requests?: StaffAccessRequest[];
+  onDecide?: (req: StaffAccessRequest, decision: "approve" | "reject", role: Role) => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,6 +33,8 @@ export function TeamView(p: {
   const current = p.staff.filter((s) => !s.terminatedAt);
   const past = p.staff.filter((s) => s.terminatedAt);
   const waiting = current.filter((s) => !s.authUid).length;
+  const pendingReqs = (p.requests ?? []).filter((r) => r.status === "pending");
+  const [reqRole, setReqRole] = useState<Role>("studio");
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   return (
@@ -42,6 +46,7 @@ export function TeamView(p: {
           { value: current.filter((s) => s.role === "studio").length, label: "Studio" },
           { value: current.filter((s) => s.role === "admin").length, label: "Office", tone: "premium" },
           { value: waiting, label: "Not signed in yet", tone: waiting ? "accent" : undefined },
+          { value: pendingReqs.length, label: "Requests", tone: pendingReqs.length ? "accent" : undefined },
         ]}
       />
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
@@ -49,6 +54,30 @@ export function TeamView(p: {
 
       <div className="ax-detail">
         <div className="ax-detail-main">
+          {pendingReqs.length > 0 && (
+            <section className="ax-panel">
+              <span className="ax-label">Waiting for your approval</span>
+              <ul className="ax-people">
+                {pendingReqs.map((r) => (
+                  <li key={r.uid} className="ax-person">
+                    <span className="ax-avatar" aria-hidden="true">{initials(r.name)}</span>
+                    <span className="ax-person-main">
+                      <span className="ax-person-name">{r.name}</span>
+                      <span className="ax-sub">{r.email}{r.phone ? ` · ${r.phone}` : ""}</span>
+                    </span>
+                    <select value={reqRole} onChange={(e) => setReqRole(e.target.value as Role)} aria-label={`Access for ${r.name}`} disabled={p.busy}>
+                      <option value="studio">Studio</option>
+                      <option value="admin">Office</option>
+                    </select>
+                    <span className="ax-row-actions">
+                      <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={() => p.onDecide?.(r, "approve", reqRole)}>Approve</button>
+                      <button type="button" className="ax-button" disabled={p.busy} onClick={() => p.onDecide?.(r, "reject", reqRole)}>Decline</button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <section className="ax-panel">
             <span className="ax-label">People with access</span>
             {p.loading ? (

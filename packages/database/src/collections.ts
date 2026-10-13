@@ -26,6 +26,8 @@ export const COLLECTIONS = {
   services: () => "services",
   employees: () => "employees",
   attendance: () => "attendance",
+  // staffAccessRequests/{uid} - a signed-in person asking the admin for studio access
+  staffAccessRequests: () => "staffAccessRequests",
   expenses: () => "expenses",
   inventoryItems: () => "inventoryItems",
   inventoryTxns: () => "inventoryTxns",

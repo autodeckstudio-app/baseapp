@@ -18,7 +18,7 @@ const ROWS = [
 export default function Preview() {
   return (
     <StaffShell pathname="/staff" office role="admin" who="studio@autodeck.example" home="/design/team" onSignOut={() => {}}>
-      <TeamView staff={ROWS} loading={false} error={null} message={null} busy={false} onAdd={() => {}} onRole={() => {}} onRemove={() => {}} />
+      <TeamView staff={ROWS} loading={false} error={null} message={null} busy={false} onAdd={() => {}} onRole={() => {}} onRemove={() => {}} requests={[{ uid: "r1", tenantId: "t", email: "kunal.p@gmail.com", name: "Kunal Patel", phone: "98250 11122", status: "pending", createdAt: "2026-10-13T10:00:00Z", updatedAt: "2026-10-13T10:00:00Z", decidedAt: null, decidedBy: null, decisionNote: null }]} onDecide={() => {}} />
     </StaffShell>
   );
 }

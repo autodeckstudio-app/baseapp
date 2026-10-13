@@ -2,12 +2,15 @@ import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
 import { CanvasBackdrop, CanvasTitle } from "../../components/CanvasTitle";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Alert, Platform, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { httpsCallable } from "firebase/functions";
 import { signOut } from "firebase/auth";
-import { auth, functions } from "../../lib/firebase";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import type { AttendanceRecord, Employee } from "@autodeck/core";
+import { auth, db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, isNightPalette, spacing, radius, typography, Avatar, LoadingState } from "@autodeck/ui";
 import { Icon } from "@autodeck/ui/native";
@@ -43,6 +46,22 @@ export default function AccountScreen() {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [me, setMe] = useState<Employee | null>(null);
+  const [today, setToday] = useState<AttendanceRecord | null>(null);
+  const uid = authState.status === "ready" ? authState.user.uid : null;
+  const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
+  useEffect(() => {
+    if (!uid || !tenantId) return;
+    return onSnapshot(query(collection(db, COLLECTIONS.employees()), where("tenantId", "==", tenantId), where("authUid", "==", uid)), (snap) => setMe((snap.docs[0]?.data() as Employee | undefined) ?? null), () => setMe(null));
+  }, [uid, tenantId]);
+  useEffect(() => {
+    if (!me || !tenantId) return;
+    const date = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    return onSnapshot(doc(db, COLLECTIONS.attendance(), `${tenantId}__${me.id}__${date}`), (snap) => setToday(snap.exists() ? (snap.data() as AttendanceRecord) : null), () => setToday(null));
+  }, [me, tenantId]);
+  const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "-");
+  const onBreak = !!today?.breaks.some((b) => !b.endedAt);
+  const dayState = !today?.checkInAt ? "Not checked in yet" : today.checkOutAt ? `Checked out ${hhmm(today.checkOutAt)} · ${Math.floor(today.workedMinutes / 60)}h ${today.workedMinutes % 60}m worked` : onBreak ? `On break · in since ${hhmm(today.checkInAt)}` : `Working · in since ${hhmm(today.checkInAt)}`;
 
   async function run(label: string, fn: string, done: string) {
     if(busy) return;
@@ -92,7 +111,13 @@ export default function AccountScreen() {
         </Text>
       </View>
 
+      <Section title="My details">
+        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: "600", padding: spacing.md, paddingBottom: 0 }}>{me?.name ?? email}</Text>
+        <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md, paddingTop: spacing.xxs }}>{me ? `${me.email}${me.phone ? ` · ${me.phone}` : ""} · ${me.role === "admin" ? "Office" : "Studio"}. These details are shared with your admin.` : "Your admin has not linked your profile yet."}</Text>
+      </Section>
+
       <Section title="My day">
+        <Text style={{ ...typography.body, color: colors.textPrimary, padding: spacing.md }}>{dayState}</Text>
         <Row icon="check" label="Check in" onPress={() => void run("in", "checkInAttendance", "Checked in for today.")} disabled={busy !== null} />
         <Row icon="bell" label="Start break" onPress={() => void run("bs", "startAttendanceBreak", "Break started.")} disabled={busy !== null} />
         <Row icon="bell" label="End break" onPress={() => void run("be", "endAttendanceBreak", "Break ended.")} disabled={busy !== null} />

@@ -1,4 +1,5 @@
 export type AuditAction =
+  | "staffAccess.approved" | "staffAccess.rejected"
   | "account.deletion_requested" | "account.deletion_cancelled"
   | "pickup.requested"
   | "pickup.updated"

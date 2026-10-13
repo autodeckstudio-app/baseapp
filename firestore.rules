@@ -353,6 +353,30 @@ service cloud.firestore {
     // âââ /attendance/{recordId} âââââââââââââââââââââââââââââââââââââââââââââ
     // Studio staff read their tenant's attendance records; an employee can
     // read their own record via the denormalized employeeAuthUid field. All
+    // /staffAccessRequests/{uid}: a signed-in person asks the admin for studio access.
+    // They may create and re-open only their own pending request (verified email must
+    // match). Approval and rejection are Admin SDK only (admin app server route).
+    match /staffAccessRequests/{uid} {
+      allow read: if isAuthenticated()
+                  && (request.auth.uid == uid || (isAdminOrAbove() && (isSuperadmin() || ownTenant(resource.data))));
+      allow create: if isAuthenticated()
+                    && request.auth.uid == uid
+                    && request.auth.token.email_verified == true
+                    && request.resource.data.uid == uid
+                    && request.resource.data.email == request.auth.token.email.lower()
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100
+                    && request.resource.data.phone is string && request.resource.data.phone.size() <= 20;
+      allow update: if isAuthenticated()
+                    && request.auth.uid == uid
+                    && resource.data.status == 'rejected'
+                    && request.resource.data.uid == uid
+                    && request.resource.data.tenantId == resource.data.tenantId
+                    && request.resource.data.email == resource.data.email
+                    && request.resource.data.status == 'pending';
+      allow delete: if false;
+    }
+
     // writes go through Cloud Functions (check-in/out, breaks, admin mark).
     match /attendance/{recordId} {
       allow read: if isStudioOrAbove() && ownTenant(resource.data)
