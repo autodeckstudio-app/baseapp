@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { View } from "react-native";
 import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Chip, Button, Kicker, Loading, Notice, Pane, Row, Screen } from "../../../ui/kit";
+import { Chip, Button, Kicker, PageHeader, Loading, Notice, Pane, Row, Screen } from "../../../ui/kit";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -43,9 +43,7 @@ export default function MembershipHistoryScreen() {
   return (
     <Screen
       header={
-        <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">Membership</Kicker>
-        </View>
+        <PageHeader kicker="Membership" title="Your plans over time" sub={`${memberships.length} ${memberships.length === 1 ? "record" : "records"}`} />
       }
     >
       {memberships.length === 0 ? (
@@ -55,7 +53,7 @@ export default function MembershipHistoryScreen() {
           {memberships.map((m, i) => (
             <Row
               key={m.id}
-              title={m.tier}
+              title={m.tier.charAt(0).toUpperCase()+m.tier.slice(1)}
               detail={
                 m.status === "cancelled"
                   ? `Cancelled${m.cancellationReason === "pending_payment_expired" ? " - payment not completed in time" : ""} - requested ${formatDate(m.createdAt)}`

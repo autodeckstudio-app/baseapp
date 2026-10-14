@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View } from "react-native";
 import type { MembershipUsage } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, rupees } from "../../../ui/kit";
+import { Button, Kicker, PageHeader, Loading, Notice, Pane, Row, Screen, rupees } from "../../../ui/kit";
 import { getMyMemberships, getMembershipUsage } from "../../../lib/membership-service";
 
 function formatDate(iso: string): string {
@@ -42,9 +42,7 @@ export default function MembershipUsageScreen() {
   return (
     <Screen
       header={
-        <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">Membership usage</Kicker>
-        </View>
+        <PageHeader kicker="Membership" title={usage.length ? `${usage.length} ${usage.length === 1 ? "use" : "uses"} this cycle` : "No washes used yet"} />
       }
     >
       {usage.length === 0 ? (

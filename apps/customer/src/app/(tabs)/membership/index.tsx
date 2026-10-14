@@ -90,7 +90,7 @@ export default function MembershipScreen() {
       {current ? (
         <Pane pad="gap" fill="cool" tone="premium">
           <Row
-            title={current.tier}
+            title={current.tier.charAt(0).toUpperCase()+current.tier.slice(1)}
             detail={current.status === "pending" ? "Payment pending - benefits locked" : "Your membership"}
             trailing={<Chip label={current.status} tone={current.status === "active" ? "premium" : "neutral"} />}
             onPress={() => router.push("/(tabs)/membership/current")}
