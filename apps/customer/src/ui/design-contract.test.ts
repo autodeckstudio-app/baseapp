@@ -115,3 +115,10 @@ it("keeps the service price bar on the card edges, hides empty story circles, an
     expect(read("src/ui/StoryCircles.tsx")).toContain("groups.filter((g) => g.cover)");
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain('?? "Studio visit"');expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
+it("keeps Home glass to three blur surfaces, hides the campaign slot without real content",async()=>{
+  const {hasCampaign,MAX_BLUR_SURFACES}=await import("../lib/campaign");
+  expect(MAX_BLUR_SURFACES).toBe(3);
+  expect(hasCampaign(null)).toBe(false);expect(hasCampaign({headline:"",imageUrl:"x",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"/a.jpg",onPress:()=>undefined})).toBe(true);
+  const home=read("src/ui/HomeView.tsx");expect((home.match(/glassPane\(\)/g)??[]).length).toBeLessThanOrEqual(2);expect(home).not.toMatch(/\u2014/);
+  expect(read("src/app/(tabs)/index.tsx")).not.toContain("campaign=");
+});

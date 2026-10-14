@@ -8,6 +8,10 @@ import type { IconName } from "@autodeck/ui/theme";
 import { serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
+import { glassPane } from "../lib/glass-pane";
+import { HomeBackdrop } from "./HomeBackdrop";
+import { CampaignSlot } from "./CampaignSlot";
+import type { Campaign } from "../lib/campaign";
 
 export type HomeCar = { id: string; title: string; plate: string; photo?: string | null; category?: string | null; hasPhoto?: boolean };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
@@ -29,6 +33,8 @@ export type HomeViewProps = {
   banner?: ReactNode;
   initialChip?: string | null;
   stories?: ReactNode;
+  /** One compact campaign slot. Omit until there is real content. */
+  campaign?: Campaign | null;
   onAvatar: () => void;
   onSearch: () => void;
   onBell: () => void;
@@ -151,7 +157,7 @@ function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: Home
   const detail = reminder ? reminder.detail : idle ? (live?.detail ?? "") : live!.detail;
   const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...r.card, ...glassBg(name !== "light") })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(), ...glassBg(name !== "light") })}>
       <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
       <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
@@ -265,6 +271,7 @@ export function HomeView(p: HomeViewProps) {
   const pct = p.progress;
   return (
     <View style={{ gap: metrics.sectionGap, paddingBottom: 100 }}>
+      <HomeBackdrop />
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Profile and settings" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
           <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
@@ -311,9 +318,10 @@ export function HomeView(p: HomeViewProps) {
           ))}
         </View>
       ) : null}
+      <CampaignSlot campaign={p.campaign} />
       <View style={{ gap: 12 }}>
         <Heading title="Studio and club" />
-        <View style={{ borderRadius: 24, overflow: "hidden", ...r.card }}>
+        <View style={{ overflow: "hidden", ...glassPane() }}>
           <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
           <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
           <ClubRow icon="pin" title="The studio" sub={`${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
