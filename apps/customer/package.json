@@ -30,7 +30,8 @@
     "react": "^19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.6",
-    "react-native-web": "~0.20.0"
+    "react-native-web": "~0.20.0",
+    "three": "0.178.0"
   },
   "devDependencies": {
     "@autodeck/config": "workspace:*",

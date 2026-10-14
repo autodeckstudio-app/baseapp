@@ -131,6 +131,9 @@ importers:
       react-native-web:
         specifier: ~0.20.0
         version: 0.20.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      three:
+        specifier: 0.178.0
+        version: 0.178.0
     devDependencies:
       '@autodeck/config':
         specifier: workspace:*

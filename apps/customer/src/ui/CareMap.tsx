@@ -4,6 +4,7 @@
 import { createElement, useMemo, useRef, useState } from "react";
 import { Image, PanResponder, Platform, Pressable, Text, View } from "react-native";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { Car3D, car3dSupported } from "./Car3D";
 import { raised } from "../lib/raised";
 import { VIEW, bodyColour, carSvg, shapeFor, shapeLabel, svgUri, zonesFor, type ZoneKey } from "../lib/car-models";
 
@@ -63,7 +64,12 @@ export function CareMap({ done, onBook, category, make, model, colour }: { done:
       </View>
 
       <View {...pan.panHandlers} style={{ alignItems: "center", paddingVertical: 14, borderRadius: 30, ...r.sheet }}>
-        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600", marginBottom: 6 }}>{shapeLabel(shape)} view. Drag sideways to tilt.</Text>
+        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600", marginBottom: 6 }}>{shapeLabel(shape)} view. Drag to turn the car.</Text>
+        {car3dSupported ? (
+          <View style={{ width: 320, height: 250 }}>
+            <Car3D shape={shape} colour={bodyColour(colour)} night={night} selected={sel} zones={zones.map((z) => ({ key: z.key, label: z.label, ok: status(z).ok }))} anchors={zp} onSelect={setSel} width={320} height={250} />
+          </View>
+        ) : (
         <View style={{ width: VIEW.w, height: VIEW.h, ...(web ? ({ transform: `perspective(900px) rotateX(${12 + tilt.x}deg) rotateY(${tilt.y}deg)`, transformOrigin: "50% 55%", transition: "transform 160ms ease-out" } as object) : {}) }}>
           {web ? createElement("img", { src: uri, width: VIEW.w, height: VIEW.h, alt: "", draggable: false, style: { display: "block", pointerEvents: "none" } }) : <Image source={{ uri }} resizeMode="contain" style={{ width: VIEW.w, height: VIEW.h }} />}
           {zones.map((z) => {
@@ -77,6 +83,7 @@ export function CareMap({ done, onBook, category, make, model, colour }: { done:
             );
           })}
         </View>
+        )}
       </View>
 
       <View style={{ borderRadius: 24, padding: 16, gap: 8, ...r.card }}>
