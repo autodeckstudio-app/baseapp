@@ -1,8 +1,8 @@
 // Customer Home in the reference layout: round menu + car and status + bell and
 // avatar, a car hero, visit and health tiles, four round actions, studio and
 // membership tiles, stories, brand widgets, popular services and reminders.
-import { useState, type ReactNode } from "react";
-import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Image, Modal, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { serviceImagery, vehicleImagery, sceneImagery } from "../lib/imagery";
@@ -154,6 +154,95 @@ export function GroupChips({ value, onChange }: { value: string | null; onChange
 }
 export const groupCategories = (key: string | null): string[] => GROUPS.find((g) => g.key === key)?.cats ?? [];
 
+type DrawerItem = { icon: IconName; label: string; on: () => void };
+function MenuDrawer({ open, onClose, items, initial, name: who }: { open: boolean; onClose: () => void; items: DrawerItem[]; initial: string; name: string }) {
+  const { name, colors } = useExperienceTheme();
+  const r = raised(name);
+  if (!open) return null;
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        <View style={{ width: "82%", maxWidth: 330, height: "100%", paddingTop: 56, paddingHorizontal: 18, gap: 6, backgroundColor: colors.canvas, ...(Platform.OS === "web" ? ({ boxShadow: "8px 0 40px rgba(0,0,0,.35)" } as object) : {}) }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 }}>
+            <View style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center", ...r.round }}><Text style={{ color: colors.accentStrong, fontSize: 19, fontWeight: "800" }}>{initial}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{who}</Text>
+              <Text style={{ color: colors.textTertiary, fontSize: 12 }}>AutoDeck</Text>
+            </View>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {items.map((it) => (
+              <Pressable key={it.label} accessibilityRole="button" onPress={() => { onClose(); it.on(); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
+                <View style={{ width: 42, height: 42, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name={it.icon} color={colors.textPrimary} size={19} /></View>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "600" }}>{it.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,.45)" }} />
+      </View>
+    </Modal>
+  );
+}
+
+// Garage cars as one endless horizontal strip: three copies, re-centred after each swipe.
+function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; onOpen: (c: HomeCar) => void; onAdd: () => void; onActive: (i: number) => void }) {
+  const { name, colors } = useExperienceTheme();
+  const r = raised(name);
+  const [w, setW] = useState(0);
+  const ref = useRef<ScrollView>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const n = cars.length;
+  const loop = n > 1;
+  const card = w > 0 ? Math.min(w - 36, 420) : 0, step = card + 12;
+  const items = loop ? [...cars, ...cars, ...cars] : cars;
+  useEffect(() => { if (loop && step > 12) ref.current?.scrollTo({ x: n * step, animated: false }); }, [loop, step, n]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const settle = (x: number) => {
+    const i = Math.round(x / step);
+    onActive(((i % n) + n) % n);
+    if (i < n) ref.current?.scrollTo({ x: x + n * step, animated: false });
+    else if (i >= 2 * n) ref.current?.scrollTo({ x: x - n * step, animated: false });
+  };
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => settle(x), 140);
+  };
+  const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
+  const img = (c: HomeCar): ImageSourcePropType => c.photo ? { uri: c.photo } : ((vehicleImagery as Record<string, ImageSourcePropType>)[c.category ?? "sedan"] ?? vehicleImagery.sedan);
+  return (
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: 210 }}>
+      {w > 0 ? (
+        n === 0 ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: 210, borderRadius: 30, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
+            <Image source={vehicleImagery.sedan} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%", borderRadius: 30 }} />
+            <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} />
+            <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
+              <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
+            </View>
+          </Pressable>
+        ) : (
+          <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
+            {items.map((c, i) => (
+              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: 210, borderRadius: 30, overflow: "hidden", ...r.sheet }}>
+                <Image source={img(c)} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
+                <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} />
+                <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
+                    <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Care map</Text>
+                  </View>
+                  <View style={{ borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>{c.plate}</Text></View>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )
+      ) : null}
+    </View>
+  );
+}
+
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
@@ -171,14 +260,16 @@ export function HomeView(p: HomeViewProps) {
       {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
     </View>
   ));
-  const car = p.cars[0];
+  const [active, setActive] = useState(0);
+  const [menu, setMenu] = useState(false);
+  const car = p.cars[active] ?? p.cars[0];
   const heroImg: ImageSourcePropType = car?.photo ? { uri: car.photo } : ((vehicleImagery as Record<string, ImageSourcePropType>)[car?.category ?? "sedan"] ?? vehicleImagery.sedan);
   const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
   const pct = p.progress;
   return (
     <View style={{ gap: 20, paddingBottom: 120 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={p.onMenu} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => setMenu(true)} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
           <Icon name="menu" color={colors.textPrimary} size={22} />
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
@@ -194,17 +285,9 @@ export function HomeView(p: HomeViewProps) {
         </Pressable>
       </View>
 
-      <Pressable accessibilityRole="button" accessibilityLabel={car ? `${car.title}, care map` : "Add a car"} onPress={car ? p.onCareMap : p.onAddCar} style={{ height: 210, borderRadius: 30, overflow: "hidden", ...r.sheet }}>
-        <Image source={heroImg} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} />
-        <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
-            <Icon name="car" color="#EC8638" size={16} />
-            <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>{car ? "Care map" : "Add a car"}</Text>
-          </View>
-          {car ? <View style={{ borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>{car.plate}</Text></View> : null}
-        </View>
-      </Pressable>
+      {p.stories}
+
+      <GarageCarousel cars={p.cars} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} onActive={setActive} />
 
       {p.banner}
 
@@ -227,13 +310,6 @@ export function HomeView(p: HomeViewProps) {
         </Tile>
       </View>
 
-      <View style={{ flexDirection: "row", gap: 6 }}>
-        <Round icon="calendar" label="Book" onPress={p.onBook} />
-        <Round icon="phone" label="Call" onPress={p.onCall} />
-        <Round icon="chat" label="WhatsApp" onPress={p.onWhatsApp} />
-        <Round icon="wrench" label="Visits" onPress={p.onVisits} />
-      </View>
-
       <View style={{ flexDirection: "row", gap: 14, alignItems: "stretch" }}>
         <Tile title="Studio" style={{ flex: 1 }} onPress={p.onStudio}>
           <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center", ...r.well, borderRadius: 17 }}><Icon name="garage" color="#EC8638" size={18} /></View>
@@ -247,8 +323,6 @@ export function HomeView(p: HomeViewProps) {
         </Tile>
       </View>
 
-      {p.stories}
-
       <View style={{ gap: 12 }}>
         <Heading title="From the studio" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingRight: 8, paddingBottom: 14 }}>
@@ -257,26 +331,6 @@ export function HomeView(p: HomeViewProps) {
           <Brand title="Bring a friend" body="Share AutoDeck with someone who loves their car." cta="Share" image={sceneImagery.membership} onPress={p.onShare} tint />
         </ScrollView>
       </View>
-
-      {p.cars.length > 1 ? (
-        <View style={{ gap: 12 }}>
-          <Heading title="Your garage" action="See all" onAction={() => p.cars[0] && p.onCar(p.cars[0])} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingRight: 8, paddingBottom: 10 }}>
-            {p.cars.map((c) => (
-              <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={c.title} onPress={() => p.onCar(c)} style={{ alignItems: "center", gap: 6, width: 76 }}>
-                <View style={{ width: 66, height: 66, borderRadius: 33, overflow: "hidden", ...r.round }}>
-                  <Image source={c.photo ? { uri: c.photo } : ((vehicleImagery as Record<string, ImageSourcePropType>)[c.category ?? "sedan"] ?? vehicleImagery.sedan)} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
-                </View>
-                <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{c.title}</Text>
-              </Pressable>
-            ))}
-            <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={p.onAddCar} style={{ alignItems: "center", gap: 6, width: 76 }}>
-              <View style={{ width: 66, height: 66, alignItems: "center", justifyContent: "center", ...r.well, borderRadius: 33 }}><Text style={{ color: "#EC8638", fontSize: 28, marginTop: -2 }}>+</Text></View>
-              <Text style={{ color: colors.textTertiary, fontSize: 12 }}>Add car</Text>
-            </Pressable>
-          </ScrollView>
-        </View>
-      ) : null}
 
       <View style={{ gap: 12 }}>
         <Heading title="Popular services" action="View all" onAction={p.onAllServices} />
@@ -308,6 +362,18 @@ export function HomeView(p: HomeViewProps) {
           ))}
         </View>
       ) : null}
+      <MenuDrawer open={menu} onClose={() => setMenu(false)} items={[
+        { icon: "calendar", label: "Book a service", on: p.onBook },
+        { icon: "wrench", label: "Visits", on: p.onVisits },
+        { icon: "phone", label: "Call the studio", on: p.onCall },
+        { icon: "chat", label: "WhatsApp", on: p.onWhatsApp },
+        { icon: "garage", label: "Studio and hours", on: p.onStudio },
+        { icon: "shield", label: p.membership ? "Membership" : "Join the club", on: p.onMembership },
+        { icon: "bell", label: p.unread > 0 ? `Notifications (${p.unread})` : "Notifications", on: p.onBell },
+        { icon: "car", label: "Add a car", on: p.onAddCar },
+        { icon: "check", label: "Share AutoDeck", on: p.onShare },
+        { icon: "menu", label: "Profile and settings", on: p.onAvatar },
+      ]} initial={p.initial} name={car ? car.title : p.greeting} />
     </View>
   );
 }
