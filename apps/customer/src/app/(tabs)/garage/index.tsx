@@ -12,6 +12,7 @@ import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { GarageCard } from "../../../ui/GarageCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
+import { metrics } from "../../../lib/metrics";
 import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, PageHeader, Pane, Plate, Screen, T } from "../../../ui/kit";
 
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
@@ -96,7 +97,7 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <GarageCard key={v.id} photo={<CarThumb car={v} height={i === 0 ? 230 : 170} radius={0} />} height={i === 0 ? 230 : 170} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
+            <GarageCard key={v.id} photo={<CarThumb car={v} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} radius={0} />} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
           ))}
         </View>
       ) : !error ? (

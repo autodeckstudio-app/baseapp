@@ -151,7 +151,7 @@ function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: Home
   const detail = reminder ? reminder.detail : idle ? (live?.detail ?? "") : live!.detail;
   const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: 24, padding: 18, gap: 10, opacity: pressed ? 0.9 : 1, ...r.card, ...glassBg(name !== "light") })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...r.card, ...glassBg(name !== "light") })}>
       <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
       <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}

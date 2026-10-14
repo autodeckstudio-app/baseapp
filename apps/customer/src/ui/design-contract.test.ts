@@ -105,3 +105,4 @@ describe("surfaces share one radius and one padding",()=>{
     expect(read("src/ui/kit.tsx")).toContain('pad === "inset" ? 16');
   });
 });
+it("keeps the Home lead card on the shared card padding",()=>{expect(read("src/ui/HomeView.tsx")).not.toContain("padding: 18")});
