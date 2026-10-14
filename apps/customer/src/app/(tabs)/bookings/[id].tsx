@@ -1,6 +1,7 @@
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
-import { View } from "react-native";
+import { Linking, View } from "react-native";
+import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { translate, useLang } from "../../../lib/i18n";
@@ -384,7 +385,7 @@ export default function BookingDetailScreen() {
               />
             </View>
           ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>You will pay at the studio. The team marks it paid once you do.</T> : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime} IST. You pay at the studio, and the team marks it paid once you do.</T> : null}
         </Pane>
       </View>
 
@@ -447,7 +448,10 @@ export default function BookingDetailScreen() {
       ) : null}
 
       {lateToCancel ? (
-        <Notice title="Cancelling" body={`Bookings can be cancelled online up to ${CANCELLATION_FREE_WINDOW_HOURS} hours before the start. After that, please call the studio.`} />
+        <>
+          <Notice title="Cancelling" body={`Bookings can be cancelled online up to ${CANCELLATION_FREE_WINDOW_HOURS} hours before the start. After that, please call the studio.`} />
+          <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} />
+        </>
       ) : null}
 
       {canCancel ? (

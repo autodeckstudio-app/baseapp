@@ -122,3 +122,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
   const home=read("src/ui/HomeView.tsx");expect((home.match(/glassPane\(\)/g)??[]).length).toBeLessThanOrEqual(2);expect(home).not.toMatch(/\u2014/);
   expect(read("src/app/(tabs)/index.tsx")).not.toContain("campaign=");
 });
+it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
+  expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("Next: bring your car at {displayTime} IST");
+});

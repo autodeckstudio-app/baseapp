@@ -63,10 +63,12 @@ export function CarOverview(p: OverviewProps) {
   const r = raised(name);
   return (
     <View style={{ gap: 12 }}>
-      <View style={{ flexDirection: "row", gap: 12 }}>
-        <Status icon="shield" label="Protection" value={p.protections > 0 ? `${p.protections} verified` : "None"} good={p.protections > 0} />
-        <Status icon="check" label="Warranty" value={p.warranties > 0 ? `${p.warranties} active` : "None"} good={p.warranties > 0} />
-      </View>
+      {p.protections > 0 || p.warranties > 0 ? (
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          {p.protections > 0 ? <Status icon="shield" label="Protection" value={`${p.protections} verified`} good /> : null}
+          {p.warranties > 0 ? <Status icon="check" label="Warranty" value={`${p.warranties} active`} good /> : null}
+        </View>
+      ) : null}
 
       {p.reminders.length > 0 ? (
         <Card title="Needs attention">
