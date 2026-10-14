@@ -105,9 +105,15 @@ export default function PurchaseMembershipScreen() {
           body={
             isStudio
               ? "Your request is saved. Pay at the studio front desk - your benefits unlock as soon as your payment is confirmed. Requests not paid within 48 hours are cancelled automatically."
-              : "Complete the payment in the page that opened. Your membership activates automatically as soon as the payment is verified - no studio approval needed. Benefits stay locked until then."
+              : "Complete the payment to activate. If you closed the payment window, tap Pay online to open it again. Your membership activates automatically as soon as the payment is verified - no studio approval needed. Benefits stay locked until then."
           }
-          action={<Button label="View status" onPress={() => router.replace("/(tabs)/membership/current")} />}
+          action={
+            <View style={{ gap: space.hair }}>
+              {!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
+              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership/current")} />
+              {error ? <T role="caption" tone="tertiary">{error}</T> : null}
+            </View>
+          }
         />
       </Screen>
     );
