@@ -15,7 +15,7 @@ import { purchaseMembershipSchema } from "../../schemas/membership.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 
-export const purchaseMembership = onCall({ region: "asia-south1" }, async (request) => {
+export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
 
