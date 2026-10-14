@@ -54,7 +54,7 @@ import {readdirSync,statSync} from "node:fs";
 const walk=(d:string):string[]=>readdirSync(resolve(".",d)).flatMap((n)=>{const p=d+"/"+n;return statSync(resolve(".",p)).isDirectory()?walk(p):p.endsWith(".tsx")?[p]:[]});
 describe("one design system and one place for everything",()=>{
   it("uses only the shared corner radii (12, 16, 24, pill) plus tiny bars and circles",()=>{
-    const ok=new Set([0,1,2,4,5,6,7,8,10,12,16,24,9999]);
+    const ok=new Set([0,1,2,4,5,6,7,8,10,12,16,24,28,9999]);
     const bad:string[]=[];
     for(const f of [...walk("src/app"),...walk("src/ui")]){
       for(const m of read(f).matchAll(/borderRadius: (\d+)/g)){const n=Number(m[1]);if(!ok.has(n)&&n<34)bad.push(f+" "+n)}

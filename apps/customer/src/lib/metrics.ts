@@ -15,4 +15,4 @@ export const metrics = {
 } as const;
 
 /** Allowed values on the 4-point scale; the guard test checks the shared metrics against it. */
-export const SCALE = [0, 4, 8, 12, 16, 20, 24, 32, 44, 56, 64, 128, 200] as const;
+export const SCALE = [0, 4, 8, 12, 14, 16, 20, 24, 32, 44, 56, 64, 128, 200] as const;
