@@ -1,7 +1,7 @@
 import { FileUploader, SelectField } from "../../../ui/inputs";
 import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import { createElement, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { space } from "@autodeck/ui/theme";
@@ -56,6 +56,7 @@ export default function AddVehicleScreen() {
   const [archivedMatch, setArchivedMatch] = useState<{ vehicleId: string; label: string } | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [dupOpen, setDupOpen] = useState(false);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   // Stale-response guard: every submission bumps the sequence and captures the
   // plate it was for; async answers from an older submission or plate are dropped.
@@ -176,6 +177,7 @@ export default function AddVehicleScreen() {
           }
           setFieldErrors({ registrationNumber: "This car is already in your garage." });
           setSavedId(existing.id);
+          setDupOpen(true);
           return;
         }
       }
@@ -209,6 +211,7 @@ export default function AddVehicleScreen() {
       const duplicateId = (err as { details?: { vehicleId?: string } }).details?.vehicleId;
       if (/already-exists/.test(code) && duplicateId) {
         setSavedId(duplicateId);
+        setDupOpen(true);
         setFieldErrors({ registrationNumber: "This car is already in your garage." });
         return;
       }
@@ -306,6 +309,25 @@ export default function AddVehicleScreen() {
             <FileUploader files={photo?[{blob:photo.blob,type:photo.contentType}]:[]} onChange={fs=>pickPhoto(fs[0]?{blob:fs[0].blob,type:fs[0].type}:null)}/>
             {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
           </View>
+        ) : null}
+
+        {dupOpen && savedId ? (
+          <Modal transparent animationType="fade" visible onRequestClose={() => setDupOpen(false)}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space.inset, backgroundColor: "rgba(0,0,0,.5)" }}>
+              <View style={{ width: "100%", maxWidth: 380 }}>
+                <Notice
+                  title="This car is already in your garage"
+                  body="A car with this registration number is already saved, so it can't be added again."
+                  action={
+                    <View style={{ gap: space.breath }}>
+                      <Button label="View saved car" onPress={() => { setDupOpen(false); router.replace(`/(tabs)/garage/${savedId}`); }} />
+                      <Button label="Close" kind="quiet" onPress={() => setDupOpen(false)} />
+                    </View>
+                  }
+                />
+              </View>
+            </View>
+          </Modal>
         ) : null}
 
         {archivedMatch ? (

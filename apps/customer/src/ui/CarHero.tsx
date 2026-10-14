@@ -14,7 +14,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
         {photo}
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 300, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.35) 0%, rgba(5,5,6,0) 40%, rgba(5,5,6,0.55) 100%)" } as object) }} />
       </View>
-      <View style={{ marginTop: -34, borderTopLeftRadius: 34, borderTopRightRadius: 34, ...glassSurface, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20, gap: 16 }}>
+      <View style={{ marginTop: -34, marginHorizontal: 20, borderRadius: 30, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingTop: 22, paddingBottom: 20, gap: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
             <T role="title" style={{ color: ink.textPrimary }} numberOfLines={2}>{title}</T>
@@ -22,11 +22,11 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
           </View>
           <Plate value={plate} />
         </View>
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {facts.map((f) => (
-            <View key={f.label} style={{ flex: 1, minWidth: 0, alignItems: "center", gap: 4, borderRadius: 16, ...glassInner, paddingVertical: 12, paddingHorizontal: 4 }}>
-              <T role="label" tone="accent" style={{ fontSize: f.value.length <= 7 ? 13 : f.value.length <= 9 ? 11.5 : 10, letterSpacing: 0 }}>{f.value}</T>
-              <T role="caption" tone="tertiary" numberOfLines={1}>{f.label}</T>
+            <View key={f.label} style={{ flexBasis: "47%", flexGrow: 1, minWidth: 0, gap: 3, borderRadius: 16, ...glassInner, paddingVertical: 12, paddingHorizontal: 14 }}>
+              <T role="caption" tone="tertiary">{f.label}</T>
+              <T role="bodyStrong" tone="accent" style={{ fontSize: 15 }}>{f.value}</T>
             </View>
           ))}
         </View>
