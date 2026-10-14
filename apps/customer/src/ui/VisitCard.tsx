@@ -6,7 +6,7 @@ import { T } from "./kit";
 
 export function VisitCard({ photo, title, car, when, price, chip, onPress }: { photo: ReactNode; title: string; car: string; when: string; price: string; chip: ReactNode; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", borderRadius: 24, ...glassSurface, padding: 10, opacity: pressed ? 0.88 : 1 })}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", gap: 14, alignItems: "center", borderRadius: 24, ...glassSurface, padding: 12, opacity: pressed ? 0.88 : 1 })}>
       <View style={{ width: 92, height: 92, borderRadius: 16, overflow: "hidden" }}>{photo}</View>
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
         <T role="bodyStrong" numberOfLines={1}>{title}</T>

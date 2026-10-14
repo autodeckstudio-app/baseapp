@@ -187,7 +187,7 @@ export function Pane({ children, pad = "gap", tone, fill, style, testID }: Glass
   const { colors } = useExperienceTheme();
   const edge = tone ? colors[tone] : "transparent";
   return (
-    <View testID={testID} style={[{ borderRadius: 24, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), ...(tone ? { borderColor: edge, borderWidth: 1 } : null), padding: pad === "none" ? 0 : space[pad] }, style as never]}>
+    <View testID={testID} style={[{ borderRadius: 24, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), ...(tone ? { borderColor: edge, borderWidth: 1 } : null), padding: pad === "none" ? 0 : pad === "inset" ? 16 : space[pad] }, style as never]}>
       {children}
     </View>
   );

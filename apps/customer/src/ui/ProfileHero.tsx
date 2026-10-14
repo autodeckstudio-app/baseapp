@@ -17,10 +17,9 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
       <View style={{ alignItems: "center", paddingTop: 6 }}>
         <View
           style={{
-            width: "100%", maxWidth: 360, borderRadius: 24, overflow: "hidden", padding: 22, gap: 18, ...glassSurface,
+            width: "100%", maxWidth: 360, borderRadius: 24, overflow: "hidden", padding: 16, gap: 16, ...glassSurface,
             borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",
-            transform: [{ perspective: 900 }, { rotateX: "5deg" }, { rotateY: "-7deg" }],
-            ...(web ? ({ backgroundImage: "linear-gradient(135deg, #2A2A2F 0%, #17171A 55%, #0E0E10 100%)", boxShadow: "0 24px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(236,134,56,.10), 28px 30px 60px rgba(236,134,56,.10)" } as object) : { shadowColor: ACCENT, shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 12, height: 18 } }),
+                        ...(web ? ({ backgroundImage: "linear-gradient(135deg, #2A2A2F 0%, #17171A 55%, #0E0E10 100%)", boxShadow: "0 24px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(236,134,56,.10), 28px 30px 60px rgba(236,134,56,.10)" } as object) : { shadowColor: ACCENT, shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 12, height: 18 } }),
           }}
         >
           <View pointerEvents="none" style={{ position: "absolute", right: -60, top: -60, width: 190, height: 190, borderRadius: 95, backgroundColor: "rgba(236,134,56,0.20)" }} />

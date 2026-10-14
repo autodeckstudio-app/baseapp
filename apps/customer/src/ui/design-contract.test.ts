@@ -97,3 +97,11 @@ describe("sizes come from one rulebook",()=>{
     const home=read("src/ui/HomeView.tsx");expect(home).toContain("metrics.heroCompact");expect(home).not.toContain("height: 210");
   });
 });
+describe("surfaces share one radius and one padding",()=>{
+  it("card and sheet surfaces are 24 and wells 16, nothing is tilted",()=>{
+    const r=read("src/lib/raised.ts");
+    expect(r).not.toContain("borderRadius: 26");expect(r).not.toContain("borderRadius: 30");expect(r).not.toContain("borderRadius: 18");
+    expect(read("src/ui/ProfileHero.tsx")).not.toContain("rotate");
+    expect(read("src/ui/kit.tsx")).toContain('pad === "inset" ? 16');
+  });
+});
