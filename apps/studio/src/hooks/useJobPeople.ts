@@ -27,7 +27,6 @@ export function useJobPeople(jobs: ServiceJob[]): { car: (j: ServiceJob) => stri
     }
     if (work.length) void Promise.all(work).then(() => { if (alive) bump((n) => n + 1); });
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return {
     car: (j) => jobCar(j, Object.fromEntries([...vehicleCache].map(([k, v]) => [k, v ?? undefined]))),
