@@ -8,6 +8,7 @@ import { space } from "@autodeck/ui/theme";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle, VehicleCategory } from "@autodeck/core";
 import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
+import { ModalCard } from "../../../ui/ModalCard";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
 import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
@@ -315,16 +316,10 @@ export default function AddVehicleScreen() {
           <Modal transparent animationType="fade" visible onRequestClose={() => setDupOpen(false)}>
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space.inset, backgroundColor: "rgba(0,0,0,.5)" }}>
               <View style={{ width: "100%", maxWidth: 380 }}>
-                <Notice
-                  title="This car is already in your garage"
-                  body="A car with this registration number is already saved, so it can't be added again."
-                  action={
-                    <View style={{ gap: space.breath }}>
-                      <Button label="View saved car" onPress={() => { setDupOpen(false); router.replace(`/(tabs)/garage/${savedId}`); }} />
-                      <Button label="Close" kind="quiet" onPress={() => setDupOpen(false)} />
-                    </View>
-                  }
-                />
+                <ModalCard title="This car is already in your garage" body="A car with this registration number is already saved, so it can't be added again.">
+                  <Button label="View saved car" onPress={() => { setDupOpen(false); router.replace(`/(tabs)/garage/${savedId}`); }} />
+                  <Button label="Close" kind="quiet" onPress={() => setDupOpen(false)} />
+                </ModalCard>
               </View>
             </View>
           </Modal>
