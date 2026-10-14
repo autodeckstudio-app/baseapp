@@ -7,6 +7,7 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
+import { metrics } from "../lib/metrics";
 
 export type HomeCar = { id: string; title: string; plate: string; photo?: string | null; category?: string | null; hasPhoto?: boolean };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
@@ -129,7 +130,7 @@ const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage:
 function CarPanel({ title, plate, cta }: { title: string; plate: string; cta: string }) {
   const { name, colors } = useExperienceTheme();
   return (
-    <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, padding: 18, justifyContent: "space-between", ...glassBg(name !== "light") }}>
+    <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, padding: metrics.cardPad, justifyContent: "space-between", ...glassBg(name !== "light") }}>
       <Icon name="car" color={colors.textTertiary} size={30} />
       <View style={{ gap: 6 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>{title}</Text>
@@ -175,8 +176,8 @@ function SuggestRow({ s, first, onPress }: { s: HomeService; first: boolean; onP
   const { colors } = useExperienceTheme();
   const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={s.name} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
-      <Image source={img} resizeMode="cover" style={{ width: 56, height: 56, borderRadius: 16 }} />
+    <Pressable accessibilityRole="button" accessibilityLabel={s.name} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: metrics.rowPadV, paddingHorizontal: metrics.rowPadH, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
+      <Image source={img} resizeMode="cover" style={{ width: metrics.thumb, height: metrics.thumb, borderRadius: 12 }} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{s.name}</Text>
         <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 13 }}>{s.price === "Quote on request" ? "Quote on request" : s.price}</Text>
@@ -188,7 +189,7 @@ function SuggestRow({ s, first, onPress }: { s: HomeService; first: boolean; onP
 function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: string; sub: string; onPress: () => void; first?: boolean }) {
   const { colors } = useExperienceTheme();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 16, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: metrics.rowPadV, paddingHorizontal: metrics.rowPadH, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
       <Icon name={icon} color="#EC8638" size={20} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
@@ -207,6 +208,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const n = cars.length;
   const loop = n > 1;
+  const H = cars.some((c) => c.photo) ? metrics.heroTall : metrics.heroCompact;
   const card = w > 0 ? Math.min(w - 36, 420) : 0, step = card + 12;
   const items = loop ? [...cars, ...cars, ...cars] : cars;
   useEffect(() => { if (loop && step > 12) ref.current?.scrollTo({ x: n * step, animated: false }); }, [loop, step, n]);
@@ -224,10 +226,10 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
   };
   const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
   return (
-    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: 210 }}>
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: H }}>
       {w > 0 ? (
         n === 0 ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: 210, borderRadius: 24, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: H, borderRadius: metrics.cardRadius, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
             <CarPanel title="Your car goes here" plate="" cta="Add a car" />
             <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
               <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
@@ -236,7 +238,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
         ) : (
           <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
             {items.map((c, i) => (
-              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: 210, borderRadius: 24, overflow: "hidden", ...r.sheet }}>
+              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: H, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.sheet }}>
                 {c.photo ? <Image source={{ uri: c.photo }} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} /> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
                 {c.photo ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
                 {c.photo ? <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
@@ -262,7 +264,7 @@ export function HomeView(p: HomeViewProps) {
   const car = p.cars[active] ?? p.cars[0];
   const pct = p.progress;
   return (
-    <View style={{ gap: 20, paddingBottom: 120 }}>
+    <View style={{ gap: metrics.sectionGap, paddingBottom: 100 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Profile and settings" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
           <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>

@@ -84,3 +84,16 @@ describe("one design system and one place for everything",()=>{
     expect(bar).toContain("size={20}");
   });
 });
+import {metrics,SCALE} from "../lib/metrics";
+describe("sizes come from one rulebook",()=>{
+  it("keeps every shared size on the scale",()=>{
+    for(const [k,v] of Object.entries(metrics)) expect([k,(SCALE as readonly number[]).includes(v as number)]).toEqual([k,true]);
+  });
+  it("uses the same section gap on Home and in Screen",()=>{
+    expect(read("src/ui/HomeView.tsx")).toContain("gap: metrics.sectionGap");
+    expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 96, gap: 20");
+  });
+  it("does not leave a tall empty car panel when there is no photo",()=>{
+    const home=read("src/ui/HomeView.tsx");expect(home).toContain("metrics.heroCompact");expect(home).not.toContain("height: 210");
+  });
+});

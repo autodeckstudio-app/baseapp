@@ -13,10 +13,10 @@ export function StoryCircles({ groups, seen, onOpen }: { groups: StoryGroup[]; s
       {groups.map((g) => {
         const ring = g.live && !seen.has(g.key) ? colors.accent : colors.borderSubtle;
         return (
-          <Pressable key={g.key} accessibilityRole="button" accessibilityLabel={`${g.title}, ${g.items.length} ${g.items.length === 1 ? "story" : "stories"}`} onPress={() => onOpen(g)} style={{ width: 68, alignItems: "center", gap: 6 }}>
-            <View style={{ width: 68, height: 68, borderRadius: 34, borderWidth: 2.5, borderColor: ring, padding: 3 }}>
+          <Pressable key={g.key} accessibilityRole="button" accessibilityLabel={`${g.title}, ${g.items.length} ${g.items.length === 1 ? "story" : "stories"}`} onPress={() => onOpen(g)} style={{ width: 60, alignItems: "center", gap: 6 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: ring, padding: 2 }}>
               <View style={{ flex: 1, borderRadius: 24, overflow: "hidden", backgroundColor: colors.accentHaze, alignItems: "center", justifyContent: "center" }}>
-                {g.cover ? <Image source={{ uri: g.cover }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <Icon name="star" color={colors.accent} size={24} />}
+                {g.cover ? <Image source={{ uri: g.cover }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <Icon name="star" color={colors.accent} size={20} />}
               </View>
             </View>
             <T role="caption" tone={g.live ? "accent" : "secondary"} numberOfLines={1}>{g.title}</T>
