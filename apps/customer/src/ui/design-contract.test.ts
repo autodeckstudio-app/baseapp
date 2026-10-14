@@ -35,3 +35,18 @@ describe("unified product design contract",()=>{
     const source=read("src/lib/imagery.ts");expect(source).toContain("suv: heroAlt");expect(source).toContain("luxury: heroAlt");expect(source).not.toContain("ALL_POOL");
   });
 });
+describe("home and car imagery guardrails",()=>{
+  it("never claims a car health score without data and never shows a stock car as the customer's car",()=>{
+    const home=read("src/ui/HomeView.tsx");
+    expect(home).not.toContain("Car health");
+    expect(home).not.toContain("Excellent");
+    expect(home).not.toContain("vehicleImagery");
+    expect(read("src/ui/CarThumb.tsx")).not.toContain("vehicleImagery");
+  });
+  it("keeps one lead card and no pasted-in services modules on Home",()=>{
+    const home=read("src/ui/HomeView.tsx");
+    expect(home).toContain("<LeadCard");
+    expect(home).not.toContain("Popular services");
+    expect(home).not.toContain("From the studio");
+  });
+});

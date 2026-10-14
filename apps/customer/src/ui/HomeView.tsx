@@ -5,13 +5,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Modal, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
-import { serviceImagery, vehicleImagery, sceneImagery } from "../lib/imagery";
+import { serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
 
-export type HomeCar = { id: string; title: string; plate: string; photo?: string | null; category?: string | null };
+export type HomeCar = { id: string; title: string; plate: string; photo?: string | null; category?: string | null; hasPhoto?: boolean };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
 export type HomeReminder = { title: string; detail: string; chip: string; danger: boolean };
-export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void };
+export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void; idle?: boolean };
 export type HomeViewProps = {
   greeting: string;
   initial: string;
@@ -23,7 +23,6 @@ export type HomeViewProps = {
   /** 0 to 100 when a visit is under way, else null. */
   progress: number | null;
   stage: string;
-  health: { label: string; ok: boolean };
   membership: { title: string; detail: string } | null;
   studio: { address: string; hours: string };
   banner?: ReactNode;
@@ -81,33 +80,6 @@ function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: str
         {badge ? <View style={{ position: "absolute", top: 14, right: 16, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
       </View>
       <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Tile({ title, children, onPress, style }: { title: string; children: ReactNode; onPress?: () => void; style?: object }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  return (
-    <Pressable accessibilityRole={onPress ? "button" : undefined} onPress={onPress} disabled={!onPress} style={({ pressed }) => ({ minWidth: 0, borderRadius: 24, padding: 16, gap: 8, opacity: pressed ? 0.85 : 1, ...r.card, ...style })}>
-      <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
-      {children}
-    </Pressable>
-  );
-}
-
-function Brand({ title, body, cta, image, onPress, tint }: { title: string; body: string; cta: string; image: ImageSourcePropType; onPress: () => void; tint?: boolean }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ width: 262, height: 150, borderRadius: 26, overflow: "hidden", opacity: pressed ? 0.9 : 1, backgroundColor: "#16181C" })}>
-      <Image source={image} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%", opacity: 0.85 }} />
-      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: tint ? "linear-gradient(100deg, rgba(60,34,18,.92) 0%, rgba(22,24,28,.30) 100%)" : "linear-gradient(100deg, rgba(10,10,12,.9) 0%, rgba(10,10,12,.2) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,.45)" }) }} />
-      <View style={{ flex: 1, padding: 16, justifyContent: "space-between" }}>
-        <View style={{ gap: 4, maxWidth: 170 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{title}</Text>
-          <Text style={{ color: "rgba(255,255,255,.82)", fontSize: 12, lineHeight: 16 }}>{body}</Text>
-        </View>
-        <View style={{ alignSelf: "flex-start", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.28)" }}><Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "700" }}>{cta}</Text></View>
-      </View>
     </Pressable>
   );
 }
@@ -212,6 +184,81 @@ function MenuDrawer({ open, onClose, items, initial, name: who }: { open: boolea
   );
 }
 
+const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage: night ? "linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(236,134,56,.07) 100%)" : "linear-gradient(135deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.4) 100%)" } as object) : {});
+
+/** The car card when there is no photo of the customer's own car: a quiet glass panel with the plate, never a stock photo of someone else's car. */
+function CarPanel({ title, plate, cta }: { title: string; plate: string; cta: string }) {
+  const { name, colors } = useExperienceTheme();
+  return (
+    <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, padding: 18, justifyContent: "space-between", ...glassBg(name !== "light") }}>
+      <Icon name="car" color={colors.textTertiary} size={30} />
+      <View style={{ gap: 6 }}>
+        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>{title}</Text>
+        {plate ? <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "700", letterSpacing: 2 }}>{plate}</Text> : null}
+        {cta ? <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "700" }}>{cta}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+/** One lead card that changes with the car's state: live job, something needing action, a document due, or a prompt to book. */
+function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: HomeLive | null; pct: number | null; reminder: HomeReminder | null; car: HomeCar | undefined; onReminder: () => void; onBook: () => void }) {
+  const { name, colors } = useExperienceTheme();
+  const r = raised(name);
+  const idle = !live || (live.idle === true && !reminder);
+  const kicker = reminder ? "Needs attention" : idle ? "Ready when you are" : live!.kicker;
+  const title = reminder ? `${reminder.title}: ${reminder.chip}` : idle ? (car ? `Book care for your ${car.title}` : "Add your car to begin") : live!.title;
+  const detail = reminder ? reminder.detail : idle ? (live?.detail ?? "") : live!.detail;
+  const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: 26, padding: 18, gap: 10, opacity: pressed ? 0.9 : 1, ...r.card, ...glassBg(name !== "light") })}>
+      <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
+      <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
+      {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
+      {!reminder && !idle && pct !== null ? (
+        <View style={{ height: 8, overflow: "hidden", ...r.well, borderRadius: 6 }}>
+          <View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} />
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** Up to three services, one per category, from the live catalogue only. */
+export function pickSuggested(all: HomeService[]): HomeService[] {
+  const seen = new Set<string>();
+  const out: HomeService[] = [];
+  for (const sv of all) { if (seen.has(sv.category)) continue; seen.add(sv.category); out.push(sv); if (out.length === 3) break; }
+  return out;
+}
+
+function SuggestRow({ s, first, onPress }: { s: HomeService; first: boolean; onPress: () => void }) {
+  const { colors } = useExperienceTheme();
+  const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={s.name} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
+      <Image source={img} resizeMode="cover" style={{ width: 56, height: 56, borderRadius: 16 }} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{s.name}</Text>
+        <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 13 }}>{s.price === "Quote on request" ? "Quote on request" : s.price}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: string; sub: string; onPress: () => void; first?: boolean }) {
+  const { colors } = useExperienceTheme();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 16, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
+      <Icon name={icon} color="#EC8638" size={20} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
+        <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{sub}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 // Garage cars as one endless horizontal strip: three copies, re-centred after each swipe.
 function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; onOpen: (c: HomeCar) => void; onAdd: () => void; onActive: (i: number) => void }) {
   const { name, colors } = useExperienceTheme();
@@ -237,14 +284,12 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
     timer.current = setTimeout(() => settle(x), 140);
   };
   const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
-  const img = (c: HomeCar): ImageSourcePropType => c.photo ? { uri: c.photo } : ((vehicleImagery as Record<string, ImageSourcePropType>)[c.category ?? "sedan"] ?? vehicleImagery.sedan);
   return (
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: 210 }}>
       {w > 0 ? (
         n === 0 ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: 210, borderRadius: 30, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
-            <Image source={vehicleImagery.sedan} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%", borderRadius: 30 }} />
-            <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} />
+            <CarPanel title="Your car goes here" plate="" cta="Add a car" />
             <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
               <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
             </View>
@@ -253,8 +298,8 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
           <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
             {items.map((c, i) => (
               <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: 210, borderRadius: 30, overflow: "hidden", ...r.sheet }}>
-                <Image source={img(c)} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
-                <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} />
+                {c.photo ? <Image source={{ uri: c.photo }} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} /> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
+                {c.photo ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
                 <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
                     <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Care map</Text>
@@ -273,26 +318,11 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
-  const [chip, setChip] = useState<string | null>(p.initialChip ?? null);
-  const cats = groupCategories(chip);
-  const shown = p.services.filter((s) => !chip || cats.includes(s.category));
-  const byBrand = chip === "coatings" || chip === "ppf";
-  const visible = chip === null ? shown.slice(0, 4) : shown;
-  const chunk = (xs: HomeService[]) => { const rr: HomeService[][] = []; for (let i = 0; i < xs.length; i += 2) rr.push(xs.slice(i, i + 2)); return rr; };
-  const brandGroups: Array<[string, HomeService[]]> = [];
-  if (byBrand) for (const sv of visible) { const k = sv.brand?.trim() || "Other"; const g = brandGroups.find(([n]) => n === k); if (g) g[1].push(sv); else brandGroups.push([k, [sv]]); }
-  const renderRows = (xs: HomeService[]) => chunk(xs).map((row, i) => (
-    <View key={i} style={{ flexDirection: "row", gap: 12 }}>
-      {row.map((s) => <ServiceCard key={s.id} s={s} onPress={() => p.onService(s)} />)}
-      {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
-    </View>
-  ));
+  const suggested = pickSuggested(p.services);
   const [active, setActive] = useState(0);
   const [menu, setMenu] = useState(false);
   const [contact, setContact] = useState(false);
   const car = p.cars[active] ?? p.cars[0];
-  const heroImg: ImageSourcePropType = car?.photo ? { uri: car.photo } : ((vehicleImagery as Record<string, ImageSourcePropType>)[car?.category ?? "sedan"] ?? vehicleImagery.sedan);
-  const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
   const pct = p.progress;
   return (
     <View style={{ gap: 20, paddingBottom: 120 }}>
@@ -316,59 +346,14 @@ export function HomeView(p: HomeViewProps) {
 
       {p.banner}
 
-      <View style={{ flexDirection: "row", gap: 14, alignItems: "stretch" }}>
-        <Tile title={p.live?.kicker ?? "Visit"} style={{ flex: 1.45 }} onPress={p.live?.onPress ?? p.onVisits}>
-          <Text numberOfLines={1} style={{ color: colors.textTertiary, fontSize: 11 }}>{p.live ? p.live.detail : "No visit booked"}</Text>
-          <View style={{ height: 10, overflow: "hidden", ...r.well, borderRadius: 6 }}>
-            <View style={{ width: `${pct ?? 0}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} />
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-            <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "800" }}>{pct !== null ? `${pct}%` : "-"}</Text>
-            <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 12, textAlign: "right", flexShrink: 1, maxWidth: 90 }}>{p.live ? p.live.title : "Book now"}</Text>
-          </View>
-        </Tile>
-        <Tile title="Car health" style={{ flex: 1 }} onPress={p.onCareMap}>
-          <View style={{ alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, ...r.well, borderRadius: 12 }}><Text style={{ color: p.health.ok ? "#2E9E6B" : "#EC8638", fontSize: 12, fontWeight: "800" }}>{p.health.label}</Text></View>
-          <View style={{ alignItems: "flex-end", marginTop: "auto" as never }}>
-            <View style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name={p.health.ok ? "check" : "shield"} color={p.health.ok ? "#2E9E6B" : "#EC8638"} size={20} /></View>
-          </View>
-        </Tile>
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 14, alignItems: "stretch" }}>
-        <Tile title="Studio" style={{ flex: 1 }} onPress={p.onStudio}>
-          <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center", ...r.well, borderRadius: 17 }}><Icon name="garage" color="#EC8638" size={18} /></View>
-          <Text numberOfLines={3} style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 16 }}>{p.studio.address}</Text>
-          <Text numberOfLines={2} style={{ color: colors.textTertiary, fontSize: 11 }}>{p.studio.hours}</Text>
-        </Tile>
-        <Tile title={p.membership ? "Membership" : "Join the club"} style={{ flex: 1 }} onPress={p.onMembership}>
-          <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{p.membership ? p.membership.title : "Wash plans"}</Text>
-          <Text numberOfLines={3} style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 16 }}>{p.membership ? p.membership.detail : "Regular washes at a better rate."}</Text>
-          <View style={{ alignSelf: "flex-start", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, ...r.quiet }}><Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800" }}>{p.membership ? "Open" : "See plans"}</Text></View>
-        </Tile>
-      </View>
+      <LeadCard live={p.live} pct={pct} reminder={p.live?.idle ? p.reminders[0] ?? null : null} car={car} onReminder={p.onReminders} onBook={p.onBook} />
 
       <View style={{ gap: 12 }}>
-        <Heading title="From the studio" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingRight: 8, paddingBottom: 14 }}>
-          <Brand title="Protect the paint" body="Paint protection film, fitted in the studio." cta="Explore PPF" image={serviceImagery.ppf} onPress={() => { setChip("ppf"); p.onCategory("ppf"); }} tint />
-          <Brand title="Ceramic season" body="Coatings that keep the shine." cta="See coatings" image={serviceImagery.ceramic} onPress={() => { setChip("coatings"); p.onCategory("coatings"); }} />
-          <Brand title="Bring a friend" body="Share AutoDeck with someone who loves their car." cta="Share" image={sceneImagery.membership} onPress={p.onShare} tint />
-        </ScrollView>
-      </View>
-
-      <View style={{ gap: 12 }}>
-        <Heading title="Popular services" action="View all" onAction={p.onAllServices} />
-        <GroupChips value={chip} onChange={(k) => { setChip(k); p.onCategory(k); }} />
-        {byBrand
-          ? brandGroups.map(([brand, xs]) => (
-              <View key={brand} style={{ gap: 10 }}>
-                <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{brand}</Text>
-                {renderRows(xs)}
-              </View>
-            ))
-          : renderRows(visible)}
-        {visible.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Nothing here yet.</Text> : null}
+        <Heading title={car ? `For your ${car.title}` : "Services"} action="All services" onAction={p.onAllServices} />
+        <View style={{ borderRadius: 24, overflow: "hidden", ...r.card }}>
+          {suggested.map((sv, i) => <SuggestRow key={sv.id} s={sv} first={i === 0} onPress={() => p.onService(sv)} />)}
+          {suggested.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14, padding: 16 }}>Services will show here.</Text> : null}
+        </View>
       </View>
 
       {p.reminders.length ? (
@@ -387,6 +372,14 @@ export function HomeView(p: HomeViewProps) {
           ))}
         </View>
       ) : null}
+      <View style={{ gap: 12 }}>
+        <Heading title="Studio and club" />
+        <View style={{ borderRadius: 24, overflow: "hidden", ...r.card }}>
+          <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
+          <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
+          <ClubRow icon="pin" title="The studio" sub={`${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
+        </View>
+      </View>
       <ContactSheet open={contact} onClose={() => setContact(false)} onCall={p.onCall} onWhatsApp={p.onWhatsApp} />
       <MenuDrawer open={menu} onClose={() => setMenu(false)} items={[
         { icon: "menu", label: "Profile and settings", on: p.onAvatar },

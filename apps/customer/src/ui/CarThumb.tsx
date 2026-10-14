@@ -5,7 +5,7 @@ import { FadeImage } from "@autodeck/ui/native";
 import type { Vehicle } from "@autodeck/core";
 import { resolveVehiclePhotoUrl } from "../lib/vehicle-service";
 import { photoKey, currentPhoto } from "./photo-state";
-import { vehicleImagery } from "../lib/imagery";
+import { Icon } from "@autodeck/ui/native";
 
 type Car = Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string };
 
@@ -28,13 +28,13 @@ export function useVehiclePhotoUri(car: Car | null | undefined): string | null {
 export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undefined; height: number; width?: number | `${number}%`; radius?: number }) {
   const uri = useVehiclePhotoUri(car);
   const [failedUri, setFailedUri] = useState<string | null>(null);
-  const fallback = vehicleImagery[(car?.category ?? "sedan") as keyof typeof vehicleImagery] ?? vehicleImagery.sedan;
-  const source = uri && failedUri !== uri ? { uri } : fallback;
+  const hasPhoto = !!uri && failedUri !== uri;
   // A saved photo is loading, not absent. Do not paint a different/old car.
   const pending = !!car?.photoUrl && !uri;
   return (
     <View style={{ width: width ?? "100%", height, borderRadius: radius, overflow: "hidden" }}>
-      {!pending ? <FadeImage key={uri ?? "fb"} source={source} resizeMode="cover" onError={() => setFailedUri(uri)} style={{ width: "100%", height: "100%" }} /> : null}
+      {!pending && hasPhoto ? <FadeImage key={uri} source={{ uri: uri as string }} resizeMode="cover" onError={() => setFailedUri(uri)} style={{ width: "100%", height: "100%" }} /> : null}
+      {!pending && !hasPhoto ? <View style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(127,127,135,0.14)" }}><Icon name="car" color="#8A8A92" size={Math.max(18, Math.min(34, height / 3))} /></View> : null}
     </View>
   );
 }

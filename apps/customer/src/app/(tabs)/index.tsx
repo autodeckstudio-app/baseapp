@@ -175,7 +175,7 @@ export default function HomeScreen() {
       ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: `Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`, onPress: () => (bookingId ? router.push(`/(tabs)/bookings/${bookingId}`) : undefined) }
       : m.upcomingBooking
         ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => (bookingId ? router.push(`/(tabs)/bookings/${bookingId}`) : undefined) }
-        : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act };
+        : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act, idle: true };
   const vehicles = [m.activeVehicle, ...m.otherVehicles].filter(Boolean) as NonNullable<typeof m.activeVehicle>[];
 
   return (
@@ -185,7 +185,6 @@ export default function HomeScreen() {
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
         progress={m.liveJob ? ({ PENDING_VEHICLE: 10, VEHICLE_RECEIVED: 25, IN_PROGRESS: 55, QUALITY_CHECK: 85, READY_FOR_DELIVERY: 100, DELIVERED: 100 } as Record<string, number>)[m.liveJob.status] ?? 10 : null}
         stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
-        health={m.protections.length === 0 ? { label: "Excellent", ok: true } : { label: `${m.protections.length} to review`, ok: false }}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours }}
         onMenu={() => router.push("/(tabs)/profile")}
@@ -199,7 +198,7 @@ export default function HomeScreen() {
         onVisits={() => router.push("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)}
         unread={unread}
-        cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null }))}
+        cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: priceLabel(s), brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}
