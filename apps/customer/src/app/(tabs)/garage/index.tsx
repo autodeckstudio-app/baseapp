@@ -110,8 +110,6 @@ export default function GarageScreen() {
       ) : null}
       <Button kind={lead ? "quiet" : "primary"} label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
       <Button label="Service history and invoices" kind="quiet" onPress={()=>router.push("/(tabs)/garage/history")}/>
-      {archived.length && !showArchived ? <Button kind="quiet" label={`Archived cars (${archived.length})`} onPress={()=>setShowArchived(true)} /> : null}
-      {archived.length && showArchived ? <View style={{gap:space.line}}><Kicker>Archived cars</Kicker><T role="caption" tone="secondary">Removed from the garage, not deleted. Past services and invoices remain in history.</T><Button kind="quiet" label="Hide archived cars" onPress={()=>setShowArchived(false)} />{archived.map(v=><Pane key={v.id} pad="inset"><View style={{gap:space.line}}><T role="heading">{v.make} {v.model}</T><Plate value={v.registrationNumber}/><Button kind="quiet" label="View service history" onPress={()=>router.push({pathname:"/(tabs)/garage/history",params:{vehicleId:v.id}})}/><Button kind="quiet" label="Restore to garage" busy={archiveActionBusy===v.id} onPress={()=>void restore(v)}/></View></Pane>)}</View>:null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
     </Screen>
   );

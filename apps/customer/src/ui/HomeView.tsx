@@ -154,6 +154,33 @@ export function GroupChips({ value, onChange }: { value: string | null; onChange
 }
 export const groupCategories = (key: string | null): string[] => GROUPS.find((g) => g.key === key)?.cats ?? [];
 
+function ContactSheet({ open, onClose, onCall, onWhatsApp }: { open: boolean; onClose: () => void; onCall: () => void; onWhatsApp: () => void }) {
+  const { name, colors } = useExperienceTheme();
+  const r = raised(name);
+  if (!open) return null;
+  const row = (icon: IconName, label: string, sub: string, on: () => void) => (
+    <Pressable key={label} accessibilityRole="button" onPress={() => { onClose(); on(); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 22, opacity: pressed ? 0.75 : 1, ...r.sheet })}>
+      <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name={icon} color="#EC8638" size={20} /></View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "700" }}>{label}</Text>
+        <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{sub}</Text>
+      </View>
+    </Pressable>
+  );
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,.45)" }} />
+        <View style={{ padding: 18, paddingBottom: 30, gap: 12, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: colors.canvas, width: "100%", maxWidth: 480, alignSelf: "center" }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>Contact us</Text>
+          {row("phone", "Call the studio", "Speak to us directly", onCall)}
+          {row("chat", "WhatsApp", "Send us a message", onWhatsApp)}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 type DrawerItem = { icon: IconName; label: string; on: () => void };
 function MenuDrawer({ open, onClose, items, initial, name: who }: { open: boolean; onClose: () => void; items: DrawerItem[]; initial: string; name: string }) {
   const { name, colors } = useExperienceTheme();
@@ -262,6 +289,7 @@ export function HomeView(p: HomeViewProps) {
   ));
   const [active, setActive] = useState(0);
   const [menu, setMenu] = useState(false);
+  const [contact, setContact] = useState(false);
   const car = p.cars[active] ?? p.cars[0];
   const heroImg: ImageSourcePropType = car?.photo ? { uri: car.photo } : ((vehicleImagery as Record<string, ImageSourcePropType>)[car?.category ?? "sedan"] ?? vehicleImagery.sedan);
   const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
@@ -362,11 +390,11 @@ export function HomeView(p: HomeViewProps) {
           ))}
         </View>
       ) : null}
+      <ContactSheet open={contact} onClose={() => setContact(false)} onCall={p.onCall} onWhatsApp={p.onWhatsApp} />
       <MenuDrawer open={menu} onClose={() => setMenu(false)} items={[
         { icon: "calendar", label: "Book a service", on: p.onBook },
         { icon: "wrench", label: "Visits", on: p.onVisits },
-        { icon: "phone", label: "Call the studio", on: p.onCall },
-        { icon: "chat", label: "WhatsApp", on: p.onWhatsApp },
+        { icon: "chat", label: "Contact us", on: () => setContact(true) },
         { icon: "garage", label: "Studio and hours", on: p.onStudio },
         { icon: "shield", label: p.membership ? "Membership" : "Join the club", on: p.onMembership },
         { icon: "bell", label: p.unread > 0 ? `Notifications (${p.unread})` : "Notifications", on: p.onBell },
