@@ -134,6 +134,8 @@ const DEFERRED = [
   "payment/confirmManualPayment.ts",
   "payment/confirmPaymentMock.ts",
   "payment/initiatePayment.ts",
+  "payment/createCheckoutOrder.ts",
+  "payment/verifyCheckoutPayment.ts",
   "payment/recordManualPayment.ts",
   "service/calculatePrice.ts",
   "service/getServiceCatalogue.ts",

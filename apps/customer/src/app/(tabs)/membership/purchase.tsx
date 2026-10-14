@@ -9,6 +9,7 @@ import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from ".
 import { db } from "../../../lib/firebase";
 import { purchaseMembership, generateIdempotencyKey } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
+import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { useAuth } from "../../../hooks/useAuth";
 
 export default function PurchaseMembershipScreen() {
@@ -60,8 +61,17 @@ export default function PurchaseMembershipScreen() {
     setError(null);
     try {
       const result = await purchaseMembership(plan.id, method, idempotencyKey);
-      if (method === "razorpay_payment_link" && result.paymentUrl) {
-        void Linking.openURL(result.paymentUrl).catch(() => undefined);
+      if (method === "razorpay_payment_link") {
+        let opened = false;
+        if (checkoutSupported && result.paymentId) {
+          try {
+            await payWithCheckout(result.paymentId, { name: "AutoDeck Studio", description: plan.name });
+            opened = true;
+          } catch {
+            opened = false; // checkout unavailable: fall back to the payment link below
+          }
+        }
+        if (!opened && result.paymentUrl) void Linking.openURL(result.paymentUrl).catch(() => undefined);
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {

@@ -24,6 +24,8 @@ export type RateLimitAction =
   | "approval.respond"
   | "approval.cancel"
   | "payment.initiate"
+  | "payment.createOrder"
+  | "payment.verify"
   | "payment.confirmMock"
   | "payment.confirmManual"
   | "payment.refund"
@@ -135,6 +137,8 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "approval.respond": { limit: 30, windowMs: 60_000 },
   "approval.cancel": { limit: 60, windowMs: 60_000 },
   "payment.initiate": { limit: 10, windowMs: 60_000 },
+  "payment.createOrder": { limit: 10, windowMs: 60_000 },
+  "payment.verify": { limit: 20, windowMs: 60_000 },
   "payment.confirmMock": { limit: 60, windowMs: 60_000 },
   "payment.confirmManual": { limit: 60, windowMs: 60_000 },
   "payment.refund": { limit: 30, windowMs: 60_000 },

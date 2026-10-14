@@ -31,3 +31,12 @@ export const initiateRefundSchema = z.object({
   paymentId: z.string().min(1),
   reason: z.string().min(1).max(500),
 }).strict();
+
+export const createCheckoutOrderSchema = z.object({ paymentId: z.string().min(1) }).strict();
+
+export const verifyCheckoutPaymentSchema = z.object({
+  paymentId: z.string().min(1),
+  razorpay_order_id: z.string().min(1),
+  razorpay_payment_id: z.string().min(1),
+  razorpay_signature: z.string().min(1),
+}).strict();
