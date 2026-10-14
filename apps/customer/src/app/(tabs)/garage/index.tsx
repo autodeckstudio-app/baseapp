@@ -84,7 +84,7 @@ export default function GarageScreen() {
       {removing ? (
         <Notice
           title={`Remove ${removing.registrationNumber} from your garage?`}
-          body={removeError ?? "This archives the car. You can restore it later. Past services and invoices stay on record."}
+          body={removeError ?? "This removes the car from your garage. Past services and invoices stay on record."}
           action={
             <View style={{ gap: space.breath }}>
               <Button label="Archive car" kind="danger" busy={removeBusy} onPress={() => void confirmRemove()} />
