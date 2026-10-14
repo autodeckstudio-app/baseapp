@@ -46,7 +46,7 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
           </View>
         </View>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      {tiles.length > 0 ? <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
         {tiles.map((t) => (
           <Pressable key={t.label} accessibilityRole="button" onPress={t.onPress} style={({ pressed }) => ({ flexBasis: "47%", flexGrow: 1, borderRadius: 24, ...glassSurface, padding: 16, gap: 12, opacity: pressed ? 0.85 : 1 })}>
             <View style={{ width: 44, height: 44, borderRadius: 24, backgroundColor: "rgba(236,134,56,0.16)", alignItems: "center", justifyContent: "center" }}>
@@ -55,7 +55,7 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
             <Text style={{ color: ink.textPrimary, fontSize: 15, fontWeight: "600" }}>{t.label}</Text>
           </Pressable>
         ))}
-      </View>
+      </View> : null}
     </View>
   );
 }

@@ -10,12 +10,6 @@ import { STUDIO_INFO, formatHours } from "../../lib/studio-info";
 import { getStudioInfo } from "../../lib/booking-service";
 import { Screen } from "../../ui/kit";
 
-const ROWS: Array<{ cat: string; title: string; note: string }> = [
-  { cat: "washing", title: "Wash and care", note: "Detailing washes and care plans" },
-  { cat: "coating", title: "Coatings", note: "Ceramic and paint coatings" },
-  { cat: "ppf", title: "Paint film", note: "Paint protection film" },
-  { cat: "tinting", title: "Window film", note: "Tint and heat control" },
-];
 
 function MapCanvas({ onPress }: { onPress: () => void }) {
   const { name, colors } = useExperienceTheme();
@@ -72,18 +66,6 @@ export default function StudioScreen() {
           <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>AutoDeck Studio</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{STUDIO_INFO.address}</Text>
           <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{hours}</Text>
-          <View style={{ gap: 8 }}>
-            {ROWS.map((row) => (
-              <Pressable key={row.cat} accessibilityRole="button" onPress={() => router.push({ pathname: "/(tabs)/catalogue", params: { cat: row.cat } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 16, opacity: pressed ? 0.8 : 1, ...r.well })}>
-                <View style={{ width: 40, height: 40, borderRadius: 16, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name="services" color="#EC8638" size={18} /></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "700" }}>{row.title}</Text>
-                  <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{row.note}</Text>
-                </View>
-                <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-              </Pressable>
-            ))}
-          </View>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center", marginTop: 4 }}>
             <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/catalogue")} style={({ pressed }) => ({ flex: 1, height: 54, borderRadius: 24, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, ...r.dark })}>
               <Text style={{ color: name === "light" ? "#FFFFFF" : "#16181C", fontSize: 15, fontWeight: "800" }}>Start booking</Text>

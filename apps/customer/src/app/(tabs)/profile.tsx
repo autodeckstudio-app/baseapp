@@ -73,10 +73,9 @@ export default function YouScreen() {
         name={name}
         email={auth.user.email}
         onEdit={() => { setDraft(name === "AutoDeck member" ? "" : name); setSaveError(null); setEditing(true); }}
-        tiles={[
-          { icon: "users", label: t("Help and contact"), onPress: () => router.push("/(tabs)/help") },
-        ]}
+        tiles={[]}
       />
+      <Pane pad="none"><View style={{ paddingHorizontal: 16 }}><Row last title="Help and contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} /></View></Pane>
       {actionMessage?<Notice title="Account update" body={actionMessage}/>:null}
       <View style={{ gap: space.hair }}>
         <Kicker>Appearance</Kicker>
