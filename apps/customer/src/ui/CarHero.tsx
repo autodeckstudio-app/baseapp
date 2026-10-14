@@ -25,7 +25,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
         <View style={{ flexDirection: "row", gap: 10 }}>
           {facts.map((f) => (
             <View key={f.label} style={{ flex: 1, minWidth: 0, alignItems: "center", gap: 4, borderRadius: 16, ...glassInner, paddingVertical: 12, paddingHorizontal: 4 }}>
-              <T role="label" tone="accent" numberOfLines={1} >{f.value}</T>
+              <T role="label" tone="accent" style={{ fontSize: f.value.length <= 7 ? 13 : f.value.length <= 9 ? 11.5 : 10, letterSpacing: 0 }}>{f.value}</T>
               <T role="caption" tone="tertiary" numberOfLines={1}>{f.label}</T>
             </View>
           ))}

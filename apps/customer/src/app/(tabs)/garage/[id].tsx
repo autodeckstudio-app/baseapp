@@ -276,7 +276,7 @@ export default function VehicleDetailScreen() {
             facts={[
               { label: "Year", value: String(vehicle.year ?? "-") },
               { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
-              { label: "Type", value: vehicle.category ? vehicle.category.toUpperCase() : "-" },
+              { label: "Type", value: vehicle.category ? vehicle.category.charAt(0).toUpperCase() + vehicle.category.slice(1) : "-" },
               { label: "Protection", value: verifiedProtections.length > 0 ? `${verifiedProtections.length} on file` : "None" },
             ]}
             onBook={() => router.push("/(tabs)/catalogue")}
