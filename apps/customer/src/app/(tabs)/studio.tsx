@@ -37,7 +37,6 @@ function MapCanvas({ onPress }: { onPress: () => void }) {
       {bar({ left: 112, top: 0, bottom: 0, width: 14 })}
       {bar({ left: 240, top: 0, bottom: 0, width: 14 })}
       <Text style={{ position: "absolute", left: 150, top: 108, color: label, fontSize: 10, fontWeight: "600" }}>Old Sharda Mandir Rd</Text>
-      <Text style={{ position: "absolute", left: 22, top: 190, color: label, fontSize: 10, fontWeight: "600" }}>Ellisbridge</Text>
       <View style={{ position: "absolute", left: 150, top: 150, alignItems: "center", gap: 4 }}>
         <View style={{ width: 54, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", backgroundColor: night ? "#F3F1ED" : "#16181C", ...(Platform.OS === "web" ? ({ boxShadow: "0 12px 22px rgba(0,0,0,.35)" } as object) : {}) }}>
           <Icon name="garage" color={night ? "#16181C" : "#FFFFFF"} size={26} />

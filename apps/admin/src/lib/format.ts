@@ -4,7 +4,7 @@
 // duplicated rather than shared, per apps/customer|studio's format.ts.
 
 export function formatPaise(paise: number): string {
-  return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: paise % 100 === 0 ? 0 : 2 })}`;
 }
 
 export function formatDateTime(iso: string | null): string {

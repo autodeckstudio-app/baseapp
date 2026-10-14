@@ -1,4 +1,4 @@
-// Garage: one lead car with its state, the rest compact (spec Â§6.4).
+// Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";

@@ -451,8 +451,7 @@ export function Field({
   );
 }
 
-export const rupees = (paise: number): string =>
-  `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: paise % 100 === 0 ? 0 : 2 })}`;
+export { rupees } from "../lib/money";
 
 /** Pulsing placeholder block for loading states. */
 export function Skeleton({ height = 56, width = "100%" }: { height?: number; width?: number | `${number}%` }) {

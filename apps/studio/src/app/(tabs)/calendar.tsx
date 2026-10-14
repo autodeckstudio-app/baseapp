@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import { listenToJobsByDate } from "../../lib/studio-service";
 import { useAuth } from "../../hooks/useAuth";
 import { useJobLabels } from "../../hooks/useBayNames";
+import { useJobPeople } from "../../hooks/useJobPeople";
 import type { ServiceJob } from "@autodeck/core";
 // V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
@@ -42,6 +43,7 @@ export default function CalendarScreen() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const labels = useJobLabels(auth.status === "ready" ? FIRST_STUDIO_ID : null);
+  const people = useJobPeople(jobs);
 
   const today = todayIST();
   const dateDays = Array.from({ length: 7 }, (_, i) => addDays(today, i));
@@ -99,7 +101,7 @@ export default function CalendarScreen() {
             keyExtractor={(j) => j.id}
             ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
             renderItem={({ item }) => (
-              <JobCard job={item} viewDate={selectedDate} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+              <JobCard job={item} carName={people.car(item)} customerName={people.customer(item)} viewDate={selectedDate} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
             )}
             ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           />

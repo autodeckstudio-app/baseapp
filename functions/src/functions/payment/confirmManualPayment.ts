@@ -41,7 +41,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
   if (payment.method === "razorpay_payment_link") {
     throw new HttpsError(
       "failed-precondition",
-      "Online payments cannot be confirmed manually â they complete via the payment provider.",
+      "Online payments cannot be confirmed manually - they complete via the payment provider.",
     );
   }
 

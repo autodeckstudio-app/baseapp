@@ -1,3 +1,4 @@
+import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
@@ -62,8 +63,7 @@ export default function BookingsScreen() {
 
   if (!bookings && !error) return <Loading label="Loading bookings" />;
   const all = [...(bookings ?? []), ...walkIns];
-  const upcoming = all.filter((b) => b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE").sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
-  const past = all.filter((b) => !upcoming.includes(b));
+  const { inStudio, upcoming, past } = bookingSections(all);
 
   const list = (items: Booking[]) => (
     <View style={{ gap: 12 }}>
@@ -80,8 +80,9 @@ export default function BookingsScreen() {
   return (
     <Screen header={<Text style={{ color: ink.textPrimary, fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
+      {inStudio.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>In the studio</Text>{list(inStudio)}</View> : null}
       {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
-      {!error && upcoming.length === 0 ? (
+      {!error && upcoming.length === 0 && inStudio.length === 0 ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
           <View style={{ padding: space.inset, gap: space.breath }}>

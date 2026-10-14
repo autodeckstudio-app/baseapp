@@ -10,6 +10,7 @@ import type { ServiceJob } from "@autodeck/core";
 import { colors, spacing, radius, typography, JobCard, LoadingState, ErrorState, Button } from "@autodeck/ui";
 import { Icon, FadeUp } from "@autodeck/ui/native";
 import { useJobLabels } from "../../hooks/useBayNames";
+import { useJobPeople } from "../../hooks/useJobPeople";
 
 function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -29,6 +30,7 @@ export default function TodaysJobsScreen() {
 
   const { width } = useWindowDimensions();
   const labels = useJobLabels(studioId);
+  const people = useJobPeople([...jobs, ...standby]);
   useEffect(() => {
     if (!studioId || !tenantId) return undefined;
     setLoading(true); setQueueReady(false); setError(null);
@@ -49,7 +51,7 @@ export default function TodaysJobsScreen() {
   }, [studioId, tenantId, attempt]);
 
   if (error) return <ErrorState title="Floor unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
-  if (loading || !queueReady) return <LoadingState label="Loading studio floor" />;
+  if (loading) return <LoadingState label="Loading studio floor" />;
 
   const activeJobs = jobs.filter((j) => j.status !== "STANDBY" && j.status !== "DELIVERED" && j.status !== "CANCELLED");
 
@@ -80,7 +82,7 @@ export default function TodaysJobsScreen() {
         </View>
       ) : activeJobs.map((item, index) => (
         <FadeUp key={item.id} delay={Math.min(index, 5) * 50}>
-          <JobCard job={item} viewDate={todayIST()} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
+          <JobCard job={item} carName={people.car(item)} customerName={people.customer(item)} viewDate={todayIST()} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
         </FadeUp>
       ))}
     </View>
@@ -127,7 +129,7 @@ export default function TodaysJobsScreen() {
       {standby.length > 0 && (
         <View style={{ gap: spacing.sm }}>
           <Text style={{ ...typography.title, color: colors.textPrimary }}>Waiting for a bay ({standby.length})</Text>
-          {standby.map((j) => <JobCard key={j.id} job={j} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
+          {standby.map((j) => <JobCard key={j.id} job={j} carName={people.car(j)} customerName={people.customer(j)} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
         </View>
       )}
       <View style={{ flexDirection: wide ? "row" : "column", gap: spacing.lg, alignItems: "flex-start" }}>

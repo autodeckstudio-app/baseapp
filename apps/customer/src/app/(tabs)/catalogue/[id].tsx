@@ -2,7 +2,8 @@ import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
 import type { ReactNode } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -30,6 +31,9 @@ const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  // The price bar is positioned over the whole page, so it must go away when another screen opens on top (Book now).
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const { colors } = useExperienceTheme();
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
@@ -261,17 +265,17 @@ export default function ServiceDetailScreen() {
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
         <View style={{ height: 180 }} />
       </Screen>
-      <View style={{ position: "absolute", left: 0, right: 0, marginHorizontal: "auto" as unknown as number, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#161618", borderRadius: 24, maxWidth: 480, width: "92%", alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
+      {focused ? <View style={{ position: "absolute", left: 0, right: 0, marginHorizontal: "auto" as unknown as number, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#161618", borderRadius: 24, maxWidth: 480, width: "92%", alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Selected size"} · incl. GST</T>
-            <T role="heading">{service.priceOnRequest ? "Consult" : priceLoading ? "Checking price" : priceBreakdown ? `${service.priceFrom === true ? "From " : ""}${rupees(priceBreakdown.total)}` : "Price unavailable"}</T>
+            <T role="heading">{service.priceOnRequest ? "Consult" : priceLoading ? "Checking price" : priceBreakdown ? `${service.priceFrom === true ? "From " : ""}${rupees(priceBreakdown.total)}` : "Pick your car size"}</T>
           </View>
           <View style={{ flex: 1.4 }}>
             <Button label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
           </View>
         </View>
-      </View>
+      </View> : null}
     </View>
   );
 }

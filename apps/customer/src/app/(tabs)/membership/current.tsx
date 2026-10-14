@@ -91,7 +91,7 @@ export default function CurrentMembershipScreen() {
             <T tone="secondary">
               {isPending
                 ? `${membership.washesTotal} washes a month and ${membership.discountPercent}% off other services - available after activation`
-                : `of ${membership.washesTotal} washes left this cycle Â· ${membership.discountPercent}% off everything else`}
+                : `of ${membership.washesTotal} washes left this cycle · ${membership.discountPercent}% off everything else`}
             </T>
           </View>
         </Pane>
@@ -106,6 +106,7 @@ export default function CurrentMembershipScreen() {
       </View>
 
       <View style={{ gap: space.breath }}>
+        {isPending && membership.planId ? <Button label="Pay online" onPress={() => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: membership.planId } })} /> : null}
         <Button label="View usage" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
         <Button label="Membership history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
       </View>

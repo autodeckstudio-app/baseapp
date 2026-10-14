@@ -1,3 +1,4 @@
+import { repairText } from "../../../lib/text-repair";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect, useCallback } from "react";
 import { Pressable, View } from "react-native";
@@ -118,8 +119,8 @@ export default function NotificationsScreen() {
                       <Icon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
-                      <T role="bodyStrong">{item.title}</T>
-                      <T role="caption" tone="secondary">{item.body}</T>
+                      <T role="bodyStrong">{repairText(item.title)}</T>
+                      <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
                     </View>
                     {unread ? <View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accent }} /> : null}

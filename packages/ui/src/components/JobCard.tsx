@@ -29,6 +29,9 @@ export function jobStatusLabel(status: string): string {
 export interface JobCardProps {
   bayName?: string | undefined;
   serviceName?: string | undefined;
+  // Who and what: shown first so staff can tell cars apart at a glance.
+  carName?: string | undefined;
+  customerName?: string | undefined;
   job: ServiceJob;
   onPress?: () => void;
   // The date this card is being shown under (e.g. the Calendar's selected
@@ -39,7 +42,7 @@ export interface JobCardProps {
 }
 
 /** Dense job summary for the studio app's Today's Jobs / Calendar lists. */
-export function JobCard({ job, onPress, viewDate, bayName, serviceName }: JobCardProps) {
+export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName, customerName }: JobCardProps) {
   const isMultiDay = job.scheduledDate !== job.estimatedEndDate;
   const isOngoingFromEarlierDay = viewDate !== undefined && viewDate !== job.scheduledDate;
 
@@ -51,6 +54,8 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName }: JobCar
         </Text>
         <StatusBadge label={JOB_STATUS_LABELS[job.status] ?? job.status} tone={statusTone(job.status)} />
       </View>
+      {carName ? <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }} numberOfLines={1}>{carName}</Text> : null}
+      {customerName ? <Text style={{ ...typography.caption, color: colors.textSecondary }} numberOfLines={1}>{customerName}</Text> : null}
       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{job.status === "STANDBY" ? "No bay reserved" : bayName ?? "Bay"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs }}>
         {job.isWalkIn && <Tag label="WALK-IN" />}

@@ -1,6 +1,6 @@
 /** Formats an integer paise amount as an INR display string, e.g. 59000 → "₹590". */
 export function formatPaise(paise: number): string {
-  return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: paise % 100 === 0 ? 0 : 2 })}`;
 }
 
 /** Formats an ISO instant as a short India-locale date, e.g. "Tue, 18 Aug". */
