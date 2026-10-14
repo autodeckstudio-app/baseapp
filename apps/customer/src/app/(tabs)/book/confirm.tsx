@@ -139,6 +139,16 @@ export default function BookingConfirmScreen() {
         />
       ) : null}
 
+      {service?.priceOnRequest !== true && breakdown ? (
+        <Pane pad="gap">
+          <Row title="Base" trailing={<T role="data">{rupees(breakdown.basePrice)}</T>} />
+          {breakdown.scopeAdjustment > 0 ? <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(breakdown.scopeAdjustment)}</T>} /> : null}
+          {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(breakdown.membershipDiscount)}</T>} /> : null}
+          <Row title={breakdown.taxDescription} trailing={<T role="data">{rupees(breakdown.tax)}</T>} />
+          <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(breakdown.total)}</T>} last />
+        </Pane>
+      ) : null}
+
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>

@@ -109,3 +109,4 @@ it("keeps the Home lead card on the shared card padding",()=>{expect(read("src/u
 it("never shows a made-up health status on car detail",()=>{expect(read("src/ui/CarOverview.tsx")).not.toMatch(/Health/);expect(read("src/app/(tabs)/garage/[id].tsx")).not.toContain("health=")});
 it("takes hero heights from metrics on car and booking detail",()=>{expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("metrics");expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain("metrics.heroCompact")});
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
+it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
