@@ -50,6 +50,7 @@ export default function TodaysJobsScreen() {
     return () => { unsub(); queueUnsub(); };
   }, [studioId, tenantId, attempt]);
 
+  if (authState.status === "ready" && !studioId) return <ErrorState title="No studio assigned" message="This account is not linked to a studio yet. Ask an admin to assign one." onRetry={() => setAttempt(n => n + 1)} />;
   if (error) return <ErrorState title="Floor unavailable" message={error} onRetry={() => setAttempt(n => n + 1)} />;
   if (loading) return <LoadingState label="Loading studio floor" />;
 

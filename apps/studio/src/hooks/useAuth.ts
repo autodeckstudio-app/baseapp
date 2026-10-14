@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { onIdTokenChanged, type User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
 import { httpsCallable } from "firebase/functions";
-import { auth, functions } from "../lib/firebase";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { COLLECTIONS } from "@autodeck/database";
+import { auth, db, functions } from "../lib/firebase";
+import { pickDefaultStudio } from "../lib/default-studio";
 
 type AuthState =
   | { status: "loading" }
@@ -44,13 +47,23 @@ export function useAuth(): AuthState {
       const tenantId = typeof rawClaims["tenantId"] === "string" ? rawClaims["tenantId"] : null;
 
       if (role && STUDIO_APP_ROLES.has(role) && tenantId) {
+        const claimStudio = typeof rawClaims["studioId"] === "string" ? rawClaims["studioId"] : null;
+        let studioId = claimStudio;
+        if (!studioId && role !== "studio") {
+          try {
+            const snap = await getDocs(query(collection(db, COLLECTIONS.studioConfig()), where("tenantId", "==", tenantId), limit(20)));
+            studioId = pickDefaultStudio(null, role, snap.docs.map((d) => ({ id: d.id })));
+          } catch {
+            studioId = null;
+          }
+        }
         setState({
           status: "ready",
           user,
           claims: {
             role: role as AutoDeckClaims["role"],
             tenantId,
-            studioId: typeof rawClaims["studioId"] === "string" ? rawClaims["studioId"] : null,
+            studioId,
           },
         });
       } else {
