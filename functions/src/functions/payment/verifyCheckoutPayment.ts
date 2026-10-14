@@ -7,10 +7,13 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { verifyCheckoutPaymentSchema } from "../../schemas/payment.js";
 import { signatureMatches } from "../../lib/razorpay-checkout.js";
+import { completeVerifiedCheckout } from "../../lib/razorpay-verified-checkout.js";
 
 // Step 3: check the signature the checkout modal returned. A match records the
-// provider payment id and moves the payment to "processing". The captured-payment
-// webhook completes it (invoice, membership) so there is one place that does that.
+// provider payment id and completes the payment through the same processor the
+// webhook uses (invoice, membership). The signed order_id|payment_id pair is proof
+// of payment, so activation does not depend on the webhook arriving. The webhook
+// stays as a backup: it finds the payment already completed and changes nothing.
 export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_SECRET"] }, async (request) => {
   const user = extractUser(request);
   const data = validate(verifyCheckoutPaymentSchema, request.data);
@@ -28,8 +31,11 @@ export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["
   if (!signatureMatches(data.razorpay_order_id, data.razorpay_payment_id, data.razorpay_signature, keySecret)) {
     throw new HttpsError("invalid-argument", "Payment could not be verified.");
   }
+  const db = getFirestore();
   if (payment.status === "pending") {
     await ref.update({ status: "processing", razorpayPaymentId: data.razorpay_payment_id, updatedAt: new Date().toISOString() });
   }
-  return { verified: true, status: payment.status === "pending" ? "processing" : payment.status };
+  const outcome = await completeVerifiedCheckout(db, { paymentId: data.paymentId, orderId: data.razorpay_order_id, providerPaymentId: data.razorpay_payment_id });
+  const after = (await ref.get()).data() as Payment;
+  return { verified: true, status: after.status, outcome };
 });
