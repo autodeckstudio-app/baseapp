@@ -109,7 +109,6 @@ export default function GarageScreen() {
         </Pane>
       ) : null}
       <Button kind={lead ? "quiet" : "primary"} label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
-      <Button label="Service history and invoices" kind="quiet" onPress={()=>router.push("/(tabs)/garage/history")}/>
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
     </Screen>
   );

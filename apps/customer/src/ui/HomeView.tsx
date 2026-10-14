@@ -239,12 +239,12 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
               <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: 210, borderRadius: 24, overflow: "hidden", ...r.sheet }}>
                 {c.photo ? <Image source={{ uri: c.photo }} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} /> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
                 {c.photo ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
-                <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
+                {c.photo ? <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
                     <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Care map</Text>
                   </View>
                   <View style={{ borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>{c.plate}</Text></View>
-                </View>
+                </View> : null}
               </Pressable>
             ))}
           </ScrollView>

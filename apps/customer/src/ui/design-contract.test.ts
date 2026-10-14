@@ -75,6 +75,7 @@ describe("one design system and one place for everything",()=>{
     expect(home).not.toContain("ContactSheet");
     const studio=read("src/app/(tabs)/studio.tsx");
     expect(studio).not.toContain("Change service");
+    expect(read("src/app/(tabs)/garage/index.tsx")).not.toContain("Service history and invoices");
   });
   it("keeps the bottom nav compact",()=>{
     const bar=read("src/ui/RaisedTabBar.tsx");
