@@ -16,7 +16,7 @@ import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, Pane, Screen, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
   PENDING: { label: "Awaiting confirm", tone: "accent" },
@@ -78,10 +78,10 @@ export default function BookingsScreen() {
   );
 
   return (
-    <Screen header={<Text style={{ color: ink.textPrimary, fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
+    <Screen header={<PageHeader kicker="Bookings" title={inStudio.length > 0 ? "Your car is in the studio" : upcoming.length > 0 ? "Your next visit is booked" : "Nothing booked right now"} sub={[upcoming.length > 0 ? `${upcoming.length} coming up` : null, past.length > 0 ? `${past.length} past` : null].filter(Boolean).join(" \u00b7 ") || "Pick a service and a time. The studio confirms it."} />}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
-      {inStudio.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>In the studio</Text>{list(inStudio)}</View> : null}
-      {upcoming.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>Coming up</Text>{list(upcoming)}</View> : null}
+      {inStudio.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>In the studio</SectionTitle>{list(inStudio)}</View> : null}
+      {upcoming.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>Coming up</SectionTitle>{list(upcoming)}</View> : null}
       {!error && upcoming.length === 0 && inStudio.length === 0 ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
@@ -92,7 +92,7 @@ export default function BookingsScreen() {
           </View>
         </Pane>
       ) : null}
-      {past.length > 0 ? <View style={{ gap: space.line }}><Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>History</Text>{list(past)}</View> : null}
+      {past.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>History</SectionTitle>{list(past)}</View> : null}
     </Screen>
   );
 }

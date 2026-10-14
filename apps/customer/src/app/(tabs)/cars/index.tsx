@@ -114,7 +114,7 @@ export default function CarsScreen() {
           <Kicker>Your cars for sale</Kicker>
           {mine.map((l) => (
             <Pressable key={l.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/cars/${l.id}`)} style={{ flexDirection: "row", gap: space.line, alignItems: "center" }}>
-              <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 14 }} />
+              <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 12 }} />
               <View style={{ flex: 1, gap: 2 }}>
                 <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
                 <T role="caption" tone="tertiary">{l.priceHidden ? "Price on request" : inr(l.askingPrice)}</T>

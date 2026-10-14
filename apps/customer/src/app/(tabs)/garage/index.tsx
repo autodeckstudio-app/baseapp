@@ -12,7 +12,7 @@ import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { GarageCard } from "../../../ui/GarageCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, Pane, Plate, Screen, T } from "../../../ui/kit";
+import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, PageHeader, Pane, Plate, Screen, T } from "../../../ui/kit";
 
 const CATEGORY: Record<string, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", muv: "MUV", luxury: "Luxury", bike: "Bike" };
 
@@ -79,7 +79,7 @@ export default function GarageScreen() {
   const lead = list[0];
 
   return (
-    <Screen header={<Text style={{ color: ink.textPrimary, fontSize: 26, fontWeight: "700" }}>Your cars</Text>}>
+    <Screen header={<PageHeader kicker="Garage" title={list.length === 0 ? "Add your first car" : list.length === 1 ? "One car in your garage" : `${list.length} cars in your garage`} sub={list.length === 0 ? "Papers, warranties and visit history live with each car." : list.map((v) => v.registrationNumber).join(" \u00b7 ")} />}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice

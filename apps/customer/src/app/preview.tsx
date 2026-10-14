@@ -12,7 +12,7 @@ export default function Preview() {
     <Screen>
       <HomeView
         initialChip={chip ?? null}
-        greeting="Good evening, Meet" initial="M" unread={2} progress={55} stage="Work under way" membership={{ title: "6 washes", detail: "left, until 30 Nov" }} studio={{ address: "Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad 380006", hours: "Mon to Sat, 10 am to 9 pm" }} onMenu={noop} onAvatar={noop} onCareMap={noop} onBook={noop} onCall={noop} onWhatsApp={noop} onStudio={noop} onMembership={noop} onVisits={noop} onShare={noop}
+        greeting="Good evening, Meet" initial="M" unread={2} progress={55} stage="Work under way" membership={{ title: "6 washes", detail: "left, until 30 Nov" }} studio={{ address: "Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad 380006", hours: "Mon to Sat, 10 am to 9 pm" }} onAvatar={noop} onCareMap={noop} onBook={noop} onStudio={noop} onMembership={noop} onVisits={noop} onShare={noop}
         cars={[{ id: "1", title: "BMW M340i", plate: "MH 02 AB 1234" }, { id: "2", title: "Thar", plate: "MH 02 CD 4321" }]}
         services={[
           { id: "a", category: "ppf", name: "Full body PPF", price: "Quote on request", brand: "XPEL" }, { id: "f", category: "ppf", name: "Plus PPF", price: "Quote on request", brand: "Garware" }, { id: "g", category: "ppf", name: "Ultimate Plus", price: "Quote on request", brand: "XPEL" },

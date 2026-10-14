@@ -123,6 +123,22 @@ export function CanvasTitle({ eyebrow, title }: { eyebrow?: string; title: strin
   );
 }
 
+/** Every page opens the same way: a small orange kicker, one specific statement, and one line of real detail. */
+export function PageHeader({ kicker, title, sub }: { kicker?: string; title: string; sub?: string | null }) {
+  return (
+    <View style={{ gap: 4 }}>
+      {kicker ? <Kicker tone="accent">{kicker}</Kicker> : null}
+      <T role="title" style={{ fontSize: 26, lineHeight: 32, fontWeight: "700" } as never}>{title}</T>
+      {sub ? <T role="body" tone="secondary">{sub}</T> : null}
+    </View>
+  );
+}
+
+/** One section heading size for every list on every page. */
+export function SectionTitle({ children }: { children: ReactNode }) {
+  return <T role="heading" style={{ fontSize: 18, fontWeight: "700" } as never}>{children}</T>;
+}
+
 export function Screen({
   children,
   scroll = true,
@@ -150,7 +166,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 112, gap: space.gap + 2 }}>
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 96, gap: space.gap + 2 }}>
       {!top ? <BackBar /> : null}
       {header}
       {children}
@@ -171,7 +187,7 @@ export function Pane({ children, pad = "gap", tone, fill, style, testID }: Glass
   const { colors } = useExperienceTheme();
   const edge = tone ? colors[tone] : "transparent";
   return (
-    <View testID={testID} style={[{ borderRadius: 26, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), ...(tone ? { borderColor: edge, borderWidth: 1 } : null), padding: pad === "none" ? 0 : space[pad] }, style as never]}>
+    <View testID={testID} style={[{ borderRadius: 24, overflow: "hidden", ...glassSurface, ...(fill === "warm" ? { backgroundColor: colors.accentHaze } : null), ...(tone ? { borderColor: edge, borderWidth: 1 } : null), padding: pad === "none" ? 0 : space[pad] }, style as never]}>
       {children}
     </View>
   );
@@ -291,7 +307,7 @@ export function Row({
         {detail ? typeof detail === "string" ? <T role="caption" tone="tertiary">{detail}</T> : detail : null}
       </View>
       {trailing}
-      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
+      {onPress ? <View style={{ width: 28, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
     </Pressable>
   );
 }
@@ -465,5 +481,5 @@ export function Skeleton({ height = 56, width = "100%" }: { height?: number; wid
     a.start();
     return () => a.stop();
   }, [v]);
-  return <Animated.View style={{ height, width, borderRadius: 14, backgroundColor: colors.borderSubtle, opacity: v }} />;
+  return <Animated.View style={{ height, width, borderRadius: 12, backgroundColor: colors.borderSubtle, opacity: v }} />;
 }

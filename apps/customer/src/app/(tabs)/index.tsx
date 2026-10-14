@@ -187,12 +187,9 @@ export default function HomeScreen() {
         stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours }}
-        onMenu={() => router.push("/(tabs)/profile")}
         onAvatar={() => router.push("/(tabs)/profile")}
         onCareMap={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))}
         onBook={() => router.push("/(tabs)/catalogue")}
-        onCall={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)}
-        onWhatsApp={() => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`)}
         onStudio={() => router.push("/(tabs)/studio")}
         onMembership={() => router.push("/(tabs)/membership")}
         onVisits={() => router.push("/(tabs)/bookings")}

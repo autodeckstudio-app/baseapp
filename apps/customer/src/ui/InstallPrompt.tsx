@@ -23,8 +23,8 @@ function isIos(): boolean {
 
 function Step({ n, icon, text }: { n: number; icon: "share" | "plus" | "check"; text: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-      <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(245,154,69,0.16)" }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+      <View style={{ width: 38, height: 38, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(245,154,69,0.16)" }}>
         {icon === "share" ? <ShareGlyph /> : icon === "plus" ? <PlusGlyph /> : <Icon name="check" color="#EC8638" size={20} />}
       </View>
       <Text style={{ flex: 1, color: "#F6F4F1", fontSize: 15, lineHeight: 21 }}><Text style={{ color: "#EC8638", fontWeight: "700" }}>{n}.  </Text>{text}</Text>
@@ -92,7 +92,7 @@ export function InstallPrompt() {
             <Step n={3} icon="check" text="Tap Add. AutoDeck appears on your home screen" />
           </View>
         ) : null}
-        <Pressable accessibilityRole="button" onPress={() => (mode === "android" ? void install() : close("dismissed"))} style={({ pressed }) => ({ height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.32)" })}>
+        <Pressable accessibilityRole="button" onPress={() => (mode === "android" ? void install() : close("dismissed"))} style={({ pressed }) => ({ height: 52, borderRadius: 24, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.32)" })}>
           <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>{mode === "android" ? "Install app" : "Got it"}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => close("dismissed")} style={{ alignItems: "center", paddingVertical: 6 }}>

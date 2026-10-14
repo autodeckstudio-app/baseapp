@@ -24,7 +24,7 @@ export function LoginStage({ title, copy, error, children }: { title: string; co
           <Logo onDark variant="stacked" height={compact ? 60 : 84} />
         </Rise>
         <Rise delay={160} style={{ width: "100%", maxWidth: 420 }}>
-          <View style={{ borderRadius: 32, padding: compact ? 18 : 24, gap: compact ? 10 : 14, alignItems: "center", backgroundColor: "rgba(18,18,20,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", ...(web ? ({ backdropFilter: "blur(26px) saturate(160%)", WebkitBackdropFilter: "blur(26px) saturate(160%)", boxShadow: "0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14)" } as object) : {}) }}>
+          <View style={{ borderRadius: 24, padding: compact ? 18 : 24, gap: compact ? 10 : 14, alignItems: "center", backgroundColor: "rgba(18,18,20,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", ...(web ? ({ backdropFilter: "blur(26px) saturate(160%)", WebkitBackdropFilter: "blur(26px) saturate(160%)", boxShadow: "0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14)" } as object) : {}) }}>
             <Text style={{ color: "#F6F4F1", fontFamily: "Montserrat, Inter, sans-serif", fontSize: 26, fontWeight: "700", textAlign: "center" }}>{title}</Text>
             <Text style={{ color: "#CDCBC8", fontSize: 15, lineHeight: 22, textAlign: "center" }}>{copy}</Text>
             <View style={{ width: "100%", gap: 10, marginTop: 6 }}>{children}</View>

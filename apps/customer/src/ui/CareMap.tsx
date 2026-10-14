@@ -57,13 +57,13 @@ export function CareMap({ done, onBook, category, make, model, colour }: { done:
     <View style={{ gap: 16 }}>
       <View style={{ flexDirection: "row", gap: 10 }}>
         {CHIPS.map((c) => (
-          <Pressable key={c.key} accessibilityRole="button" accessibilityState={{ selected: chip === c.key }} onPress={() => { setChip(c.key); const f = ZONES.find((z) => c.key === "all" || z.kind === c.key); if (f && !(c.key === "all" || zone.kind === c.key)) setSel(f.key); }} style={{ flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 18, ...(chip === c.key ? r.well : r.quiet) }}>
+          <Pressable key={c.key} accessibilityRole="button" accessibilityState={{ selected: chip === c.key }} onPress={() => { setChip(c.key); const f = ZONES.find((z) => c.key === "all" || z.kind === c.key); if (f && !(c.key === "all" || zone.kind === c.key)) setSel(f.key); }} style={{ flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 16, ...(chip === c.key ? r.well : r.quiet) }}>
             <Text style={{ color: chip === c.key ? colors.accentStrong : colors.textSecondary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
           </Pressable>
         ))}
       </View>
 
-      <View {...pan.panHandlers} style={{ alignItems: "center", paddingVertical: 14, borderRadius: 30, ...r.sheet }}>
+      <View {...pan.panHandlers} style={{ alignItems: "center", paddingVertical: 14, borderRadius: 24, ...r.sheet }}>
         <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600", marginBottom: 6 }}>{shapeLabel(shape)} view. Drag to turn the car.</Text>
         {car3dSupported ? (
           <View style={{ width: 320, height: 250 }}>
@@ -77,7 +77,7 @@ export function CareMap({ done, onBook, category, make, model, colour }: { done:
             const on = z.key === sel;
             const [px, py] = zp[z.key];
             return (
-              <Pressable key={z.key} accessibilityRole="button" accessibilityLabel={`${z.label}, ${s2.text}`} onPress={() => setSel(z.key)} hitSlop={8} style={{ position: "absolute", left: (px / 100) * VIEW.w - 17, top: (py / 100) * VIEW.h - 17, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: on ? 2 : 0, borderColor: "#EC8638", ...r.round }}>
+              <Pressable key={z.key} accessibilityRole="button" accessibilityLabel={`${z.label}, ${s2.text}`} onPress={() => setSel(z.key)} hitSlop={8} style={{ position: "absolute", left: (px / 100) * VIEW.w - 17, top: (py / 100) * VIEW.h - 17, width: 34, height: 34, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: on ? 2 : 0, borderColor: "#EC8638", ...r.round }}>
                 <Icon name={s2.ok ? "check" : "plus"} color={s2.ok ? "#2E9E6B" : colors.textSecondary} size={16} />
               </Pressable>
             );

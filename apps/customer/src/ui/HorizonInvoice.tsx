@@ -9,7 +9,7 @@ export function HorizonInvoice({ html }: { html: string }) {
     title: "AutoDeck invoice",
     srcDoc: html,
     scrolling: "no",
-    style: { display: "block", width: "100%", maxWidth: 794, height, border: 0, borderRadius: 18, margin: "0 auto", background: "#121413" },
+    style: { display: "block", width: "100%", maxWidth: 794, height, border: 0, borderRadius: 16, margin: "0 auto", background: "#121413" },
     onLoad: (event: { currentTarget: { contentDocument: { body: { scrollHeight: number }; fonts: { ready: Promise<unknown> } } | null } }) => {
       const frame = event.currentTarget;
       const document = frame.contentDocument;

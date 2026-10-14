@@ -14,7 +14,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
         {photo}
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 300, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.35) 0%, rgba(5,5,6,0) 40%, rgba(5,5,6,0.55) 100%)" } as object) }} />
       </View>
-      <View style={{ marginTop: -34, marginHorizontal: 20, borderRadius: 30, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingTop: 22, paddingBottom: 20, gap: 16 }}>
+      <View style={{ marginTop: -34, marginHorizontal: 20, borderRadius: 24, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingTop: 22, paddingBottom: 20, gap: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
             <T role="title" style={{ color: ink.textPrimary }} numberOfLines={2}>{title}</T>
@@ -30,7 +30,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { phot
             </View>
           ))}
         </View>
-        <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 54, borderRadius: 27, ...glassQuiet, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
+        <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 54, borderRadius: 24, ...glassQuiet, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
           <T role="bodyStrong" style={{ color: ink.textPrimary, fontWeight: "700" }}>Book a service</T>
         </Pressable>
       </View>

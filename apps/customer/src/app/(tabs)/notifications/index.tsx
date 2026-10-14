@@ -7,7 +7,7 @@ import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
+import { Button, Kicker, Loading, Notice, PageHeader, Pane, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { enablePush, pushPermission, type PushPermission } from "../../../lib/push";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
@@ -97,7 +97,7 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Updates</Kicker><T role="title">Notifications</T></View>}>
+    <Screen header={<PageHeader kicker="Updates" title="Notifications" />}>
       {pushState === "prompt" && pushPermission() === "prompt" ? (
         <Notice
           title="Get updates on this device"
@@ -115,7 +115,7 @@ export default function NotificationsScreen() {
               <Pressable key={item.id} accessibilityRole="button" onPress={() => void handlePress(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
                 <Pane pad="inset">
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.line }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)" }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)" }}>
                       <Icon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>

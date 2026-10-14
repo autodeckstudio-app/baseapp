@@ -127,7 +127,7 @@ export default function CatalogueScreen() {
     <View style={{ gap: 16 }}>
       <View style={{ gap: 4 }}>
         {level === 3 && groups.length > 1 && cat ? crumb(catGroup?.label ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
-        <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700" }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "Services"}</Text>
+        <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700", lineHeight: 32 }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "What does your car need?"}</Text>
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
       {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label} · incl. GST</T> : null}

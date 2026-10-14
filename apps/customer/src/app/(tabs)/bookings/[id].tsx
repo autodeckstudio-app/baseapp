@@ -259,7 +259,7 @@ export default function BookingDetailScreen() {
   return (
     <Screen
       header={
-        <View style={{ borderRadius: 28, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+        <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
           {svc ? <ServicePhoto service={svc} aspect={16 / 10} radius={0} /> : <View style={{ aspectRatio: 16 / 10 }} />}
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: space.inset, right: space.inset, bottom: space.inset, gap: 6 }}>

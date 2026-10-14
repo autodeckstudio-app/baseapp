@@ -186,7 +186,7 @@ export function Car3D(p: Car3DProps) {
         const on = z.key === p.selected;
         return (
           <Pressable key={z.key} accessibilityRole="button" accessibilityLabel={`${z.label}`} onPress={() => p.onSelect(z.key)} hitSlop={8}
-            style={{ position: "absolute", left: pt.x - 15, top: pt.y - 15, width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#EC8638" : "rgba(255,255,255,0.92)", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}>
+            style={{ position: "absolute", left: pt.x - 15, top: pt.y - 15, width: 30, height: 30, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#EC8638" : "rgba(255,255,255,0.92)", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}>
             <Icon name={z.ok ? "check" : "plus"} color={on ? "#fff" : z.ok ? "#2E9E6B" : "#3A3D44"} size={15} />
           </Pressable>
         );

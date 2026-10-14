@@ -74,9 +74,6 @@ export default function YouScreen() {
         email={auth.user.email}
         onEdit={() => { setDraft(name === "AutoDeck member" ? "" : name); setSaveError(null); setEditing(true); }}
         tiles={[
-          { icon: "club", label: t("Membership"), onPress: () => router.push("/(tabs)/membership") },
-          { icon: "bell", label: t("Notifications"), onPress: () => router.push("/(tabs)/notifications") },
-          { icon: "garage", label: "My cars", onPress: () => router.push("/(tabs)/garage") },
           { icon: "users", label: t("Help and contact"), onPress: () => router.push("/(tabs)/help") },
         ]}
       />

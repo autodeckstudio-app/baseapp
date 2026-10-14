@@ -22,9 +22,9 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
   return (
     <View
       pointerEvents="box-none"
-      style={{ position: "absolute", left: 0, right: 0, bottom: (Platform.OS === "web" ? "calc(10px + env(safe-area-inset-bottom))" : 10) as unknown as number, alignItems: "center", paddingHorizontal: 12 }}
+      style={{ position: "absolute", left: 0, right: 0, bottom: (Platform.OS === "web" ? "calc(8px + env(safe-area-inset-bottom))" : 8) as unknown as number, alignItems: "center", paddingHorizontal: 12 }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", maxWidth: 440, paddingHorizontal: 8, paddingVertical: 8, ...r.sheet, borderRadius: 32, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" } as object) : {}) }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", maxWidth: 360, paddingHorizontal: 6, paddingVertical: 4, ...r.sheet, borderRadius: 24, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" } as object) : {}) }}>
         {visible.map((route) => {
           const focused = activeKey === route.key;
           const label = descriptors[route.key]?.options.title ?? route.name;
@@ -40,12 +40,12 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
                 navigation.navigate(route.name, { screen: "index", params: { cat: undefined, brand: undefined, need: undefined } });
                 emitTabPressed(route.name);
               }}
-              style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", gap: 3, paddingVertical: 6, opacity: pressed ? 0.7 : 1 })}
+              style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", gap: 1, paddingVertical: 3, opacity: pressed ? 0.7 : 1 })}
             >
-              <View style={{ width: 44, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", ...(focused ? r.well : null) }}>
-                <Icon name={icons[route.name] ?? "home"} color={focused ? "#EC8638" : colors.inactive} size={22} filled={focused} />
+              <View style={{ width: 40, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", ...(focused ? r.well : null) }}>
+                <Icon name={icons[route.name] ?? "home"} color={focused ? "#EC8638" : colors.inactive} size={20} filled={focused} />
               </View>
-              <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: focused ? "700" : "500", color: focused ? colors.textPrimary : colors.inactive }}>{label}</Text>
+              <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: focused ? "700" : "500", color: focused ? colors.textPrimary : colors.inactive }}>{label}</Text>
             </Pressable>
           );
         })}

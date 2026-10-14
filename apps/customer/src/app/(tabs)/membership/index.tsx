@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, HeroImage, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, HeroImage, Chip, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { getMembershipPlans } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { useAuth } from "../../../hooks/useAuth";
@@ -75,10 +75,7 @@ export default function MembershipScreen() {
   return (
     <Screen
       header={
-        <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">Membership</Kicker>
-          <T role="title">Care, made regular</T>
-        </View>
+        <PageHeader kicker="Membership" title={current ? "Your plan is active" : "Regular washes at a better rate"} sub={current ? null : "Pick a plan and pay online."} />
       }
     >
       <Pane pad="none" round="hero" fill="cool" tone="premium">

@@ -117,7 +117,7 @@ export default function InvoiceScreen() {
 
   return (
     <Screen>
-      <View style={{ backgroundColor: IVORY, borderRadius: 20, padding: compact?16:28, gap: 20, width: "100%", maxWidth: 720, alignSelf: "center" }}>
+      <View style={{ backgroundColor: IVORY, borderRadius: 16, padding: compact?16:28, gap: 20, width: "100%", maxWidth: 720, alignSelf: "center" }}>
         {/* Header: brand left, invoice identity right */}
         <View style={{ flexDirection: "column", alignItems: "flex-start", gap: 16 }}>
           <View style={{ gap: 4 }}>

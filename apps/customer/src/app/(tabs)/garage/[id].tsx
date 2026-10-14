@@ -304,7 +304,7 @@ export default function VehicleDetailScreen() {
           />
 
           {vehicle && editing ? (
-            <View style={{ borderRadius: 20, overflow: "hidden" }}>
+            <View style={{ borderRadius: 16, overflow: "hidden" }}>
               {newPhoto ? (
                 createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 200, objectFit: "cover", display: "block" } })
               ) : (

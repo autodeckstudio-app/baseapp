@@ -50,3 +50,35 @@ describe("home and car imagery guardrails",()=>{
     expect(home).not.toContain("From the studio");
   });
 });
+import {readdirSync,statSync} from "node:fs";
+const walk=(d:string):string[]=>readdirSync(resolve(".",d)).flatMap((n)=>{const p=d+"/"+n;return statSync(resolve(".",p)).isDirectory()?walk(p):p.endsWith(".tsx")?[p]:[]});
+describe("one design system and one place for everything",()=>{
+  it("uses only the shared corner radii (12, 16, 24, pill) plus tiny bars and circles",()=>{
+    const ok=new Set([0,1,2,4,5,6,7,8,10,12,16,24,9999]);
+    const bad:string[]=[];
+    for(const f of [...walk("src/app"),...walk("src/ui")]){
+      for(const m of read(f).matchAll(/borderRadius: (\d+)/g)){const n=Number(m[1]);if(!ok.has(n)&&n<34)bad.push(f+" "+n)}
+    }
+    expect(bad).toEqual([]);
+  });
+  it("opens every tab page with the shared PageHeader and the shared section title",()=>{
+    for(const f of ["bookings/index","garage/index","membership/index","notifications/index"]) expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("<PageHeader");
+    expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain("fontSize: 19");
+  });
+  it("keeps one entry point per destination",()=>{
+    const profile=read("src/app/(tabs)/profile.tsx");
+    expect(profile).not.toContain('label: "My cars"');
+    expect(profile).not.toContain('t("Notifications")');
+    expect(profile).not.toContain('t("Membership")');
+    const home=read("src/ui/HomeView.tsx");
+    expect(home).not.toContain("MenuDrawer");
+    expect(home).not.toContain("ContactSheet");
+    const studio=read("src/app/(tabs)/studio.tsx");
+    expect(studio).not.toContain("Change service");
+  });
+  it("keeps the bottom nav compact",()=>{
+    const bar=read("src/ui/RaisedTabBar.tsx");
+    expect(bar).toContain("maxWidth: 360");
+    expect(bar).toContain("size={20}");
+  });
+});

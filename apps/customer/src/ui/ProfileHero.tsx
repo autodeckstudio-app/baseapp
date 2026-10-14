@@ -17,7 +17,7 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
       <View style={{ alignItems: "center", paddingTop: 6 }}>
         <View
           style={{
-            width: "100%", maxWidth: 360, borderRadius: 30, overflow: "hidden", padding: 22, gap: 18, ...glassSurface,
+            width: "100%", maxWidth: 360, borderRadius: 24, overflow: "hidden", padding: 22, gap: 18, ...glassSurface,
             borderWidth: 1, borderColor: "rgba(255,255,255,0.10)",
             transform: [{ perspective: 900 }, { rotateX: "5deg" }, { rotateY: "-7deg" }],
             ...(web ? ({ backgroundImage: "linear-gradient(135deg, #2A2A2F 0%, #17171A 55%, #0E0E10 100%)", boxShadow: "0 24px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(236,134,56,.10), 28px 30px 60px rgba(236,134,56,.10)" } as object) : { shadowColor: ACCENT, shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 12, height: 18 } }),
@@ -37,7 +37,7 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
             </View>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ borderRadius: 14, backgroundColor: "rgba(236,134,56,0.16)", paddingHorizontal: 12, paddingVertical: 5 }}>
+            <View style={{ borderRadius: 12, backgroundColor: "rgba(236,134,56,0.16)", paddingHorizontal: 12, paddingVertical: 5 }}>
               <Text style={{ color: "#F3B27A", fontSize: 12, fontWeight: "700", letterSpacing: 1.2 }}>AUTODECK MEMBER</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Edit name" onPress={onEdit} hitSlop={8}>
@@ -48,8 +48,8 @@ export function ProfileHero({ name, email, tiles, onEdit }: { name: string; emai
       </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
         {tiles.map((t) => (
-          <Pressable key={t.label} accessibilityRole="button" onPress={t.onPress} style={({ pressed }) => ({ flexBasis: "47%", flexGrow: 1, borderRadius: 22, ...glassSurface, padding: 16, gap: 12, opacity: pressed ? 0.85 : 1 })}>
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(236,134,56,0.16)", alignItems: "center", justifyContent: "center" }}>
+          <Pressable key={t.label} accessibilityRole="button" onPress={t.onPress} style={({ pressed }) => ({ flexBasis: "47%", flexGrow: 1, borderRadius: 24, ...glassSurface, padding: 16, gap: 12, opacity: pressed ? 0.85 : 1 })}>
+            <View style={{ width: 44, height: 44, borderRadius: 24, backgroundColor: "rgba(236,134,56,0.16)", alignItems: "center", justifyContent: "center" }}>
               <Icon name={t.icon} color={ACCENT} size={22} />
             </View>
             <Text style={{ color: ink.textPrimary, fontSize: 15, fontWeight: "600" }}>{t.label}</Text>

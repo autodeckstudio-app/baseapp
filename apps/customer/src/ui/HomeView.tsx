@@ -2,7 +2,7 @@
 // avatar, a car hero, visit and health tiles, four round actions, studio and
 // membership tiles, stories, brand widgets, popular services and reminders.
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, Modal, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { serviceImagery } from "../lib/imagery";
@@ -28,7 +28,6 @@ export type HomeViewProps = {
   banner?: ReactNode;
   initialChip?: string | null;
   stories?: ReactNode;
-  onMenu: () => void;
   onAvatar: () => void;
   onSearch: () => void;
   onBell: () => void;
@@ -40,8 +39,6 @@ export type HomeViewProps = {
   onAddCar: () => void;
   onReminders: () => void;
   onBook: () => void;
-  onCall: () => void;
-  onWhatsApp: () => void;
   onStudio: () => void;
   onMembership: () => void;
   onVisits: () => void;
@@ -87,14 +84,14 @@ function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: str
 export function PhotoCard({ media, title, pill, onPress, hearted = true }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean }) {
   const [liked, setLiked] = useState(false);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 22, overflow: "hidden", ...glassSurface, aspectRatio: 0.82 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 24, overflow: "hidden", ...glassSurface, aspectRatio: 0.82 }}>
       <View style={{ position: "absolute", width: "100%", height: "100%" }}>{media}</View>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.25)" }) }} />
       <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: 12 }}>
         <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>{title}</Text>
       </View>
       {hearted ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 15, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 16, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
         </Pressable>
       ) : null}
@@ -126,64 +123,6 @@ export function GroupChips({ value, onChange }: { value: string | null; onChange
 }
 export const groupCategories = (key: string | null): string[] => GROUPS.find((g) => g.key === key)?.cats ?? [];
 
-function ContactSheet({ open, onClose, onCall, onWhatsApp }: { open: boolean; onClose: () => void; onCall: () => void; onWhatsApp: () => void }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  if (!open) return null;
-  const row = (icon: IconName, label: string, sub: string, on: () => void) => (
-    <Pressable key={label} accessibilityRole="button" onPress={() => { onClose(); on(); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 22, opacity: pressed ? 0.75 : 1, ...r.sheet })}>
-      <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name={icon} color="#EC8638" size={20} /></View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "700" }}>{label}</Text>
-        <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{sub}</Text>
-      </View>
-    </Pressable>
-  );
-  return (
-    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,.45)" }} />
-        <View style={{ padding: 18, paddingBottom: 30, gap: 12, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: colors.canvas, width: "100%", maxWidth: 480, alignSelf: "center" }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>Contact us</Text>
-          {row("phone", "Call the studio", "Speak to us directly", onCall)}
-          {row("chat", "WhatsApp", "Send us a message", onWhatsApp)}
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-type DrawerItem = { icon: IconName; label: string; on: () => void };
-function MenuDrawer({ open, onClose, items, initial, name: who }: { open: boolean; onClose: () => void; items: DrawerItem[]; initial: string; name: string }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  if (!open) return null;
-  return (
-    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
-      <View style={{ flex: 1, flexDirection: "row" }}>
-        <View style={{ width: "82%", maxWidth: 330, height: "100%", paddingTop: 56, paddingHorizontal: 18, gap: 6, backgroundColor: colors.canvas, ...(Platform.OS === "web" ? ({ boxShadow: "8px 0 40px rgba(0,0,0,.35)" } as object) : {}) }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 }}>
-            <View style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center", ...r.round }}><Text style={{ color: colors.accentStrong, fontSize: 19, fontWeight: "800" }}>{initial}</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{who}</Text>
-              <Text style={{ color: colors.textTertiary, fontSize: 12 }}>AutoDeck</Text>
-            </View>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {items.map((it) => (
-              <Pressable key={it.label} accessibilityRole="button" onPress={() => { onClose(); it.on(); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-                <View style={{ width: 42, height: 42, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name={it.icon} color={colors.textPrimary} size={19} /></View>
-                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "600" }}>{it.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,.45)" }} />
-      </View>
-    </Modal>
-  );
-}
-
 const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage: night ? "linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(236,134,56,.07) 100%)" : "linear-gradient(135deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.4) 100%)" } as object) : {});
 
 /** The car card when there is no photo of the customer's own car: a quiet glass panel with the plate, never a stock photo of someone else's car. */
@@ -211,7 +150,7 @@ function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: Home
   const detail = reminder ? reminder.detail : idle ? (live?.detail ?? "") : live!.detail;
   const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: 26, padding: 18, gap: 10, opacity: pressed ? 0.9 : 1, ...r.card, ...glassBg(name !== "light") })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: 24, padding: 18, gap: 10, opacity: pressed ? 0.9 : 1, ...r.card, ...glassBg(name !== "light") })}>
       <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
       <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
@@ -288,7 +227,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: 210 }}>
       {w > 0 ? (
         n === 0 ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: 210, borderRadius: 30, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: 210, borderRadius: 24, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
             <CarPanel title="Your car goes here" plate="" cta="Add a car" />
             <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
               <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
@@ -297,7 +236,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
         ) : (
           <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
             {items.map((c, i) => (
-              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: 210, borderRadius: 30, overflow: "hidden", ...r.sheet }}>
+              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: 210, borderRadius: 24, overflow: "hidden", ...r.sheet }}>
                 {c.photo ? <Image source={{ uri: c.photo }} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} /> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
                 {c.photo ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
                 <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
@@ -320,15 +259,13 @@ export function HomeView(p: HomeViewProps) {
   const r = raised(name);
   const suggested = pickSuggested(p.services);
   const [active, setActive] = useState(0);
-  const [menu, setMenu] = useState(false);
-  const [contact, setContact] = useState(false);
   const car = p.cars[active] ?? p.cars[0];
   const pct = p.progress;
   return (
     <View style={{ gap: 20, paddingBottom: 120 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => setMenu(true)} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <Icon name="menu" color={colors.textPrimary} size={22} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Profile and settings" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
+          <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
           <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{car ? car.title : p.greeting}</Text>
@@ -360,7 +297,7 @@ export function HomeView(p: HomeViewProps) {
         <View style={{ gap: 12 }}>
           <Heading title="Reminders" />
           {p.reminders.map((rm) => (
-            <Pressable key={rm.title} accessibilityRole="button" onPress={p.onReminders} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 22, padding: 14, ...r.card }}>
+            <Pressable key={rm.title} accessibilityRole="button" onPress={p.onReminders} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 24, padding: 14, ...r.card }}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{rm.title}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{rm.detail}</Text>
@@ -380,11 +317,6 @@ export function HomeView(p: HomeViewProps) {
           <ClubRow icon="pin" title="The studio" sub={`${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
         </View>
       </View>
-      <ContactSheet open={contact} onClose={() => setContact(false)} onCall={p.onCall} onWhatsApp={p.onWhatsApp} />
-      <MenuDrawer open={menu} onClose={() => setMenu(false)} items={[
-        { icon: "menu", label: "Profile and settings", on: p.onAvatar },
-        { icon: "chat", label: "Contact us", on: () => setContact(true) },
-      ]} initial={p.initial} name={car ? car.title : p.greeting} />
     </View>
   );
 }
