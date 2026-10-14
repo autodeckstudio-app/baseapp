@@ -24,6 +24,7 @@ import { listenToInvoicesForVehicle } from "../../../lib/invoice-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { CarOverview, TabPills } from "../../../ui/CarOverview";
 import { CareMap, type CareDone } from "../../../ui/CareMap";
 
 type TabKey = "overview" | "care" | "passport" | "protection" | "warranty";
@@ -280,99 +281,27 @@ export default function VehicleDetailScreen() {
             ]}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, padding: 4, borderRadius: 24, ...glassSurface }}>
-            {TABS.map((t) => {
-              const selected = tab === t.key;
-              return (
-                <Pressable
-                  key={t.key}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => setTab(t.key)}
-                  style={{ flexBasis: "48%", flexGrow: 1, alignItems: "center", paddingVertical: 12, borderRadius: 20, ...(selected ? glassInner : null) }}
-                >
-                  <T role="label" tone={selected ? "accent" : "secondary"}>{t.label}</T>
-                </Pressable>
-              );
-            })}
-          </View>
+          <TabPills tabs={TABS} value={tab} onChange={setTab} />
         </View>
       }
     >
       {tab === "overview" ? (
         <>
-          {reminders.length > 0 ? (
-            <Pane pad="inset">
-              <View style={{ gap: space.breath }}>
-                <Kicker tone="accent">Reminders</Kicker>
-                {reminders.map((r) => (
-                  <T key={r} role="body">{r}</T>
-                ))}
-              </View>
-            </Pane>
-          ) : null}
-          <View style={{ flexDirection: "row", gap: space.line }}>
-            <View style={{ flex: 1 }}>
-              <Pane pad="inset">
-                <View style={{ gap: space.hair }}>
-                  <Kicker>Protection</Kicker>
-                  {verifiedProtections.length > 0 ? (
-                    <Chip label={`${verifiedProtections.length} verified`} tone="premium" />
-                  ) : (
-                    <T role="caption" tone="tertiary">None on file</T>
-                  )}
-                </View>
-              </Pane>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Pane pad="inset">
-                <View style={{ gap: space.hair }}>
-                  <Kicker>Warranty</Kicker>
-                  {activeWarranties.length > 0 ? (
-                    <Chip label={`${activeWarranties.length} active`} tone="premium" />
-                  ) : (
-                    <T role="caption" tone="tertiary">None active</T>
-                  )}
-                </View>
-              </Pane>
-            </View>
-          </View>
-
-          <View style={{ gap: space.line }}>
-            <Kicker>Recent service</Kicker>
-            <Pane pad="gap">
-              {mostRecentJob ? (
-                <Row
-                  title={serviceNames[mostRecentJob.serviceId] ?? "Service"}
-                  detail={formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt)}
-                  trailing={<Chip label={mostRecentJob.status.replace(/_/g, " ")} />}
-                  last
-                />
-              ) : (
-                <T tone="tertiary">No service history yet</T>
-              )}
-            </Pane>
-          </View>
-
-          <View style={{ gap: space.line }}>
-            <Kicker>Upcoming booking</Kicker>
-            <Pane pad="gap">
-              {upcomingBooking ? (
-                <>
-                  <Row
-                    title={`${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`}
-                    onPress={() => router.push(`/(tabs)/bookings/${upcomingBooking.id}`)}
-                    last
-                  />
-                  {upcomingBooking.membershipDiscountApplied ? (
-                    <T role="caption" tone="accent">Membership benefit applies to this booking</T>
-                  ) : null}
-                </>
-              ) : (
-                <T tone="tertiary">No upcoming booking</T>
-              )}
-            </Pane>
-          </View>
+          <CarOverview
+            health={{ ok: reminders.length === 0, label: reminders.length === 0 ? "Excellent" : "Check" }}
+            protections={verifiedProtections.length}
+            warranties={activeWarranties.length}
+            next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: "Upcoming booking", note: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : undefined, onPress: () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) } : null}
+            last={mostRecentJob ? { title: serviceNames[mostRecentJob.serviceId] ?? "Service", detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
+            reminders={reminders}
+            details={[
+              { label: "Make", value: vehicle.make },
+              { label: "Model", value: vehicle.model },
+              { label: "Registration", value: vehicle.registrationNumber },
+              ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
+            ]}
+            onBook={() => router.push("/(tabs)/catalogue")}
+          />
 
           {vehicle && editing ? (
             <View style={{ borderRadius: 20, overflow: "hidden" }}>
@@ -410,14 +339,7 @@ export default function VehicleDetailScreen() {
                 <Button label="Cancel" kind="quiet" onPress={() => { setNewPhoto(null); setNewRc(null); setEditing(false); }} />
               </View>
             </View>
-          ) : (
-            <Pane pad="gap">
-              <Row title="Colour" detail={vehicle.color} />
-              {vehicle.odometer !== null ? (
-                <Row title="Odometer" detail={`${vehicle.odometer?.toLocaleString("en-IN")} km`} last />
-              ) : <Row title="" detail="" last />}
-            </Pane>
-          )}
+          ) : null}
 
           {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
 
