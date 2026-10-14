@@ -18,6 +18,7 @@ import {
 import type { AutoDeckClaims } from "@autodeck/auth";
 import { auth } from "./firebase";
 import { isMultiFactorRequiredError, pickPhoneHint } from "./mfa";
+import { claimsForSignedInUser } from "./session-heal";
 import { currentUserAgent, isInAppBrowser, isIosBrowser, shouldFallBackToRedirect } from "./browser";
 
 function googleProvider(): GoogleAuthProvider {
@@ -157,7 +158,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (signingInRef.current) return;
-      const sessionClaims = await fetchSessionClaims();
+      const sessionClaims = await claimsForSignedInUser<AutoDeckClaims>({
+        getIdToken: () => nextUser.getIdToken(),
+        fetchSessionClaims,
+        resolveClaims,
+        exchangeIdToken: exchangeIdTokenForSession,
+        refreshIdToken: () => nextUser.getIdToken(true),
+      });
       if (!sessionClaims) {
         // Client SDK still thinks it's signed in but the server session is
         // absent/expired/revoked - bring the two back into agreement
