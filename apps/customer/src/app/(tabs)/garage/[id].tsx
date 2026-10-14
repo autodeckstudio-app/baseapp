@@ -292,7 +292,7 @@ export default function VehicleDetailScreen() {
             protections={verifiedProtections.length}
             warranties={activeWarranties.length}
             next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: "Upcoming booking", note: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : undefined, onPress: () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) } : null}
-            last={mostRecentJob ? { title: serviceNames[mostRecentJob.serviceId] ?? "Service", detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
+            last={mostRecentJob ? { title: serviceNames[mostRecentJob.serviceId] ?? "Studio visit", detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
             reminders={reminders}
             details={[
               { label: "Make", value: vehicle.make },
@@ -376,7 +376,7 @@ export default function VehicleDetailScreen() {
               return (
                 <View key={job.id}>
                   <Row
-                    title={serviceNames[job.serviceId] ?? "Service"}
+                    title={serviceNames[job.serviceId] ?? "Studio visit"}
                     detail={formatDate(job.sealedAt ?? job.createdAt)}
                     trailing={<Chip label={job.status.replace(/_/g, " ")} />}
                     onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}

@@ -77,7 +77,7 @@ export default function ServiceHistoryScreen() {
             return (
               <View key={job.id}>
                 <Row
-                  title={names[job.serviceId] ?? "Service"}
+                  title={names[job.serviceId] ?? "Studio visit"}
                   detail={[fmt(job.sealedAt ?? job.createdAt),!vehicleId?((job as unknown as {vehicleSnapshot?:{make:string;model:string;registrationNumber:string}}).vehicleSnapshot?.registrationNumber??"Recorded visit"):null].filter(Boolean).join(" · ")}
                   trailing={<Chip label={job.status.replace(/_/g, " ")} />}
                   onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}

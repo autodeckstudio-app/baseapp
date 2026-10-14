@@ -110,3 +110,8 @@ it("never shows a made-up health status on car detail",()=>{expect(read("src/ui/
 it("takes hero heights from metrics on car and booking detail",()=>{expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("metrics");expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain("metrics.heroCompact")});
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
+it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 20, right: 20, bottom: 92");expect(svc).not.toContain('width: "92%"');
+    expect(read("src/ui/StoryCircles.tsx")).toContain("groups.filter((g) => g.cover)");
+    expect(read("src/app/(tabs)/bookings/index.tsx")).toContain('?? "Studio visit"');expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
+  });

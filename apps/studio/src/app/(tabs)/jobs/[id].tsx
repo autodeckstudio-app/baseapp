@@ -14,6 +14,7 @@ import {
   listenToInvoiceForJob,
 } from "../../../lib/payment-service";
 import { getCustomerMembership } from "../../../lib/membership-service";
+import { approvalSendButton, pendingApprovalNote } from "../../../lib/approval-send";
 import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
 import { listenToInspection, startInspection } from "../../../lib/inspection-service";
 import type { Vehicle, Customer, ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
@@ -111,6 +112,8 @@ export default function JobDetailScreen() {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [approvalReason, setApprovalReason] = useState("");
   const [creatingApproval, setCreatingApproval] = useState(false);
+  const [approvalSent, setApprovalSent] = useState(false);
+  const [approvalsBefore, setApprovalsBefore] = useState(0);
 
   useEffect(() => {
     if (!id) {setLoading(false);return;}
@@ -211,9 +214,10 @@ export default function JobDetailScreen() {
 
   async function handleCreateApproval() {
     if (!job || creatingApproval || !selectedServiceId || !approvalReason.trim()) return;
-    setActionError(null);setCreatingApproval(true);
+    setActionError(null);setApprovalsBefore(approvals.length);setApprovalSent(false);setCreatingApproval(true);
     try {
       await createApproval({ jobId: job.id, serviceId: selectedServiceId, reason: approvalReason.trim() });
+      setApprovalSent(true);
       setShowApprovalForm(false);
       setSelectedServiceId(null);
       setApprovalReason("");
@@ -494,7 +498,12 @@ export default function JobDetailScreen() {
       </Section>
 
       <Text style={sectionTitle}>Approvals</Text>
-      {approvals.length === 0 && !showApprovalForm && (
+      {pendingApprovalNote(creatingApproval ? "sending" : approvalSent ? "sent" : "idle", approvals.length, approvalsBefore) ? (
+        <Section>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>{pendingApprovalNote(creatingApproval ? "sending" : approvalSent ? "sent" : "idle", approvals.length, approvalsBefore)}</Text>
+        </Section>
+      ) : null}
+      {approvals.length === 0 && !showApprovalForm && !creatingApproval && !approvalSent && (
         <Section>
           <Text style={{ ...typography.caption, color: colors.textMuted }}>No additional work requested.</Text>
         </Section>
@@ -572,10 +581,10 @@ export default function JobDetailScreen() {
                 multiline
               />
               <Button
-                label="Send for approval"
+                label={approvalSendButton(creatingApproval ? "sending" : "idle", !!selectedServiceId && !!approvalReason.trim()).label}
                 onPress={() => void handleCreateApproval()}
                 loading={creatingApproval}
-                disabled={!selectedServiceId || !approvalReason.trim()}
+                disabled={approvalSendButton(creatingApproval ? "sending" : "idle", !!selectedServiceId && !!approvalReason.trim()).disabled}
               />
               <View style={{ height: spacing.sm }} />
               <Button

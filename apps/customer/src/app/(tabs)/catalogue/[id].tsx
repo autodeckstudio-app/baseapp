@@ -263,9 +263,9 @@ export default function ServiceDetailScreen() {
         </View>
 
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
-        <View style={{ height: 180 }} />
+        <View style={{ height: 220 }} />
       </Screen>
-      {focused ? <View style={{ position: "absolute", left: 0, right: 0, marginHorizontal: "auto" as unknown as number, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#161618", borderRadius: 24, maxWidth: 480, width: "92%", alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
+      {focused ? <View style={{ position: "absolute", left: 20, right: 20, bottom: 92, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: "#161618", borderRadius: 24, maxWidth: 480, alignSelf: "center", shadowColor: "#7A6FD0", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Selected size"} · incl. GST</T>
