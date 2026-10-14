@@ -1,3 +1,4 @@
+import { metrics } from "../../../lib/metrics";
 import { useState, useEffect, useCallback } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -80,7 +81,7 @@ export default function MembershipScreen() {
     >
       <Pane pad="none" round="hero" fill="cool" tone="premium">
         <HeroImage source={sceneImagery.membership} />
-        <View style={{ padding: space.inset, gap: space.breath }}>
+        <View style={{ padding: metrics.cardPad, gap: space.breath }}>
           <T role="heading">The {current ? "club" : "AutoDeck club"}</T>
           <T tone="secondary">Regular washes, a standing discount, and a car that always looks done.</T>
         </View>

@@ -106,3 +106,6 @@ describe("surfaces share one radius and one padding",()=>{
   });
 });
 it("keeps the Home lead card on the shared card padding",()=>{expect(read("src/ui/HomeView.tsx")).not.toContain("padding: 18")});
+it("never shows a made-up health status on car detail",()=>{expect(read("src/ui/CarOverview.tsx")).not.toMatch(/Health/);expect(read("src/app/(tabs)/garage/[id].tsx")).not.toContain("health=")});
+it("takes hero heights from metrics on car and booking detail",()=>{expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("metrics");expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain("metrics.heroCompact")});
+it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});

@@ -13,6 +13,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
+import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
@@ -269,16 +270,16 @@ export default function VehicleDetailScreen() {
       header={
         <View style={{ gap: space.breath }}>
           <CarHero
-            photo={newPhoto ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 300, objectFit: "cover", display: "block" } }) : <CarThumb car={vehicle} height={300} radius={0} />}
+            photo={newPhoto ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <CarThumb car={vehicle} height={vehicle.photoUrl ? metrics.heroTall : metrics.heroCompact} radius={0} />}
             title={`${vehicle.make} ${vehicle.model}`}
-            subtitle={[vehicle.year, vehicle.color].filter(Boolean).join(" \u00b7 ")}
             plate={vehicle.registrationNumber}
             facts={[
               { label: "Year", value: String(vehicle.year ?? "-") },
               { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
-              { label: "Type", value: vehicle.category ? vehicle.category.charAt(0).toUpperCase() + vehicle.category.slice(1) : "-" },
-              { label: "Protection", value: verifiedProtections.length > 0 ? `${verifiedProtections.length} on file` : "None" },
+              ...(vehicle.category ? [{ label: "Type", value: vehicle.category.charAt(0).toUpperCase() + vehicle.category.slice(1) }] : []),
+              ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
             ]}
+            compact={!vehicle.photoUrl && !newPhoto}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
           <TabPills tabs={TABS} value={tab} onChange={setTab} />
@@ -288,7 +289,6 @@ export default function VehicleDetailScreen() {
       {tab === "overview" ? (
         <>
           <CarOverview
-            health={{ ok: reminders.length === 0, label: reminders.length === 0 ? "Excellent" : "Check" }}
             protections={verifiedProtections.length}
             warranties={activeWarranties.length}
             next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: "Upcoming booking", note: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : undefined, onPress: () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) } : null}

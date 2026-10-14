@@ -103,7 +103,7 @@ export default function GarageScreen() {
       ) : !error ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroAlt} />
-          <View style={{ padding: space.inset, gap: space.breath }}>
+          <View style={{ padding: metrics.cardPad, gap: space.breath }}>
             <T role="heading">No cars yet</T>
             <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
           </View>

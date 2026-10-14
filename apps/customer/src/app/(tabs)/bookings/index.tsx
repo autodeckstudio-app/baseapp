@@ -1,3 +1,4 @@
+import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
@@ -85,7 +86,7 @@ export default function BookingsScreen() {
       {!error && upcoming.length === 0 && inStudio.length === 0 ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
-          <View style={{ padding: space.inset, gap: space.breath }}>
+          <View style={{ padding: metrics.cardPad, gap: space.breath }}>
             <T role="heading">Nothing booked</T>
             <T tone="secondary">Pick a service and a time. The studio confirms it.</T>
             <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />

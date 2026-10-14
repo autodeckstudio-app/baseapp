@@ -23,7 +23,6 @@ export function TabPills<K extends string>({ tabs, value, onChange }: { tabs: Ar
 }
 
 export type OverviewProps = {
-  health: { ok: boolean; label: string };
   protections: number;
   warranties: number;
   next: { title: string; detail: string; note?: string | undefined; onPress: () => void } | null;
@@ -63,9 +62,8 @@ export function CarOverview(p: OverviewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <Status icon={p.health.ok ? "check" : "shield"} label="Health" value={p.health.label} good={p.health.ok} />
         <Status icon="shield" label="Protection" value={p.protections > 0 ? `${p.protections} verified` : "None"} good={p.protections > 0} />
         <Status icon="check" label="Warranty" value={p.warranties > 0 ? `${p.warranties} active` : "None"} good={p.warranties > 0} />
       </View>

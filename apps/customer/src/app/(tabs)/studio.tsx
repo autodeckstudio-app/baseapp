@@ -62,7 +62,7 @@ export default function StudioScreen() {
             </Pressable>
           </View>
         </View>
-        <View style={{ marginTop: -46, marginHorizontal: 8, padding: 18, gap: 12, borderRadius: 24, ...r.sheet }}>
+        <View style={{ marginTop: -46, marginHorizontal: 8, padding: 16, gap: 12, borderRadius: 24, ...r.sheet }}>
           <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>AutoDeck Studio</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{STUDIO_INFO.address}</Text>
           <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{hours}</Text>

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { HeroImage, Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
+import { HeroImage, Button, Chip, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T } from "../../../ui/kit";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { sceneImagery } from "../../../lib/imagery";
@@ -64,13 +64,7 @@ export default function CurrentMembershipScreen() {
   return (
     <Screen
       header={
-        <View style={{ gap: space.breath }}>
-          <Kicker tone="accent">Your membership</Kicker>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.inset }}>
-            <T role="title" style={{ textTransform: "capitalize" }}>{membership.tier}</T>
-            <Chip label={membership.status} tone={membership.status === "active" ? "premium" : "neutral"} />
-          </View>
-        </View>
+        <PageHeader kicker="Your membership" title={`${membership.tier.charAt(0).toUpperCase()}${membership.tier.slice(1)} membership`} sub={isPending ? "Payment pending, benefits locked" : membership.endDate ? `Active until ${formatDate(membership.endDate)}` : "Active"} />
       }
     >
       {isPending ? (
@@ -80,10 +74,10 @@ export default function CurrentMembershipScreen() {
         />
       ) : null}
 
-      <View style={isPending ? { opacity: 0.45 } : undefined}>
+      <View style={{ gap: 20, ...(isPending ? { opacity: 0.45 } : null) }}>
         <Pane pad="none" round="hero" fill="cool" tone="premium">
           <HeroImage source={sceneImagery.membership} />
-          <View style={{ padding: space.inset, gap: space.breath }}>
+          <View style={{ padding: 16, gap: space.breath }}>
             <T role="display">{isPending ? membership.washesTotal : washesRemaining}</T>
             <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
               <View style={{ height: 8, borderRadius: 4, backgroundColor: "#EC8638", width: `${!isPending && membership.washesTotal > 0 ? Math.round((washesRemaining / membership.washesTotal) * 100) : 0}%` }} />
@@ -97,11 +91,9 @@ export default function CurrentMembershipScreen() {
         </Pane>
 
         <Pane pad="gap">
-          <Row title={isPending ? "Washes (locked)" : "Washes remaining"} detail={`${isPending ? membership.washesTotal : washesRemaining} / ${membership.washesTotal}`} />
-          <Row title={isPending ? "Discount (locked)" : "Discount on other services"} detail={`${membership.discountPercent}%`} />
-          {isPending ? <Row title="Status" detail="Available after activation" /> : null}
-          {membership.startDate ? <Row title="Started" detail={formatDate(membership.startDate)} /> : null}
-          {membership.endDate ? <Row title="Renews / expires" detail={formatDate(membership.endDate)} last /> : <Row title="" detail="" last />}
+          {isPending ? <Row title="Status" detail="Available after activation" last={!membership.startDate && !membership.endDate} /> : null}
+          {membership.startDate ? <Row title="Started" detail={formatDate(membership.startDate)} last={!membership.endDate} /> : null}
+          {membership.endDate ? <Row title="Renews / expires" detail={formatDate(membership.endDate)} last /> : null}
         </Pane>
       </View>
 

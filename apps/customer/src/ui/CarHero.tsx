@@ -5,20 +5,22 @@ import { glassSurface, glassInner, glassQuiet } from "../lib/glass";
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { Plate, T } from "./kit";
+import { metrics } from "../lib/metrics";
 
-export function CarHero({ photo, title, subtitle, plate, facts, onBook }: { photo: ReactNode; title: string; subtitle: string; plate: string; facts: Array<{ label: string; value: string }>; onBook: () => void }) {
+export function CarHero({ photo, title, subtitle, plate, facts, onBook, compact }: { compact?: boolean; photo: ReactNode; title: string; subtitle?: string; plate: string; facts: Array<{ label: string; value: string }>; onBook: () => void }) {
   const { colors: ink } = useExperienceTheme();
+  const heroH = compact ? metrics.heroCompact : metrics.heroTall;
   return (
     <View style={{ marginHorizontal: -20, marginTop: -8 }}>
-      <View style={{ height: 300, backgroundColor: "#121214", overflow: "hidden" }}>
+      <View style={{ height: heroH, backgroundColor: "#121214", overflow: "hidden" }}>
         {photo}
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 300, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.35) 0%, rgba(5,5,6,0) 40%, rgba(5,5,6,0.55) 100%)" } as object) }} />
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: heroH, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0.35) 0%, rgba(5,5,6,0) 40%, rgba(5,5,6,0.55) 100%)" } as object) }} />
       </View>
-      <View style={{ marginTop: -34, marginHorizontal: 20, borderRadius: 24, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingTop: 22, paddingBottom: 20, gap: 16 }}>
+      <View style={{ marginTop: -34, marginHorizontal: 20, borderRadius: 24, ...glassSurface, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, gap: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
             <T role="title" style={{ color: ink.textPrimary }} numberOfLines={2}>{title}</T>
-            <T role="caption" tone="secondary">{subtitle}</T>
+            {subtitle ? <T role="caption" tone="secondary">{subtitle}</T> : null}
           </View>
           <Plate value={plate} />
         </View>
