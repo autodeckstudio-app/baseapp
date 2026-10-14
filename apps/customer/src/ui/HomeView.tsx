@@ -308,9 +308,6 @@ export function HomeView(p: HomeViewProps) {
           <Icon name="bell" color={colors.textPrimary} size={21} />
           {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
-        </Pressable>
       </View>
 
       {p.stories}
@@ -392,15 +389,8 @@ export function HomeView(p: HomeViewProps) {
       ) : null}
       <ContactSheet open={contact} onClose={() => setContact(false)} onCall={p.onCall} onWhatsApp={p.onWhatsApp} />
       <MenuDrawer open={menu} onClose={() => setMenu(false)} items={[
-        { icon: "calendar", label: "Book a service", on: p.onBook },
-        { icon: "wrench", label: "Visits", on: p.onVisits },
-        { icon: "chat", label: "Contact us", on: () => setContact(true) },
-        { icon: "garage", label: "Studio and hours", on: p.onStudio },
-        { icon: "shield", label: p.membership ? "Membership" : "Join the club", on: p.onMembership },
-        { icon: "bell", label: p.unread > 0 ? `Notifications (${p.unread})` : "Notifications", on: p.onBell },
-        { icon: "car", label: "Add a car", on: p.onAddCar },
-        { icon: "check", label: "Share AutoDeck", on: p.onShare },
         { icon: "menu", label: "Profile and settings", on: p.onAvatar },
+        { icon: "chat", label: "Contact us", on: () => setContact(true) },
       ]} initial={p.initial} name={car ? car.title : p.greeting} />
     </View>
   );
