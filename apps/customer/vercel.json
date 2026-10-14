@@ -4,8 +4,29 @@
   "outputDirectory": "dist",
   "installCommand": "pnpm install --frozen-lockfile",
   "redirects": [
-    { "source": "/services", "destination": "/catalogue", "permanent": false },
-    { "source": "/sell", "destination": "/cars/sell", "permanent": false }
+    {
+      "source": "/services",
+      "destination": "/catalogue",
+      "permanent": false
+    },
+    {
+      "source": "/sell",
+      "destination": "/cars/sell",
+      "permanent": false
+    }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://autodeck-studio.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/:path*",
+      "destination": "https://autodeck-studio.firebaseapp.com/__/firebase/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
