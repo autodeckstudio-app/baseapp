@@ -329,7 +329,7 @@ describe("referral wording", () => {
   it("every Bring a friend button uses the one share message", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);
-      expect(s).toContain("referralSubtitle()");
+      expect(s).toContain("referralSubtitle(myCode)");
       expect(s).not.toContain("Book on https://app.autodeck.in");
     }
   });
@@ -365,5 +365,14 @@ describe("nav order and drawer", () => {
     const m = read("src/ui/AdMonogram.tsx");
     expect(m).toContain("M1447,666 L1953,666 A500,500 0 0 1 1953,1666");
     expect(m).toContain("M756,1494 L995,1500 L1072,1662 L612,1662 Z");
+  });
+});
+
+describe("referral code stays dark", () => {
+  it("the Have a code field and the sent code are both gated by REFERRAL_LIVE", () => {
+    const c = read("src/app/(tabs)/book/confirm.tsx");
+    expect(c).toContain("{REFERRAL_LIVE ? (");
+    expect(c).toContain("referralCodeToSend(friendCode");
+    expect(read("src/lib/referral.ts")).toContain("export const REFERRAL_LIVE = false");
   });
 });

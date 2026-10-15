@@ -1,4 +1,4 @@
-import { referralShareMessage, referralSubtitle } from "../lib/referral";
+import { referralCodeFor, referralShareMessage, referralSubtitle } from "../lib/referral";
 // One header for every tab screen: avatar (opens the side drawer) on the left, the screen name in the middle, the bell on the right.
 import { useEffect, useState } from "react";
 import { Pressable, Share, Text, View } from "react-native";
@@ -18,6 +18,7 @@ export function AppBar({ title }: { title: string }) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const ready = auth.status === "ready";
+  const myCode = ready ? referralCodeFor(auth.user.uid) : null;
   useEffect(() => {
     if (auth.status !== "ready") return;
     return listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => setUnread(n.filter((x) => x.readAt === null).length), () => undefined);
@@ -27,7 +28,7 @@ export function AppBar({ title }: { title: string }) {
   const go = (p: string) => () => router.push(p as never);
   const items: DrawerItem[] = [
     { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: go("/(tabs)/membership") },
-    { key: "friend", label: "Bring a friend", sub: referralSubtitle(), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage() }).catch(() => undefined) },
+    { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
     { key: "notifications", label: "Notifications", icon: "bell", onPress: go("/(tabs)/notifications") },
     { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: go("/(tabs)/studio") },
     { key: "help", label: "Help and contact", icon: "chat", onPress: go("/(tabs)/help") },

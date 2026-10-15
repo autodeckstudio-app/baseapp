@@ -1,4 +1,4 @@
-import { referralShareMessage, referralSubtitle } from "../../lib/referral";
+import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
@@ -78,6 +78,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
   const ready = auth.status === "ready";
+  const myCode = ready ? referralCodeFor(auth.user.uid) : null;
   const home = useCustomerHome(ready ? auth.user.uid : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
   const [unread, setUnread] = useState(0);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
@@ -202,7 +203,7 @@ export default function HomeScreen() {
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
         drawer={[
           { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: () => router.push("/(tabs)/membership") },
-          { key: "friend", label: "Bring a friend", sub: referralSubtitle(), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage() }).catch(() => undefined) },
+          { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
           { key: "notifications", label: "Notifications", icon: "bell", onPress: () => router.push("/(tabs)/notifications") },
           { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => router.push("/(tabs)/studio") },
           { key: "help", label: "Help and contact", icon: "chat", onPress: () => router.push("/(tabs)/help") },
@@ -212,7 +213,7 @@ export default function HomeScreen() {
         onStudio={() => router.push("/(tabs)/studio")}
         onMembership={() => router.push("/(tabs)/membership")}
         onVisits={() => router.push("/(tabs)/bookings")}
-        onShare={() => void Share.share({ message: referralShareMessage() }).catch(() => undefined)}
+        onShare={() => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined)}
         unread={unread}
         cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}

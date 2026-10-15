@@ -15,7 +15,9 @@ import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
 import { getMyMemberships } from "../../../lib/membership-service";
 import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
-import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
+import { useAuth } from "../../../hooks/useAuth";
 
 // Multi-day PPF services run into thousands of minutes - "~4320 min" is
 // meaningless to a customer. This is service-time (not calendar time - the
@@ -41,6 +43,8 @@ export default function BookingConfirmScreen() {
     endTime: string;
   }>();
   const router = useRouter();
+  const auth = useAuth();
+  const [friendCode, setFriendCode] = useState("");
 
   const [service, setService] = useState<Service | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -86,6 +90,8 @@ export default function BookingConfirmScreen() {
   const washOffer = MEMBERSHIP_WASH_LIVE && wash && wash.ok ? wash : null;
   const washOn = useWash && washOffer !== null;
 
+  const sendCode = auth.status === "ready" ? referralCodeToSend(friendCode, auth.user.uid) : null;
+
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
@@ -101,6 +107,7 @@ export default function BookingConfirmScreen() {
         scheduledTime: params.scheduledTime,
         idempotencyKey,
         ...(washOn ? { useMembershipWash: true } : {}),
+        ...(sendCode ? { referralCode: sendCode } : {}),
       });
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
     } catch (err) {
@@ -152,6 +159,12 @@ export default function BookingConfirmScreen() {
           title="Multi-day service"
           body={`Your car stays at the studio from ${displayDate} through ${displayEndDate}.`}
         />
+      ) : null}
+
+      {REFERRAL_LIVE ? (
+        <Pane pad="gap">
+          <Field label="Have a friend's code? (optional)" value={friendCode} onChangeText={setFriendCode} autoCapitalize="characters" placeholder="AD2K7QX" maxLength={12} error={friendCode.trim() !== "" && !normaliseReferralCode(friendCode) ? "That does not look like a code" : undefined} />
+        </Pane>
       ) : null}
 
       {washOffer ? (

@@ -47,6 +47,8 @@ type CreateBookingInput = {
   notes?: string;
   /** Held until the server records redemptions; only sent while MEMBERSHIP_WASH_LIVE is true. */
   useMembershipWash?: boolean;
+  /** A friend's personal code. Held until the server can validate it and redeem the first wash; only sent while REFERRAL_LIVE is true. */
+  referralCode?: string;
 };
 type CreateBookingOutput = { booking: Booking };
 
