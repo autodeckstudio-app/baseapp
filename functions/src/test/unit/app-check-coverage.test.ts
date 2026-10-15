@@ -91,6 +91,7 @@ const EXCLUDED_NON_CALLABLE = [
   "membership/expireStalePendingMembershipsScheduled.ts",
   "notification/onAuditLogCreated.ts",
   "notification/winbackScheduled.ts",
+  "notification/expiryRemindersScheduled.ts",
   "push/onNotificationPush.ts",
   "auth/processAccountDeletionsScheduled.ts",
   "payment/razorpayWebhook.ts",

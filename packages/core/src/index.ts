@@ -9,3 +9,4 @@ export * from "./menu.js";
 export * from "./pickup-zone.js";
 export * from "./winback.js";
 export * from "./gift.js";
+export * from "./expiry-reminder.js";

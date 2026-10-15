@@ -23,6 +23,7 @@ export type NotificationType =
   | "pickup_confirmed"
   | "pickup_declined"
   | "winback"
+  | "expiry_reminder"
   | "job_message"
   | "job_message_staff";
 
