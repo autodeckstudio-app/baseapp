@@ -38,8 +38,8 @@ export function ServicePhoto({ service, height, width, radius = 0, aspect, varia
   }
   if (v.bottle) {
     return (
-      <View style={[box, { backgroundColor: "#F3EFE8", alignItems: "center", justifyContent: "center" }]}>
-        <Image source={v.bottle.src} resizeMode="contain" style={{ width: "62%", height: "88%" }} />
+      <View style={[box, { backgroundColor: "#F3EFE8", alignItems: "center", justifyContent: "flex-end", ...(height && height > 260 ? { height: "100%" as const, paddingTop: 44, paddingBottom: 30 } : null) }]}>
+        <Image source={v.bottle.src} resizeMode="contain" style={{ width: "62%", ...(height && height > 260 ? { flex: 1 } : { height: "88%" }) }} />
       </View>
     );
   }
