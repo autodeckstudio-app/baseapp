@@ -234,3 +234,15 @@ describe("services filters", () => {
     expect(src).toContain("!fromRoute && !searching ? <GroupChips");
   });
 });
+
+describe("service photos", () => {
+  it("every photo pool has distinct files so neighbouring cards differ", () => {
+    const src = read("src/lib/imagery.ts");
+    const pools = src.slice(src.indexOf("const POOLS"), src.indexOf("/** Pick the Nth"));
+    for (const line of pools.split("\n").filter((l) => l.includes("require("))) {
+      const files = [...line.matchAll(/imagery\/([\w/.-]+\.jpg)/g)].map((m) => m[1]);
+      expect(files.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(files).size).toBe(files.length);
+    }
+  });
+});

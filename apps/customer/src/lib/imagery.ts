@@ -103,6 +103,23 @@ function topicOf(s: Svc): string {
   if (/wash|foam/.test(n) || s.category === "washing") return "washExt";
   return "care";
 }
+/** Extra real photos per topic so neighbouring cards in one list never show the same picture. */
+/* eslint-disable @typescript-eslint/no-require-imports */
+const POOLS: Record<string, ImageSourcePropType[]> = {
+  coating: [require("../../assets/imagery/curated/coating.jpg"), require("../../assets/imagery/stock/coating-water-beading.jpg"), require("../../assets/imagery/stock/x-glossy-black.jpg"), require("../../assets/imagery/stock/x-black-reflect.jpg")],
+  washExt: [require("../../assets/imagery/stock/x-white-garage.jpg"), require("../../assets/imagery/stock/wash-foam.jpg"), require("../../assets/imagery/stock/wash-suds.jpg"), require("../../assets/imagery/stock/x-foam-street.jpg")],
+  ppf: [require("../../assets/imagery/stock/ppf-install.jpg"), require("../../assets/imagery/stock/ppf-hood-wrap.jpg"), require("../../assets/imagery/stock/x-foil-garage.jpg")],
+  tint: [require("../../assets/imagery/stock/tint-install.jpg"), require("../../assets/imagery/stock/x-film-window.jpg"), require("../../assets/imagery/stock/x-car-window.jpg")],
+  polish: [require("../../assets/imagery/stock/x-polish-red.jpg"), require("../../assets/imagery/stock/paint-polish.jpg"), require("../../assets/imagery/stock/x-buff-rear.jpg"), require("../../assets/imagery/stock/x-buff-roof.jpg")],
+  interior: [require("../../assets/imagery/stock/x-white-seats.jpg"), require("../../assets/imagery/stock/interior-detail.jpg"), require("../../assets/imagery/stock/x-seat-clean.jpg")],
+};
+/* eslint-enable @typescript-eslint/no-require-imports */
+/** Pick the Nth photo of a topic (position in the list), wrapping around. */
+export function pooledPhoto(topic: string, variant: number): ImageSourcePropType | undefined {
+  const pool = POOLS[topic];
+  return pool ? pool[((variant % pool.length) + pool.length) % pool.length] : undefined;
+}
+
 /** No order-dependent allocation or random cross-topic fallbacks. */
 export function primeVisuals(_list: Svc[]): void { /* deterministic per subject */ }
 
@@ -119,10 +136,12 @@ function bottleOf(s: Svc) {
 export type ServiceVisual = { photo: ImageSourcePropType; bottle?: { src: ImageSourcePropType; tint: string } };
 
 /** Product shot for Kovalent items, otherwise a photo no other service in the catalogue shares. */
-export function serviceVisual(s: Svc): ServiceVisual {
+export function serviceVisual(s: Svc, variant = 0): ServiceVisual {
   const bottle = bottleOf(s);
-  if (bottle) return { photo: TOPICS[topicOf(s)] ?? TOPICS.coating!, bottle };
-  return { photo: TOPICS[topicOf(s)] ?? TOPICS.care! };
+  const t = topicOf(s);
+  const photo = pooledPhoto(t, variant) ?? TOPICS[t] ?? TOPICS.care!;
+  if (bottle) return { photo, bottle };
+  return { photo };
 }
 
 /** Brand banner photo, only where the brand's own site gave a usable image. */

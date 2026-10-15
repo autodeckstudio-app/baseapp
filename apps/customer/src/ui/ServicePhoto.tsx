@@ -17,8 +17,8 @@ export function garageIconFor(name: string): IconName {
   return "search";
 }
 
-export function ServicePhoto({ service, height, width, radius = 0, aspect }: { service: Svc; height?: number; width?: number | `${number}%`; radius?: number; aspect?: number }) {
-  const v = serviceVisual(service);
+export function ServicePhoto({ service, height, width, radius = 0, aspect, variant = 0 }: { service: Svc; height?: number; width?: number | `${number}%`; radius?: number; aspect?: number; variant?: number }) {
+  const v = serviceVisual(service, variant);
   const [bad, setBad] = useState(false);
   const box = { width: width ?? ("100%" as const), ...(height ? { height } : {}), ...(aspect ? { aspectRatio: aspect } : {}), borderRadius: radius, overflow: "hidden" as const };
   if (service.imageUrl && !bad) {

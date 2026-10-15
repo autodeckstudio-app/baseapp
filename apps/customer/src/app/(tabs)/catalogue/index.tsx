@@ -110,8 +110,8 @@ export default function CatalogueScreen() {
     </View>
   );
 
-  const card = (sv: Service) => (
-    <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} />} />
+  const card = (sv: Service, i = 0) => (
+    <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} variant={i} />} />
   );
 
   const crumb = (label: string, onPress: () => void) => (
