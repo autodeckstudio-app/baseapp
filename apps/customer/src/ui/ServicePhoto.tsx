@@ -14,7 +14,7 @@ export function garageIconFor(name: string): IconName {
   if (n.includes("ac ")) return "tools";
   if (n.includes("battery")) return "check";
   if (n.includes("repair")) return "wrench";
-  return "inspect";
+  return "search";
 }
 
 export function ServicePhoto({ service, height, width, radius = 0, aspect }: { service: Svc; height?: number; width?: number | `${number}%`; radius?: number; aspect?: number }) {

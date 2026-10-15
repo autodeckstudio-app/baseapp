@@ -14,7 +14,7 @@ export function pickTopServices(all: TopSvc[]): TopPick[] {
   const garage = cheapest(all.filter((x) => x.category === "garage" && x.price !== "Quote on request" && !/repair/i.test(x.name)));
   if (garage) out.push({ key: "garage", title: "Garage check", icon: "tools", service: garage });
   const insp = all.find((x) => /repair|inspection/i.test(x.name) && x.price === "Quote on request") ?? all.find((x) => /inspection/i.test(x.name));
-  if (insp) out.push({ key: "inspect", title: "Book an inspection", icon: "inspect", service: insp });
+  if (insp) out.push({ key: "inspect", title: "Book an inspection", icon: "search", service: insp });
   return out;
 }
 

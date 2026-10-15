@@ -219,3 +219,10 @@ describe("home cars", () => {
     expect(src).toContain("#FBF8F3");
   });
 });
+
+describe("home menu", () => {
+  it("the avatar opens the side drawer", () => {
+    expect(read("src/ui/HomeView.tsx")).toContain("SideDrawer");
+    expect(read("src/app/(tabs)/index.tsx")).toContain("drawer={[");
+  });
+});

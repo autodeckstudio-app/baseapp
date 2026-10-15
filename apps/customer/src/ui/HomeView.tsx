@@ -11,6 +11,7 @@ import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
 import { HomeBackdrop } from "./HomeBackdrop";
+import { SideDrawer, type DrawerItem } from "./SideDrawer";
 import { HeroStage } from "./HeroStage";
 import { CampaignSlot } from "./CampaignSlot";
 import type { Campaign } from "../lib/campaign";
@@ -39,6 +40,9 @@ export type HomeViewProps = {
   /** One compact campaign slot. Omit until there is real content. */
   campaign?: Campaign | null;
   onAvatar: () => void;
+  /** Shortcuts shown in the side drawer opened from the avatar. */
+  drawer?: DrawerItem[];
+  displayName?: string;
   onSearch: () => void;
   onBell: () => void;
   onAllServices: () => void;
@@ -291,13 +295,15 @@ export function HomeView(p: HomeViewProps) {
   const r = raised(name);
   const top = pickTopServices(p.services);
   const [active, setActive] = useState(0);
+  const [menu, setMenu] = useState(false);
   const car = p.cars[active] ?? p.cars[0];
   const pct = p.progress;
   return (
     <View style={{ gap: metrics.sectionGap, paddingBottom: 100 }}>
       <HomeBackdrop />
+      {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Profile and settings" onPress={p.onAvatar} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
           <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
@@ -329,7 +335,7 @@ export function HomeView(p: HomeViewProps) {
       ) : null}
 
       <View style={{ gap: 12 }}>
-        <Heading title={car ? `Top services for your ${car.title}` : "Top services"} action="All services" onAction={p.onAllServices} />
+        <Heading title={car ? "Top services" : "Top services"} action="All services" onAction={p.onAllServices} />
         {top.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Services will show here.</Text> : (
           <View style={{ gap: metrics.innerGap }}>
             {[top.slice(0, 2), top.slice(2, 4)].filter((row) => row.length > 0).map((row, i) => (
