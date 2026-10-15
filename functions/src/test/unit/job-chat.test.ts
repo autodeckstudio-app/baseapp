@@ -23,3 +23,16 @@ describe("job chat server", () => {
     expect(block).toContain("allow write: if false");
   });
 });
+
+describe("staff alert on customer messages", () => {
+  it("customer messages notify active staff of the tenant, one alert per job per person per 5 minutes", () => {
+    expect(src).toContain("if (customer) await notifyStaff");
+    expect(src).toContain('where("active", "==", true)');
+    expect(src).toContain("60_000");
+    expect(src).toContain("e.studioId !== job.studioId");
+  });
+  it("the push opens the job page for staff", () => {
+    const push = readFileSync(`${__dirname}/../../functions/push/onNotificationPush.ts`, "utf8");
+    expect(push).toContain("/jobs/");
+  });
+});

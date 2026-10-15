@@ -2,7 +2,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import { canMessageJob, cleanJobMessage, type JobMessage, type Notification, type ServiceJob } from "@autodeck/core";
+import { canMessageJob, cleanJobMessage, type Employee, type JobMessage, type Notification, type ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -41,5 +41,20 @@ export const sendJobMessage = onCall({ region: "asia-south1" }, async (request) 
       tx.create(db.collection(COLLECTIONS.notifications()).doc(n.id), n);
     }
   });
+  if (customer) await notifyStaff(db, job, ref.id, clean.text, now);
   return { id: ref.id };
 });
+
+/** Push to the studio's active staff (all admins, and studio staff of this studio). One alert per job per person per 5 minutes, so a burst of messages is one buzz. */
+async function notifyStaff(db: FirebaseFirestore.Firestore, job: ServiceJob, messageId: string, text: string, nowIso: string): Promise<void> {
+  const staff = await db.collection(COLLECTIONS.employees()).where("tenantId", "==", job.tenantId).where("active", "==", true).get();
+  const bucket = Math.floor(Date.parse(nowIso) / (5 * 60_000));
+  for (const d of staff.docs) {
+    const e = d.data() as Employee;
+    if (!e.authUid || e.terminatedAt) continue;
+    if (e.role === "studio" && e.studioId !== job.studioId) continue;
+    const id = `job-message-staff-${job.id}-${e.authUid}-${bucket}`;
+    const n: Notification = { id, tenantId: job.tenantId, userId: e.authUid, auditLogId: messageId, type: "job_message_staff", title: "Customer message", body: text.length > 120 ? `${text.slice(0, 117)}...` : text, entityType: "Job", entityId: job.id, createdAt: nowIso, readAt: null };
+    try { await db.collection(COLLECTIONS.notifications()).doc(id).create(n); } catch (err) { if ((err as { code?: number }).code !== 6) throw err; }
+  }
+}

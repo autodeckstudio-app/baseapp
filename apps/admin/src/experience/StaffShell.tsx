@@ -3,6 +3,7 @@
 // Presentational staff shell: glass sidebar on the studio ground. Holds no
 // auth state; the (admin) layout decides who may see what and passes it in.
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { PushAlertsButton } from "./PushAlertsButton";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { LOGO_HORIZONTAL_SVG, LOGO_MARK_SVG, LOGO_HORIZONTAL_ON_DARK_SVG, LOGO_MARK_ON_DARK_SVG, logoDataUri } from "@autodeck/ui/theme";
@@ -155,6 +156,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
             </div>
           ) : null}
           <div className="ax-corner ax-corner--r">
+            <PushAlertsButton />
             <span className="ax-avatar" title={`${who} - ${ROLE_LABEL[role] ?? role}`} aria-label={`${who}, ${ROLE_LABEL[role] ?? role}`}>{(who.trim()[0] ?? "A").toUpperCase()}</span>
             <button type="button" className="ax-corner-out" title="Sign out" aria-label="Sign out" onClick={onSignOut}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
