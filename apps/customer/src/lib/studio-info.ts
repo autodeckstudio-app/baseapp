@@ -52,3 +52,10 @@ export function formatHours(hours: LiveStudioInfo["operatingHours"]): string {
   if (closed.length) parts.push(`Closed ${closed.join(", ")}`);
   return parts.join(". ");
 }
+
+/** The studio's Google review link. Empty hides the "Review us on Google" button; set it once the link exists. */
+export const GOOGLE_REVIEW_URL = "";
+
+/** Privacy policy and Terms pages. Empty hides the links; set them once the pages exist. */
+export const PRIVACY_POLICY_URL = "";
+export const TERMS_URL = "";

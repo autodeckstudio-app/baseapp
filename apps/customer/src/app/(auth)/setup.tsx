@@ -1,3 +1,4 @@
+import { LegalLinks } from "../../ui/LegalLinks";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -56,6 +57,7 @@ export default function SetupScreen() {
         />
         {error ? <T role="caption" tone="danger">{error}</T> : null}
         <Button label="Continue" onPress={() => void handleSetup()} busy={busy} testID="setup-continue" />
+        <LegalLinks />
       </KeyboardAvoidingView>
     </Ambient>
   );

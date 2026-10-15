@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Platform, View, useWindowDimensions } from "react-native";
+import { Linking, Platform, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import type { Customer, Invoice, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToInvoice, listenToInvoiceByNumber, listenToInvoiceForJob } from "../../../lib/invoice-service";
+import { invoiceShareText, whatsappShareUrl } from "../../../lib/invoice-share";
 import { buildInvoiceHtml, gstSplit, printInvoiceHtml, serviceLabel } from "../../../lib/invoice-display";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { db } from "../../../lib/firebase";
@@ -110,7 +111,14 @@ export default function InvoiceScreen() {
   if (Platform.OS === "web") return (
     <Screen>
       <HorizonInvoice html={buildInvoiceHtml({ ...docInput, appearance: "screen" })} />
-      <Button label="Download or print PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
+      <Button label="Save as PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
+      <Button kind="quiet" label="Share on WhatsApp" onPress={() => {
+        const text = invoiceShareText({ number: invoice.invoiceNumber, totalPaise: invoice.total, studioName: STUDIO_INFO.name, studioPhone: STUDIO_INFO.phone });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nav = (globalThis as any).navigator;
+        if (nav?.share) void nav.share({ title: `Invoice ${invoice.invoiceNumber}`, text }).catch(() => undefined);
+        else void Linking.openURL(whatsappShareUrl(text));
+      }} />
       <Button label="Go back" kind="quiet" onPress={() => router.back()} />
     </Screen>
   );

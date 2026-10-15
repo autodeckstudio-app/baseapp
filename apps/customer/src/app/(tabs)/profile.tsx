@@ -1,4 +1,5 @@
 // You: account, membership, notifications, sign out.
+import { LegalLinks } from "../../ui/LegalLinks";
 import { useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -139,6 +140,7 @@ export default function YouScreen() {
       ) : (
         <View style={{ marginTop: 32 }}><Button kind="quiet" label="Delete my account" onPress={() => setDelStep("ask")} /></View>
       )}
+      <LegalLinks />
     </Screen>
   );
 }
