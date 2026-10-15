@@ -67,11 +67,11 @@ export default function CatalogueScreen() {
     return ()=>{active=false;};
   },[services,pricingVehicle.category]);
   const all = services ?? [];
-  const pricedLabel=(sv:Service)=>sv.priceOnRequest?"Quote on request":(pricingVehicle.category?(prices[sv.id]!==undefined?(sv.priceFrom===true?"From ":"")+rupees(prices[sv.id]!):"Checking price"):(sv.priceFrom===true?"From ":"")+priceLabel(sv));
+  const pricedLabel=(sv:Service)=>sv.priceOnRequest?"Quote on request":(pricingVehicle.category?(prices[sv.id]!==undefined?(sv.priceFrom===true?"From ":"")+rupees(prices[sv.id]!):(sv.priceFrom===true?"From ":"")+priceLabel(sv)):(sv.priceFrom===true?"From ":"")+priceLabel(sv));
   const pricedFrom=(xs:Service[])=>{
     if(!pricingVehicle.category)return fromPrice(xs);
     const amounts=xs.filter(s=>!s.priceOnRequest).map(s=>prices[s.id]).filter((x):x is number=>x!==undefined);
-    return amounts.length ? `From ${rupees(Math.min(...amounts))}` : "Checking prices";
+    return amounts.length ? `From ${rupees(Math.min(...amounts))}` : fromPrice(xs);
   };
   const byPrice = (a: Service, b: Service) => Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice;
   const inGroup = (g: MenuGroup) => all.filter((x) => (g.categories as string[]).includes(x.category));

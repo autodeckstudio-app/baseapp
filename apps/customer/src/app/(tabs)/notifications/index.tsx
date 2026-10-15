@@ -14,6 +14,8 @@ import { listenToMyNotifications, markNotificationRead } from "../../../lib/noti
 import { useAuth } from "../../../hooks/useAuth";
 
 
+export const NOTIFICATION_ACTION: Record<string, string> = { Approval: "Review request", Booking: "View booking", Membership: "View membership", Invoice: "View invoice" };
+
 function formatWhen(iso: string): string {
   const d = new Date(iso);
   return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
@@ -122,6 +124,7 @@ export default function NotificationsScreen() {
                       <T role="bodyStrong">{repairText(item.title)}</T>
                       <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
+                      {NOTIFICATION_ACTION[item.entityType ?? ""] ? <T role="caption" tone="accent" style={{ fontWeight: "700" }}>{NOTIFICATION_ACTION[item.entityType ?? ""]}</T> : null}
                     </View>
                     {unread ? <View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accent }} /> : null}
                   </View>

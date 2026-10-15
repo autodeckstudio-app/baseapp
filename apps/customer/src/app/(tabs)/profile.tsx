@@ -16,7 +16,7 @@ import { signOut } from "../../lib/auth-service";
 import { enablePush, pushAvailable } from "../../lib/push";
 import { useAuth } from "../../hooks/useAuth";
 import { ProfileHero } from "../../ui/ProfileHero";
-import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../ui/kit";
+import { Button, Field, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function YouScreen() {
   const auth = useAuth();
@@ -69,6 +69,7 @@ export default function YouScreen() {
 
   return (
     <Screen>
+      <PageHeader kicker="You" title="Your account" />
       <ProfileHero
         name={name}
         email={auth.user.email}
@@ -129,7 +130,7 @@ export default function YouScreen() {
           </View>
         </View>
       ) : (
-        <Button kind="quiet" label="Delete my account" onPress={() => setDelStep("ask")} />
+        <View style={{ marginTop: 32 }}><Button kind="quiet" label="Delete my account" onPress={() => setDelStep("ask")} /></View>
       )}
     </Screen>
   );

@@ -91,7 +91,7 @@ describe("sizes come from one rulebook",()=>{
   });
   it("uses the same section gap on Home and in Screen",()=>{
     expect(read("src/ui/HomeView.tsx")).toContain("gap: metrics.sectionGap");
-    expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 96, gap: 20");
+    expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120, gap: 20");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
     const home=read("src/ui/HomeView.tsx");expect(home).toContain("metrics.heroCompact");expect(home).not.toContain("height: 210");
@@ -119,10 +119,19 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
   const {hasCampaign,MAX_BLUR_SURFACES}=await import("../lib/campaign");
   expect(MAX_BLUR_SURFACES).toBe(3);
   expect(hasCampaign(null)).toBe(false);expect(hasCampaign({headline:"",imageUrl:"x",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"/a.jpg",onPress:()=>undefined})).toBe(true);
-  const home=read("src/ui/HomeView.tsx");expect((home.match(/glassPane\(\)/g)??[]).length).toBeLessThanOrEqual(2);expect(home).not.toMatch(/\u2014/);
+  const home=read("src/ui/HomeView.tsx");expect((home.match(/glassPane\(\)/g)??[]).length).toBeLessThanOrEqual(3);expect(home).not.toMatch(/\u2014/);
   expect(read("src/app/(tabs)/index.tsx")).not.toContain("campaign=");
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
   const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("Next: bring your car at {displayTime} IST");
+});
+it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
+  expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
+  expect(read("src/ui/GarageCard.tsx")).toContain(">Remove<");expect(read("src/ui/GarageCard.tsx")).not.toContain('name="close"');
+  expect(read("src/app/(tabs)/garage/index.tsx")).toContain("v.photoUrl ? <CarThumb");
+  expect(read("src/app/(tabs)/profile.tsx")).toContain("<PageHeader");
+  expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
+  const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
+  expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120");
 });

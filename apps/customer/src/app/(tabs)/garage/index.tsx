@@ -97,7 +97,7 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
           {list.map((v, i) => (
-            <GarageCard key={v.id} photo={<CarThumb car={v} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} radius={0} />} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
+            <GarageCard key={v.id} photo={v.photoUrl ? <CarThumb car={v} height={i === 0 ? metrics.heroTall : 170} radius={0} /> : <View style={{ height: metrics.heroCompact }} />} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
           ))}
         </View>
       ) : !error ? (

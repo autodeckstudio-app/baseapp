@@ -206,6 +206,22 @@ function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: 
 }
 
 // Garage cars as one endless horizontal strip: three copies, re-centred after each swipe.
+/** One car with no photo: a single compact line with the plate and one action, instead of a tall empty card. */
+function CompactCar({ car, onOpen }: { car: HomeCar; onOpen: () => void }) {
+  const { colors } = useExperienceTheme();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`${car.title}, care map`} onPress={onOpen} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, padding: metrics.cardPad, ...glassPane() }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{car.title}</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: 2 }}>{car.plate}</Text>
+      </View>
+      <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700" }}>{car.hasPhoto === false ? "Add photo" : "Care map"}</Text>
+    </Pressable>
+  );
+}
+
+export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length === 1 && !cars[0]!.photo; }
+
 function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; onOpen: (c: HomeCar) => void; onAdd: () => void; onActive: (i: number) => void }) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
@@ -277,7 +293,7 @@ export function HomeView(p: HomeViewProps) {
           <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{car ? car.title : p.greeting}</Text>
+          <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>
           <Text numberOfLines={1} style={{ color: colors.textTertiary, fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
@@ -288,7 +304,7 @@ export function HomeView(p: HomeViewProps) {
 
       {p.stories}
 
-      <GarageCarousel cars={p.cars} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} onActive={setActive} />
+      {isCompactCarRow(p.cars) ? <CompactCar car={p.cars[0]!} onOpen={() => p.onCar(p.cars[0]!)} /> : <GarageCarousel cars={p.cars} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} onActive={setActive} />}
 
       {p.banner}
 

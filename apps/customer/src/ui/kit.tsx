@@ -166,7 +166,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 96, gap: 20 }}>
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 120, gap: 20 }}>
       {!top ? <BackBar /> : null}
       {header}
       {children}
