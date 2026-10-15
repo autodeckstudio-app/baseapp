@@ -12,6 +12,7 @@ import { db } from "../../../lib/firebase";
 import { enablePush, pushPermission, type PushPermission } from "../../../lib/push";
 import { listenToMyNotifications, markNotificationRead } from "../../../lib/notification-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { clearable, isProtected, loadHidden, saveHidden, visibleNotifications } from "../../../lib/notification-hidden";
 
 
 export const NOTIFICATION_ACTION: Record<string, string> = { Approval: "Review request", Booking: "View booking", Membership: "View membership", Invoice: "View invoice" };
@@ -29,6 +30,8 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [retryTick, setRetryTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [hidden, setHidden] = useState<Set<string>>(() => loadHidden());
+  const hide = (ids: string[]) => { const next = new Set([...hidden, ...ids]); setHidden(next); saveHidden(next); };
   const [pushState, setPushState] = useState<PushPermission>(() => pushPermission());
 
   const load = useCallback(() => {
@@ -89,6 +92,9 @@ export default function NotificationsScreen() {
     }
   }
 
+  const shown = visibleNotifications(notifications, hidden);
+  const canClear = clearable(shown).length > 0;
+
   if (loading) return <Loading label="Checking for updates" />;
   if (error) {
     return (
@@ -100,6 +106,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen header={<PageHeader kicker="Updates" title="Notifications" />}>
+      {canClear ? <Button kind="quiet" label="Clear all" onPress={() => hide(clearable(shown))} /> : null}
       {pushState === "prompt" && pushPermission() === "prompt" ? (
         <Notice
           title="Get updates on this device"
@@ -107,11 +114,11 @@ export default function NotificationsScreen() {
           action={<Button label="Turn on alerts" onPress={() => void enablePush().then((r) => setPushState(r)).catch(() => setPushState(pushPermission()))} />}
         />
       ) : null}
-      {notifications.length === 0 ? (
-        <Notice title="No notifications yet" body="Updates about your bookings and services will show up here." />
+      {shown.length === 0 ? (
+        <Notice title="You are all caught up" body="Updates about your bookings and services will show up here. Older read ones tidy away after 30 days." />
       ) : (
         <View style={{ gap: space.line }}>
-          {notifications.map((item) => {
+          {shown.map((item) => {
             const unread = item.readAt === null && !asked.has(item.id);
             return (
               <Pressable key={item.id} accessibilityRole="button" onPress={() => void handlePress(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
@@ -125,6 +132,11 @@ export default function NotificationsScreen() {
                       <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
                       {NOTIFICATION_ACTION[item.entityType ?? ""] ? <T role="caption" tone="accent" style={{ fontWeight: "700" }}>{NOTIFICATION_ACTION[item.entityType ?? ""]}</T> : null}
+                      {!isProtected(item) ? (
+                        <Pressable accessibilityRole="button" accessibilityLabel="Dismiss notification" hitSlop={8} onPress={(e) => { e.stopPropagation?.(); hide([item.id]); }} style={{ alignSelf: "flex-start", minHeight: 32, justifyContent: "center" }}>
+                          <T role="caption" tone="tertiary">Dismiss</T>
+                        </Pressable>
+                      ) : null}
                     </View>
                     {unread ? <View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accent }} /> : null}
                   </View>

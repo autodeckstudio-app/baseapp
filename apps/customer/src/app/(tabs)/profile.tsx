@@ -71,7 +71,7 @@ export default function YouScreen() {
 
   return (
     <Screen appBar="You">
-      <PageHeader kicker="You" title="Your account" />
+      <PageHeader title="Your account" />
       <ProfileHero
         name={name}
         email={auth.user.email}
