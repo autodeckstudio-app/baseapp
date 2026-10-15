@@ -267,7 +267,7 @@ describe("garage brand filter", () => {
 describe("provenance", () => {
   it("does not attribute web-researched facts to the owner", () => {
     expect(read("src/lib/catalogue-service.ts")).not.toContain("Per Meet");
-    expect(read("src/lib/catalogue-service.ts")).toContain("WARRANTY-CLAIMS.md");
+    expect(read("src/lib/warranty-labels.ts")).toContain("WARRANTY-CLAIMS.md");
   });
 });
 

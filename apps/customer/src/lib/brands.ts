@@ -61,7 +61,7 @@ export const BRANDS: Brand[] = [
     source: "3mindia.in",
     items: [
       { name: "Scotchgard Paint Protection Film Pro Series 200", kind: "PPF", warranty: "10-year consumer warranty (see warranty card)" },
-      { name: "Ceramic Coating", kind: "Coating", note: "Brand says durable up to five years with care" },
+      { name: "Ceramic Coating", kind: "Coating", note: "Brand says durable up to five years with care (durability, not a warranty)" },
       { name: "Ceramic Boost", kind: "Coating" },
     ],
   },
@@ -70,9 +70,9 @@ export const BRANDS: Brand[] = [
     blurb: "Ceramic coatings",
     source: "kovalentcoatings.com/products",
     items: [
-      { name: "Borophene", kind: "Coating", note: "9H+ hardness, boron nitride formula", warranty: "Brand site says 9 years durability" },
+      { name: "Borophene", kind: "Coating", note: "9H+ hardness, boron nitride formula", warranty: "9-year warranty (registration needed)" },
       { name: "Graphene", kind: "Coating", warranty: "7-year warranty (brand site)" },
-      { name: "Graphene Matrix", kind: "Coating", note: "Brand says it self-heals minor swirls when heat-activated" },
+      { name: "Graphene Matrix", kind: "Coating", note: "Brand says it self-heals minor swirls when heat-activated; not a warranty claim" },
       { name: "Prolong", kind: "Coating", note: "9H ceramic coating" },
       { name: "Prolong Light", kind: "Coating" },
       { name: "PowerShield", kind: "Coating" },

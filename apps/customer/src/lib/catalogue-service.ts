@@ -3,6 +3,7 @@ import { functions } from "./firebase";
 import { rupees } from "../ui/kit";
 import { primeVisuals } from "./imagery";
 import { MENU_SEED, sizePricingFor } from "@autodeck/core";
+import { applyBrandWarranty } from "./warranty-labels";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 // Dev-only: ?mock=1 on web renders the real screens from the seeded menu (no Firebase session needed).
@@ -53,23 +54,7 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
   return p;
 }
 
-// Warranty labels below were web-researched from the brand sites listed here. They are NOT owner-supplied and
-// still need owner confirmation against official brand pages before launch. See docs/WARRANTY-CLAIMS.md.
-// Garware site tiers: Premium 8-year, Plus 5-year, Protect 3-year (garwarehitechfilms.com).
-// LLumar site: Platinum Gloss 10-year, Gloss/Matte 5-year. No site source for "Garware Platinum" or
-// "LLumar Valor", so their warranty shows blank until sourced.
-const SITE_WARRANTY: Record<string, string | null> = {
-  "garware plus": "5-Year PPF Film Warranty",
-  "garware premium": "8-Year PPF Film Warranty",
-  "garware platinum": null,
-  "llumar gloss": "5-Year PPF Film Warranty",
-  "llumar platinum": "10-Year PPF Film Warranty",
-  "llumar valor": null,
-};
-export function applyBrandWarranty(s: Service): Service {
-  const k = s.name.toLowerCase();
-  return k in SITE_WARRANTY ? { ...s, warrantyLabel: SITE_WARRANTY[k] ?? null } : s;
-}
+export { applyBrandWarranty } from "./warranty-labels";
 
 export async function calculateServicePrice(
   serviceId: string,

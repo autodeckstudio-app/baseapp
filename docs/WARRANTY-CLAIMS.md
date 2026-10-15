@@ -36,3 +36,16 @@ Note: A and B can disagree (e.g. menu seed says Garware 8-year for every Garware
 | Fireball | Dok Do "9H flagship, top coat and base coat" | fireballkorea.com/ceramic-coating |
 
 Conflict to resolve: Kovalent Borophene shows "9 years durability" in C, no warranty in A.
+
+## Update 16 Oct 2026: corrections applied (client side)
+Status: applied from a correction plan relayed by the assistant, not from values supplied by the studio. No owner
+confirmation is recorded in this repo. Values are web-sourced; verify against the brand pages before launch.
+- Labels are per film or product, never per brand. Brand and coverage cards (menu-ppf-*) show no warranty because the film is not named.
+- Garware: Plus 5, Premium 8, Protect 3 years. Garware Platinum blank (no source).
+- LLumar: Gloss and Matte 5, Platinum 10, Valor 12 years.
+- 3M: Series 200 and 150 10 years, Series 100 7, Series 50 5. 3M Ceramic "up to five years" is durability, not a warranty; label blank.
+- XPEL: 10 years only on Ultimate Plus and Stealth.
+- Kovalent: Graphene 7, Borophene 9 (registration needed). Graphene Matrix self-healing is heat-activated and not a warranty claim.
+- AutoDeck Care and Fireball coatings: blank until sourced.
+- Code: SITE_WARRANTY replaced by FILM_WARRANTY and BLANK_WARRANTY_IDS in apps/customer/src/lib/catalogue-service.ts, test in warranty-labels.test.ts.
+- Server seed (packages/core/src/menu.ts) still carries the old brand-wide terms; it needs the same change at the held functions deploy.
