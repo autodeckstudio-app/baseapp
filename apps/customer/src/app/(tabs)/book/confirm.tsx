@@ -12,6 +12,8 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
+import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
+import { getMyMemberships } from "../../../lib/membership-service";
 import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
@@ -48,6 +50,8 @@ export default function BookingConfirmScreen() {
   const [loadError, setLoadError] = useState(false);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+  const [wash, setWash] = useState<WashDecision | null>(null);
+  const [useWash, setUseWash] = useState(false);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   useEffect(() => {
@@ -72,6 +76,16 @@ export default function BookingConfirmScreen() {
     })();
   }, [params.serviceId, params.vehicleId, params.vehicleCategory,retryTick]);
 
+  // One included wash per booking, offered only when every rule passes (see lib/membership-wash.ts). Dark until the server can record it.
+  useEffect(() => {
+    if (!MEMBERSHIP_WASH_LIVE || !service) return;
+    let alive = true;
+    void getMyMemberships().then((list) => { if (alive) setWash(pickWash(list, service, todayInIndia())); }).catch(() => { if (alive) setWash(null); });
+    return () => { alive = false; };
+  }, [service]);
+  const washOffer = MEMBERSHIP_WASH_LIVE && wash && wash.ok ? wash : null;
+  const washOn = useWash && washOffer !== null;
+
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
@@ -86,6 +100,7 @@ export default function BookingConfirmScreen() {
         scheduledDate: params.scheduledDate,
         scheduledTime: params.scheduledTime,
         idempotencyKey,
+        ...(washOn ? { useMembershipWash: true } : {}),
       });
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
     } catch (err) {
@@ -122,7 +137,7 @@ export default function BookingConfirmScreen() {
         </View>
       ) : null}
       <Sheet>
-        {service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total, pay at the studio" value={rupees(breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
+        {washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total, pay at the studio" value={rupees(breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
         <SheetDivider />
         <SheetLine label="Service" value={service?.name ?? "-"} />
         <SheetLine label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
@@ -139,7 +154,18 @@ export default function BookingConfirmScreen() {
         />
       ) : null}
 
-      {service?.priceOnRequest !== true && breakdown ? (
+      {washOffer ? (
+        <Pane pad="gap">
+          <Row
+            title="Use a membership wash"
+            detail={<T role="caption" tone="secondary">{`${washOffer.washesLeft} left${washOffer.expiresOn ? `, plan valid until ${washOffer.expiresOn}` : ""}. One wash per booking.`}</T>}
+            trailing={<Button kind={washOn ? "primary" : "quiet"} label={washOn ? "Using it" : "Use"} onPress={() => setUseWash(!useWash)} />}
+            last
+          />
+        </Pane>
+      ) : null}
+
+      {!washOn && service?.priceOnRequest !== true && breakdown ? (
         <Sheet>
           <SheetLine small label="Base" value={rupees(breakdown.basePrice)} />
           {breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}

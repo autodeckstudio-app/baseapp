@@ -45,6 +45,8 @@ type CreateBookingInput = {
   scheduledTime: string;
   idempotencyKey: string;
   notes?: string;
+  /** Held until the server records redemptions; only sent while MEMBERSHIP_WASH_LIVE is true. */
+  useMembershipWash?: boolean;
 };
 type CreateBookingOutput = { booking: Booking };
 

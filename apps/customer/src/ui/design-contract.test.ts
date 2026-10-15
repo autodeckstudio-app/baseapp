@@ -316,3 +316,12 @@ describe("home car cards", () => {
     expect(read("src/ui/HeroStage.tsx")).toContain("<Plate value={car.plate} />");
   });
 });
+
+describe("membership wash", () => {
+  it("stays dark until the server records redemptions", () => {
+    expect(read("src/lib/membership-wash.ts")).toContain("export const MEMBERSHIP_WASH_LIVE = false");
+    const c = read("src/app/(tabs)/book/confirm.tsx");
+    expect(c).toContain("MEMBERSHIP_WASH_LIVE && wash && wash.ok");
+    expect(c).toContain("...(washOn ? { useMembershipWash: true } : {})");
+  });
+});
