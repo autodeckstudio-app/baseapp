@@ -278,3 +278,10 @@ describe("shared header", () => {
     }
   });
 });
+
+describe("bookings explore", () => {
+  it("bookings page offers real feature tiles, not only history", () => {
+    const b = read("src/app/(tabs)/bookings/index.tsx");
+    expect(b).toContain("<SectionTitle>Explore</SectionTitle>");
+  });
+});

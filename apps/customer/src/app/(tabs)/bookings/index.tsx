@@ -18,6 +18,9 @@ import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
+import { Image, Share } from "react-native";
+import { PhotoCard } from "../../../ui/HomeView";
+import { serviceImagery } from "../../../lib/imagery";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
@@ -95,6 +98,17 @@ export default function BookingsScreen() {
         </Pane>
       ) : null}
       {past.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>History</SectionTitle>{list(past)}</View> : null}
+      <View style={{ gap: space.line }}>
+        <SectionTitle>Explore</SectionTitle>
+        <View style={{ flexDirection: "row", gap: space.line }}>
+          <PhotoCard hearted={false} title="Ceramic coatings" pill="See range" onPress={() => router.push("/(tabs)/catalogue?cat=coatings" as never)} media={<Image source={serviceImagery.ceramic} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+          <PhotoCard hearted={false} title="Paint protection film" pill="See range" onPress={() => router.push("/(tabs)/catalogue?cat=ppf" as never)} media={<Image source={serviceImagery.ppf} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+        </View>
+        <View style={{ flexDirection: "row", gap: space.line }}>
+          <PhotoCard hearted={false} title="Membership" pill="Washes and perks" onPress={() => router.push("/(tabs)/membership")} media={<Image source={sceneImagery.membership} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+          <PhotoCard hearted={false} title="Bring a friend" pill="Share AutoDeck" onPress={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)} media={<Image source={sceneImagery.heroHome} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+        </View>
+      </View>
     </Screen>
   );
 }
