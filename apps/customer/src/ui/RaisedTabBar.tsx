@@ -1,10 +1,11 @@
-// Customer tab bar in the reference style: one soft raised bar across the
-// bottom, icons with small labels, the active tab a pressed well with an orange icon.
-import { Platform, Pressable, Text, View } from "react-native";
+// Customer tab bar, Instagram style: translucent glass, plain outline icons with no labels,
+// the active icon on a soft orange tint. It shrinks while the page scrolls down and returns on scroll up.
+import { useEffect, useRef } from "react";
+import { Animated, Platform, Pressable, View } from "react-native";
 import { Icon } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { emitTabPressed, useExperienceTheme } from "@autodeck/ui/native";
-import { raised } from "../lib/raised";
+import { onNavCompact } from "../lib/nav-scroll";
 
 type Route = { key: string; name: string };
 type Props = {
@@ -16,15 +17,23 @@ type Props = {
 
 export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
   const { name, colors } = useExperienceTheme();
-  const r = raised(name);
+  const light = name === "light";
   const visible = state.routes.filter((r2) => descriptors[r2.key]?.options.href !== null && icons[r2.name]);
   const activeKey = state.routes[state.index]?.key;
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => onNavCompact((c) => { Animated.timing(t, { toValue: c ? 1 : 0, duration: 220, useNativeDriver: Platform.OS !== "web" }).start(); }), [t]);
+  const scale = t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] });
+  const lift = t.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
+  const glass = light
+    ? { backgroundColor: "rgba(251,248,243,0.62)", borderColor: "rgba(60,48,36,0.10)" }
+    : { backgroundColor: "rgba(24,24,28,0.50)", borderColor: "rgba(255,255,255,0.10)" };
   return (
     <View
       pointerEvents="box-none"
       style={{ position: "absolute", left: 0, right: 0, bottom: (Platform.OS === "web" ? "calc(8px + env(safe-area-inset-bottom))" : 8) as unknown as number, alignItems: "center", paddingHorizontal: 12 }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", maxWidth: 360, paddingHorizontal: 6, paddingVertical: 4, ...r.sheet, borderRadius: 24, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" } as object) : {}) }}>
+      <Animated.View style={{ width: "100%", maxWidth: 360, transform: [{ translateY: lift }, { scale }] }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", width: "100%", paddingHorizontal: 6, paddingVertical: 6, borderRadius: 24, borderWidth: 1, ...glass, ...(Platform.OS === "web" ? ({ backdropFilter: "blur(16px) saturate(140%)", WebkitBackdropFilter: "blur(16px) saturate(140%)" } as object) : null) }}>
         {visible.map((route) => {
           const focused = activeKey === route.key;
           const label = descriptors[route.key]?.options.title ?? route.name;
@@ -40,16 +49,16 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
                 navigation.navigate(route.name, { screen: "index", params: { cat: undefined, brand: undefined, need: undefined } });
                 emitTabPressed(route.name);
               }}
-              style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", gap: 1, paddingVertical: 3, opacity: pressed ? 0.7 : 1 })}
+              style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", justifyContent: "center", paddingVertical: 2, opacity: pressed ? 0.7 : 1 })}
             >
-              <View style={{ width: 40, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", ...(focused ? r.well : null) }}>
-                <Icon name={icons[route.name] ?? "home"} color={focused ? "#EC8638" : colors.inactive} size={20} filled={focused} />
+              <View style={{ width: 52, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(236,134,56,0.20)" : "transparent" }}>
+                <Icon name={icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={22} />
               </View>
-              <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: focused ? "700" : "500", color: focused ? colors.textPrimary : colors.inactive }}>{label}</Text>
             </Pressable>
           );
         })}
       </View>
+      </Animated.View>
     </View>
   );
 }

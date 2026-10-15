@@ -1,6 +1,7 @@
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
+import { reportScroll, resetNavScroll } from "../lib/nav-scroll";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -160,6 +161,7 @@ export function Screen({
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => {
     setFocused(true);
+    resetNavScroll();
     return () => setFocused(false);
   }, []));
   const segs = useSegments() as string[];
@@ -177,7 +179,7 @@ export function Screen({
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}><BackBar />{top}</View> : null}
-      {scroll ? <ScrollView ref={scrollRef} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
+      {scroll ? <ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );
 }
