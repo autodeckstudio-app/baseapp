@@ -270,3 +270,11 @@ describe("provenance", () => {
     expect(read("src/lib/catalogue-service.ts")).toContain("WARRANTY-CLAIMS.md");
   });
 });
+
+describe("shared header", () => {
+  it("every tab screen uses the same app bar", () => {
+    for (const f of ["garage/index", "bookings/index", "catalogue/index", "profile"]) {
+      expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("appBar=");
+    }
+  });
+});

@@ -83,7 +83,7 @@ export default function GarageScreen() {
   const lead = list[0];
 
   return (
-    <Screen header={<PageHeader kicker="Garage" title={list.length === 0 ? "Add your first car" : list.length === 1 ? "One car in your garage" : `${list.length} cars in your garage`} sub={list.length === 0 ? "Papers, warranties and visit history live with each car." : list.map((v) => v.registrationNumber).join(" \u00b7 ")} />}>
+    <Screen appBar="Garage" header={<PageHeader kicker="Garage" title={list.length === 0 ? "Add your first car" : list.length === 1 ? "One car in your garage" : `${list.length} cars in your garage`} sub={list.length === 0 ? "Papers, warranties and visit history live with each car." : list.map((v) => v.registrationNumber).join(" \u00b7 ")} />}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {removing ? (
         <Notice

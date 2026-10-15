@@ -70,7 +70,7 @@ export default function YouScreen() {
   const name = savedName ?? auth.user.displayName ?? "AutoDeck member";
 
   return (
-    <Screen>
+    <Screen appBar="You">
       <PageHeader kicker="You" title="Your account" />
       <ProfileHero
         name={name}

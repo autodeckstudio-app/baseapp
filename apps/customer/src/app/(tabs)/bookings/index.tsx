@@ -80,7 +80,7 @@ export default function BookingsScreen() {
   );
 
   return (
-    <Screen header={<PageHeader kicker="Bookings" title={inStudio.length > 0 ? "Your car is in the studio" : upcoming.length > 0 ? "Your next visit is booked" : "Nothing booked right now"} sub={[inStudio.length > 0 ? `${inStudio.length} in progress` : null, upcoming.length > 0 ? `${upcoming.length} coming up` : null, past.length > 0 ? `${past.length} past` : null].filter(Boolean).join(" \u00b7 ") || "Pick a service and a time. The studio confirms it."} />}>
+    <Screen appBar="Bookings" header={<PageHeader kicker="Bookings" title={inStudio.length > 0 ? "Your car is in the studio" : upcoming.length > 0 ? "Your next visit is booked" : "Nothing booked right now"} sub={[inStudio.length > 0 ? `${inStudio.length} in progress` : null, upcoming.length > 0 ? `${upcoming.length} coming up` : null, past.length > 0 ? `${past.length} past` : null].filter(Boolean).join(" \u00b7 ") || "Pick a service and a time. The studio confirms it."} />}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {inStudio.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>In the studio</SectionTitle>{list(inStudio)}</View> : null}
       {upcoming.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>Coming up</SectionTitle>{list(upcoming)}</View> : null}

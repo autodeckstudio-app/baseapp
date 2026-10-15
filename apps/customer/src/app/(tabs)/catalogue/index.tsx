@@ -144,7 +144,7 @@ export default function CatalogueScreen() {
   );
 
   return (
-    <Screen top={top}>
+    <Screen appBar="Services" top={top}>
       {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {!services && !error ? (
         <View style={{ gap: space.line }}>

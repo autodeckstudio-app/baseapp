@@ -1,6 +1,7 @@
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
+import { AppBar } from "./AppBar";
 import { reportScroll, resetNavScroll } from "../lib/nav-scroll";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -146,7 +147,10 @@ export function Screen({
   header,
   top,
   canvas = false,
+  appBar,
 }: {
+  /** Shared tab header: avatar, screen name, bell. Pass the screen name. */
+  appBar?: string;
   /** Show the photo backdrop behind the header (use with CanvasTitle). */
   canvas?: boolean;
   children: ReactNode;
@@ -169,6 +173,7 @@ export function Screen({
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
     <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 120, gap: 20 }}>
+      {appBar && !top ? <AppBar title={appBar} /> : null}
       {!top ? <BackBar /> : null}
       {header}
       {children}
@@ -178,7 +183,7 @@ export function Screen({
   return (
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
-      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}><BackBar />{top}</View> : null}
+      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{appBar ? <AppBar title={appBar} /> : null}<BackBar />{top}</View> : null}
       {scroll ? <ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );
