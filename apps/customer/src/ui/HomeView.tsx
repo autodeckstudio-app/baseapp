@@ -10,6 +10,8 @@ import { serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
+import { ServicePhoto } from "./ServicePhoto";
+import { NavIcon, navIconFor } from "./NavIcon";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
 import { HeroStage } from "./HeroStage";
@@ -194,11 +196,14 @@ function TopPickCard({ pick, onPress }: { pick: TopPick; onPress: () => void }) 
   const r = raised(name);
   const price = pick.service.price === "Quote on request" ? "We quote after a look" : pick.service.price ? `From ${pick.service.price.replace(/^From\s+/i, "")}` : "";
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={pick.title} onPress={onPress} style={{ flex: 1, minWidth: 0, minHeight: 104, borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, justifyContent: "space-between", ...r.card }}>
-      <View style={{ width: 36, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(236,134,56,0.14)" }}>
-        <Icon name={pick.icon} color="#EC8638" size={20} />
+    <Pressable accessibilityRole="button" accessibilityLabel={pick.title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.card }}>
+      <View style={{ height: 84 }}>
+        <ServicePhoto service={{ name: pick.service.name, category: pick.service.category, brand: pick.service.brand ?? null }} height={84} />
+        <View style={{ position: "absolute", left: 10, bottom: 8, width: 30, height: 30, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(20,20,24,0.62)" }}>
+          <NavIcon name={navIconFor(pick.icon)} color="#FFFFFF" size={18} cut="#18181C" />
+        </View>
       </View>
-      <View style={{ gap: 2 }}>
+      <View style={{ gap: 2, padding: metrics.cardPad, paddingTop: 10 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{pick.title}</Text>
         <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{price}</Text>
       </View>
@@ -311,7 +316,7 @@ export function HomeView(p: HomeViewProps) {
           <Text numberOfLines={1} style={{ color: "#D5D1CA", fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <Icon name="bell" color={colors.textPrimary} size={21} />
+          <NavIcon name="bell" color={colors.textPrimary} size={22} cut="#18181C" />
           {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
         </Pressable>
       </View>

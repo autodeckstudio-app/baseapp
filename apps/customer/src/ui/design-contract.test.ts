@@ -113,7 +113,7 @@ it("takes hero heights from metrics on car and booking detail",()=>{expect(read(
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
-    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 20, right: 20, bottom: 92");expect(svc).not.toContain('width: "92%"');
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: 480");expect(svc).toContain('alignItems: "center", paddingHorizontal: 20');expect(svc).not.toContain('width: "92%"');
     expect(read("src/ui/StoryCircles.tsx")).toContain("groups.filter((g) => g.cover)");
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain('?? "Studio visit"');expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
@@ -291,5 +291,19 @@ describe("actionable notifications", () => {
     const n = read("src/app/(tabs)/notifications/index.tsx");
     expect(n).toContain("accessibilityLabel={NOTIFICATION_ACTION[item.entityType");
     expect(n).not.toContain("respondToApproval");
+  });
+});
+
+describe("one icon set", () => {
+  it("drawer, app bar, home bell, top picks and notifications draw the thin-line set", () => {
+    for (const f of ["src/ui/SideDrawer.tsx", "src/ui/AppBar.tsx", "src/ui/HomeView.tsx", "src/app/(tabs)/notifications/index.tsx"]) {
+      expect(read(f)).toContain("NavIcon");
+    }
+  });
+  it("top services cards carry a photo", () => {
+    expect(read("src/ui/HomeView.tsx")).toContain("<ServicePhoto service={{ name: pick.service.name");
+  });
+  it("night surfaces use one charcoal card colour", () => {
+    expect(read("src/lib/raised.ts")).toContain('#1B1B1F');
   });
 });

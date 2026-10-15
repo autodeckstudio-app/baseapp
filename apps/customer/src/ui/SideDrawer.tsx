@@ -1,6 +1,7 @@
 import { Modal, Pressable, Text, View } from "react-native";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
+import { NavIcon, navIconFor } from "./NavIcon";
 import { metrics } from "../lib/metrics";
 
 export type DrawerItem = { key: string; label: string; sub?: string; icon: IconName; onPress: () => void };
@@ -25,7 +26,7 @@ export function SideDrawer({ open, onClose, name, initial, items }: { open: bool
           </View>
           {items.map((it) => (
             <Pressable key={it.key} accessibilityRole="button" accessibilityLabel={it.label} onPress={() => { onClose(); it.onPress(); }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, minHeight: 48, opacity: pressed ? 0.6 : 1 })}>
-              <Icon name={it.icon} color={colors.textPrimary} size={22} />
+              <NavIcon name={navIconFor(it.icon)} color={colors.textPrimary} size={24} cut="#18181C" />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{it.label}</Text>
                 {it.sub ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{it.sub}</Text> : null}

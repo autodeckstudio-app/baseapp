@@ -7,6 +7,7 @@ import type { Notification } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { NavIcon } from "../../../ui/NavIcon";
 import { Button, Kicker, Loading, Notice, PageHeader, Pane, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { enablePush, pushPermission, type PushPermission } from "../../../lib/push";
@@ -125,7 +126,7 @@ export default function NotificationsScreen() {
                 <Pane pad="inset">
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.line }}>
                     <View style={{ width: 40, height: 40, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)" }}>
-                      <Icon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} />
+                      <NavIcon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} cut="#18181C" />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       <T role="bodyStrong">{repairText(item.title)}</T>

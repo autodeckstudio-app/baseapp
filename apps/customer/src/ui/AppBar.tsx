@@ -6,6 +6,7 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 import { listenToMyNotifications } from "../lib/notification-service";
 import { raised } from "../lib/raised";
+import { NavIcon } from "./NavIcon";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
 
 export function AppBar({ title }: { title: string }) {
@@ -42,7 +43,7 @@ export function AppBar({ title }: { title: string }) {
       </Pressable>
       <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{title}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"} onPress={go("/(tabs)/notifications")} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-        <Icon name="bell" color={colors.textPrimary} size={21} />
+        <NavIcon name="bell" color={colors.textPrimary} size={22} cut="#18181C" />
         {unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
       </Pressable>
     </View>
