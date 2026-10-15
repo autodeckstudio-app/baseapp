@@ -49,6 +49,8 @@ type CreateBookingInput = {
   useMembershipWash?: boolean;
   /** A friend's personal code. Held until the server can validate it and redeem the first wash; only sent while REFERRAL_LIVE is true. */
   referralCode?: string;
+  /** A claimed gift code. The server checks and uses it; only sent while GIFT_LIVE is true. */
+  giftCode?: string;
 };
 type CreateBookingOutput = { booking: Booking };
 

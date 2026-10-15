@@ -4,6 +4,7 @@ import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
 import { createBooking, generateIdempotencyKey } from "../../../lib/booking-service";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
@@ -45,6 +46,7 @@ export default function BookingConfirmScreen() {
   const router = useRouter();
   const auth = useAuth();
   const [friendCode, setFriendCode] = useState("");
+  const [giftCode] = useState(() => (GIFT_LIVE ? takePendingGiftCode() : null));
 
   const [service, setService] = useState<Service | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -108,6 +110,7 @@ export default function BookingConfirmScreen() {
         idempotencyKey,
         ...(washOn ? { useMembershipWash: true } : {}),
         ...(sendCode ? { referralCode: sendCode } : {}),
+        ...(giftCode ? { giftCode } : {}),
       });
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
     } catch (err) {
@@ -163,6 +166,7 @@ export default function BookingConfirmScreen() {
 
       {REFERRAL_LIVE ? (
         <Pane pad="gap">
+          {giftCode ? <Notice title="Covered by your gift" body="You will not pay for this wash. The studio confirms the price is covered." /> : null}
           <Field label="Have a friend's code? (optional)" value={friendCode} onChangeText={setFriendCode} autoCapitalize="characters" placeholder="AD2K7QX" maxLength={12} error={friendCode.trim() !== "" && !normaliseReferralCode(friendCode) ? "That does not look like a code" : undefined} />
         </Pane>
       ) : null}

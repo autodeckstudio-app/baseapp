@@ -1,6 +1,7 @@
 import { RateCard } from "../../ui/RateCard";
 import { rateCandidate } from "../../lib/rate-card";
 import { liveTrackTarget } from "../../lib/bookings-view";
+import { GIFT_LIVE } from "../../lib/gift";
 import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
@@ -245,6 +246,7 @@ export default function HomeScreen() {
         drawer={[
           { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: () => router.push("/(tabs)/membership") },
           { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
+          ...(GIFT_LIVE ? [{ key: "gifts", label: "Gift a wash", sub: "Use or send a gift", icon: "gift" as const, onPress: () => router.push("/(tabs)/gifts") }] : []),
           { key: "notifications", label: "Notifications", icon: "bell", onPress: () => router.push("/(tabs)/notifications") },
           { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => router.push("/(tabs)/studio") },
           { key: "help", label: "Help and contact", icon: "chat", onPress: () => router.push("/(tabs)/help") },
