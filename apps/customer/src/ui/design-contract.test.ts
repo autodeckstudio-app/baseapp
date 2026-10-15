@@ -200,3 +200,11 @@ describe("slide to confirm", () => {
     expect(s).not.toMatch(/\u2014/);
   });
 });
+
+describe("garage cards", () => {
+  it("never reuse one photo: garage services use an icon tile", () => {
+    const src = read("src/ui/ServicePhoto.tsx");
+    expect(src).toContain('service.category === "garage"');
+    expect(src).toContain("garageIconFor");
+  });
+});
