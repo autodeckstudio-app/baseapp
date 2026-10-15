@@ -50,5 +50,8 @@ export function navIconFor(name: string): NavIconName {
   if (name === "wrench") return "tools";
   if (name === "shield") return "ceramic";
   if (name === "calendar") return "bookings";
+  if (name === "membership") return "club";
+  if (name === "phone") return "chat";
+  if (name === "user" || name === "users") return "profile";
   return "check";
 }

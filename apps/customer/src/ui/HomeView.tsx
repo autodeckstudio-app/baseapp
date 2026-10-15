@@ -89,7 +89,7 @@ function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: str
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => ({ alignItems: "center", gap: 8, opacity: pressed ? 0.75 : 1, flex: 1 })}>
       <View style={{ width: 64, height: 64, alignItems: "center", justifyContent: "center", ...(on ? r.roundOn : r.round) }}>
-        <Icon name={icon} color={on ? "#1A1410" : colors.textPrimary} size={24} />
+        <NavIcon name={navIconFor(icon)} color={on ? "#1A1410" : colors.textPrimary} size={24} cut="#18181C" />
         {badge ? <View style={{ position: "absolute", top: 14, right: 16, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
       </View>
       <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>{label}</Text>
@@ -229,7 +229,7 @@ function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: 
   const { colors } = useExperienceTheme();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: metrics.rowPadV, paddingHorizontal: metrics.rowPadH, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
-      <Icon name={icon} color={colors.textSecondary} size={20} />
+      <NavIcon name={navIconFor(icon)} color={colors.textSecondary} size={20} cut="#18181C" />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
         <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{sub}</Text>
