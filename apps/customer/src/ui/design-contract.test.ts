@@ -189,3 +189,14 @@ describe("Home hero stage", () => {
     expect(home).not.toMatch(/<Icon name=\{icon\} color="#EC8638"/);
   });
 });
+
+describe("slide to confirm", () => {
+  it("the Review step confirms by slide with a visible tap fallback, and the booking still goes through handleConfirm", () => {
+    const c = read("src/app/(tabs)/book/confirm.tsx");
+    expect(c).toMatch(/<SlideToConfirm /);
+    expect(c).toMatch(/onConfirm=\{\(\) => void handleConfirm\(\)\}/);
+    const s = read("src/ui/SlideToConfirm.tsx");
+    expect(s).toMatch(/Or tap here to confirm/);
+    expect(s).not.toMatch(/\u2014/);
+  });
+});

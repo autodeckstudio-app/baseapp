@@ -1,3 +1,4 @@
+import { SlideToConfirm } from "../../../ui/SlideToConfirm";
 import { useState, useEffect } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -11,6 +12,7 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
+import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 
 // Multi-day PPF services run into thousands of minutes - "~4320 min" is
@@ -119,18 +121,16 @@ export default function BookingConfirmScreen() {
           </View>
         </View>
       ) : null}
-      <Pane pad="gap">
-        <Row title="Service" detail={service?.name ?? "-"} />
-        <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
-        <Row title="Date" detail={displayDate ?? "-"} />
-        <Row title="Time" detail={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
-        <Row title="Duration" detail={durationLabel} />
-        <Row
-          title="Expected ready"
-          detail={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime}` : ""}` : "-"}
-          last
-        />
-      </Pane>
+      <Sheet>
+        {service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total, pay at the studio" value={rupees(breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
+        <SheetDivider />
+        <SheetLine label="Service" value={service?.name ?? "-"} />
+        <SheetLine label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
+        <SheetLine label="Date" value={displayDate ?? "-"} />
+        <SheetLine label="Time" value={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
+        <SheetLine label="Duration" value={durationLabel} />
+        <SheetLine label="Expected ready" value={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime}` : ""}` : "-"} last />
+      </Sheet>
 
       {isMultiDay ? (
         <Notice
@@ -140,13 +140,13 @@ export default function BookingConfirmScreen() {
       ) : null}
 
       {service?.priceOnRequest !== true && breakdown ? (
-        <Pane pad="gap">
-          <Row title="Base" trailing={<T role="data">{rupees(breakdown.basePrice)}</T>} />
-          {breakdown.scopeAdjustment > 0 ? <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(breakdown.scopeAdjustment)}</T>} /> : null}
-          {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(breakdown.membershipDiscount)}</T>} /> : null}
-          <Row title={breakdown.taxDescription} trailing={<T role="data">{rupees(breakdown.tax)}</T>} />
-          <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(breakdown.total)}</T>} last />
-        </Pane>
+        <Sheet>
+          <SheetLine small label="Base" value={rupees(breakdown.basePrice)} />
+          {breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
+          {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
+          {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
+          <SheetLine small label="Total" value={rupees(breakdown.total)} last />
+        </Sheet>
       ) : null}
 
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
@@ -165,7 +165,7 @@ export default function BookingConfirmScreen() {
       {bookError ? <Notice title="Could not confirm the request" body={bookError} /> : null}
 
       <View style={{ gap: space.breath }}>
-        <Button label={service?.priceOnRequest === true ? "Request quote and book" : "Request booking"} busy={booking} onPress={() => void handleConfirm()} />
+        <SlideToConfirm label={service?.priceOnRequest === true ? "Slide to request a quote" : "Slide to request booking"} busy={booking} onConfirm={() => void handleConfirm()} />
         {bookError ? <Button label="Back to my details" kind="quiet" onPress={() => router.back()} /> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
     </Screen>
