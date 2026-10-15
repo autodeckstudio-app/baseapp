@@ -145,6 +145,8 @@ export { issueStoryUploadUrl } from "./functions/story/issueStoryUploadUrl.js";
 export { createStory } from "./functions/story/createStory.js";
 export { updateStory } from "./functions/story/updateStory.js";
 export { listStories } from "./functions/story/listStories.js";
+// Win-back nudge (weekly, plain message)
+export { winbackScheduled } from "./functions/notification/winbackScheduled.js";
 // Offers (one banner on customer Home between two dates)
 export { issueOfferUploadUrl } from "./functions/offer/issueOfferUploadUrl.js";
 export { createOffer } from "./functions/offer/createOffer.js";
