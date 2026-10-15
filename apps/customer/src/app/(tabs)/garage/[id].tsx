@@ -1,3 +1,4 @@
+import { lastFinishedJob } from "../../../lib/care-due";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField } from "../../../ui/inputs";
 import { validateDocument, documentReference } from "../../../lib/document-validation";
@@ -239,7 +240,7 @@ export default function VehicleDetailScreen() {
 
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
-  const mostRecentJob = jobs[0] ?? null;
+  const mostRecentJob = lastFinishedJob(jobs);
   const careDone: CareDone = { ppf: null, coating: null, tint: null };
   for (const j of jobs) {
     if (j.status !== "DELIVERED" && j.status !== "READY_FOR_DELIVERY" && j.status !== "QUALITY_CHECK") continue;

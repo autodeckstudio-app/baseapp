@@ -170,3 +170,7 @@ describe("Book shows the price and time picker early", () => {
     expect(b).toMatch(/aspect=\{3\}/);
   });
 });
+
+it("Garage last service and the service reminder count delivered visits only", () => {
+  expect(read("src/app/(tabs)/garage/[id].tsx")).toMatch(/mostRecentJob = lastFinishedJob\(jobs\)/);
+});
