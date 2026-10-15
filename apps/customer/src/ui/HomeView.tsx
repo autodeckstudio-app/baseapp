@@ -3,6 +3,7 @@
 // membership tiles, stories, brand widgets, popular services and reminders.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { pickTopServices, type TopPick } from "../lib/top-services";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { serviceImagery } from "../lib/imagery";
@@ -183,6 +184,24 @@ export function pickSuggested(all: HomeService[]): HomeService[] {
   return out;
 }
 
+export type { TopPick } from "../lib/top-services";
+function TopPickCard({ pick, onPress }: { pick: TopPick; onPress: () => void }) {
+  const { colors, name } = useExperienceTheme();
+  const r = raised(name);
+  const price = pick.service.price === "Quote on request" ? "We quote after a look" : pick.service.price ? `From ${pick.service.price.replace(/^From\s+/i, "")}` : "";
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={pick.title} onPress={onPress} style={{ flex: 1, minWidth: 0, minHeight: 104, borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, justifyContent: "space-between", ...r.card }}>
+      <View style={{ width: 36, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(236,134,56,0.14)" }}>
+        <Icon name={pick.icon} color="#EC8638" size={20} />
+      </View>
+      <View style={{ gap: 2 }}>
+        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{pick.title}</Text>
+        <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{price}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function SuggestRow({ s, first, onPress }: { s: HomeService; first: boolean; onPress: () => void }) {
   const { colors } = useExperienceTheme();
   const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
@@ -270,7 +289,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
-  const suggested = pickSuggested(p.services);
+  const top = pickTopServices(p.services);
   const [active, setActive] = useState(0);
   const car = p.cars[active] ?? p.cars[0];
   const pct = p.progress;
@@ -282,8 +301,8 @@ export function HomeView(p: HomeViewProps) {
           <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>
-          <Text numberOfLines={1} style={{ color: colors.textTertiary, fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
+          <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>
+          <Text numberOfLines={1} style={{ color: "#D5D1CA", fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
           <Icon name="bell" color={colors.textPrimary} size={21} />
@@ -310,11 +329,17 @@ export function HomeView(p: HomeViewProps) {
       ) : null}
 
       <View style={{ gap: 12 }}>
-        <Heading title={car ? `For your ${car.title}` : "Services"} action="All services" onAction={p.onAllServices} />
-        <View style={{ borderRadius: 24, overflow: "hidden", ...r.card }}>
-          {suggested.map((sv, i) => <SuggestRow key={sv.id} s={sv} first={i === 0} onPress={() => p.onService(sv)} />)}
-          {suggested.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14, padding: 16 }}>Services will show here.</Text> : null}
-        </View>
+        <Heading title={car ? `Top services for your ${car.title}` : "Top services"} action="All services" onAction={p.onAllServices} />
+        {top.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Services will show here.</Text> : (
+          <View style={{ gap: metrics.innerGap }}>
+            {[top.slice(0, 2), top.slice(2, 4)].filter((row) => row.length > 0).map((row, i) => (
+              <View key={i} style={{ flexDirection: "row", gap: metrics.innerGap }}>
+                {row.map((pk) => <TopPickCard key={pk.key} pick={pk} onPress={() => p.onService(pk.service)} />)}
+                {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {p.reminders.length ? (
