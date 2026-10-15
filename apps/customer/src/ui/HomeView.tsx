@@ -98,21 +98,25 @@ function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: str
   );
 }
 
-export function PhotoCard({ media, title, pill, onPress, hearted = true, compact = false }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean; compact?: boolean }) {
+/** The one tile size used on Services, Garage, Home Top services and Bookings Explore. */
+export const TILE_ASPECT = 1.4;
+export const TILE_GAP = 10;
+
+export function PhotoCard({ media, title, pill, onPress, hearted = true }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean }) {
   const [liked, setLiked] = useState(false);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 24, overflow: "hidden", ...glassSurface, aspectRatio: compact ? 1.4 : 0.82 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 24, overflow: "hidden", ...glassSurface, aspectRatio: TILE_ASPECT }}>
       <View style={{ position: "absolute", width: "100%", height: "100%" }}>{media}</View>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.25)" }) }} />
-      <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: compact ? 10 : 12 }}>
-        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: compact ? 13 : 15, fontWeight: "700" }}>{title}</Text>
+      <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: 10 }}>
+        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>{title}</Text>
       </View>
       {hearted ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 16, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
         </Pressable>
       ) : null}
-      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: compact ? 8 : 10, paddingVertical: compact ? 3 : 4 }}><Text style={{ color: "#F59A4E", fontSize: compact ? 10 : 11, fontWeight: "700" }}>{pill}</Text></View> : null}
+      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: "#F59A4E", fontSize: 10, fontWeight: "700" }}>{pill}</Text></View> : null}
     </Pressable>
   );
 }
@@ -193,22 +197,9 @@ export function pickSuggested(all: HomeService[]): HomeService[] {
 
 export type { TopPick } from "../lib/top-services";
 function TopPickCard({ pick, onPress }: { pick: TopPick; onPress: () => void }) {
-  const { colors, name } = useExperienceTheme();
-  const r = raised(name);
-  const price = pick.service.price === "Quote on request" ? "We quote after a look" : pick.service.price ? `From ${pick.service.price.replace(/^From\s+/i, "")}` : "";
+  const price = pick.service.price === "Quote on request" ? "Quote" : pick.service.price ? `From ${pick.service.price.replace(/^From\s+/i, "")}` : undefined;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={pick.title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.card }}>
-      <View style={{ height: 84 }}>
-        <ServicePhoto service={{ name: pick.service.name, category: pick.service.category, brand: pick.service.brand ?? null }} height={84} />
-        <View style={{ position: "absolute", left: 10, bottom: 8, width: 30, height: 30, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(20,20,24,0.62)" }}>
-          <NavIcon name={navIconFor(pick.icon)} color="#FFFFFF" size={18} cut="#18181C" />
-        </View>
-      </View>
-      <View style={{ gap: 2, padding: metrics.cardPad, paddingTop: 10 }}>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{pick.title}</Text>
-        <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{price}</Text>
-      </View>
-    </Pressable>
+    <PhotoCard hearted={false} title={pick.title} pill={price} onPress={onPress} media={<ServicePhoto service={{ name: pick.service.name, category: pick.service.category, brand: pick.service.brand ?? null }} height={400} />} />
   );
 }
 
@@ -341,9 +332,9 @@ export function HomeView(p: HomeViewProps) {
       <View style={{ gap: 12 }}>
         <Heading title={car ? "Top services" : "Top services"} action="All services" onAction={p.onAllServices} />
         {top.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Services will show here.</Text> : (
-          <View style={{ gap: metrics.innerGap }}>
+          <View style={{ gap: TILE_GAP }}>
             {[top.slice(0, 2), top.slice(2, 4)].filter((row) => row.length > 0).map((row, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: metrics.innerGap }}>
+              <View key={i} style={{ flexDirection: "row", gap: TILE_GAP }}>
                 {row.map((pk) => <TopPickCard key={pk.key} pick={pk} onPress={() => p.onService(pk.service)} />)}
                 {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
               </View>

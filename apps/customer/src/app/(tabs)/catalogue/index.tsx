@@ -1,7 +1,7 @@
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import type { ReactElement } from "react";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../../lib/vehicle-size";
-// Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
+// Services: one screen, two levels. Sticky category chips, sub-group sections, search, rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
@@ -13,7 +13,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
-import { PhotoCard, GroupChips, groupCategories } from "../../../ui/HomeView";
+import { PhotoCard, GroupChips, groupCategories, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
 import { Button, Kicker, Notice, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
@@ -99,19 +99,19 @@ export default function CatalogueScreen() {
   useEffect(() => { if (soleId) router.replace(`/(tabs)/catalogue/${soleId}`); }, [soleId, router]);
 
   const tile = (key: string, title: string, _sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
-    <PhotoCard key={key} title={title} pill={meta?.replace(/^From /, "From ")} hearted={false} compact onPress={onPress} media={image ? <FadeImage source={image} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : null} />
+    <PhotoCard key={key} title={title} pill={meta?.replace(/^From /, "From ")} hearted={false} onPress={onPress} media={image ? <FadeImage source={image} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : null} />
   );
   const pairs = <X,>(xs: X[]): X[][] => { const r: X[][] = []; for (let i = 0; i < xs.length; i += 2) r.push(xs.slice(i, i + 2)); return r; };
   const grid = (nodes: ReactElement[]) => (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: TILE_GAP }}>
       {pairs(nodes).map((r, i) => (
-        <View key={i} style={{ flexDirection: "row", gap: 10 }}>{r}{r.length === 1 ? <View style={{ flex: 1 }} /> : null}</View>
+        <View key={i} style={{ flexDirection: "row", gap: TILE_GAP }}>{r}{r.length === 1 ? <View style={{ flex: 1 }} /> : null}</View>
       ))}
     </View>
   );
 
   const card = (sv: Service, i = 0) => (
-    <PhotoCard key={sv.id} compact title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} variant={i} />} />
+    <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} variant={i} />} />
   );
 
   const crumb = (label: string, onPress: () => void) => (
