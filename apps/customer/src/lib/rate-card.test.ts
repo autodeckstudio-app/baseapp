@@ -15,8 +15,8 @@ describe("rate card", () => {
   it("offers nothing for old, cancelled or future visits", () => {
     expect(rateCandidate([b("old", 8), b("c", 1, "CANCELLED"), b("fut", -3)], now)).toBeNull();
   });
-  it("the Google review button stays hidden until the link is set and is never gated by the score", () => {
-    expect(GOOGLE_REVIEW_URL).toBe("");
+  it("the Google review button is a real g.page review link or empty (hidden) and is never gated by the score", () => {
+    expect(GOOGLE_REVIEW_URL).toMatch(/^https:\/\/g\.page\/r\/.+\/review$|^$/);
     const c = readFileSync(`${__dirname}/../ui/RateCard.tsx`, "utf8");
     expect(c).toContain("GOOGLE_REVIEW_URL ?");
     expect(c).not.toMatch(/stars?\s*(>=|>|<)/);

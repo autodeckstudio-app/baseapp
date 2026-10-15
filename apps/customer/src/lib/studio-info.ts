@@ -54,7 +54,7 @@ export function formatHours(hours: LiveStudioInfo["operatingHours"]): string {
 }
 
 /** The studio's Google review link. Empty hides the "Review us on Google" button; set it once the link exists. */
-export const GOOGLE_REVIEW_URL = "";
+export const GOOGLE_REVIEW_URL = "https://g.page/r/CXUDwXSsnhcxEBM/review";
 
 /** Privacy policy and Terms pages. Empty hides the links; set them once the pages exist. */
 export const PRIVACY_POLICY_URL = "";
