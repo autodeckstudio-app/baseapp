@@ -88,6 +88,8 @@ export type AuditAction =
   | "gallery.imageDeleted"
   | "story.created"
   | "story.updated"
+  | "offer.created"
+  | "offer.updated"
   | "carListing.saved"
   | "carListing.submitted"
   | "carListing.reviewed"

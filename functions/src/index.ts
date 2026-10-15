@@ -145,6 +145,11 @@ export { issueStoryUploadUrl } from "./functions/story/issueStoryUploadUrl.js";
 export { createStory } from "./functions/story/createStory.js";
 export { updateStory } from "./functions/story/updateStory.js";
 export { listStories } from "./functions/story/listStories.js";
+// Offers (one banner on customer Home between two dates)
+export { issueOfferUploadUrl } from "./functions/offer/issueOfferUploadUrl.js";
+export { createOffer } from "./functions/offer/createOffer.js";
+export { updateOffer } from "./functions/offer/updateOffer.js";
+export { listOffers } from "./functions/offer/listOffers.js";
 
 // âââ Office dashboard & reports (M6 Automodz Office) âââââââââââââââââââââââ
 export { getOfficeDashboard } from "./functions/office/getOfficeDashboard.js";

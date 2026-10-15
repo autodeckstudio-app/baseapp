@@ -122,7 +122,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
   expect(MAX_BLUR_SURFACES).toBe(3);
   expect(hasCampaign(null)).toBe(false);expect(hasCampaign({headline:"",imageUrl:"x",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"",onPress:()=>undefined})).toBe(false);expect(hasCampaign({headline:"Real",imageUrl:"/a.jpg",onPress:()=>undefined})).toBe(true);
   const home=read("src/ui/HomeView.tsx");expect((home.match(/glassPane\(\)/g)??[]).length).toBeLessThanOrEqual(3);expect(home).not.toMatch(/\u2014/);
-  expect(read("src/app/(tabs)/index.tsx")).not.toContain("campaign=");
+  const idx=read("src/app/(tabs)/index.tsx");expect(idx).toContain("campaign={offerToCampaign(");expect(idx).not.toMatch(/campaign=\{\{/);
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');

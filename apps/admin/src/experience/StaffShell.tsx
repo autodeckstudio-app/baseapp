@@ -35,6 +35,7 @@ export const OFFICE_LINKS = [
   { href: "/studio", label: "Studio" },
   { href: "/audit", label: "Audit log" },
   { href: "/stories", label: "Stories" },
+  { href: "/offers", label: "Offers" },
   { href: "/cars", label: "Cars for sale" },
 ] as const;
 
@@ -46,6 +47,7 @@ const SECTIONS: { group: string; key: string; label: string; icon: string; links
   { group: "Daily", key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/reports", label: "Reports", office: true }] },
   { group: "Grow", key: "cars", label: "Cars for sale", icon: "car", links: [{ href: "/cars", label: "Cars for sale", office: true }] },
   { group: "Grow", key: "stories", label: "Stories", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }] },
+  { group: "Grow", key: "offers", label: "Offers", icon: "star", links: [{ href: "/offers", label: "Offers", office: true }] },
   { group: "Set up", key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
   { group: "Set up", key: "admin", label: "Admin", icon: "profile", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
 ];
@@ -59,11 +61,11 @@ const GROUPS = [
 ] as const;
 const MORE_LINKS = [
   { href: "/papers", label: "Papers" }, { href: "/inventory", label: "Inventory" }, { href: "/services", label: "Services" },
-  { href: "/staff", label: "Team" }, { href: "/studio", label: "Studio" }, { href: "/stories", label: "Stories" },
+  { href: "/staff", label: "Team" }, { href: "/studio", label: "Studio" }, { href: "/stories", label: "Stories" }, { href: "/offers", label: "Offers" },
   { href: "/cars", label: "Cars for sale" }, { href: "/pickups", label: "Pickup and drop" }, { href: "/audit", label: "Audit log" },
 ] as const;
 
-const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/cars": "car", "/pickups": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
+const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/offers": "star", "/cars": "car", "/pickups": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
 
 const RAIL_ICON: Record<string, string> = {
   "/dashboard": "home", "/bookings": "calendar", "/pickups": "pickup", "/jobs": "wrench", "/attendance": "check-in",
@@ -130,7 +132,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
   const sections = SECTIONS.map((sec) => ({ ...sec, links: sec.links.filter((l) => office || !l.office) })).filter((sec) => sec.links.length > 0);
   const activeSection = sections.find((sec) => sec.links.some((l) => isActive(pathname, l.href)));
-  const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "stories" || sec.key === "cars" || sec.key === "admin");
+  const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "stories" || sec.key === "offers" || sec.key === "cars" || sec.key === "admin");
 
   return (
     <div className="ax-shell">

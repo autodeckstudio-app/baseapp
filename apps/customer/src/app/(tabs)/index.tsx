@@ -10,6 +10,8 @@ import { Linking, Pressable, ScrollView, Share, View } from "react-native";
 import { STUDIO_INFO } from "../../lib/studio-info";
 import { openStatus } from "../../lib/open-status";
 import { carNeed } from "../../lib/home-needs";
+import { getOffers, offerToCampaign } from "../../lib/offer-service";
+import type { OfferView } from "@autodeck/core";
 import { getStudioInfo } from "../../lib/booking-service";
 import { listenToJobsForVehicle } from "../../lib/job-service";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
@@ -128,6 +130,13 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [ready]);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
+  const [offers, setOffers] = useState<OfferView[]>([]);
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    void getOffers().then((l) => { if (alive) setOffers(l); });
+    return () => { alive = false; };
+  }, [ready]);
   const [liveInfo, setLiveInfo] = useState<{ operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] } | null>(null);
   const [carJobs, setCarJobs] = useState<Array<{ serviceId: string; status: string; createdAt: string; sealedAt?: string | null }>>([]);
   useEffect(() => {
@@ -220,6 +229,7 @@ export default function HomeScreen() {
         stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours, openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays)?.text ?? null }}
+        campaign={offerToCampaign(offers, (h) => router.push(h as never))}
         need={(() => { const n = carNeed(carJobs, Object.fromEntries(catalogue.map((x) => [x.id, { id: x.id, name: x.name, category: x.category }]))); return n ? { title: n.title, detail: n.detail, onPress: () => router.push(`/(tabs)/book/${n.serviceId}`) } : null; })()}
         quick={[
           ...(STUDIO_INFO.phone ? [{ key: "call", label: "Call", icon: "phone" as const, onPress: () => void Linking.openURL(`tel:${STUDIO_INFO.phone}`) }] : []),

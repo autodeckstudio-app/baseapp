@@ -35,6 +35,7 @@ export const COLLECTIONS = {
   dailyClosings: () => "dailyClosings",
   gallery: () => "gallery",
   stories: () => "stories",
+  offers: () => "offers",
   carListings: () => "carListings",
   carLeads: () => "carLeads",
   studioConfig: () => "studioConfig",
