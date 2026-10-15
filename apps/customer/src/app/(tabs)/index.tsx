@@ -201,15 +201,11 @@ export default function HomeScreen() {
         onAvatar={() => router.push("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
         drawer={[
-          { key: "garage", label: "My garage", sub: "Your cars and care map", icon: "garage", onPress: () => router.push("/(tabs)/garage") },
-          { key: "bookings", label: "Bookings", sub: "Upcoming and past visits", icon: "bookings", onPress: () => router.push("/(tabs)/bookings") },
-          { key: "services", label: "All services", sub: "Wash, coatings, PPF, garage", icon: "services", onPress: () => router.push("/(tabs)/catalogue") },
           { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: () => router.push("/(tabs)/membership") },
           { key: "friend", label: "Bring a friend", sub: referralSubtitle(), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage() }).catch(() => undefined) },
           { key: "notifications", label: "Notifications", icon: "bell", onPress: () => router.push("/(tabs)/notifications") },
           { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => router.push("/(tabs)/studio") },
           { key: "help", label: "Help and contact", icon: "chat", onPress: () => router.push("/(tabs)/help") },
-          { key: "profile", label: "Profile and settings", sub: "Name, appearance, licence", icon: "profile", onPress: () => router.push("/(tabs)/profile") },
         ]}
         onCareMap={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))}
         onBook={() => router.push("/(tabs)/catalogue")}

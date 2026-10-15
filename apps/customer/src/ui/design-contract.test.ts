@@ -349,3 +349,23 @@ describe("one tile size everywhere", () => {
     expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*<PhotoCard/);
   });
 });
+
+describe("nav order and drawer", () => {
+  it("tabs are Home, Bookings, Services, Garage, You, in that order", () => {
+    const s = read("src/app/(tabs)/_layout.tsx");
+    const order = ["index", "bookings", "catalogue", "garage", "profile"].map((n) => s.indexOf(`<Tabs.Screen name="${n}"`));
+    expect(order.every((i) => i > 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+  it("the drawer does not repeat anything already in the nav", () => {
+    for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
+      const s = read(f);
+      for (const k of ["garage", "bookings", "services", "profile"]) expect(s).not.toContain(`key: "${k}", label`);
+    }
+  });
+  it("the centre button uses the official monogram paths, unchanged", () => {
+    const m = read("src/ui/AdMonogram.tsx");
+    expect(m).toContain("M1447,666 L1953,666 A500,500 0 0 1 1953,1666");
+    expect(m).toContain("M756,1494 L995,1500 L1072,1662 L612,1662 Z");
+  });
+});

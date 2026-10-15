@@ -26,15 +26,11 @@ export function AppBar({ title }: { title: string }) {
   const initial = display.charAt(0).toUpperCase() || "A";
   const go = (p: string) => () => router.push(p as never);
   const items: DrawerItem[] = [
-    { key: "garage", label: "My garage", sub: "Your cars and care map", icon: "garage", onPress: go("/(tabs)/garage") },
-    { key: "bookings", label: "Bookings", sub: "Upcoming and past visits", icon: "bookings", onPress: go("/(tabs)/bookings") },
-    { key: "services", label: "All services", sub: "Wash, coatings, PPF, garage", icon: "services", onPress: go("/(tabs)/catalogue") },
     { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: go("/(tabs)/membership") },
     { key: "friend", label: "Bring a friend", sub: referralSubtitle(), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage() }).catch(() => undefined) },
     { key: "notifications", label: "Notifications", icon: "bell", onPress: go("/(tabs)/notifications") },
     { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: go("/(tabs)/studio") },
     { key: "help", label: "Help and contact", icon: "chat", onPress: go("/(tabs)/help") },
-    { key: "profile", label: "Profile and settings", sub: "Name, appearance, licence", icon: "profile", onPress: go("/(tabs)/profile") },
   ];
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
