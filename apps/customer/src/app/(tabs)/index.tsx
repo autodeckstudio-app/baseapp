@@ -16,7 +16,9 @@ import { useVehiclePhotoUri } from "../../ui/CarThumb";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
 import { listenToVehicleWarranties } from "../../lib/warranty-service";
-import type { Service } from "@autodeck/core";
+import type { Service, Booking } from "@autodeck/core";
+import { getMyBookings } from "../../lib/booking-service";
+import { lastCompletedService } from "../../lib/booking-sections";
 import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
@@ -83,6 +85,7 @@ export default function HomeScreen() {
   const [catalogueFailed, setCatalogueFailed] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const [catalogue, setCatalogue] = useState<Service[]>([]);
+  const [past, setPast] = useState<Booking[]>([]);
   const pricingVehicle = usePricingVehicle();
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   useEffect(() => {
@@ -109,6 +112,12 @@ export default function HomeScreen() {
     return listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => setUnread(n.filter((x) => x.readAt === null).length), () => undefined);
   }, [ready]);
 
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    void getMyBookings(auth.user.uid, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [ready]);
   const carPhoto = useVehiclePhotoUri(ready ? home.model?.activeVehicle : null);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
   const [papers, setPapers] = useState<MyPaper[]>([]);
@@ -200,6 +209,7 @@ export default function HomeScreen() {
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}
+        rebook={(() => { const b = lastCompletedService(past); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
         banner={home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh} />} /> : null}
         onSearch={() => router.push("/(tabs)/catalogue")}

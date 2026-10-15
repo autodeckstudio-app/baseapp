@@ -18,6 +18,7 @@ export type HomeService = { id: string; category: string; name: string; price: s
 export type HomeReminder = { title: string; detail: string; chip: string; danger: boolean };
 export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void; idle?: boolean };
 export type HomeViewProps = {
+  rebook?: { serviceName: string; onPress: () => void } | null;
   greeting: string;
   initial: string;
   unread: number;
@@ -309,6 +310,16 @@ export function HomeView(p: HomeViewProps) {
       {p.banner}
 
       <LeadCard live={p.live} pct={pct} reminder={p.live?.idle ? p.reminders[0] ?? null : null} car={car} onReminder={p.onReminders} onBook={p.onBook} />
+
+      {p.rebook && (!p.live || p.live.idle === true) ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={`Book ${p.rebook.serviceName} again`} onPress={p.rebook.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: metrics.cardRadius, padding: metrics.cardPad, opacity: pressed ? 0.9 : 1, ...r.card })}>
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Last time</Text>
+            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.rebook.serviceName}</Text>
+          </View>
+          <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700" }}>Book again</Text>
+        </Pressable>
+      ) : null}
 
       <View style={{ gap: 12 }}>
         <Heading title={car ? `For your ${car.title}` : "Services"} action="All services" onAction={p.onAllServices} />

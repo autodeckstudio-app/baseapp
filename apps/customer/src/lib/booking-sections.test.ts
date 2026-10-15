@@ -20,3 +20,17 @@ describe("bookingSections", () => {
     expect(s.upcoming.map((x) => x.scheduledAt)).toEqual(["2026-10-20T10:00:00Z", "2026-10-22T10:00:00Z"]);
   });
 });
+
+import { lastCompletedService } from "./booking-sections";
+describe("one-tap rebook", () => {
+  it("offers the most recent completed visit that had a service", () => {
+    const l = [
+      { id: "a", status: "COMPLETED", scheduledAt: "2026-09-01T10:00", serviceId: "s1" },
+      { id: "b", status: "COMPLETED", scheduledAt: "2026-10-01T10:00", serviceId: "s2" },
+      { id: "c", status: "CANCELLED", scheduledAt: "2026-10-10T10:00", serviceId: "s3" },
+      { id: "d", status: "COMPLETED", scheduledAt: "2026-10-12T10:00", serviceId: null },
+    ];
+    expect(lastCompletedService(l)?.id).toBe("b");
+    expect(lastCompletedService([])).toBeNull();
+  });
+});
