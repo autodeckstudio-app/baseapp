@@ -41,7 +41,9 @@ export default function CatalogueScreen() {
   const pricingVehicle = usePricingVehicle();
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState<string | null>(null);
-  const cat = catParam ?? (need ? NEED_TO_GROUP[need] : undefined); // a menu group key
+  const fromRoute = catParam ?? (need ? NEED_TO_GROUP[need] : undefined);
+  // A chip opens that group's brands or products directly, never a card for the group you just picked.
+  const cat = fromRoute ?? grp ?? undefined; // a menu group key
   const catGroup = MENU_GROUPS.find((g) => g.key === cat);
   const brand = brandParam;
 
@@ -93,7 +95,7 @@ export default function CatalogueScreen() {
   const products = level === 3 ? (groups.find(([k]) => k === groupKey)?.[1] ?? []) : [];
 
   // A category with exactly one service has nothing to choose from: open it directly.
-  const soleId = !searching && level === 3 && !brand && products.length === 1 ? products[0]?.id : undefined;
+  const soleId = !searching && !!fromRoute && level === 3 && !brand && products.length === 1 ? products[0]?.id : undefined;
   useEffect(() => { if (soleId) router.replace(`/(tabs)/catalogue/${soleId}`); }, [soleId, router]);
 
   const tile = (key: string, title: string, _sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
@@ -121,7 +123,7 @@ export default function CatalogueScreen() {
   const top = (
     <View style={{ gap: 16 }}>
       <View style={{ gap: 4 }}>
-        {level === 3 && groups.length > 1 && cat ? crumb(catGroup?.label ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
+        {!fromRoute ? null : level === 3 && groups.length > 1 && cat ? crumb(catGroup?.label ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
         <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700", lineHeight: 32 }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "What does your car need?"}</Text>
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
@@ -137,7 +139,7 @@ export default function CatalogueScreen() {
           style={{ flex: 1, color: colors.textPrimary, fontSize: 15, outlineStyle: "none" } as never}
         />
       </View>
-      {!cat && !searching ? <GroupChips value={grp} onChange={setGrp} /> : null}
+      {!fromRoute && !searching ? <GroupChips value={grp} onChange={setGrp} /> : null}
     </View>
   );
 

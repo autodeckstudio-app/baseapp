@@ -226,3 +226,11 @@ describe("home menu", () => {
     expect(read("src/app/(tabs)/index.tsx")).toContain("drawer={[");
   });
 });
+
+describe("services filters", () => {
+  it("a chip opens the group's products, not a card for the same group", () => {
+    const src = read("src/app/(tabs)/catalogue/index.tsx");
+    expect(src).toContain("const cat = fromRoute ?? grp ?? undefined");
+    expect(src).toContain("!fromRoute && !searching ? <GroupChips");
+  });
+});
