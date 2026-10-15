@@ -8,6 +8,11 @@ import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib
 import { useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Share, View } from "react-native";
 import { STUDIO_INFO } from "../../lib/studio-info";
+import { openStatus } from "../../lib/open-status";
+import { carNeed } from "../../lib/home-needs";
+import { getStudioInfo } from "../../lib/booking-service";
+import { listenToJobsForVehicle } from "../../lib/job-service";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { useRouter } from "expo-router";
 import { greetingFor, type CustomerHomeModel } from "@autodeck/core";
 import { FadeUp, Icon, Logo, useExperienceTheme } from "@autodeck/ui/native";
@@ -123,6 +128,19 @@ export default function HomeScreen() {
     return () => { alive = false; };
   }, [ready]);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
+  const [liveInfo, setLiveInfo] = useState<{ operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] } | null>(null);
+  const [carJobs, setCarJobs] = useState<Array<{ serviceId: string; status: string; createdAt: string; sealedAt?: string | null }>>([]);
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) setLiveInfo(i); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [ready]);
+  useEffect(() => {
+    setCarJobs([]);
+    if (!ready || !carId) return;
+    return listenToJobsForVehicle(carId, auth.claims.tenantId, auth.user.uid, (j) => setCarJobs(j as never), () => undefined);
+  }, [ready, carId]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
   useEffect(() => {
@@ -201,7 +219,13 @@ export default function HomeScreen() {
         progress={m.liveJob ? ({ PENDING_VEHICLE: 10, VEHICLE_RECEIVED: 25, IN_PROGRESS: 55, QUALITY_CHECK: 85, READY_FOR_DELIVERY: 100, DELIVERED: 100 } as Record<string, number>)[m.liveJob.status] ?? 10 : null}
         stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
-        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours }}
+        studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours, openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays)?.text ?? null }}
+        need={(() => { const n = carNeed(carJobs, Object.fromEntries(catalogue.map((x) => [x.id, { id: x.id, name: x.name, category: x.category }]))); return n ? { title: n.title, detail: n.detail, onPress: () => router.push(`/(tabs)/book/${n.serviceId}`) } : null; })()}
+        quick={[
+          ...(STUDIO_INFO.phone ? [{ key: "call", label: "Call", icon: "phone" as const, onPress: () => void Linking.openURL(`tel:${STUDIO_INFO.phone}`) }] : []),
+          ...(STUDIO_INFO.whatsapp ? [{ key: "wa", label: "WhatsApp", icon: "chat" as const, onPress: () => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`) }] : []),
+          ...(STUDIO_INFO.mapsUrl ? [{ key: "map", label: "Directions", icon: "pin" as const, onPress: () => void Linking.openURL(STUDIO_INFO.mapsUrl) }] : []),
+        ]}
         onAvatar={() => router.push("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
         drawer={[

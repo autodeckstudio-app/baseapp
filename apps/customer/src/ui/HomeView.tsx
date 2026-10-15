@@ -38,7 +38,11 @@ export type HomeViewProps = {
   progress: number | null;
   stage: string;
   membership: { title: string; detail: string } | null;
-  studio: { address: string; hours: string };
+  studio: { address: string; hours: string; openText?: string | null; open?: boolean };
+  /** What the car is due for, from its delivered visits. Null hides the card. */
+  need?: { title: string; detail: string; onPress: () => void } | null;
+  /** One-tap studio contact: Call, WhatsApp, Directions. Empty hides the row. */
+  quick?: Array<{ key: string; label: string; icon: IconName; onPress: () => void }>;
   banner?: ReactNode;
   initialChip?: string | null;
   stories?: ReactNode;
@@ -321,6 +325,28 @@ export function HomeView(p: HomeViewProps) {
 
       <LeadCard live={p.live} pct={pct} reminder={p.live?.idle ? p.reminders[0] ?? null : null} car={car} onReminder={p.onReminders} onBook={p.onBook} />
 
+      {p.need && (!p.live || p.live.idle === true) ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={`${p.need.title}. ${p.need.detail}`} onPress={p.need.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: metrics.cardRadius, padding: metrics.cardPad, opacity: pressed ? 0.9 : 1, ...r.card })}>
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Your car needs</Text>
+            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.need.title}</Text>
+            <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 13 }}>{p.need.detail}</Text>
+          </View>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700" }}>Book</Text>
+        </Pressable>
+      ) : null}
+
+      {p.quick?.length ? (
+        <View style={{ flexDirection: "row", gap: TILE_GAP }}>
+          {p.quick.map((q) => (
+            <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: pressed ? 0.8 : 1, ...r.round })}>
+              <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={16} cut="#18181C" />
+              <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{q.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
       {p.rebook && (!p.live || p.live.idle === true) ? (
         <Pressable accessibilityRole="button" accessibilityLabel={`Book ${p.rebook.serviceName} again`} onPress={p.rebook.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: metrics.cardRadius, padding: metrics.cardPad, opacity: pressed ? 0.9 : 1, ...r.card })}>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
@@ -367,7 +393,7 @@ export function HomeView(p: HomeViewProps) {
         <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
           <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
           <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
-          <ClubRow icon="pin" title="The studio" sub={`${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
+          <ClubRow icon="pin" title="The studio" sub={`${p.studio.openText ? `${p.studio.openText}. ` : ""}${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
         </View>
       </View>
     </View>

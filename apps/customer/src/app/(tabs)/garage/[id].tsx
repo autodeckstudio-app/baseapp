@@ -16,6 +16,8 @@ import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
 import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
+import { historyReportHtml, historyRows } from "../../../lib/history-report";
+import { STUDIO_INFO } from "../../../lib/studio-info";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { listenToVehicleProtections } from "../../../lib/protection-service";
@@ -369,6 +371,15 @@ export default function VehicleDetailScreen() {
           <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />
         ) : (
           <Pane pad="gap">
+            {Platform.OS === "web" ? (
+              <View style={{ paddingBottom: space.line }}>
+                <Button label="Download service history (PDF)" kind="quiet" onPress={() => {
+                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? "Studio visit", formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null) });
+                  const w = (globalThis as unknown as { open: (u: string, t: string) => { document: { write: (h: string) => void; close: () => void }; focus: () => void; print: () => void } | null }).open("", "_blank");
+                  if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); } else setActionError("Allow pop-ups to download the history.");
+                }} />
+              </View>
+            ) : null}
             {jobs.map((job, i) => {
               const invoice = invoices.find((x) => x.jobId === job.id);
               return (
