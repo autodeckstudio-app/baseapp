@@ -144,7 +144,7 @@ export function GroupChips({ value, onChange }: { value: string | null; onChange
 }
 export const groupCategories = (key: string | null): string[] => GROUPS.find((g) => g.key === key)?.cats ?? [];
 
-const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage: night ? "linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(236,134,56,.07) 100%)" : "linear-gradient(135deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.4) 100%)" } as object) : {});
+const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage: night ? "linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(236,134,56,.07) 100%)" : "none" } as object) : {});
 
 /** The car card when there is no photo of the customer's own car: a quiet glass panel with the plate, never a stock photo of someone else's car. */
 function CarPanel({ title, plate, cta }: { title: string; plate: string; cta: string }) {
@@ -171,7 +171,7 @@ function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: Home
   const detail = reminder ? reminder.detail : idle ? (live?.detail ?? "") : live!.detail;
   const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(), ...glassBg(name !== "light") })}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light"), ...glassBg(name !== "light") })}>
       <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
       <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
@@ -362,7 +362,7 @@ export function HomeView(p: HomeViewProps) {
       <CampaignSlot campaign={p.campaign} />
       <View style={{ gap: 12 }}>
         <Heading title="Studio and club" />
-        <View style={{ overflow: "hidden", ...glassPane() }}>
+        <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
           <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
           <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
           <ClubRow icon="pin" title="The studio" sub={`${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />

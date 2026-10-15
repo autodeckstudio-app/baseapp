@@ -1,3 +1,4 @@
+import { glassInner } from "../../../lib/glass";
 import { View } from "react-native";
 import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
@@ -79,7 +80,7 @@ export default function CurrentMembershipScreen() {
           <HeroImage source={sceneImagery.membership} />
           <View style={{ padding: 16, gap: space.breath }}>
             <T role="display">{isPending ? membership.washesTotal : washesRemaining}</T>
-            <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+            <View style={{ height: 8, borderRadius: 4, backgroundColor: glassInner.backgroundColor, overflow: "hidden" }}>
               <View style={{ height: 8, borderRadius: 4, backgroundColor: "#EC8638", width: `${!isPending && membership.washesTotal > 0 ? Math.round((washesRemaining / membership.washesTotal) * 100) : 0}%` }} />
             </View>
             <T tone="secondary">

@@ -1,3 +1,4 @@
+import { glassInner } from "../../../lib/glass";
 import { repairText } from "../../../lib/text-repair";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect, useCallback } from "react";
@@ -125,7 +126,7 @@ export default function NotificationsScreen() {
               <Pressable key={item.id} accessibilityRole="button" onPress={() => void handlePress(item)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
                 <Pane pad="inset">
                   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.line }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)" }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: unread ? "rgba(236,134,56,0.22)" : glassInner.backgroundColor }}>
                       <NavIcon name="bell" color={unread ? colors.accent : colors.textSecondary} size={20} cut="#18181C" />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
@@ -133,7 +134,7 @@ export default function NotificationsScreen() {
                       <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
                       {NOTIFICATION_ACTION[item.entityType ?? ""] ? (
-                        <Pressable accessibilityRole="button" accessibilityLabel={NOTIFICATION_ACTION[item.entityType ?? ""]} onPress={(e) => { e.stopPropagation?.(); void handlePress(item); }} style={({ pressed }) => ({ alignSelf: "flex-start", marginTop: 6, minHeight: 36, borderRadius: 9999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: item.entityType === "Approval" ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)", opacity: pressed ? 0.8 : 1 })}>
+                        <Pressable accessibilityRole="button" accessibilityLabel={NOTIFICATION_ACTION[item.entityType ?? ""]} onPress={(e) => { e.stopPropagation?.(); void handlePress(item); }} style={({ pressed }) => ({ alignSelf: "flex-start", marginTop: 6, minHeight: 36, borderRadius: 9999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: item.entityType === "Approval" ? "rgba(236,134,56,0.22)" : glassInner.backgroundColor, opacity: pressed ? 0.8 : 1 })}>
                           <T role="caption" style={{ fontWeight: "700", color: colors.textPrimary }}>{NOTIFICATION_ACTION[item.entityType ?? ""]}</T>
                         </Pressable>
                       ) : null}
