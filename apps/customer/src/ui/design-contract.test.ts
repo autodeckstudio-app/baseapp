@@ -94,7 +94,7 @@ describe("sizes come from one rulebook",()=>{
     expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120, gap: 20");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
-    const home=read("src/ui/HomeView.tsx");expect(home).toContain("metrics.heroCompact");expect(home).not.toContain("height: 210");
+    const home=read("src/ui/HomeView.tsx");expect(home).toContain("metrics.heroCompact");expect(home).toContain("HeroStage");expect(home).not.toContain("height: 210");
   });
 });
 describe("surfaces share one radius and one padding",()=>{
@@ -173,4 +173,19 @@ describe("Book shows the price and time picker early", () => {
 
 it("Garage last service and the service reminder count delivered visits only", () => {
   expect(read("src/app/(tabs)/garage/[id].tsx")).toMatch(/mostRecentJob = lastFinishedJob\(jobs\)/);
+});
+
+describe("Home hero stage", () => {
+  it("a single car is the hero on black with the orange glow, and its height comes from metrics", () => {
+    const h = read("src/ui/HeroStage.tsx");
+    expect(h).toContain("metrics.heroStage");
+    expect(h).toMatch(/radial-gradient/);
+    expect(h).not.toMatch(/\u2014/);
+    expect(read("src/ui/HomeView.tsx")).toMatch(/<HeroStage car=/);
+  });
+  it("Home keeps orange to small highlights: no orange kicker or orange text links", () => {
+    const home = read("src/ui/HomeView.tsx");
+    expect(home).not.toMatch(/colors\.accentStrong, fontSize: 14, fontWeight: "600"/);
+    expect(home).not.toMatch(/<Icon name=\{icon\} color="#EC8638"/);
+  });
 });

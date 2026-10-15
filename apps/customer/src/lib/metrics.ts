@@ -11,8 +11,9 @@ export const metrics = {
   thumb: 44,
   heroTall: 200,
   heroCompact: 128,
+  heroStage: 260,
   story: 56,
 } as const;
 
 /** Allowed values on the 4-point scale; the guard test checks the shared metrics against it. */
-export const SCALE = [0, 4, 8, 12, 14, 16, 20, 24, 32, 44, 56, 64, 128, 200] as const;
+export const SCALE = [0, 4, 8, 12, 14, 16, 20, 24, 32, 44, 56, 64, 128, 200, 260] as const;

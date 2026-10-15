@@ -10,6 +10,7 @@ import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
 import { HomeBackdrop } from "./HomeBackdrop";
+import { HeroStage } from "./HeroStage";
 import { CampaignSlot } from "./CampaignSlot";
 import type { Campaign } from "../lib/campaign";
 
@@ -70,7 +71,7 @@ function Heading({ title, action, onAction }: { title: string; action?: string |
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
       <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "700" }}>{title}</Text>
-      {action ? <Pressable accessibilityRole="button" onPress={onAction} hitSlop={10}><Text style={{ color: colors.accentStrong, fontSize: 14, fontWeight: "600" }}>{action}</Text></Pressable> : null}
+      {action ? <Pressable accessibilityRole="button" onPress={onAction} hitSlop={10}><Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>{action}</Text></Pressable> : null}
     </View>
   );
 }
@@ -159,7 +160,7 @@ function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: Home
   const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(), ...glassBg(name !== "light") })}>
-      <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
+      <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
       <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
       {!reminder && !idle && pct !== null ? (
@@ -167,6 +168,9 @@ function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: Home
           <View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} />
         </View>
       ) : null}
+      <View style={{ alignSelf: "flex-start", marginTop: 4, borderRadius: 9999, paddingHorizontal: 22, paddingVertical: 12, backgroundColor: "#F4F2EF" }}>
+        <Text style={{ color: "#0B0B0D", fontSize: 15, fontWeight: "800" }}>{reminder ? "Take a look" : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track"}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -197,7 +201,7 @@ function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: 
   const { colors } = useExperienceTheme();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: metrics.rowPadV, paddingHorizontal: metrics.rowPadH, opacity: pressed ? 0.8 : 1, borderTopWidth: first ? 0 : 1, borderTopColor: colors.borderSubtle })}>
-      <Icon name={icon} color="#EC8638" size={20} />
+      <Icon name={icon} color={colors.textSecondary} size={20} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
         <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{sub}</Text>
@@ -207,21 +211,8 @@ function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: 
 }
 
 // Garage cars as one endless horizontal strip: three copies, re-centred after each swipe.
-/** One car with no photo: a single compact line with the plate and one action, instead of a tall empty card. */
-function CompactCar({ car, onOpen }: { car: HomeCar; onOpen: () => void }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${car.title}, care map`} onPress={onOpen} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, padding: metrics.cardPad, ...glassPane() }}>
-      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{car.title}</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", letterSpacing: 2 }}>{car.plate}</Text>
-      </View>
-      <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700" }}>{car.hasPhoto === false ? "Add photo" : "Care map"}</Text>
-    </Pressable>
-  );
-}
-
-export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length === 1 && !cars[0]!.photo; }
+/** One car gets the hero stage, with or without a photo. */
+export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length === 1; }
 
 function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; onOpen: (c: HomeCar) => void; onAdd: () => void; onActive: (i: number) => void }) {
   const { name, colors } = useExperienceTheme();
@@ -305,7 +296,7 @@ export function HomeView(p: HomeViewProps) {
 
       {p.stories}
 
-      {isCompactCarRow(p.cars) ? <CompactCar car={p.cars[0]!} onOpen={() => p.onCar(p.cars[0]!)} /> : <GarageCarousel cars={p.cars} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} onActive={setActive} />}
+      {isCompactCarRow(p.cars) ? <HeroStage car={p.cars[0]!} onOpen={() => p.onCar(p.cars[0]!)} /> : <GarageCarousel cars={p.cars} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} onActive={setActive} />}
 
       {p.banner}
 
@@ -317,7 +308,7 @@ export function HomeView(p: HomeViewProps) {
             <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Last time</Text>
             <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.rebook.serviceName}</Text>
           </View>
-          <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700" }}>Book again</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700" }}>Book again</Text>
         </Pressable>
       ) : null}
 
