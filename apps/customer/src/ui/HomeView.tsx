@@ -98,21 +98,21 @@ function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: str
   );
 }
 
-export function PhotoCard({ media, title, pill, onPress, hearted = true }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean }) {
+export function PhotoCard({ media, title, pill, onPress, hearted = true, compact = false }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean; compact?: boolean }) {
   const [liked, setLiked] = useState(false);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 24, overflow: "hidden", ...glassSurface, aspectRatio: 0.82 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 24, overflow: "hidden", ...glassSurface, aspectRatio: compact ? 1.4 : 0.82 }}>
       <View style={{ position: "absolute", width: "100%", height: "100%" }}>{media}</View>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.25)" }) }} />
-      <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: 12 }}>
-        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>{title}</Text>
+      <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: compact ? 10 : 12 }}>
+        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: compact ? 13 : 15, fontWeight: "700" }}>{title}</Text>
       </View>
       {hearted ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 16, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
         </Pressable>
       ) : null}
-      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#F59A4E", fontSize: 11, fontWeight: "700" }}>{pill}</Text></View> : null}
+      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: compact ? 8 : 10, paddingVertical: compact ? 3 : 4 }}><Text style={{ color: "#F59A4E", fontSize: compact ? 10 : 11, fontWeight: "700" }}>{pill}</Text></View> : null}
     </Pressable>
   );
 }

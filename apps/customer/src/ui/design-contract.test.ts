@@ -335,3 +335,11 @@ describe("referral wording", () => {
     }
   });
 });
+
+describe("catalogue cards stay compact", () => {
+  it("category, brand and product tiles use the compact PhotoCard", () => {
+    const s = read("src/app/(tabs)/catalogue/index.tsx");
+    expect((s.match(/<PhotoCard /g) ?? []).length).toBe((s.match(/<PhotoCard [^>]*compact/g) ?? []).length);
+    expect(read("src/ui/HomeView.tsx")).toContain("compact ? 1.4 : 0.82");
+  });
+});
