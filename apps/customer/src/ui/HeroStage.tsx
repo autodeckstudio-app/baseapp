@@ -1,5 +1,6 @@
 import { Image, Platform, Pressable, Text, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
+import { Plate } from "./kit";
 import { metrics } from "../lib/metrics";
 
 export type StageCar = { id: string; title: string; plate: string; photo?: string | null; hasPhoto?: boolean };
@@ -22,7 +23,7 @@ export function HeroStage({ car, onOpen }: { car: StageCar; onOpen: () => void }
       <View style={{ alignItems: "center", gap: 6, paddingBottom: metrics.innerGap }}>
         <Text numberOfLines={1} style={{ color: day ? "#1D1B26" : "#FFFFFF", fontSize: 24, fontWeight: "800", textAlign: "center" }}>{car.title}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={{ color: day ? "#5B5750" : "#C9C6C1", fontSize: 13, fontWeight: "700", letterSpacing: 2 }}>{car.plate}</Text>
+          <Plate value={car.plate} />
           {!car.photo ? <View style={{ borderRadius: 9999, borderWidth: 1, borderColor: day ? "rgba(29,27,38,0.30)" : "rgba(255,255,255,0.28)", paddingHorizontal: 12, paddingVertical: 5 }}><Text style={{ color: day ? "#1D1B26" : "#F4F2EF", fontSize: 12, fontWeight: "700" }}>Add your car photo</Text></View> : null}
         </View>
       </View>

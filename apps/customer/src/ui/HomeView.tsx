@@ -10,6 +10,7 @@ import { serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
+import { Plate } from "./kit";
 import { ServicePhoto } from "./ServicePhoto";
 import { NavIcon, navIconFor } from "./NavIcon";
 import { HomeBackdrop } from "./HomeBackdrop";
@@ -146,10 +147,10 @@ function CarPanel({ title, plate, cta }: { title: string; plate: string; cta: st
   const { name, colors } = useExperienceTheme();
   return (
     <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, padding: metrics.cardPad, justifyContent: "space-between", ...glassBg(name !== "light") }}>
-      <Icon name="car" color={colors.textTertiary} size={30} />
+      <View />
       <View style={{ gap: 6 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>{title}</Text>
-        {plate ? <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "700", letterSpacing: 2 }}>{plate}</Text> : null}
+        {plate ? <Plate value={plate} /> : null}
         {cta ? <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "700" }}>{cta}</Text> : null}
       </View>
     </View>
@@ -271,7 +272,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
           <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: H, borderRadius: metrics.cardRadius, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
             <CarPanel title="Your car goes here" plate="" cta="Add a car" />
             <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
-              <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
             </View>
           </Pressable>
         ) : (
@@ -280,11 +281,9 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
               <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: H, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.sheet }}>
                 {c.photo ? <Image source={{ uri: c.photo }} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} /> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
                 {c.photo ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
-                {c.photo ? <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", gap: 8 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
-                    <Icon name="car" color="#EC8638" size={16} /><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Care map</Text>
-                  </View>
-                  <View style={{ borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>{c.plate}</Text></View>
+                {c.photo ? <View style={{ position: "absolute", left: 14, right: 14, bottom: 14, gap: 6 }}>
+                  <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>{c.title}</Text>
+                  <Plate value={c.plate} />
                 </View> : null}
               </Pressable>
             ))}

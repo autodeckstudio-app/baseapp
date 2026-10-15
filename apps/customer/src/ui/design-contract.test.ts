@@ -307,3 +307,12 @@ describe("one icon set", () => {
     expect(read("src/lib/raised.ts")).toContain('#1B1B1F');
   });
 });
+
+describe("home car cards", () => {
+  it("show the car name and number plate only, no stray icons", () => {
+    const h = read("src/ui/HomeView.tsx");
+    expect(h).not.toContain('<Icon name="car"');
+    expect(h).not.toContain("Care map</Text>");
+    expect(read("src/ui/HeroStage.tsx")).toContain("<Plate value={car.plate} />");
+  });
+});
