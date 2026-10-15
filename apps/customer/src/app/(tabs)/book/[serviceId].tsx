@@ -32,6 +32,8 @@ const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "commercial", label: "Commercial" },
 ];
 
+const durationText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+
 export default function BookServiceScreen() {
   const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
   const router = useRouter();
@@ -148,8 +150,8 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
-      <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={16 / 9} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(service.estimatedDurationMinutes)}</T> : null}</View>}>
+      <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
         {selectedVehicle && vehicles.length <= 1 ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View></Pane> : null}
