@@ -1,4 +1,4 @@
-import { usePricingVehicle, useVehiclePrices } from "../../lib/vehicle-size";
+import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
@@ -20,7 +20,6 @@ import type { Service } from "@autodeck/core";
 import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
-import { priceLabel } from "../../lib/catalogue-service";
 import { HomeView } from "../../ui/HomeView";
 import { StoryViewer } from "../../ui/StoryViewer";
 import { HeroImage, Button, Chip, Kicker, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
@@ -129,9 +128,11 @@ export default function HomeScreen() {
     return (
       <Screen>
         <Skeleton height={28} width="55%" />
-        <Skeleton height={300} />
         <Skeleton height={64} />
-        <Skeleton height={96} />
+        <Skeleton height={120} />
+        <Skeleton height={56} />
+        <Skeleton height={56} />
+        <Skeleton height={56} />
       </Screen>
     );
   }
@@ -196,7 +197,7 @@ export default function HomeScreen() {
         onShare={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)}
         unread={unread}
         cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
-        services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: priceLabel(s), brand: s.brand ?? null }))}
+        services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}
         stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}

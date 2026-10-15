@@ -1,6 +1,6 @@
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import type { ReactElement } from "react";
-import { usePricingVehicle } from "../../../lib/vehicle-size";
+import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../../lib/vehicle-size";
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, compact rows.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "react-native";
@@ -10,7 +10,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, menuGroupOf, needsInspectionNote, type MenuGroup, type Service } from "@autodeck/core";
 import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { getServiceCatalogue, calculateServicePrice, priceLabel } from "../../../lib/catalogue-service";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, GroupChips, groupCategories } from "../../../ui/HomeView";
@@ -39,7 +39,6 @@ export default function CatalogueScreen() {
   const [services, setServices] = useState<Service[] | null>(null);
   const [error, setError] = useState(false);
   const pricingVehicle = usePricingVehicle();
-  const [prices, setPrices] = useState<Record<string,number>>({});
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState<string | null>(null);
   const cat = catParam ?? (need ? NEED_TO_GROUP[need] : undefined); // a menu group key
@@ -56,22 +55,13 @@ export default function CatalogueScreen() {
   }, []);
   useEffect(() => void load(), [load]);
 
-  useEffect(() => {
-    setPrices({});
-    if (!services || !pricingVehicle.category) return;
-    let active=true;
-    void Promise.all(services.filter(s=>!s.priceOnRequest).map(async s=>{
-      try { const {breakdown}=await calculateServicePrice(s.id,pricingVehicle.category!); return [s.id,breakdown.total] as const; }
-      catch {return null;}
-    })).then(rows=>{if(active)setPrices(Object.fromEntries(rows.filter(x=>x!==null)));});
-    return ()=>{active=false;};
-  },[services,pricingVehicle.category]);
   const all = services ?? [];
-  const pricedLabel=(sv:Service)=>sv.priceOnRequest?"Quote on request":(pricingVehicle.category?(prices[sv.id]!==undefined?(sv.priceFrom===true?"From ":"")+rupees(prices[sv.id]!):(sv.priceFrom===true?"From ":"")+priceLabel(sv)):(sv.priceFrom===true?"From ":"")+priceLabel(sv));
+  const prices = useVehiclePrices(all, pricingVehicle.category);
+  const pricedLabel=(sv:Service)=>servicePriceText(sv,pricingVehicle.category,prices);
   const pricedFrom=(xs:Service[])=>{
     if(!pricingVehicle.category)return fromPrice(xs);
     const amounts=xs.filter(s=>!s.priceOnRequest).map(s=>prices[s.id]).filter((x):x is number=>x!==undefined);
-    return amounts.length ? `From ${rupees(Math.min(...amounts))}` : fromPrice(xs);
+    return amounts.length ? `From ${rupees(Math.min(...amounts))}` : undefined;
   };
   const byPrice = (a: Service, b: Service) => Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice;
   const inGroup = (g: MenuGroup) => all.filter((x) => (g.categories as string[]).includes(x.category));
@@ -114,7 +104,7 @@ export default function CatalogueScreen() {
   );
 
   const card = (sv: Service) => (
-    <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv)} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} />} />
+    <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} />} />
   );
 
   const crumb = (label: string, onPress: () => void) => (

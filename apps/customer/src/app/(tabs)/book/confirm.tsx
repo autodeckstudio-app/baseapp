@@ -123,11 +123,11 @@ export default function BookingConfirmScreen() {
         <Row title="Service" detail={service?.name ?? "-"} />
         <Row title="Car" detail={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
         <Row title="Date" detail={displayDate ?? "-"} />
-        <Row title="Time" detail={params.scheduledTime ? `${params.scheduledTime} IST` : "-"} />
+        <Row title="Time" detail={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
         <Row title="Duration" detail={durationLabel} />
         <Row
           title="Expected ready"
-          detail={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime} IST` : ""}` : "-"}
+          detail={displayEndDate ? `${displayEndDate}${params.endTime ? `, ${params.endTime}` : ""}` : "-"}
           last
         />
       </Pane>

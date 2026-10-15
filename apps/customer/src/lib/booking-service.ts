@@ -70,8 +70,17 @@ export async function getAvailability(
     "getAvailability",
   );
   const result = await fn({ serviceId, studioId, startDate, lookAheadDays });
-  const now = Date.now();
-  return result.data.slots.filter((s) => { const t = Date.parse(s.startAt); return Number.isNaN(t) || t > now; });
+  availabilityCache.set(availabilityKey(serviceId, studioId, startDate, lookAheadDays), { at: Date.now(), slots: result.data.slots });
+  return futureOnly(result.data.slots);
+}
+
+// Slots fetched in the last minute, so opening Book right after a service page shows times at once. Always refetched after.
+const availabilityCache = new Map<string, { at: number; slots: AvailableSlot[] }>();
+const availabilityKey = (a: string, b: string, c: string, d: number) => `${a}|${b}|${c}|${d}`;
+const futureOnly = (slots: AvailableSlot[]) => { const now = Date.now(); return slots.filter((s) => { const t = Date.parse(s.startAt); return Number.isNaN(t) || t > now; }); };
+export function peekAvailability(serviceId: string, studioId: string, startDate: string, lookAheadDays = 14): AvailableSlot[] | null {
+  const hit = availabilityCache.get(availabilityKey(serviceId, studioId, startDate, lookAheadDays));
+  return hit && Date.now() - hit.at < 60_000 ? futureOnly(hit.slots) : null;
 }
 
 export async function createBooking(input: CreateBookingInput): Promise<Booking> {

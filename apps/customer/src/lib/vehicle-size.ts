@@ -1,4 +1,5 @@
-import { calculateServicePrice } from "./catalogue-service";
+import { calculateServicePrice, cachedServiceTotal, priceLabel } from "./catalogue-service";
+import { rupees } from "../ui/kit";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
@@ -19,9 +20,10 @@ export function usePricingVehicle() {
 }
 
 export function useVehiclePrices(services: Service[], category: VehicleCategory | null) {
- const [prices,setPrices]=useState<Record<string,number>>({});
+ const seed=()=>{const o:Record<string,number>={}; if(category)for(const s of services){const t=cachedServiceTotal(s.id,category); if(t!==undefined)o[s.id]=t;} return o;};
+ const [prices,setPrices]=useState<Record<string,number>>(seed);
  useEffect(()=>{
-  setPrices({}); if(!category || !services.length)return;
+  setPrices(seed()); if(!category || !services.length)return;
   let alive=true;
   void Promise.all(services.filter(s=>!s.priceOnRequest).map(async s=>{
    try { const {breakdown}=await calculateServicePrice(s.id,category);return [s.id,breakdown.total] as const; }
@@ -30,4 +32,16 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
   return ()=>{alive=false;};
  },[services,category]);
  return prices;
+}
+
+/**
+ * The price a list tile shows. With a known car size it is the server total (incl. GST) or nothing while that loads,
+ * never the unadjusted base price. Without a car it is the entry price.
+ */
+export function servicePriceText(sv: Service, category: VehicleCategory | null, prices: Record<string, number>): string | null {
+  if (sv.priceOnRequest) return "Quote on request";
+  const from = sv.priceFrom === true ? "From " : "";
+  if (!category) return from + priceLabel(sv);
+  const t = prices[sv.id] ?? cachedServiceTotal(sv.id, category);
+  return t === undefined ? null : from + rupees(t);
 }

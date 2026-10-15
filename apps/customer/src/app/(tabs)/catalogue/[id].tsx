@@ -17,6 +17,8 @@ import { useAuth } from "../../../hooks/useAuth";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
 import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
+import { getAvailability, todayIST } from "../../../lib/booking-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
@@ -83,8 +85,10 @@ export default function ServiceDetailScreen() {
     return () => { stale = true; };
   }, [id, service, selectedCategory]);
 
+  // Warm the studio calendar so Book opens with times already there.
   useEffect(() => {
-    if (!service) return;
+    if (!service || service.priceOnRequest === true) return;
+    void getAvailability(service.id, FIRST_STUDIO_ID, todayIST(), 7).catch(() => undefined);
   }, [service]);
 
   useEffect(() => {

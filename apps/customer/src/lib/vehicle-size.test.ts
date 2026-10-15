@@ -8,7 +8,7 @@ describe('saved vehicle size pricing contract',()=>{
  });
  it('uses persisted active vehicle for pricing and price calculation for catalogue',()=>{
  expect(read('src/lib/vehicle-size.ts')).toContain('autodeck.activeVehicle');
- expect(read('src/app/(tabs)/catalogue/index.tsx')).toContain('calculateServicePrice(s.id,pricingVehicle.category!)');
+ expect(read('src/app/(tabs)/catalogue/index.tsx')).toContain('useVehiclePrices(all, pricingVehicle.category)');
  expect(read('src/app/(tabs)/catalogue/[id].tsx')).toContain('pricingVehicle.category');
  expect(read('src/app/(tabs)/book/[serviceId].tsx')).toContain('setSelectedCategory(selectedVehicle?.category??null)');
  });

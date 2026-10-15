@@ -109,7 +109,7 @@ export function PhotoCard({ media, title, pill, onPress, hearted = true }: { med
 
 function ServiceCard({ s, onPress }: { s: HomeService; onPress: () => void }) {
   const img = (serviceImagery as Record<string, ImageSourcePropType>)[s.category] ?? serviceImagery.other;
-  return <PhotoCard title={s.name} pill={s.price === "Quote on request" ? "Quote" : s.price} onPress={onPress} media={<Image source={img} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />;
+  return <PhotoCard title={s.name} pill={s.price === "Quote on request" ? "Quote" : s.price || undefined} onPress={onPress} media={<Image source={img} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />;
 }
 
 export function GroupChips({ value, onChange }: { value: string | null; onChange: (k: string | null) => void }) {

@@ -10,7 +10,7 @@ import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
-import { getAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
+import { getAvailability, peekAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 // V1 is explicitly single-studio-per-tenant (seeded once) - FIRST_STUDIO_ID
@@ -21,7 +21,7 @@ import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
   { value: "hatchback", label: "Hatchback" },
@@ -100,7 +100,9 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     if (!serviceId || !service) return;
-    setSlotsLoading(true);
+    const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7);
+    if (warm) setSlots(warm);
+    setSlotsLoading(!warm);
     setSlotsError(false);
     void getAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7)
       .then(setSlots)
@@ -150,7 +152,7 @@ export default function BookServiceScreen() {
       <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={16 / 9} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
-        {selectedVehicle && vehicles.length <= 1 ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}><CarThumb car={selectedVehicle} height={60} width={84} radius={12}/><View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View></Pane> : null}
+        {selectedVehicle && vehicles.length <= 1 ? <Pane pad="inset"><View style={{flexDirection:"row",alignItems:"center",gap:14}}>{selectedVehicle.photoUrl?<CarThumb car={selectedVehicle} height={60} width={84} radius={12}/>:null}<View style={{flex:1,gap:6}}><T role="heading">{selectedVehicle.make} {selectedVehicle.model}</T><Plate value={selectedVehicle.registrationNumber}/></View></View></Pane> : null}
         {vehiclesError ? <Notice title="Can't load your cars" body="Try again before choosing a time." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}/> : vehicles.length === 0 ? (
           <Notice title="Add your car first" body="We price and plan the work around it." action={<Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} />} />
         ) : vehicles.length === 1 ? null : (
@@ -188,7 +190,7 @@ export default function BookServiceScreen() {
         <Kicker>Pick a time</Kicker>
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
-          <T role="caption" tone="tertiary">Checking the studio's calendar...</T>
+          <View style={{ gap: space.line }}><View style={{ flexDirection: "row", gap: 8 }}><Skeleton height={40} width={110} /><Skeleton height={40} width={110} /></View><Skeleton height={150} /></View>
         ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (
           <Notice title="Fully booked this week" body="No free times in the next 7 days. Try again tomorrow or call the studio." />
         ) : (

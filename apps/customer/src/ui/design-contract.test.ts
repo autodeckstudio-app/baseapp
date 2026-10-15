@@ -124,7 +124,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("Next: bring your car at {displayTime} IST");
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("Next: bring your car at {displayTime}");
 });
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
@@ -134,4 +134,31 @@ it("audit batch: no spinner price labels, no icon placeholders over titles, labe
   expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
   const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
   expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120");
+});
+
+describe("booking flow guardrails", () => {
+  const rd = (p: string) => read("src/" + p);
+  it("list prices never fall back to the unadjusted base price once the car size is known", () => {
+    const vs = rd("lib/vehicle-size.ts");
+    expect(vs).toMatch(/export function servicePriceText/);
+    expect(vs).toMatch(/t === undefined \? null/);
+    expect(rd("app/(tabs)/catalogue/index.tsx")).not.toMatch(/priceLabel\(/);
+    expect(rd("app/(tabs)/index.tsx")).toMatch(/servicePriceText\(/);
+    expect(rd("app/(tabs)/index.tsx")).not.toMatch(/priceLabel\(/);
+  });
+  it("calculateServicePrice feeds the shared total cache the lists read", () => {
+    expect(rd("lib/catalogue-service.ts")).toMatch(/totalCache\.set\(/);
+  });
+  it("no timezone suffix in booking times", () => {
+    for (const f of ["app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/reschedule.tsx"]) {
+      expect(rd(f)).not.toMatch(/ IST[`"<. ]/);
+    }
+  });
+  it("Book shows times from a warm cache and no plain-text calendar wait", () => {
+    expect(rd("app/(tabs)/book/[serviceId].tsx")).toMatch(/peekAvailability\(/);
+    expect(rd("app/(tabs)/book/[serviceId].tsx")).not.toMatch(/Checking the studio/);
+  });
+  it("the booking car card has no photo placeholder when the car has no photo", () => {
+    expect(rd("app/(tabs)/book/[serviceId].tsx")).toMatch(/selectedVehicle\.photoUrl\?<CarThumb/);
+  });
 });

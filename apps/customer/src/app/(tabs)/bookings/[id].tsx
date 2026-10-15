@@ -306,9 +306,9 @@ export default function BookingDetailScreen() {
       ) : null}
 
       <Pane pad="gap">
-        <Row title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime} IST`} />
+        <Row title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
         <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
-        <Row title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${booking.estimatedEndTime} IST`} last={!(booking.notes !== null && booking.notes.trim() !== "")} />
+        <Row title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${booking.estimatedEndTime}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} />
         {booking.notes !== null && booking.notes.trim() !== "" ? <Row title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
@@ -385,7 +385,7 @@ export default function BookingDetailScreen() {
               />
             </View>
           ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime} IST. You pay at the studio, and the team marks it paid once you do.</T> : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime} . You pay at the studio, and the team marks it paid once you do.</T> : null}
         </Pane>
       </View>
 

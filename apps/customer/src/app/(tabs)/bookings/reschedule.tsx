@@ -116,7 +116,7 @@ export default function RescheduleBookingScreen() {
       <Screen>
         <Notice
           title="Booking rescheduled"
-          body={`Your booking is now set for ${doneLabel} IST.`}
+          body={`Your booking is now set for ${doneLabel}.`}
           action={<Button label="Done" onPress={() => router.back()} />}
         />
       </Screen>
@@ -135,7 +135,7 @@ export default function RescheduleBookingScreen() {
         <View style={{ gap: space.hair }}>
           <Kicker tone="accent">Reschedule</Kicker>
           <T role="title">Pick a new time</T>
-          <T role="caption" tone="secondary">Currently: {currentDisplay} IST</T>
+          <T role="caption" tone="secondary">Currently: {currentDisplay}</T>
         </View>
       }
     >
@@ -185,7 +185,7 @@ export default function RescheduleBookingScreen() {
       {pendingSlot ? (
         <Notice
           title="Confirm reschedule"
-          body={`Move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))} IST. Your price stays the same.`}
+          body={`Move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your price stays the same.`}
           action={
             <View style={{ gap: space.breath }}>
               <Button label="Confirm new time" busy={submitting} onPress={() => void handleConfirm()} />
