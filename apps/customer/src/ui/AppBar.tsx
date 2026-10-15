@@ -1,3 +1,4 @@
+import { referralShareMessage, referralSubtitle } from "../lib/referral";
 // One header for every tab screen: avatar (opens the side drawer) on the left, the screen name in the middle, the bell on the right.
 import { useEffect, useState } from "react";
 import { Pressable, Share, Text, View } from "react-native";
@@ -29,7 +30,7 @@ export function AppBar({ title }: { title: string }) {
     { key: "bookings", label: "Bookings", sub: "Upcoming and past visits", icon: "bookings", onPress: go("/(tabs)/bookings") },
     { key: "services", label: "All services", sub: "Wash, coatings, PPF, garage", icon: "services", onPress: go("/(tabs)/catalogue") },
     { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: go("/(tabs)/membership") },
-    { key: "friend", label: "Bring a friend", sub: "Share AutoDeck", icon: "gift", onPress: () => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined) },
+    { key: "friend", label: "Bring a friend", sub: referralSubtitle(), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage() }).catch(() => undefined) },
     { key: "notifications", label: "Notifications", icon: "bell", onPress: go("/(tabs)/notifications") },
     { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: go("/(tabs)/studio") },
     { key: "help", label: "Help and contact", icon: "chat", onPress: go("/(tabs)/help") },

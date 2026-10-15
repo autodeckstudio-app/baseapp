@@ -1,3 +1,4 @@
+import { referralShareMessage, referralSubtitle } from "../../../lib/referral";
 import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -106,7 +107,7 @@ export default function BookingsScreen() {
         </View>
         <View style={{ flexDirection: "row", gap: space.line }}>
           <PhotoCard hearted={false} title="Membership" pill="Washes and perks" onPress={() => router.push("/(tabs)/membership")} media={<Image source={sceneImagery.membership} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
-          <PhotoCard hearted={false} title="Bring a friend" pill="Share AutoDeck" onPress={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)} media={<Image source={sceneImagery.heroHome} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+          <PhotoCard hearted={false} title="Bring a friend" pill={referralSubtitle()} onPress={() => void Share.share({ message: referralShareMessage() }).catch(() => undefined)} media={<Image source={sceneImagery.heroHome} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
         </View>
       </View>
     </Screen>

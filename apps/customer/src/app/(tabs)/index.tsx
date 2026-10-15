@@ -1,3 +1,4 @@
+import { referralShareMessage, referralSubtitle } from "../../lib/referral";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
 // projectCustomerHome from the customer's own records - never invented here.
@@ -204,7 +205,7 @@ export default function HomeScreen() {
           { key: "bookings", label: "Bookings", sub: "Upcoming and past visits", icon: "bookings", onPress: () => router.push("/(tabs)/bookings") },
           { key: "services", label: "All services", sub: "Wash, coatings, PPF, garage", icon: "services", onPress: () => router.push("/(tabs)/catalogue") },
           { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: () => router.push("/(tabs)/membership") },
-          { key: "friend", label: "Bring a friend", sub: "Share AutoDeck", icon: "gift", onPress: () => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined) },
+          { key: "friend", label: "Bring a friend", sub: referralSubtitle(), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage() }).catch(() => undefined) },
           { key: "notifications", label: "Notifications", icon: "bell", onPress: () => router.push("/(tabs)/notifications") },
           { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => router.push("/(tabs)/studio") },
           { key: "help", label: "Help and contact", icon: "chat", onPress: () => router.push("/(tabs)/help") },
@@ -215,7 +216,7 @@ export default function HomeScreen() {
         onStudio={() => router.push("/(tabs)/studio")}
         onMembership={() => router.push("/(tabs)/membership")}
         onVisits={() => router.push("/(tabs)/bookings")}
-        onShare={() => void Share.share({ message: "AutoDeck, car care studio in Ahmedabad. Book on https://app.autodeck.in" }).catch(() => undefined)}
+        onShare={() => void Share.share({ message: referralShareMessage() }).catch(() => undefined)}
         unread={unread}
         cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}

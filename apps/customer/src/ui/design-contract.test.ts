@@ -325,3 +325,13 @@ describe("membership wash", () => {
     expect(c).toContain("...(washOn ? { useMembershipWash: true } : {})");
   });
 });
+
+describe("referral wording", () => {
+  it("every Bring a friend button uses the one share message", () => {
+    for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx", "src/app/(tabs)/bookings/index.tsx"]) {
+      const s = read(f);
+      expect(s).toContain("referralSubtitle()");
+      expect(s).not.toContain("Book on https://app.autodeck.in");
+    }
+  });
+});
