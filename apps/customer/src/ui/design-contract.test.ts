@@ -208,3 +208,14 @@ describe("garage cards", () => {
     expect(src).toContain("garageIconFor");
   });
 });
+
+describe("home cars", () => {
+  it("shows each car once: no tripled looping list", () => {
+    expect(read("src/ui/HomeView.tsx")).not.toContain("[...cars, ...cars, ...cars]");
+  });
+  it("light surfaces are warm and flat: no white offset highlights", () => {
+    const src = read("src/lib/raised.ts");
+    expect(src).not.toContain("-8px -8px 20px rgba(255,255,255,0.95)");
+    expect(src).toContain("#FBF8F3");
+  });
+});

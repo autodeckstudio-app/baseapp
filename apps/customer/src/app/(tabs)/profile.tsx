@@ -1,6 +1,7 @@
 // You: account, membership, notifications, sign out.
 import { useState } from "react";
-import { Platform, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { getThemePref, setThemePref, type ThemePref } from "@autodeck/ui/theme";
@@ -19,6 +20,7 @@ import { ProfileHero } from "../../ui/ProfileHero";
 import { Button, Field, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function YouScreen() {
+  const { colors, name: themeName } = useExperienceTheme();
   const auth = useAuth();
   const { lang, t } = useLang();
   const router = useRouter();
@@ -81,9 +83,14 @@ export default function YouScreen() {
       <View style={{ gap: space.hair }}>
         <Kicker>Appearance</Kicker>
         <View style={{ flexDirection: "row", gap: space.line }}>
-          {(["auto", "light", "night"] as const).map((m) => (
-            <Button key={m} kind={pref === m ? "primary" : "quiet"} label={m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1 }} />
-          ))}
+          {(["auto", "light", "night"] as const).map((m) => {
+            const on = pref === m;
+            return (
+              <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1, flexBasis: 0, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: on ? "transparent" : "rgba(128,128,128,0.28)", backgroundColor: on ? (themeName === "light" ? "#16181C" : "#F3F1ED") : "transparent" }}>
+                <Text style={{ color: on ? (themeName === "light" ? "#F4F1EC" : "#16181C") : colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
       {editing ? (

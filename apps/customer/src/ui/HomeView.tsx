@@ -221,24 +221,21 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
   const ref = useRef<ScrollView>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const n = cars.length;
-  const loop = n > 1;
+  const loop = n > 1; // paging only; each car appears once
   const H = cars.some((c) => c.photo) ? metrics.heroTall : metrics.heroCompact;
   const card = w > 0 ? Math.min(w - 36, 420) : 0, step = card + 12;
-  const items = loop ? [...cars, ...cars, ...cars] : cars;
-  useEffect(() => { if (loop && step > 12) ref.current?.scrollTo({ x: n * step, animated: false }); }, [loop, step, n]);
+  const items = cars;
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const settle = (x: number) => {
     const i = Math.round(x / step);
-    onActive(((i % n) + n) % n);
-    if (i < n) ref.current?.scrollTo({ x: x + n * step, animated: false });
-    else if (i >= 2 * n) ref.current?.scrollTo({ x: x - n * step, animated: false });
+    onActive(Math.max(0, Math.min(n - 1, i)));
   };
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => settle(x), 140);
   };
-  const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(232,234,237,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
+  const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(239,234,225,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
   return (
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: H }}>
       {w > 0 ? (
