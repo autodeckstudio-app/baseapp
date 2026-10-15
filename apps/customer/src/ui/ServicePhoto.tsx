@@ -30,7 +30,7 @@ export function ServicePhoto({ service, height, width, radius = 0, aspect }: { s
   }
   if (service.category === "garage") {
     return (
-      <View style={[box, { backgroundColor: "#15171B", alignItems: "center", justifyContent: "center" }]}>
+      <View style={[box, { backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", ...(height && height > 260 ? { height: "100%" as const } : {}) }]}>
         <View style={{ position: "absolute", width: "70%", aspectRatio: 1, borderRadius: 999, backgroundColor: "rgba(236,134,56,0.16)" }} />
         <Icon name={garageIconFor(` ${service.name} `)} color="#F4F1EC" size={44} />
       </View>
