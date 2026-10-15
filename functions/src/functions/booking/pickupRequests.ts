@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import type { Booking } from "@autodeck/core";
+import { pickupZone, PICKUP_FREE_KM, type Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -22,7 +22,10 @@ const requestSchema = z.object({
   requestedPickupTime: z.string().trim().max(100).optional(),
   requestedDropTime: z.string().trim().max(100).optional(),
   note: z.string().trim().max(300).optional(),
-}).strict();
+  // Optional device location. When sent, the server checks the free zone itself. Without it the studio checks by phone.
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+}).strict().refine((d) => (d.lat === undefined) === (d.lng === undefined), "Send both latitude and longitude.");
 
 const updateSchema = z.object({
   requestId: z.string().min(1),
@@ -56,6 +59,12 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
   assertTenant(user, user.claims.tenantId);
   const data = validate(requestSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "pickup.request");
+  let distanceKm: number | null = null;
+  if (data.lat !== undefined && data.lng !== undefined) {
+    const z = pickupZone({ lat: data.lat, lng: data.lng });
+    if (!z.within) throw new HttpsError("failed-precondition", `Pickup and drop is free within ${PICKUP_FREE_KM} km of the studio. Please call the studio to arrange it.`);
+    distanceKm = z.km;
+  }
   const db = getFirestore();
   const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
   if (!bookingSnap.exists) throw new HttpsError("not-found", "Booking not found.");
@@ -76,6 +85,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
     requestedPickupTime: data.requestedPickupTime ?? "",
     requestedDropTime: data.requestedDropTime ?? "",
     note: data.note ?? "",
+    distanceKm,
     status: "REQUESTED" as const,
     staffNote: "",
     agreedPickupAt: null,

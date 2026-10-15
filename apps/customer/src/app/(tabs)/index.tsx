@@ -7,7 +7,7 @@ import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib
 // projectCustomerHome from the customer's own records - never invented here.
 import { useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Share, View } from "react-native";
-import { STUDIO_INFO } from "../../lib/studio-info";
+import { STUDIO_INFO, WHATSAPP_CHANNEL_URL, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../../lib/studio-info";
 import { openStatus } from "../../lib/open-status";
 import { carNeed } from "../../lib/home-needs";
 import { getOffers, offerToCampaign } from "../../lib/offer-service";
@@ -231,6 +231,10 @@ export default function HomeScreen() {
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours, openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays)?.text ?? null }}
         campaign={offerToCampaign(offers, (h) => router.push(h as never))}
         need={(() => { const n = carNeed(carJobs, Object.fromEntries(catalogue.map((x) => [x.id, { id: x.id, name: x.name, category: x.category }]))); return n ? { title: n.title, detail: n.detail, onPress: () => router.push(`/(tabs)/book/${n.serviceId}`) } : null; })()}
+        social={[
+          ...(WHATSAPP_CHANNEL_URL ? [{ key: "wac", title: "Join our WhatsApp channel", sub: "Offers and news from the studio.", icon: "chat" as const, onPress: () => void Linking.openURL(WHATSAPP_CHANNEL_URL) }] : []),
+          ...(INSTAGRAM_URL ? [{ key: "ig", title: "Follow us on Instagram", sub: `@${INSTAGRAM_HANDLE}. Reels and stories.`, icon: "star" as const, onPress: () => void Linking.openURL(INSTAGRAM_URL) }] : []),
+        ]}
         quick={[
           ...(STUDIO_INFO.phone ? [{ key: "call", label: "Call", icon: "phone" as const, onPress: () => void Linking.openURL(`tel:${STUDIO_INFO.phone}`) }] : []),
           ...(STUDIO_INFO.whatsapp ? [{ key: "wa", label: "WhatsApp", icon: "chat" as const, onPress: () => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`) }] : []),

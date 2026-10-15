@@ -93,7 +93,7 @@ export default function PickupsPage() {
             <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {counts[t.id]}</button>
           ))}
         </div>
-        <p className="ax-pu-policy">Free up to 5 km. Beyond that, Rs 100 for each pickup and each drop. Put the charge in the note when you approve.</p>
+        <p className="ax-pu-policy">Free within 3 km. Beyond that, arrange it with the customer by phone. The app asks beyond-3 km customers to call.</p>
       </div>
 
       {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}

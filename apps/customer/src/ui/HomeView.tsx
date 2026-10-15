@@ -40,6 +40,8 @@ export type HomeViewProps = {
   membership: { title: string; detail: string } | null;
   studio: { address: string; hours: string; openText?: string | null; open?: boolean };
   /** What the car is due for, from its delivered visits. Null hides the card. */
+  /** Social rows under Studio and club. Empty values hide the row. */
+  social?: Array<{ key: string; title: string; sub: string; icon: IconName; onPress: () => void }>;
   need?: { title: string; detail: string; onPress: () => void } | null;
   /** One-tap studio contact: Call, WhatsApp, Directions. Empty hides the row. */
   quick?: Array<{ key: string; label: string; icon: IconName; onPress: () => void }>;
@@ -393,6 +395,7 @@ export function HomeView(p: HomeViewProps) {
         <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
           <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
           <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
+          {(p.social ?? []).map((x) => <ClubRow key={x.key} icon={x.icon} title={x.title} sub={x.sub} onPress={x.onPress} />)}
           <ClubRow icon="pin" title="The studio" sub={`${p.studio.openText ? `${p.studio.openText}. ` : ""}${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
         </View>
       </View>

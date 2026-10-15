@@ -10,8 +10,15 @@ export async function getPickupRequest(bookingId: string): Promise<PickupRequest
   return snap.exists() ? (snap.data() as PickupRequest) : null;
 }
 
-export async function requestPickupDrop(input: { bookingId: string; kind: PickupRequest["kind"]; address: string; preferredTime?: string; requestedPickupTime?: string; requestedDropTime?: string }): Promise<void> {
+export async function requestPickupDrop(input: { bookingId: string; kind: PickupRequest["kind"]; address: string; preferredTime?: string; requestedPickupTime?: string; requestedDropTime?: string; lat?: number; lng?: number }): Promise<void> {
   await httpsCallable(functions, "requestPickupDrop")(input);
+}
+
+/** One try at the device location. Resolves null if unavailable or refused. Web only. */
+export function getDeviceLocation(): Promise<{ lat: number; lng: number } | null> {
+  const nav = (globalThis as unknown as { navigator?: { geolocation?: { getCurrentPosition: (ok: (p: { coords: { latitude: number; longitude: number } }) => void, no: () => void, o?: object) => void } } }).navigator;
+  if (!nav?.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => nav.geolocation!.getCurrentPosition((p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }), () => resolve(null), { enableHighAccuracy: false, timeout: 10000 }));
 }
 
 export async function requestAccountDeletion(): Promise<void> {

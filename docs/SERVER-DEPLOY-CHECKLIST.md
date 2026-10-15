@@ -25,3 +25,8 @@ Reward: the referred friend's first wash is free, once. No referrer reward.
 - Warranty seed: packages/core/src/menu.ts still carries brand-wide warranty terms; update to the per-film labels in docs/WARRANTY-CLAIMS.md.
 - Catalogue cold start: `getServiceCatalogue` is slow on a cold function; consider min instances.
 - Pay online, invoices and WhatsApp updates (test mode first). Live Razorpay keys through a vault link at the end, before deployment.
+
+## Added 16 Oct (3:2x AM)
+
+- **Offers** (banner on Home, admin /offers page): functions `issueOfferUploadUrl`, `createOffer`, `updateOffer`, `listOffers` (region asia-south1). Collection `offers`. Storage path `{tenantId}/offers/`. No rules change (callable only, deny-all default). Admin app must be deployed for the /offers page. Home shows nothing until an offer is published.
+- **Pickup and drop free zone (3 km)**: `requestPickupDrop` now accepts optional `lat` and `lng`, rejects beyond `PICKUP_FREE_KM` (3), stores `distanceKm`. Without a location the request goes to the studio, who checks by phone. Studio coordinates are geocoded from the studio address (`packages/core/src/pickup-zone.ts`). No fee beyond 3 km exists: the app tells the customer to call. A fee is an open decision.

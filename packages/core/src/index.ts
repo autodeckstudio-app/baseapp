@@ -6,3 +6,4 @@ export * from "./pricing-category.js";
 export * from "./invoice-display.js";
 export * from "./customer-search.js";
 export * from "./menu.js";
+export * from "./pickup-zone.js";
