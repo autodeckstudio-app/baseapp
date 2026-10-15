@@ -7,7 +7,7 @@ import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "reac
 import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS} from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, menuGroupOf, needsInspectionNote, type MenuGroup, type Service } from "@autodeck/core";
+import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, menuGroupOf, needsInspectionNote, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
 import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
@@ -70,6 +70,11 @@ export default function CatalogueScreen() {
   const groups = useMemo(() => {
     if (!catGroup) return [] as [string, Service[]][];
     const xs = all.filter((x) => (catGroup.categories as string[]).includes(x.category));
+    if (catGroup.key === "garage") {
+      const gm = new Map<string, Service[]>();
+      for (const sv of xs) { const k = garageSectionOf(sv.id); gm.set(k, [...(gm.get(k) ?? []), sv]); }
+      return GARAGE_SECTIONS.filter((k) => gm.has(k)).map((k) => [k, [...(gm.get(k) ?? [])].sort(byPrice)] as [string, Service[]]);
+    }
     if (!catGroup.byBrand) return [[catGroup.label, [...xs].sort(byPrice)]] as [string, Service[]][];
     const order: string[] = catGroup.key === "ppf" ? [...PPF_BRANDS] : [...COATING_BRANDS];
     const m = new Map<string, Service[]>();

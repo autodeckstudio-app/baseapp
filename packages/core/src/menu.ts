@@ -33,6 +33,20 @@ export function menuGroupOf(category: ServiceCategory): MenuGroup {
   return MENU_GROUPS.find((g) => g.categories.includes(category)) ?? (MENU_GROUPS[3] as MenuGroup);
 }
 
+/** Garage sections, in display order. Services are placed by id so no stored data changes. */
+export const GARAGE_SECTIONS = ["Health checks", "Wheels and tyres", "Repairs"] as const;
+const GARAGE_SECTION_BY_ID: Record<string, (typeof GARAGE_SECTIONS)[number]> = {
+  "menu-garage-inspection": "Health checks",
+  "menu-garage-ac": "Health checks",
+  "menu-garage-battery": "Health checks",
+  "menu-garage-alignment": "Wheels and tyres",
+  "menu-garage-repairs": "Repairs",
+};
+/** Repairs is quote only: inspection first, quote after. Unknown garage services land in Health checks. */
+export function garageSectionOf(serviceId: string): (typeof GARAGE_SECTIONS)[number] {
+  return GARAGE_SECTION_BY_ID[serviceId] ?? "Health checks";
+}
+
 /** Popular-services chips: the six menu groups except pickup. */
 export const MENU_CHIPS: MenuGroupKey[] = ["wash", "coatings", "ppf", "garage", "mods"];
 
