@@ -81,7 +81,7 @@ describe("one design system and one place for everything",()=>{
   it("keeps the bottom nav compact",()=>{
     const bar=read("src/ui/RaisedTabBar.tsx");
     expect(bar).toContain("maxWidth: 360");
-    expect(bar).toContain("size={22}");
+    expect(bar).toContain("size={26}");
     expect(bar).toContain("onNavCompact");
     expect(bar).not.toContain("<Text");
   });

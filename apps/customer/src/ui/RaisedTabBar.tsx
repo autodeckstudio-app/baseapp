@@ -2,8 +2,7 @@
 // the active icon on a soft orange tint. It shrinks while the page scrolls down and returns on scroll up.
 import { useEffect, useRef } from "react";
 import { Animated, Platform, Pressable, View } from "react-native";
-import { Icon } from "@autodeck/ui/native";
-import type { IconName } from "@autodeck/ui/theme";
+import { NavIcon, type NavIconName } from "./NavIcon";
 import { emitTabPressed, useExperienceTheme } from "@autodeck/ui/native";
 import { onNavCompact } from "../lib/nav-scroll";
 
@@ -12,7 +11,7 @@ type Props = {
   state: { index: number; routes: Route[] };
   descriptors: Record<string, { options: { href?: unknown; title?: string } }>;
   navigation: { navigate: (name: string, params?: object) => void; emit: (e: { type: "tabPress"; target: string; canPreventDefault: true }) => { defaultPrevented: boolean } };
-  icons: Record<string, IconName>;
+  icons: Record<string, NavIconName>;
 };
 
 export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
@@ -51,8 +50,8 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
               }}
               style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", justifyContent: "center", paddingVertical: 2, opacity: pressed ? 0.7 : 1 })}
             >
-              <View style={{ width: 52, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(236,134,56,0.20)" : "transparent" }}>
-                <Icon name={icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={22} />
+              <View style={{ width: 52, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(236,134,56,0.26)" : "transparent" }}>
+                <NavIcon name={icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={26} filled={focused} cut={light ? "#FBF8F3" : "#18181C"} />
               </View>
             </Pressable>
           );
