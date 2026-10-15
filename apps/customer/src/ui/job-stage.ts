@@ -19,3 +19,17 @@ export function readyIsAhead(date: string, time: string, now = Date.now()): bool
   const t = Date.parse(`${date}T${time.length === 5 ? time + ":00" : time}+05:30`);
   return !Number.isNaN(t) && t > now;
 }
+
+export type TimelineStep = { label: string; at: string | null; state: "done" | "now" | "next" };
+const STEP_STATUS = ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"] as const;
+const STEP_LABEL = ["Car received", "Work started", "Final checks", "Ready for pickup"];
+
+/** The four visible steps with the time each began, from the job's own status history. Staff notes are never shown. */
+export function jobTimeline(status: string, history: Array<{ status: string; changedAt: string }>): TimelineStep[] {
+  const cur = jobStage(status)?.index ?? -1;
+  return STEP_STATUS.map((s, i) => {
+    const hit = history.filter((h) => h.status === s).sort((a, b) => a.changedAt.localeCompare(b.changedAt))[0];
+    const state: TimelineStep["state"] = i < cur || (status === "DELIVERED" && i <= cur) ? "done" : i === cur ? "now" : "next";
+    return { label: STEP_LABEL[i]!, at: hit && state !== "next" ? hit.changedAt : null, state };
+  });
+}
