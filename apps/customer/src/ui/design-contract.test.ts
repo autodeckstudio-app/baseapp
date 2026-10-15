@@ -248,3 +248,10 @@ describe("service photos", () => {
     }
   });
 });
+
+describe("catalogue loading", () => {
+  it("shares one catalogue request and paints the saved copy first", () => {
+    expect(read("src/lib/catalogue-service.ts")).toContain("TTL_MS");
+    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("peekCatalogue()");
+  });
+});

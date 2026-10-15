@@ -10,7 +10,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, menuGroupOf, needsInspectionNote, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
 import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, GroupChips, groupCategories } from "../../../ui/HomeView";
@@ -36,7 +36,7 @@ export default function CatalogueScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
   const { need, cat: catParam, brand: brandParam } = useLocalSearchParams<{ need?: string; cat?: string; brand?: string }>();
-  const [services, setServices] = useState<Service[] | null>(null);
+  const [services, setServices] = useState<Service[] | null>(() => peekCatalogue());
   const [error, setError] = useState(false);
   const pricingVehicle = usePricingVehicle();
   const [q, setQ] = useState("");
