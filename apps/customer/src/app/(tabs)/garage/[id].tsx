@@ -43,7 +43,7 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "care", label: "Care map" },
-  { key: "passport", label: "Service history" },
+  { key: "passport", label: "History" },
   { key: "protection", label: "Documents" },
   { key: "warranty", label: "Warranty" },
 ];
@@ -296,9 +296,6 @@ export default function VehicleDetailScreen() {
             last={mostRecentJob ? { title: serviceNames[mostRecentJob.serviceId] ?? "Studio visit", detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
             reminders={reminders}
             details={[
-              { label: "Make", value: vehicle.make },
-              { label: "Model", value: vehicle.model },
-              { label: "Registration", value: vehicle.registrationNumber },
               ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
             ]}
             onBook={() => router.push("/(tabs)/catalogue")}

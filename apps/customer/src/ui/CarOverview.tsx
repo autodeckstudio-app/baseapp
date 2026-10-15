@@ -6,15 +6,15 @@ import type { IconName } from "@autodeck/ui/theme";
 import { raised } from "../lib/raised";
 
 export function TabPills<K extends string>({ tabs, value, onChange }: { tabs: Array<{ key: K; label: string }>; value: K; onChange: (k: K) => void }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
+  const { colors } = useExperienceTheme();
+  // One line always: text tabs with a thin underline, spread across the width.
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+    <View style={{ flexDirection: "row", flexWrap: "nowrap", justifyContent: "space-between", alignItems: "flex-end", borderBottomWidth: 1, borderBottomColor: colors.borderSubtle }}>
       {tabs.map((t) => {
         const on = t.key === value;
         return (
-          <Pressable key={t.key} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(t.key)} style={({ pressed }) => ({ paddingHorizontal: 16, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.8 : 1, ...(on ? r.roundOn : r.round) })}>
-            <Text style={{ color: on ? "#1A1410" : colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{t.label}</Text>
+          <Pressable key={t.key} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(t.key)} style={({ pressed }) => ({ paddingTop: 8, paddingBottom: 8, flexShrink: 1, opacity: pressed ? 0.8 : 1, borderBottomWidth: 2, borderBottomColor: on ? "#EC8638" : "transparent", marginBottom: -1 })}>
+            <Text numberOfLines={1} style={{ color: on ? colors.textPrimary : colors.textSecondary, fontSize: 13, fontWeight: on ? "800" : "600" }}>{t.label}</Text>
           </Pressable>
         );
       })}
@@ -110,14 +110,14 @@ export function CarOverview(p: OverviewProps) {
         )}
       </Card>
 
-      <Card title="Car details">
+      {p.details.length ? <Card title="Car details">
         {p.details.map((d, i) => (
           <View key={d.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.borderSubtle }}>
             <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{d.label}</Text>
             <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "700" }}>{d.value}</Text>
           </View>
         ))}
-      </Card>
+      </Card> : null}
     </View>
   );
 }
