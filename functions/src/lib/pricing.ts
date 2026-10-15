@@ -4,6 +4,7 @@ import type { VehicleCategoryPricing, VehicleCategory, PriceBreakdown } from "@a
 import {
   DEFAULT_CURRENCY,
   DEFAULT_TAX_RATE_PERCENT,
+  GST_ENABLED,
   DEFAULT_TAX_DESCRIPTION,
 } from "@autodeck/core";
 
@@ -90,6 +91,12 @@ export function applyMembershipBenefit(
 
 // Integer-safe GST calculation.
 // Rounds to the nearest paise: Math.round avoids systematic bias (banker's rounding is V2+).
+/** The tax to apply: none while GST_ENABLED is false, whatever the studio settings say. Every price entry point goes through this. */
+export function taxFor(cfg?: { taxRatePercent?: number; taxDescription?: string } | null): { taxRatePercent: number; taxDescription: string } {
+  if (!GST_ENABLED) return { taxRatePercent: 0, taxDescription: "No tax" };
+  return { taxRatePercent: cfg?.taxRatePercent ?? DEFAULT_TAX_RATE_PERCENT, taxDescription: cfg?.taxDescription ?? DEFAULT_TAX_DESCRIPTION };
+}
+
 export function calculateTax(subtotalPaise: number, taxRatePercent: number): number {
   return Math.round((subtotalPaise * taxRatePercent) / 100);
 }

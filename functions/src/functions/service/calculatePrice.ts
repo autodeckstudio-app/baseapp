@@ -6,7 +6,7 @@ import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { calculatePriceSchema } from "../../schemas/service.js";
-import { calculatePrice } from "../../lib/pricing.js";
+import { calculatePrice, taxFor } from "../../lib/pricing.js";
 
 // Server-authoritative price calculation.
 // The client MUST call this and use the returned breakdown — it must never compute
@@ -44,7 +44,7 @@ export const calculateServicePrice = onCall({ region: "asia-south1" }, async (re
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
     currency: service.currency,
-    // taxRatePercent and taxDescription use defaults (GST 18%) — tenant config is V2+
+    ...taxFor(null),
   });
 
   // PriceSnapshot — immutable record of this calculation; written into bookings at creation.

@@ -3,6 +3,12 @@ export const FIRST_STUDIO_ID = "studio-ahmedabad";
 
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
 export const DEFAULT_CURRENCY = "INR";
+/**
+ * The one GST switch. false: customers pay base price plus size adjustment, with no tax line anywhere.
+ * true: the studio rate (default 18%) is added. Prices are calculated on the server (functions/src/lib/pricing.ts taxFor);
+ * the apps only read this to decide whether to print "incl. GST". Turning it on needs a functions deploy.
+ */
+export const GST_ENABLED = false;
 export const DEFAULT_TAX_RATE_PERCENT = 18;
 export const DEFAULT_TAX_DESCRIPTION = "GST 18%";
 

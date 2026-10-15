@@ -199,12 +199,12 @@ export default function InvoiceScreen() {
                 <T role="body" style={{ color: INK }}>{rupees(sgst)}</T>
               </View>
             </>
-          ) : (
+          ) : invoice.tax > 0 ? (
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <T role="body" style={{ color: INK_SOFT }}>{invoice.taxDescription}</T>
               <T role="body" style={{ color: INK }}>{rupees(invoice.tax)}</T>
             </View>
-          )}
+          ) : null}
           <View style={{ height: 1, backgroundColor: HAIRLINE, marginVertical: 4 }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
             <T role="heading" style={{ color: INK }}>Total</T>

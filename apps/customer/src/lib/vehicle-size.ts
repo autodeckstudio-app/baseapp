@@ -35,7 +35,7 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
 }
 
 /**
- * The price a list tile shows. With a known car size it is the server total (incl. GST) or nothing while that loads,
+ * The price a list tile shows. With a known car size it is the server total or nothing while that loads,
  * never the unadjusted base price. Without a car it is the entry price.
  */
 export function servicePriceText(sv: Service, category: VehicleCategory | null, prices: Record<string, number>): string | null {

@@ -21,7 +21,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createBookingSchema } from "../../schemas/booking.js";
-import { calculatePrice, applyMembershipBenefit } from "../../lib/pricing.js";
+import { calculatePrice, applyMembershipBenefit, taxFor } from "../../lib/pricing.js";
 import {
   buildOccupiedInterval,
   hasConflict,
@@ -127,8 +127,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     basePrice: service.basePrice,
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
-    taxRatePercent: config.taxRatePercent,
-    taxDescription: config.taxDescription,
+    ...taxFor(config),
     currency: config.currency,
   });
 

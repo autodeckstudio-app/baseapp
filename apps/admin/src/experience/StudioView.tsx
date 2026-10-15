@@ -88,7 +88,7 @@ export function StudioView(p: {
             <p className="ax-label ax-form-section">Business</p>
             <div className="ax-form-pair">
               <label className="ax-form-row"><span>Studio name</span><input value={cur.name} onChange={(e) => setProf({ ...cur, name: e.target.value })} /></label>
-              <label className="ax-form-row"><span>GST (%), fixed at 18 in billing</span><input inputMode="decimal" value={cur.taxRatePercent} disabled readOnly /></label>
+              <label className="ax-form-row"><span>GST (%), not charged while GST is off</span><input inputMode="decimal" value={cur.taxRatePercent} disabled readOnly /></label>
             </div>
             <label className="ax-form-row"><span>Time zone, India only for now</span>
               <select disabled value={cur.timezone} onChange={(e) => setProf({ ...cur, timezone: e.target.value })}>

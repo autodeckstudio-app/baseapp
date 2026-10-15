@@ -9,7 +9,7 @@ import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { calculatePrice } from "../../lib/pricing.js";
+import { calculatePrice, taxFor } from "../../lib/pricing.js";
 
 const schema = z.object({
   bookingId: z.string().min(1),
@@ -38,7 +38,8 @@ export const setBookingQuote = onCall({ region: "asia-south1" }, async (request)
       basePrice: data.basePricePaise,
       vehicleCategory: b.vehicleCategory,
       vehicleCategoryPricing: pricing,
-      ...(cfg ? { taxRatePercent: cfg.taxRatePercent, taxDescription: cfg.taxDescription, currency: cfg.currency } : {}),
+      ...taxFor(cfg),
+      ...(cfg ? { currency: cfg.currency } : {}),
     });
     // The job was created at booking time with a zero price; keep it in step with the quote.
     const jobsSnap = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1));

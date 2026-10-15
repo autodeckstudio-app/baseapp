@@ -435,7 +435,7 @@ export default function WalkinScreen() {
               ) : priceBreakdown ? (
                 <>
                   <Text style={{ ...typography.price, color: colors.textPrimary }}>₹{(priceBreakdown.total / 100).toLocaleString("en-IN")}</Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>incl. {priceBreakdown.taxDescription}</Text>
+                  {priceBreakdown.tax > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted }}>incl. {priceBreakdown.taxDescription}</Text> : null}
                 </>
               ) : null}
             </View>

@@ -14,7 +14,7 @@ import {
   type OccupiedInterval,
 } from "../../lib/availability.js";
 import { utcToLocalDate, addDays, computeScheduleEnd } from "../../lib/schedule.js";
-import { calculatePrice } from "../../lib/pricing.js";
+import { calculatePrice, taxFor } from "../../lib/pricing.js";
 
 export const createWalkinJob = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
@@ -78,8 +78,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
     basePrice: service.basePrice,
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
-    taxRatePercent: config.taxRatePercent,
-    taxDescription: config.taxDescription,
+    ...taxFor(config),
     currency: config.currency,
   });
 

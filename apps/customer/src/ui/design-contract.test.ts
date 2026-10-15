@@ -171,6 +171,20 @@ describe("booking flow guardrails", () => {
   it("the booking car card has no photo placeholder when the car has no photo", () => {
     expect(rd("app/(tabs)/book/[serviceId].tsx")).toMatch(/selectedVehicle\.photoUrl\?<CarThumb/);
   });
+  it("GST is one switch and no screen prints GST or a tax row unless it is on", () => {
+    expect(read("packages/core/src/constants.ts".replace(/^/, "../../"))).toMatch(/export const GST_ENABLED = false/);
+    expect(rd("app/(tabs)/catalogue/[id].tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
+    expect(rd("app/(tabs)/catalogue/index.tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
+    for (const f of ["app/(tabs)/catalogue/[id].tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
+      expect(rd(f)).toMatch(/\.tax > 0/);
+      expect(rd(f)).not.toMatch(/[^_]incl\. GST[^"]/);
+    }
+  });
+  it("book, quote and walk-in pricing all go through taxFor so the shown, booked and paid amounts agree", () => {
+    for (const f of ["booking/createBooking.ts", "job/createWalkinJob.ts", "booking/setBookingQuote.ts", "service/calculatePrice.ts"]) {
+      expect(read("../../functions/src/functions/" + f)).toMatch(/taxFor\(/);
+    }
+  });
 });
 
 describe("Book shows the price and time picker early", () => {

@@ -25,7 +25,7 @@ export function PriceBreakdown({ breakdown: pb, baseLabel = "Base price" }: Pric
       {pb.membershipDiscount !== null && pb.membershipDiscount > 0 && (
         <Row label="Membership discount" value={`-${formatPaise(pb.membershipDiscount)}`} />
       )}
-      <Row label={pb.taxDescription} value={formatPaise(pb.tax)} />
+      {pb.tax > 0 && <Row label={pb.taxDescription} value={formatPaise(pb.tax)} />}
       <Divider spacingY="sm" />
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <Text style={{ ...typography.title, color: colors.textPrimary }}>Total</Text>
