@@ -93,7 +93,7 @@ export default function PickupsPage() {
             <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {counts[t.id]}</button>
           ))}
         </div>
-        <p className="ax-pu-policy">Free within 3 km. Beyond that, arrange it with the customer by phone. The app asks beyond-3 km customers to call.</p>
+        <p className="ax-pu-policy">Free within 3 km. 3 to 7 km is Rs 100 flat for the request (pickup and drop together), collected at the studio. Beyond 7 km the app asks customers to call. Requests without a shared location need the distance and fee confirmed by phone.</p>
       </div>
 
       {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}
@@ -111,6 +111,8 @@ export default function PickupsPage() {
             const asked: [string, string][] = [];
             if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
             if (r.kind !== "pickup" && r.requestedDropTime) asked.push([r.kind === "both" ? "Drop" : "Time", r.requestedDropTime]);
+            if (typeof r.feePaise === "number") asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100} flat`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}`]);
+            else asked.push(["Fee", "No location shared: confirm distance by phone"]);
             const agreed: [string, string][] = [];
             if (r.status !== "REQUESTED" && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
             if (r.status !== "REQUESTED" && r.agreedDropAt) agreed.push(["Drop", formatAgreed(r.agreedDropAt)]);
@@ -152,7 +154,7 @@ export default function PickupsPage() {
                 ) : null}
 
                 {open ? (
-                  <textarea rows={1} aria-label="Note or charge for the customer" placeholder={`Note or extra charge, e.g. Rs ${r.kind === "both" ? 200 : 100}`} value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} className="ax-pu-note" />
+                  <textarea rows={1} aria-label="Note for the customer" placeholder="Note for the customer" value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} className="ax-pu-note" />
                 ) : r.staffNote ? <p className="ax-pu-staffnote">{r.staffNote}</p> : null}
 
                 <div className="ax-pu-foot">

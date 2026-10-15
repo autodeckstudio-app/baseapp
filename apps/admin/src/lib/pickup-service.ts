@@ -17,6 +17,9 @@ export interface PickupRequestRow {
   agreedDropAt?: string | null;
   status: "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED";
   staffNote: string;
+  /** Set by the server from the shared location: 0 = free, 10000 = Rs 100 flat. null/absent = confirm distance and fee by phone. */
+  feePaise?: number | null;
+  distanceKm?: number | null;
   createdAt: string;
 }
 

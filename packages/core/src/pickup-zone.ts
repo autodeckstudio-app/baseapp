@@ -1,3 +1,8 @@
+/** Beyond the free zone and up to this distance, pickup and drop costs the flat fee. Further than this the studio does not collect. */
+export const PICKUP_MAX_KM = 7;
+/** One flat fee per request (not per leg), in paise: Rs 100. Read from here by the server and the app, never typed twice. */
+export const PICKUP_FEE_PAISE = 10_000;
+
 /** Where pickup and drop is free. Within this distance of the studio only. Beyond it the studio arranges it by phone. */
 export const PICKUP_FREE_KM = 3;
 /** The studio front door, geocoded from its address in studio-info (Sunbeam Complex, Ellisbridge). */
@@ -11,7 +16,11 @@ export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; l
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export function pickupZone(point: { lat: number; lng: number }): { km: number; within: boolean } {
+export type PickupTier = "free" | "fee" | "blocked";
+
+/** Free up to 3 km, a flat fee up to 7 km, then not offered (the customer calls the studio). Distances are straight-line. */
+export function pickupZone(point: { lat: number; lng: number }): { km: number; within: boolean; tier: PickupTier; feePaise: number } {
   const km = haversineKm(STUDIO_COORDS, point);
-  return { km: Math.round(km * 10) / 10, within: km <= PICKUP_FREE_KM };
+  const tier: PickupTier = km <= PICKUP_FREE_KM ? "free" : km <= PICKUP_MAX_KM ? "fee" : "blocked";
+  return { km: Math.round(km * 10) / 10, within: tier === "free", tier, feePaise: tier === "fee" ? PICKUP_FEE_PAISE : 0 };
 }

@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import { pickupZone, PICKUP_FREE_KM, type Booking } from "@autodeck/core";
+import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, type Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -60,10 +60,13 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
   const data = validate(requestSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "pickup.request");
   let distanceKm: number | null = null;
+  // The fee is decided here from the distance. null = no location sent, so the studio confirms the distance and fee by phone.
+  let feePaise: number | null = null;
   if (data.lat !== undefined && data.lng !== undefined) {
     const z = pickupZone({ lat: data.lat, lng: data.lng });
-    if (!z.within) throw new HttpsError("failed-precondition", `Pickup and drop is free within ${PICKUP_FREE_KM} km of the studio. Please call the studio to arrange it.`);
+    if (z.tier === "blocked") throw new HttpsError("failed-precondition", `We collect and return cars within ${PICKUP_MAX_KM} km of the studio. Please call the studio to arrange it.`);
     distanceKm = z.km;
+    feePaise = z.feePaise;
   }
   const db = getFirestore();
   const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
@@ -86,6 +89,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
     requestedDropTime: data.requestedDropTime ?? "",
     note: data.note ?? "",
     distanceKm,
+    feePaise,
     status: "REQUESTED" as const,
     staffNote: "",
     agreedPickupAt: null,

@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Pane, Row, T } from "./kit";
 import { Linking } from "react-native";
-import { PICKUP_FREE_KM, pickupZone } from "@autodeck/core";
+import { PICKUP_FEE_PAISE, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupZone } from "@autodeck/core";
 import { STUDIO_INFO } from "../lib/studio-info";
 import { getDeviceLocation, getPickupRequest, listenToPickupRequest, requestPickupDrop, type PickupRequest } from "../lib/pickup-service";
 
@@ -27,6 +27,9 @@ function formatAgreed(iso: string): string {
 }
 
 /** Ask the studio to collect or return the car. It is a request: the studio confirms it. */
+const FEE_TEXT = `Rs ${PICKUP_FEE_PAISE / 100} flat`;
+const POLICY = `Free within ${PICKUP_FREE_KM} km of the studio. From ${PICKUP_FREE_KM} to ${PICKUP_MAX_KM} km it is ${FEE_TEXT} for the request, pickup and drop together. Further than that, please call the studio. The fee is paid at the studio.`;
+
 export function PickupCard({ bookingId }: { bookingId: string }) {
   const [req, setReq] = useState<PickupRequest | null>(null);
   const [open, setOpen] = useState(false);
@@ -52,7 +55,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
   }
 
   async function send() {
-    if (zone && !zone.within) { setError(`Pickup and drop is free within ${PICKUP_FREE_KM} km of the studio. Please call us to arrange it.`); return; }
+    if (zone?.tier === "blocked") { setError(`We collect and return cars within ${PICKUP_MAX_KM} km of the studio. Please call us to arrange it.`); return; }
     if (address.trim().length < 8) { setError("Enter the full address."); return; }
     setBusy(true);
     setError(null);
@@ -96,7 +99,8 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
               <Row title="Timing" detail="The studio confirms the exact time with you by phone call." />
             </>
           )}
-          <Row title="Distance" detail={`Free within ${PICKUP_FREE_KM} km of the studio. Beyond that, the studio arranges it with you by phone.`} />
+          <Row title="Distance" detail={POLICY} />
+          {typeof req.feePaise === "number" ? <Row title="Pickup and drop fee" detail={req.feePaise === 0 ? "Free" : `${FEE_TEXT} for the request`} /> : null}
           {req.staffNote ? <Row title="Studio note" detail={req.staffNote} /> : null}
           <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
         </Pane>
@@ -106,16 +110,16 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
               {KINDS.map((k) => <Button key={k.value} label={k.label} kind={kind === k.value ? "primary" : "quiet"} onPress={() => setKind(k.value)} style={{ flexGrow: 1 }} />)}
             </View>
-            <T role="caption" tone="secondary">{`Free pickup and drop within ${PICKUP_FREE_KM} km of the studio. Beyond that, please call the studio to arrange it.`}</T>
+            <T role="caption" tone="secondary">{POLICY}</T>
             <Field label="Address" value={address} onChangeText={setAddress} placeholder="House, street, area" multiline />
             <Button label={where ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locate()} />
-            {zone ? <T role="caption" tone={zone.within ? "secondary" : "danger"}>{zone.within ? `About ${zone.km} km from the studio. Inside the free zone.` : `About ${zone.km} km from the studio. Beyond ${PICKUP_FREE_KM} km, please call us to arrange it.`}</T> : null}
-            {zone && !zone.within && STUDIO_INFO.phone ? <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /> : null}
+            {zone ? <T role="caption" tone={zone.tier === "blocked" ? "danger" : "secondary"}>{zone.tier === "free" ? `About ${zone.km} km from the studio. Free.` : zone.tier === "fee" ? `About ${zone.km} km from the studio. ${FEE_TEXT} for the request.` : `About ${zone.km} km from the studio. Please call us to arrange it.`}</T> : null}
+            {zone?.tier === "blocked" && STUDIO_INFO.phone ? <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /> : null}
             {kind !== "drop" ? <Field label={kind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"} value={pickupTime} onChangeText={setPickupTime} placeholder="e.g. Saturday morning" /> : null}
             {kind !== "pickup" ? <Field label="Preferred drop-off time (optional)" value={dropTime} onChangeText={setDropTime} placeholder="e.g. Sunday evening" /> : null}
             <T role="caption" tone="secondary">This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.</T>
             {error ? <T role="caption" tone="danger">{error}</T> : null}
-            <Button label="Send request" busy={busy} disabled={!!zone && !zone.within} onPress={() => void send()} />
+            <Button label="Send request" busy={busy} disabled={zone?.tier === "blocked"} onPress={() => void send()} />
             <Button label="Cancel" kind="quiet" onPress={() => setOpen(false)} />
           </View>
         </Pane>
