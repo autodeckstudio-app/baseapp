@@ -55,6 +55,8 @@ export interface Booking {
   status: BookingStatus;
   priceBreakdown: PriceBreakdown;
   totalAmount: number; // paise — equals priceBreakdown.total
+  /** Set when this visit is a redeemed gift wash (paid for by the buyer, so the total here is 0). */
+  giftId?: string | null;
   membershipId: string | null; // set when a membership benefit was applied at booking creation
   membershipDiscountApplied: boolean; // true for either wash-credit or percent-discount redemption
   membershipWashUsed: boolean; // true only when an included wash credit was consumed

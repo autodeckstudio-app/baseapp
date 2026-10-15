@@ -177,3 +177,4 @@ export { requestPickupDrop, updatePickupRequest } from "./functions/booking/pick
 export { requestAccountDeletion } from "./functions/auth/requestAccountDeletion.js";
 
 export { standbyBooking } from "./functions/job/standbyBooking.js";
+export { createGift, listMyGifts, redeemGift, cancelGift, lookupGift, voidGift } from "./functions/gift/gift.js";

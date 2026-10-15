@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type {
+  Gift,
   Service,
   StudioConfig,
   ServiceJob,
@@ -25,6 +26,8 @@ import {
   hasConflict,
   type OccupiedInterval,
 } from "../../lib/availability.js";
+import { hashGiftCode } from "../../lib/gift-code.js";
+import { findGiftByHash, giftBlockReason } from "../../lib/gift-store.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
 export const createBooking = onCall({ region: "asia-south1" }, async (request) => {
@@ -81,6 +84,14 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
   );
   if (compatibleBays.length === 0) {
     throw new HttpsError("failed-precondition", "No bays available for this service type.");
+  }
+
+  // A gift covers the gifted wash only: no stacking with a membership, and the code must be well formed.
+  let giftHash: string | null = null;
+  if (data.giftCode !== undefined) {
+    if (data.membershipId !== undefined) throw new HttpsError("failed-precondition", "A gift cannot be combined with a membership.");
+    giftHash = hashGiftCode(data.giftCode);
+    if (!giftHash) throw new HttpsError("not-found", "That gift code did not work.");
   }
 
   // Membership pre-validation (cheap, non-transactional fail-fast). The
@@ -216,6 +227,21 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     const bayLockRef = db.collection(COLLECTIONS.bayLocks()).doc(`${user.claims.tenantId}__${data.studioId}__${assignedBayId}`);
     await tx.get(bayLockRef);
 
+    // Gift: one transaction checks it is unused, unexpired, not void, bound to this account and for this service, and
+    // marks it used together with the booking below. A second booking with the same code fails here.
+    let giftToUse: { ref: FirebaseFirestore.DocumentReference; gift: Gift } | null = null;
+    if (giftHash) {
+      const gd = await findGiftByHash(tx, db, giftHash);
+      if (!gd) throw new HttpsError("not-found", "That gift code did not work.");
+      const gift = gd.data() as Gift;
+      if (gift.tenantId !== user.claims.tenantId) throw new HttpsError("not-found", "That gift code did not work.");
+      const reason = giftBlockReason(gift, user.uid, now.getTime());
+      if (reason) throw new HttpsError("failed-precondition", reason);
+      if (gift.claimedBy !== user.uid) throw new HttpsError("failed-precondition", "Enter the gift code first.");
+      if (gift.serviceId !== data.serviceId) throw new HttpsError("failed-precondition", "This gift is for a different wash.");
+      giftToUse = { ref: gd.ref, gift };
+    }
+
     // Membership benefit — re-validated against a FRESH read inside the
     // transaction (the race-safety guarantee: two concurrent bookings both
     // reading washesUsed and racing to consume the last credit will have one
@@ -285,6 +311,13 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       }
     }
 
+    if (giftToUse) {
+      // The buyer already paid the full price, so this visit costs the recipient nothing.
+      finalBreakdown = { ...breakdown, tax: 0, total: 0, subtotal: 0 };
+      tx.update(giftToUse.ref, { status: "REDEEMED", redeemedBy: user.uid, redeemedAt: nowIso, bookingId: bookingRef.id });
+      writeAuditLog(tx, { action: "gift.redeemed", entityType: "Gift", entityId: giftToUse.gift.id, user, studioId: data.studioId, after: { bookingId: bookingRef.id } });
+    }
+
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
@@ -315,9 +348,10 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       priceBreakdown: finalBreakdown,
       totalAmount: finalBreakdown.total,
       membershipId: data.membershipId ?? null,
+      ...(giftToUse ? { giftId: giftToUse.gift.id } : {}),
       membershipDiscountApplied,
       membershipWashUsed,
-      paymentStatus: "unpaid",
+      paymentStatus: giftToUse ? "paid" : "unpaid",
       notes: data.notes ?? null,
       idempotencyKey: data.idempotencyKey,
       rescheduleCount: 0,
@@ -359,7 +393,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       additionalWorkDelta: 0,
       priceBreakdown: finalBreakdown, // same snapshot already computed for the booking — not recomputed
       totalAmount: finalBreakdown.total,
-      paymentStatus: "unpaid",
+      paymentStatus: giftToUse ? "paid" : "unpaid",
       isWalkIn: false,
       createdAt: nowIso,
       updatedAt: nowIso,

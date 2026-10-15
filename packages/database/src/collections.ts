@@ -37,6 +37,10 @@ export const COLLECTIONS = {
   stories: () => "stories",
   offers: () => "offers",
   jobMessages: () => "jobMessages",
+  /** Gift-a-wash codes (hashed). Server only; rules deny all client access. */
+  gifts: () => "gifts",
+  /** Failed gift-code attempts per account and per network address, for the lockout. Server only. */
+  giftAttempts: () => "giftAttempts",
   carListings: () => "carListings",
   carLeads: () => "carLeads",
   studioConfig: () => "studioConfig",

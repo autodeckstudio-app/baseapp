@@ -29,6 +29,8 @@ export const createBookingSchema = z.object({
   idempotencyKey: z.string().min(1).max(128),
   notes: z.string().max(500).optional(),
   membershipId: z.string().min(1).optional(),
+  /** A gift code that was already claimed by this account; books the gifted wash. */
+  giftCode: z.string().min(1).max(32).optional(),
 }).strict();
 
 export const cancelBookingSchema = z.object({

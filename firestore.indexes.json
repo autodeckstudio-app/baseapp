@@ -1085,6 +1085,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "gifts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "buyerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
