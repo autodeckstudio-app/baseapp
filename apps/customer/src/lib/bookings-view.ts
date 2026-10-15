@@ -22,3 +22,9 @@ export function recentDistinctServices<B extends BookingLike>(all: B[], limit = 
   }
   return out;
 }
+
+/** Where "Track" on Home goes: the live job's own booking, or the job itself for a walk-in (the booking screen accepts either). Never another booking. */
+export function liveTrackTarget(job: { id: string; bookingId?: string | null } | null | undefined, upcomingBookingId?: string | null): string | null {
+  if (job) return job.bookingId ?? job.id;
+  return upcomingBookingId ?? null;
+}

@@ -35,3 +35,18 @@ describe("Bookings screen holds only booking content", () => {
     expect(s).toContain("cancelState");
   });
 });
+
+import { liveTrackTarget } from "./bookings-view";
+describe("Home Track target", () => {
+  it("uses the job's booking, falls back to the job id for a walk-in, and never another booking", () => {
+    expect(liveTrackTarget({ id: "j1", bookingId: "b1" }, "other")).toBe("b1");
+    expect(liveTrackTarget({ id: "j2" }, "other")).toBe("j2");
+    expect(liveTrackTarget(null, "b9")).toBe("b9");
+    expect(liveTrackTarget(null, null)).toBeNull();
+  });
+  it("Home never leaves Track / Next visit as a silent no-op", () => {
+    const h = readFileSync(`${__dirname}/../app/(tabs)/index.tsx`, "utf8");
+    expect(h).not.toContain(": undefined) }");
+    expect(h).toContain('"/(tabs)/bookings"');
+  });
+});
