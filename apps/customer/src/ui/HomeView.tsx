@@ -16,10 +16,12 @@ import { NavIcon, navIconFor } from "./NavIcon";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
 import { HeroStage } from "./HeroStage";
+import { CarThumb } from "./CarThumb";
+import type { Vehicle } from "@autodeck/core";
 import { CampaignSlot } from "./CampaignSlot";
 import type { Campaign } from "../lib/campaign";
 
-export type HomeCar = { id: string; title: string; plate: string; photo?: string | null; category?: string | null; hasPhoto?: boolean };
+export type HomeCar = { id: string; title: string; plate: string; /** The vehicle record. Photo comes from the same source as Garage (CarThumb), for every car. */ vehicle?: Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string }; category?: string | null; hasPhoto?: boolean };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
 export type HomeReminder = { title: string; detail: string; chip: string; danger: boolean };
 export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void; idle?: boolean };
@@ -242,7 +244,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const n = cars.length;
   const loop = n > 1; // paging only; each car appears once
-  const H = cars.some((c) => c.photo) ? metrics.heroTall : metrics.heroCompact;
+  const H = cars.some((c) => c.hasPhoto) ? metrics.heroTall : metrics.heroCompact;
   const card = w > 0 ? Math.min(w - 36, 420) : 0, step = card + 12;
   const items = cars;
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -270,9 +272,9 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
           <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
             {items.map((c, i) => (
               <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: H, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.sheet }}>
-                {c.photo ? <Image source={{ uri: c.photo }} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} /> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
-                {c.photo ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
-                {c.photo ? <View style={{ position: "absolute", left: 14, right: 14, bottom: 14, gap: 6 }}>
+                {c.hasPhoto && c.vehicle ? <View style={{ position: "absolute", width: "100%", height: "100%" }}><CarThumb car={c.vehicle} height={H} radius={0} /></View> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
+                {c.hasPhoto ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
+                {c.hasPhoto ? <View style={{ position: "absolute", left: 14, right: 14, bottom: 14, gap: 6 }}>
                   <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>{c.title}</Text>
                   <Plate value={c.plate} />
                 </View> : null}

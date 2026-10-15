@@ -15,7 +15,6 @@ import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
 import { sceneImagery, vehicleImagery, serviceImagery } from "../../lib/imagery";
-import { useVehiclePhotoUri } from "../../ui/CarThumb";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
 import { listenToVehicleWarranties } from "../../lib/warranty-service";
@@ -122,7 +121,6 @@ export default function HomeScreen() {
     void getMyBookings(auth.user.uid, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
     return () => { alive = false; };
   }, [ready]);
-  const carPhoto = useVehiclePhotoUri(ready ? home.model?.activeVehicle : null);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
@@ -218,7 +216,7 @@ export default function HomeScreen() {
         onVisits={() => router.push("/(tabs)/bookings")}
         onShare={() => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined)}
         unread={unread}
-        cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, photo: v.id === car?.id ? carPhoto : null, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
+        cars={vehicles.map((v) => ({ id: v.id, title: `${v.make} ${v.model}`, plate: v.registrationNumber, vehicle: { photoUrl: v.photoUrl, category: v.category, updatedAt: v.updatedAt }, category: v.category ?? null, hasPhoto: !!v.photoUrl }))}
         services={catalogue.map((s) => ({ id: s.id, category: s.category, name: s.name, price: servicePriceText(s, pricingVehicle.category, vehiclePrices) ?? "", brand: s.brand ?? null }))}
         reminders={reminders}
         live={live}

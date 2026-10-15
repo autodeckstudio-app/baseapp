@@ -319,7 +319,7 @@ export default function VehicleDetailScreen() {
               {Platform.OS === "web" ? (
                 <View style={{ gap: space.hair }}>
                   <Kicker>Car photo</Kicker>
-                  <FileUploader files={newPhoto?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
+                  <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} files={newPhoto?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
 
                   <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
                 </View>
@@ -327,7 +327,7 @@ export default function VehicleDetailScreen() {
               {Platform.OS === "web" ? (
                 <View style={{ gap: space.hair }}>
                   <Kicker>RC photo</Kicker>
-                  <FileUploader files={newRc ? [{ blob: newRc.blob, type: newRc.contentType }] : []} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
+                  <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} files={newRc ? [{ blob: newRc.blob, type: newRc.contentType }] : []} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
                   <T role="caption" tone="tertiary">{newRc ? "RC photo ready. It uploads when you save." : vehicle.rcPhotoUrl ? "An RC photo is on file. Choose a JPEG, PNG or WebP to replace it." : "Add a clear photo of the registration certificate (JPEG, PNG or WebP)."}</T>
                 </View>
               ) : null}
