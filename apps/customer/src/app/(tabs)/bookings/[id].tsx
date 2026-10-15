@@ -7,7 +7,7 @@ import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../li
 import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking, listenToJobById, bookingFromJob } from "../../../lib/job-service";
 import { listenToPaymentForJob } from "../../../lib/payment-service";
-import { listenToApprovalsForJob } from "../../../lib/approval-service";
+import { listenToApprovalsForJob, respondToApproval } from "../../../lib/approval-service";
 import { getReview, submitReview } from "../../../lib/review-service";
 import { Pressable } from "react-native";
 import { PickupCard } from "../../../ui/PickupCard";
@@ -16,6 +16,8 @@ import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, isBookingLateToday } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { LiveJobCard } from "../../../ui/LiveJobCard";
+import { jobStage } from "../../../ui/job-stage";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { metrics } from "../../../lib/metrics";
@@ -197,6 +199,15 @@ export default function BookingDetailScreen() {
   }, [booking?.serviceId]);
 
   const [quoteBusy, setQuoteBusy] = useState(false);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [decideError, setDecideError] = useState<string | null>(null);
+  async function handleDecide(approvalId: string, decision: "approved" | "rejected") {
+    if (decidingId) return;
+    setDecidingId(approvalId); setDecideError(null);
+    try { await respondToApproval(approvalId, decision); }
+    catch (err) { setDecideError(err instanceof Error ? err.message : "Could not record your answer. Try again."); }
+    finally { setDecidingId(null); }
+  }
   async function handleApproveQuote() {
     if (!id) return;
     setQuoteBusy(true);
@@ -316,26 +327,13 @@ export default function BookingDetailScreen() {
         <Notice title="Multi-day service" body={`Your car stays at the studio from ${displayDate} through ${displayEndDate}.`} />
       ) : null}
 
-      {job ? (
+      {job && jobStage(job.status) ? (
+        <LiveJobCard status={job.status} readyText={job.status === "DELIVERED" ? null : `${displayEndDate}, ${booking.estimatedEndTime}`} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(id, d) => void handleDecide(id, d)} />
+      ) : job ? (
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>
             <Kicker tone="accent">{translate("Studio status")}</Kicker>
-            {job.status === "STANDBY" ? <><T role="heading">Arrived - standby</T><T role="body" tone="tertiary">Your car is waiting for an available compatible bay. No service start time is promised. The studio will update this when you are admitted.</T></> : job.status === "CANCELLED" ? (
-              <T role="heading">Cancelled</T>
-            ) : (
-              TRACK_STEPS.map((step, i) => {
-                const cur = TRACK_STEPS.indexOf(job.status as (typeof TRACK_STEPS)[number]);
-                const done = i < cur || job.status === "DELIVERED";
-                const active = i === cur && job.status !== "DELIVERED";
-                return (
-                  <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: space.line }}>
-                    <View style={{ width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: done || active ? "#EC8638" : "rgba(255,255,255,0.3)", backgroundColor: done ? "#EC8638" : "#161618" }} />
-                    <T role={active ? "bodyStrong" : "body"} tone={done || active ? "primary" : "tertiary"}>{translate(JOB_STATUS_LABELS[step] ?? step)}</T>
-                  </View>
-                );
-              })
-            )}
-            <T role="caption" tone="tertiary">Updates here as the studio moves your car along.</T>
+            {job.status === "STANDBY" ? <><T role="heading">Arrived - standby</T><T role="body" tone="tertiary">Your car is waiting for an available compatible bay. No service start time is promised. The studio will update this when you are admitted.</T></> : <T role="heading">Cancelled</T>}
           </View>
         </Pane>
       ) : null}
@@ -352,7 +350,7 @@ export default function BookingDetailScreen() {
       ) : null}
 
       {approvals
-        .filter((a) => a.status === "pending")
+        .filter((a) => a.status === "pending" && !(job && jobStage(job.status)))
         .map((a) => (
           <Notice
             key={a.id}
@@ -385,7 +383,7 @@ export default function BookingDetailScreen() {
               />
             </View>
           ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime} . You pay at the studio, and the team marks it paid once you do.</T> : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
         </Pane>
       </View>
 
