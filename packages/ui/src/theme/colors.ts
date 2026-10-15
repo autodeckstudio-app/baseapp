@@ -132,7 +132,7 @@ export function applyCustomerRaisedTheme(): void {
   Object.assign(lightColors, {
     canvas: "#E8EAED", canvasDeep: "#DCDFE4", surface: "#F3F4F6", surfaceElevated: "#FAFBFC",
     borderSubtle: "rgba(20,22,26,0.07)", borderStrong: "rgba(20,22,26,0.22)",
-    textPrimary: "#16181C", textSecondary: "#4B5058", textTertiary: "#767C85", textOnAccent: "#1A1410",
+    textPrimary: "#16181C", textSecondary: "#4B5058", textTertiary: "#626871", textOnAccent: "#1A1410",
     accent: "#EC8638", accentStrong: "#B8500A", accentHaze: "rgba(236,134,56,0.16)",
     inactive: "#9AA0A8", scrim: "rgba(20,22,26,0.40)", ink: "#16181C", onInk: "#FFFFFF",
   } satisfies Partial<ThemeColors>);

@@ -6,6 +6,7 @@ import { NavIcon, type NavIconName } from "./NavIcon";
 import { AdMonogram } from "./AdMonogram";
 import { emitTabPressed, useExperienceTheme } from "@autodeck/ui/native";
 import { onNavCompact } from "../lib/nav-scroll";
+import { reducedMotion } from "./Drift";
 
 type Route = { key: string; name: string };
 type Props = {
@@ -21,7 +22,7 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
   const visible = state.routes.filter((r2) => descriptors[r2.key]?.options.href !== null && icons[r2.name]);
   const activeKey = state.routes[state.index]?.key;
   const t = useRef(new Animated.Value(0)).current;
-  useEffect(() => onNavCompact((c) => { Animated.timing(t, { toValue: c ? 1 : 0, duration: 220, useNativeDriver: Platform.OS !== "web" }).start(); }), [t]);
+  useEffect(() => onNavCompact((c) => { Animated.timing(t, { toValue: c ? 1 : 0, duration: reducedMotion() ? 0 : 220, useNativeDriver: Platform.OS !== "web" }).start(); }), [t]);
   const scale = t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] });
   const lift = t.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const glass = light

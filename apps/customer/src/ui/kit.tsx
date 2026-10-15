@@ -380,7 +380,7 @@ export function PhotoCard({
 
 export function Chip({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger" }) {
   const { colors, name } = useExperienceTheme();
-  const c = tone === "accent" ? colors.accent : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
+  const c = tone === "accent" ? (name === "night" ? colors.accent : colors.accentStrong) : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
   return (
     <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
       <T role="label" style={{ color: c }}>
