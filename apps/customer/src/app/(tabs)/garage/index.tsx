@@ -1,7 +1,7 @@
 // Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -29,6 +29,7 @@ export default function GarageScreen() {
   const [removing, setRemoving] = useState<Vehicle | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [brand, setBrand] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.user.uid : null;
@@ -77,6 +78,8 @@ export default function GarageScreen() {
     }
   }
   const list = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const brands = [...new Set(list.map((v) => (v.make ?? "").trim()).filter(Boolean))];
+  const shown = brand && brands.includes(brand) ? list.filter((v) => (v.make ?? "").trim() === brand) : list;
   const lead = list[0];
 
   return (
@@ -94,9 +97,22 @@ export default function GarageScreen() {
           }
         />
       ) : null}
+      {brands.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingRight: 8 }}>
+          {[null, ...brands].map((b) => {
+            const on = (brand && brands.includes(brand) ? brand : null) === b;
+            return (
+              <Pressable key={b ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setBrand(b)} style={{ paddingVertical: 6 }}>
+                <Text style={{ color: on ? ink.accentStrong : ink.textSecondary, fontSize: 15, fontWeight: on ? "700" : "500" }}>{b ?? "All"}</Text>
+                <View style={{ height: 2, borderRadius: 1, marginTop: 4, backgroundColor: on ? "#EC8638" : "transparent" }} />
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
       {list.length > 0 ? (
         <View style={{ gap: space.breath }}>
-          {list.map((v, i) => (
+          {shown.map((v, i) => (
             <GarageCard key={v.id} photo={v.photoUrl ? <CarThumb car={v} height={i === 0 ? metrics.heroTall : 170} radius={0} /> : <View style={{ height: metrics.heroCompact }} />} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? CATEGORY[v.category] : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
           ))}
         </View>

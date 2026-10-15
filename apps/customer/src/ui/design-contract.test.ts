@@ -255,3 +255,11 @@ describe("catalogue loading", () => {
     expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("peekCatalogue()");
   });
 });
+
+describe("garage brand filter", () => {
+  it("filters the account's cars by make with an All chip", () => {
+    const g = read("src/app/(tabs)/garage/index.tsx");
+    expect(g).toContain("const brands =");
+    expect(g).toContain('b ?? "All"');
+  });
+});
