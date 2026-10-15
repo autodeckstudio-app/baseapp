@@ -1,10 +1,9 @@
-import { referralShareMessage, referralSubtitle } from "../../../lib/referral";
 import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
@@ -15,13 +14,19 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import type { Service, Vehicle } from "@autodeck/core";
 import { getMyBookings } from "../../../lib/booking-service";
+
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
 import { CarThumb } from "../../../ui/CarThumb";
 import { sceneImagery } from "../../../lib/imagery";
-import { Image, Share } from "react-native";
-import { PhotoCard, TILE_GAP } from "../../../ui/HomeView";
-import { serviceImagery } from "../../../lib/imagery";
+import type { ApprovalRequest, ServiceJob } from "@autodeck/core";
+import { listenToApprovalsForJob } from "../../../lib/approval-service";
+import { cancelBooking } from "../../../lib/booking-service";
+import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rules";
+import { liveJobOf, recentDistinctServices } from "../../../lib/bookings-view";
+import { STUDIO_INFO } from "../../../lib/studio-info";
+import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
+import { glassInner } from "../../../lib/glass";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
@@ -40,15 +45,29 @@ export default function BookingsScreen() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState(false);
   const [walkIns, setWalkIns] = useState<Booking[]>([]);
+  const [jobs, setJobs] = useState<ServiceJob[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [cars, setCars] = useState<Record<string, Vehicle>>({});
   const [svcs, setSvcs] = useState<Record<string, Service>>({});
   useEffect(() => {
     if (auth.status !== "ready") return;
     const un = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
-    const unJobs = listenToMyJobs(auth.claims.tenantId, auth.user.uid, (js) => setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)), () => {});
+    const unJobs = listenToMyJobs(auth.claims.tenantId, auth.user.uid, (js) => { setJobs(js); setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)); }, () => {});
     getServiceCatalogue().then((l) => setSvcs(Object.fromEntries(l.map((x) => [x.id, x])))).catch(() => {});
     return () => { un(); unJobs(); };
   }, [auth]);
+
+  const liveJob = liveJobOf(jobs);
+  const liveJobId = liveJob?.id ?? null;
+  useEffect(() => {
+    setApprovals([]);
+    if (auth.status !== "ready" || !liveJobId) return;
+    return listenToApprovalsForJob(liveJobId, auth.claims.tenantId, auth.user.uid, setApprovals, () => {});
+  }, [auth, liveJobId]);
 
   const load = useCallback(async () => {
     if (auth.status !== "ready") return;
@@ -83,12 +102,88 @@ export default function BookingsScreen() {
     </View>
   );
 
+  const stage = liveJob ? jobStage(liveJob.status) : null;
+  const liveBooking = liveJob ? all.find((b) => b.id === (liveJob.bookingId ?? liveJob.id)) : undefined;
+  const readyText = liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
+  const pending = approvals.filter((a) => a.status === "pending");
+  const next = upcoming[0];
+  const nextCar = next ? cars[next.vehicleId] ?? (next.vehicleSnapshot ? { ...next.vehicleSnapshot, photoUrl: null, category: next.vehicleCategory } : undefined) : undefined;
+  const nextElig = next ? getRescheduleEligibility(next) : null;
+  const nextCancel = next ? cancelState(next) : null;
+  const rebook = recentDistinctServices(all, 3).filter((b) => svcs[b.serviceId] && !svcs[b.serviceId]!.priceOnRequest);
+  const doCancel = async () => {
+    if (!next) return;
+    setCancelBusy(true);
+    setCancelError(null);
+    try {
+      await cancelBooking(next.id, "Cancelled by customer");
+      setConfirmCancel(false);
+      await load();
+    } catch (err) {
+      setCancelError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
+    } finally {
+      setCancelBusy(false);
+    }
+  };
+
   return (
-    <Screen appBar="Bookings" header={<PageHeader title={inStudio.length > 0 ? "Your car is in the studio" : upcoming.length > 0 ? "Your next visit is booked" : "Nothing booked right now"} sub={[inStudio.length > 0 ? `${inStudio.length} in progress` : null, upcoming.length > 0 ? `${upcoming.length} coming up` : null, past.length > 0 ? `${past.length} past` : null].filter(Boolean).join(" \u00b7 ") || "Pick a service and a time. The studio confirms it."} />}>
+    <Screen appBar="Bookings" header={<PageHeader title={liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={[upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
-      {inStudio.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>In the studio</SectionTitle>{list(inStudio)}</View> : null}
-      {upcoming.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>Coming up</SectionTitle>{list(upcoming)}</View> : null}
-      {!error && upcoming.length === 0 && inStudio.length === 0 ? (
+
+      {liveJob && stage ? (
+        <Pane pad="inset">
+          <View style={{ gap: metrics.innerGap }}>
+            <Kicker tone="accent">In the studio</Kicker>
+            <T role="heading">{stage.headline}</T>
+            <T role="body" tone="secondary">{stage.line}</T>
+            <View accessibilityRole="progressbar" accessibilityLabel={`Step ${Math.max(stage.index + 1, 0)} of ${STAGES.length}`} style={{ flexDirection: "row", gap: 6 }}>
+              {STAGES.map((st, i) => <View key={st} style={{ flex: 1, height: 6, borderRadius: 4, backgroundColor: i <= stage.index ? "#EC8638" : glassInner.backgroundColor }} />)}
+            </View>
+            {readyText ? <T role="bodyStrong">Expected ready {readyText}</T> : null}
+            <Button label="Track" onPress={() => router.push(`/(tabs)/bookings/${liveJob.bookingId ?? liveJob.id}`)} />
+          </View>
+        </Pane>
+      ) : null}
+
+      {pending.length > 0 ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Waiting for your OK</SectionTitle>
+          {pending.map((a) => (
+            <VisitCard key={a.id} onPress={() => router.push(`/(tabs)/approvals/${a.id}`)} photo={<View style={{ flex: 1, backgroundColor: glassInner.backgroundColor }} />} title={a.serviceName} car={a.reason} when="Review and decide" price={a.priceImpact ? `+${rupees(a.priceImpact)}` : ""} chip={<Chip label="Needs your OK" tone="accent" />} />
+          ))}
+        </View>
+      ) : null}
+
+      {next ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Next booking</SectionTitle>
+          {list([next])}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {nextElig?.eligible ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /></View> : null}
+            {nextCancel?.canCancel && !confirmCancel ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Cancel" onPress={() => setConfirmCancel(true)} /></View> : null}
+            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Directions" onPress={() => void Linking.openURL(STUDIO_INFO.mapsUrl)} /></View>
+            <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /></View>
+          </View>
+          {nextElig && !nextElig.eligible && nextElig.reason ? <T role="caption" tone="tertiary">{nextElig.reason}</T> : null}
+          {nextCancel?.lateToCancel ? <T role="caption" tone="tertiary">Too close to the start to cancel online. Please call the studio.</T> : null}
+          {confirmCancel ? (
+            <Notice
+              title="Cancel this booking?"
+              body={next.paymentStatus === "paid" || next.paymentStatus === "partial" ? "This booking has been paid. The studio will contact you about the refund. This can't be undone." : "The slot is released straight away. This can't be undone."}
+              action={
+                <View style={{ gap: space.breath }}>
+                  <Button label="Yes, cancel booking" kind="danger" busy={cancelBusy} onPress={() => void doCancel()} />
+                  <Button label="Keep it" kind="quiet" onPress={() => setConfirmCancel(false)} />
+                </View>
+              }
+            />
+          ) : null}
+          {cancelError ? <Notice title="Not cancelled" body={cancelError} /> : null}
+          {upcoming.length > 1 ? <View style={{ gap: space.line }}><SectionTitle>Also coming up</SectionTitle>{list(upcoming.slice(1))}</View> : null}
+        </View>
+      ) : null}
+
+      {!error && !next && !liveJob ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
           <View style={{ padding: metrics.cardPad, gap: space.breath }}>
@@ -98,18 +193,28 @@ export default function BookingsScreen() {
           </View>
         </Pane>
       ) : null}
-      {past.length > 0 ? <View style={{ gap: space.line }}><SectionTitle>History</SectionTitle>{list(past)}</View> : null}
-      <View style={{ gap: space.line }}>
-        <SectionTitle>Explore</SectionTitle>
-        <View style={{ flexDirection: "row", gap: TILE_GAP }}>
-          <PhotoCard hearted={false} title="Ceramic coatings" pill="See range" onPress={() => router.push("/(tabs)/catalogue?cat=coatings" as never)} media={<Image source={serviceImagery.ceramic} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
-          <PhotoCard hearted={false} title="Paint protection film" pill="See range" onPress={() => router.push("/(tabs)/catalogue?cat=ppf" as never)} media={<Image source={serviceImagery.ppf} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+
+      {rebook.length > 0 ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Book again</SectionTitle>
+          {rebook.map((b) => {
+            const sv = svcs[b.serviceId]!;
+            return (
+              <VisitCard key={sv.id} onPress={() => router.push(`/(tabs)/book/${sv.id}`)} photo={<ServicePhoto service={sv} height={64} />} title={sv.name.replace(/^Kovalent\s+/i, "")} car="Pick a time, then review" when="" price="" chip={<Chip label="Book again" tone="accent" />} />
+            );
+          })}
         </View>
-        <View style={{ flexDirection: "row", gap: TILE_GAP }}>
-          <PhotoCard hearted={false} title="Membership" pill="Washes and perks" onPress={() => router.push("/(tabs)/membership")} media={<Image source={sceneImagery.membership} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
-          <PhotoCard hearted={false} title="Bring a friend" pill={referralSubtitle()} onPress={() => void Share.share({ message: referralShareMessage() }).catch(() => undefined)} media={<Image source={sceneImagery.heroHome} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
+      ) : null}
+
+      {past.length > 0 ? (
+        <View style={{ gap: space.line }}>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: showHistory }} onPress={() => setShowHistory((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
+            <SectionTitle>{`History (${past.length})`}</SectionTitle>
+            <T role="caption" tone="accent">{showHistory ? "Hide" : "Show"}</T>
+          </Pressable>
+          {showHistory ? list(past) : null}
         </View>
-      </View>
+      ) : null}
     </Screen>
   );
 }

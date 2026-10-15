@@ -16,6 +16,7 @@ import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, isBookingLateToday } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rules";
 import { LiveJobCard } from "../../../ui/LiveJobCard";
 import { jobStage, readyIsAhead } from "../../../ui/job-stage";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -63,41 +64,12 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
   EXPIRED: "danger",
 };
 
-const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
-  PENDING: "This booking is still awaiting studio confirmation.",
-  ACTIVE: "Your vehicle is already at the studio - contact the studio to change the schedule.",
-  COMPLETED: "This booking is already completed.",
-  CANCELLED: "This booking has been cancelled.",
-  EXPIRED: "This booking has expired.",
-};
-
 // Multi-day PPF services run into thousands of minutes - express as hours
 // once past a day (this is service-time, not calendar time; the
 // authoritative calendar span is shown separately via "Expected ready").
 function formatDuration(minutes: number): string {
   if (minutes < 24 * 60) return `~${minutes} min`;
   return `~${Math.round(minutes / 60)} hrs of service time`;
-}
-
-function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason: string | null } {
-  if (isBookingMissed(booking)) return { eligible: false, reason: "This booking was auto-cancelled at studio close. Make a new booking." };
-  if (booking.status !== "CONFIRMED") {
-    return { eligible: false, reason: NON_RESCHEDULABLE_STATUS_REASONS[booking.status] ?? "This booking can't be rescheduled." };
-  }
-  if (booking.rescheduleCount >= MAX_CUSTOMER_RESCHEDULES) {
-    return {
-      eligible: false,
-      reason: `You've used all ${MAX_CUSTOMER_RESCHEDULES} reschedules for this booking. Contact the studio to change the time.`,
-    };
-  }
-  const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
-  if (hoursUntil < CANCELLATION_FREE_WINDOW_HOURS) {
-    return {
-      eligible: false,
-      reason: `Less than ${CANCELLATION_FREE_WINDOW_HOURS} hours before your appointment - contact the studio directly to reschedule.`,
-    };
-  }
-  return { eligible: true, reason: null };
 }
 
 export default function BookingDetailScreen() {
@@ -240,12 +212,9 @@ export default function BookingDetailScreen() {
   if(feedError) return <Screen><Notice title="Can't load your booking" body={feedError} action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
-  const hoursToStart = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
   const missed = isBookingMissed(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
-  const withinFreeWindow = !missed && hoursToStart >= CANCELLATION_FREE_WINDOW_HOURS;
-  const canCancel = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING") && withinFreeWindow;
-  const lateToCancel = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING") && !withinFreeWindow;
+  const { canCancel, lateToCancel } = cancelState(booking);
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   const showRescheduleSection = !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";

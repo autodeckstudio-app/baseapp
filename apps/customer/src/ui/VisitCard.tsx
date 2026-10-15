@@ -10,7 +10,7 @@ export function VisitCard({ photo, title, car, when, price, chip, onPress }: { p
       <View style={{ width: 64, height: 64, borderRadius: 12, overflow: "hidden" }}>{photo}</View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <T role="bodyStrong" numberOfLines={1}>{title}</T>
-        <T role="caption" tone="secondary" numberOfLines={1}>{car} · {when}</T>
+        <T role="caption" tone="secondary" numberOfLines={1}>{[car, when].filter(Boolean).join(" · ")}</T>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <T role="bodyStrong" tone="accent">{price}</T>
           {chip}

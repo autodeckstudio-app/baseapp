@@ -279,10 +279,9 @@ describe("shared header", () => {
   });
 });
 
-describe("bookings explore", () => {
-  it("bookings page offers real feature tiles, not only history", () => {
-    const b = read("src/app/(tabs)/bookings/index.tsx");
-    expect(b).toContain("<SectionTitle>Explore</SectionTitle>");
+describe("bookings page", () => {
+  it("holds booking content only: no Explore tiles", () => {
+    expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain("Explore");
   });
 });
 
@@ -328,7 +327,7 @@ describe("membership wash", () => {
 
 describe("referral wording", () => {
   it("every Bring a friend button uses the one share message", () => {
-    for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx", "src/app/(tabs)/bookings/index.tsx"]) {
+    for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);
       expect(s).toContain("referralSubtitle()");
       expect(s).not.toContain("Book on https://app.autodeck.in");
@@ -343,9 +342,8 @@ describe("one tile size everywhere", () => {
     expect(h).not.toContain("compact?: boolean");
     expect((h.match(/aspectRatio: TILE_ASPECT/g) ?? []).length).toBe(1);
   });
-  it("Services, Home Top services and Bookings Explore all use PhotoCard and TILE_GAP", () => {
+  it("Services and Home Top services use PhotoCard and TILE_GAP", () => {
     expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("TILE_GAP");
-    expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("TILE_GAP");
     expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*<PhotoCard/);
   });
 });
