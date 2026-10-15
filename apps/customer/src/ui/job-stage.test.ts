@@ -23,3 +23,13 @@ describe("live job stages", () => {
     expect(readFileSync("src/app/(tabs)/bookings/[id].tsx", "utf8")).toMatch(/respondToApproval\(approvalId, decision\)/);
   });
 });
+
+import { readyIsAhead } from "./job-stage";
+describe("expected ready", () => {
+  it("shows only while it is still ahead", () => {
+    const now = Date.parse("2026-10-15T12:00:00+05:30");
+    expect(readyIsAhead("2026-10-15", "13:00", now)).toBe(true);
+    expect(readyIsAhead("2026-10-09", "12:14", now)).toBe(false);
+    expect(readyIsAhead("bad", "x", now)).toBe(false);
+  });
+});

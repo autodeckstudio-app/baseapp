@@ -13,3 +13,9 @@ const BY_STATUS: Record<string, { index: number; headline: string; line: string 
 export function jobStage(status: string): { index: number; headline: string; line: string } | null {
   return BY_STATUS[status] ?? null;
 }
+
+/** An "expected ready" time is only worth showing while it is still ahead of us (a multi-day walk-in can carry a stale one). */
+export function readyIsAhead(date: string, time: string, now = Date.now()): boolean {
+  const t = Date.parse(`${date}T${time.length === 5 ? time + ":00" : time}+05:30`);
+  return !Number.isNaN(t) && t > now;
+}

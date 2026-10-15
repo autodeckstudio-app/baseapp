@@ -17,7 +17,7 @@ import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMiss
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { LiveJobCard } from "../../../ui/LiveJobCard";
-import { jobStage } from "../../../ui/job-stage";
+import { jobStage, readyIsAhead } from "../../../ui/job-stage";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { metrics } from "../../../lib/metrics";
@@ -328,7 +328,7 @@ export default function BookingDetailScreen() {
       ) : null}
 
       {job && jobStage(job.status) ? (
-        <LiveJobCard status={job.status} readyText={job.status === "DELIVERED" ? null : `${displayEndDate}, ${booking.estimatedEndTime}`} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(id, d) => void handleDecide(id, d)} />
+        <LiveJobCard status={job.status} readyText={job.status === "DELIVERED" || !readyIsAhead(booking.estimatedEndDate, booking.estimatedEndTime) ? null : `${displayEndDate}, ${booking.estimatedEndTime}`} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(id, d) => void handleDecide(id, d)} />
       ) : job ? (
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>
