@@ -13,6 +13,7 @@ import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
 import { JobControls } from "../../../../components/JobControls";
+import { JobChatPanel } from "../../../../experience/JobChatPanel";
 import { StageTrack } from "../../../../experience/StageTrack";
 
 type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
@@ -220,6 +221,8 @@ export default function JobDetailPage() {
               {inspection.overallNotes && <p style={{ marginTop: 12, marginBottom: 0 }}>{inspection.overallNotes}</p>}
             </section>
           )}
+
+          {claims ? <JobChatPanel job={job} tenantId={claims.tenantId} /> : null}
 
           {approvals.length > 0 && (
             <section className="ax-panel">

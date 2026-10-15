@@ -169,6 +169,14 @@ service cloud.firestore {
       allow delete: if false; // Jobs are permanent records
     }
 
+    // Job chat: text only. Reads by the customer who owns it or staff in the tenant. Writes only through sendJobMessage.
+    match /jobMessages/{messageId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
     // âââ /approvals/{approvalId} ââââââââââââââââââââââââââââââââââââââââââââ
     match /approvals/{approvalId} {
       allow read: if isAuthenticated()

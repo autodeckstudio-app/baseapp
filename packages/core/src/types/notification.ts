@@ -22,7 +22,8 @@ export type NotificationType =
   | "approval_rejected"
   | "pickup_confirmed"
   | "pickup_declined"
-  | "winback";
+  | "winback"
+  | "job_message";
 
 // Entities the customer app can navigate to from a notification. Job/Payment
 // source events are resolved down to their owning Booking at write time

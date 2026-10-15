@@ -54,4 +54,5 @@ export * from "./dailyClose.js";
 export * from "./gallery.js";
 export * from "./story.js";
 export * from "./offer.js";
+export * from "./job-message.js";
 export * from "./carsale.js";
