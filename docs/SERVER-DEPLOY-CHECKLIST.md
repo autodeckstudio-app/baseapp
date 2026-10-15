@@ -15,6 +15,11 @@ Reward: the referred friend's first wash is free, once. No referrer reward.
 ## Membership wash (client flag: MEMBERSHIP_WASH_LIVE in apps/customer/src/lib/membership-wash.ts)
 - `createBooking`: accept `useMembershipWash`, re-check every rule server side (active, dates, washes left, wash-eligible service, one per booking), decrement washes in the same transaction, price the wash at zero on the server.
 
+## Reminders and live-job pushes (client: Add to calendar and push ask are in main)
+- Scheduled function: send a push (and WhatsApp if enabled) 24 hours and 2 hours before a CONFIRMED booking; skip cancelled or rescheduled ones, and re-schedule when the booking time changes.
+- Confirm job-stage pushes exist (confirmed, car received, in progress, ready for pickup) and respect the customer's notification setting.
+- Receipt after online payment (with pay online, test mode first).
+
 ## Other held items
 - GST off: branch `gst-off`, commit 079d0cc.
 - Warranty seed: packages/core/src/menu.ts still carries brand-wide warranty terms; update to the per-film labels in docs/WARRANTY-CLAIMS.md.

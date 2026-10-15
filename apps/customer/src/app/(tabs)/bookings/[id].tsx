@@ -1,6 +1,6 @@
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
-import { Linking, View } from "react-native";
+import { Linking, Platform, View } from "react-native";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
@@ -17,6 +17,9 @@ import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMiss
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rules";
+import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
+import { enablePush, pushPermission } from "../../../lib/push";
+import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
 import { LiveJobCard } from "../../../ui/LiveJobCard";
 import { jobStage, readyIsAhead } from "../../../ui/job-stage";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -162,6 +165,11 @@ export default function BookingDetailScreen() {
     return listenToApprovalsForJob(job.id, job.tenantId, job.customerId, setApprovals, () => undefined);
   }, [job?.id]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const store = (globalThis as any).localStorage as { getItem(k: string): string | null; setItem(k: string, v: string): void } | undefined;
+  const [pushAsked, setPushAsked] = useState<boolean>(() => { try { return store?.getItem(PUSH_ASKED_KEY) === "1"; } catch { return false; } });
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushResult, setPushResult] = useState<"on" | "denied" | null>(null);
   const [svc, setSvc] = useState<{ name: string; brand?: string | null; category: string; imageUrl?: string | null } | null>(null);
   useEffect(() => {
     if (!booking) return;
@@ -256,6 +264,43 @@ export default function BookingDetailScreen() {
         <Notice
           title="Request sent"
           body="Pending means the studio has your request and will confirm your slot. You will see the status change here once they do. Nothing is charged now."
+        />
+      ) : null}
+
+      {placed === "1" && shouldAskPush(pushPermission(), pushAsked) && pushResult === null ? (
+        <Notice
+          title="Get live updates"
+          body="We can tell you when the studio confirms your slot, when work starts, and when your car is ready. One tap, and you can turn it off any time."
+          action={
+            <View style={{ gap: space.breath }}>
+              <Button label="Turn on updates" busy={pushBusy} onPress={() => { setPushBusy(true); void enablePush().then((r) => setPushResult(r === "on" ? "on" : "denied")).catch(() => setPushResult("denied")).finally(() => { setPushBusy(false); try { store?.setItem(PUSH_ASKED_KEY, "1"); } catch { /* private mode */ } setPushAsked(true); }); }} />
+              <Button label="Not now" kind="quiet" onPress={() => { try { store?.setItem(PUSH_ASKED_KEY, "1"); } catch { /* private mode */ } setPushAsked(true); }} />
+            </View>
+          }
+        />
+      ) : null}
+      {pushResult === "on" ? <Notice title="Updates are on" body="You will get a message when the studio confirms and when your car is ready." /> : null}
+
+      {!walkIn && (booking.status === "PENDING" || booking.status === "CONFIRMED") ? (
+        <Button
+          kind="quiet"
+          label="Add to calendar"
+          onPress={() => {
+            const name = svc?.name ?? "AutoDeck visit";
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const doc = (globalThis as any).document;
+            if (Platform.OS === "web" && doc && /iPhone|iPad|Macintosh/.test((globalThis as any).navigator?.userAgent ?? "")) {
+              const url = (globalThis as any).URL.createObjectURL(new (globalThis as any).Blob([icsFor(booking, name)], { type: "text/calendar" }));
+              const a = doc.createElement("a");
+              a.href = url;
+              a.download = "autodeck-booking.ics";
+              doc.body.appendChild(a);
+              a.click();
+              a.remove();
+              return;
+            }
+            void Linking.openURL(googleCalendarUrl(booking, name));
+          }}
         />
       ) : null}
 

@@ -3,13 +3,15 @@ import "../lib/webAlert";
 import { useEffect, useState } from "react";
 import { View, Platform, Pressable } from "react-native";
 import { groundFor, groundImageFor } from "../lib/ground";
-import { setSurfaceMode } from "../lib/glass";
+import { setSurfaceMode, glassSurface } from "../lib/glass";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
+import { ConnectionBanner } from "../ui/ConnectionBanner";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 
 installWebFonts();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +70,7 @@ function PushBridge() {
       accessibilityRole="button"
       accessibilityLabel={`${banner.title}. Dismiss`}
       onPress={() => setBanner(null)}
-      style={{ position: "absolute", top: 16, left: 16, right: 16, maxWidth: 460, alignSelf: "center", zIndex: 60, backgroundColor: "rgba(24,22,20,0.97)", borderRadius: 16, padding: 14, borderWidth: 1, borderColor: "rgba(236,134,56,0.45)", gap: 2 }}
+      style={{ position: "absolute", top: 16, left: 16, right: 16, maxWidth: 460, alignSelf: "center", zIndex: 60, backgroundColor: glassSurface.backgroundColor, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: "rgba(236,134,56,0.45)", gap: 2 }}
     >
       <T role="bodyStrong">{banner.title}</T>
       {banner.body ? <T role="caption" tone="secondary">{banner.body}</T> : null}
@@ -99,12 +101,15 @@ function ThemedRoot() {
   return (
     <View style={{ flex: 1, backgroundColor: GROUND_COLOR, ...(Platform.OS === "web" ? ({ backgroundImage: COALMINE } as object) : null) }}>
       <StatusBar style={name === "night" ? "light" : "dark"} />
+      <ConnectionBanner />
+      <ErrorBoundary>
       <NavigationGuard key={name}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" }, animation: "fade", animationDuration: 180 }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>
       </NavigationGuard>
+      </ErrorBoundary>
       <PushBridge />
     </View>
   );
