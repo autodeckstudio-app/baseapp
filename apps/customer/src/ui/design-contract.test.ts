@@ -285,3 +285,11 @@ describe("bookings explore", () => {
     expect(b).toContain("<SectionTitle>Explore</SectionTitle>");
   });
 });
+
+describe("actionable notifications", () => {
+  it("each notification action is a real button; money decisions stay on the confirm screen", () => {
+    const n = read("src/app/(tabs)/notifications/index.tsx");
+    expect(n).toContain("accessibilityLabel={NOTIFICATION_ACTION[item.entityType");
+    expect(n).not.toContain("respondToApproval");
+  });
+});

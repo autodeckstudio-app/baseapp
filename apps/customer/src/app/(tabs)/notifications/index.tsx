@@ -131,7 +131,11 @@ export default function NotificationsScreen() {
                       <T role="bodyStrong">{repairText(item.title)}</T>
                       <T role="caption" tone="secondary">{repairText(item.body)}</T>
                       <T role="caption" tone="tertiary">{formatWhen(item.createdAt)}</T>
-                      {NOTIFICATION_ACTION[item.entityType ?? ""] ? <T role="caption" tone="accent" style={{ fontWeight: "700" }}>{NOTIFICATION_ACTION[item.entityType ?? ""]}</T> : null}
+                      {NOTIFICATION_ACTION[item.entityType ?? ""] ? (
+                        <Pressable accessibilityRole="button" accessibilityLabel={NOTIFICATION_ACTION[item.entityType ?? ""]} onPress={(e) => { e.stopPropagation?.(); void handlePress(item); }} style={({ pressed }) => ({ alignSelf: "flex-start", marginTop: 6, minHeight: 36, borderRadius: 9999, paddingHorizontal: 14, justifyContent: "center", backgroundColor: item.entityType === "Approval" ? "rgba(236,134,56,0.22)" : "rgba(255,255,255,0.08)", opacity: pressed ? 0.8 : 1 })}>
+                          <T role="caption" style={{ fontWeight: "700", color: colors.textPrimary }}>{NOTIFICATION_ACTION[item.entityType ?? ""]}</T>
+                        </Pressable>
+                      ) : null}
                       {!isProtected(item) ? (
                         <Pressable accessibilityRole="button" accessibilityLabel="Dismiss notification" hitSlop={8} onPress={(e) => { e.stopPropagation?.(); hide([item.id]); }} style={{ alignSelf: "flex-start", minHeight: 32, justifyContent: "center" }}>
                           <T role="caption" tone="tertiary">Dismiss</T>
