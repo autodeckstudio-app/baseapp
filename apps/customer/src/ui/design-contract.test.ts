@@ -263,3 +263,10 @@ describe("garage brand filter", () => {
     expect(g).toContain('b ?? "All"');
   });
 });
+
+describe("provenance", () => {
+  it("does not attribute web-researched facts to the owner", () => {
+    expect(read("src/lib/catalogue-service.ts")).not.toContain("Per Meet");
+    expect(read("src/lib/catalogue-service.ts")).toContain("WARRANTY-CLAIMS.md");
+  });
+});

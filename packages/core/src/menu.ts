@@ -2,8 +2,9 @@
 // branded, tiered and priced. Every app (customer, admin, studio, site) and the
 // seed script read this. Change the structure here, not in a screen.
 //
-// Structure and anchor prices come from the market study approved by the owner:
-// price what can be judged from a photo, quote what has to be touched.
+// Structure and anchor prices are working placeholders from a market study. The owner has not signed
+// them off; real prices and warranty terms are still to be confirmed. Principle: price what can be
+// judged from a photo, quote what has to be touched.
 import type { CoverageLevel, ServiceCategory, VehicleCategory } from "./types/service.js";
 
 export type MenuGroupKey = "wash" | "coatings" | "ppf" | "garage" | "mods" | "pickup";

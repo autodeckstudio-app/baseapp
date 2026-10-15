@@ -53,7 +53,8 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
   return p;
 }
 
-// Per Meet via parent relay (phonemsg-01M3T6NC5N3Q1R0K1PFXRXW7K0): brand-website facts override the studio's old price-list labels.
+// Warranty labels below were web-researched from the brand sites listed here. They are NOT owner-supplied and
+// still need owner confirmation against official brand pages before launch. See docs/WARRANTY-CLAIMS.md.
 // Garware site tiers: Premium 8-year, Plus 5-year, Protect 3-year (garwarehitechfilms.com).
 // LLumar site: Platinum Gloss 10-year, Gloss/Matte 5-year. No site source for "Garware Platinum" or
 // "LLumar Valor", so their warranty shows blank until sourced.
