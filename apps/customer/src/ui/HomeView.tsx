@@ -2,7 +2,7 @@
 // avatar, a car hero, visit and health tiles, four round actions, studio and
 // membership tiles, stories, brand widgets, popular services and reminders.
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Image, Platform, useWindowDimensions, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { pickTopServices, type TopPick } from "../lib/top-services";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
@@ -297,6 +297,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
+  const narrow = useWindowDimensions().width < 350;
   const top = pickTopServices(p.services);
   const [active, setActive] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -395,7 +396,7 @@ export function HomeView(p: HomeViewProps) {
             <View style={{ flexDirection: "row", gap: 8 }}>
               {p.quick.map((q) => (
                 <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: pressed ? 0.8 : 1, ...r.round })}>
-                  <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={16} cut="#18181C" />
+                  {narrow ? null : <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={16} cut="#18181C" />}
                   <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{q.label}</Text>
                 </Pressable>
               ))}
@@ -415,7 +416,7 @@ export function HomeView(p: HomeViewProps) {
       {(p.social ?? []).length ? (
         <View style={{ gap: 12 }}>
           <Heading title="Follow us" />
-          <View style={{ flexDirection: "row", gap: TILE_GAP }}>
+          <View style={{ flexDirection: narrow ? "column" : "row", gap: TILE_GAP }}>
             {(p.social ?? []).map((x) => (
               <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={x.title} onPress={x.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, padding: 14, opacity: pressed ? 0.85 : 1, ...glassPane(name === "light") })}>
                 <NavIcon name={x.icon} color={colors.accentStrong} size={22} cut="#18181C" />
