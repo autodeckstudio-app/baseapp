@@ -23,3 +23,9 @@ describe("what a visit was for", () => {
     for (const f of ["app/(tabs)/garage/history.tsx", "app/(tabs)/garage/[id].tsx"]) expect(readFileSync(`${__dirname}/../${f}`, "utf8")).not.toContain('"Studio visit"');
   });
 });
+
+describe("history invoice button spacing", () => {
+  it("is padded away from the row divider and the card edge", () => {
+    expect(readFileSync("src/app/(tabs)/garage/history.tsx", "utf8")).toMatch(/paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12/);
+  });
+});

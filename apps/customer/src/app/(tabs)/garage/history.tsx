@@ -87,7 +87,7 @@ export default function ServiceHistoryScreen() {
                   last={i === jobs.length - 1 && !invoice}
                 />
                 {invoice ? (
-                  <View style={{ paddingBottom: space.line }}>
+                  <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 }}>
                     <Button label={`View invoice ${invoice.invoiceNumber}`} kind="quiet" testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} />
                   </View>
                 ) : null}
