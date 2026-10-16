@@ -251,7 +251,6 @@ export default function HomeScreen() {
           { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => router.push("/(tabs)/studio") },
           { key: "help", label: "Help and contact", icon: "chat", onPress: () => router.push("/(tabs)/help") },
         ]}
-        onCareMap={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : router.push("/(tabs)/garage/add"))}
         onBook={() => router.push("/(tabs)/catalogue")}
         onStudio={() => router.push("/(tabs)/studio")}
         onMembership={() => router.push("/(tabs)/membership")}

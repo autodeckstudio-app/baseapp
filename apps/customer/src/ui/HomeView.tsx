@@ -61,7 +61,6 @@ export type HomeViewProps = {
   onCategory: (category: string | null) => void;
   onService: (s: HomeService) => void;
   onCar: (c: HomeCar) => void;
-  onCareMap: () => void;
   onAddCar: () => void;
   onReminders: () => void;
   onBook: () => void;
@@ -278,7 +277,7 @@ function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; on
         ) : (
           <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
             {items.map((c, i) => (
-              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}, care map`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: H, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.sheet }}>
+              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: H, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.sheet }}>
                 {c.hasPhoto && c.vehicle ? <View style={{ position: "absolute", width: "100%", height: "100%" }}><CarThumb car={c.vehicle} height={H} radius={0} /></View> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
                 {c.hasPhoto ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
                 {c.hasPhoto ? <View style={{ position: "absolute", left: 14, right: 14, bottom: 14, gap: 6 }}>

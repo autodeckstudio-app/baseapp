@@ -17,7 +17,7 @@ const feather = web ? ({ WebkitMaskImage: "radial-gradient(ellipse 72% 68% at 50
 export function HeroStage({ car, onOpen }: { car: StageCar; onOpen: () => void }) {
   const day = useExperienceTheme().name === "light";
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${car.title}, ${car.hasPhoto ? "care map" : "add a photo"}`} onPress={onOpen} style={{ height: metrics.heroStage, alignItems: "center", justifyContent: "flex-end", overflow: "hidden" }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${car.title}, ${car.hasPhoto ? "open car" : "add a photo"}`} onPress={onOpen} style={{ height: metrics.heroStage, alignItems: "center", justifyContent: "flex-end", overflow: "hidden" }}>
       <View pointerEvents="none" style={{ position: "absolute", left: "6%", right: "6%", bottom: 28, height: 150, borderRadius: 9999, ...glow }} />
       {car.hasPhoto && car.vehicle ? (
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 52, ...feather } as object}><CarThumb car={car.vehicle} height={metrics.heroStage - 52} radius={0} /></View>

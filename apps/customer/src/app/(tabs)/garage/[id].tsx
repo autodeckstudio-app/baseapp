@@ -30,9 +30,8 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview, TabPills } from "../../../ui/CarOverview";
-import { CareMap, type CareDone } from "../../../ui/CareMap";
 
-type TabKey = "overview" | "care" | "passport" | "protection" | "warranty";
+type TabKey = "overview" | "passport" | "protection" | "warranty";
 
 const PROTECTION_KIND_LABELS: Record<string, string> = {
   insurance: "Insurance",
@@ -45,7 +44,6 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
-  { key: "care", label: "Care map" },
   { key: "passport", label: "History" },
   { key: "protection", label: "Documents" },
   { key: "warranty", label: "Warranty" },
@@ -244,15 +242,6 @@ export default function VehicleDetailScreen() {
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
   const mostRecentJob = lastFinishedJob(jobs);
-  const careDone: CareDone = { ppf: null, coating: null, tint: null };
-  for (const j of jobs) {
-    if (j.status !== "DELIVERED" && j.status !== "READY_FOR_DELIVERY" && j.status !== "QUALITY_CHECK") continue;
-    const c = serviceCats[j.serviceId];
-    const when = j.sealedAt ?? j.createdAt;
-    if (c === "ppf" && (!careDone.ppf || when > careDone.ppf)) careDone.ppf = when;
-    if ((c === "ceramic" || c === "coating") && (!careDone.coating || when > careDone.coating)) careDone.coating = when;
-    if (c === "tinting" && (!careDone.tint || when > careDone.tint)) careDone.tint = when;
-  }
   const reminders: string[] = [];
   for (const p of papers) {
     const left = daysUntil(p.expiresOn);
@@ -366,7 +355,6 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
-      {tab === "care" ? <CareMap done={careDone} category={vehicle.category ?? null} make={vehicle.make} model={vehicle.model} colour={vehicle.color ?? null} onBook={(cat) => router.push({ pathname: "/(tabs)/catalogue", params: { cat } })} /> : null}
       {tab === "passport" ? (
         jobs.length === 0 ? (
           <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />
