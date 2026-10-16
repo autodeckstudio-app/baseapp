@@ -12,6 +12,6 @@ export function historyReportHtml(i: HistoryReportInput): string {
 }
 
 /** Only delivered visits belong in a history a buyer or insurer might read. */
-export function historyRows<J extends { serviceId: string; status: string; sealedAt?: string | null; createdAt: string; id: string }>(jobs: J[], name: (id: string) => string, fmt: (iso: string) => string, invoiceOf: (jobId: string) => string | null): HistoryRow[] {
-  return jobs.filter((j) => j.status === "DELIVERED").map((j) => ({ date: fmt(j.sealedAt ?? j.createdAt), service: name(j.serviceId), status: "Delivered", invoice: invoiceOf(j.id) }));
+export function historyRows<J extends { serviceId: string; status: string; sealedAt?: string | null; createdAt: string; id: string }>(jobs: J[], name: (id: string) => string, fmt: (iso: string) => string, invoiceOf: (jobId: string) => string | null, titleOf?: (job: J) => string): HistoryRow[] {
+  return jobs.filter((j) => j.status === "DELIVERED").map((j) => ({ date: fmt(j.sealedAt ?? j.createdAt), service: titleOf ? titleOf(j) : name(j.serviceId), status: "Delivered", invoice: invoiceOf(j.id) }));
 }

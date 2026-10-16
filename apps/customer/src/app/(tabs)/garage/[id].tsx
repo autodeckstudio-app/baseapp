@@ -1,3 +1,4 @@
+import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField } from "../../../ui/inputs";
@@ -295,7 +296,7 @@ export default function VehicleDetailScreen() {
             protections={verifiedProtections.length}
             warranties={activeWarranties.length}
             next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: "Upcoming booking", note: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : undefined, onPress: () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) } : null}
-            last={mostRecentJob ? { title: serviceNames[mostRecentJob.serviceId] ?? "Studio visit", detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
+            last={mostRecentJob ? { title: visitTitle(visitServices(mostRecentJob, invoices.find((x) => x.jobId === mostRecentJob.id), serviceNames)), detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
             reminders={reminders}
             details={[
               ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
@@ -374,7 +375,7 @@ export default function VehicleDetailScreen() {
             {Platform.OS === "web" ? (
               <View style={{ paddingBottom: space.line }}>
                 <Button label="Download service history (PDF)" kind="quiet" onPress={() => {
-                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? "Studio visit", formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null) });
+                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? VISIT_FALLBACK, formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null, (j) => visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))) });
                   const w = (globalThis as unknown as { open: (u: string, t: string) => { document: { write: (h: string) => void; close: () => void }; focus: () => void; print: () => void } | null }).open("", "_blank");
                   if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); } else setActionError("Allow pop-ups to download the history.");
                 }} />
@@ -385,8 +386,8 @@ export default function VehicleDetailScreen() {
               return (
                 <View key={job.id}>
                   <Row
-                    title={serviceNames[job.serviceId] ?? "Studio visit"}
-                    detail={formatDate(job.sealedAt ?? job.createdAt)}
+                    title={visitTitle(visitServices(job, invoice, serviceNames))}
+                    detail={[formatDate(job.sealedAt ?? job.createdAt), visitAlso(visitServices(job, invoice, serviceNames))].filter(Boolean).join(" · ")}
                     trailing={<Chip label={job.status.replace(/_/g, " ")} />}
                     onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
                     last={i === jobs.length - 1 && !invoice}

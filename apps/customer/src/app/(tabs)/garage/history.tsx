@@ -2,6 +2,7 @@
 // customer's own jobs and invoices, so it still works after the car document
 // is deleted (the garage room returns "Vehicle not found" in that case).
 // Contract assumed: jobs/invoices keep their vehicleId, tenantId and customerId.
+import { visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -74,11 +75,13 @@ export default function ServiceHistoryScreen() {
         <Pane pad="gap">
           {jobs.map((job, i) => {
             const invoice = invoices.find((x) => x.jobId === job.id);
+            const svc = visitServices(job, invoice, names);
+            const also = visitAlso(svc);
             return (
               <View key={job.id}>
                 <Row
-                  title={names[job.serviceId] ?? "Studio visit"}
-                  detail={[fmt(job.sealedAt ?? job.createdAt),!vehicleId?((job as unknown as {vehicleSnapshot?:{make:string;model:string;registrationNumber:string}}).vehicleSnapshot?.registrationNumber??"Recorded visit"):null].filter(Boolean).join(" · ")}
+                  title={visitTitle(svc)}
+                  detail={[fmt(job.sealedAt ?? job.createdAt),also,!vehicleId?((job as unknown as {vehicleSnapshot?:{make:string;model:string;registrationNumber:string}}).vehicleSnapshot?.registrationNumber??"Recorded visit"):null].filter(Boolean).join(" · ")}
                   trailing={<Chip label={job.status.replace(/_/g, " ")} />}
                   onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
                   last={i === jobs.length - 1 && !invoice}
