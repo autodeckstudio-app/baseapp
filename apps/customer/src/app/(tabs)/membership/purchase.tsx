@@ -90,7 +90,7 @@ export default function PurchaseMembershipScreen() {
         <Notice
           title="Membership active"
           body="Your membership is active and your benefits are unlocked."
-          action={<Button label="View membership" onPress={() => router.replace("/(tabs)/membership/current")} />}
+          action={<Button label="View membership" onPress={() => router.replace("/(tabs)/membership")} />}
         />
       </Screen>
     );
@@ -110,7 +110,7 @@ export default function PurchaseMembershipScreen() {
           action={
             <View style={{ gap: space.hair }}>
               {!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
-              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership/current")} />
+              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} />
               {error ? <T role="caption" tone="tertiary">{error}</T> : null}
             </View>
           }

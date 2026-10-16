@@ -23,3 +23,10 @@ export function expiryReminderText(kind: string, daysLeft: ExpiryReminderDay, pl
   if (daysLeft === 0) return { title: `${name} expires today`, body: `Your ${name}${car} expires today.` };
   return { title: `${name} expires in ${daysLeft} days`, body: `Your ${name}${car} expires in ${daysLeft} days. Renew it before then.` };
 }
+
+/** Plain reminder for a plan that ends in 7 days or today. No offer, no price. */
+export function membershipReminderText(daysLeft: 7 | 0, tier: string): { title: string; body: string } {
+  const name = `${tier.charAt(0).toUpperCase()}${tier.slice(1)} membership`;
+  if (daysLeft === 0) return { title: `${name} ends today`, body: `Your ${name} ends today. Unused washes expire. You can join a plan again once it ends.` };
+  return { title: `${name} ends in 7 days`, body: `Your ${name} ends in 7 days. Unused washes expire when it ends.` };
+}

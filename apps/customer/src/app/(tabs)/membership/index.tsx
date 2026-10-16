@@ -4,11 +4,15 @@ import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
-import { Button, HeroImage, Chip, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
-import { getMembershipPlans } from "../../../lib/membership-service";
+import { Button, Chip, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
+import { getMembershipPlans, getMembershipUsage } from "../../../lib/membership-service";
+import { PlanCompare } from "../../../ui/PlanCompare";
+import { MembershipCard } from "../../../ui/MembershipCard";
+import { compareCols, valueRedeemed } from "../../../lib/membership-view";
+import { MEMBERSHIP_WASH_LIVE, todayInIndia } from "../../../lib/membership-wash";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { useAuth } from "../../../hooks/useAuth";
-import { sceneImagery } from "../../../lib/imagery";
 
 export default function MembershipScreen() {
   const router = useRouter();
@@ -18,6 +22,9 @@ export default function MembershipScreen() {
   const [plansLoading, setPlansLoading] = useState(true);
   const [membershipsLoading, setMembershipsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [redeemed, setRedeemed] = useState<ReturnType<typeof valueRedeemed> | null>(null);
+  const [ended, setEnded] = useState<Membership | null>(null);
+  const [washIds, setWashIds] = useState<string[]>([]);
 
   const uid = auth.status === "ready" ? auth.user.uid : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
@@ -48,6 +55,7 @@ export default function MembershipScreen() {
       uid,
       (memberships) => {
         setCurrent(memberships.find((m) => m.status === "active" || m.status === "pending") ?? null);
+        setEnded(memberships.filter((m) => m.status === "expired").sort((a, b) => (b.endDate ?? "").localeCompare(a.endDate ?? ""))[0] ?? null);
         setMembershipsLoading(false);
       },
       (e) => {
@@ -56,6 +64,19 @@ export default function MembershipScreen() {
       },
     );
   }, [uid, tenantId]);
+
+  const currentId = current?.status === "active" ? current.id : null;
+  useEffect(() => {
+    if (!currentId) { setRedeemed(null); return; }
+    let alive = true;
+    void getMembershipUsage(currentId).then((u) => { if (alive) setRedeemed(valueRedeemed(u)); }).catch(() => { if (alive) setRedeemed(null); });
+    return () => { alive = false; };
+  }, [currentId]);
+  // The "book with my membership" button exists only once the server records included washes (see lib/membership-wash.ts).
+  useEffect(() => {
+    if (!MEMBERSHIP_WASH_LIVE || !currentId) return;
+    void getServiceCatalogue().then((all) => setWashIds(all.filter((x) => x.membershipWashEligible === true).map((x) => x.id))).catch(() => undefined);
+  }, [currentId]);
 
   const loading = plansLoading || membershipsLoading;
   if (loading) return <Loading label="Opening membership" />;
@@ -71,65 +92,53 @@ export default function MembershipScreen() {
     );
   }
 
-  const otherPlans = plans;
+  const cols = compareCols(plans, current?.planId ?? null);
+  const today = todayInIndia();
+  const active = current?.status === "active";
+  const rupeesOf = (paise: number) => rupees(paise);
 
   return (
     <Screen
       header={
-        <PageHeader kicker="Membership" title={current ? "Your plan is active" : "Regular washes at a better rate"} sub={current ? null : "Pick a plan and pay online."} />
+        <PageHeader kicker="Membership" title={current ? "Your membership" : "Regular washes at a better rate"} sub={current ? null : "Pick a plan and pay online."} />
       }
     >
-      <Pane pad="none" round="hero" fill="cool" tone="premium">
-        <HeroImage source={sceneImagery.membership} />
-        <View style={{ padding: metrics.cardPad, gap: space.breath }}>
-          <T role="heading">The {current ? "club" : "AutoDeck club"}</T>
-          <T tone="secondary">Regular washes, a standing discount, and a car that always looks done.</T>
-        </View>
-      </Pane>
-
       {current ? (
-        <Pane pad="gap" fill="cool" tone="premium">
-          <Row
-            title={current.tier.charAt(0).toUpperCase()+current.tier.slice(1)}
-            detail={current.status === "pending" ? "Payment pending - benefits locked" : "Your membership"}
-            trailing={<Chip label={current.status} tone={current.status === "active" ? "premium" : "neutral"} />}
-            onPress={() => router.push("/(tabs)/membership/current")}
-            last
-          />
-        </Pane>
-      ) : null}
+        <>
+          <MembershipCard membership={current} today={today} />
+          {active && redeemed && redeemed.total > 0 ? (
+            <Pane pad="gap">
+              <Row title="Value used so far" detail={`${rupeesOf(redeemed.total)} · ${redeemed.washes} wash${redeemed.washes === 1 ? "" : "es"}${redeemed.discountValue > 0 ? ` and ${rupeesOf(redeemed.discountValue)} off other services` : ""}`} last />
+            </Pane>
+          ) : null}
+          <View style={{ gap: space.breath }}>
+            {active && MEMBERSHIP_WASH_LIVE && washIds.length > 0 ? (
+              <Button label="Book a wash with my membership" onPress={() => router.push(washIds.length === 1 ? `/(tabs)/catalogue/${washIds[0]}` : "/(tabs)/catalogue")} />
+            ) : null}
+            {current.status === "pending" && current.planId ? <Button label="Pay online" onPress={() => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: current.planId } })} /> : null}
+            <Button label="Usage" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
+            <Button label="History" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
+          </View>
+        </>
+      ) : (
+        <>
+          {ended ? (
+            <Pane pad="gap" tone="premium" fill="cool">
+              <Row title={`Your ${ended.tier} membership ended`} detail={ended.endDate ? `Ended ${new Date(ended.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : "Ended"} last />
+              {ended.planId ? <View style={{ padding: metrics.cardPad }}><Button label={`Renew ${ended.tier}`} onPress={() => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: ended.planId } })} /></View> : null}
+            </Pane>
+          ) : null}
+        </>
+      )}
 
-      <View style={{ gap: space.line }}>
-        <Kicker>{current ? "Other plans" : "Choose a plan"}</Kicker>
-        {otherPlans.length === 0 ? (
-          <Notice title="No plans available" body="Check back soon." />
-        ) : (
-          otherPlans.map((p) => {
-            const topTier = p.priceInPaise === Math.max(...otherPlans.map((x) => x.priceInPaise));
-            return (
-              <Pressable key={p.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/membership/${p.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
-                <Pane pad="inset" {...(topTier ? { tone: "premium" as const, fill: "cool" as const } : {})}>
-                  <View style={{ gap: space.line }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.line }}>
-                      <View style={{ flex: 1, gap: space.hair }}>
-                        {topTier ? <Chip label="More included" tone="premium" /> : null}
-                        <T role="heading">{p.name}</T>
-                      </View>
-                      <View style={{ borderRadius: 9999, borderWidth: 1, borderColor: "#EC8638", backgroundColor: "rgba(236,134,56,0.12)", paddingHorizontal: 14, paddingVertical: 8 }}>
-                        <T role="bodyStrong" tone="accent">{rupees(p.priceInPaise)}</T>
-                      </View>
-                    </View>
-                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                      <Chip label={`${p.includedWashes} washes a month`} tone="accent" />
-                      <Chip label={`${p.discountPercent}% off other services`} />
-                    </View>
-                  </View>
-                </Pane>
-              </Pressable>
-            );
-          })
-        )}
-      </View>
+      {cols.length === 0 ? (
+        <Notice title="No plans available" body="Check back soon." />
+      ) : (
+        <View style={{ gap: space.line }}>
+          <Kicker>{current ? "Plans" : "Compare plans"}</Kicker>
+          <PlanCompare cols={cols} onOpen={(id) => router.push(`/(tabs)/membership/${id}`)} />
+        </View>
+      )}
     </Screen>
   );
 }

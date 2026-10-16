@@ -7,6 +7,7 @@ import type { MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { HeroImage, Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
+import { carryOverLine } from "../../../lib/membership-rules";
 import { sceneImagery } from "../../../lib/imagery";
 
 export default function PlanDetailScreen() {
@@ -59,7 +60,7 @@ export default function PlanDetailScreen() {
       </Pane>
 
       <T role="caption" tone="tertiary">
-        Washes reset each billing cycle and do not roll over. Non-wash services receive the discount automatically at booking.
+        {[carryOverLine(), "Non-wash services receive the discount automatically at booking."].filter(Boolean).join(" ")}
       </T>
 
       <Button

@@ -80,7 +80,7 @@ export default function NotificationsScreen() {
       return;
     }
     if (n.entityType === "Membership") {
-      router.push("/(tabs)/membership/current");
+      router.push("/(tabs)/membership");
       return;
     }
     if (n.entityType === "Approval" && n.entityId) {
