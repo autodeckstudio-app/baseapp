@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, type Booking } from "@autodeck/core";
+import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, type Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -66,7 +66,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
     const z = pickupZone({ lat: data.lat, lng: data.lng });
     if (z.tier === "blocked") throw new HttpsError("failed-precondition", `We collect and return cars within ${PICKUP_MAX_KM} km of the studio. Please call the studio to arrange it.`);
     distanceKm = z.km;
-    feePaise = z.feePaise;
+    feePaise = pickupFeePaise(z.tier, data.kind);
   }
   const db = getFirestore();
   const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();

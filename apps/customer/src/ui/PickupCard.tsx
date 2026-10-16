@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Pane, Row, T } from "./kit";
 import { Linking } from "react-native";
-import { PICKUP_FEE_PAISE, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupZone } from "@autodeck/core";
+import { PICKUP_FEE_PER_LEG_PAISE, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, pickupZone } from "@autodeck/core";
 import { STUDIO_INFO } from "../lib/studio-info";
 import { getDeviceLocation, getPickupRequest, listenToPickupRequest, requestPickupDrop, type PickupRequest } from "../lib/pickup-service";
 
@@ -27,8 +27,9 @@ function formatAgreed(iso: string): string {
 }
 
 /** Ask the studio to collect or return the car. It is a request: the studio confirms it. */
-const FEE_TEXT = `Rs ${PICKUP_FEE_PAISE / 100} flat`;
-const POLICY = `Free within ${PICKUP_FREE_KM} km of the studio. From ${PICKUP_FREE_KM} to ${PICKUP_MAX_KM} km it is ${FEE_TEXT} for the request, pickup and drop together. Further than that, please call the studio. The fee is paid at the studio.`;
+const LEG = `Rs ${PICKUP_FEE_PER_LEG_PAISE / 100}`;
+const feeText = (kind: "pickup" | "drop" | "both") => `Rs ${pickupFeePaise("fee", kind) / 100}`;
+const POLICY = `Free within ${PICKUP_FREE_KM} km of the studio. From ${PICKUP_FREE_KM} to ${PICKUP_MAX_KM} km it is ${LEG} for pickup and ${LEG} for drop-off. Further than that, please call the studio. The fee is paid at the studio.`;
 
 export function PickupCard({ bookingId }: { bookingId: string }) {
   const [req, setReq] = useState<PickupRequest | null>(null);
@@ -100,7 +101,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             </>
           )}
           <Row title="Distance" detail={POLICY} />
-          {typeof req.feePaise === "number" ? <Row title="Pickup and drop fee" detail={req.feePaise === 0 ? "Free" : `${FEE_TEXT} for the request`} /> : null}
+          {typeof req.feePaise === "number" ? <Row title="Pickup and drop fee" detail={req.feePaise === 0 ? "Free" : `Rs ${req.feePaise / 100}`} /> : null}
           {req.staffNote ? <Row title="Studio note" detail={req.staffNote} /> : null}
           <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
         </Pane>
@@ -113,7 +114,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             <T role="caption" tone="secondary">{POLICY}</T>
             <Field label="Address" value={address} onChangeText={setAddress} placeholder="House, street, area" multiline />
             <Button label={where ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locate()} />
-            {zone ? <T role="caption" tone={zone.tier === "blocked" ? "danger" : "secondary"}>{zone.tier === "free" ? `About ${zone.km} km from the studio. Free.` : zone.tier === "fee" ? `About ${zone.km} km from the studio. ${FEE_TEXT} for the request.` : `About ${zone.km} km from the studio. Please call us to arrange it.`}</T> : null}
+            {zone ? <T role="caption" tone={zone.tier === "blocked" ? "danger" : "secondary"}>{zone.tier === "free" ? `About ${zone.km} km from the studio. Free.` : zone.tier === "fee" ? `About ${zone.km} km from the studio. ${feeText(kind)} for ${kind === "both" ? "pickup and drop-off" : kind === "pickup" ? "pickup" : "drop-off"}.` : `About ${zone.km} km from the studio. Please call us to arrange it.`}</T> : null}
             {zone?.tier === "blocked" && STUDIO_INFO.phone ? <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /> : null}
             {kind !== "drop" ? <Field label={kind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"} value={pickupTime} onChangeText={setPickupTime} placeholder="e.g. Saturday morning" /> : null}
             {kind !== "pickup" ? <Field label="Preferred drop-off time (optional)" value={dropTime} onChangeText={setDropTime} placeholder="e.g. Sunday evening" /> : null}

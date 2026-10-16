@@ -1,7 +1,13 @@
-/** Beyond the free zone and up to this distance, pickup and drop costs the flat fee. Further than this the studio does not collect. */
+/** Beyond the free zone and up to this distance, pickup and drop costs a fee per leg. Further than this the studio does not collect. */
 export const PICKUP_MAX_KM = 7;
-/** One flat fee per request (not per leg), in paise: Rs 100. Read from here by the server and the app, never typed twice. */
-export const PICKUP_FEE_PAISE = 10_000;
+/** Fee per leg, in paise: Rs 100 for pickup and Rs 100 for drop, so Rs 200 for both. Read from here by the server and the app, never typed twice. */
+export const PICKUP_FEE_PER_LEG_PAISE = 10_000;
+
+export type PickupKind = "pickup" | "drop" | "both";
+/** Fee for a request: free inside 3 km, per leg from 3 to 7 km. A leg is one trip, so "both" is two. */
+export function pickupFeePaise(tier: "free" | "fee" | "blocked", kind: PickupKind): number {
+  return tier === "fee" ? PICKUP_FEE_PER_LEG_PAISE * (kind === "both" ? 2 : 1) : 0;
+}
 
 /** Where pickup and drop is free. Within this distance of the studio only. Beyond it the studio arranges it by phone. */
 export const PICKUP_FREE_KM = 3;
@@ -18,9 +24,9 @@ export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; l
 
 export type PickupTier = "free" | "fee" | "blocked";
 
-/** Free up to 3 km, a flat fee up to 7 km, then not offered (the customer calls the studio). Distances are straight-line. */
-export function pickupZone(point: { lat: number; lng: number }): { km: number; within: boolean; tier: PickupTier; feePaise: number } {
+/** Free up to 3 km, a per-leg fee up to 7 km, then not offered (the customer calls the studio). Distances are straight-line. */
+export function pickupZone(point: { lat: number; lng: number }): { km: number; within: boolean; tier: PickupTier; feePerLegPaise: number } {
   const km = haversineKm(STUDIO_COORDS, point);
   const tier: PickupTier = km <= PICKUP_FREE_KM ? "free" : km <= PICKUP_MAX_KM ? "fee" : "blocked";
-  return { km: Math.round(km * 10) / 10, within: tier === "free", tier, feePaise: tier === "fee" ? PICKUP_FEE_PAISE : 0 };
+  return { km: Math.round(km * 10) / 10, within: tier === "free", tier, feePerLegPaise: tier === "fee" ? PICKUP_FEE_PER_LEG_PAISE : 0 };
 }

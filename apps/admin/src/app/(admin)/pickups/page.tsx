@@ -93,7 +93,7 @@ export default function PickupsPage() {
             <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {counts[t.id]}</button>
           ))}
         </div>
-        <p className="ax-pu-policy">Free within 3 km. 3 to 7 km is Rs 100 flat for the request (pickup and drop together), collected at the studio. Beyond 7 km the app asks customers to call. Requests without a shared location need the distance and fee confirmed by phone.</p>
+        <p className="ax-pu-policy">Free within 3 km. 3 to 7 km is Rs 100 per leg (pickup Rs 100, drop Rs 100, both Rs 200), collected at the studio. Beyond 7 km the app asks customers to call. Requests without a shared location need the distance and fee confirmed by phone.</p>
       </div>
 
       {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}
@@ -111,7 +111,7 @@ export default function PickupsPage() {
             const asked: [string, string][] = [];
             if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
             if (r.kind !== "pickup" && r.requestedDropTime) asked.push([r.kind === "both" ? "Drop" : "Time", r.requestedDropTime]);
-            if (typeof r.feePaise === "number") asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100} flat`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}`]);
+            if (typeof r.feePaise === "number") asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100}`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}`]);
             else asked.push(["Fee", "No location shared: confirm distance by phone"]);
             const agreed: [string, string][] = [];
             if (r.status !== "REQUESTED" && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
