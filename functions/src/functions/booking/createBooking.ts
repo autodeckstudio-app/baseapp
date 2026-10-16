@@ -351,7 +351,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       ...(giftToUse ? { giftId: giftToUse.gift.id } : {}),
       membershipDiscountApplied,
       membershipWashUsed,
-      paymentStatus: giftToUse ? "paid" : "unpaid",
+      paymentStatus: "unpaid",
       notes: data.notes ?? null,
       idempotencyKey: data.idempotencyKey,
       rescheduleCount: 0,
@@ -393,7 +393,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       additionalWorkDelta: 0,
       priceBreakdown: finalBreakdown, // same snapshot already computed for the booking — not recomputed
       totalAmount: finalBreakdown.total,
-      paymentStatus: giftToUse ? "paid" : "unpaid",
+      paymentStatus: "unpaid",
       isWalkIn: false,
       createdAt: nowIso,
       updatedAt: nowIso,

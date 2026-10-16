@@ -47,3 +47,14 @@ describe("gift guardrails (source)", () => {
   });
   it("the HttpsError type is usable", () => expect(new HttpsError("not-found", "x").code).toBe("not-found"));
 });
+describe("invoice guards (source)", () => {
+  it("a gift visit is not marked paid at creation, so it goes through the normal invoice path", () => {
+    const b = readFileSync(`${__dirname}/../../functions/booking/createBooking.ts`, "utf8");
+    expect(b).not.toContain('giftToUse ? "paid"');
+  });
+  it("delivery requires a live invoice", () => {
+    const a = readFileSync(`${__dirname}/../../functions/job/advanceJobStatus.ts`, "utf8");
+    expect(a).toContain("has no invoice");
+    expect(a).toContain('!== "void"');
+  });
+});

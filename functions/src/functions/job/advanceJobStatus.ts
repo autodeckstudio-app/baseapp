@@ -108,6 +108,9 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
     const warrantyRef = db.collection(COLLECTIONS.warranties()).doc(data.jobId);
     if (nextStatus === "DELIVERED") {
       if (freshJob.paymentStatus !== "paid") throw new HttpsError("failed-precondition", "Collect and confirm full payment before delivering this vehicle.");
+      // Every delivered visit has a live (not void) invoice. Payment status alone is not enough: a void leaves the job marked paid.
+      const invs = await tx.get(db.collection(COLLECTIONS.invoices()).where("jobId", "==", data.jobId).where("tenantId", "==", freshJob.tenantId));
+      if (!invs.docs.some((d) => (d.data() as { status: string }).status !== "void")) throw new HttpsError("failed-precondition", "This visit has no invoice. Record the payment to issue one before delivering.");
       // A job cannot be delivered while additional work is still awaiting
       // the customer's decision — Phase 3 requirement: prevent the studio
       // from treating unauthorized additional work as complete.
