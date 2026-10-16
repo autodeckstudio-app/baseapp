@@ -54,3 +54,8 @@ export function compareCols(plans: MembershipPlan[], currentPlanId: string | nul
   if (min !== null && new Set(rates).size > 1) for (const c of cols) c.best = c.perWash === min;
   return cols;
 }
+
+/** "5% off other services", or null when the plan has no discount (never show "0% off"). */
+export function discountLine(pct: number): string | null {
+  return pct > 0 ? `${pct}% off other services` : null;
+}

@@ -79,3 +79,11 @@ describe("membership hub rules", () => {
     expect(readFileSync("src/app/(tabs)/membership/index.tsx", "utf8")).toMatch(/MEMBERSHIP_WASH_LIVE && washIds/);
   });
 });
+
+import { discountLine } from "./membership-view";
+describe("no awkward zero discount", () => {
+  it("says nothing for 0%", () => { expect(discountLine(0)).toBeNull(); expect(discountLine(5)).toBe("5% off other services"); });
+  it("screens never print the raw percent for a plan", () => {
+    for (const f of ["src/ui/PlanCompare.tsx", "src/ui/MembershipCard.tsx"]) expect(readFileSync(f, "utf8")).not.toMatch(/\}% off/);
+  });
+});

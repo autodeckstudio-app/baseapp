@@ -4,7 +4,7 @@ import type { Membership } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { glassInner } from "../lib/glass";
 import { metrics } from "../lib/metrics";
-import { cardState, daysLabel } from "../lib/membership-view";
+import { cardState, daysLabel, discountLine } from "../lib/membership-view";
 import { carryOverLine } from "../lib/membership-rules";
 import { Chip, Pane, T } from "./kit";
 
@@ -32,8 +32,8 @@ export function MembershipCard({ membership, today }: { membership: Membership; 
         </View>
         <T tone="secondary">
           {pending
-            ? `${membership.discountPercent}% off other services. Benefits unlock once payment is confirmed.`
-            : `${s.used} used this cycle${membership.endDate ? ` · valid until ${new Date(membership.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""} · ${membership.discountPercent}% off other services`}
+            ? `${discountLine(membership.discountPercent) ? `${discountLine(membership.discountPercent)}. ` : ""}Benefits unlock once payment is confirmed.`
+            : `${s.used} used this cycle${membership.endDate ? ` · valid until ${new Date(membership.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}${discountLine(membership.discountPercent) ? ` · ${discountLine(membership.discountPercent)}` : ""}`}
         </T>
         {!pending && s.noWashes && !s.ended ? <T tone="secondary">All washes used for this cycle.</T> : null}
         {!pending && s.endingSoon && !s.ended ? <T tone="secondary">Your plan is ending. You can join the next plan once it ends.</T> : null}

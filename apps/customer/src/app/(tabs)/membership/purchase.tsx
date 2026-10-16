@@ -130,7 +130,7 @@ export default function PurchaseMembershipScreen() {
     >
       <Pane pad="gap">
         <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
-        <Row title="Discount" detail={`${plan.discountPercent}%`} />
+        <Row title="Discount" detail={plan.discountPercent > 0 ? `${plan.discountPercent}%` : "None"} />
         <Row title="Price" detail={`${rupees(plan.priceInPaise)} / month`} last />
       </Pane>
 

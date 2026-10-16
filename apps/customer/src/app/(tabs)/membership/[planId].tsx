@@ -56,7 +56,7 @@ export default function PlanDetailScreen() {
 
       <Pane pad="gap">
         <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
-        <Row title="Discount on other services" detail={`${plan.discountPercent}%`} last />
+        <Row title="Discount on other services" detail={plan.discountPercent > 0 ? `${plan.discountPercent}%` : "None"} last />
       </Pane>
 
       <T role="caption" tone="tertiary">

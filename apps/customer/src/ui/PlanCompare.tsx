@@ -2,7 +2,7 @@
 import { Pressable, View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { glassInner } from "../lib/glass";
-import type { CompareCol } from "../lib/membership-view";
+import { discountLine, type CompareCol } from "../lib/membership-view";
 import { Chip, Pane, T, rupees } from "./kit";
 
 export function PlanCompare({ cols, onOpen }: { cols: CompareCol[]; onOpen: (planId: string) => void }) {
@@ -14,7 +14,7 @@ export function PlanCompare({ cols, onOpen }: { cols: CompareCol[]; onOpen: (pla
             <T role="bodyStrong">{c.name}</T>
             <T role="heading">{rupees(c.price)}</T>
             <T tone="secondary">{c.washes} washes</T>
-            <T tone="secondary">{c.discount}% off other services</T>
+            {discountLine(c.discount) ? <T tone="secondary">{discountLine(c.discount)}</T> : null}
             {c.perWash !== null ? <T role="caption" tone="tertiary">{rupees(c.perWash)} per wash</T> : null}
             {c.current ? <Chip label="Yours" tone="premium" /> : c.best ? <Chip label="Best rate" tone="accent" /> : null}
           </Pressable>
