@@ -72,12 +72,13 @@ const studioConfig: Omit<StudioConfig, "updatedAt"> = {
   ],
 };
 
-// doc04 "Membership tiers": Silver ₹1,499/4 washes/10%, Gold ₹2,999/8/15%,
-// Platinum ₹5,999/16/20%. Prices are monthly (MEMBERSHIP_DURATION_DAYS = 30).
+// Plan prices are derived from the Rs 1000 single wash (owner, 17 Oct): washes x 1000, less the plan's own discount %.
+// Silver 4 washes 10% = Rs 3,600; Gold 8 washes 15% = Rs 6,800; Platinum 16 washes 20% = Rs 12,800. Monthly (MEMBERSHIP_DURATION_DAYS = 30).
+// Wash count and discount % are unchanged. The live plans are data: change them in the admin Memberships page.
 const PLANS: Array<{ id: string; tier: MembershipTier; name: string; priceInPaise: number; includedWashes: number; discountPercent: number }> = [
-  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 1499_00, includedWashes: 4, discountPercent: 10 },
-  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 2999_00, includedWashes: 8, discountPercent: 15 },
-  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 5999_00, includedWashes: 16, discountPercent: 20 },
+  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 3600_00, includedWashes: 4, discountPercent: 10 },
+  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 6800_00, includedWashes: 8, discountPercent: 15 },
+  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 12800_00, includedWashes: 16, discountPercent: 20 },
 ];
 
 async function seedStudio(): Promise<void> {
