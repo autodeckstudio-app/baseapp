@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, type Booking } from "@autodeck/core";
+import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
+import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, type Booking, type Invoice, type ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -43,6 +44,9 @@ interface PickupRequestDoc {
   staffNote: string;
   agreedPickupAt: string | null;
   agreedDropAt: string | null;
+  bookingId?: string;
+  feePaise?: number | null;
+  feeBilled?: boolean;
 }
 
 
@@ -162,7 +166,44 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       return { requestId: data.requestId, status: data.status, idempotent: true };
     }
 
-    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, updatedAt: now });
+    // Fee on the visit's price. Added when the studio confirms, taken off if it is declined. Never touches a job that already
+    // has a live invoice or any payment: those amounts are fixed, so the fee is flagged "not billed" for the studio to handle.
+    let feeBilled = cur.feeBilled ?? false;
+    const wantFee = data.status === "CONFIRMED" || data.status === "DONE";
+    const fees = wantFee ? legFees(cur.kind, cur.feePaise) : { pickup: 0, drop: 0 };
+    if ((fees.pickup + fees.drop > 0 || feeBilled) && cur.bookingId && (wantFee || data.status === "DECLINED")) {
+      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", cur.bookingId).limit(1));
+      const jobDoc = jobs.docs[0];
+      if (jobDoc) {
+        const job = jobDoc.data() as ServiceJob;
+        const bRef = db.collection(COLLECTIONS.bookings()).doc(cur.bookingId);
+        const [inv, pay, bSnap] = await Promise.all([
+          tx.get(db.collection(COLLECTIONS.invoices()).where("jobId", "==", job.id).where("tenantId", "==", job.tenantId)),
+          tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).where("status", "in", ["pending", "processing", "completed"]).limit(1)),
+          tx.get(bRef),
+        ]);
+        const invoiced = inv.docs.some((d) => (d.data() as Invoice).status !== "void");
+        const locked = invoiced || !pay.empty || job.paymentStatus === "paid" || job.status === "CANCELLED" || job.status === "DELIVERED";
+        const want = wantFee ? fees : { pickup: 0, drop: 0 };
+        if (!locked) {
+          const next = applyPickupFees(job.priceBreakdown, want.pickup, want.drop);
+          const delta = next.total - job.priceBreakdown.total;
+          if (delta !== 0 || next.pickupFee !== job.priceBreakdown.pickupFee || next.dropFee !== job.priceBreakdown.dropFee) {
+            tx.update(jobDoc.ref, { priceBreakdown: next, totalAmount: job.totalAmount + delta, updatedAt: now });
+            if (bSnap.exists) {
+              const b = bSnap.data() as Booking;
+              tx.update(bRef, { priceBreakdown: applyPickupFees(b.priceBreakdown, want.pickup, want.drop), totalAmount: b.totalAmount + delta, updatedAt: now });
+            }
+          }
+          feeBilled = want.pickup + want.drop > 0;
+        } else if (wantFee && fees.pickup + fees.drop > 0) {
+          feeBilled = false;
+        }
+      }
+    }
+    const feeUnbilled = wantFee && (fees.pickup + fees.drop > 0) && !feeBilled;
+
+    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, updatedAt: now });
     writeAuditLog(tx, {
       action: "pickup.updated",
       entityType: "PickupRequest",
@@ -172,7 +213,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       before: { status: cur.status },
       after: { status: data.status, agreedPickupAt, agreedDropAt },
     });
-    return { requestId: data.requestId, status: data.status, idempotent: false };
+    return { requestId: data.requestId, status: data.status, idempotent: false, feeBilled, feeUnbilled };
   });
   return result;
 });

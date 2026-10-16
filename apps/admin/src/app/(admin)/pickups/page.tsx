@@ -111,7 +111,10 @@ export default function PickupsPage() {
             const asked: [string, string][] = [];
             if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
             if (r.kind !== "pickup" && r.requestedDropTime) asked.push([r.kind === "both" ? "Drop" : "Time", r.requestedDropTime]);
-            if (typeof r.feePaise === "number") asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100}`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}`]);
+            if (typeof r.feePaise === "number") {
+              const billing = r.feePaise > 0 && (r.status === "CONFIRMED" || r.status === "DONE") ? (r.feeBilled ? ", added to the bill" : ", NOT on the bill (already invoiced or paid): collect it separately") : "";
+              asked.push(["Fee", `${r.feePaise === 0 ? "Free" : `Rs ${r.feePaise / 100}`}${typeof r.distanceKm === "number" ? ` (${r.distanceKm} km)` : ""}${billing}`]);
+            }
             else asked.push(["Fee", "No location shared: confirm distance by phone"]);
             const agreed: [string, string][] = [];
             if (r.status !== "REQUESTED" && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
