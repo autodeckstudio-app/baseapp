@@ -233,13 +233,13 @@ export default function HomeScreen() {
         campaign={offerToCampaign(offers, (h) => router.push(h as never))}
         need={(() => { const n = carNeed(carJobs, Object.fromEntries(catalogue.map((x) => [x.id, { id: x.id, name: x.name, category: x.category }]))); return n ? { title: n.title, detail: n.detail, onPress: () => router.push(`/(tabs)/book/${n.serviceId}`) } : null; })()}
         social={[
-          ...(WHATSAPP_CHANNEL_URL ? [{ key: "wac", title: "Join our WhatsApp channel", sub: "Offers and news from the studio.", icon: "chat" as const, onPress: () => void Linking.openURL(WHATSAPP_CHANNEL_URL) }] : []),
-          ...(INSTAGRAM_URL ? [{ key: "ig", title: "Follow us on Instagram", sub: `@${INSTAGRAM_HANDLE}. Reels and stories.`, icon: "star" as const, onPress: () => void Linking.openURL(INSTAGRAM_URL) }] : []),
+          ...(WHATSAPP_CHANNEL_URL ? [{ key: "wac", title: "WhatsApp", sub: "Our channel", icon: "channel" as const, onPress: () => void Linking.openURL(WHATSAPP_CHANNEL_URL) }] : []),
+          ...(INSTAGRAM_URL ? [{ key: "ig", title: "Instagram", sub: `@${INSTAGRAM_HANDLE}`, icon: "instagram" as const, onPress: () => void Linking.openURL(INSTAGRAM_URL) }] : []),
         ]}
         quick={[
-          ...(STUDIO_INFO.phone ? [{ key: "call", label: "Call", icon: "phone" as const, onPress: () => void Linking.openURL(`tel:${STUDIO_INFO.phone}`) }] : []),
-          ...(STUDIO_INFO.whatsapp ? [{ key: "wa", label: "WhatsApp", icon: "chat" as const, onPress: () => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`) }] : []),
-          ...(STUDIO_INFO.mapsUrl ? [{ key: "map", label: "Directions", icon: "pin" as const, onPress: () => void Linking.openURL(STUDIO_INFO.mapsUrl) }] : []),
+          ...(STUDIO_INFO.phone ? [{ key: "call", label: "Call", icon: "call" as const, onPress: () => void Linking.openURL(`tel:${STUDIO_INFO.phone}`) }] : []),
+          ...(STUDIO_INFO.whatsapp ? [{ key: "wa", label: "WhatsApp", icon: "whatsapp" as const, onPress: () => void Linking.openURL(`https://wa.me/${STUDIO_INFO.whatsapp}`) }] : []),
+          ...(STUDIO_INFO.mapsUrl ? [{ key: "map", label: "Directions", icon: "directions" as const, onPress: () => void Linking.openURL(STUDIO_INFO.mapsUrl) }] : []),
         ]}
         onAvatar={() => router.push("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}

@@ -6,6 +6,7 @@ import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePro
 import { pickTopServices, type TopPick } from "../lib/top-services";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
+import type { NavIconName } from "./NavIcon";
 import { serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
@@ -41,10 +42,10 @@ export type HomeViewProps = {
   studio: { address: string; hours: string; openText?: string | null; open?: boolean };
   /** What the car is due for, from its delivered visits. Null hides the card. */
   /** Social rows under Studio and club. Empty values hide the row. */
-  social?: Array<{ key: string; title: string; sub: string; icon: IconName; onPress: () => void }>;
+  social?: Array<{ key: string; title: string; sub: string; icon: NavIconName; onPress: () => void }>;
   need?: { title: string; detail: string; onPress: () => void } | null;
   /** One-tap studio contact: Call, WhatsApp, Directions. Empty hides the row. */
-  quick?: Array<{ key: string; label: string; icon: IconName; onPress: () => void }>;
+  quick?: Array<{ key: string; label: string; icon: NavIconName; onPress: () => void }>;
   banner?: ReactNode;
   initialChip?: string | null;
   stories?: ReactNode;
@@ -338,17 +339,6 @@ export function HomeView(p: HomeViewProps) {
         </Pressable>
       ) : null}
 
-      {p.quick?.length ? (
-        <View style={{ flexDirection: "row", gap: TILE_GAP }}>
-          {p.quick.map((q) => (
-            <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: pressed ? 0.8 : 1, ...r.round })}>
-              <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={16} cut="#18181C" />
-              <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{q.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-
       {p.rebook && (!p.live || p.live.idle === true) ? (
         <Pressable accessibilityRole="button" accessibilityLabel={`Book ${p.rebook.serviceName} again`} onPress={p.rebook.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: metrics.cardRadius, padding: metrics.cardPad, opacity: pressed ? 0.9 : 1, ...r.card })}>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
@@ -391,14 +381,53 @@ export function HomeView(p: HomeViewProps) {
       ) : null}
       <CampaignSlot campaign={p.campaign} />
       <View style={{ gap: 12 }}>
-        <Heading title="Studio and club" />
+        <Heading title="The studio" />
+        <View style={{ ...glassPane(name === "light"), padding: metrics.cardPad, gap: 12 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="The studio" onPress={p.onStudio} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+            <NavIcon name="pin" color={colors.textSecondary} size={20} cut="#18181C" />
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              {p.studio.openText ? <Text style={{ color: p.studio.open === false ? colors.textSecondary : colors.accentStrong, fontSize: 13, fontWeight: "800" }}>{p.studio.openText}</Text> : null}
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{p.studio.address}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{p.studio.hours}</Text>
+            </View>
+          </Pressable>
+          {p.quick?.length ? (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {p.quick.map((q) => (
+                <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: pressed ? 0.8 : 1, ...r.round })}>
+                  <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={16} cut="#18181C" />
+                  <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{q.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={{ gap: 12 }}>
+        <Heading title="Club" />
         <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
           <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
           <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
-          {(p.social ?? []).map((x) => <ClubRow key={x.key} icon={x.icon} title={x.title} sub={x.sub} onPress={x.onPress} />)}
-          <ClubRow icon="pin" title="The studio" sub={`${p.studio.openText ? `${p.studio.openText}. ` : ""}${p.studio.address}. ${p.studio.hours}`} onPress={p.onStudio} />
         </View>
       </View>
+
+      {(p.social ?? []).length ? (
+        <View style={{ gap: 12 }}>
+          <Heading title="Follow us" />
+          <View style={{ flexDirection: "row", gap: TILE_GAP }}>
+            {(p.social ?? []).map((x) => (
+              <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={x.title} onPress={x.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, padding: 14, opacity: pressed ? 0.85 : 1, ...glassPane(name === "light") })}>
+                <NavIcon name={x.icon} color={colors.accentStrong} size={22} cut="#18181C" />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "700" }}>{x.title}</Text>
+                  <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{x.sub}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }

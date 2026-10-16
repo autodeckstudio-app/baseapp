@@ -2,7 +2,7 @@
 import { createElement } from "react";
 import { Image, Platform } from "react-native";
 
-export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check";
+export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile" | "club" | "gift" | "bell" | "pin" | "chat" | "wash" | "ceramic" | "tools" | "search" | "check" | "call" | "whatsapp" | "instagram" | "channel" | "directions";
 
 // body: the main silhouette (filled when active). detail: strokes drawn on top, in the cut-out colour when filled.
 const ART: Record<NavIconName, { body: string; detail: string }> = {
@@ -20,6 +20,11 @@ const ART: Record<NavIconName, { body: string; detail: string }> = {
   ceramic: { body: '<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/>', detail: '<path d="M9 12l2.2 2.2 4-4.2"/>' },
   tools: { body: '<path d="M14.5 4a5 5 0 0 0-4.5 6.8L3.8 17a1.8 1.8 0 0 0 2.5 2.5l6.2-6.2A5 5 0 0 0 20 9.5l-3 3-2.5-.5-.5-2.5 3-3A5 5 0 0 0 14.500 4z"/>', detail: "" },
   search: { body: '<circle cx="11" cy="11" r="6.5"/>', detail: '<path d="M16 16l4.5 4.5"/>' },
+  call: { body: '<path d="M6.6 3.5h2.8l1.5 4-1.9 1.3a11 11 0 0 0 5.200 5.200l1.300-1.900 4 1.500v2.800a2 2 0 0 1-2.100 2A15.500 15.500 0 0 1 4.600 5.600a2 2 0 0 1 2-2.100z"/>', detail: "" },
+  whatsapp: { body: '<path d="M12 3.500a8.500 8.500 0 0 0-7.300 12.800L3.500 20.500l4.300-1.100A8.500 8.500 0 1 0 12 3.500z"/>', detail: '<path d="M9.200 8.600c.3 3 2.300 5 5.300 5.700l1-1.300-1.800-1-.9.700a4 4 0 0 1-1.800-1.800l.7-.9-1-1.800z"/>' },
+  instagram: { body: '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/>', detail: '<circle cx="12" cy="12" r="3.8"/><path d="M17 7h.01"/>' },
+  channel: { body: '<path d="M4 10v4a1 1 0 0 0 1 1h2.500l7 4V5l-7 4H5a1 1 0 0 0-1 1z"/>', detail: '<path d="M18.500 9.500a3.500 3.500 0 0 1 0 5"/>' },
+  directions: { body: '<path d="M12 3.500 20.500 12 12 20.500 3.500 12z"/>', detail: '<path d="M9 13v-2.200a1 1 0 0 1 1-1h5M13 7.500l2.500 2.500-2.500 2.500"/>' },
   check: { body: '<circle cx="12" cy="12" r="9"/>', detail: '<path d="M8 12.2l2.7 2.7 5-5.2"/>' },
 };
 
@@ -51,7 +56,7 @@ export function navIconFor(name: string): NavIconName {
   if (name === "shield") return "ceramic";
   if (name === "calendar") return "bookings";
   if (name === "membership") return "club";
-  if (name === "phone") return "chat";
+  if (name === "phone") return "call";
   if (name === "user" || name === "users") return "profile";
   return "check";
 }
