@@ -113,11 +113,10 @@ export default function MembershipScreen() {
           ) : null}
           <View style={{ gap: space.breath }}>
             {active && MEMBERSHIP_WASH_LIVE && washIds.length > 0 ? (
-              <Button label="Book a wash with my membership" onPress={() => router.push(washIds.length === 1 ? `/(tabs)/catalogue/${washIds[0]}` : "/(tabs)/catalogue")} />
+              <Button label="Book a wash with my plan" onPress={() => router.push(washIds.length === 1 ? `/(tabs)/catalogue/${washIds[0]}` : "/(tabs)/catalogue")} />
             ) : null}
             {current.status === "pending" && current.planId ? <Button label="Pay online" onPress={() => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: current.planId } })} /> : null}
-            <Button label="Usage" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
-            <Button label="History" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
+            <Button label="Usage and history" kind="quiet" onPress={() => router.push("/(tabs)/membership/usage")} />
           </View>
         </>
       ) : (
@@ -136,7 +135,7 @@ export default function MembershipScreen() {
       ) : (
         <View style={{ gap: space.line }}>
           <Kicker>{current ? "Plans" : "Compare plans"}</Kicker>
-          <PlanCompare cols={cols} onOpen={(id) => router.push(`/(tabs)/membership/${id}`)} />
+          <PlanCompare cols={cols} onOpen={(id) => router.push({ pathname: "/(tabs)/membership/purchase", params: { planId: id } })} />
         </View>
       )}
     </Screen>

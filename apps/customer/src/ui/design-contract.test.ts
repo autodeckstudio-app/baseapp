@@ -409,7 +409,7 @@ describe("nav order and drawer", () => {
     expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('svc?.name ?? "Your visit"');
   });
   it("plan page never claims a discount the plan does not have", () => {
-    expect(read("src/app/(tabs)/membership/[planId].tsx")).toContain('plan.discountPercent > 0 ? "Non-wash services receive the discount');
+    expect(read("src/app/(tabs)/membership/purchase.tsx")).toContain('plan.discountPercent > 0 ? "Non-wash services receive the discount');
   });
   it("pickupRequests rule lets a customer listen to a request that does not exist yet", () => {
     const rules = require("node:fs").readFileSync("../../firestore.rules", "utf8");
@@ -613,4 +613,15 @@ it("invoice web view leads with a Total card and offers Download PDF and Share o
   expect(i).toContain('label="Download PDF"');
   expect(i).toContain('label="Share"');
   expect(i).not.toContain('label="Save as PDF"');
+});
+
+describe("club (batch 4)", () => {
+  it("hub has one wash button and one usage link; plan detail and purchase are one screen", () => {
+    const h = read("src/app/(tabs)/membership/index.tsx");
+    expect(h).toContain('label="Book a wash with my plan"');
+    expect(h).toContain('label="Usage and history"');
+    expect(h).not.toContain('label="History" kind');
+    expect(h).toContain("membership/purchase");
+    expect(read("src/app/(tabs)/membership/[planId].tsx")).toContain("Redirect");
+  });
 });

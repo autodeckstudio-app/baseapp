@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { View } from "react-native";
+import { useRouter } from "expo-router";
 import type { MembershipUsage } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Kicker, PageHeader, Loading, Notice, Pane, Row, Screen, rupees } from "../../../ui/kit";
@@ -16,6 +17,7 @@ function formatDate(iso: string): string {
 }
 
 export default function MembershipUsageScreen() {
+  const router = useRouter();
   const auth = useAuth();
   const [usage, setUsage] = useState<MembershipUsage[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
@@ -82,6 +84,7 @@ export default function MembershipUsageScreen() {
           })}
         </Pane>
       )}
+      <Button label="Plan history" kind="quiet" onPress={() => router.push("/(tabs)/membership/history")} />
     </Screen>
   );
 }

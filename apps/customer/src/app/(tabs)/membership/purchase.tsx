@@ -11,6 +11,7 @@ import { purchaseMembership, generateIdempotencyKey } from "../../../lib/members
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { useAuth } from "../../../hooks/useAuth";
+import { carryOverLine } from "../../../lib/membership-rules";
 import { pickupsLine } from "../../../lib/membership-view";
 
 export default function PurchaseMembershipScreen() {
@@ -124,7 +125,7 @@ export default function PurchaseMembershipScreen() {
     <Screen
       header={
         <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">Confirm purchase</Kicker>
+          <Kicker tone="accent">{plan.tier}</Kicker>
           <T role="title">{plan.name}</T>
         </View>
       }
@@ -137,6 +138,10 @@ export default function PurchaseMembershipScreen() {
         <Row title="Price" detail={`${rupees(plan.priceInPaise)} / month`} last />
       </Pane>
 
+      <T role="caption" tone="tertiary">
+        {[carryOverLine(), plan.discountPercent > 0 ? "Non-wash services receive the discount automatically at booking." : ""].filter(Boolean).join(" ")}
+      </T>
+
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         Benefits unlock only after your payment is confirmed. Online payments activate automatically once verified; pay-at-studio requests are confirmed at the front desk.
       </T>
@@ -146,7 +151,6 @@ export default function PurchaseMembershipScreen() {
       <View style={{ gap: space.breath }}>
         <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} />
         <Button label="Pay at studio" kind="quiet" busy={purchasing} onPress={() => void handlePurchase("cash")} />
-        <Button label="Go back" kind="quiet" onPress={() => router.back()} />
       </View>
     </Screen>
   );
