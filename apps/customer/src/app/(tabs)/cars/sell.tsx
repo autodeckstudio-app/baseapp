@@ -65,9 +65,9 @@ export default function SellScreen() {
     );
   }
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Sell your car</Kicker><T role="title">Make the next move</T></View>}>
+    <Screen appBar="Sell your car">
       <T tone="secondary">A clear listing starts with your car's story. The studio reviews it before buyers see it.</T>
-      <View style={{flexDirection:"row",gap:8}}>{steps.map((label,i)=><View key={label} style={{flex:1,gap:8}}><View style={{height:3,backgroundColor:i<=step?"#EC8638":"#353538",borderRadius:2}}/><T role="caption" tone={i===step?"accent":"tertiary"}>{i+1}. {label}</T></View>)}</View>
+      <View style={{flexDirection:"row",gap:8}}>{steps.map((label,i)=><View key={label} style={{flex:1,gap:8}}><View style={{height:3,backgroundColor:i<=step?"#EC8638":"rgba(128,128,136,0.35)",borderRadius:9999}}/><T role="caption" tone={i===step?"accent":"tertiary"}>{i+1}. {label}</T></View>)}</View>
       {step===0 && <View style={{ gap: space.line }}>
         <Kicker>Your vehicle</Kicker>
         <Field label="Make" value={f.make} error={fieldErrors.make} onBlur={() => setFieldErrors((p) => ({ ...p, make: validateSellStep(f, step, photos.length).make }))} onChangeText={(v) => up("make", v)} placeholder="Tata" autoCapitalize="words" maxLength={50} />

@@ -497,3 +497,22 @@ describe("Cars entry points (owner: buy and sell must be reachable)", () => {
     expect(cars.match(/label="Sell your car"/g)?.length).toBe(1);
   });
 });
+
+describe("Cars pages follow the common design rules", () => {
+  const pages = ["src/app/(tabs)/cars/index.tsx", "src/app/(tabs)/cars/sell.tsx", "src/app/(tabs)/cars/[id].tsx"];
+  it("no second title block: the one header names the screen", () => {
+    expect(read(pages[0]!)).toContain('<Screen appBar="Cars">');
+    expect(read(pages[1]!)).toContain('<Screen appBar="Sell your car">');
+    for (const p of pages) expect(read(p)).not.toMatch(/<Screen\s+(top|header)=/);
+  });
+  it("only the allowed radii and no fixed dark-only surfaces", () => {
+    for (const p of pages) {
+      const s = read(p);
+      expect(s).not.toMatch(/borderRadius:\s*(999|20|2)\b/);
+      expect(s).not.toMatch(/#151517|#202023|#373735|#353538|#454548/);
+    }
+  });
+  it("car cards use the shared glass surface", () => {
+    expect(read(pages[0]!)).toContain("glassPane(day)");
+  });
+});

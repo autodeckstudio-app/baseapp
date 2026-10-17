@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, Field, Kicker, Notice, Screen, Skeleton, T } from "../../../ui/kit";
+import { glassPane } from "../../../lib/glass-pane";
 import { filterCars } from "../../../lib/car-filters";
 import { getCarListings, inr, kmLabel } from "../../../lib/carsale-service";
 
@@ -41,12 +42,13 @@ function Choice({label,value,onChange,options}:{label:string;value:string;onChan
 }
 
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${l.priceHidden ? "price on request" : inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",borderRadius:24,overflow:"hidden",backgroundColor:"#151517",borderWidth:1,borderColor:"rgba(255,255,255,.10)",opacity:pressed?.85:1})}>
-    <View style={{aspectRatio:3/2,backgroundColor:"#202023"}}>{l.photoUrls[0] ? <Image source={{uri:l.photoUrls[0]}} resizeMode="cover" style={{width:"100%",height:"100%"}}/> : <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><T tone="tertiary">Photo unavailable</T></View>}
-      <View style={{position:"absolute",top:14,left:14,backgroundColor:"rgba(10,10,12,.82)",borderRadius:999,paddingHorizontal:12,paddingVertical:6}}><T role="caption">{l.status==="reserved" ? "Reserved" : l.source==="studio" ? "Studio listing" : "Customer listing"}</T></View>
+  const day = useExperienceTheme().name === "light";
+  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${l.priceHidden ? "price on request" : inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",overflow:"hidden",opacity:pressed?.85:1,...glassPane(day)})}>
+    <View style={{aspectRatio:3/2,backgroundColor:"rgba(128,128,136,0.2)"}}>{l.photoUrls[0] ? <Image source={{uri:l.photoUrls[0]}} resizeMode="cover" style={{width:"100%",height:"100%"}}/> : <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><T tone="tertiary">Photo unavailable</T></View>}
+      <View style={{position:"absolute",top:14,left:14,backgroundColor:"rgba(10,10,12,.82)",borderRadius:9999,paddingHorizontal:12,paddingVertical:6}}><T role="caption" style={{color:"#FFFFFF"}}>{l.status==="reserved" ? "Reserved" : l.source==="studio" ? "Studio listing" : "Customer listing"}</T></View>
     </View>
-    <View style={{padding:20,gap:10}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{l.priceHidden ? "Ask price" : inr(l.askingPrice)}</T></View>
-      <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area}</T><T role="caption" tone="accent">View car ›</T></View>
+    <View style={{padding:16,gap:12}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{l.priceHidden ? "Ask price" : inr(l.askingPrice)}</T></View>
+      <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area}</T><T role="caption" tone="accent">View car</T></View>
     </View>
   </Pressable>;
 }
@@ -73,24 +75,17 @@ export default function CarsScreen() {
   }, [attempt]);
 
   return (
-    <Screen
-      top={
-        <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">Cars for sale</Kicker>
-          <T role="title">Find your next car</T>
-        </View>
-      }
-    >
+    <Screen appBar="Cars">
       <T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T>
       <Button kind="quiet" label="Sell your car" onPress={() => router.push("/(tabs)/cars/sell")} />
       {all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
           <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:999,borderWidth:1,borderColor:filtering?"#EC8638":"#454548",backgroundColor:"#202023",justifyContent:"center"}}><T role="bodyStrong">Filters</T></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Filter cars" accessibilityState={{expanded:filtersOpen}} onPress={()=>setFiltersOpen(!filtersOpen)} style={{minHeight:48,paddingHorizontal:18,borderRadius:9999,borderWidth:1,borderColor:filtering?"#EC8638":themeNight?"rgba(255,255,255,0.28)":"rgba(29,27,38,0.16)",backgroundColor:themeNight?"rgba(255,255,255,0.08)":"rgba(29,27,38,0.06)",justifyContent:"center"}}><T role="bodyStrong">Filters</T></Pressable>
             <View style={{flex:1}}><Choice label="Sort cars" value={sort} onChange={v=>setSort(v as typeof sort)} options={[{value:"new",label:"Newest first"},{value:"low",label:"Price: low to high"},{value:"high",label:"Price: high to low"}]}/></View>
           </View>
-          {filtersOpen ? <View style={{padding:18,gap:16,borderRadius:20,borderWidth:1,borderColor:"rgba(29,27,38,0.12)",backgroundColor:themeNight?"#373735":"#FFFFFF"}}>
+          {filtersOpen ? <View style={{padding:16,gap:16,...glassPane(!themeNight)}}>
             <View style={{gap:8}}><Kicker>Budget</Kicker><Choice label="Car budget" value={budget} onChange={setBudget} options={BUDGETS.map(b=>({value:b.id,label:b.label}))}/></View>
             <View style={{gap:8}}><Kicker>Fuel</Kicker><Choice label="Car fuel" value={fuel??""} onChange={v=>setFuel(v||null)} options={[{value:"",label:"Any fuel"},...FUEL_FILTERS.map(f=>({value:f,label:f.toUpperCase()==="CNG"?"CNG":f[0]!.toUpperCase()+f.slice(1)}))]}/></View>
             <View style={{gap:8}}><Kicker>Body type</Kicker><Choice label="Car body type" value={body??""} onChange={v=>setBody(v||null)} options={[{value:"",label:"Any body type"},...BODY_FILTERS.map(b=>({value:b,label:["suv","muv"].includes(b)?b.toUpperCase():b[0]!.toUpperCase()+b.slice(1)}))]}/></View>
