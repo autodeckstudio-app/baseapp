@@ -648,3 +648,13 @@ describe("home header blends into the page (PWA and web)", () => {
     expect(b).not.toContain("useExperienceTheme");
   });
 });
+
+describe("Home live card (concept C)", () => {
+  it("car photo card with LIVE badge, four-step bar, ready-by and one Track button", () => {
+    const h = read("src/ui/HomeView.tsx");
+    expect(h).toContain("LIVE_STEPS");
+    expect(h).toContain(">LIVE<");
+    expect(h).toContain(">Track<");
+    expect(h).toContain("Ready by ${live.ready}");
+  });
+});

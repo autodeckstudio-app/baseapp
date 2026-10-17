@@ -1,6 +1,8 @@
 // Customer Home in the reference layout: round menu + car and status + bell and
 // avatar, a car hero, visit and health tiles, four round actions, studio and
 // membership row, stories and follow links. One entry point per thing: services live in the Services tab, papers in Car.
+import { CarThumb } from "./CarThumb";
+import { liveStep } from "../lib/live-step";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Platform, useWindowDimensions, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { pickTopServices, type TopPick } from "../lib/top-services";
@@ -26,7 +28,7 @@ import type { Campaign } from "../lib/campaign";
 export type HomeCar = { id: string; title: string; plate: string; /** The vehicle record. Photo comes from the same source as Garage (CarThumb), for every car. */ vehicle?: Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string }; category?: string | null; hasPhoto?: boolean };
 export type HomeService = { id: string; category: string; name: string; price: string; brand?: string | null };
 export type HomeReminder = { title: string; detail: string; chip: string; danger: boolean };
-export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void; idle?: boolean };
+export type HomeLive = { kicker: string; title: string; detail: string; onPress: () => void; idle?: boolean; /** Expected ready time, shown only when set and still ahead. */ ready?: string | null };
 export type HomeViewProps = {
   rebook?: { serviceName: string; onPress: () => void } | null;
   greeting: string;
@@ -196,16 +198,38 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
 }
 
 /** Slot 1 while a car is in the studio: the live job with the car inside it. Replaces the car chip, so "in studio" is said once. */
+const LIVE_STEPS = ["Received", "In progress", "Final checks", "Ready"];
+
+/** Live visit: the car photo fills the card, with the step, the four-step bar, ready-by and one Track button. */
 function LiveCard({ live, pct, car }: { live: HomeLive; pct: number | null; car: HomeCar | undefined }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
+  const step = liveStep(pct);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={live.title} onPress={live.onPress} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light") })}>
-      <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{live.kicker}</Text>
-      {car ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "700", flexShrink: 1 }}>{car.title}</Text>{car.plate ? <Plate value={car.plate} /> : null}</View> : null}
-      <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800", lineHeight: 26 }}>{live.title}</Text>
-      {live.detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{live.detail}</Text> : null}
-      {pct !== null ? <View style={{ height: 8, overflow: "hidden", ...r.well, borderRadius: 6 }}><View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} /></View> : null}
+    <Pressable accessibilityRole="button" accessibilityLabel={live.title} onPress={live.onPress} style={({ pressed }) => ({ borderRadius: 24, overflow: "hidden", minHeight: 236, backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", opacity: pressed ? 0.92 : 1 })}>
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+        <CarThumb car={car?.vehicle} height={300} radius={0} />
+      </View>
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.2) 35%, rgba(0,0,0,.88) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.4)" }) }} />
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 14 }}>
+        <View style={{ backgroundColor: "#EC8638", borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 }}><Text style={{ color: "#1A1410", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>LIVE</Text></View>
+        {car?.plate ? <Plate value={car.plate} /> : null}
+      </View>
+      <View style={{ flex: 1 }} />
+      <View style={{ padding: 16, gap: 10 }}>
+        <Text numberOfLines={1} style={{ color: "#E4E2DF", fontSize: 13 }}>{[car?.title, live.detail].filter(Boolean).join(" \u00b7 ")}</Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 24, fontWeight: "800", lineHeight: 30 }}>{live.title}</Text>
+        <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
+          {LIVE_STEPS.map((n, i) => (
+            <View key={n} style={{ flex: 1, gap: 6 }}>
+              <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(255,255,255,0.28)" }} />
+              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 10.5, opacity: i <= step ? 1 : 0.6, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <Text numberOfLines={1} style={{ color: "#E4E2DF", fontSize: 13, flex: 1 }}>{live.ready ? `Ready by ${live.ready}` : ""}</Text>
+          <View style={{ backgroundColor: "#FFFFFF", borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8 }}><Text style={{ color: "#111111", fontSize: 13, fontWeight: "700" }}>Track</Text></View>
+        </View>
+      </View>
     </Pressable>
   );
 }
