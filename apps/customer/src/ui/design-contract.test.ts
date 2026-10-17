@@ -625,3 +625,14 @@ describe("club (batch 4)", () => {
     expect(read("src/app/(tabs)/membership/[planId].tsx")).toContain("Redirect");
   });
 });
+
+it("notifications has All, Bookings, Papers and Club chips", () => {
+  const n = read("src/app/(tabs)/notifications/index.tsx");
+  for (const k of ["All", "Bookings", "Papers", "Club"]) expect(n).toContain(`label: "${k}"`);
+});
+
+it("car for sale detail has Call studio and I am interested", () => {
+  const c = read("src/app/(tabs)/cars/[id].tsx");
+  expect(c).toContain('label="Call studio"');
+  expect(c).toContain('"I am interested"');
+});

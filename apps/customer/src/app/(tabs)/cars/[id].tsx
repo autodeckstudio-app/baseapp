@@ -1,6 +1,7 @@
 // One car: photos, plain facts, "I'm interested" (goes to the studio, never to the seller) and "Report this listing".
+import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Image, Linking, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -111,10 +112,11 @@ export default function CarDetail() {
       ) : (
         <View style={{ gap: space.gap }}>
           <View style={{gap:8}}><Kicker>Interested?</Kicker><T role="heading">See if this is your next car</T><T tone="secondary">Ask the studio about this car. Your number is not shown to the seller.</T></View>
-          {authState.status === "unauthenticated" ? <Button label="Sign in to enquire" onPress={() => router.push("/(auth)/login")}/> : !showEnquiry ? <Button label={!hasCarPrice(car) ? "Request the price" : "Enquire about this car"} onPress={() => setShowEnquiry(true)}/> : <View style={{gap:12}}><Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
+          {authState.status === "unauthenticated" ? <Button label="Sign in to enquire" onPress={() => router.push("/(auth)/login")}/> : !showEnquiry ? <Button label={!hasCarPrice(car) ? "Request the price" : "I am interested"} onPress={() => setShowEnquiry(true)}/> : <View style={{gap:12}}><Field label="Your phone number (required for enquiries)" value={phone} error={phoneError} onChangeText={(v) => { setPhone(v); setPhoneError(undefined); }} keyboardType="phone-pad" placeholder="So the studio can reach you" maxLength={15} />
           <Field label="Message (optional)" value={note} onChangeText={setNote} maxLength={300} />
           {error ? <Notice title="Not sent" body={error} /> : null}
           <Button label="Send enquiry to the studio" busy={busy} onPress={() => void send("interest")} /></View>}
+          {STUDIO_INFO.phone ? <Button kind="quiet" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /> : null}
           {showReport ? (
             <Button kind="quiet" label="Send report" busy={busy} onPress={() => void send("report")} />
           ) : (

@@ -1,3 +1,5 @@
+import { inChip, type NotificationChip } from "../../../lib/notification-groups";
+import { TabPills } from "../../../ui/CarOverview";
 import { glassInner } from "../../../lib/glass";
 import { repairText } from "../../../lib/text-repair";
 import { invoiceHref } from "../../../lib/invoice-display";
@@ -94,8 +96,9 @@ export default function NotificationsScreen() {
     }
   }
 
-  const shown = visibleNotifications(notifications, hidden);
-  const canClear = clearable(shown).length > 0;
+  const [chip, setChip] = useState<NotificationChip>("all");
+  const shown = inChip(visibleNotifications(notifications, hidden), chip);
+  const canClear = chip === "all" && clearable(shown).length > 0;
 
   if (loading) return <Loading label="Checking for updates" />;
   if (error) {
@@ -108,6 +111,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen header={<PageHeader kicker="Updates" title="Notifications" />}>
+      <TabPills tabs={[{ key: "all", label: "All" }, { key: "bookings", label: "Bookings" }, { key: "papers", label: "Papers" }, { key: "club", label: "Club" }]} value={chip} onChange={setChip} />
       {canClear ? <Button kind="quiet" label="Clear all" onPress={() => hide(clearable(shown))} /> : null}
       {pushState === "prompt" && pushPermission() === "prompt" ? (
         <Notice
