@@ -18,6 +18,12 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
+import { GarageShowroom } from "../../../ui/GarageShowroom";
+import { CareRing } from "../../../ui/CareRing";
+import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
+import { liveTrackTarget } from "../../../lib/bookings-view";
+import { listenToMyMemberships } from "../../../lib/home-service";
+import type { Membership } from "@autodeck/core";
 
 
 function DueChip({ text }: { text: string }) {
@@ -45,6 +51,7 @@ export default function GarageScreen() {
   const [pick, setPick] = useState<string | null>(null);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>({});
+  const [plan, setPlan] = useState<Membership | null>(null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.user.uid : null;
@@ -56,6 +63,7 @@ export default function GarageScreen() {
   }, [uid, tenantId, retryTick]);
 
   useEffect(() => { if (!uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { if (!uid || !tenantId) return; return listenToMyMemberships(tenantId, uid, (ms) => setPlan(ms.find((m) => m.status === "active") ?? null), () => undefined); }, [uid, tenantId, retryTick]);
   useEffect(() => { void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
   useEffect(()=>{if(!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
   async function restore(v:Vehicle){setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not restore the car.");}finally{setArchiveActionBusy(null);}}
@@ -123,19 +131,47 @@ export default function GarageScreen() {
           <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
         </View>
       ) : one ? (
-        <View style={{ ...glassPane(light), overflow: "hidden" }}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${one.make} ${one.model}`} onPress={() => open(one)}>
-            {one.photoUrl ? <CarThumb car={one} height={metrics.heroTall} radius={0} /> : <View style={{ height: metrics.heroCompact }} />}
-          </Pressable>
-          <View style={{ padding: metrics.cardPad, gap: space.breath }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-                <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 18, fontWeight: "800" }}>{`${one.make ?? ""} ${one.model ?? ""}`.trim()}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={one.registrationNumber} />{segmentLabel(one.category) ? <Text style={{ color: ink.textSecondary, fontSize: 12 }}>{segmentLabel(one.category)}</Text> : null}</View>
+        <View style={{ gap: space.breath }}>
+          {liveJobForCar(jobs, one.id) ? (() => {
+            const job = liveJobForCar(jobs, one.id)!;
+            const step = jobStep(job.status);
+            const target = liveTrackTarget(job, null);
+            const ready = readyBy(job);
+            return (
+              <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} /><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "800" }}>In the studio now</Text></View>
+                  {ready ? <Text style={{ color: ink.textSecondary, fontSize: 12 }}>{`Ready by ${ready}`}</Text> : null}
+                </View>
+                <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
+                  {LIVE_STEP_NAMES.map((n, i) => (
+                    <View key={n} style={{ flex: 1, gap: 6 }}>
+                      <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(128,128,128,0.3)" }} />
+                      <Text numberOfLines={1} style={{ color: i <= step ? ink.textPrimary : ink.textSecondary, fontSize: 10.5, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Button label="Track and chat" onPress={() => router.push(target ? `/(tabs)/bookings/${target}` : "/(tabs)/bookings")} />
               </View>
-              {chip(one) ? <DueChip text={chip(one)!} /> : null}
-            </View>
+            );
+          })() : null}
+          <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={(v) => (chip(v) ? <DueChip text={chip(v)!} /> : null)} />
+          {careRing(plan) ? (() => {
+            const r = careRing(plan)!;
+            return (
+              <View style={{ ...glassPane(light), padding: metrics.cardPad, flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <CareRing fraction={r.fraction} left={r.left} total={r.total} />
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>CARE PLAN</Text>
+                  <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 16, fontWeight: "800" }}>{r.line}</Text>
+                  <Text style={{ color: ink.textSecondary, fontSize: 13 }}>{r.sub}</Text>
+                </View>
+              </View>
+            );
+          })() : null}
+          <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
             <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+            <Button label="Service history" kind="quiet" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } })} />
           </View>
         </View>
       ) : (
