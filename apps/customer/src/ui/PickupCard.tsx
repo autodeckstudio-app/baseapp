@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Pane, Row, T } from "./kit";
-import { Linking } from "react-native";
-import { PICKUP_FEE_PER_LEG_PAISE, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, pickupZone } from "@autodeck/core";
-import { STUDIO_INFO } from "../lib/studio-info";
+import { PICKUP_FEE_PER_LEG_PAISE, PICKUP_FLAT_KM, PICKUP_FREE_KM, PICKUP_PER_KM_PAISE, pickupFeePaise, pickupZone } from "@autodeck/core";
 import { getDeviceLocation, getPickupRequest, listenToPickupRequest, requestPickupDrop, type PickupRequest } from "../lib/pickup-service";
 
 const KINDS: { value: PickupRequest["kind"]; label: string }[] = [
@@ -28,8 +26,8 @@ function formatAgreed(iso: string): string {
 
 /** Ask the studio to collect or return the car. It is a request: the studio confirms it. */
 const LEG = `Rs ${PICKUP_FEE_PER_LEG_PAISE / 100}`;
-const feeText = (kind: "pickup" | "drop" | "both") => `Rs ${pickupFeePaise("fee", kind) / 100}`;
-const POLICY = `Free within ${PICKUP_FREE_KM} km of the studio. From ${PICKUP_FREE_KM} to ${PICKUP_MAX_KM} km it is ${LEG} for pickup and ${LEG} for drop-off. Further than that, please call the studio. The fee is paid at the studio.`;
+const feeText = (km: number, kind: "pickup" | "drop" | "both") => `Rs ${pickupFeePaise(km, kind) / 100}`;
+const POLICY = `Free within ${PICKUP_FREE_KM} km of the studio. From ${PICKUP_FREE_KM} to ${PICKUP_FLAT_KM} km it is ${LEG} for pickup and ${LEG} for drop-off. Beyond ${PICKUP_FLAT_KM} km add Rs ${PICKUP_PER_KM_PAISE / 100} for every km past ${PICKUP_FLAT_KM}, for each of pickup and drop-off. Distance is measured in a straight line. The fee is paid at the studio.`;
 
 export function PickupCard({ bookingId }: { bookingId: string }) {
   const [req, setReq] = useState<PickupRequest | null>(null);
@@ -56,7 +54,6 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
   }
 
   async function send() {
-    if (zone?.tier === "blocked") { setError(`We collect and return cars within ${PICKUP_MAX_KM} km of the studio. Please call us to arrange it.`); return; }
     if (address.trim().length < 8) { setError("Enter the full address."); return; }
     setBusy(true);
     setError(null);
@@ -114,13 +111,12 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             <T role="caption" tone="secondary">{POLICY}</T>
             <Field label="Address" value={address} onChangeText={setAddress} placeholder="House, street, area" multiline />
             <Button label={where ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locate()} />
-            {zone ? <T role="caption" tone={zone.tier === "blocked" ? "danger" : "secondary"}>{zone.tier === "free" ? `About ${zone.km} km from the studio. Free.` : zone.tier === "fee" ? `About ${zone.km} km from the studio. ${feeText(kind)} for ${kind === "both" ? "pickup and drop-off" : kind === "pickup" ? "pickup" : "drop-off"}.` : `About ${zone.km} km from the studio. Please call us to arrange it.`}</T> : null}
-            {zone?.tier === "blocked" && STUDIO_INFO.phone ? <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /> : null}
+            {zone ? <T role="caption" tone="secondary">{zone.tier === "free" ? `About ${zone.km} km from the studio. Free.` : `About ${zone.km} km from the studio. ${feeText(zone.km, kind)} for ${kind === "both" ? "pickup and drop-off" : kind === "pickup" ? "pickup" : "drop-off"}.`}</T> : null}
             {kind !== "drop" ? <Field label={kind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"} value={pickupTime} onChangeText={setPickupTime} placeholder="e.g. Saturday morning" /> : null}
             {kind !== "pickup" ? <Field label="Preferred drop-off time (optional)" value={dropTime} onChangeText={setDropTime} placeholder="e.g. Sunday evening" /> : null}
             <T role="caption" tone="secondary">This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.</T>
             {error ? <T role="caption" tone="danger">{error}</T> : null}
-            <Button label="Send request" busy={busy} disabled={zone?.tier === "blocked"} onPress={() => void send()} />
+            <Button label="Send request" busy={busy} onPress={() => void send()} />
             <Button label="Cancel" kind="quiet" onPress={() => setOpen(false)} />
           </View>
         </Pane>

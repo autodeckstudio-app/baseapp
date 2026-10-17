@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
 import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
-import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, type Booking, type Invoice, type ServiceJob, type Membership } from "@autodeck/core";
+import { pickupZone, pickupFeePaise, type Booking, type Invoice, type ServiceJob, type Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -72,9 +72,8 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
   let feePaise: number | null = null;
   if (data.lat !== undefined && data.lng !== undefined) {
     const z = pickupZone({ lat: data.lat, lng: data.lng });
-    if (z.tier === "blocked") throw new HttpsError("failed-precondition", `We collect and return cars within ${PICKUP_MAX_KM} km of the studio. Please call the studio to arrange it.`);
     distanceKm = z.km;
-    feePaise = pickupFeePaise(z.tier, data.kind);
+    feePaise = pickupFeePaise(z.km, data.kind);
   }
   const db = getFirestore();
   const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();

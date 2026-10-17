@@ -27,7 +27,7 @@ export const MENU_GROUPS: MenuGroup[] = [
   { key: "ppf", label: "PPF", blurb: "Paint protection film by brand and coverage.", categories: ["ppf"], pricing: "mixed", byBrand: true },
   { key: "garage", label: "Garage", blurb: "Health checks with published prices. Repairs start with an inspection.", categories: ["garage", "inspection", "other"], pricing: "mixed", byBrand: false },
   { key: "mods", label: "Modifications & wraps", blurb: "Tint, wraps and styling. We quote after seeing the car.", categories: ["modifications", "tinting"], pricing: "consult", byBrand: false },
-  { key: "pickup", label: "Pickup & drop", blurb: "Flat-rate pickup and drop for your car.", categories: ["pickup"], pricing: "priced", byBrand: false },
+  { key: "pickup", label: "Pickup & drop", blurb: "We collect your car and bring it back.", categories: ["pickup"], pricing: "priced", byBrand: false },
 ];
 
 export function menuGroupOf(category: ServiceCategory): MenuGroup {

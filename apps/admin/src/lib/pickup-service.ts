@@ -17,7 +17,7 @@ export interface PickupRequestRow {
   agreedDropAt?: string | null;
   status: "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED";
   staffNote: string;
-  /** Set by the server from the shared location: 0 = free, 10000 = Rs 100 flat. null/absent = confirm distance and fee by phone. */
+  /** Set by the server from the shared location: 0 = free, otherwise the whole request in paise (per leg, both = two legs). null/absent = confirm distance and fee by phone. */
   feePaise?: number | null;
   /** True once the fee is on the visit's bill. False after approval means the visit was already invoiced or paid. */
   feeBilled?: boolean;

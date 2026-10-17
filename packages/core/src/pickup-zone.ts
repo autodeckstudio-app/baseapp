@@ -1,20 +1,33 @@
-/** Beyond the free zone and up to this distance, pickup and drop costs a fee per leg. Further than this the studio does not collect. */
-export const PICKUP_MAX_KM = 7;
-/** Fee per leg, in paise: Rs 100 for pickup and Rs 100 for drop, so Rs 200 for both. Read from here by the server and the app, never typed twice. */
-export const PICKUP_FEE_PER_LEG_PAISE = 10_000;
+/** Pickup and drop, one rule for every service (wash, garage, club). Free up to 3 km. From 3 to 5 km a flat fee per leg.
+ *  Beyond 5 km the flat fee plus a per km charge on the distance past 5 km, like a ride app. A leg is one trip, so "both" is two legs.
+ *  There is no distance limit. Values live here only: the server and the apps read them, never typed twice. */
+export const PICKUP_FREE_KM = 3;
+/** Up to here the fee is flat. Past it the per km charge starts. */
+export const PICKUP_FLAT_KM = 5;
+/** Flat fee per leg from 3 to 5 km, in paise: Rs 150. */
+export const PICKUP_FEE_PER_LEG_PAISE = 15_000;
+/** Charge per km past 5 km, in paise: Rs 15. Each started km counts, so a straight-line distance never undercharges a road trip. */
+export const PICKUP_PER_KM_PAISE = 1_500;
 
 export type PickupKind = "pickup" | "drop" | "both";
-/** Fee for a request: free inside 3 km, per leg from 3 to 7 km. A leg is one trip, so "both" is two. */
-export function pickupFeePaise(tier: "free" | "fee" | "blocked", kind: PickupKind): number {
-  return tier === "fee" ? PICKUP_FEE_PER_LEG_PAISE * (kind === "both" ? 2 : 1) : 0;
-}
 
-/** Where pickup and drop is free. Within this distance of the studio only. Beyond it the studio arranges it by phone. */
-export const PICKUP_FREE_KM = 3;
+/** Fee for ONE leg at this distance, in paise. */
+export function pickupLegFeePaise(km: number): number {
+  if (km <= PICKUP_FREE_KM) return 0;
+  if (km <= PICKUP_FLAT_KM) return PICKUP_FEE_PER_LEG_PAISE;
+  return PICKUP_FEE_PER_LEG_PAISE + Math.ceil(Math.round((km - PICKUP_FLAT_KM) * 10) / 10) * PICKUP_PER_KM_PAISE;
+}
+/** Fee for a request at this distance: per leg, so "both" is twice one leg. */
+export function pickupFeePaise(km: number, kind: PickupKind): number {
+  return pickupLegFeePaise(km) * (kind === "both" ? 2 : 1);
+}
+/** Short text for the catalogue tile. Numbers come from the constants above. */
+export const PICKUP_TILE_TEXT = `Free to ${PICKUP_FREE_KM} km`;
+
 /** The studio front door, geocoded from its address in studio-info (Sunbeam Complex, Ellisbridge). */
 export const STUDIO_COORDS = { lat: 23.0192928, lng: 72.5614457 } as const;
 
-/** Straight-line distance in km. Roads are longer, so the free zone is generous by a little. */
+/** Straight-line distance in km. Roads are longer, so the fee is a little lower than a road trip would be. */
 export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6371, rad = (d: number) => (d * Math.PI) / 180;
   const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
@@ -22,11 +35,9 @@ export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; l
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export type PickupTier = "free" | "fee" | "blocked";
+export type PickupTier = "free" | "fee";
 
-/** Free up to 3 km, a per-leg fee up to 7 km, then not offered (the customer calls the studio). Distances are straight-line. */
 export function pickupZone(point: { lat: number; lng: number }): { km: number; within: boolean; tier: PickupTier; feePerLegPaise: number } {
-  const km = haversineKm(STUDIO_COORDS, point);
-  const tier: PickupTier = km <= PICKUP_FREE_KM ? "free" : km <= PICKUP_MAX_KM ? "fee" : "blocked";
-  return { km: Math.round(km * 10) / 10, within: tier === "free", tier, feePerLegPaise: tier === "fee" ? PICKUP_FEE_PER_LEG_PAISE : 0 };
+  const km = Math.round(haversineKm(STUDIO_COORDS, point) * 10) / 10;
+  return { km, within: km <= PICKUP_FREE_KM, tier: km <= PICKUP_FREE_KM ? "free" : "fee", feePerLegPaise: pickupLegFeePaise(km) };
 }

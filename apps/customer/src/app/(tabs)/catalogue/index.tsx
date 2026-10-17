@@ -7,7 +7,7 @@ import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "reac
 import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS} from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, GST_ENABLED, menuGroupOf, needsInspectionNote, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
+import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, GST_ENABLED, menuGroupOf, PICKUP_TILE_TEXT, needsInspectionNote, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
 import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
@@ -150,7 +150,7 @@ export default function CatalogueScreen() {
         found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : grid(found.map(card))
       ) : null}
       {services && !searching && level === 1 ? (
-        grid(visibleGroups.map((g) => tile(g.key, g.label, g.blurb, g.pricing === "consult" ? "Consult" : pricedFrom(inGroup(g)) ?? undefined, "tools", () => go({ cat: g.key }), serviceImagery[GROUP_IMAGE[g.key] ?? "other"])))
+        grid(visibleGroups.map((g) => tile(g.key, g.label, g.blurb, g.pricing === "consult" ? "Consult" : g.key === "pickup" ? PICKUP_TILE_TEXT : pricedFrom(inGroup(g)) ?? undefined, "tools", () => go({ cat: g.key }), serviceImagery[GROUP_IMAGE[g.key] ?? "other"])))
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: 22 }}>

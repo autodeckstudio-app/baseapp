@@ -12,6 +12,8 @@ describe("pickup fee legs", () => {
     expect(legFees("pickup", 10000)).toEqual({ pickup: 10000, drop: 0 });
     expect(legFees("drop", 10000)).toEqual({ pickup: 0, drop: 10000 });
     expect(legFees("both", 20000)).toEqual({ pickup: 10000, drop: 10000 });
+    expect(legFees("both", 33000)).toEqual({ pickup: 16500, drop: 16500 });
+    expect(legFees("pickup", 16500)).toEqual({ pickup: 16500, drop: 0 });
     expect(legFees("both", 0)).toEqual({ pickup: 0, drop: 0 });
     expect(legFees("both", null)).toEqual({ pickup: 0, drop: 0 });
   });

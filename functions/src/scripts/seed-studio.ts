@@ -73,7 +73,7 @@ const studioConfig: Omit<StudioConfig, "updatedAt"> = {
 };
 
 // Club structure from the 17 Oct 2026 owner chat (comment is a note, not authority; no % discounts in this version).
-// Every plan is Rs 900 per wash. Free pickups waive the Rs 100 per leg fee beyond 3 km; one pickup request uses one.
+// Every plan is Rs 900 per wash. Free pickups waive the whole pickup fee (flat and per km); one pickup request uses one.
 //   Starter Rs 1,800 = 2 washes, no pickup
 //   Silver Rs 3,600 = 4 washes + 1 free pickup
 //   Gold Rs 5,400 = 6 washes + 3 free pickups
