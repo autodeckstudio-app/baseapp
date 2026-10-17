@@ -33,7 +33,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const web = Platform.OS === "web";
   return (
-    <LoginStage title="Welcome to AutoDeck" copy="Book services, follow your car's visit and keep every bill and warranty in one place." error={error}>
+    <LoginStage title="Welcome to AutoDeck" error={error}>
       {web ? <WebGoogleButton onError={setError} /> : googleSignInConfigured() ? <GoogleButton onError={setError} /> : null}
       {!web && useEmulator ? <DevSignIn onError={setError} /> : null}
       {!web && !googleSignInConfigured() && !useEmulator ? <T tone="tertiary">Sign-in isn't set up in this build yet.</T> : null}
