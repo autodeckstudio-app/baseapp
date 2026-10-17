@@ -3,7 +3,9 @@ import { httpsCallable } from "firebase/functions";
 import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "./firebase";
 
-export type PickupRequest = { kind: "pickup" | "drop" | "both"; address: string; preferredTime: string; requestedPickupTime: string; requestedDropTime: string; agreedPickupAt: string | null; agreedDropAt: string | null; status: "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED"; staffNote: string; feePaise?: number | null };
+export type PickupRequest = {
+  /** Set by the studio when a member free pickup covered this request. */
+  memberMembershipId?: string | null; kind: "pickup" | "drop" | "both"; address: string; preferredTime: string; requestedPickupTime: string; requestedDropTime: string; agreedPickupAt: string | null; agreedDropAt: string | null; status: "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED"; staffNote: string; feePaise?: number | null };
 
 export async function getPickupRequest(bookingId: string): Promise<PickupRequest | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.pickupRequests(), bookingId));

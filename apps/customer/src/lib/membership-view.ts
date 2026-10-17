@@ -41,13 +41,13 @@ export function valueRedeemed(usage: Pick<MembershipUsage, "usageType" | "valueR
   return { total: washValue + discountValue, washes, washValue, discountValue };
 }
 
-export type CompareCol = { id: string; name: string; price: number; washes: number; discount: number; perWash: number | null; best: boolean; current: boolean };
+export type CompareCol = { id: string; name: string; price: number; washes: number; discount: number; perWash: number | null; pickups: number; priority: boolean; best: boolean; current: boolean };
 
 /** Plans side by side, cheapest first. perWash is the plan price divided by its washes, computed only for display. */
 export function compareCols(plans: MembershipPlan[], currentPlanId: string | null): CompareCol[] {
   const cols = plans.filter((p) => p.active !== false).sort((a, b) => a.priceInPaise - b.priceInPaise).map((p) => ({
     id: p.id, name: p.name, price: p.priceInPaise, washes: p.includedWashes, discount: p.discountPercent,
-    perWash: p.includedWashes > 0 ? Math.round(p.priceInPaise / p.includedWashes) : null, best: false, current: p.id === currentPlanId,
+    perWash: p.includedWashes > 0 ? Math.round(p.priceInPaise / p.includedWashes) : null, pickups: p.freePickups ?? 0, priority: !!p.prioritySlot, best: false, current: p.id === currentPlanId,
   }));
   const rates = cols.map((c) => c.perWash).filter((x): x is number => x !== null);
   const min = rates.length ? Math.min(...rates) : null;
@@ -58,4 +58,17 @@ export function compareCols(plans: MembershipPlan[], currentPlanId: string | nul
 /** "5% off other services", or null when the plan has no discount (never show "0% off"). */
 export function discountLine(pct: number): string | null {
   return pct > 0 ? `${pct}% off other services` : null;
+}
+
+/** "3 free pickups", or null when the plan has none (plans sold before the field existed have none). */
+export function pickupsLine(n: number | null | undefined): string | null {
+  const k = n ?? 0;
+  return k > 0 ? `${k} free pickup${k === 1 ? "" : "s"}` : null;
+}
+
+/** Free pickups left on a membership: "2 of 3 free pickups left", or null when the plan has none. */
+export function pickupsLeftLine(m: { pickupsTotal?: number; pickupsUsed?: number }): string | null {
+  const total = m.pickupsTotal ?? 0;
+  if (total <= 0) return null;
+  return `${Math.max(0, total - (m.pickupsUsed ?? 0))} of ${total} free pickups left`;
 }

@@ -8,6 +8,7 @@ import { space } from "@autodeck/ui/theme";
 import { HeroImage, Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { carryOverLine } from "../../../lib/membership-rules";
+import { pickupsLine } from "../../../lib/membership-view";
 import { sceneImagery } from "../../../lib/imagery";
 
 export default function PlanDetailScreen() {
@@ -55,8 +56,10 @@ export default function PlanDetailScreen() {
       </Pane>
 
       <Pane pad="gap">
-        <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
-        <Row title="Discount on other services" detail={plan.discountPercent > 0 ? `${plan.discountPercent}%` : "None"} last />
+        <Row title="Included washes" detail={`${plan.includedWashes} / month`} last={!pickupsLine(plan.freePickups) && !plan.prioritySlot && !(plan.discountPercent > 0)} />
+        {pickupsLine(plan.freePickups) ? <Row title="Free pickups" detail={`${plan.freePickups} / month`} last={!plan.prioritySlot && !(plan.discountPercent > 0)} /> : null}
+        {plan.prioritySlot ? <Row title="Priority slot" detail="Included" last={!(plan.discountPercent > 0)} /> : null}
+        {plan.discountPercent > 0 ? <Row title="Discount on other services" detail={`${plan.discountPercent}%`} last /> : null}
       </Pane>
 
       <T role="caption" tone="tertiary">

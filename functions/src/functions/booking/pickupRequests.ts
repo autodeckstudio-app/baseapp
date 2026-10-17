@@ -2,7 +2,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
-import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, type Booking, type Invoice, type ServiceJob } from "@autodeck/core";
+import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
+import { pickupZone, PICKUP_FREE_KM, PICKUP_MAX_KM, pickupFeePaise, type Booking, type Invoice, type ServiceJob, type Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -47,6 +48,9 @@ interface PickupRequestDoc {
   bookingId?: string;
   feePaise?: number | null;
   feeBilled?: boolean;
+  customerId?: string;
+  /** Set when a member free pickup paid for this request: the fee is waived and the membership is charged one pickup. */
+  memberMembershipId?: string | null;
 }
 
 
@@ -170,7 +174,29 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     // has a live invoice or any payment: those amounts are fixed, so the fee is flagged "not billed" for the studio to handle.
     let feeBilled = cur.feeBilled ?? false;
     const wantFee = data.status === "CONFIRMED" || data.status === "DONE";
-    const fees = wantFee ? legFees(cur.kind, cur.feePaise) : { pickup: 0, drop: 0 };
+    // Member free pickup: a request that has a fee uses one free pickup if the customer has one. Decided once (when first
+    // confirmed) and kept on repeat clicks; given back if the request is declined.
+    let memberMembershipId = cur.memberMembershipId ?? null;
+    const memberRows = wantFee && !memberMembershipId && (cur.feePaise ?? 0) > 0 && cur.customerId
+      ? await tx.get(db.collection(COLLECTIONS.memberships()).where("customerId", "==", cur.customerId).where("status", "==", "active"))
+      : null;
+    const heldRef = memberMembershipId ? db.collection(COLLECTIONS.memberships()).doc(memberMembershipId) : null;
+    const heldSnap = heldRef && data.status === "DECLINED" ? await tx.get(heldRef) : null;
+    // Membership writes wait until every read in this transaction is done (Firestore needs reads before writes).
+    let chargeMembership: { ref: FirebaseFirestore.DocumentReference; used: number } | null = null;
+    if (memberRows) {
+      const pick = membershipForFreePickup(memberRows.docs.map((d) => d.data() as Membership), now);
+      if (pick) {
+        memberMembershipId = pick.id;
+        chargeMembership = { ref: db.collection(COLLECTIONS.memberships()).doc(pick.id), used: (pick.pickupsUsed ?? 0) + 1 };
+      }
+    }
+    if (heldRef && heldSnap?.exists) {
+      const hm = heldSnap.data() as Membership;
+      chargeMembership = { ref: heldRef, used: Math.max(0, (hm.pickupsUsed ?? 0) - 1) };
+      memberMembershipId = null;
+    }
+    const fees = wantFee && !memberMembershipId ? legFees(cur.kind, cur.feePaise) : { pickup: 0, drop: 0 };
     if ((fees.pickup + fees.drop > 0 || feeBilled) && cur.bookingId && (wantFee || data.status === "DECLINED")) {
       const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", cur.bookingId).limit(1));
       const jobDoc = jobs.docs[0];
@@ -203,7 +229,8 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     }
     const feeUnbilled = wantFee && (fees.pickup + fees.drop > 0) && !feeBilled;
 
-    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, updatedAt: now });
+    if (chargeMembership) tx.update(chargeMembership.ref, { pickupsUsed: chargeMembership.used, updatedAt: now });
+    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, memberMembershipId, updatedAt: now });
     writeAuditLog(tx, {
       action: "pickup.updated",
       entityType: "PickupRequest",

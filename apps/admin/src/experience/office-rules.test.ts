@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { planProblem } from "./MembershipsView";
 import { daysLeft } from "./VehiclesView";
 
-const ok = { planId: null, tier: "gold" as const, name: "Gold", priceInRupees: "1499", includedWashes: "4", discountPercent: "10" };
+const ok = { planId: null, tier: "gold" as const, name: "Gold", priceInRupees: "1499", includedWashes: "4", discountPercent: "10", freePickups: "0", prioritySlot: false };
 
 describe("planProblem", () => {
   it("accepts a sane plan", () => expect(planProblem(ok)).toBeNull());
+  it("rejects a bad free pickup count", () => { expect(planProblem({ ...ok, freePickups: "-1" })).toBeTruthy(); expect(planProblem({ ...ok, freePickups: "2.5" })).toBeTruthy(); expect(planProblem({ ...ok, freePickups: "3" })).toBeNull(); });
   it("rejects zero price", () => expect(planProblem({ ...ok, priceInRupees: "0" })).toMatch(/Price/));
   it("rejects fractional washes", () => expect(planProblem({ ...ok, includedWashes: "2.5" })).toMatch(/whole/));
   it("rejects discount over 100", () => expect(planProblem({ ...ok, discountPercent: "120" })).toMatch(/Discount/));

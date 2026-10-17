@@ -22,6 +22,8 @@ export interface CreateMembershipPlanInput {
   priceInPaise: number;
   includedWashes: number;
   discountPercent: number;
+  freePickups?: number;
+  prioritySlot?: boolean;
 }
 
 export async function createMembershipPlan(input: CreateMembershipPlanInput): Promise<MembershipPlan> {

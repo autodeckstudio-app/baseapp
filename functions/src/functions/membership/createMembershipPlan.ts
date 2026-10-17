@@ -30,6 +30,8 @@ export const createMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
     priceInPaise: data.priceInPaise,
     includedWashes: data.includedWashes,
     discountPercent: data.discountPercent,
+    freePickups: data.freePickups ?? 0,
+    prioritySlot: data.prioritySlot ?? false,
     active: true,
     createdAt: now,
     updatedAt: now,

@@ -8,7 +8,7 @@ import type { MembershipPlan, MembershipTier } from "@autodeck/core";
 import { PageHead } from "./Office";
 import { formatPaise } from "../lib/format";
 
-const TIER_NAME: Record<MembershipTier, string> = { silver: "Silver", gold: "Gold", platinum: "Platinum" };
+const TIER_NAME: Record<MembershipTier, string> = { starter: "Starter", silver: "Silver", gold: "Gold", platinum: "Platinum" };
 const TIERS = Object.keys(TIER_NAME) as MembershipTier[];
 
 export interface PlanDraft {
@@ -18,8 +18,10 @@ export interface PlanDraft {
   priceInRupees: string;
   includedWashes: string;
   discountPercent: string;
+  freePickups: string;
+  prioritySlot: boolean;
 }
-const EMPTY: PlanDraft = { planId: null, tier: "silver", name: "", priceInRupees: "", includedWashes: "", discountPercent: "" };
+const EMPTY: PlanDraft = { planId: null, tier: "silver", name: "", priceInRupees: "", includedWashes: "", discountPercent: "0", freePickups: "0", prioritySlot: false };
 
 // Returns a problem to show, or null when the draft can be saved.
 export function planProblem(d: PlanDraft): string | null {
@@ -30,6 +32,8 @@ export function planProblem(d: PlanDraft): string | null {
   if (!Number.isInteger(washes) || washes < 0) return "Washes must be a whole number.";
   const disc = Number(d.discountPercent);
   if (!Number.isFinite(disc) || disc < 0 || disc > 100) return "Discount must be between 0 and 100%.";
+  const pickups = Number(d.freePickups);
+  if (!Number.isInteger(pickups) || pickups < 0 || pickups > 31) return "Free pickups must be a whole number from 0 to 31.";
   return null;
 }
 
@@ -78,10 +82,12 @@ export function MembershipsView(p: {
                   <p className="ax-plan-price">{formatPaise(plan.priceInPaise)}<span> / month</span></p>
                   <ul className="ax-plan-perks">
                     <li>{plan.includedWashes} wash{plan.includedWashes === 1 ? "" : "es"} included each month</li>
-                    <li>{plan.discountPercent}% off other services</li>
+                    {plan.discountPercent > 0 && <li>{plan.discountPercent}% off other services</li>}
+                    {(plan.freePickups ?? 0) > 0 && <li>{plan.freePickups} free pickup{plan.freePickups === 1 ? "" : "s"} per month</li>}
+                    {plan.prioritySlot && <li>Priority slot</li>}
                   </ul>
                   <div className="ax-panel-actions">
-                    <button type="button" className="ax-button" onClick={() => setDraft({ planId: plan.id, tier: plan.tier, name: plan.name, priceInRupees: String(plan.priceInPaise / 100), includedWashes: String(plan.includedWashes), discountPercent: String(plan.discountPercent) })}>Edit</button>
+                    <button type="button" className="ax-button" onClick={() => setDraft({ planId: plan.id, tier: plan.tier, name: plan.name, priceInRupees: String(plan.priceInPaise / 100), includedWashes: String(plan.includedWashes), discountPercent: String(plan.discountPercent), freePickups: String(plan.freePickups ?? 0), prioritySlot: !!plan.prioritySlot })}>Edit</button>
                     {confirmId === plan.id ? (
                       <>
                         <button type="button" className={`ax-button${plan.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(plan); setConfirmId(null); }}>{plan.active ? "Stop selling" : "Start selling"}</button>
@@ -114,6 +120,10 @@ export function MembershipsView(p: {
               <div className="ax-form-pair">
                 <label className="ax-form-row"><span>Washes / month</span><input inputMode="numeric" value={draft.includedWashes} onChange={(e) => setDraft({ ...draft, includedWashes: e.target.value })} placeholder="4" /></label>
                 <label className="ax-form-row"><span>Discount (%)</span><input inputMode="decimal" value={draft.discountPercent} onChange={(e) => setDraft({ ...draft, discountPercent: e.target.value })} placeholder="10" /></label>
+              </div>
+              <div className="ax-form-pair">
+                <label className="ax-form-row"><span>Free pickups / month</span><input inputMode="numeric" value={draft.freePickups} onChange={(e) => setDraft({ ...draft, freePickups: e.target.value })} placeholder="0" /></label>
+                <label className="ax-form-row"><span>Priority slot</span><input type="checkbox" checked={draft.prioritySlot} onChange={(e) => setDraft({ ...draft, prioritySlot: e.target.checked })} /></label>
               </div>
               {problem && draft.name && <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{problem}</p>}
               <div className="ax-panel-actions">

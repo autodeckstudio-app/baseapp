@@ -101,7 +101,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             </>
           )}
           <Row title="Distance" detail={POLICY} />
-          {typeof req.feePaise === "number" ? <Row title="Pickup and drop fee" detail={req.feePaise === 0 ? "Free" : `Rs ${req.feePaise / 100}`} /> : null}
+          {typeof req.feePaise === "number" ? <Row title="Pickup and drop fee" detail={req.memberMembershipId ? "Free with your membership" : req.feePaise === 0 ? "Free" : `Rs ${req.feePaise / 100}`} /> : null}
           {req.staffNote ? <Row title="Studio note" detail={req.staffNote} /> : null}
           <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
         </Pane>

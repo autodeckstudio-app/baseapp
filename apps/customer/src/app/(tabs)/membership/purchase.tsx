@@ -11,6 +11,7 @@ import { purchaseMembership, generateIdempotencyKey } from "../../../lib/members
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { useAuth } from "../../../hooks/useAuth";
+import { pickupsLine } from "../../../lib/membership-view";
 
 export default function PurchaseMembershipScreen() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
@@ -130,7 +131,9 @@ export default function PurchaseMembershipScreen() {
     >
       <Pane pad="gap">
         <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
-        <Row title="Discount" detail={plan.discountPercent > 0 ? `${plan.discountPercent}%` : "None"} />
+        {pickupsLine(plan.freePickups) ? <Row title="Free pickups" detail={`${plan.freePickups} / month`} /> : null}
+        {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
+        {plan.discountPercent > 0 ? <Row title="Discount" detail={`${plan.discountPercent}%`} /> : null}
         <Row title="Price" detail={`${rupees(plan.priceInPaise)} / month`} last />
       </Pane>
 

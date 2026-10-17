@@ -353,10 +353,15 @@ export default function MembershipPlansPage() {
     const discountPercent = Number(d.discountPercent);
     try {
       if (d.planId) {
-        await updateMembershipPlan({ planId: d.planId, name: d.name.trim(), priceInPaise, includedWashes, discountPercent });
+        // Send the pickup fields only when they changed, so a price edit never depends on them.
+        const was = plans.find((x) => x.id === d.planId);
+        const extra: { freePickups?: number; prioritySlot?: boolean } = {};
+        if (Number(d.freePickups) !== (was?.freePickups ?? 0)) extra.freePickups = Number(d.freePickups);
+        if (d.prioritySlot !== !!was?.prioritySlot) extra.prioritySlot = d.prioritySlot;
+        await updateMembershipPlan({ planId: d.planId, name: d.name.trim(), priceInPaise, includedWashes, discountPercent, ...extra });
         setStatus("Plan saved. Existing members keep the terms they bought.");
       } else {
-        await createMembershipPlan({ tier: d.tier, name: d.name.trim(), priceInPaise, includedWashes, discountPercent });
+        await createMembershipPlan({ tier: d.tier, name: d.name.trim(), priceInPaise, includedWashes, discountPercent, freePickups: Number(d.freePickups), prioritySlot: d.prioritySlot });
         setStatus(`${d.name.trim()} is on sale.`);
       }
       await refresh();

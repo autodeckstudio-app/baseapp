@@ -38,6 +38,9 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
     if (data.includedWashes !== undefined && data.includedWashes !== null) updates["includedWashes"] = data.includedWashes;
     if (data.discountPercent !== undefined && data.discountPercent !== null) updates["discountPercent"] = data.discountPercent;
 
+    if (data.freePickups !== undefined && data.freePickups !== null) updates["freePickups"] = data.freePickups;
+    if (data.prioritySlot !== undefined && data.prioritySlot !== null) updates["prioritySlot"] = data.prioritySlot;
+
     tx.update(ref, updates);
     writeAuditLog(tx, {
       action: "membership.plan_updated",
@@ -50,6 +53,8 @@ export const updateMembershipPlan = onCall({ region: "asia-south1", enforceAppCh
         priceInPaise: existing.priceInPaise,
         includedWashes: existing.includedWashes,
         discountPercent: existing.discountPercent,
+        freePickups: existing.freePickups ?? 0,
+        prioritySlot: existing.prioritySlot ?? false,
       },
       after: updates,
     });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const tierEnum = z.enum(["silver", "gold", "platinum"]);
+const tierEnum = z.enum(["starter", "silver", "gold", "platinum"]);
 
 export const createMembershipPlanSchema = z.object({
   tier: tierEnum,
@@ -8,6 +8,8 @@ export const createMembershipPlanSchema = z.object({
   priceInPaise: z.number().int().min(0),
   includedWashes: z.number().int().min(0),
   discountPercent: z.number().int().min(0).max(100),
+  freePickups: z.number().int().min(0).max(31).nullish(),
+  prioritySlot: z.boolean().nullish(),
 }).strict();
 
 // Optional fields are .nullish() not .optional(): the Firebase JS callable
@@ -21,6 +23,8 @@ export const updateMembershipPlanSchema = z.object({
   priceInPaise: z.number().int().min(0).nullish(),
   includedWashes: z.number().int().min(0).nullish(),
   discountPercent: z.number().int().min(0).max(100).nullish(),
+  freePickups: z.number().int().min(0).max(31).nullish(),
+  prioritySlot: z.boolean().nullish(),
 }).strict();
 
 export const setMembershipPlanActiveSchema = z.object({

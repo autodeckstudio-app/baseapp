@@ -1,4 +1,4 @@
-export type MembershipTier = "silver" | "gold" | "platinum";
+export type MembershipTier = "starter" | "silver" | "gold" | "platinum";
 export type MembershipStatus = "pending" | "active" | "expired" | "cancelled";
 
 // Admin-managed template. Snapshotted onto a Membership at purchase time —
@@ -12,6 +12,8 @@ export interface MembershipPlan {
   priceInPaise: number; // monthly price
   includedWashes: number;
   discountPercent: number; // applied to non-wash-eligible services
+  freePickups?: number; // pickup and drop requests per month whose fee is waived. Missing = 0
+  prioritySlot?: boolean; // member gets the priority slot. Missing = false
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +30,9 @@ export interface Membership {
   washesTotal: number;
   washesUsed: number;
   discountPercent: number;
+  pickupsTotal?: number; // snapshot of plan.freePickups. Missing = 0
+  pickupsUsed?: number;
+  prioritySlot?: boolean; // snapshot of plan.prioritySlot
   startDate: string | null; // ISO date
   endDate: string | null; // ISO date
   activatedAt: string | null;
