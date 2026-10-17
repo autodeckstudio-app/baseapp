@@ -93,7 +93,7 @@ export default function PickupsPage() {
             <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {counts[t.id]}</button>
           ))}
         </div>
-        <p className="ax-pu-policy">Free within 3 km. 3 to 5 km is Rs 150 per leg (pickup and drop each, so both is Rs 300). Beyond 5 km, Rs 15 for every km past 5, per leg. Collected at the studio. Requests without a shared location need the distance and fee confirmed by phone.</p>
+        <p className="ax-pu-policy">Under 3 km is Rs 100 per leg, from 3 km is Rs 150 per leg (pickup and drop each, so both is two legs). Collected at the studio. Requests without a shared location need the distance and fee confirmed by phone.</p>
       </div>
 
       {loadError ? <p role="alert" className="ax-pu-error">{loadError}</p> : null}

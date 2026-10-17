@@ -12,7 +12,7 @@ Not published. Not wired into the app. Have it reviewed by a lawyer before use.
 
 **5. Hours.** Mon to Sat, 10 am to 9 pm. Sunday, 10 am to 7 pm.
 
-**6. Pickup and drop.** Pickup and drop is the same for every service. It is free within 3 km. From 3 to 5 km it costs Rs 150 for each leg (pickup and drop-off are separate legs). Beyond 5 km, add Rs 15 for every km past 5, for each leg. Distance is measured in a straight line from the studio, so the road may be longer. A Club free pickup covers the whole fee.
+**6. Pickup and drop.** Pickup and drop is the same for every service. It costs Rs 100 for each leg under 3 km from the studio, and Rs 150 for each leg from 3 km (pickup and drop-off are separate legs). Distance is measured in a straight line from the studio, so the road may be longer. A Club free pickup covers the whole fee.
 
 **7. Payments and invoices.** You can pay at the studio or online. Online payments are processed by Razorpay. You get an invoice for each completed job. Refunds, where due, go back to the original payment method.
 

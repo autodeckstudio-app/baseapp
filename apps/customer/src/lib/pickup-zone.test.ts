@@ -5,7 +5,7 @@ describe("pickup card zone", () => {
   it("takes the zone, fee and limits from the shared core, with no fee typed in the card", () => {
     expect(card).toContain("pickupZone(where)");
     expect(card).toContain("pickupFeePaise");
-    expect(card).toContain("PICKUP_PER_KM_PAISE");
+    expect(card).toContain("PICKUP_FAR_FEE_PAISE");
     expect(card).not.toMatch(/Rs\s?\d/);
   });
   it("has no distance limit, so it never blocks a request or tells the customer to call", () => {
