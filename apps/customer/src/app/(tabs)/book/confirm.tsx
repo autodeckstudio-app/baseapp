@@ -1,7 +1,7 @@
 import { SlideToConfirm } from "../../../ui/SlideToConfirm";
 import { useState, useEffect, useMemo } from "react";
 import { extrasFromParam } from "../../../lib/visit-extras";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -10,7 +10,10 @@ import { createBooking, generateIdempotencyKey } from "../../../lib/booking-serv
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { FIRST_STUDIO_ID } from "@autodeck/core";
+import { FIRST_STUDIO_ID, bookingPayment } from "@autodeck/core";
+import { getJobIdForBooking } from "../../../lib/job-service";
+import { initiatePayment } from "../../../lib/payment-service";
+import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -61,6 +64,7 @@ export default function BookingConfirmScreen() {
   const [bookError, setBookError] = useState<string | null>(null);
   const [wash, setWash] = useState<WashDecision | null>(null);
   const [useWash, setUseWash] = useState(false);
+  const [payAtStudio, setPayAtStudio] = useState(false);
   // More services in the same visit. The server prices them again; this is what the customer sees first.
   const extraIds = useMemo(() => extrasFromParam(params.extras), [params.extras]);
   const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number }>>([]);
@@ -115,6 +119,8 @@ export default function BookingConfirmScreen() {
 
   const sendCode = auth.status === "ready" ? referralCodeToSend(friendCode, auth.user.uid) : null;
 
+  const payHow = service && breakdown ? bookingPayment(service, breakdown.total) : { online: false, studioChoice: false };
+
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
@@ -134,7 +140,19 @@ export default function BookingConfirmScreen() {
         ...(sendCode ? { referralCode: sendCode } : {}),
         ...(giftCode ? { giftCode } : {}),
       });
-      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
+      // Pay in the app for regular services (or when a bigger service chose it). The job exists with the booking, so the same
+      // payment path as the Club is used. If checkout does not open or is closed, the booking stands and can be paid at the studio.
+      let paidNote: string | undefined;
+      if (payHow.online && !payAtStudio && !washOn && auth.status === "ready" && result.totalAmount > 0) {
+        try {
+          const jobId = await getJobIdForBooking(result.id, auth.claims.tenantId, auth.user.uid);
+          if (jobId && checkoutSupported) {
+            const pay = await initiatePayment(jobId, "razorpay_payment_link");
+            if (pay.paymentId) paidNote = (await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: service.name })) === "paid" ? "paid" : "unpaid";
+          } else paidNote = "unpaid";
+        } catch { paidNote = "unpaid"; }
+      }
+      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(paidNote ? { pay: paidNote } : {}) } });
     } catch (err) {
       console.warn("create booking failed", err);
       setBookError("We could not send your request. Check your bookings before trying again. If the request reached the studio, it will appear there.");
@@ -230,8 +248,16 @@ export default function BookingConfirmScreen() {
       <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
-          <Row title="Pay at the studio" detail={<T role="caption" tone="secondary">Pay when you collect your car. Nothing is charged now.</T>} trailing={<Icon name="check" color="#EC8638" size={20} />} />
-          <Row title="Pay online now" detail={<T role="caption" tone="tertiary">Opens when online payments go live. For now, pay at the studio.</T>} last />
+          {payHow.online ? (
+            <Pressable accessibilityRole="button" accessibilityState={{ selected: !payAtStudio }} onPress={() => setPayAtStudio(false)}>
+              <Row title="Pay in the app" detail={<T role="caption" tone="secondary">{washOn ? "Not needed, this wash is on your plan." : "Secure online payment right after you confirm."}</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!payHow.studioChoice} />
+            </Pressable>
+          ) : null}
+          {!payHow.online || payHow.studioChoice ? (
+            <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => setPayAtStudio(true)}>
+              <Row title="Pay at the studio" detail={<T role="caption" tone="secondary">Pay when you collect your car. Nothing is charged now.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last />
+            </Pressable>
+          ) : null}
         </Pane>
       </View>
 

@@ -1,4 +1,4 @@
-import { collection, doc, query, where, orderBy, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, onSnapshot, type Unsubscribe, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Booking, ServiceJob } from "@autodeck/core";
@@ -116,4 +116,10 @@ export function bookingFromJob(job: ServiceJob): Booking {
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };
+}
+
+/** The job made for a booking, read once (it is created with the booking). Null if it is not there yet. */
+export async function getJobIdForBooking(bookingId: string, tenantId: string, customerId: string): Promise<string | null> {
+  const snap = await getDocs(query(collection(db, COLLECTIONS.jobs()), where("bookingId", "==", bookingId), where("tenantId", "==", tenantId), where("customerId", "==", customerId)));
+  return snap.empty ? null : snap.docs[0]!.id;
 }

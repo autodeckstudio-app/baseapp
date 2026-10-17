@@ -64,3 +64,19 @@ describe("garage All view and selected view share one language", () => {
   it("the Today strip has a text Track link and no second button", () => { expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"'); });
   it("All view has no plan ring", () => { const a = g.slice(g.indexOf("COMING UP") - 1500, g.indexOf("COMING UP")); expect(a).not.toContain("<CareRing"); });
 });
+import { bookingPayment, PAY_AT_STUDIO_GROUPS } from "@autodeck/core";
+describe("pay in the app at booking", () => {
+  it("regular services are paid online with no studio choice, bigger groups may pay at the studio, quotes and zero totals have no online payment", () => {
+    expect(bookingPayment({ category: "washing", priceOnRequest: false } as never, 90000)).toEqual({ online: true, studioChoice: false });
+    expect(bookingPayment({ category: "ceramic_coating", priceOnRequest: false } as never, 400000).online).toBe(true);
+    expect(bookingPayment({ category: "garage", priceOnRequest: false } as never, 80000)).toEqual({ online: true, studioChoice: true });
+    expect(bookingPayment({ category: "garage", priceOnRequest: true } as never, 0)).toEqual({ online: false, studioChoice: false });
+    expect(bookingPayment({ category: "washing", priceOnRequest: false } as never, 0).online).toBe(false);
+    expect([...PAY_AT_STUDIO_GROUPS]).toEqual(["coatings", "ppf", "garage", "mods"]);
+  });
+  it("the confirm screen pays through the existing job payment path, never for a wash on the plan, and keeps the booking if checkout is closed", () => {
+    const c = read("../app/(tabs)/book/confirm.tsx");
+    expect(c).toContain("initiatePayment(jobId"); expect(c).toContain("payWithCheckout"); expect(c).toContain("!washOn");
+    expect(c).toContain('paidNote = "unpaid"'); expect(c).not.toContain("Opens when online payments go live");
+  });
+});
