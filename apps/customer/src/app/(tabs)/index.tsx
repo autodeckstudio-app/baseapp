@@ -1,6 +1,7 @@
 import { RateCard } from "../../ui/RateCard";
 import { rateCandidate } from "../../lib/rate-card";
 import { liveTrackTarget } from "../../lib/bookings-view";
+import { LIVE_PROGRESS } from "../../lib/garage-live";
 import { buildDrawerItems } from "../../lib/drawer-items";
 import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
@@ -231,7 +232,7 @@ export default function HomeScreen() {
       <HomeView
         greeting={greetingFor(new Date(), m.customer.firstName)}
         initial={(m.customer.firstName ?? auth.user.displayName ?? "A").trim().charAt(0).toUpperCase() || "A"}
-        progress={m.liveJob ? ({ PENDING_VEHICLE: 10, VEHICLE_RECEIVED: 25, IN_PROGRESS: 55, QUALITY_CHECK: 85, READY_FOR_DELIVERY: 100, DELIVERED: 100 } as Record<string, number>)[m.liveJob.status] ?? 10 : null}
+        progress={m.liveJob ? LIVE_PROGRESS[m.liveJob.status] ?? 10 : null}
         stage={m.liveJob ? JOB_STAGE[m.liveJob.status] ?? "In the studio" : m.upcomingBooking ? `Next visit ${formatDateShort(m.upcomingBooking.scheduledDate)}` : "Parked, all good"}
         membership={m.membership && m.membership.status === "active" ? { title: `${Math.max(0, m.membership.washesTotal - m.membership.washesUsed)} washes`, detail: `left${m.membership.endDate ? `, until ${formatDateShort(m.membership.endDate)}` : ""}` } : null}
         studio={{ address: STUDIO_INFO.address.replace(", Gujarat", ""), hours: STUDIO_INFO.hours, openText: openStatus(liveInfo?.operatingHours, liveInfo?.holidays)?.text ?? null }}

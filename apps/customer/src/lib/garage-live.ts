@@ -1,8 +1,9 @@
 // Garage helpers: the live job on one car and the care-plan ring. Pure, no hidden numbers.
-import { liveStep } from "./live-step";
+import { jobStage } from "../ui/job-stage";
 
-export const LIVE_PROGRESS: Record<string, number> = { PENDING_VEHICLE: 10, VEHICLE_RECEIVED: 25, IN_PROGRESS: 55, QUALITY_CHECK: 85, READY_FOR_DELIVERY: 100, DELIVERED: 100 };
+export const LIVE_PROGRESS: Record<string, number> = { PENDING_VEHICLE: 10, VEHICLE_RECEIVED: 25, IN_PROGRESS: 50, QUALITY_CHECK: 75, READY_FOR_DELIVERY: 100, DELIVERED: 100 };
 export const LIVE_STEP_NAMES = ["Received", "In progress", "Final checks", "Ready"];
+/** Progress values chosen so liveStep(LIVE_PROGRESS[status]) lands on the same step the booking screen shows (job-stage.ts is the source). */
 const LIVE = ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"];
 
 type JobLite = { id: string; status: string; vehicleId?: string; bookingId?: string | null; estimatedEndAt?: string | null };
@@ -13,7 +14,7 @@ export function liveJobForCar<J extends JobLite>(jobs: J[], vehicleId: string): 
 }
 
 /** Which of the four steps the job is on (0-3). */
-export function jobStep(status: string): number { return liveStep(LIVE_PROGRESS[status] ?? 10); }
+export function jobStep(status: string): number { return Math.max(0, jobStage(status)?.index ?? 0); }
 
 /** Ready-by time only when the studio set one and it is still ahead. Never invented. */
 export function readyBy(job: { estimatedEndAt?: string | null }, now = Date.now()): string | null {
