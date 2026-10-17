@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { freshGrant } from "../../lib/membership-grant.js";
-import { upgradePricePaise, washesLostOnUpgrade, UPGRADE_PRICING_CONFIRMED } from "@autodeck/core";
+import { upgradePricePaise, upgradePaysFullPrice, washesLostOnUpgrade, pickupsLostOnUpgrade, UPGRADE_PRICING_CONFIRMED } from "@autodeck/core";
 
 const plan = (price: number, washes: number, pickups = 0) => ({ priceInPaise: price, includedWashes: washes, freePickups: pickups, prioritySlot: false, discountPercent: 0 });
 
@@ -34,12 +34,25 @@ describe("no washes carry forward (owner rule, 18 Oct)", () => {
   });
 });
 
-describe("upgrade price (ON HOLD: owner is settling the loophole fix)", () => {
-  const q = (cur: number, next: number, unused = 0) => upgradePricePaise({ currentPlanPricePaise: cur, newPlanPricePaise: next, unusedWashes: unused });
+describe("upgrade price (owner rule: difference only if nothing used, else full price)", () => {
+  const q = (cur: number, next: number, w = 0, p = 0) => upgradePricePaise({ currentPlanPricePaise: cur, newPlanPricePaise: next, washesUsed: w, pickupsUsed: p });
   it("a cheaper or equal plan is not an upgrade", () => { expect(q(360000, 360000)).toBeNull(); expect(q(540000, 360000)).toBeNull(); });
-  it("a dearer plan has a price", () => { expect(q(360000, 540000, 2)).toBeGreaterThan(0); });
-  it("counts washes lost, never negative", () => { expect(washesLostOnUpgrade({ washesTotal: 4, washesUsed: 1 })).toBe(3); expect(washesLostOnUpgrade({ washesTotal: 4, washesUsed: 9 })).toBe(0); });
-  it("stays flagged unconfirmed until the owner settles the price", () => { expect(UPGRADE_PRICING_CONFIRMED).toBe(false); });
+  it("nothing used: pay the difference", () => { expect(q(360000, 540000)).toBe(180000); });
+  it("one wash used: pay the full new price (closes the use-all-then-upgrade loophole)", () => {
+    expect(q(360000, 540000, 1)).toBe(540000);
+    expect(q(360000, 540000, 4)).toBe(540000);
+  });
+  it("one pickup used: pay the full new price", () => { expect(q(360000, 540000, 0, 1)).toBe(540000); });
+  it("never turns unused washes into money credit", () => {
+    expect(q(360000, 540000, 1)).toBeGreaterThanOrEqual(540000);
+    expect(upgradePaysFullPrice({ washesUsed: 0, pickupsUsed: 0 })).toBe(false);
+    expect(upgradePaysFullPrice({ washesUsed: 1 })).toBe(true);
+  });
+  it("counts washes and pickups lost, never negative", () => {
+    expect(washesLostOnUpgrade({ washesTotal: 4, washesUsed: 1 })).toBe(3); expect(washesLostOnUpgrade({ washesTotal: 4, washesUsed: 9 })).toBe(0);
+    expect(pickupsLostOnUpgrade({ pickupsTotal: 3, pickupsUsed: 1 })).toBe(2); expect(pickupsLostOnUpgrade({})).toBe(0);
+  });
+  it("is marked confirmed", () => { expect(UPGRADE_PRICING_CONFIRMED).toBe(true); });
 });
 
 describe("upgrade wiring", () => {
@@ -57,6 +70,6 @@ describe("upgrade wiring", () => {
     expect(s).toContain("upgradePricePaise(");
     expect(s).toContain("amount: difference");
     expect(s).toMatch(/need an active plan/);
-    expect(s).not.toMatch(/washesUsed: [^0]/);
+    expect(s).not.toMatch(/washesUsed: (?!current\.washesUsed)[^0]/);
   });
 });

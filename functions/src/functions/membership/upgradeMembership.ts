@@ -1,5 +1,5 @@
 // Customer upgrades an active membership to a dearer plan: pays only the price difference; on payment the old plan ends
-// (unused washes forfeited, nothing carried over) and the new plan starts a fresh 30-day term. Terms relayed by the parent from the owner on 18 Oct (not independently verified by me).
+// (unused washes forfeited, nothing carried over) and the new plan starts a fresh 30-day term. Price rule in core upgradePricePaise (owner rule relayed by the parent, 18 Oct): difference if nothing used, else the full new price.
 // Original header of the purchase flow this is based on: Customer requests a membership plan. Creates a Membership in 'pending' status
 // plus a Payment record (targetType: "membership") using the same financial
 // architecture as job payments (Payment status machine, PaymentProvider).
@@ -15,7 +15,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { upgradeMembershipSchema } from "../../schemas/membership.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
-import { upgradePricePaise, washesLostOnUpgrade } from "@autodeck/core";
+import { upgradePricePaise } from "@autodeck/core";
 import { freshGrant } from "../../lib/membership-grant.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 
@@ -55,7 +55,7 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
   }
   const currentPlanSnap = await db.collection(COLLECTIONS.membershipPlans()).doc(current.planId).get();
   if (!currentPlanSnap.exists) throw new HttpsError("failed-precondition", "Your current plan could not be read. Contact the studio.");
-  const difference = upgradePricePaise({ currentPlanPricePaise: (currentPlanSnap.data() as MembershipPlan).priceInPaise, newPlanPricePaise: plan.priceInPaise, unusedWashes: washesLostOnUpgrade(current) });
+  const difference = upgradePricePaise({ currentPlanPricePaise: (currentPlanSnap.data() as MembershipPlan).priceInPaise, newPlanPricePaise: plan.priceInPaise, washesUsed: current.washesUsed, pickupsUsed: current.pickupsUsed ?? 0 });
   if (difference === null) throw new HttpsError("failed-precondition", "Choose a plan that costs more than your current one.");
 
   const now = new Date().toISOString();

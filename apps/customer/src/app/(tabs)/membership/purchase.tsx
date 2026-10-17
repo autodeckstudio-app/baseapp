@@ -3,7 +3,7 @@ import { View, Linking, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
-import { upgradePricePaise, washesLostOnUpgrade, type Membership, type MembershipPlan } from "@autodeck/core";
+import { pickupsLostOnUpgrade, upgradePaysFullPrice, upgradePricePaise, washesLostOnUpgrade, type Membership, type MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
@@ -71,7 +71,7 @@ export default function PurchaseMembershipScreen() {
     void getDoc(doc(db, COLLECTIONS.membershipPlans(), active.planId)).then((snap) => { if (alive) setActivePlan(snap.exists() ? (snap.data() as MembershipPlan) : null); }).catch(() => undefined);
     return () => { alive = false; };
   }, [active?.planId]);
-  const upgradeQuote = plan && active && activePlan ? upgradePricePaise({ currentPlanPricePaise: activePlan.priceInPaise, newPlanPricePaise: plan.priceInPaise, unusedWashes: washesLostOnUpgrade(active) }) : null;
+  const upgradeQuote = plan && active && activePlan ? upgradePricePaise({ currentPlanPricePaise: activePlan.priceInPaise, newPlanPricePaise: plan.priceInPaise, washesUsed: active.washesUsed, pickupsUsed: active.pickupsUsed ?? 0 }) : null;
   const pendingIsUpgrade = existing?.status === "pending" && Boolean(existing.upgradeFromMembershipId);
 
   // Reachable only from the Confirm upgrade button in the pop-up.
@@ -125,7 +125,7 @@ export default function PurchaseMembershipScreen() {
 
   if (active && !existing?.upgradeFromMembershipId && existing?.status !== "pending" && upgradeQuote !== null && !done) {
     const lost = washesLostOnUpgrade(active);
-    const copy = upgradeConfirmCopy(lost, active.tier, plan.name, rupees(upgradeQuote));
+    const copy = upgradeConfirmCopy({ lostWashes: lost, lostPickups: pickupsLostOnUpgrade(active), tier: active.tier, newName: plan.name, priceLabel: rupees(upgradeQuote), fullPrice: upgradePaysFullPrice(active) });
     return (
       <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Upgrade</Kicker><T role="title">{plan.name}</T></View>}>
         <Pane pad="gap">
@@ -134,7 +134,7 @@ export default function PurchaseMembershipScreen() {
           {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
           <Row title="You pay now" detail={rupees(upgradeQuote)} last />
         </Pane>
-        <T role="caption" tone="tertiary">Your {active.tier} plan ends when the upgrade is paid. Unused washes do not carry over. The new plan runs 30 days from the day it starts.</T>
+        <T role="caption" tone="tertiary">Your {active.tier} plan ends when the upgrade is paid. Unused washes and pickups do not carry over. {upgradePaysFullPrice(active) ? "You have used part of this plan, so the full new price applies." : "Nothing used yet, so you pay only the difference."} The new plan runs 30 days from the day it starts.</T>
         {error ? <Notice title="Upgrade failed" body={error} /> : null}
         <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
         <Modal visible={askUpgrade} transparent animationType="fade" onRequestClose={() => setAskUpgrade(false)}>
