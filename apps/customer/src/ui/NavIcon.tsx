@@ -7,7 +7,7 @@ export type NavIconName = "home" | "services" | "bookings" | "garage" | "profile
 // body: the main silhouette (filled when active). detail: strokes drawn on top, in the cut-out colour when filled.
 const ART: Record<NavIconName, { body: string; detail: string }> = {
   home: { body: '<path d="M3.5 10.8 12 3.5l8.5 7.3V19.5a1 1 0 0 1-1 1H15v-5.8H9v5.8H4.5a1 1 0 0 1-1-1z"/>', detail: "" },
-  services: { body: '<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2"/>', detail: "" },
+  services: { body: '<path d="M10.5 4.5 12.3 10l5.500 1.800-5.500 1.800-1.800 5.500-1.800-5.500L3.200 11.800 8.700 10z"/>', detail: '<path d="M18 3.500v4M16 5.500h4M18.500 16v3.500M16.800 17.800h3.400"/>' },
   bookings: { body: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/>', detail: '<path d="M3.5 10h17M8 3v4M16 3v4M9 15.2l2.2 2.2 4-4.2"/>' },
   garage: { body: '<path d="M4 17.5v-5l2.2-4.6A2 2 0 0 1 8 6.8h8a2 2 0 0 1 1.8 1.1L20 12.5v5a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1V17h-9v.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>', detail: '<path d="M4 12.5h16M7.5 14.8h.01M16.5 14.8h.01"/>' },
   profile: { body: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-3.900 3.300-6.300 7.5-6.300s7.5 2.400 7.5 6.300z"/>', detail: "" },

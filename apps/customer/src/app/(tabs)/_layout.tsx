@@ -1,4 +1,4 @@
-// Customer tabs: Home, Bookings, Services (centre, AD monogram), Garage, You. One tab per
+// Customer tabs: Bookings, Services, Home (centre, AD monogram), Garage, You. One tab per
 // journey: book (Services), track and pay (Bookings), car and papers (Garage).
 // Membership, notifications and approvals are nested routes with a back bar.
 import { View } from "react-native";
@@ -21,9 +21,9 @@ export default function TabsLayout() {
         animation: "fade",
       })}
     >
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />
       <Tabs.Screen name="catalogue" options={{ title: "Services" }} />
+      <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="garage" options={{ title: "Garage" }} />
       <Tabs.Screen name="profile" options={{ title: "You" }} />
       <Tabs.Screen name="membership" options={{ href: null }} />

@@ -85,6 +85,14 @@ describe("one design system and one place for everything",()=>{
     expect(bar).toContain("onNavCompact");
     expect(bar).not.toContain("<Text");
   });
+  it("puts Home in the centre with the AD monogram and Services beside it",()=>{
+    const bar=read("src/ui/RaisedTabBar.tsx");
+    expect(bar).toContain('route.name === "index"');
+    const lay=read("src/app/(tabs)/_layout.tsx");
+    const order=["bookings","catalogue","index","garage","profile"].map((n)=>lay.indexOf('<Tabs.Screen name="'+n+'"'));
+    expect(order.every((v)=>v>=0)).toBe(true);
+    expect([...order].sort((a,b)=>a-b)).toEqual(order);
+  });
 });
 import {metrics,SCALE} from "../lib/metrics";
 describe("sizes come from one rulebook",()=>{
@@ -349,9 +357,9 @@ describe("one tile size everywhere", () => {
 });
 
 describe("nav order and drawer", () => {
-  it("tabs are Home, Bookings, Services, Garage, You, in that order", () => {
+  it("tabs are Bookings, Services, Home (centre), Garage, You, in that order", () => {
     const s = read("src/app/(tabs)/_layout.tsx");
-    const order = ["index", "bookings", "catalogue", "garage", "profile"].map((n) => s.indexOf(`<Tabs.Screen name="${n}"`));
+    const order = ["bookings", "catalogue", "index", "garage", "profile"].map((n) => s.indexOf(`<Tabs.Screen name="${n}"`));
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });

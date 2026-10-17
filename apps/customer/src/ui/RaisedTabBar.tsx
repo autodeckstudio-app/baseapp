@@ -52,7 +52,7 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
               }}
               style={({ pressed }) => ({ flex: 1, minWidth: 0, alignItems: "center", justifyContent: "center", paddingVertical: 2, opacity: pressed ? 0.7 : 1 })}
             >
-              {route.name === "catalogue" ? (
+              {route.name === "index" ? (
                 <View style={{ width: 56, height: 56, marginTop: -22, marginBottom: -4, borderRadius: 9999, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: focused ? "rgba(236,134,56,0.85)" : "rgba(236,134,56,0.35)", backgroundColor: light ? "rgba(251,248,243,0.96)" : "rgba(27,27,31,0.96)", ...(Platform.OS === "web" ? ({ boxShadow: "0 6px 18px rgba(0,0,0,0.28), 0 0 14px rgba(236,134,56,0.22)" } as object) : {}) }}>
                   <AdMonogram theme={light ? "light" : "dark"} width={32} />
                 </View>
