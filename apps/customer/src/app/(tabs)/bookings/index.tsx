@@ -18,12 +18,13 @@ import { getMyBookings } from "../../../lib/booking-service";
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
 import { CarThumb } from "../../../ui/CarThumb";
+import { NextVisitHero } from "../../../ui/NextVisitHero";
 import { sceneImagery } from "../../../lib/imagery";
 import type { ApprovalRequest, ServiceJob } from "@autodeck/core";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { cancelBooking } from "../../../lib/booking-service";
 import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rules";
-import { liveJobOf, recentDistinctServices } from "../../../lib/bookings-view";
+import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bookings-view";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
 import { glassInner } from "../../../lib/glass";
@@ -106,6 +107,7 @@ export default function BookingsScreen() {
   const liveBooking = liveJob ? all.find((b) => b.id === (liveJob.bookingId ?? liveJob.id)) : undefined;
   const readyText = liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
   const pending = approvals.filter((a) => a.status === "pending");
+  const todayIst = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const next = upcoming[0];
   const nextCar = next ? cars[next.vehicleId] ?? (next.vehicleSnapshot ? { ...next.vehicleSnapshot, photoUrl: null, category: next.vehicleCategory } : undefined) : undefined;
   const nextElig = next ? getRescheduleEligibility(next) : null;
@@ -156,8 +158,8 @@ export default function BookingsScreen() {
 
       {next ? (
         <View style={{ gap: space.line }}>
-          <SectionTitle>Next booking</SectionTitle>
-          {list([next])}
+          <SectionTitle>Next visit</SectionTitle>
+          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={svcs[next.serviceId]?.name ?? "Service visit"} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : STATUS[next.status].label} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {nextElig?.eligible ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /></View> : null}
             {nextCancel?.canCancel && !confirmCancel ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Cancel" onPress={() => setConfirmCancel(true)} /></View> : null}
@@ -212,7 +214,7 @@ export default function BookingsScreen() {
             <SectionTitle>{`History (${past.length})`}</SectionTitle>
             <T role="caption" tone="accent">{showHistory ? "Hide" : "Show"}</T>
           </Pressable>
-          {showHistory ? list(past) : null}
+          {showHistory ? groupByMonth(past).map((g) => <View key={g.key} style={{ gap: space.line }}><T role="label" tone="secondary">{g.label.toUpperCase()}</T>{list(g.items)}</View>) : null}
         </View>
       ) : null}
     </Screen>

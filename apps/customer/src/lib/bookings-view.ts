@@ -28,3 +28,31 @@ export function liveTrackTarget(job: { id: string; bookingId?: string | null } |
   if (job) return job.bookingId ?? job.id;
   return upcomingBookingId ?? null;
 }
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** Past visits grouped by month, newest month first, newest visit first inside each. Uses the booking's own date, so no timezone drift. */
+export function groupByMonth<B extends { scheduledDate: string; scheduledAt: string }>(items: B[]): { key: string; label: string; items: B[] }[] {
+  const sorted = [...items].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt));
+  const out: { key: string; label: string; items: B[] }[] = [];
+  for (const b of sorted) {
+    const key = b.scheduledDate.slice(0, 7);
+    let g = out.find((x) => x.key === key);
+    if (!g) {
+      const m = Number(key.slice(5, 7));
+      g = { key, label: `${MONTHS[m - 1] ?? key} ${key.slice(0, 4)}`, items: [] };
+      out.push(g);
+    }
+    g.items.push(b);
+  }
+  return out;
+}
+
+/** "Today", "Tomorrow", "In 3 days", or "Overdue" for a date. today and date are YYYY-MM-DD. */
+export function daysUntilLabel(date: string, today: string): string {
+  const d = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+  if (d < 0) return "Date has passed";
+  if (d === 0) return "Today";
+  if (d === 1) return "Tomorrow";
+  return `In ${d} days`;
+}

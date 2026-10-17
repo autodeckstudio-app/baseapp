@@ -3,6 +3,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Image, Text, View } from "react-native";
 import { Screen, Chip } from "../ui/kit";
 import { VisitCard } from "../ui/VisitCard";
+import { NextVisitHero } from "../ui/NextVisitHero";
 import { vehicleImagery, serviceImagery } from "../lib/imagery";
 
 const noop = () => undefined;
@@ -13,6 +14,7 @@ export default function PreviewBookings() {
   return (
     <Screen header={<Text style={{ color: ink.textPrimary, fontSize: 26, fontWeight: "700" }}>Visits</Text>}>
       <View style={{ gap: 12 }}>
+        <NextVisitHero date="2026-10-20" today="2026-10-17" time="10:00" title="Full body PPF" car="BMW M340i" status="Confirmed" onPress={noop} />
         <Text style={{ color: ink.textPrimary, fontSize: 19, fontWeight: "700" }}>Coming up</Text>
         <VisitCard onPress={noop} photo={photo(vehicleImagery.sedan as never)} title="Full body PPF" car="BMW M340i" when={"14 Oct \u00b7 10:00"} price={"\u20b91,20,000"} chip={<Chip label="Confirmed" tone="premium" />} />
         <VisitCard onPress={noop} photo={photo(serviceImagery.washing as never)} title="Detailing wash" car="Thar" when={"18 Oct \u00b7 15:30"} price={"\u20b91,500"} chip={<Chip label="Awaiting confirm" tone="accent" />} />

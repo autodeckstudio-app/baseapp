@@ -22,7 +22,7 @@ describe("Bookings screen holds only booking content", () => {
     for (const w of ["Explore", "Membership", "referral", "Bring a friend", "PhotoCard", "Care map", "papers"]) expect(s).not.toContain(w);
   });
   it("sections come in the agreed order", () => {
-    const at = ["In the studio", "Waiting for your OK", "Next booking", "Book again", "History ("].map((k) => s.indexOf(k));
+    const at = ["In the studio", "Waiting for your OK", "Next visit", "Book again", "History ("].map((k) => s.indexOf(k));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
   });
@@ -48,5 +48,24 @@ describe("Home Track target", () => {
     const h = readFileSync(`${__dirname}/../app/(tabs)/index.tsx`, "utf8");
     expect(h).not.toContain(": undefined) }");
     expect(h).toContain('"/(tabs)/bookings"');
+  });
+});
+
+import { groupByMonth, daysUntilLabel } from "./bookings-view";
+describe("past visits by month", () => {
+  const b = (d: string) => ({ scheduledDate: d, scheduledAt: `${d}T10:00:00Z` });
+  it("groups newest month first, newest visit first inside", () => {
+    const g = groupByMonth([b("2026-08-03"), b("2026-09-20"), b("2026-09-02"), b("2025-12-30")]);
+    expect(g.map((x) => x.label)).toEqual(["September 2026", "August 2026", "December 2025"]);
+    expect(g[0]!.items.map((x) => x.scheduledDate)).toEqual(["2026-09-20", "2026-09-02"]);
+  });
+  it("gives nothing for no visits", () => expect(groupByMonth([])).toEqual([]));
+});
+describe("days until a visit", () => {
+  it("names today, tomorrow and later", () => {
+    expect(daysUntilLabel("2026-10-17", "2026-10-17")).toBe("Today");
+    expect(daysUntilLabel("2026-10-18", "2026-10-17")).toBe("Tomorrow");
+    expect(daysUntilLabel("2026-10-22", "2026-10-17")).toBe("In 5 days");
+    expect(daysUntilLabel("2026-10-10", "2026-10-17")).toBe("Date has passed");
   });
 });
