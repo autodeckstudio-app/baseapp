@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Image, View } from "react-native";
 import { FadeImage, Icon } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
-import { serviceVisual } from "../lib/imagery";
+import { serviceVisual, hasGaragePhoto } from "../lib/imagery";
 
 type Svc = { name: string; brand?: string | null; category: string; imageUrl?: string | null };
 
@@ -28,7 +28,7 @@ export function ServicePhoto({ service, height, width, radius = 0, aspect, varia
       </View>
     );
   }
-  if (service.category === "garage") {
+  if (service.category === "garage" && !hasGaragePhoto(service.name)) {
     return (
       <View style={[box, { backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", ...(height && height > 260 ? { height: "100%" as const } : {}) }]}>
         <View style={{ position: "absolute", width: "70%", aspectRatio: 1, borderRadius: 999, backgroundColor: "rgba(236,134,56,0.16)" }} />

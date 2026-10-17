@@ -45,3 +45,65 @@ Files stock/x-*.jpg are Pexels photos (free licence), each taken from pexels.com
 
 ## Curated white/orange visual system (Oct 7)
 `curated/*.jpg` are edited derivatives of the reviewed, already licensed source files in this register. Warm-neutral grading, lower saturation and consistent 3:2 framing. Topic identity takes priority over uniqueness. Car/hero is a side profile without a visible plate; category images show service subjects rather than generic car ads. Brand packshots keep their original colors and labels on a uniform warm-white panel. Customer uploads, seller photos, Stories and document/evidence originals are not edited.
+
+## Garage, mods, pickup and membership placeholders (Pexels licence, free for commercial use)
+All rows are PLACEHOLDER: replace with studio shoot photos.
+| File | Used for | Source page | Status |
+| --- | --- | --- | --- |
+| stock/g-inspection.jpg | Multi-point inspection, Book an inspection | https://www.pexels.com/photo/a-man-inspecting-the-car-s-under-chassis-8986036/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-alignment.jpg | Wheel alignment and balancing | https://www.pexels.com/photo/3806280/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-ac.jpg | AC check | https://www.pexels.com/photo/air-conditioning-vent-on-a-car-10508830/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-battery.jpg | Battery check | https://www.pexels.com/photo/close-up-photo-of-car-s-battery-4374843/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-repairs.jpg | Repairs | https://www.pexels.com/photo/mechanic-working-on-car-engine-in-garage-3441895/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-wrap.jpg | Vinyl wraps and colour change | https://www.pexels.com/photo/a-man-wrapping-a-car-hood-10126665/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-styling.jpg | Accessories and styling, membership scene | https://www.pexels.com/photo/steering-wheel-in-car-interior-8723324/ | STOCK-OK, placeholder, replace with shoot |
+| stock/g-pickup.jpg | Pickup and drop | https://www.pexels.com/photo/person-in-grey-shirt-handing-keys-97079/ | STOCK-OK, placeholder, replace with shoot |
+
+## Replace with shoot photos
+Every file under stock/ and curated/ is a placeholder until the studio shoot. Priority: the g-* files above, then every STOCK-OK and TEST row.
+
+## Earlier stock files (Pexels licence, page URLs not recorded)
+| File | Source | Status |
+| --- | --- | --- |
+| stock/x-bentley-hose.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-black-reflect.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-black-sunlight.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-buff-rear.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-buff-roof.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-car-window.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-cleaner-sponge.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-damage-check.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-detail-workshop.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-engine-bay.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-engine-filter.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-engine-red.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-engine-turbo.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-film-window.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-foam-street.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-foil-garage.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-glossy-black.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-headlight-black.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-headlight-grille.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-polish-door.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-polish-garage.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-polish-red.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-rim-clean.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-seat-clean.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-showroom.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-spray-bonnet.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-spray-booth.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-suv-rinse.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-suv-suds.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-tan-leather.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-tyre-clean.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-underbody-a.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-underbody-b.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-vacuum-white.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-vintage-interior.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-vintage-soap.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-wet-black.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-wheel-spray.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-white-garage.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-white-seats.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-window-clean.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-wipe-gloss.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |

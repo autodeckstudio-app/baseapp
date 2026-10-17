@@ -14,7 +14,7 @@ import type { ServiceCategory, VehicleCategory } from "@autodeck/core";
 import heroHome from "../../assets/imagery/stock/x-polish-red.jpg";
 import loginHero from "../../assets/imagery/studio-login.jpg";
 import heroAlt from "../../assets/imagery/stock/x-polish-red.jpg";
-import membership from "../../assets/imagery/stock/x-white-garage.jpg";
+import membership from "../../assets/imagery/stock/g-styling.jpg";
 import serviceWashing from "../../assets/imagery/stock/x-white-garage.jpg";
 import serviceCeramic from "../../assets/imagery/curated/coating.jpg";
 import serviceCoating from "../../assets/imagery/curated/coating.jpg";
@@ -83,26 +83,12 @@ const TOPICS: Record<string, ImageSourcePropType> = {
   headlight: require("../../assets/imagery/curated/headlight.jpg"), coating: require("../../assets/imagery/curated/coating.jpg"),
   ppf: require("../../assets/imagery/stock/ppf-install.jpg"), tint: require("../../assets/imagery/stock/tint-install.jpg"),
   wheel: require("../../assets/imagery/stock/x-rim-clean.jpg"), engine: require("../../assets/imagery/stock/x-engine-bay.jpg"),
-  inspection: require("../../assets/imagery/stock/x-underbody-b.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
+  inspection: require("../../assets/imagery/stock/x-underbody-b.jpg"), gInspect: require("../../assets/imagery/stock/g-inspection.jpg"), align: require("../../assets/imagery/stock/g-alignment.jpg"),
+  ac: require("../../assets/imagery/stock/g-ac.jpg"), battery: require("../../assets/imagery/stock/g-battery.jpg"), repair: require("../../assets/imagery/stock/g-repairs.jpg"),
+  wrap: require("../../assets/imagery/stock/g-wrap.jpg"), styling: require("../../assets/imagery/stock/g-styling.jpg"), pickup: require("../../assets/imagery/stock/g-pickup.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
-type Svc = { name: string; brand?: string | null; category: string; imageUrl?: string | null };
-function topicOf(s: Svc): string {
-  const n = s.name.toLowerCase();
-  if (s.category === "ppf") return "ppf";
-  if (s.category === "tinting" || n.includes("tint")) return "tint";
-  if (n.includes("headlight")) return "headlight";
-  if (n.includes("roof")) return "roof";
-  if (n.includes("engine")) return "engine";
-  if (/wheel|tyre|tire|rim/.test(n)) return "wheel";
-  if (/dry clean|spa|interior|upholstery|leather|fabric/.test(n)) return "interior";
-  if (/polish|buff|correction/.test(n)) return "polish";
-  if (s.category === "inspection" || /inspect|check/.test(n)) return "inspection";
-  if (/glass|window/.test(n)) return "tint";
-  if (/teflon|coat/.test(n) || s.category === "ceramic" || s.category === "coating") return "coating";
-  if (/wash|foam/.test(n) || s.category === "washing") return "washExt";
-  return "care";
-}
+import { topicOf, GARAGE_PHOTO_TOPICS, type Svc } from "./imagery-topic";
 /** Extra real photos per topic so neighbouring cards in one list never show the same picture. */
 /* eslint-disable @typescript-eslint/no-require-imports */
 const POOLS: Record<string, ImageSourcePropType[]> = {
@@ -148,4 +134,9 @@ export function serviceVisual(s: Svc, variant = 0): ServiceVisual {
 export function brandHero(_name: string): ImageSourcePropType | null {
   // Category tile supplies the matching subject; do not substitute brand car ads.
   return null;
+}
+
+/** True when a garage service has its own matching photo, so it shows the photo instead of the icon tile. */
+export function hasGaragePhoto(name: string): boolean {
+  return GARAGE_PHOTO_TOPICS.includes(topicOf({ name, category: "garage" }));
 }

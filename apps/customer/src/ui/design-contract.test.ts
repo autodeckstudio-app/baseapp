@@ -384,3 +384,11 @@ describe("care map is gone", () => {
     expect(hits).toEqual([]);
   });
 });
+
+it("lists every stock image in the imagery register",()=>{
+  const fs=require("fs") as typeof import("fs");const path=require("path") as typeof import("path");
+  const dir=path.join(__dirname,"../../assets/imagery/stock");
+  const reg=fs.readFileSync(path.join(__dirname,"../../assets/imagery/REGISTER.md"),"utf8");
+  const missing=fs.readdirSync(dir).filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).filter(f=>!reg.includes(f));
+  expect(missing).toEqual([]);
+});
