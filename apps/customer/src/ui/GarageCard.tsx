@@ -17,7 +17,7 @@ export function GarageCard({ photo, height, kicker, title, lead, plate, chips, o
       </Pressable>
       <View pointerEvents="none" style={{ position: "absolute", left: 16, right: 16, top: height - 60, gap: 2 }}>
         {kicker ? <T role="label" tone="accent">{kicker}</T> : null}
-        <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: lead ? 22 : 18, fontWeight: "700" }}>{title}</Text>
+        <Text numberOfLines={1} style={{ color: mode === "light" ? "#1D1B26" : "#FFFFFF", fontSize: lead ? 22 : 18, fontWeight: "700", ...(mode === "light" ? { alignSelf: "flex-start", backgroundColor: "rgba(251,248,243,0.88)", borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 2, overflow: "hidden" } : null) }}>{title}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", padding: 14 }}>
         <Plate value={plate} />

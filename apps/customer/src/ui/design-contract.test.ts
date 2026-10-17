@@ -410,6 +410,9 @@ describe("nav order and drawer", () => {
     expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('booking.membershipWashUsed ? "Wash from your plan"');
     expect(read("src/app/(tabs)/book/confirm.tsx")).not.toContain("plan valid until ${washOffer.expiresOn}");
   });
+  it("garage card title stays readable in Day (pill, dark ink) as on the Home hero", () => {
+    expect(read("src/ui/GarageCard.tsx")).toContain('mode === "light" ? "#1D1B26" : "#FFFFFF"');
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);
