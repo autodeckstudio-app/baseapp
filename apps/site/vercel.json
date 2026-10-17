@@ -2,6 +2,26 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/gallery",
+      "destination": "/#studio",
+      "statusCode": 301
+    },
+    {
+      "source": "/app",
+      "destination": "/services#app",
+      "statusCode": 301
+    },
+    {
+      "source": "/visit",
+      "destination": "/#visit",
+      "statusCode": 301
+    },
+    {
+      "source": "/lounge",
+      "destination": "/shop",
+      "statusCode": 301
+    },
+    {
       "source": "/login",
       "destination": "https://app.autodeck.in/login",
       "permanent": false
@@ -42,8 +62,8 @@
       "permanent": false
     },
     {
-      "source": "/cars/:path*",
-      "destination": "https://app.autodeck.in/cars/:path*",
+      "source": "/cars/:path+",
+      "destination": "https://app.autodeck.in/cars/:path+",
       "permanent": false
     },
     {

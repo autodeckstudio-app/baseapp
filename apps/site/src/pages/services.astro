@@ -1,32 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
-const items = [
-  ['01','Paint Protection Film','Self-healing film, cut to your car and nothing else.','Detailing Lab'],
-  ['02','Ceramic Coating','Five years of gloss, on record, with a 6-monthly check to keep it honest.','Detailing Lab'],
-  ['03','Detailing','Paint corrected under studio light, then measured. Seen, never just promised.','Detailing Lab'],
-  ['04','Washing','Foam, two buckets, clean mitts. The wash it should always have been.','Wash Studio'],
-  ['05','Garage','Repairs and service, with updates on your car from anywhere.','Performance Garage'],
-  ['06','Modification','Upgrades chosen with care, fitted right the first time.','Accessory Lounge'],
+const categories = [
+ ['01','Paint protection film','A protective layer for the finish you want to keep.'],
+ ['02','Ceramic coating','Surface protection, with a finish that stays easy to care for.'],
+ ['03','Detailing','A closer look at paint, cabin and the details between.'],
+ ['04','Washing','A fresh start for the everyday drive.'],
+ ['05','Garage','Service and repairs, all connected to your car.'],
+ ['06','Modifications','Make it yours. Explore the possibilities with the studio.'],
 ];
 ---
-<Base
-  title="Services · AutoDeck"
-  description="Paint protection film, ceramic coating, detailing, washing, garage and modification, six crafts under one roof in Ahmedabad. Every service and your car's price is in the app."
-  page="services"
->
-  <section class="phero"><div class="wrap">
-    <p class="eyebrow">The six things we do</p>
-    <h1>Every service. One roof. <em>Nothing outsourced.</em></h1>
-    <p class="lede">The work measured, photographed and on record, not claimed. Every service, with your car's exact price, is in the app.</p>
-    <div class="actions" style="margin-top:26px"><a class="btn" href="https://app.autodeck.in">Open the app <span aria-hidden="true">&rarr;</span></a></div>
-  </div></section>
-  <section class="s" style="padding-top:56px"><div class="wrap">
-    <ul class="rows">
-      {items.map(([k,n,d,z]) => <li class="rv"><span class="k">{k}</span><h2>{n}</h2><p>{d}</p><span class="z">{z}</span></li>)}
-    </ul>
-    <div class="cta-box rv" style="margin-top:72px">
-      <div><h2>59 services. Every price in the app.</h2><p>Pick your car and see its exact price before you book. Final price confirmed after paint inspection. Garage work and modifications are quoted after we see the car.</p></div>
-      <div class="actions"><a class="btn dark" href="https://app.autodeck.in">See your car's prices <span aria-hidden="true">&rarr;</span></a></div>
-    </div>
-  </div></section>
-</Base>
+<Base title="Services + app · AutoDeck" description="PPF, ceramic coating, detailing, washing, garage and modifications. Explore service categories, then book in the AutoDeck app." page="services">
+<section class="page-head wrap"><p class="eyebrow">The studio menu</p><h1>For every kind <em>of care.</em></h1><div class="head-bottom"><p class="intro">Six categories. The full menu lives in the app.</p><a class="button" href="https://app.autodeck.in">Explore in the app ↗</a></div></section>
+<section class="wrap editorial-grid"><figure class="side-photo reveal"><img src="/assets/img/stock-wash.jpg" alt="Gloved hand polishing a car headlight. Illustrative stock photograph."/><figcaption>Illustrative photography</figcaption></figure><div class="service-list">{categories.map(([n,t,d])=><article class="reveal"><small>{n}</small><div><h2>{t}</h2><p>{d}</p></div></article>)}</div></section>
+<section class="section wrap"><div class="connected glass" id="app"><div><p class="eyebrow">The AutoDeck app</p><h2>Your car care.<br />One place.</h2><a class="button" href="https://app.autodeck.in">Open the app ↗</a></div><div class="connected-steps"><article><small>01 / Before</small><h3>Choose and book.</h3><p>Your car, the full menu and your next visit.</p></article><article><small>02 / During</small><h3>Stay connected.</h3><p>Updates and approvals, without the back and forth.</p></article><article><small>03 / After</small><h3>Keep the record.</h3><p>Invoices and service history, ready when you need them.</p></article></div></div></section></Base>

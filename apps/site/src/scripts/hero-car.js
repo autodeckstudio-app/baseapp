@@ -24,7 +24,7 @@ export function initHeroCar(host) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  camera.position.set(4.4, 0.95, 7.4);
+  camera.position.set(3.4, 1.35, 5.5);
   camera.lookAt(0, 0.34, 0);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -95,8 +95,8 @@ export function initHeroCar(host) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     /* car sits right of the copy on wide screens, centred and quieter on phones */
-    carGroup.position.x = w > 900 ? 1.35 : 0;
-    carGroup.position.y = w > 900 ? 0 : -0.6;
+    carGroup.position.x = 0;
+    carGroup.position.y = 0;
   }
   resize();
   window.addEventListener('resize', resize);

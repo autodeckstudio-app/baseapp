@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Studio Tee",
+    "category": "Wear",
+    "status": "Existing range",
+    "art": "tee"
+  },
+  {
+    "name": "Shield Cap",
+    "category": "Wear",
+    "status": "Existing range",
+    "art": "cap"
+  },
+  {
+    "name": "Care Kit",
+    "category": "Care",
+    "status": "Existing range",
+    "art": "bottle"
+  },
+  {
+    "name": "All-weather car cover",
+    "category": "Drive",
+    "status": "Proposed product",
+    "art": "cover"
+  },
+  {
+    "name": "Shield key chain",
+    "category": "Everyday",
+    "status": "Proposed product",
+    "art": "key"
+  },
+  {
+    "name": "Studio hoodie",
+    "category": "Wear",
+    "status": "Proposed product",
+    "art": "tee"
+  },
+  {
+    "name": "Driver tote",
+    "category": "Everyday",
+    "status": "Proposed product",
+    "art": "bag"
+  },
+  {
+    "name": "Microfibre pack",
+    "category": "Care",
+    "status": "Proposed product",
+    "art": "cloth"
+  },
+  {
+    "name": "Wheel brush",
+    "category": "Care",
+    "status": "Proposed product",
+    "art": "brush"
+  },
+  {
+    "name": "Cabin scent",
+    "category": "Everyday",
+    "status": "Proposed product",
+    "art": "scent"
+  },
+  {
+    "name": "Window decal set",
+    "category": "Drive",
+    "status": "Proposed product",
+    "art": "decal"
+  },
+  {
+    "name": "Driving gloves",
+    "category": "Drive",
+    "status": "Proposed product",
+    "art": "glove"
+  }
+]
