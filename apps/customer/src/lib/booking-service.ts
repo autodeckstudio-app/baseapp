@@ -33,11 +33,14 @@ type GetAvailabilityInput = {
   studioId: string;
   startDate: string;
   lookAheadDays?: number;
+  extraServiceIds?: string[];
 };
 type GetAvailabilityOutput = { slots: AvailableSlot[] };
 
 type CreateBookingInput = {
   serviceId: string;
+  /** More services in the same visit (up to 4). The server prices them and checks they fit one slot. */
+  extraServiceIds?: string[];
   vehicleId: string;
   vehicleCategory: string;
   studioId: string;
@@ -70,13 +73,14 @@ export async function getAvailability(
   studioId: string,
   startDate: string,
   lookAheadDays = 14,
+  extraServiceIds: string[] = [],
 ): Promise<AvailableSlot[]> {
   const fn = httpsCallable<GetAvailabilityInput, GetAvailabilityOutput>(
     functions,
     "getAvailability",
   );
-  const result = await fn({ serviceId, studioId, startDate, lookAheadDays });
-  availabilityCache.set(availabilityKey(serviceId, studioId, startDate, lookAheadDays), { at: Date.now(), slots: result.data.slots });
+  const result = await fn({ serviceId, studioId, startDate, lookAheadDays, ...(extraServiceIds.length ? { extraServiceIds } : {}) });
+  availabilityCache.set(availabilityKey(serviceId + extraServiceIds.join("+"), studioId, startDate, lookAheadDays), { at: Date.now(), slots: result.data.slots });
   return futureOnly(result.data.slots);
 }
 
@@ -84,8 +88,8 @@ export async function getAvailability(
 const availabilityCache = new Map<string, { at: number; slots: AvailableSlot[] }>();
 const availabilityKey = (a: string, b: string, c: string, d: number) => `${a}|${b}|${c}|${d}`;
 const futureOnly = (slots: AvailableSlot[]) => { const now = Date.now(); return slots.filter((s) => { const t = Date.parse(s.startAt); return Number.isNaN(t) || t > now; }); };
-export function peekAvailability(serviceId: string, studioId: string, startDate: string, lookAheadDays = 14): AvailableSlot[] | null {
-  const hit = availabilityCache.get(availabilityKey(serviceId, studioId, startDate, lookAheadDays));
+export function peekAvailability(serviceId: string, studioId: string, startDate: string, lookAheadDays = 14, extraServiceIds: string[] = []): AvailableSlot[] | null {
+  const hit = availabilityCache.get(availabilityKey(serviceId + extraServiceIds.join("+"), studioId, startDate, lookAheadDays));
   return hit && Date.now() - hit.at < 60_000 ? futureOnly(hit.slots) : null;
 }
 

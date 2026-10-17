@@ -189,7 +189,7 @@ describe("booking flow guardrails", () => {
 describe("Book shows the price and time picker early", () => {
   it("price in the header, short photo, so times sit above the fold", () => {
     const b = read("src/app/(tabs)/book/[serviceId].tsx");
-    expect(b).toMatch(/total !== null \? <T role="bodyStrong" tone="accent">\{rupees\(total\)\}/);
+    expect(b).toMatch(/total !== null \? <T role="bodyStrong" tone="accent">\{visitTotal !== null \? rupees\(visitTotal\)/);
     expect(b).toMatch(/aspect=\{3\}/);
   });
 });

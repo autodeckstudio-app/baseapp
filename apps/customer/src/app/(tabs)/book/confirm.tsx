@@ -1,5 +1,6 @@
 import { SlideToConfirm } from "../../../ui/SlideToConfirm";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { extrasFromParam } from "../../../lib/visit-extras";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -35,6 +36,7 @@ function formatDuration(minutes: number): string {
 export default function BookingConfirmScreen() {
   const params = useLocalSearchParams<{
     serviceId: string;
+    extras?: string;
     vehicleId: string;
     vehicleCategory: VehicleCategory;
     scheduledDate: string;
@@ -59,6 +61,9 @@ export default function BookingConfirmScreen() {
   const [bookError, setBookError] = useState<string | null>(null);
   const [wash, setWash] = useState<WashDecision | null>(null);
   const [useWash, setUseWash] = useState(false);
+  // More services in the same visit. The server prices them again; this is what the customer sees first.
+  const extraIds = useMemo(() => extrasFromParam(params.extras), [params.extras]);
+  const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number }>>([]);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   useEffect(() => {
@@ -75,13 +80,20 @@ export default function BookingConfirmScreen() {
         setService(serviceSnap.data() as Service);
         setVehicle(vehicleSnap.data() as Vehicle);
         setBreakdown(priceResult.breakdown);
+        const rows = await Promise.all(extraIds.map(async (id) => {
+          const [es, ep] = await Promise.all([getDoc(doc(db, COLLECTIONS.services(), id)), calculateServicePrice(id, params.vehicleCategory)]);
+          if (!es.exists()) throw new Error("Booking details unavailable");
+          const e = es.data() as Service;
+          return { id, name: e.name, minutes: e.estimatedDurationMinutes, total: ep.breakdown.total };
+        }));
+        setExtraRows(rows);
       } catch {
         setLoadError(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [params.serviceId, params.vehicleId, params.vehicleCategory,retryTick]);
+  }, [params.serviceId, params.vehicleId, params.vehicleCategory, extraIds.join(","), retryTick]);
 
   // One included wash per booking, offered only when every rule passes (see lib/membership-wash.ts). Dark until the server can record it.
   useEffect(() => {
@@ -97,7 +109,7 @@ export default function BookingConfirmScreen() {
     void getMembershipPlans().then((p) => { if (alive) setPlans(p); }).catch(() => { if (alive) setPlans(null); });
     return () => { alive = false; };
   }, []);
-  const washOffer = MEMBERSHIP_WASH_LIVE && wash && wash.ok ? wash : null;
+  const washOffer = MEMBERSHIP_WASH_LIVE && wash && wash.ok && extraIds.length === 0 ? wash : null;
   const saving = !giftCode && wash && !wash.ok && wash.reason === "no_membership" ? memberSaving({ service, total: breakdown?.total, plans }) : null;
   const washOn = useWash && washOffer !== null;
 
@@ -111,6 +123,7 @@ export default function BookingConfirmScreen() {
     try {
       const result = await createBooking({
         serviceId: params.serviceId,
+        ...(extraIds.length ? { extraServiceIds: extraIds } : {}),
         vehicleId: params.vehicleId,
         vehicleCategory: params.vehicleCategory,
         studioId: FIRST_STUDIO_ID,
@@ -142,7 +155,8 @@ export default function BookingConfirmScreen() {
     params.estimatedEndDate &&
     new Date(`${params.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
-  const durationLabel = service ? formatDuration(service.estimatedDurationMinutes) : "-";
+  const durationLabel = service ? formatDuration(service.estimatedDurationMinutes + extraRows.reduce((m, r) => m + r.minutes, 0)) : "-";
+  const visitTotal = breakdown ? breakdown.total + extraRows.reduce((t, r) => t + r.total, 0) : null;
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
@@ -156,9 +170,10 @@ export default function BookingConfirmScreen() {
         </View>
       ) : null}
       <Sheet>
-        {washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total, pay at the studio" value={rupees(breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
+        {washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total, pay at the studio" value={rupees(visitTotal ?? breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
         <SheetDivider />
         <SheetLine label="Service" value={service?.name ?? "-"} />
+        {extraRows.map((r) => <SheetLine key={r.id} label="Also" value={r.name} />)}
         <SheetLine label="Car" value={vehicle ? `${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}` : "-"} />
         <SheetLine label="Date" value={displayDate ?? "-"} />
         <SheetLine label="Time" value={params.scheduledTime ? `${params.scheduledTime}` : "-"} />
@@ -196,6 +211,7 @@ export default function BookingConfirmScreen() {
           <SheetLine small label="Base" value={rupees(breakdown.basePrice)} />
           {breakdown.scopeAdjustment > 0 ? <SheetLine small label="Vehicle size adjustment" value={`+${rupees(breakdown.scopeAdjustment)}`} /> : null}
           {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
+          {extraRows.map((r) => <SheetLine key={r.id} small label={r.name} value={rupees(r.total)} />)}
           {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
         </Sheet>
       ) : null}

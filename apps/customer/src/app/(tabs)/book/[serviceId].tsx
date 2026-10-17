@@ -19,7 +19,8 @@ import { COLLECTIONS } from "@autodeck/database";
 import { CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { calculateServicePrice } from "../../../lib/catalogue-service";
+import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
+import { eligibleExtras, extrasToParam, toggleExtra } from "../../../lib/visit-extras";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
@@ -49,7 +50,24 @@ export default function BookServiceScreen() {
   const [vehiclesError,setVehiclesError] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
-  const { colors } = useExperienceTheme();
+  const { colors, name: themeName } = useExperienceTheme();
+
+  // More services in the same visit: same bay type only, so one slot fits them all. The server checks again.
+  const [catalogue, setCatalogue] = useState<Service[]>([]);
+  const [extraIds, setExtraIds] = useState<string[]>([]);
+  const [extraTotals, setExtraTotals] = useState<Record<string, number>>({});
+  useEffect(() => { let alive = true; void getServiceCatalogue().then((c) => { if (alive) setCatalogue(c); }).catch(() => undefined); return () => { alive = false; }; }, []);
+  useEffect(() => {
+    if (!selectedCategory) return;
+    let alive = true;
+    for (const id of extraIds) void calculateServicePrice(id, selectedCategory).then(({ breakdown }) => { if (alive) setExtraTotals((t) => ({ ...t, [id]: breakdown.total })); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [extraIds.join(","), selectedCategory]);
+  const extraKey = extraIds.join(",");
+  const extraList = extraIds.map((id) => catalogue.find((c) => c.id === id)).filter((x): x is Service => Boolean(x));
+  const extraMinutes = extraList.reduce((m, e) => m + e.estimatedDurationMinutes, 0);
+  const extraPriced = extraIds.every((id) => extraTotals[id] !== undefined);
+  const visitTotal = total !== null && extraPriced ? total + extraIds.reduce((t, id) => t + (extraTotals[id] ?? 0), 0) : null;
 
   useEffect(() => {
     setTotal(null);
@@ -95,15 +113,19 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     if (!serviceId || !service) return;
-    const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7);
+    const ids = extraKey ? extraKey.split(",") : [];
+    const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids);
     if (warm) setSlots(warm);
     setSlotsLoading(!warm);
     setSlotsError(false);
-    void getAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7)
-      .then(setSlots)
-      .catch(() => setSlotsError(true))
-      .finally(() => setSlotsLoading(false));
-  }, [serviceId, service,retryTick]);
+    setPickedSlot(null);
+    let alive = true;
+    void getAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids)
+      .then((r) => { if (alive) setSlots(r); })
+      .catch(() => { if (alive) setSlotsError(true); })
+      .finally(() => { if (alive) setSlotsLoading(false); });
+    return () => { alive = false; };
+  }, [serviceId, service, retryTick, extraKey]);
 
   useEffect(()=>{setSelectedDate(cur=>slots.some(s=>s.date===cur)?cur:slots[0]?.date??null);},[slots]);
 
@@ -121,6 +143,7 @@ export default function BookServiceScreen() {
       pathname: "/(tabs)/book/confirm",
       params: {
         serviceId,
+        ...(extraIds.length ? { extras: extrasToParam(extraIds) } : {}),
         vehicleId: selectedVehicle.id,
         vehicleCategory: selectedCategory,
         scheduledDate: slot.date,
@@ -133,6 +156,7 @@ export default function BookServiceScreen() {
     });
   }
 
+
   if (loading) return <Loading label="Finding times" />;
   if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
@@ -143,7 +167,7 @@ export default function BookServiceScreen() {
   }, {});
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="bodyStrong" tone="accent">{rupees(total)} · {durationText(service.estimatedDurationMinutes)}</T> : null}</View>}>
+    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Book</Kicker><T role="title">{service.name}</T>{service.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : total !== null ? <T role="bodyStrong" tone="accent">{visitTotal !== null ? rupees(visitTotal) : extraIds.length ? "" : rupees(total)} · {durationText(service.estimatedDurationMinutes + extraMinutes)}</T> : null}</View>}>
       <View style={{ borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}><ServicePhoto service={service} aspect={3} radius={0} /><View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(5,5,6,0) 50%, rgba(5,5,6,0.7) 100%)" } as object) }} /></View>
       <View style={{ gap: space.line }}>
         <Kicker>Booking for</Kicker>
@@ -180,6 +204,23 @@ export default function BookServiceScreen() {
         {sizeError?<T role="caption" tone="danger">{sizeError}</T>:null}
         {sizeSaving?<T role="caption">Saving your car size...</T>:null}
       </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{segmentLabel(selectedVehicle.category)} · Saved with your car</T>:null}
+
+      {service.priceOnRequest !== true && eligibleExtras(service, catalogue).length > 0 ? (
+        <View style={{ gap: space.hair }}>
+          <Kicker>Add to this visit</Kicker>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+            {eligibleExtras(service, catalogue).map((e) => {
+              const on = extraIds.includes(e.id);
+              return (
+                <Pressable key={e.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setExtraIds((p) => toggleExtra(p, e.id))} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (colors.textPrimary) : "rgba(128,128,128,0.14)" }}>
+                  <T role="bodyStrong" style={{ color: on ? (themeName === "light" ? "#F4F1EC" : "#16181C") : colors.textPrimary, fontSize: 13 }}>{on ? "\u2713 " : "+ "}{e.name}</T>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          {extraIds.length > 0 ? <T role="caption" tone="tertiary">One visit, one slot. Times below fit all {extraIds.length + 1} services.</T> : null}
+        </View>
+      ) : null}
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>
