@@ -131,7 +131,7 @@ export default function GarageScreen() {
           <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
         </View>
       ) : one ? (
-        <View style={{ gap: space.breath }}>
+        <View style={{ gap: space.breath, paddingBottom: 100 }}>
           {liveJobForCar(jobs, one.id) ? (() => {
             const job = liveJobForCar(jobs, one.id)!;
             const step = jobStep(job.status);

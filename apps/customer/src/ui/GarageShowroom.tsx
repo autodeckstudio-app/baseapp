@@ -1,7 +1,7 @@
 // Garage showroom: the selected car as a full-width hero. Swipe sideways to change car; the photo moves
 // slower than the card (parallax). Reduce Motion: no parallax, plain paging.
 import { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, ScrollView, Text, View, type LayoutChangeEvent } from "react-native";
+import { Animated, Platform, Pressable, ScrollView, Text, View, type LayoutChangeEvent } from "react-native";
 import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { CarThumb } from "./CarThumb";
@@ -40,7 +40,7 @@ export function GarageShowroom({ cars, selectedId, onSelect, onOpen, chipFor }: 
                   <Animated.View style={{ position: "absolute", top: 0, bottom: 0, left: -SHIFT, width: w + SHIFT * 2, transform: [{ translateX: shift as never }] }}>
                     <CarThumb car={v} height={metrics.heroTall + 40} radius={0} />
                   </Animated.View>
-                  <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110, backgroundColor: "rgba(0,0,0,0.5)" }} />
+                  <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 130, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
                   <View style={{ position: "absolute", left: 16, right: 16, bottom: 14, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
                     <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
                       <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800" }}>{name}</Text>

@@ -26,4 +26,5 @@ describe("garage showroom guards", () => {
   it("has one Book a service button", () => { expect((g.match(/label="Book a service"/g) ?? []).length).toBe(1); });
   it("respects Reduce Motion in every animation", () => { expect(s).toContain("useReduceMotion"); expect(read("../ui/CareRing.tsx")).toContain("useReduceMotion"); });
   it("uses only allowed radii and no emoji", () => { expect(s).not.toMatch(/borderRadius: (?!12|16|24|9999|0\b)\d+/); });
+  it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).toContain("paddingBottom: 100"); });
 });

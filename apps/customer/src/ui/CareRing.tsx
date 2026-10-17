@@ -25,7 +25,7 @@ export function CareRing({ fraction, left, total, size = 76 }: { fraction: numbe
     <View accessibilityRole="progressbar" accessibilityLabel={`${left} of ${total} washes left`} style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       {Array.from({ length: TICKS }, (_, i) => {
         const a = (i / TICKS) * 2 * Math.PI - Math.PI / 2;
-        return <View key={i} style={{ position: "absolute", left: size / 2 + r * Math.cos(a) - 1.25, top: size / 2 + r * Math.sin(a) - 4, width: 2.5, height: 8, borderRadius: 2, backgroundColor: i < lit ? "#EC8638" : "rgba(128,128,128,0.28)", transform: [{ rotate: `${(a + Math.PI / 2)}rad` }] }} />;
+        return <View key={i} style={{ position: "absolute", left: size / 2 + r * Math.cos(a) - 1, top: size / 2 + r * Math.sin(a) - 3, width: 2, height: 6, borderRadius: 2, backgroundColor: i < lit ? "#EC8638" : "rgba(128,128,128,0.28)", transform: [{ rotate: `${(a + Math.PI / 2)}rad` }] }} />;
       })}
       <View style={{ alignItems: "center" }}>
         <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>{left}</Text>
