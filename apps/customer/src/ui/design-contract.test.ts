@@ -363,6 +363,13 @@ describe("nav order and drawer", () => {
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
+  it("Home has one entry point per thing: no service grid, reminders list, friend row or drawer copies", () => {
+    const h = read("src/ui/HomeView.tsx");
+    for (const dup of ['"Top services"', 'Heading title="Reminders"', 'title="Bring a friend"', 'Your car needs</Text>', '>Last time</Text>']) expect(h).not.toContain(dup);
+    expect(h).toContain("pickIdleNudge(");
+    const idx = read("src/app/(tabs)/index.tsx");
+    for (const key of ["membership", "notifications", "studio", "help"]) expect(idx).not.toContain(`{ key: "${key}", label:`);
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);

@@ -1,6 +1,6 @@
 // Customer Home in the reference layout: round menu + car and status + bell and
 // avatar, a car hero, visit and health tiles, four round actions, studio and
-// membership tiles, stories, brand widgets, popular services and reminders.
+// membership row, stories and follow links. One entry point per thing: services live in the Services tab, papers in Car.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Platform, useWindowDimensions, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { pickTopServices, type TopPick } from "../lib/top-services";
@@ -170,26 +170,35 @@ function CarPanel({ title, plate, cta }: { title: string; plate: string; cta: st
 }
 
 /** One lead card that changes with the car's state: live job, something needing action, a document due, or a prompt to book. */
-function LeadCard({ live, pct, reminder, car, onReminder, onBook }: { live: HomeLive | null; pct: number | null; reminder: HomeReminder | null; car: HomeCar | undefined; onReminder: () => void; onBook: () => void }) {
+type IdleNudge = { kicker: string; title: string; detail: string; cta: string; onPress: () => void };
+/** The one thing Home nudges about when nothing is live: an expiring paper first, then what the car needs, then a rebook. */
+export function pickIdleNudge(p: { reminder: HomeReminder | null; need?: { title: string; detail: string; onPress: () => void } | null | undefined; rebook?: { serviceName: string; onPress: () => void } | null | undefined; onReminder: () => void }): IdleNudge | null {
+  if (p.reminder) return { kicker: "Needs attention", title: `${p.reminder.title}: ${p.reminder.chip}`, detail: p.reminder.detail, cta: "Take a look", onPress: p.onReminder };
+  if (p.need) return { kicker: "Your car needs", title: p.need.title, detail: p.need.detail, cta: "Book", onPress: p.need.onPress };
+  if (p.rebook) return { kicker: "Last time", title: p.rebook.serviceName, detail: "", cta: "Book again", onPress: p.rebook.onPress };
+  return null;
+}
+function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pct: number | null; nudge: IdleNudge | null; car: HomeCar | undefined; onBook: () => void }) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
-  const idle = !live || (live.idle === true && !reminder);
-  const kicker = reminder ? "Needs attention" : idle ? "Ready when you are" : live!.kicker;
-  const title = reminder ? `${reminder.title}: ${reminder.chip}` : idle ? (car ? `Book care for your ${car.title}` : "Add your car to begin") : live!.title;
-  const detail = reminder ? reminder.detail : idle ? (live?.detail ?? "") : live!.detail;
-  const press = reminder ? onReminder : idle ? (live?.onPress ?? onBook) : live!.onPress;
+  const idle = !live || live.idle === true;
+  const n = idle ? nudge : null;
+  const kicker = n ? n.kicker : idle ? "Ready when you are" : live!.kicker;
+  const title = n ? n.title : idle ? (car ? `Book care for your ${car.title}` : "Add your car to begin") : live!.title;
+  const detail = n ? n.detail : idle ? (live?.detail ?? "") : live!.detail;
+  const press = n ? n.onPress : idle ? (live?.onPress ?? onBook) : live!.onPress;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light"), ...glassBg(name !== "light") })}>
       <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
       <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
-      {!reminder && !idle && pct !== null ? (
+      {!idle && pct !== null ? (
         <View style={{ height: 8, overflow: "hidden", ...r.well, borderRadius: 6 }}>
           <View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} />
         </View>
       ) : null}
       <View style={{ alignSelf: "flex-start", marginTop: 4, borderRadius: 9999, paddingHorizontal: 22, paddingVertical: 12, backgroundColor: "#F4F2EF" }}>
-        <Text style={{ color: "#0B0B0D", fontSize: 15, fontWeight: "800" }}>{reminder ? "Take a look" : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track"}</Text>
+        <Text style={{ color: "#0B0B0D", fontSize: 15, fontWeight: "800" }}>{n ? n.cta : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track"}</Text>
       </View>
     </Pressable>
   );
@@ -326,59 +335,8 @@ export function HomeView(p: HomeViewProps) {
 
       {p.banner}
 
-      <LeadCard live={p.live} pct={pct} reminder={p.live?.idle ? p.reminders[0] ?? null : null} car={car} onReminder={p.onReminders} onBook={p.onBook} />
+      <LeadCard live={p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
 
-      {p.need && (!p.live || p.live.idle === true) ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`${p.need.title}. ${p.need.detail}`} onPress={p.need.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: metrics.cardRadius, padding: metrics.cardPad, opacity: pressed ? 0.9 : 1, ...r.card })}>
-          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Your car needs</Text>
-            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.need.title}</Text>
-            <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 13 }}>{p.need.detail}</Text>
-          </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700" }}>Book</Text>
-        </Pressable>
-      ) : null}
-
-      {p.rebook && (!p.live || p.live.idle === true) ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Book ${p.rebook.serviceName} again`} onPress={p.rebook.onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: metrics.cardRadius, padding: metrics.cardPad, opacity: pressed ? 0.9 : 1, ...r.card })}>
-          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Last time</Text>
-            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.rebook.serviceName}</Text>
-          </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700" }}>Book again</Text>
-        </Pressable>
-      ) : null}
-
-      <View style={{ gap: 12 }}>
-        <Heading title={car ? "Top services" : "Top services"} action="All services" onAction={p.onAllServices} />
-        {top.length === 0 ? <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Services will show here.</Text> : (
-          <View style={{ gap: TILE_GAP }}>
-            {[top.slice(0, 2), top.slice(2, 4)].filter((row) => row.length > 0).map((row, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: TILE_GAP }}>
-                {row.map((pk) => <TopPickCard key={pk.key} pick={pk} onPress={() => p.onService(pk.service)} />)}
-                {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {p.reminders.length ? (
-        <View style={{ gap: 12 }}>
-          <Heading title="Reminders" />
-          {p.reminders.map((rm) => (
-            <Pressable key={rm.title} accessibilityRole="button" onPress={p.onReminders} style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 24, padding: 14, ...r.card }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{rm.title}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{rm.detail}</Text>
-              </View>
-              <View style={{ borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: rm.danger ? "rgba(229,72,77,.16)" : colors.accentHaze }}>
-                <Text style={{ color: rm.danger ? "#D6383E" : colors.accentStrong, fontSize: 12, fontWeight: "800" }}>{rm.chip}</Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
       <CampaignSlot campaign={p.campaign} />
       <View style={{ gap: 12 }}>
         <Heading title="The studio" />
@@ -408,7 +366,6 @@ export function HomeView(p: HomeViewProps) {
         <Heading title="Club" />
         <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
           <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
-          <ClubRow icon="gift" title="Bring a friend" sub="Share AutoDeck with someone who loves their car." onPress={p.onShare} />
         </View>
       </View>
 

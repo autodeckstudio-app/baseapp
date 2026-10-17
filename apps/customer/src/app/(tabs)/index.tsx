@@ -244,12 +244,8 @@ export default function HomeScreen() {
         onAvatar={() => router.push("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
         drawer={[
-          { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: () => router.push("/(tabs)/membership") },
           { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
           ...(GIFT_LIVE ? [{ key: "gifts", label: "Gift a wash", sub: "Use or send a gift", icon: "gift" as const, onPress: () => router.push("/(tabs)/gifts") }] : []),
-          { key: "notifications", label: "Notifications", icon: "bell", onPress: () => router.push("/(tabs)/notifications") },
-          { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => router.push("/(tabs)/studio") },
-          { key: "help", label: "Help and contact", icon: "chat", onPress: () => router.push("/(tabs)/help") },
         ]}
         onBook={() => router.push("/(tabs)/catalogue")}
         onStudio={() => router.push("/(tabs)/studio")}
