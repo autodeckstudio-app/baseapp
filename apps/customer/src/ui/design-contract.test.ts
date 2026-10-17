@@ -140,7 +140,7 @@ it("audit batch: no spinner price labels, no icon placeholders over titles, labe
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
   expect(read("src/ui/GarageCard.tsx")).toContain(">Remove<");expect(read("src/ui/GarageCard.tsx")).not.toContain('name="close"');
   expect(read("src/app/(tabs)/garage/index.tsx")).toContain("v.photoUrl ? <CarThumb");
-  expect(read("src/app/(tabs)/profile.tsx")).toContain("<PageHeader");
+  expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You">'); // the common header is the only title (no second "Your account")
   expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
   const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
   expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120");
