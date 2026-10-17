@@ -1,7 +1,7 @@
 import { RateCard } from "../../ui/RateCard";
 import { rateCandidate } from "../../lib/rate-card";
 import { liveTrackTarget } from "../../lib/bookings-view";
-import { GIFT_LIVE } from "../../lib/gift";
+import { buildDrawerItems } from "../../lib/drawer-items";
 import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../lib/vehicle-size";
 // Home: vehicle-first, one lead state (spec §6.2). What leads is decided by
@@ -251,12 +251,7 @@ export default function HomeScreen() {
         carsCard={pickFeaturedCar(carListings)}
         onBuyCar={() => router.push("/(tabs)/cars")}
         onSellCar={() => router.push("/(tabs)/cars/sell")}
-        drawer={[
-          { key: "buycar", label: "Buy a car", sub: "Studio and owner listings", icon: "car", onPress: () => router.push("/(tabs)/cars") },
-          { key: "sellcar", label: "Sell your car", sub: "List it with the studio", icon: "car", onPress: () => router.push("/(tabs)/cars/sell") },
-          { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
-          ...(GIFT_LIVE ? [{ key: "gifts", label: "Gift a wash", sub: "Use or send a gift", icon: "gift" as const, onPress: () => router.push("/(tabs)/gifts") }] : []),
-        ]}
+        drawer={buildDrawerItems((path) => router.push(path as never), myCode)}
         onBook={() => router.push("/(tabs)/catalogue")}
         onStudio={() => router.push("/(tabs)/studio")}
         onMembership={() => router.push("/(tabs)/membership")}

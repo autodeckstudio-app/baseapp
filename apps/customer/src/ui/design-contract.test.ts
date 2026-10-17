@@ -247,7 +247,7 @@ describe("home cars", () => {
 describe("home menu", () => {
   it("the avatar opens the side drawer", () => {
     expect(read("src/ui/HomeView.tsx")).toContain("SideDrawer");
-    expect(read("src/app/(tabs)/index.tsx")).toContain("drawer={[");
+    expect(read("src/app/(tabs)/index.tsx")).toContain("drawer={buildDrawerItems(");
   });
 });
 
@@ -350,9 +350,9 @@ describe("membership wash", () => {
 
 describe("referral wording", () => {
   it("every Bring a friend button uses the one share message", () => {
-    for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
+    for (const f of ["src/lib/drawer-items.ts"]) {
       const s = read(f);
-      expect(s).toContain("referralSubtitle(myCode)");
+      expect(s).toContain("referralSubtitle(referralCode)");
       expect(s).not.toContain("Book on https://app.autodeck.in");
     }
   });
@@ -490,8 +490,8 @@ describe("Cars entry points (owner: buy and sell must be reachable)", () => {
   });
   it("Home drawer and Home card both link to Cars and Cars sell, and the Cars page has one Sell button", () => {
     const idx = read("src/app/(tabs)/index.tsx");
-    expect(idx).toContain('label: "Buy a car"');
-    expect(idx).toContain('label: "Sell your car"');
+    expect(read("src/lib/drawer-items.ts")).toContain('label: "Buy a car"');
+    expect(read("src/lib/drawer-items.ts")).toContain('label: "Sell your car"');
     expect(idx).toContain("carsCard={pickFeaturedCar(carListings)}");
     const cars = read("src/app/(tabs)/cars/index.tsx");
     expect(cars.match(/label="Sell your car"/g)?.length).toBe(1);

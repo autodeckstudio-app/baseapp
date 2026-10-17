@@ -1,7 +1,8 @@
-import { referralCodeFor, referralShareMessage, referralSubtitle } from "../lib/referral";
+import { referralCodeFor } from "../lib/referral";
+import { buildDrawerItems } from "../lib/drawer-items";
 // One header for every tab screen: avatar (opens the side drawer) on the left, the screen name in the middle, the bell on the right.
 import { useEffect, useState } from "react";
-import { Pressable, Share, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
@@ -26,13 +27,7 @@ export function AppBar({ title, onBack }: { title: string; onBack?: (() => void)
   const display = ready ? (auth.user.displayName ?? "AutoDeck").trim() || "AutoDeck" : "AutoDeck";
   const initial = display.charAt(0).toUpperCase() || "A";
   const go = (p: string) => () => router.push(p as never);
-  const items: DrawerItem[] = [
-    { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: go("/(tabs)/membership") },
-    { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
-    { key: "notifications", label: "Notifications", icon: "bell", onPress: go("/(tabs)/notifications") },
-    { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: go("/(tabs)/studio") },
-    { key: "help", label: "Help and contact", icon: "chat", onPress: go("/(tabs)/help") },
-  ];
+  const items: DrawerItem[] = buildDrawerItems((path) => router.push(path as never), myCode);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
       <SideDrawer open={open} onClose={() => setOpen(false)} name={display} initial={initial} items={items} />

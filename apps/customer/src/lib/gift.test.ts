@@ -10,7 +10,7 @@ describe("gift client", () => {
     expect(c).toContain("GIFT_LIVE ? takePendingGiftCode()");
     expect(read("lib/gift-service.ts")).not.toMatch(/amount\s*:\s*\d/);
   });
-  it("the home entry only exists when live", () => expect(read("app/(tabs)/index.tsx")).toContain("...(GIFT_LIVE ? ["));
+  it("the home entry only exists when live", () => expect(read("lib/drawer-items.ts")).toContain("...(GIFT_LIVE ? ["));
   it("holds a claimed code in memory only", () => {
     setPendingGiftCode("GWABCD2345");
     expect(takePendingGiftCode()).toBe("GWABCD2345");
