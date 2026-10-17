@@ -3,7 +3,7 @@ import { SelectField } from "../../../ui/inputs";
 import { createElement, useEffect, useMemo, useState } from "react";
 import { Image, Platform, Pressable, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, Field, Kicker, Notice, Screen, Skeleton, T } from "../../../ui/kit";
@@ -54,8 +54,75 @@ function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
   </Pressable>;
 }
 
+type Tab = "buy" | "sell";
+
+/** Buy | Sell switch at the top of the Cars hub. */
+function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  const night = useExperienceTheme().name === "night";
+  return (
+    <View accessibilityRole="tablist" style={{ flexDirection: "row", padding: 4, gap: 4, ...glassPane(!night) }}>
+      {(["buy", "sell"] as Tab[]).map((t) => {
+        const on = tab === t;
+        return (
+          <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={t === "buy" ? "Buy a car" : "Sell your car"} onPress={() => onChange(t)}
+            style={{ flex: 1, minHeight: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: on ? (night ? "#FAF8F5" : "#1D1B26") : "transparent" }}>
+            <T role="label" style={{ color: on ? (night ? "#1D1B26" : "#FFFFFF") : night ? "#FAF8F5" : "#1D1B26" }}>{t === "buy" ? "Buy" : "Sell"}</T>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const SELL_STEPS: Array<{ n: string; title: string; body: string }> = [
+  { n: "1", title: "Add your car", body: "Make, model, year, kilometres and clear photos of your own car." },
+  { n: "2", title: "The studio reviews it", body: "Your listing goes live once the studio has checked it." },
+  { n: "3", title: "Enquiries come to the studio", body: "Buyers enquire through AutoDeck. You see their status under your listings." },
+];
+
+function SellHub({ mine, onSell, onOpen }: { mine: CarListingView[]; onSell: () => void; onOpen: (id: string) => void }) {
+  const night = useExperienceTheme().name === "night";
+  return (
+    <View style={{ gap: space.inset }}>
+      <View style={{ padding: 20, gap: 14, ...glassPane(!night) }}>
+        <Kicker>Sell your car</Kicker>
+        <T role="heading">List it with AutoDeck</T>
+        <T tone="secondary">Add your car once. The studio reviews it and shows it to buyers in the app.</T>
+        <Button label="List your car" onPress={onSell} />
+      </View>
+      <View style={{ gap: space.line }}>
+        {SELL_STEPS.map((st) => (
+          <View key={st.n} style={{ flexDirection: "row", gap: 14, alignItems: "flex-start", padding: 16, ...glassPane(!night) }}>
+            <View style={{ width: 36, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.10)" : "rgba(29,27,38,0.06)" }}><T role="label">{st.n}</T></View>
+            <View style={{ flex: 1, gap: 2 }}><T role="bodyStrong">{st.title}</T><T role="caption" tone="secondary">{st.body}</T></View>
+          </View>
+        ))}
+      </View>
+      {mine.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          <Kicker>Your cars for sale</Kicker>
+          {mine.map((l) => (
+            <Pressable key={l.id} accessibilityRole="button" onPress={() => onOpen(l.id)} style={{ flexDirection: "row", gap: space.line, alignItems: "center" }}>
+              <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 12 }} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
+                <T role="caption" tone="tertiary">{hasCarPrice(l) ? inr(l.askingPrice) : "Price on request"}</T>
+                {l.status === "rejected" && l.rejectionReason ? <T role="caption" tone="secondary" numberOfLines={2}>{l.rejectionReason}</T> : null}
+              </View>
+              <Chip label={STATE[l.status] ?? l.status} tone={l.status === "live" ? "accent" : l.status === "rejected" ? "danger" : "neutral"} />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function CarsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(params.tab === "sell" ? "sell" : "buy");
+  useEffect(() => { if (params.tab === "sell") setTab("sell"); else if (params.tab === "buy") setTab("buy"); }, [params.tab]);
   const [all, setAll] = useState<CarListingView[] | null>(null);
   const [mine, setMine] = useState<CarListingView[]>([]);
   const [error, setError] = useState(false);
@@ -77,9 +144,10 @@ export default function CarsScreen() {
 
   return (
     <Screen appBar="Cars">
-      <T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T>
-      <Button kind="quiet" label="Sell your car" onPress={() => router.push("/(tabs)/cars/sell")} />
-      {all && all.length > 0 ? (
+      <TabSwitch tab={tab} onChange={setTab} />
+      {tab === "sell" ? <SellHub mine={mine} onSell={() => router.push("/(tabs)/cars/sell")} onOpen={(id) => router.push(`/(tabs)/cars/${id}`)} /> : null}
+      {tab === "buy" ? <T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T> : null}
+      {tab === "buy" && all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
           <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
@@ -95,32 +163,16 @@ export default function CarsScreen() {
           <View style={{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12}}><T role="caption" tone="tertiary">{shown.length} car{shown.length===1?"":"s"}{filtering?" match your search":" to explore"}</T>{filtering?<Pressable accessibilityRole="button" accessibilityLabel="Clear car filters and search" onPress={()=>{setQuery("");setFuel(null);setBody(null);setBudget("any");}} style={{minHeight:44,justifyContent:"center"}}><T role="caption" tone="accent">Clear all</T></Pressable>:null}</View>
         </View>
       ) : null}
-      {error ? <Notice title="Can't load cars" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n => n+1)}/>} /> : null}
-      {!all && !error ? <View style={{ gap: space.line }}><Skeleton height={200} /><Skeleton height={200} /></View> : null}
-      {all && all.length === 0 ? <Notice title="No cars listed yet" body="New cars appear here as soon as the studio lists them." /> : null}
-      {all && all.length > 0 && shown.length === 0 && filtering ? (
+      {tab === "buy" && error ? <Notice title="Can't load cars" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={() => setAttempt(n => n+1)}/>} /> : null}
+      {tab === "buy" && !all && !error ? <View style={{ gap: space.line }}><Skeleton height={200} /><Skeleton height={200} /></View> : null}
+      {tab === "buy" && all && all.length === 0 ? <Notice title="No cars listed yet" body="New cars appear here as soon as the studio lists them." /> : null}
+      {tab === "buy" && all && all.length > 0 && shown.length === 0 && filtering ? (
         <Notice title="No cars match" body="Try a wider budget or clear the search." action={<Button kind="quiet" label="Clear filters" onPress={() => { setQuery(""); setFuel(null); setBody(null); setBudget("any"); }} />} />
       ) : null}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.inset }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.inset, display: tab === "buy" ? "flex" : "none" }}>
         {shown.map((l) => <Card key={l.id} l={l} onPress={() => router.push(`/(tabs)/cars/${l.id}`)} />)}
       </View>
 
-      {mine.length > 0 ? (
-        <View style={{ gap: space.breath }}>
-          <Kicker>Your cars for sale</Kicker>
-          {mine.map((l) => (
-            <Pressable key={l.id} accessibilityRole="button" onPress={() => router.push(`/(tabs)/cars/${l.id}`)} style={{ flexDirection: "row", gap: space.line, alignItems: "center" }}>
-              <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 12 }} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
-                <T role="caption" tone="tertiary">{hasCarPrice(l) ? inr(l.askingPrice) : "Price on request"}</T>
-                {l.status === "rejected" && l.rejectionReason ? <T role="caption" tone="secondary" numberOfLines={2}>{l.rejectionReason}</T> : null}
-              </View>
-              <Chip label={STATE[l.status] ?? l.status} tone={l.status === "live" ? "accent" : l.status === "rejected" ? "danger" : "neutral"} />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
 
       <T role="caption" tone="tertiary">AutoDeck lists cars to help buyers and sellers meet. We are not a party to the sale, and ownership papers and transfer are between buyer and seller.</T>
     </Screen>

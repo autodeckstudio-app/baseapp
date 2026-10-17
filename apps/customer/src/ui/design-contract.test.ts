@@ -494,7 +494,10 @@ describe("Cars entry points (owner: buy and sell must be reachable)", () => {
     expect(read("src/lib/drawer-items.ts")).toContain('label: "Sell your car"');
     expect(idx).toContain("carsCard={pickFeaturedCar(carListings)}");
     const cars = read("src/app/(tabs)/cars/index.tsx");
-    expect(cars.match(/label="Sell your car"/g)?.length).toBe(1);
+    expect(cars.match(/label="List your car"/g)?.length).toBe(1);
+    expect(cars).toContain("<TabSwitch");
+    expect(cars).toContain('accessibilityLabel={t === "buy" ? "Buy a car" : "Sell your car"}');
+    expect(read("src/lib/drawer-items.ts")).toContain("/(tabs)/cars?tab=sell");
   });
 });
 
