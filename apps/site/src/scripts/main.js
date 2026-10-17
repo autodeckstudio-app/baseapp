@@ -1,21 +1,7 @@
 document.documentElement.classList.add('js');
-// Reveal on scroll and the opening countdown. Nothing else.
+// Reveal on scroll. Nothing else.
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.12 });
 document.querySelectorAll('.rv').forEach((el) => io.observe(el));
-const cd = document.getElementById('countdown');
-if (cd) {
-  const target = new Date(cd.dataset.target || '').getTime();
-  const q = (k) => cd.querySelector(`[data-cd="${k}"]`);
-  const pad = (n) => String(n).padStart(2, '0');
-  const tick = () => {
-    const ms = Math.max(0, target - Date.now());
-    q('d').textContent = pad(Math.floor(ms / 864e5));
-    q('h').textContent = pad(Math.floor(ms / 36e5) % 24);
-    q('m').textContent = pad(Math.floor(ms / 6e4) % 60);
-    q('s').textContent = pad(Math.floor(ms / 1e3) % 60);
-  };
-  tick(); setInterval(tick, 1000);
-}
 
 // Scroll-driven story: one background that changes with the page, a pinned chapter stage, a timeline that lights up, counters.
 const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -68,3 +54,24 @@ if (line && when) {
 }
 if (location.hash === '#all') document.querySelectorAll('.rv').forEach((e) => e.classList.add('in'));
 { const y0 = new URLSearchParams(location.search).get('y'); if (y0) { scrollTo(0, Number(y0)); frame(); } }
+
+// Hero car: lazy, idle-time, and never under reduced motion. No WebGL or an old phone keeps the studio photos as the hero.
+const heroCarHost = document.querySelector('[data-hero-car]');
+if (heroCarHost && !calm) {
+  const start = () => import('./hero-car.js').then((m) => m.initHeroCar(heroCarHost)).catch(() => {});
+  if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2500 });
+  else setTimeout(start, 400);
+}
+
+// First-visit intro veil: one beat, then gone. Skipped on repeat visits and under reduced motion.
+const intro = document.querySelector('[data-intro]');
+if (intro) {
+  const seen = sessionStorage.getItem('ad-intro');
+  if (seen || calm) intro.remove();
+  else {
+    sessionStorage.setItem('ad-intro', '1');
+    const drop = () => { intro.classList.add('done'); setTimeout(() => intro.remove(), 700); };
+    if (document.readyState === 'complete') setTimeout(drop, 900);
+    else addEventListener('load', () => setTimeout(drop, 900), { once: true });
+  }
+}
