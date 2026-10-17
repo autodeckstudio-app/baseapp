@@ -406,6 +406,10 @@ describe("nav order and drawer", () => {
     expect(c).toContain("onBack={levelBack}");
     expect(read("src/ui/GarageCard.tsx")).toContain("minHeight: 44");
   });
+  it("a plan wash is labelled as a wash and its expiry date is human readable", () => {
+    expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('booking.membershipWashUsed ? "Wash from your plan"');
+    expect(read("src/app/(tabs)/book/confirm.tsx")).not.toContain("plan valid until ${washOffer.expiresOn}");
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);

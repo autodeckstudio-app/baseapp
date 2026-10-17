@@ -175,7 +175,7 @@ export default function BookingConfirmScreen() {
         <Pane pad="gap">
           <Row
             title="Use a membership wash"
-            detail={<T role="caption" tone="secondary">{`${washOffer.washesLeft} left${washOffer.expiresOn ? `, plan valid until ${washOffer.expiresOn}` : ""}. One wash per booking.`}</T>}
+            detail={<T role="caption" tone="secondary">{`${washOffer.washesLeft} left${washOffer.expiresOn ? `, plan valid until ${new Date(`${washOffer.expiresOn}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}. One wash per booking.`}</T>}
             trailing={<Button kind={washOn ? "primary" : "quiet"} label={washOn ? "Using it" : "Use"} onPress={() => setUseWash(!useWash)} />}
             last
           />
