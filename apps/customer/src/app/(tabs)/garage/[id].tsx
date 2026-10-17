@@ -1,5 +1,6 @@
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
+import { buildCarePlan, dueText } from "../../../lib/care-plan";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField } from "../../../ui/inputs";
 import { validateDocument, documentReference } from "../../../lib/document-validation";
@@ -32,7 +33,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview, TabPills } from "../../../ui/CarOverview";
 import { nextDue, dueLine } from "../../../lib/car-next-due";
 
-type TabKey = "overview" | "passport" | "protection" | "warranty";
+type TabKey = "overview" | "careplan" | "passport" | "protection" | "warranty";
 
 const PROTECTION_KIND_LABELS: Record<string, string> = {
   insurance: "Insurance",
@@ -45,6 +46,7 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "careplan", label: "Care plan" },
   { key: "passport", label: "History" },
   { key: "protection", label: "Documents" },
   { key: "warranty", label: "Warranty" },
@@ -354,6 +356,50 @@ export default function VehicleDetailScreen() {
           ) : null}
         </>
       ) : null}
+
+      {tab === "careplan" ? (() => {
+        const svc: Record<string, { id: string; name: string; category: string }> = {};
+        for (const j of jobs) if (serviceNames[j.serviceId]) svc[j.serviceId] = { id: j.serviceId, name: serviceNames[j.serviceId]!, category: serviceCats[j.serviceId] ?? "" };
+        const plan = buildCarePlan({ jobs, services: svc, warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate })) });
+        const dateOf = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+        if (plan.done.length === 0 && plan.warranties.length === 0) return <Notice title="No care plan yet" body="Once the studio finishes a service on this car, what was done and what is due next will show here." action={<Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />} />;
+        return (
+          <View style={{ gap: space.inset }}>
+            {plan.nextCoat ? (
+              <Pane pad="gap">
+                <Kicker tone="accent">Next maintenance coat</Kicker>
+                <T role="heading">{plan.nextCoat.name}</T>
+                <T tone="secondary">{dueText(plan.nextCoat.days)} · {dateOf(plan.nextCoat.dueAt)}</T>
+                <Button label="Book maintenance" onPress={() => router.push("/(tabs)/catalogue")} />
+              </Pane>
+            ) : null}
+            {plan.due.length > 0 ? (
+              <View style={{ gap: space.breath }}>
+                <Kicker>Due</Kicker>
+                <Pane pad="gap">
+                  {plan.due.map((d, i) => <Row key={`${d.name}-${i}`} title={d.label} detail={<T role="caption" tone="secondary">{d.name} · {dueText(d.days)} · {dateOf(d.dueAt)}</T>} last={i === plan.due.length - 1} />)}
+                </Pane>
+              </View>
+            ) : null}
+            {plan.warranties.length > 0 ? (
+              <View style={{ gap: space.breath }}>
+                <Kicker>Warranty ends</Kicker>
+                <Pane pad="gap">
+                  {plan.warranties.map((w, i) => <Row key={`${w.label}-${i}`} title={w.label} detail={<T role="caption" tone="secondary">{w.days < 0 ? "Ended" : `Ends in ${w.days} day${w.days === 1 ? "" : "s"}`} · {dateOf(new Date(w.endDate))}</T>} last={i === plan.warranties.length - 1} />)}
+                </Pane>
+              </View>
+            ) : null}
+            {plan.done.length > 0 ? (
+              <View style={{ gap: space.breath }}>
+                <Kicker>Done</Kicker>
+                <Pane pad="gap">
+                  {plan.done.slice(0, 8).map((d, i, a) => <Row key={`${d.name}-${i}`} title={d.name} detail={<T role="caption" tone="secondary">{dateOf(d.at)}</T>} last={i === a.length - 1} />)}
+                </Pane>
+              </View>
+            ) : null}
+          </View>
+        );
+      })() : null}
 
       {tab === "passport" ? (
         jobs.length === 0 ? (
