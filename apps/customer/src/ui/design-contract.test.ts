@@ -479,20 +479,23 @@ it("car overview shows a concrete Next due, not vague count tiles or a one-row d
   expect(o).not.toMatch(/label="Protection"|label="Warranty"/);
 });
 
-import { pickFeaturedCar } from "../lib/cars-home";
+import { homeCars } from "../lib/cars-home";
 describe("Cars entry points (owner: buy and sell must be reachable)", () => {
   const l = (o: Record<string, unknown>) => ({ id: "x", status: "live", source: "customer", photoUrls: ["u"], ...o }) as never;
-  it("features a live studio listing with a photo, else any live one, else nothing", () => {
-    expect(pickFeaturedCar([l({ id: "a" }), l({ id: "b", source: "studio" })])?.id).toBe("b");
-    expect(pickFeaturedCar([l({ id: "a" })])?.id).toBe("a");
-    expect(pickFeaturedCar([l({ photoUrls: [] }), l({ status: "pending" })])).toBeNull();
-    expect(pickFeaturedCar(null)).toBeNull();
+  it("Home lists ALL live listings that have a photo, studio first, never a single card", () => {
+    expect(homeCars([l({ id: "a" }), l({ id: "b", source: "studio" }), l({ id: "c" })]).map((x) => x.id)).toEqual(["b", "a", "c"]);
+    expect(homeCars([l({ photoUrls: [] }), l({ status: "pending" })])).toEqual([]);
+    expect(homeCars(null)).toEqual([]);
+    const card = read("src/ui/CarsCard.tsx");
+    expect(card).toContain("<ScrollView horizontal");
+    expect(card).toContain("cars.map(");
+    expect(card).toContain("Cars for sale");
   });
   it("Home drawer and Home card both link to Cars and Cars sell, and the Cars page has one Sell button", () => {
     const idx = read("src/app/(tabs)/index.tsx");
     expect(read("src/lib/drawer-items.ts")).toContain('label: "Buy a car"');
     expect(read("src/lib/drawer-items.ts")).toContain('label: "Sell your car"');
-    expect(idx).toContain("carsCard={pickFeaturedCar(carListings)}");
+    expect(idx).toContain("carsList={homeCars(carListings)}");
     const cars = read("src/app/(tabs)/cars/index.tsx");
     expect(cars.match(/label="List your car"/g)?.length).toBe(1);
     expect(cars).toContain("<TabSwitch");

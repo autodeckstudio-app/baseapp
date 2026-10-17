@@ -146,7 +146,7 @@ export default function CarsScreen() {
     <Screen appBar="Cars">
       <TabSwitch tab={tab} onChange={setTab} />
       {tab === "sell" ? <SellHub mine={mine} onSell={() => router.push("/(tabs)/cars/sell")} onOpen={(id) => router.push(`/(tabs)/cars/${id}`)} /> : null}
-      {tab === "buy" ? <T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T> : null}
+      {tab === "buy" ? <View style={{ gap: 4 }}><T role="heading">Cars for sale</T><T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T></View> : null}
       {tab === "buy" && all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />

@@ -35,7 +35,7 @@ import { getStories, groupStories, type StoryGroup } from "../../lib/story-servi
 import { StoryCircles } from "../../ui/StoryCircles";
 import { HomeView } from "../../ui/HomeView";
 import { getCarListings } from "../../lib/carsale-service";
-import { pickFeaturedCar } from "../../lib/cars-home";
+import { homeCars } from "../../lib/cars-home";
 import type { CarListingView } from "@autodeck/core";
 import { StoryViewer } from "../../ui/StoryViewer";
 import { HeroImage, Button, Chip, Kicker, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
@@ -248,7 +248,8 @@ export default function HomeScreen() {
         ]}
         onAvatar={() => router.push("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
-        carsCard={pickFeaturedCar(carListings)}
+        carsList={homeCars(carListings)}
+        onOpenCar={(id) => router.push(`/(tabs)/cars/${id}` as never)}
         onBuyCar={() => router.push("/(tabs)/cars")}
         onSellCar={() => router.push("/(tabs)/cars/sell")}
         drawer={buildDrawerItems((path) => router.push(path as never), myCode)}

@@ -54,7 +54,8 @@ export type HomeViewProps = {
   /** One compact campaign slot. Omit until there is real content. */
   campaign?: Campaign | null;
   /** A live car listing for the Cars card. Null hides it. */
-  carsCard?: CarListingView | null;
+  carsList?: CarListingView[];
+  onOpenCar?: (id: string) => void;
   onBuyCar?: () => void;
   onSellCar?: () => void;
   onAvatar: () => void;
@@ -344,7 +345,7 @@ export function HomeView(p: HomeViewProps) {
       <LeadCard live={p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
 
       <CampaignSlot campaign={p.campaign} />
-      {p.carsCard && p.onBuyCar && p.onSellCar ? <CarsCard car={p.carsCard} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
+      {p.carsList && p.carsList.length > 0 && p.onOpenCar && p.onBuyCar && p.onSellCar ? <CarsCard cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
       <View style={{ gap: 12 }}>
         <Heading title="The studio" />
         <View style={{ ...glassPane(name === "light"), padding: metrics.cardPad, gap: 12 }}>
