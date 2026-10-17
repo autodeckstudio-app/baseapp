@@ -16,8 +16,9 @@ describe("upgrade confirmation", () => {
     const s = readFileSync(`${__dirname}/../app/(tabs)/membership/purchase.tsx`, "utf8");
     expect(s).toContain("upgradeConfirmCopy(");
     expect(s).toContain("washesLostOnUpgrade(");
-    // the upgrade call is only reachable from the confirm button
-    expect(s.match(/upgradeMembership\(/g)?.length).toBe(1);
+    // a new upgrade is only reachable from the confirm button; the one other call re-pays an already confirmed pending upgrade
+    expect(s.match(/upgradeMembership\(/g)?.length).toBe(2);
+    expect(s).toContain("pendingIsUpgrade ? await upgradeMembership(");
     expect(s).toMatch(/confirmUpgrade[\s\S]*upgradeMembership\(/);
   });
 });
