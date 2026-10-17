@@ -27,6 +27,7 @@ import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rule
 import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bookings-view";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
+import { TabPills } from "../../../ui/CarOverview";
 import { glassInner } from "../../../lib/glass";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
@@ -48,7 +49,7 @@ export default function BookingsScreen() {
   const [walkIns, setWalkIns] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [segPick, setSegPick] = useState<"active" | "upcoming" | "past" | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -103,6 +104,7 @@ export default function BookingsScreen() {
     </View>
   );
 
+  const seg = segPick ?? (liveJob || approvals.some((a) => a.status === "pending") ? "active" : "upcoming");
   const stage = liveJob ? jobStage(liveJob.status) : null;
   const liveBooking = liveJob ? all.find((b) => b.id === (liveJob.bookingId ?? liveJob.id)) : undefined;
   const readyText = liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
@@ -132,7 +134,11 @@ export default function BookingsScreen() {
     <Screen appBar="Bookings" header={<PageHeader title={liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={[upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
 
-      {liveJob && stage ? (
+      <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
+
+      {seg === "active" && !liveJob && approvals.filter((a) => a.status === "pending").length === 0 ? <Notice title="Nothing active" body="When your car is in the studio, you can follow it here." /> : null}
+
+      {seg === "active" && liveJob && stage ? (
         <Pane pad="inset">
           <View style={{ gap: metrics.innerGap }}>
             <Kicker tone="accent">In the studio</Kicker>
@@ -147,7 +153,7 @@ export default function BookingsScreen() {
         </Pane>
       ) : null}
 
-      {pending.length > 0 ? (
+      {seg === "active" && pending.length > 0 ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Waiting for your OK</SectionTitle>
           {pending.map((a) => (
@@ -156,7 +162,7 @@ export default function BookingsScreen() {
         </View>
       ) : null}
 
-      {next ? (
+      {seg === "upcoming" && next ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Next visit</SectionTitle>
           <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={svcs[next.serviceId]?.name ?? "Service visit"} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : STATUS[next.status].label} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
@@ -185,7 +191,7 @@ export default function BookingsScreen() {
         </View>
       ) : null}
 
-      {!error && !next && !liveJob ? (
+      {seg === "upcoming" && !error && !next ? (
         <Pane pad="none" round="hero">
           <HeroImage source={sceneImagery.heroHome} />
           <View style={{ padding: metrics.cardPad, gap: space.breath }}>
@@ -196,7 +202,7 @@ export default function BookingsScreen() {
         </Pane>
       ) : null}
 
-      {rebook.length > 0 ? (
+      {seg === "upcoming" && rebook.length > 0 ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Book again</SectionTitle>
           {rebook.map((b) => {
@@ -208,14 +214,12 @@ export default function BookingsScreen() {
         </View>
       ) : null}
 
-      {past.length > 0 ? (
-        <View style={{ gap: space.line }}>
-          <Pressable accessibilityRole="button" accessibilityState={{ expanded: showHistory }} onPress={() => setShowHistory((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 }}>
-            <SectionTitle>{`History (${past.length})`}</SectionTitle>
-            <T role="caption" tone="accent">{showHistory ? "Hide" : "Show"}</T>
-          </Pressable>
-          {showHistory ? groupByMonth(past).map((g) => <View key={g.key} style={{ gap: space.line }}><T role="label" tone="secondary">{g.label.toUpperCase()}</T>{list(g.items)}</View>) : null}
-        </View>
+      {seg === "past" ? (
+        past.length > 0 ? (
+          <View style={{ gap: space.line }}>
+            {groupByMonth(past).map((g) => <View key={g.key} style={{ gap: space.line }}><T role="label" tone="secondary">{g.label.toUpperCase()}</T>{list(g.items)}</View>)}
+          </View>
+        ) : <Notice title="No past visits" body="Finished and cancelled visits show here." />
       ) : null}
     </Screen>
   );

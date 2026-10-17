@@ -1,5 +1,9 @@
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
+import { CarThumb } from "../../../ui/CarThumb";
+import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { useAuth } from "../../../hooks/useAuth";
+import type { Vehicle } from "@autodeck/core";
 import { Linking, Platform, View } from "react-native";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -172,6 +176,12 @@ export default function BookingDetailScreen() {
   const [pushAsked, setPushAsked] = useState<boolean>(() => { try { return store?.getItem(PUSH_ASKED_KEY) === "1"; } catch { return false; } });
   const [pushBusy, setPushBusy] = useState(false);
   const [pushResult, setPushResult] = useState<"on" | "denied" | null>(null);
+  const authB = useAuth();
+  const [car, setCar] = useState<Vehicle | null>(null);
+  useEffect(() => {
+    if (authB.status !== "ready" || !booking) return;
+    return listenToMyVehicles(authB.user.uid, authB.claims.tenantId, (vs) => setCar(vs.find((v) => v.id === booking.vehicleId) ?? null), () => {});
+  }, [authB, booking?.vehicleId]);
   const [svc, setSvc] = useState<{ name: string; brand?: string | null; category: string; imageUrl?: string | null } | null>(null);
   useEffect(() => {
     if (!booking) return;
@@ -252,10 +262,10 @@ export default function BookingDetailScreen() {
     <Screen
       header={
         <View style={{ borderRadius: 24, overflow: "hidden", backgroundColor: "#0B0B0D", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-          {svc ? <ServicePhoto service={svc} aspect={16 / 10} radius={0} /> : <View style={{ height: metrics.heroCompact }} />}
+          <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start" }}><Chip label={missed ? "Missed" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
+            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" ? <Chip label="Live" tone="accent" /> : null}<Chip label={missed ? "Missed" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
           </View>
@@ -391,23 +401,6 @@ export default function BookingDetailScreen() {
       ) : null}
 
       <View style={{ gap: space.line }}>
-        <Kicker>Payment</Kicker>
-        <Pane pad="gap">
-          <Row title="Status" detail={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} last />
-          {payment?.invoiceId && job ? (
-            <View style={{ marginTop: space.line }}>
-              <Button
-                label="View invoice"
-                kind="quiet"
-                onPress={() => router.push(invoiceHref(payment.invoiceId as string))}
-              />
-            </View>
-          ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
-        </Pane>
-      </View>
-
-      <View style={{ gap: space.line }}>
         <Kicker>Price</Kicker>
         {booking.priceOnRequest === true && booking.quoteStatus === "requested" ? (
           <Pane pad="gap"><Row title="Quote requested" detail={<T role="caption" tone="secondary">The studio will set the price for your car. You approve it before any work starts.</T>} last /></Pane>
@@ -431,7 +424,14 @@ export default function BookingDetailScreen() {
             <Row title={booking.membershipWashUsed ? "Wash from your plan" : "Membership discount"} trailing={<T role="data" tone="premium">-{rupees(booking.priceBreakdown.membershipDiscount)}</T>} />
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
-          <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} last />
+          <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
+          <Row title="Payment" detail={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} last />
+          {payment?.invoiceId && job ? (
+            <View style={{ marginTop: space.line }}>
+              <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
+            </View>
+          ) : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
         </Pane>
         )}
       </View>

@@ -22,9 +22,12 @@ describe("Bookings screen holds only booking content", () => {
     for (const w of ["Explore", "Membership", "referral", "Bring a friend", "PhotoCard", "Care map", "papers"]) expect(s).not.toContain(w);
   });
   it("sections come in the agreed order", () => {
-    const at = ["In the studio", "Waiting for your OK", "Next visit", "Book again", "History ("].map((k) => s.indexOf(k));
+    const at = ["In the studio", "Waiting for your OK", "Next visit", "Book again", "No past visits"].map((k) => s.indexOf(k));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+  it("has Active, Upcoming and Past chips", () => {
+    for (const k of ["Active", "Upcoming", "Past"]) expect(s).toContain(`label: "${k}"`);
   });
   it("approvals open the existing approval screen and are never decided inline", () => {
     expect(s).toContain("/(tabs)/approvals/");

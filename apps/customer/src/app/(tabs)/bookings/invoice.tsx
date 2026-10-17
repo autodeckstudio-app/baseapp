@@ -11,7 +11,7 @@ import { buildInvoiceHtml, gstSplit, printInvoiceHtml, serviceLabel } from "../.
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { db } from "../../../lib/firebase";
 import { STUDIO_INFO } from "../../../lib/studio-info";
-import { Button, Loading, Notice, Screen, T, rupees } from "../../../ui/kit";
+import { Button, Chip, Pane, Loading, Notice, Screen, T, rupees } from "../../../ui/kit";
 import { amountInWords } from "../../../lib/amount-words";
 import { HorizonInvoice } from "../../../ui/HorizonInvoice";
 
@@ -110,16 +110,24 @@ export default function InvoiceScreen() {
   const docInput = { invoice, catalogue, studio: { name: STUDIO_INFO.name, address: STUDIO_INFO.address, phone: STUDIO_INFO.phone }, customer, vehicle };
   if (Platform.OS === "web") return (
     <Screen>
+      <Pane pad="inset">
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <View style={{ gap: 2 }}>
+            <T role="caption" tone="secondary">{invoice.invoiceNumber}</T>
+            <T role="title">{rupees(invoice.total)}</T>
+          </View>
+          <Chip label={statusLabel} tone={invoice.status === "paid" ? "premium" : "neutral"} />
+        </View>
+      </Pane>
       <HorizonInvoice html={buildInvoiceHtml({ ...docInput, appearance: "screen" })} />
-      <Button label="Save as PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
-      <Button kind="quiet" label="Share on WhatsApp" onPress={() => {
+      <Button label="Download PDF" onPress={() => printInvoiceHtml(buildInvoiceHtml(docInput))} />
+      <Button kind="quiet" label="Share" onPress={() => {
         const text = invoiceShareText({ number: invoice.invoiceNumber, totalPaise: invoice.total, studioName: STUDIO_INFO.name, studioPhone: STUDIO_INFO.phone });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const nav = (globalThis as any).navigator;
         if (nav?.share) void nav.share({ title: `Invoice ${invoice.invoiceNumber}`, text }).catch(() => undefined);
         else void Linking.openURL(whatsappShareUrl(text));
       }} />
-      <Button label="Go back" kind="quiet" onPress={() => router.back()} />
     </Screen>
   );
 

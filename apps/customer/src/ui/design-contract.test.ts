@@ -597,3 +597,20 @@ describe("service detail tabs (batch 2)", () => {
 it("confirm booking shows the total once", () => {
   expect(read("src/app/(tabs)/book/confirm.tsx")).not.toContain('<SheetLine small label="Total"');
 });
+
+describe("booking detail (batch 3)", () => {
+  it("shows the car photo with a Live badge and one price card holding payment and the Invoice button", () => {
+    const d = read("src/app/(tabs)/bookings/[id].tsx");
+    expect(d).toContain("<CarThumb");
+    expect(d).toContain('label="Live"');
+    expect(d).not.toContain("<Kicker>Payment</Kicker>");
+    expect(d.split('label="Invoice"').length - 1).toBe(1);
+  });
+});
+
+it("invoice web view leads with a Total card and offers Download PDF and Share only", () => {
+  const i = read("src/app/(tabs)/bookings/invoice.tsx");
+  expect(i).toContain('label="Download PDF"');
+  expect(i).toContain('label="Share"');
+  expect(i).not.toContain('label="Save as PDF"');
+});
