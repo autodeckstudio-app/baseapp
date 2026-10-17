@@ -61,7 +61,8 @@ describe("additive customer capability", () => {
       h.docs["bookings/b"] = { tenantId: "tenant", customerId: "other", studioId: "studio", status: "CONFIRMED" };
       await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "permission-denied" });
       h.docs["bookings/b"] = { ...h.docs["bookings/b"], customerId: "staff", scheduledAt: new Date(Date.now() + 3600000).toISOString(), scheduledDate: new Date().toISOString().slice(0,10) };
-      await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "failed-precondition" });
+      // Inside the free window a customer can still cancel: the fee is recorded on the booking, not refused.
+      await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).resolves.toMatchObject({ success: true });
     } finally { vi.useRealTimers(); }
   });
 });

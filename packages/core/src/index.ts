@@ -8,6 +8,7 @@ export * from "./customer-search.js";
 export * from "./menu.js";
 export * from "./pickup-zone.js";
 export * from "./pay-online.js";
+export * from "./cancellation-policy.js";
 export * from "./winback.js";
 export * from "./gift.js";
 export * from "./membership-upgrade.js";

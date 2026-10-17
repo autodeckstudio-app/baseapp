@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, ServiceJob, Membership } from "@autodeck/core";
-import { CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
+import { cancellationTerms, isBookingMissed } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -50,16 +50,12 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
     );
   }
 
-  // Customers cannot cancel within 24h of the scheduled time (a missed booking can always be cancelled)
+  // Customers can cancel up to the start. Inside the free window a fee applies (cancellation-policy.ts); it is recorded on the booking and the studio settles it. No money moves here.
+  let cancellationFeePaise = 0;
   if (isCustomer && !isBookingMissed(booking)) {
-    const scheduledAt = new Date(booking.scheduledAt);
-    const hoursUntil = (scheduledAt.getTime() - Date.now()) / 3600000;
-    if (hoursUntil < CANCELLATION_FREE_WINDOW_HOURS) {
-      throw new HttpsError(
-        "failed-precondition",
-        `Cancellations within ${CANCELLATION_FREE_WINDOW_HOURS} hours of the appointment must be made by contacting the studio directly.`,
-      );
-    }
+    const svcSnap = await db.collection(COLLECTIONS.services()).doc(booking.serviceId).get();
+    const category = svcSnap.exists ? (svcSnap.data() as { category?: string }).category : undefined;
+    cancellationFeePaise = cancellationTerms({ category, totalPaise: booking.totalAmount, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: Date.now() }).feePaise;
   }
 
   const now = new Date().toISOString();
@@ -131,6 +127,7 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
       status: "CANCELLED",
       cancelledAt: now,
       cancellationReason: data.reason,
+      cancellationFeePaise,
       updatedAt: now,
     });
 
@@ -159,6 +156,10 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
       } else {
         const job = jobDoc.data() as ServiceJob;
         const cancellableStatuses: string[] = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
+        // Work already started: a customer cannot cancel online and the advance is not refunded. The studio handles it.
+        if (isCustomer && !cancellableStatuses.includes(job.status)) {
+          throw new HttpsError("failed-precondition", "Work on your car has already started. Please contact the studio.");
+        }
         if (cancellableStatuses.includes(job.status)) {
           tx.update(db.collection(COLLECTIONS.jobs()).doc(jobDoc.id), {
             status: "CANCELLED",
@@ -184,7 +185,7 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
       user,
       studioId: booking.studioId,
       before: { status: booking.status },
-      after: { status: "CANCELLED", cancellationReason: data.reason },
+      after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise },
     });
   });
 

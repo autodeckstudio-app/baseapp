@@ -73,6 +73,8 @@ export interface Booking {
   confirmedAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  /** Fee in paise for a customer cancel inside the free window (cancellation-policy.ts). Recorded only; the studio settles it. Absent or 0 = no fee. */
+  cancellationFeePaise?: number;
   createdAt: string;
   updatedAt: string;
 }

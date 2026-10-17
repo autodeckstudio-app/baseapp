@@ -1,6 +1,6 @@
 // Reschedule and cancel rules for a customer booking, shared by the booking page and the Bookings list.
 import type { Booking } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, cancellationTerms, cancellationLine, REFUND_TIMELINE_TEXT } from "@autodeck/core";
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
@@ -32,10 +32,18 @@ export function getRescheduleEligibility(booking: Booking): { eligible: boolean;
 }
 
 
-/** Whether the customer can cancel online, or is too close to the start and must call. */
-export function cancelState(booking: Booking, now = Date.now()): { canCancel: boolean; lateToCancel: boolean } {
-  const missed = isBookingMissed(booking);
+/** Whether the customer can cancel online. A cancel inside the free window costs a fee (core cancellation-policy), so it is allowed with the fee shown first.
+ *  Once the car is at the studio (ACTIVE) work has started: no online cancel, call the studio. */
+export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; feePaise: number; line: string } {
+  const missed = isBookingMissed(booking, now);
   const open = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
-  const within = !missed && (new Date(booking.scheduledAt).getTime() - now) / 3600000 >= CANCELLATION_FREE_WINDOW_HOURS;
-  return { canCancel: open && within, lateToCancel: open && !within };
+  const terms = cancellationTerms({ category, totalPaise: booking.totalAmount ?? 0, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: now });
+  return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", feePaise: terms.feePaise, line: cancellationLine(category) };
+}
+
+/** Text for the cancel confirmation: the rule, and the fee if one applies now. */
+export function cancelConfirmBody(c: { feePaise: number; line: string }, paid: boolean): string {
+  const fee = c.feePaise > 0 ? ` Cancelling now costs Rs ${c.feePaise / 100}.` : "";
+  const money = paid ? ` This booking has been paid. The studio will contact you about the refund, which goes back to your original payment method in ${REFUND_TIMELINE_TEXT}.` : " The slot is released straight away.";
+  return `${c.line}${fee}${money} This can't be undone.`;
 }

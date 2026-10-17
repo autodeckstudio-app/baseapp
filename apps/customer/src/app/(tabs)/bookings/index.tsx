@@ -23,7 +23,7 @@ import { sceneImagery } from "../../../lib/imagery";
 import type { ApprovalRequest, ServiceJob } from "@autodeck/core";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { cancelBooking } from "../../../lib/booking-service";
-import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
 import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bookings-view";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
@@ -131,7 +131,7 @@ export default function BookingsScreen() {
   const next = upcoming[0];
   const nextCar = next ? cars[next.vehicleId] ?? (next.vehicleSnapshot ? { ...next.vehicleSnapshot, photoUrl: null, category: next.vehicleCategory } : undefined) : undefined;
   const nextElig = next ? getRescheduleEligibility(next) : null;
-  const nextCancel = next ? cancelState(next) : null;
+  const nextCancel = next ? cancelState(next, Date.now(), svcs[next.serviceId]?.category) : null;
   const rebook = recentDistinctServices(all, 3).filter((b) => svcs[b.serviceId] && !svcs[b.serviceId]!.priceOnRequest);
   const doCancel = async () => {
     if (!next) return;
@@ -191,11 +191,11 @@ export default function BookingsScreen() {
             <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /></View>
           </View>
           {nextElig && !nextElig.eligible && nextElig.reason ? <T role="caption" tone="tertiary">{nextElig.reason}</T> : null}
-          {nextCancel?.lateToCancel ? <T role="caption" tone="tertiary">Too close to the start to cancel online. Please call the studio.</T> : null}
+          {nextCancel?.lateToCancel ? <T role="caption" tone="tertiary">Work has started, so this cannot be cancelled online. Please call the studio.</T> : null}
           {confirmCancel ? (
             <Notice
               title="Cancel this booking?"
-              body={next.paymentStatus === "paid" || next.paymentStatus === "partial" ? "This booking has been paid. The studio will contact you about the refund. This can't be undone." : "The slot is released straight away. This can't be undone."}
+              body={nextCancel ? cancelConfirmBody(nextCancel, next.paymentStatus === "paid" || next.paymentStatus === "partial") : ""}
               action={
                 <View style={{ gap: space.breath }}>
                   <Button label="Yes, cancel booking" kind="danger" busy={cancelBusy} onPress={() => void doCancel()} />

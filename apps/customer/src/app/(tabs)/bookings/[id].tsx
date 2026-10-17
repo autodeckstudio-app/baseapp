@@ -17,10 +17,10 @@ import { Pressable } from "react-native";
 import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, isBookingLateToday } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -234,7 +234,8 @@ export default function BookingDetailScreen() {
 
   const missed = isBookingMissed(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
-  const { canCancel, lateToCancel } = cancelState(booking);
+  const cancel = cancelState(booking, Date.now(), svc?.category);
+  const { canCancel, lateToCancel } = cancel;
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   const showRescheduleSection = !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
@@ -467,7 +468,7 @@ export default function BookingDetailScreen() {
 
       {lateToCancel ? (
         <>
-          <Notice title="Cancelling" body={`Bookings can be cancelled online up to ${CANCELLATION_FREE_WINDOW_HOURS} hours before the start. After that, please call the studio.`} />
+          <Notice title="Cancelling" body="Work on your car has started, so it cannot be cancelled online. Please call the studio." />
           <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} />
         </>
       ) : null}
@@ -476,7 +477,7 @@ export default function BookingDetailScreen() {
         confirmingCancel ? (
           <Notice
             title="Cancel this booking?"
-            body={paidAlready ? "This booking has been paid. The studio will contact you about the refund. This can't be undone." : "The slot is released straight away. This can't be undone."}
+            body={cancelConfirmBody(cancel, paidAlready)}
             action={
               <View style={{ gap: space.breath }}>
                 <Button label="Yes, cancel booking" kind="danger" busy={cancelling} onPress={() => void handleCancelConfirmed()} />
