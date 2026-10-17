@@ -4,6 +4,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob } from "@autodeck/core";
 import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
+import { extrasProblem } from "../../lib/booking-lines.js";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -35,6 +36,18 @@ export const getAvailability = onCall({ region: "asia-south1" }, async (request)
   }
   if (!service.active) {
     throw new HttpsError("failed-precondition", "Service is not currently available.");
+  }
+
+  // Extra services in the same visit lengthen the slot. Same rules as createBooking; the price is not needed here.
+  let visitMinutes = service.estimatedDurationMinutes;
+  if (data.extraServiceIds?.length) {
+    const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
+    if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
+    const extras = extraSnaps.map((x) => ({ ...(x.data() as Service), id: x.id }));
+    if (extras.some((e) => e.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    const problem = extrasProblem({ ...service, id: serviceSnap.id }, extras, { gift: false });
+    if (problem) throw new HttpsError("failed-precondition", problem);
+    visitMinutes = extras.reduce((m, e) => m + e.estimatedDurationMinutes, visitMinutes);
   }
 
   // Fetch studio config
@@ -87,7 +100,7 @@ export const getAvailability = onCall({ region: "asia-south1" }, async (request)
   const slots = computeAvailability({
     startDate: data.startDate,
     lookAheadDays,
-    serviceDurationMinutes: service.estimatedDurationMinutes,
+    serviceDurationMinutes: visitMinutes,
     requiredBayType: service.requiredBayType,
     bays: config.bays,
     operatingHours: config.operatingHours,
@@ -106,7 +119,7 @@ export const getAvailability = onCall({ region: "asia-south1" }, async (request)
       visible = slots.filter((s) => {
         let held = heldByDate.get(s.date);
         if (!held) {
-          held = heldStartTimes({ date: s.date, serviceDurationMinutes: service.estimatedDurationMinutes, operatingHours: config.operatingHours, holidays: config.holidays, timezone: config.timezone });
+          held = heldStartTimes({ date: s.date, serviceDurationMinutes: visitMinutes, operatingHours: config.operatingHours, holidays: config.holidays, timezone: config.timezone });
           heldByDate.set(s.date, held);
         }
         return !isPriorityHeld({ date: s.date, startTime: s.startTime, held, now, timezone: config.timezone });

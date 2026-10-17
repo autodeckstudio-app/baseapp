@@ -17,10 +17,14 @@ export const getAvailabilitySchema = z.object({
   studioId: z.string().min(1),
   startDate: dateStr,
   lookAheadDays: z.number().int().min(1).max(30).optional(),
+  /** More services in the same visit; the slot length is the sum. */
+  extraServiceIds: z.array(z.string().min(1)).max(4).optional(),
 }).strict();
 
 export const createBookingSchema = z.object({
   serviceId: z.string().min(1),
+  /** More services in the same visit (up to 4 on top of serviceId). */
+  extraServiceIds: z.array(z.string().min(1)).max(4).optional(),
   vehicleId: z.string().min(1),
   vehicleCategory: vehicleCategoryEnum,
   studioId: z.string().min(1),

@@ -28,6 +28,8 @@ export interface ServiceJob {
   // Copy of the car, stamped when the vehicle is permanently deleted (and may be set earlier).
   vehicleSnapshot?: VehicleSnapshot;
   serviceId: string;
+  /** Set when the visit has more than one service: main service first, then the extras. Prices are paise snapshots. */
+  lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
   bayId: string; // empty while on standby
   standbyArrivedAt?: string | null;
   standbyAdmittedAt?: string | null;

@@ -29,6 +29,7 @@ import {
 } from "../../lib/availability.js";
 import { hashGiftCode } from "../../lib/gift-code.js";
 import { findGiftByHash, giftBlockReason } from "../../lib/gift-store.js";
+import { addExtrasToBreakdown, extrasProblem, priceExtras, totalMinutes, type BookingLine } from "../../lib/booking-lines.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 
 export const createBooking = onCall({ region: "asia-south1" }, async (request) => {
@@ -87,6 +88,19 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     throw new HttpsError("failed-precondition", "No bays available for this service type.");
   }
 
+  // More services in the same visit. All checks are server side; the app only mirrors them.
+  let extraLines: BookingLine[] = [];
+  if (data.extraServiceIds?.length) {
+    const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
+    if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
+    const extras = extraSnaps.map((x) => ({ ...(x.data() as Service), id: x.id }));
+    if (extras.some((e) => e.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    const problem = extrasProblem({ ...service, id: serviceSnap.id }, extras, { gift: data.giftCode !== undefined });
+    if (problem) throw new HttpsError("failed-precondition", problem);
+    extraLines = priceExtras(extras, { vehicleCategory: data.vehicleCategory, tax: taxFor(config), currency: config.currency });
+  }
+  const visitMinutes = totalMinutes(service.estimatedDurationMinutes, extraLines);
+
   // A gift covers the gifted wash only: no stacking with a membership, and the code must be well formed.
   let giftHash: string | null = null;
   if (data.giftCode !== undefined) {
@@ -137,10 +151,10 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
   // its start day (Phase 5 — multi-day booking; single source of truth used
   // by both booking and job records below, and re-derived identically by
   // rescheduleBooking).
-  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: user.uid, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: service.estimatedDurationMinutes, config, now });
+  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: user.uid, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: visitMinutes, config, now });
   const estimatedEndAt = computeScheduleEnd(
     requestedStart,
-    service.estimatedDurationMinutes,
+    visitMinutes,
     config.operatingHours,
     config.holidays,
     config.timezone,
@@ -319,6 +333,10 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       writeAuditLog(tx, { action: "gift.redeemed", entityType: "Gift", entityId: giftToUse.gift.id, user, studioId: data.studioId, after: { bookingId: bookingRef.id } });
     }
 
+    // Extra services ride on the same booking. Any membership benefit stays on the main service only.
+    finalBreakdown = addExtrasToBreakdown(finalBreakdown, extraLines);
+    const lines = extraLines.length ? [{ serviceId: data.serviceId, name: service.name, price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : undefined;
+
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
@@ -341,12 +359,13 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       estimatedEndAt: estimatedEndAt.toISOString(),
       estimatedEndDate: utcToLocalDate(estimatedEndAt, config.timezone),
       estimatedEndTime: utcToLocalTime(estimatedEndAt, config.timezone),
-      durationMinutes: service.estimatedDurationMinutes,
+      durationMinutes: visitMinutes,
       bayId: assignedBayId,
       assignedEmployeeId: null,
       status: "CONFIRMED",
       ...(service.priceOnRequest === true ? { priceOnRequest: true, quoteStatus: "requested" as const } : {}),
       priceBreakdown: finalBreakdown,
+      ...(lines ? { lines } : {}),
       totalAmount: finalBreakdown.total,
       membershipId: data.membershipId ?? null,
       ...(giftToUse ? { giftId: giftToUse.gift.id } : {}),
@@ -389,10 +408,11 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       // occupancy intervals (buildOccupiedInterval), never stored here.
       estimatedEndAt: estimatedEndAt.toISOString(),
       estimatedEndDate: utcToLocalDate(estimatedEndAt, config.timezone),
-      estimatedDurationMinutes: service.estimatedDurationMinutes,
+      estimatedDurationMinutes: visitMinutes,
       studioNotes: data.notes ?? null,
       additionalWorkDelta: 0,
       priceBreakdown: finalBreakdown, // same snapshot already computed for the booking — not recomputed
+      ...(lines ? { lines } : {}),
       totalAmount: finalBreakdown.total,
       paymentStatus: "unpaid",
       isWalkIn: false,

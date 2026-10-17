@@ -42,6 +42,8 @@ export interface Booking {
   // Copy of the car at booking time, so old bookings still read correctly if the car is edited or removed.
   vehicleSnapshot?: { registrationNumber: string; make: string; model: string; year: number; color: string; photoUrl: string | null };
   serviceId: string;
+  /** Set when the visit has more than one service: main service first, then the extras. Prices are paise snapshots. */
+  lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
   vehicleCategory: VehicleCategory;
   scheduledAt: string; // ISO UTC — slot start time
   scheduledDate: string; // "YYYY-MM-DD" in studio TZ — for date-scoped queries
