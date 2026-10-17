@@ -16,6 +16,11 @@ describe("vercel ignored-build rule", () => {
       expect(cfg.ignoreCommand).toBe(`bash ../../scripts/vercel-ignore.sh ${app}`);
     });
   }
+  it("builds (never guesses HEAD~1) when the base commit is unknown", () => {
+    const s = readFileSync(join(root, "scripts/vercel-ignore.sh"), "utf8");
+    expect(s).not.toContain("HEAD~1");
+    expect(s).toMatch(/cat-file -e[^\n]*\|\| exit 1/);
+  });
   it("never builds for docs, functions or rules alone", () => {
     const s = readFileSync(join(root, "scripts/vercel-ignore.sh"), "utf8");
     expect(s.split("\n").filter((l) => /paths=/.test(l)).join()).not.toMatch(/functions|rules/);

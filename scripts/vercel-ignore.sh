@@ -12,8 +12,9 @@ case "$app" in
 esac
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
 base="${VERCEL_GIT_PREVIOUS_SHA:-}"
-[ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null || base="HEAD~1"
-git rev-parse --verify -q "$base" >/dev/null || exit 1
+# No usable base commit (first build, shallow clone, force push): always build. Never guess the parent commit:
+# a push of several commits would then skip an app whose changes are further back.
+[ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null || exit 1
 cd "$root" || exit 1
 changed="$(git diff --name-only "$base" HEAD -- $paths 2>/dev/null)" || exit 1
 relevant="$(printf '%s\n' "$changed" | grep -vE '(\.test\.tsx?$|\.md$|/__tests__/|^docs/)' | grep -v '^$')"
