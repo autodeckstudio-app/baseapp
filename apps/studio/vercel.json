@@ -17,5 +17,16 @@
       "destination": "/index.html"
     }
   ],
-  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh studio"
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh studio",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ]
 }
