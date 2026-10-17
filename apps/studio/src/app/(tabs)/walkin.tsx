@@ -17,18 +17,12 @@ import {
   previewServicePrice,
 } from "../../lib/walkin-service";
 import { getActiveServices } from "../../lib/approval-service";
+import { STAFF_SEGMENTS, normalizeSegment } from "@autodeck/core";
 import type { Customer, Vehicle, Service, ServiceJob, StudioConfig, VehicleCategory, PriceBreakdown } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, TextInput, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 
-const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
-  { value: "hatchback", label: "Hatchback" },
-  { value: "sedan", label: "Sedan" },
-  { value: "suv", label: "SUV" },
-  { value: "luxury", label: "Luxury" },
-  { value: "van", label: "Van / MUV" },
-  { value: "commercial", label: "Commercial" },
-];
+const VEHICLE_CATEGORIES = STAFF_SEGMENTS;
 
 const ACTIVE_STATUSES: ServiceJob["status"][] = [
   "PENDING_VEHICLE",
@@ -101,7 +95,7 @@ export default function WalkinScreen() {
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) ?? null;
 
   useEffect(() => {
-    if (selectedVehicle?.category) setVehicleCategory(selectedVehicle.category);
+    if (selectedVehicle?.category) setVehicleCategory(normalizeSegment(selectedVehicle.category) ?? "hatchback");
   }, [selectedVehicleId]);
 
   useEffect(() => {

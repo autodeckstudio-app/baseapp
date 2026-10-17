@@ -9,7 +9,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import type { Invoice, Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { FIRST_STUDIO_ID } from "@autodeck/core";
+import { FIRST_STUDIO_ID, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
@@ -272,7 +272,7 @@ export default function VehicleDetailScreen() {
             facts={[
               { label: "Year", value: String(vehicle.year ?? "-") },
               { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
-              ...(vehicle.category ? [{ label: "Type", value: vehicle.category.charAt(0).toUpperCase() + vehicle.category.slice(1) }] : []),
+              ...(vehicle.category ? [{ label: "Type", value: segmentLabel(vehicle.category) ?? "" }] : []),
               ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
               ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
             ]}

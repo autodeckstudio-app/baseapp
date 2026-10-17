@@ -61,11 +61,10 @@ export const COVERAGE_LEVELS: Array<{ key: CoverageLevel; label: string; blurb: 
 ];
 
 // Size tiers shown to customers. A car's stored category maps onto one of them.
-export type SizeTierKey = "hatch" | "sedan_suv" | "luxury";
+export type SizeTierKey = "hatch" | "sedan_suv";
 export const SIZE_TIERS: Array<{ key: SizeTierKey; label: string; vehicles: VehicleCategory[]; /** Added to the hatchback price, as a fraction. */ uplift: number }> = [
   { key: "hatch", label: "Hatchback", vehicles: ["hatchback"], uplift: 0 },
-  { key: "sedan_suv", label: "Sedan / SUV", vehicles: ["sedan", "suv", "commercial", "van"], uplift: 0.25 },
-  { key: "luxury", label: "Luxury", vehicles: ["luxury"], uplift: 0.6 },
+  { key: "sedan_suv", label: "Sedan / SUV", vehicles: ["sedan", "suv", "luxury", "commercial", "van"], uplift: 0.25 },
 ];
 
 export function sizeTierOf(vehicle: VehicleCategory | null | undefined): SizeTierKey {

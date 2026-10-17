@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
+import { CAR_SEGMENTS, needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
@@ -21,14 +21,7 @@ import { FIRST_STUDIO_ID, GST_ENABLED } from "@autodeck/core";
 import { getAvailability, todayIST } from "../../../lib/booking-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
-const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
-  { value: "hatchback", label: "Hatchback" },
-  { value: "sedan", label: "Sedan" },
-  { value: "suv", label: "SUV" },
-  { value: "luxury", label: "Luxury / Premium" },
-  { value: "van", label: "Van / MUV" },
-  { value: "commercial", label: "Commercial" },
-];
+const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

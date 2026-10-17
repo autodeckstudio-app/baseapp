@@ -16,21 +16,14 @@ import { COLLECTIONS } from "@autodeck/database";
 // V1 is explicitly single-studio-per-tenant (seeded once) - FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
-import { FIRST_STUDIO_ID } from "@autodeck/core";
+import { CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
-const VEHICLE_CATEGORIES: { value: VehicleCategory; label: string }[] = [
-  { value: "hatchback", label: "Hatchback" },
-  { value: "sedan", label: "Sedan" },
-  { value: "suv", label: "SUV" },
-  { value: "luxury", label: "Luxury / Premium" },
-  { value: "van", label: "Van / MUV" },
-  { value: "commercial", label: "Commercial" },
-];
+const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 
 const durationText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 
@@ -98,7 +91,7 @@ export default function BookServiceScreen() {
     );
   }, [auth.status,retryTick]);
 
-  useEffect(()=>{setSelectedCategory(selectedVehicle?.category??null);setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
+  useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
   useEffect(() => {
     if (!serviceId || !service) return;
@@ -186,7 +179,7 @@ export default function BookServiceScreen() {
         <SelectField label="Car size" value={selectedCategory??""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>setSelectedCategory(v as VehicleCategory)}/>
         {sizeError?<T role="caption" tone="danger">{sizeError}</T>:null}
         {sizeSaving?<T role="caption">Saving your car size...</T>:null}
-      </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{VEHICLE_SIZES.find(x=>x.value===selectedVehicle.category)?.label} · Saved with your car</T>:null}
+      </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{segmentLabel(selectedVehicle.category)} · Saved with your car</T>:null}
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>

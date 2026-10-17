@@ -6,7 +6,7 @@ describe("saved-car pricing category", () => {
     expect(resolvePricingCategory(value, "hatchback")).toBe("hatchback");
     expect(resolvePricingCategory(value, "sedan")).toBe("sedan");
   });
-  it.each(["hatchback", "sedan", "suv", "luxury", "van", "commercial"] as const)("accepts %s", (value) => {
+  it.each(["hatchback", "sedan", "suv", "van", "commercial"] as const)("accepts %s", (value) => {
     expect(resolvePricingCategory(value, "hatchback")).toBe(value);
   });
 });

@@ -3,6 +3,7 @@
 // One customer, whole relationship: cars and papers, membership, visits,
 // money, and one log of changes and messages sent, on one glass page with tabs.
 import { useState } from "react";
+import { STAFF_SEGMENTS } from "@autodeck/core";
 import type { AuditLog, Booking, Customer, Invoice, Membership, Notification, Payment, Protection, Service, ServiceJob, Vehicle, Warranty } from "@autodeck/core";
 import { Segmented } from "./Office";
 import { StatusBadge } from "../components/StatusBadge";
@@ -210,7 +211,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
                           <label className="ax-form-row"><span>Plate</span><input value={carEdit.reg} onChange={(e) => setCarEdit({ ...carEdit, reg: e.target.value })} /></label>
                           <label className="ax-form-row"><span>Size</span>
                             <select value={carEdit.category} onChange={(e) => setCarEdit({ ...carEdit, category: e.target.value })}>
-                              <option value="">Not set</option>{["hatchback", "sedan", "suv", "luxury", "commercial", "van"].map((c) => <option key={c} value={c}>{c === "suv" ? "SUV" : statusLabel(c)}</option>)}
+                              <option value="">Not set</option>{STAFF_SEGMENTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                             </select>
                           </label>
                         </div>

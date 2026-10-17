@@ -9,6 +9,7 @@ import { db } from "../../../../lib/firebase";
 import { useAuth } from "../../../../hooks/useAuth";
 import { listenToJobsForVehicleAtStudio } from "../../../../lib/lookup-service";
 import { COLLECTIONS } from "@autodeck/database";
+import { segmentLabel } from "@autodeck/core";
 import type { Vehicle, Customer, ServiceJob } from "@autodeck/core";
 import { DocPhoto } from "../../../../components/DocPhoto";
 import { colors, spacing, radius, typography, ListRow, JobCard, LoadingState, ErrorState } from "@autodeck/ui";
@@ -54,7 +55,7 @@ export default function LookupVehicleScreen() {
       <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>{vehicle.registrationNumber}</Text>
 
       <View style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" && nightMaterial ? nightSurfaceStyle : {}), borderRadius: radius.lg, paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-        <ListRow label="Category" value={vehicle.category ?? "-"} />
+        <ListRow label="Category" value={segmentLabel(vehicle.category) ?? "-"} />
         <View style={{ height: 1, backgroundColor: colors.divider }} />
         {owner ? (
           <ListRow label="Owner" value={owner.name} showChevron onPress={() => router.push(`/(tabs)/lookup/customer/${owner.id}`)} />

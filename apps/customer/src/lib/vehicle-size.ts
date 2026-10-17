@@ -2,13 +2,11 @@ import { calculateServicePrice, cachedServiceTotal, priceLabel } from "./catalog
 import { rupees } from "../ui/kit";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CAR_SEGMENTS, normalizeSegment, segmentLabel } from "@autodeck/core";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { listenToMyVehicles } from "./vehicle-service";
 import { useAuth } from "../hooks/useAuth";
-export const VEHICLE_SIZES: { value: VehicleCategory; label: string }[] = [
- {value:"hatchback",label:"Hatchback"},{value:"sedan",label:"Sedan"},{value:"suv",label:"SUV"},
- {value:"luxury",label:"Luxury/Premium"},{value:"van",label:"Van/MUV"},{value:"commercial",label:"Commercial"}
-];
+export const VEHICLE_SIZES: { value: VehicleCategory; label: string }[] = CAR_SEGMENTS;
 export function usePricingVehicle() {
  const auth=useAuth(); const [vehicle,setVehicle]=useState<Vehicle|null>(null);
  const uid=auth.status==="ready"?auth.user.uid:null;
@@ -16,7 +14,7 @@ export function usePricingVehicle() {
  useEffect(()=>{if(!uid||!tenant){setVehicle(null);return;}
   return listenToMyVehicles(uid,tenant,(vs)=>{void AsyncStorage.getItem("autodeck.activeVehicle").then(id=>setVehicle(vs.find(v=>v.id===id)??vs[0]??null));},()=>setVehicle(null));
  },[uid,tenant]);
- return {vehicle,category:vehicle?.category??null,label:VEHICLE_SIZES.find(x=>x.value===vehicle?.category)?.label??null};
+ return {vehicle,category:normalizeSegment(vehicle?.category),label:segmentLabel(vehicle?.category)};
 }
 
 export function useVehiclePrices(services: Service[], category: VehicleCategory | null) {

@@ -16,7 +16,7 @@ const CATEGORY_BLURB: Record<ServiceCategory, string> = { washing: "Quick, safe 
 const CATEGORY_ICON: Record<ServiceCategory, IconName> = { washing: "wash", ceramic: "ceramic", ppf: "ppf", coating: "coating", tinting: "tint", inspection: "inspect", other: "tools", garage: "inspect", modifications: "tools", pickup: "tools" };
 // Same order the customer app shows.
 const CATEGORIES: ServiceCategory[] = ["washing", "ceramic", "coating", "ppf", "garage", "modifications", "pickup", "tinting", "inspection", "other"];
-const SIZE_NAME: Record<VehicleCategory, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", luxury: "Luxury", commercial: "Commercial", van: "Van" };
+const SIZE_NAME: Record<VehicleCategory, string> = { hatchback: "Hatchback", sedan: "Sedan", suv: "SUV", luxury: "SUV (old)", commercial: "Commercial", van: "MUV / XUV" };
 const SIZES = Object.keys(SIZE_NAME) as VehicleCategory[];
 const BAY_NAME: Record<BayType, string> = { wash: "Wash bay", protection: "Protection bay", general: "Any bay" };
 const UNIT_NAME: Record<WarrantyDurationUnit, string> = { days: "Days", months: "Months", years: "Years", lifetime: "Lifetime" };
@@ -174,7 +174,7 @@ export function ServicesView(p: {
             {draft.sizes.map((r, i) => (
               <div key={i} className="ax-size-rule">
                 <select value={r.vehicleCategory} aria-label="Car size" onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, vehicleCategory: e.target.value as VehicleCategory } : x)) })}>
-                  {SIZES.map((z) => <option key={z} value={z}>{SIZE_NAME[z]}</option>)}
+                  {SIZES.filter((z) => z !== "luxury" || r.vehicleCategory === "luxury").map((z) => <option key={z} value={z}>{SIZE_NAME[z]}</option>)}
                 </select>
                 <input inputMode="decimal" aria-label="Extra price in rupees" placeholder="+₹" value={r.extraRupees} onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, extraRupees: e.target.value } : x)) })} />
                 <input inputMode="numeric" aria-label="Extra minutes" placeholder="+min" value={r.extraMinutes} onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, extraMinutes: e.target.value } : x)) })} />
