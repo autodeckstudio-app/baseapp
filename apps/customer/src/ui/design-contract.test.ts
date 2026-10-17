@@ -123,7 +123,7 @@ it("shows the price total on the booking confirm screen",()=>{const s=read("src/
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
     const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: 480");expect(svc).toContain('alignItems: "center", paddingHorizontal: 20');expect(svc).not.toContain('width: "92%"');
     expect(read("src/ui/StoryCircles.tsx")).toContain("groups.filter((g) => g.cover)");
-    expect(read("src/app/(tabs)/bookings/index.tsx")).toContain('?? "Service visit"');expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
+    expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
 it("keeps Home glass to three blur surfaces, hides the campaign slot without real content",async()=>{
   const {hasCampaign,MAX_BLUR_SURFACES}=await import("../lib/campaign");
@@ -635,4 +635,16 @@ it("car for sale detail has Call studio and I am interested", () => {
   const c = read("src/app/(tabs)/cars/[id].tsx");
   expect(c).toContain('label="Call studio"');
   expect(c).toContain('"I am interested"');
+});
+
+describe("home header blends into the page (PWA and web)", () => {
+  it("backdrop is one fixed layer from the top edge with a long fade mask in both themes, no negative-offset band", () => {
+    const b = read("src/ui/HomeBackdrop.tsx");
+    expect(b).toContain('position: "fixed"');
+    expect(b).toContain("top: 0");
+    expect(b).toContain("maskImage: BACKDROP_FADE");
+    expect(b).toContain("transparent 100%");
+    expect(b).not.toContain("top: -140");
+    expect(b).not.toContain("useExperienceTheme");
+  });
 });

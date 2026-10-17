@@ -14,15 +14,14 @@ export function visitServices(job: { serviceId: string }, invoice: { lineItems?:
   return out;
 }
 
-/** One line for a list row: "Quick wash", "Quick wash + Interior detail", "Quick wash + 2 more". */
+/** One line for a list row: "Quick wash", "Quick wash + 1 more", "Quick wash + 2 more". */
 export function visitTitle(names: string[]): string {
   if (names.length === 0) return VISIT_FALLBACK;
   if (names.length === 1) return names[0]!;
-  if (names.length === 2) return `${names[0]} + ${names[1]}`;
   return `${names[0]} + ${names.length - 1} more`;
 }
 
-/** The full list, only when the title does not already show everything. */
+/** The full list, whenever the title is shortened to "first + N more". */
 export function visitAlso(names: string[]): string | null {
-  return names.length > 2 ? names.join(", ") : null;
+  return names.length > 1 ? names.join(", ") : null;
 }

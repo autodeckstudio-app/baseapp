@@ -72,3 +72,12 @@ describe("days until a visit", () => {
     expect(daysUntilLabel("2026-10-10", "2026-10-17")).toBe("Date has passed");
   });
 });
+
+describe("booking rows name the booked service", () => {
+  it("never print a bare Service visit on a row", () => {
+    const s = read("app/(tabs)/bookings/index.tsx");
+    expect(s).not.toContain('?? "Service visit"');
+    expect(s).toContain("visitTitle(nameOf(");
+    expect(s).toContain("loadServiceNames");
+  });
+});

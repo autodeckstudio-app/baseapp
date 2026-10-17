@@ -14,10 +14,11 @@ describe("what a visit was for", () => {
     expect(VISIT_FALLBACK).not.toMatch(/studio visit/i);
   });
   it("multiples: two are joined, three or more collapse and the full list is shown below", () => {
-    expect(visitTitle(["A", "B"])).toBe("A + B");
+    expect(visitTitle(["A", "B"])).toBe("A + 1 more");
     expect(visitTitle(["A", "B", "C"])).toBe("A + 2 more");
     expect(visitAlso(["A", "B", "C"])).toBe("A, B, C");
-    expect(visitAlso(["A", "B"])).toBeNull();
+    expect(visitAlso(["A", "B"])).toBe("A, B");
+    expect(visitAlso(["A"])).toBeNull();
   });
   it("no screen falls back to the literal Studio visit", () => {
     for (const f of ["app/(tabs)/garage/history.tsx", "app/(tabs)/garage/[id].tsx"]) expect(readFileSync(`${__dirname}/../${f}`, "utf8")).not.toContain('"Studio visit"');

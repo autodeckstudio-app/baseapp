@@ -28,6 +28,10 @@ import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bo
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
 import { TabPills } from "../../../ui/CarOverview";
+import { loadServiceNames, missingNameIds } from "../../../lib/service-names";
+import { listenToMyInvoices } from "../../../lib/invoice-service";
+import { visitServices, visitTitle, visitAlso } from "../../../lib/visit-services";
+import type { Invoice } from "@autodeck/core";
 import { glassInner } from "../../../lib/glass";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
@@ -54,13 +58,16 @@ export default function BookingsScreen() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cars, setCars] = useState<Record<string, Vehicle>>({});
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [extraNames, setExtraNames] = useState<Record<string, string>>({});
   const [svcs, setSvcs] = useState<Record<string, Service>>({});
   useEffect(() => {
     if (auth.status !== "ready") return;
     const un = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
     const unJobs = listenToMyJobs(auth.claims.tenantId, auth.user.uid, (js) => { setJobs(js); setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)); }, () => {});
+    const unInv = listenToMyInvoices(auth.claims.tenantId, auth.user.uid, setInvoices, () => {});
     getServiceCatalogue().then((l) => setSvcs(Object.fromEntries(l.map((x) => [x.id, x])))).catch(() => {});
-    return () => { un(); unJobs(); };
+    return () => { un(); unJobs(); unInv(); };
   }, [auth]);
 
   const liveJob = liveJobOf(jobs);
@@ -88,9 +95,20 @@ export default function BookingsScreen() {
     }, [auth.status, load]),
   );
 
+  useEffect(() => {
+    const knownNow = Object.fromEntries(Object.values(svcs).map((x) => [x.id, x.name]));
+    const ids = missingNameIds([...(bookings ?? []), ...walkIns].map((b) => b.serviceId), knownNow);
+    if (ids.length === 0) return;
+    let alive = true;
+    void loadServiceNames(ids).then((m) => { if (alive && Object.keys(m).length) setExtraNames((p) => ({ ...p, ...m })); });
+    return () => { alive = false; };
+  }, [bookings, walkIns, svcs]);
+
   if (!bookings && !error) return <Loading label="Loading bookings" />;
   const all = [...(bookings ?? []), ...walkIns];
   const { inStudio, upcoming, past } = bookingSections(all);
+  const known = { ...Object.fromEntries(Object.values(svcs).map((x) => [x.id, x.name])), ...extraNames };
+  const nameOf = (b: Booking): string[] => visitServices(b, invoices.find((i) => i.jobId === b.id || i.bookingId === b.id), known);
 
   const list = (items: Booking[]) => (
     <View style={{ gap: 12 }}>
@@ -98,7 +116,7 @@ export default function BookingsScreen() {
         const car = cars[b.vehicleId] ?? (b.vehicleSnapshot ? { ...b.vehicleSnapshot, photoUrl: null, category: b.vehicleCategory } : undefined);
         const missed = isBookingMissed(b);
         return (
-          <VisitCard key={b.id} onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} photo={car?.photoUrl || !svcs[b.serviceId] ? <CarThumb car={car} height={64} width={64} radius={0} /> : <ServicePhoto service={svcs[b.serviceId]!} height={64} width={64} />} title={svcs[b.serviceId]?.name ?? "Service visit"} car={car ? `${car.make} ${car.model}` : "Car"} when={`${formatDateShort(b.scheduledDate)} \u00b7 ${b.scheduledTime}`} price={rupees(b.totalAmount)} chip={<Chip label={missed ? "Missed" : STATUS[b.status].label} tone={missed ? "danger" : STATUS[b.status].tone} />} />
+          <VisitCard key={b.id} onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} photo={car?.photoUrl || !svcs[b.serviceId] ? <CarThumb car={car} height={64} width={64} radius={0} /> : <ServicePhoto service={svcs[b.serviceId]!} height={64} width={64} />} title={visitTitle(nameOf(b))} car={[car ? `${car.make} ${car.model}` : "Car", visitAlso(nameOf(b))].filter(Boolean).join(" \u00b7 ")} when={`${formatDateShort(b.scheduledDate)} \u00b7 ${b.scheduledTime}`} price={rupees(b.totalAmount)} chip={<Chip label={missed ? "Missed" : STATUS[b.status].label} tone={missed ? "danger" : STATUS[b.status].tone} />} />
         );
       })}
     </View>
@@ -165,7 +183,7 @@ export default function BookingsScreen() {
       {seg === "upcoming" && next ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Next visit</SectionTitle>
-          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={svcs[next.serviceId]?.name ?? "Service visit"} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : STATUS[next.status].label} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
+          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : STATUS[next.status].label} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {nextElig?.eligible ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /></View> : null}
             {nextCancel?.canCancel && !confirmCancel ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Cancel" onPress={() => setConfirmCancel(true)} /></View> : null}
