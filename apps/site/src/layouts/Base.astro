@@ -9,6 +9,27 @@ interface Props {
 }
 const { title, description, page = '' } = Astro.props;
 const ogImage = 'https://www.autodeck.in/assets/og.png';
+const canonical = new URL(Astro.url.pathname, 'https://www.autodeck.in').href;
+const localBusiness = {
+  '@context': 'https://schema.org',
+  '@type': 'AutoRepair',
+  name: 'AutoDeck',
+  url: 'https://www.autodeck.in',
+  image: ogImage,
+  telephone: '+91 98986 79711',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge',
+    addressLocality: 'Ahmedabad',
+    postalCode: '380006',
+    addressCountry: 'IN',
+  },
+  openingHoursSpecification: [
+    { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '10:00', closes: '21:00' },
+    { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '10:00', closes: '19:00' },
+  ],
+  sameAs: ['https://instagram.com/autodeck.studio'],
+};
 ---
 <!doctype html>
 <html lang="en">
@@ -22,6 +43,9 @@ const ogImage = 'https://www.autodeck.in/assets/og.png';
   <meta property="og:type" content="website" />
   <meta property="og:image" content={ogImage} />
   <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:url" content={canonical} />
+  <script type="application/ld+json" set:html={JSON.stringify(localBusiness)} />
   <link rel="icon" type="image/png" href="/assets/favicon.png" />
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
