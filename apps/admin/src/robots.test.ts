@@ -7,7 +7,7 @@ const read = (p: string) => readFileSync(join(root, p), "utf8");
 
 // Admin and studio logins must not be listed by search engines.
 describe("admin and studio are not indexed", () => {
-  for (const app of ["admin", "studio"]) {
+  for (const app of ["admin", "studio", "customer"]) {
     it(`${app} serves a real robots.txt that disallows everything`, () => {
       const t = read(`${app}/public/robots.txt`);
       expect(t).toContain("User-agent: *");
