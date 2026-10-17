@@ -12,8 +12,9 @@ export function initHeroCar(host) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
-  } catch {
-    return { destroy() {} }; // no WebGL: the studio photos behind stay as the hero
+  } catch (e) {
+    console.warn('[hero-car] WebGL unavailable, studio photos stay as the hero', e);
+    return { destroy() {} };
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -72,7 +73,7 @@ export function initHeroCar(host) {
     carGroup.add(car);
     carGroup.rotation.y = -0.55; /* three-quarter front */
     host.classList.add('ready');
-  }, undefined, () => {});
+  }, undefined, (err) => console.warn('[hero-car] model failed to load', err));
 
   /* drag to turn, with a slow idle rotation and inertia */
   let dragging = false, px = 0, vel = 0;

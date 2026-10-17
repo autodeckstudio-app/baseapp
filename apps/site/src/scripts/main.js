@@ -59,13 +59,13 @@ if (location.hash === '#all') document.querySelectorAll('.rv').forEach((e) => e.
 const heroCarHost = document.querySelector('[data-hero-car]');
 // Motion polish: smooth scroll + hero type reveal. Same lazy, reduced-motion-safe rules as the hero car.
 if (!calm) {
-  const startFx = () => import('./motion-fx.js').then((m) => m.initMotionFx()).catch(() => {});
+  const startFx = () => import('./motion-fx.js').then((m) => m.initMotionFx()).catch((e) => console.warn('[motion-fx] failed', e));
   if ('requestIdleCallback' in window) requestIdleCallback(startFx, { timeout: 3500 });
   else setTimeout(startFx, 600);
 }
 
 if (heroCarHost && !calm) {
-  const start = () => import('./hero-car.js').then((m) => m.initHeroCar(heroCarHost)).catch(() => {});
+  const start = () => import('./hero-car.js').then((m) => m.initHeroCar(heroCarHost)).catch((e) => console.warn('[hero-car] failed', e));
   if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2500 });
   else setTimeout(start, 400);
 }
