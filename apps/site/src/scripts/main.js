@@ -57,6 +57,13 @@ if (location.hash === '#all') document.querySelectorAll('.rv').forEach((e) => e.
 
 // Hero car: lazy, idle-time, and never under reduced motion. No WebGL or an old phone keeps the studio photos as the hero.
 const heroCarHost = document.querySelector('[data-hero-car]');
+// Motion polish: smooth scroll + hero type reveal. Same lazy, reduced-motion-safe rules as the hero car.
+if (!calm) {
+  const startFx = () => import('./motion-fx.js').then((m) => m.initMotionFx()).catch(() => {});
+  if ('requestIdleCallback' in window) requestIdleCallback(startFx, { timeout: 3500 });
+  else setTimeout(startFx, 600);
+}
+
 if (heroCarHost && !calm) {
   const start = () => import('./hero-car.js').then((m) => m.initHeroCar(heroCarHost)).catch(() => {});
   if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2500 });
