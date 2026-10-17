@@ -60,7 +60,7 @@ export default function SellScreen() {
   if (done) {
     return (
       <Screen>
-        <Notice title="Sent for review" body="The studio checks every car before it shows to other customers. You will see its status under Cars for sale." action={<Button label="Done" onPress={() => router.replace("/(tabs)/cars")} />} />
+        <Notice title="Sent for review" body="The studio checks every car before it shows to other customers. You can follow its status under Your cars for sale on the Cars page." action={<Button label="Done" onPress={() => router.replace("/(tabs)/cars")} />} />
       </Screen>
     );
   }

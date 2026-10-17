@@ -531,3 +531,10 @@ describe("form controls follow the theme", () => {
     expect(s).not.toContain("borderRadius:14");
   });
 });
+
+describe("sell confirmation copy", () => {
+  it("points to the section that exists on the Cars page", () => {
+    expect(read("src/app/(tabs)/cars/sell.tsx")).toContain("Your cars for sale on the Cars page");
+    expect(read("src/app/(tabs)/cars/index.tsx")).toContain("Your cars for sale");
+  });
+});
