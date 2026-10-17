@@ -388,6 +388,9 @@ describe("nav order and drawer", () => {
     expect(read("src/ui/AppBar.tsx")).toContain("onBack");
     for (const t of ["bookings", "catalogue", "garage", "profile", "membership", "notifications", "studio", "help", "cars", "book", "approvals", "invoice"]) expect(kit).toMatch(new RegExp(`\\b${t}: "`));
   });
+  it("booking detail hero always has a title, even when the service record is gone", () => {
+    expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('svc?.name ?? "Your visit"');
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);

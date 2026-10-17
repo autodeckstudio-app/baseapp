@@ -256,7 +256,7 @@ export default function BookingDetailScreen() {
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
             <View style={{ alignSelf: "flex-start" }}><Chip label={missed ? "Missed" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
-            {svc ? <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc.name}</T> : null}
+            <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
           </View>
         </View>
