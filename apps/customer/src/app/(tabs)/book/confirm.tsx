@@ -14,7 +14,8 @@ import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
-import { getMyMemberships } from "../../../lib/membership-service";
+import { getMyMemberships, getMembershipPlans } from "../../../lib/membership-service";
+import { memberSaving } from "../../../lib/member-save";
 import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
@@ -89,7 +90,15 @@ export default function BookingConfirmScreen() {
     void getMyMemberships().then((list) => { if (alive) setWash(pickWash(list, service, todayInIndia())); }).catch(() => { if (alive) setWash(null); });
     return () => { alive = false; };
   }, [service]);
+  // "Members save" line: only for people with no plan yet, from real plan data, hidden when it is not above zero.
+  const [plans, setPlans] = useState<Awaited<ReturnType<typeof getMembershipPlans>> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getMembershipPlans().then((p) => { if (alive) setPlans(p); }).catch(() => { if (alive) setPlans(null); });
+    return () => { alive = false; };
+  }, []);
   const washOffer = MEMBERSHIP_WASH_LIVE && wash && wash.ok ? wash : null;
+  const saving = !giftCode && wash && !wash.ok && wash.reason === "no_membership" ? memberSaving({ service, total: breakdown?.total, plans }) : null;
   const washOn = useWash && washOffer !== null;
 
   const sendCode = auth.status === "ready" ? referralCodeToSend(friendCode, auth.user.uid) : null;
@@ -190,6 +199,12 @@ export default function BookingConfirmScreen() {
           {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
           <SheetLine small label="Total" value={rupees(breakdown.total)} last />
         </Sheet>
+      ) : null}
+
+      {saving !== null ? (
+        <Pane pad="gap">
+          <Row title={`Members save ${rupees(saving)} on this wash`} detail={<T role="caption" tone="secondary">Club plans include washes at a lower rate each.</T>} trailing={<Button kind="quiet" label="Join Club" onPress={() => router.push("/(tabs)/membership")} />} last />
+        </Pane>
       ) : null}
 
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
