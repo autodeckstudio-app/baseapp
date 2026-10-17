@@ -1,59 +1,32 @@
 ---
 import Base from '../layouts/Base.astro';
 const items = [
-  ['01','Paint Protection Film','Self-healing film, cut to your car and nothing else. From ₹15,000 for a high-impact kit.','Detailing Lab'],
+  ['01','Paint Protection Film','Self-healing film, cut to your car and nothing else.','Detailing Lab'],
   ['02','Ceramic Coating','Five years of gloss, on record, with a 6-monthly check to keep it honest.','Detailing Lab'],
   ['03','Detailing','Paint corrected under studio light, then measured. Seen, never just promised.','Detailing Lab'],
   ['04','Washing','Foam, two buckets, clean mitts. The wash it should always have been.','Wash Studio'],
   ['05','Garage','Repairs and service, with updates on your car from anywhere.','Performance Garage'],
   ['06','Modification','Upgrades chosen with care, fitted right the first time.','Accessory Lounge'],
 ];
-import menu from '../data/menu.json';
-const inr = (n: number) => '₹' + n.toLocaleString('en-IN');
-const time = (h: number) => h >= 24 ? `${Math.round(h / 8)} working days` : h < 1 ? `${Math.round(h * 60)} min` : `${h % 1 ? h.toFixed(1) : h} hr`;
-const price = (i: { rupees: number; consult: boolean; from: boolean }) => i.consult ? 'Consult' : (i.from ? 'From ' : '') + inr(i.rupees);
-const priced = (g: { key: string }) => g.key === 'coatings' || g.key === 'ppf';
-const groups = menu.groups.map((g) => {
-  const brands = g.byBrand ? [...new Set(g.items.map((r) => r.brand || 'More'))] : [''];
-  return { ...g, count: g.items.length, brands: brands.map((b) => ({ name: b, items: g.items.filter((r) => !g.byBrand || (r.brand || 'More') === b) })) };
-});
 ---
 <Base
   title="Services · AutoDeck"
-  description="Paint protection film, ceramic coating, detailing, washing, garage and modification, six crafts under one roof in Ahmedabad. Nothing outsourced."
+  description="Paint protection film, ceramic coating, detailing, washing, garage and modification, six crafts under one roof in Ahmedabad. Every service and your car's price is in the app."
   page="services"
 >
   <section class="phero"><div class="wrap">
     <p class="eyebrow">The six things we do</p>
     <h1>Every service. One roof. <em>Nothing outsourced.</em></h1>
-    <p class="lede">Published prices before the car comes in. The work measured, photographed and on record, not claimed.</p>
+    <p class="lede">The work measured, photographed and on record, not claimed. Every service, with your car's exact price, is in the app.</p>
+    <div class="actions" style="margin-top:26px"><a class="btn" href="https://app.autodeck.in">Open the app <span aria-hidden="true">&rarr;</span></a></div>
   </div></section>
   <section class="s" style="padding-top:56px"><div class="wrap">
     <ul class="rows">
       {items.map(([k,n,d,z]) => <li class="rv"><span class="k">{k}</span><h2>{n}</h2><p>{d}</p><span class="z">{z}</span></li>)}
     </ul>
-    <nav class="chips rv" aria-label="Jump to a craft">
-      {groups.map((g) => <a href={`#${g.key}`}>{g.label} <i>{g.count}</i></a>)}
-    </nav>
-    {groups.map((g) => (
-      <section class="cat" id={g.key}>
-        <div class="cat-head rv"><h2>{g.label}</h2><p>{g.blurb}</p></div>
-        {g.brands.map((b) => (
-          <div class="bgroup rv">
-            {b.name ? <h3>{b.name}</h3> : null}
-            <ul class="plist">
-              {b.items.map((i) => (
-                <li><span class="pn">{i.name}{i.warranty ? <em>{i.warranty}</em> : null}</span><span class="pt">{i.consult ? '' : time(i.hours)}</span><span class="pp">{price(i)}</span></li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </section>
-    ))}
-    <p class="fine rv">Prices are for a hatchback, in rupees; sedans, SUVs and luxury cars cost more and the app shows your car's price. {menu.note} Modifications, wraps and garage repairs are quoted after we see the car.</p>
     <div class="cta-box rv" style="margin-top:72px">
-      <div><h2>Only products we would put on our own cars.</h2><p>Every coating and consumable is the one the lab uses. Batch on record, warranty in the app.</p></div>
-      <div class="actions"><a class="btn dark" href="https://app.autodeck.in">See published prices <span aria-hidden="true">→</span></a></div>
+      <div><h2>59 services. Every price in the app.</h2><p>Pick your car and see its exact price before you book. Final price confirmed after paint inspection. Garage work and modifications are quoted after we see the car.</p></div>
+      <div class="actions"><a class="btn dark" href="https://app.autodeck.in">See your car's prices <span aria-hidden="true">&rarr;</span></a></div>
     </div>
   </div></section>
 </Base>

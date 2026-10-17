@@ -7,3 +7,10 @@
 | GSAP (npm `gsap`, incl. ScrollTrigger/SplitText) | https://gsap.com/community/standard-license/ | GSAP Standard License, free for commercial use since 2025-04-30 (Webflow) | Reserved for scroll scenes; keep lazy. |
 | Taste Skill (design review only, no code shipped) | https://github.com/Leonxlnx/taste-skill | MIT | Used as an art-direction checklist during the build. |
 | ThreeUI Community components (reference, no code shipped yet) | https://github.com/MengTo/threeui | MIT (Community tier only; PRO excluded) | If a component is copied, add it here. |
+
+## Poly Haven covered_car (hero 3D model)
+
+- Source: https://polyhaven.com/a/covered_car
+- Licence: CC0 (public domain), https://polyhaven.com/license
+- Files: public/assets/models/covered-car/ (gltf 1k: covered_car.gltf, covered_car.bin, textures/)
+- Use: hero 3D turntable on the home page. No attribution required.

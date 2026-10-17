@@ -130,3 +130,31 @@ h1,h2,h3,h4,b{color:var(--ink)}
 
 /* hero type reveal masks */
 .fx-mask{display:block;overflow:hidden}
+
+/* horizontal studio film: vertical scroll drives a sideways pan (JS); native snap strip without it */
+.film{position:relative}
+.film-pin{min-height:100svh;display:flex;flex-direction:column;justify-content:center;gap:36px;padding:12vh 0;box-sizing:border-box}
+.film-track{display:flex;gap:20px;width:max-content;max-width:none;padding:0 max(24px,calc((100vw - var(--wrap,72rem))/2));overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.film-track::-webkit-scrollbar{display:none}
+.film.film-on .film-track{overflow:visible}
+.film-card{position:relative;flex:0 0 auto;width:min(62vw,760px);height:min(58vh,540px);border-radius:30px;background-size:cover;background-position:center;text-decoration:none;border:1px solid rgba(255,255,255,.14);display:flex;align-items:flex-end;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.45);scroll-snap-align:center}
+.film-card span{padding:10px 16px;border-radius:14px;font:600 15px Montserrat,sans-serif;color:var(--ink)}
+.film-prog{width:min(var(--wrap,72rem),100% - 48px);margin:0 auto;height:2px;border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden}
+.film-prog i{display:block;height:100%;width:calc(var(--fp,0)*100%);background:var(--orange)}
+@media(max-width:900px){.film-card{width:80vw;height:52vh}}
+@media(prefers-reduced-motion:reduce){.film-pin{min-height:0}.film-prog{display:none}}
+
+/* record timeline: an orange line that draws itself as you scroll */
+.tline::after{content:"";position:absolute;left:49px;top:50px;height:calc(100% - 100px);width:2px;background:var(--orange);border-radius:2px;transform-origin:top;transform:scaleY(var(--tlp,0));box-shadow:0 0 12px rgba(236,134,56,.5)}
+@media(prefers-reduced-motion:reduce){.tline::after{transform:none}.tline li{opacity:1}.tline li i{background:var(--orange);border-color:var(--orange)}}
+
+/* chapter pill links to the app for prices */
+a.from{color:var(--ink);text-decoration:none;transition:border-color .3s,background .3s}
+a.from:hover{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.1)}
+a.from span{color:var(--orange)}
+
+/* home merch cards behave like the other zone cards */
+.merch-card{text-decoration:none;color:var(--ink);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.merch-card:hover{transform:translateY(-8px)}
+.merch-card .tx{padding-bottom:24px}
+@media(hover:none),(prefers-reduced-motion:reduce){.merch-card:hover{transform:none}}

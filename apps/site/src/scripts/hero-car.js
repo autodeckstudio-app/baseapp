@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-/* Hero car: a glossy black studio car you can drag to turn.
+/* Hero: the car under its studio cover, waiting for handover. Drag to turn.
    Loaded lazily by main.js, never under prefers-reduced-motion. */
 export function initHeroCar(host) {
   const canvas = document.createElement('canvas');
@@ -23,8 +23,8 @@ export function initHeroCar(host) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  camera.position.set(3.6, 1.7, 6.6);
-  camera.lookAt(0, 0.5, 0);
+  camera.position.set(4.4, 0.95, 7.4);
+  camera.lookAt(0, 0.34, 0);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
@@ -40,36 +40,39 @@ export function initHeroCar(host) {
   scene.add(rim);
 
   /* soft contact shadow only, no visible floor */
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.ShadowMaterial({ opacity: 0.35 }));
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.ShadowMaterial({ opacity: 0.45 }));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  /* glossy black clearcoat, orange spoiler accent: the car as it leaves the Detailing Lab */
-  const paint = new THREE.MeshPhysicalMaterial({ color: 0x101014, metalness: 0.9, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.1 });
-  const trim = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.2, roughness: 0.7 });
-  const accent = new THREE.MeshStandardMaterial({ color: 0xec8638, metalness: 0.4, roughness: 0.4 });
+  /* the car under its studio cover, as it waits for handover. Poly Haven CC0 scan. */
+  const trim = new THREE.MeshStandardMaterial({ color: 0x0d0d0f, metalness: 0.3, roughness: 0.65 });
 
   const carGroup = new THREE.Group();
   scene.add(carGroup);
 
-  new GLTFLoader().load('/assets/models/car.glb', (g) => {
+  new GLTFLoader().load('/assets/models/covered-car/covered_car.gltf', (g) => {
     const car = g.scene;
     car.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true;
       const n = (o.name || '').toLowerCase();
-      o.material = n.includes('wheel') ? trim : n.includes('spoiler') ? accent : paint;
+      if (n.includes('wheel')) { o.material = trim; }
+      else if (o.material) {
+        o.material.color.setHex(0x77777b); /* pull the cover down to studio charcoal */
+        o.material.envMapIntensity = 1.15; /* cloth picks up the studio room */
+        o.material.needsUpdate = true;
+      }
     });
     const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(new THREE.Vector3());
-    car.scale.setScalar(3.1 / Math.max(size.x, size.z));
+    car.scale.setScalar(2.9 / Math.max(size.x, size.z));
     const box2 = new THREE.Box3().setFromObject(car);
-    car.position.y = -box2.min.y;
+    car.position.set(-(box2.min.x + box2.max.x) / 2, -box2.min.y, -(box2.min.z + box2.max.z) / 2);
     carGroup.add(car);
     carGroup.rotation.y = -0.55; /* three-quarter front */
     host.classList.add('ready');
-  });
+  }, undefined, () => {});
 
   /* drag to turn, with a slow idle rotation and inertia */
   let dragging = false, px = 0, vel = 0;
@@ -91,7 +94,7 @@ export function initHeroCar(host) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     /* car sits right of the copy on wide screens, centred and quieter on phones */
-    carGroup.position.x = w > 900 ? 1.5 : 0;
+    carGroup.position.x = w > 900 ? 1.35 : 0;
     carGroup.position.y = w > 900 ? 0 : -0.6;
   }
   resize();

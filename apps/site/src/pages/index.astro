@@ -1,12 +1,21 @@
 ---
 import Base from '../layouts/Base.astro';
+import merch from '../data/merch.json';
 const chapters = [
-  { n: '01', t: 'Protect', l: 'Self-healing film, cut to your car.', k: 'Paint Protection Film', from: 'from ₹65,000', img: '/assets/img/covered-car.jpg' },
-  { n: '02', t: 'Perfect', l: 'Paint corrected under studio light.', k: 'Detailing and Ceramic', from: 'from ₹3,500', img: '/assets/img/car-lights.jpg' },
-  { n: '03', t: 'Keep clean', l: 'The wash it should always have been.', k: 'Wash Studio', from: 'from ₹500', img: '/assets/img/product-ceramic.jpg' },
-  { n: '04', t: 'Keep running', l: 'Repairs and fitting, with updates on your car from anywhere.', k: 'Performance Garage', from: 'quoted per car', img: '/assets/img/studio-bay.jpg' },
+  { n: '01', t: 'Protect', l: 'Self-healing film, cut to your car.', k: 'Paint Protection Film', img: '/assets/img/covered-car.jpg' },
+  { n: '02', t: 'Perfect', l: 'Paint corrected under studio light.', k: 'Detailing and Ceramic', img: '/assets/img/car-lights.jpg' },
+  { n: '03', t: 'Keep clean', l: 'The wash it should always have been.', k: 'Wash Studio', img: '/assets/img/product-ceramic.jpg' },
+  { n: '04', t: 'Keep running', l: 'Repairs and fitting, with updates on your car from anywhere.', k: 'Performance Garage', img: '/assets/img/studio-bay.jpg' },
 ];
 const steps = [['09:12', 'Vehicle received'], ['09:20', 'Photos taken at the bay'], ['11:05', 'Paint correction in progress'], ['04:40', 'Coating cured, final check'], ['06:15', 'Ready for handover']];
+const film = [
+  { img: '/assets/img/studio-wide.jpg', t: 'The floor, before the day starts', h: '/gallery' },
+  { img: '/assets/img/covered-car.jpg', t: 'Under cover until handover', h: '/gallery' },
+  { img: '/assets/img/car-lights.jpg', t: 'Corrected under studio light', h: '/gallery' },
+  { img: '/assets/img/product-ceramic.jpg', t: 'Ceramic, cured and checked', h: '/gallery' },
+  { img: '/assets/img/studio-bay.jpg', t: 'The bay, mid-job', h: '/gallery' },
+  { img: '/assets/img/studio-orange.jpg', t: 'One address in Ahmedabad', h: '/visit' },
+];
 const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
 ---
 <Base
@@ -23,7 +32,7 @@ const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
       <p class="lede">Nothing outsourced. Your car, and its whole story, in one team's hands.</p>
       <div class="actions">
         <a class="btn" href="https://app.autodeck.in">Book a slot <span aria-hidden="true">→</span></a>
-        <a class="btn ghost" href="/services">See every service</a>
+        <a class="btn ghost" href="/services">See what we do</a>
       </div>
       <div class="live" aria-live="off"><span class="dot"></span><div><small>Sample update</small><b id="live-line">Vehicle received</b><em id="live-time">09:12 am</em></div></div>
       <a class="scue" href="#story" aria-label="Scroll"><i></i></a>
@@ -40,7 +49,7 @@ const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
               <p class="eyebrow">{c.k}</p>
               <h2>{c.t}</h2>
               <p class="lede">{c.l}</p>
-              <span class="from">{c.from}</span>
+              <a class="from" href="https://app.autodeck.in">Prices in the app <span aria-hidden="true">→</span></a>
             </div>
           ))}
           <div class="rail"><i data-rail></i></div>
@@ -74,23 +83,24 @@ const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
 
   <section class="nums" data-bg="1">
     <div class="wrap">
-      <div class="rv"><b data-count="59">0</b><span>services, priced and published</span></div>
+      <div class="rv"><b data-count="59">0</b><span>services, priced in the app</span></div>
       <div class="rv"><b data-count="6">0</b><span>crafts under one roof</span></div>
       <div class="rv"><b data-count="0">0</b><span>jobs outsourced. Ever.</span></div>
     </div>
   </section>
 
-  <section class="s" data-bg="1">
-    <div class="wrap">
-      <p class="eyebrow rv">At a glance</p>
-      <div class="bento">
-        <a class="b-lg img glass rv" href="/gallery" style="background-image:linear-gradient(0deg,rgba(20,20,18,.75),rgba(20,20,18,.05)),url(/assets/img/studio-wide.jpg)"><b>See the studio</b><small>Bays, products and the work</small></a>
-        <div class="b-sm glass rv"><span class="big-n">59</span><small>services, priced and published</small></div>
-        <div class="b-sm glass rv"><span class="big-n">6</span><small>crafts under one roof</small></div>
-        <a class="b-sm glass rv" href="/app"><b>Your car's record, in the app</b><small>Photos at every stage, papers on file</small></a>
-        <a class="b-sm img glass rv" href="/lounge" style="background-image:linear-gradient(0deg,rgba(20,20,18,.75),rgba(20,20,18,.05)),url(/assets/img/storefront.jpg)"><b>The Lounge</b><small>Merch and care</small></a>
-        <a class="b-full glass rv" href="/visit"><b>Visit the studio</b><small>Mon to Sat 10 am to 9 pm, Sun 10 am to 7 pm</small></a>
+  <section class="film" data-bg="1" data-film>
+    <div class="film-pin">
+      <div class="wrap film-head">
+        <p class="eyebrow rv">Inside the studio</p>
+        <h2 class="big rv">One slow pass across the floor.</h2>
       </div>
+      <div class="film-track" data-film-track>
+        {film.map((f) => (
+          <a class="film-card" href={f.h} style={`background-image:linear-gradient(0deg,rgba(20,20,18,.72),rgba(20,20,18,.04)),url(${f.img})`}><span class="glass">{f.t}</span></a>
+        ))}
+      </div>
+      <div class="film-prog" aria-hidden="true"><i></i></div>
     </div>
   </section>
 
@@ -111,12 +121,28 @@ const brands = ['3M', 'Garware', 'LLumar', 'XPEL', 'Fireball', 'Kovalent'];
     </div>
   </section>
 
+  <section class="s merch" data-bg="3">
+    <div class="wrap">
+      <p class="eyebrow rv">The Accessory Lounge</p>
+      <h2 class="big rv">Wear the shield. <em>Stock the shelf.</em></h2>
+      <div class="shop" style="margin-top:34px">
+        {merch.map((m) => (
+          <a class="item glass rv merch-card" href="/lounge">
+            <div class="ph">{m.image ? <img src={m.image} alt={m.name} loading="lazy" /> : <span>Photo soon</span>}</div>
+            <div class="tx"><h3>{m.name}</h3><p>{m.blurb}</p></div>
+          </a>
+        ))}
+      </div>
+      <p class="fine rv" style="margin-top:22px">First drops on <a href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio</a>. The full shelf is at the studio.</p>
+    </div>
+  </section>
+
   <section class="s cta" data-bg="0">
     <div class="wrap">
       <div class="cta-box rv">
         <div>
           <h2>Book your first slot.</h2>
-          <p>Pick a service, see the price, choose a time.</p>
+          <p>Pick a service, see your price in the app, choose a time.</p>
           <div class="actions" style="margin-top:28px"><a class="btn" href="https://app.autodeck.in">Book a slot <span aria-hidden="true">→</span></a><a class="btn ghost" href="tel:+919898679711">Call the studio</a></div>
         </div>
         <div class="facts">
