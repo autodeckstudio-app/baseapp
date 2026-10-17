@@ -3,11 +3,10 @@
 import type { Membership, Service } from "@autodeck/core";
 
 /**
- * Stays false until the server can record a redemption (functions deploy is held). While false, the app shows
- * nothing about washes on the review screen and sends nothing, so a customer is never promised a free wash
- * the server would not honour.
+ * Live since 17 Oct: createBooking (deployed) re-checks every rule, prices the wash at zero and decrements the plan
+ * in one transaction; cancelBooking gives the wash back. The app only sends the membership id.
  */
-export const MEMBERSHIP_WASH_LIVE = false;
+export const MEMBERSHIP_WASH_LIVE = true;
 
 export type WashDecision =
   | { ok: true; membershipId: string; washesLeft: number; expiresOn: string | null }

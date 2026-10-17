@@ -81,7 +81,7 @@ export function T({
 // Tab roots (index, bookings, catalogue = Services, garage, profile) never show Back: the nav is their way around.
 const SUB_ROOTS: Record<string, string> = { studio: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)" };
 const BAR_TITLES: Record<string, string> = { bookings: "Bookings", catalogue: "Services", garage: "Garage", profile: "You", membership: "Membership", notifications: "Notifications", studio: "The studio", help: "Help", cars: "Cars", book: "Book", approvals: "Approval", invoice: "Invoice", gifts: "Gifts" };
-function useBar(appBar?: string) {
+function useBar(appBar?: string, onBackOverride?: () => void) {
   const router = useRouter();
   const segs = useSegments() as string[];
   const root = segs[1] ?? "";
@@ -90,7 +90,7 @@ function useBar(appBar?: string) {
   const fallback = SUB_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
   const title = appBar ?? BAR_TITLES[root];
   if (!title) return null;
-  const back = deep || root in SUB_ROOTS ? () => (router.canGoBack() ? router.back() : router.replace(fallback as never)) : undefined;
+  const back = onBackOverride ?? (deep || root in SUB_ROOTS ? () => (router.canGoBack() ? router.back() : router.replace(fallback as never)) : undefined);
   return { title, back };
 }
 
@@ -140,9 +140,12 @@ export function Screen({
   top,
   canvas = false,
   appBar,
+  onBack,
 }: {
   /** Shared tab header: avatar, screen name, bell. Pass the screen name. */
   appBar?: string;
+  /** A level inside one screen (Services category) steps back here instead of using a second back link. */
+  onBack?: (() => void) | undefined;
   /** Show the photo backdrop behind the header (use with CanvasTitle). */
   canvas?: boolean;
   children: ReactNode;
@@ -152,7 +155,7 @@ export function Screen({
   top?: ReactNode;
 }) {
   const scrollRef = useRef<ScrollView>(null);
-  const bar = useBar(appBar);
+  const bar = useBar(appBar, onBack);
   const {width}=useWindowDimensions();
   const gutter=width<360?layout.screenInsetCompact:layout.screenInset;
   const [focused, setFocused] = useState(true);

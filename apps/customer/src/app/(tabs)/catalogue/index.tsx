@@ -114,17 +114,12 @@ export default function CatalogueScreen() {
     <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} variant={i} />} />
   );
 
-  const crumb = (label: string, onPress: () => void) => (
-    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ alignSelf: "flex-start", marginBottom:layout.secondaryHeadingGap, minHeight:44, justifyContent:"center" }}>
-      <T role="caption" tone="accent">‹ {label}</T>
-    </Pressable>
-  );
 
+  const levelBack = !fromRoute ? undefined : level === 3 && groups.length > 1 && cat ? () => go({ cat }) : level >= 2 && cat ? () => router.push("/(tabs)/catalogue") : undefined;
   const top = (
     <View style={{ gap: 16 }}>
       <View style={{ gap: 4 }}>
-        {!fromRoute ? null : level === 3 && groups.length > 1 && cat ? crumb(catGroup?.label ?? "Services", () => go({ cat })) : level >= 2 && cat ? crumb("All services", () => router.push("/(tabs)/catalogue")) : null}
-        <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700", lineHeight: 32 }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "What does your car need?"}</Text>
+                <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700", lineHeight: 32 }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "What does your car need?"}</Text>
         {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
       </View>
       {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label} · incl. GST</T> : null}
@@ -144,7 +139,7 @@ export default function CatalogueScreen() {
   );
 
   return (
-    <Screen appBar="Services" top={top}>
+    <Screen appBar="Services" top={top} onBack={levelBack}>
       {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {!services && !error ? (
         <View style={{ gap: space.line }}>

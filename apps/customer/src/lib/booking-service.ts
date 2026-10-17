@@ -45,8 +45,8 @@ type CreateBookingInput = {
   scheduledTime: string;
   idempotencyKey: string;
   notes?: string;
-  /** Held until the server records redemptions; only sent while MEMBERSHIP_WASH_LIVE is true. */
-  useMembershipWash?: boolean;
+  /** The plan to take one included wash from. The server re-checks everything and prices the wash at zero. */
+  membershipId?: string;
   /** A friend's personal code. Held until the server can validate it and redeem the first wash; only sent while REFERRAL_LIVE is true. */
   referralCode?: string;
   /** A claimed gift code. The server checks and uses it; only sent while GIFT_LIVE is true. */

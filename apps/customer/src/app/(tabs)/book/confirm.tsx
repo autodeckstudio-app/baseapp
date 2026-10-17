@@ -108,7 +108,7 @@ export default function BookingConfirmScreen() {
         scheduledDate: params.scheduledDate,
         scheduledTime: params.scheduledTime,
         idempotencyKey,
-        ...(washOn ? { useMembershipWash: true } : {}),
+        ...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {}),
         ...(sendCode ? { referralCode: sendCode } : {}),
         ...(giftCode ? { giftCode } : {}),
       });

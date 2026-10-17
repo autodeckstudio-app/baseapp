@@ -325,11 +325,12 @@ describe("home car cards", () => {
 });
 
 describe("membership wash", () => {
-  it("stays dark until the server records redemptions", () => {
-    expect(read("src/lib/membership-wash.ts")).toContain("export const MEMBERSHIP_WASH_LIVE = false");
+  it("sends the plan id the server expects, never a price", () => {
+    expect(read("src/lib/membership-wash.ts")).toContain("export const MEMBERSHIP_WASH_LIVE = true");
     const c = read("src/app/(tabs)/book/confirm.tsx");
     expect(c).toContain("MEMBERSHIP_WASH_LIVE && wash && wash.ok");
-    expect(c).toContain("...(washOn ? { useMembershipWash: true } : {})");
+    expect(c).toContain("...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {})");
+    expect(c).not.toContain("useMembershipWash");
   });
 });
 
@@ -398,6 +399,12 @@ describe("nav order and drawer", () => {
     const rules = require("node:fs").readFileSync("../../firestore.rules", "utf8");
     const block = rules.slice(rules.indexOf("match /pickupRequests/"));
     expect(block.slice(0, 600)).toContain("resource == null");
+  });
+  it("Services levels step back through the one header, not a second back link", () => {
+    const c = read("src/app/(tabs)/catalogue/index.tsx");
+    expect(c).not.toContain("\u2039 {label}");
+    expect(c).toContain("onBack={levelBack}");
+    expect(read("src/ui/GarageCard.tsx")).toContain("minHeight: 44");
   });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
