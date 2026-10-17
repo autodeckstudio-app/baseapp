@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# The customer app is not indexed. www.autodeck.in/app carries the ranking.
