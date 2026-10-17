@@ -127,3 +127,6 @@ h1,h2,h3,h4,b{color:var(--ink)}
 @keyframes intro-rise{to{opacity:1}}
 @keyframes intro-rule{to{width:170px}}
 @media (prefers-reduced-motion:reduce){.intro-veil{display:none}}
+
+/* hero type reveal masks */
+.fx-mask{display:block;overflow:hidden}
