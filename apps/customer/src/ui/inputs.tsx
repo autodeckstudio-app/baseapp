@@ -6,7 +6,7 @@ import { useExperienceTheme } from '@autodeck/ui/native';
 
 export type UploadFile = { blob: Blob; type: string };
 const css = `autodeck-uploader input:focus-visible + span {outline:2px solid #EC8638;outline-offset:4px} .autodeck-control:focus-visible {outline:2px solid #EC8638;outline-offset:3px}`;
-const controlFor = (day: boolean) => ({width:'100%',minWidth:0,minHeight:48,boxSizing:'border-box' as const,padding:'12px 44px 12px 16px',borderRadius:16,border:day?'1px solid rgba(29,27,38,0.16)':'1px solid rgba(255,255,255,0.28)',background:day?'#FFFFFF':'rgba(255,255,255,0.08)',color:day?'#1D1B26':'#F6F4F1',fontSize:15,fontFamily:'Archivo,system-ui,sans-serif',colorScheme:day?'light':'dark',appearance:'none' as const});
+const controlFor = (day: boolean) => ({width:'100%',minWidth:0,minHeight:48,boxSizing:'border-box' as const,padding:'12px 44px 12px 16px',borderRadius:16,border:day?'1px solid rgba(29,27,38,0.16)':'1px solid rgba(255,255,255,0.28)',background:day?'rgba(29,27,38,0.05)':'rgba(255,255,255,0.08)',color:day?'#1D1B26':'#F6F4F1',fontSize:15,fontFamily:'Archivo,system-ui,sans-serif',colorScheme:day?'light':'dark',appearance:'none' as const});
 export function SelectField({label,value,onChange,options,placeholder}:{label:string;value:string;onChange:(v:string)=>void;options:Array<{value:string;label:string}>;placeholder?:string}) {
  const control=controlFor(useExperienceTheme().name==='light');
  if(Platform.OS!=='web')return <View><T tone="secondary">{label}</T>{options.map(o=><Pressable key={o.value} accessibilityRole="button" accessibilityState={{selected:value===o.value}} onPress={()=>onChange(o.value)} style={{paddingVertical:12}}><T tone={value===o.value?"accent":"secondary"}>{o.label}</T></Pressable>)}</View>;
