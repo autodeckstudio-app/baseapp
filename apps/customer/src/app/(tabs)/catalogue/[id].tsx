@@ -1,3 +1,4 @@
+import { TabPills } from "../../../ui/CarOverview";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
@@ -42,6 +43,7 @@ export default function ServiceDetailScreen() {
   const [priceError, setPriceError] = useState(false);
   const [after, setAfter] = useState(true);
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
+  const [tab, setTab] = useState<"overview" | "includes">("overview");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
@@ -120,6 +122,10 @@ export default function ServiceDetailScreen() {
           <ServicePhoto service={service} aspect={4 / 3} radius={26} />
         </Pane>
 
+        <TabPills tabs={[{ key: "overview", label: "Overview" }, { key: "includes", label: "Includes" }]} value={tab} onChange={setTab} />
+
+        {tab === "overview" ? (
+          <>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath, alignItems: "center" }}>
           {sc.studioPick ? <Chip label="Studio pick" tone="accent" /> : null}
           {service.warrantyLabel !== null ? <Chip label={service.warrantyLabel} tone="premium" /> : null}
@@ -130,28 +136,6 @@ export default function ServiceDetailScreen() {
         <T role="heading">{sc.tagline || service.description}</T>
         {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description}</T> : null}
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
-
-        {sc.included.length > 0 ? (
-          <View style={{ gap: space.breath }}>
-            {H("What's included")}
-            <Pane pad="gap">
-              {sc.included.map((x, i) => (
-                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="check" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.included.length - 1} />
-              ))}
-            </Pane>
-          </View>
-        ) : null}
-
-        {sc.benefits.length > 0 ? (
-          <View style={{ gap: space.breath }}>
-            {H("Why people choose it")}
-            <Pane pad="gap">
-              {sc.benefits.map((x, i) => (
-                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="ceramic" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
-              ))}
-            </Pane>
-          </View>
-        ) : null}
 
         {reviews && reviews.count > 0 ? (
           <View style={{ gap: space.breath }}>
@@ -232,6 +216,33 @@ export default function ServiceDetailScreen() {
           ) : null}
         </View>
 
+          </>
+        ) : null}
+
+        {tab === "includes" ? (
+          <>
+        {sc.included.length > 0 ? (
+          <View style={{ gap: space.breath }}>
+            {H("What's included")}
+            <Pane pad="gap">
+              {sc.included.map((x, i) => (
+                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="check" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.included.length - 1} />
+              ))}
+            </Pane>
+          </View>
+        ) : null}
+
+        {sc.benefits.length > 0 ? (
+          <View style={{ gap: space.breath }}>
+            {H("Why people choose it")}
+            <Pane pad="gap">
+              {sc.benefits.map((x, i) => (
+                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="ceramic" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.benefits.length - 1} />
+              ))}
+            </Pane>
+          </View>
+        ) : null}
+
         {(service.careTips ?? []).length > 0 ? (
           <View style={{ gap: space.breath }}>
             {H("Care tips")}
@@ -258,6 +269,9 @@ export default function ServiceDetailScreen() {
             ))}
           </Pane>
         </View>
+
+          </>
+        ) : null}
 
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
         <View style={{ height: 220 }} />

@@ -583,3 +583,17 @@ describe("car detail and add car (batch 1)", () => {
     expect(a).toContain("uploadVehiclePhoto");
   });
 });
+
+describe("service detail tabs (batch 2)", () => {
+  it("has Overview and Includes tabs and no Reviews tab", () => {
+    const d = read("src/app/(tabs)/catalogue/[id].tsx");
+    expect(d).toContain('label: "Overview"');
+    expect(d).toContain('label: "Includes"');
+    expect(d).not.toContain('label: "Reviews"');
+    expect(d).toContain("reviews.count > 0");
+  });
+});
+
+it("confirm booking shows the total once", () => {
+  expect(read("src/app/(tabs)/book/confirm.tsx")).not.toContain('<SheetLine small label="Total"');
+});
