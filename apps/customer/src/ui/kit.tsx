@@ -77,30 +77,21 @@ export function T({
 }
 
 /** Full screen: ambient ground, scrolling column capped at reading width. */
-// Sub-screens (anything deeper than a tab root, plus membership and
-// notifications which live under You) get a quiet back control so no screen
-// is a dead end. Falls back to the parent tab when there is no history.
-// Tab roots (index, bookings, catalogue = Services, garage, profile) never appear here: the nav is their way around.
+// One header on every screen: avatar (or Back on a drill-down), screen name, bell. Same height everywhere.
+// Tab roots (index, bookings, catalogue = Services, garage, profile) never show Back: the nav is their way around.
 const SUB_ROOTS: Record<string, string> = { studio: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)" };
-function BackBar() {
+const BAR_TITLES: Record<string, string> = { bookings: "Bookings", catalogue: "Services", garage: "Garage", profile: "You", membership: "Membership", notifications: "Notifications", studio: "The studio", help: "Help", cars: "Cars", book: "Book", approvals: "Approval", invoice: "Invoice", gifts: "Gifts" };
+function useBar(appBar?: string) {
   const router = useRouter();
   const segs = useSegments() as string[];
-  const { colors } = useExperienceTheme();
   const root = segs[1] ?? "";
+  if (segs[0] !== "(tabs)") return appBar ? { title: appBar } : null;
   const deep = segs.length >= 3 && !(segs[2] === "index");
   const fallback = SUB_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
-  if (segs[0] !== "(tabs)" || !(deep || root in SUB_ROOTS)) return null;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Back"
-      onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback as never))}
-      style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingRight: 12 }}
-    >
-      <Text style={{ color: colors.textSecondary, fontSize: 20, lineHeight: 20 }}>‹</Text>
-      <T role="label" tone="secondary">Back</T>
-    </Pressable>
-  );
+  const title = appBar ?? BAR_TITLES[root];
+  if (!title) return null;
+  const back = deep || root in SUB_ROOTS ? () => (router.canGoBack() ? router.back() : router.replace(fallback as never)) : undefined;
+  return { title, back };
 }
 
 function Ambient({ children }: { children?: ReactNode }) {
@@ -161,6 +152,7 @@ export function Screen({
   top?: ReactNode;
 }) {
   const scrollRef = useRef<ScrollView>(null);
+  const bar = useBar(appBar);
   const {width}=useWindowDimensions();
   const gutter=width<360?layout.screenInsetCompact:layout.screenInset;
   const [focused, setFocused] = useState(true);
@@ -174,8 +166,7 @@ export function Screen({
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
     <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 120, gap: 20 }}>
-      {appBar && !top ? <AppBar title={appBar} /> : null}
-      {!top ? <BackBar /> : null}
+      {bar && !top ? <AppBar title={bar.title} onBack={bar.back} /> : null}
       {header}
       {children}
     </View>
@@ -184,7 +175,7 @@ export function Screen({
   return (
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
-      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{appBar ? <AppBar title={appBar} /> : null}<BackBar />{top}</View> : null}
+      {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} /> : null}{top}</View> : null}
       {scroll ? <ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
     </Ambient>
   );

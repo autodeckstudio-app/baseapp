@@ -7,7 +7,7 @@ describe("unified product design contract",()=>{
     expect(read("src/ui/ServicePhoto.tsx")).not.toContain("filter:");
   });
   it("labels shared input controls and preserves minimum back target",()=>{
-    const source=read("src/ui/kit.tsx");expect(source).toContain("accessibilityLabel={label}");expect(source).toContain("minHeight: 44");
+    const source=read("src/ui/kit.tsx");expect(source).toContain("accessibilityLabel={label}");expect(read("src/ui/AppBar.tsx")).toMatch(/accessibilityLabel="Back"[^\n]*width: 46, height: 46/);
   });
   it("does not send or upload before the staged sell review",()=>{
     const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("validateSellStep(f, step, photos.length)");expect(read("src/lib/sell-validation.ts")).toContain("if (!photoCount)");
@@ -380,6 +380,13 @@ describe("nav order and drawer", () => {
     const m = kit.match(/const SUB_ROOTS: Record<string, string> = \{([^}]*)\}/);
     expect(m).not.toBeNull();
     for (const tab of ["index", "bookings", "catalogue", "garage", "profile"]) expect(m![1]).not.toMatch(new RegExp(`\\b${tab}:`));
+  });
+  it("one header on every screen: Screen renders AppBar itself, Back lives inside it, no separate back bar", () => {
+    const kit = read("src/ui/kit.tsx");
+    expect(kit).not.toContain("function BackBar");
+    expect(kit).toContain("<AppBar title={bar.title} onBack={bar.back} />");
+    expect(read("src/ui/AppBar.tsx")).toContain("onBack");
+    for (const t of ["bookings", "catalogue", "garage", "profile", "membership", "notifications", "studio", "help", "cars", "book", "approvals", "invoice"]) expect(kit).toMatch(new RegExp(`\\b${t}: "`));
   });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
