@@ -33,10 +33,10 @@ describe("invoice share", () => {
 });
 
 describe("policy links", () => {
-  it("are config values, hidden until set, and shown on sign-in, setup and You", () => {
+  it("are config values (set 18 Oct on the owner's go), and shown on sign-in, setup and You", () => {
     const si = readFileSync(`${__dirname}/studio-info.ts`, "utf8");
-    expect(si).toContain('export const PRIVACY_POLICY_URL = ""');
-    expect(si).toContain('export const TERMS_URL = ""');
+    expect(si).toContain('export const PRIVACY_POLICY_URL = "https://www.autodeck.in/privacy"');
+    expect(si).toContain('export const TERMS_URL = "https://www.autodeck.in/terms"');
     for (const f of ["ui/LoginStage.tsx", "app/(auth)/setup.tsx", "app/(tabs)/profile.tsx"]) expect(readFileSync(`${__dirname}/../${f}`, "utf8")).toContain("<LegalLinks");
   });
 });

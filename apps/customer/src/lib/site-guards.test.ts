@@ -25,6 +25,17 @@ describe("public site guards", () => {
       expect(existsSync(join(site, "src/pages", `${file}.astro`)), p).toBe(true);
     }
   });
+  it("published legal text matches the approved drafts: no draft or lawyer line, no GST claim, 30-day Club plans", () => {
+    const t = readFileSync(join(site, "src/pages/terms.astro"), "utf8");
+    const pr = readFileSync(join(site, "src/pages/privacy.astro"), "utf8");
+    for (const x of [t, pr]) { expect(x).not.toMatch(/lawyer|Not published|DRAFT|Owner to confirm/i); expect(x).toContain("Shalin Sheth"); }
+    expect(t).not.toMatch(/include GST/i); expect(t).toContain("30 days"); expect(t).toContain("autodeckstudio@gmail.com");
+  });
+  it("the app links Terms and Privacy to the published pages", () => {
+    const info = readFileSync(join(__dirname, "studio-info.ts"), "utf8");
+    expect(info).toContain('PRIVACY_POLICY_URL = "https://www.autodeck.in/privacy"'); expect(info).toContain('TERMS_URL = "https://www.autodeck.in/terms"');
+    expect(readFileSync(join(__dirname, "../ui/LoginStage.tsx"), "utf8")).toContain("LegalLinks");
+  });
   it("has privacy and terms pages linked from the footer", () => {
     const base = readFileSync(join(site, "src/layouts/Base.astro"), "utf8");
     for (const p of ["privacy", "terms"]) {

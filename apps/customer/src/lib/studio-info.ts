@@ -57,8 +57,8 @@ export function formatHours(hours: LiveStudioInfo["operatingHours"]): string {
 export const GOOGLE_REVIEW_URL = "https://g.page/r/CXUDwXSsnhcxEBM/review";
 
 /** Privacy policy and Terms pages. Empty hides the links; set them once the pages exist. */
-export const PRIVACY_POLICY_URL = "";
-export const TERMS_URL = "";
+export const PRIVACY_POLICY_URL = "https://www.autodeck.in/privacy";
+export const TERMS_URL = "https://www.autodeck.in/terms";
 
 /** Social links. Empty hides the row. */
 export const WHATSAPP_CHANNEL_URL = "https://whatsapp.com/channel/0029Vb90oya8aKvHK2DjRt2k";
