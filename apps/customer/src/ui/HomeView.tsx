@@ -16,11 +16,10 @@ import { ServicePhoto } from "./ServicePhoto";
 import { NavIcon, navIconFor } from "./NavIcon";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
-import { HeroStage } from "./HeroStage";
-import { CarThumb } from "./CarThumb";
 import type { Vehicle } from "@autodeck/core";
 import { CampaignSlot } from "./CampaignSlot";
 import { CarsCard } from "./CarsCard";
+import { CarChips } from "./CarChips";
 import type { CarListingView } from "@autodeck/core";
 import type { Campaign } from "../lib/campaign";
 
@@ -161,21 +160,6 @@ export const groupCategories = (key: string | null): string[] => GROUPS.find((g)
 
 const glassBg = (night: boolean) => (Platform.OS === "web" ? ({ backgroundImage: night ? "linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(236,134,56,.07) 100%)" : "none" } as object) : {});
 
-/** The car card when there is no photo of the customer's own car: a quiet glass panel with the plate, never a stock photo of someone else's car. */
-function CarPanel({ title, plate, cta }: { title: string; plate: string; cta: string }) {
-  const { name, colors } = useExperienceTheme();
-  return (
-    <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, padding: metrics.cardPad, justifyContent: "space-between", ...glassBg(name !== "light") }}>
-      <View />
-      <View style={{ gap: 6 }}>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>{title}</Text>
-        {plate ? <Plate value={plate} /> : null}
-        {cta ? <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "700" }}>{cta}</Text> : null}
-      </View>
-    </View>
-  );
-}
-
 /** One lead card that changes with the car's state: live job, something needing action, a document due, or a prompt to book. */
 type IdleNudge = { kicker: string; title: string; detail: string; cta: string; onPress: () => void };
 /** The one thing Home nudges about when nothing is live: an expiring paper first, then what the car needs, then a rebook. */
@@ -207,6 +191,21 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
       <View style={{ alignSelf: "flex-start", marginTop: 4, borderRadius: 9999, paddingHorizontal: 22, paddingVertical: 12, backgroundColor: "#F4F2EF" }}>
         <Text style={{ color: "#0B0B0D", fontSize: 15, fontWeight: "800" }}>{n ? n.cta : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track"}</Text>
       </View>
+    </Pressable>
+  );
+}
+
+/** Slot 1 while a car is in the studio: the live job with the car inside it. Replaces the car chip, so "in studio" is said once. */
+function LiveCard({ live, pct, car }: { live: HomeLive; pct: number | null; car: HomeCar | undefined }) {
+  const { name, colors } = useExperienceTheme();
+  const r = raised(name);
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={live.title} onPress={live.onPress} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light") })}>
+      <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{live.kicker}</Text>
+      {car ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "700", flexShrink: 1 }}>{car.title}</Text>{car.plate ? <Plate value={car.plate} /> : null}</View> : null}
+      <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800", lineHeight: 26 }}>{live.title}</Text>
+      {live.detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{live.detail}</Text> : null}
+      {pct !== null ? <View style={{ height: 8, overflow: "hidden", ...r.well, borderRadius: 6 }}><View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} /></View> : null}
     </Pressable>
   );
 }
@@ -254,60 +253,8 @@ function ClubRow({ icon, title, sub, onPress, first }: { icon: IconName; title: 
   );
 }
 
-// Garage cars as one endless horizontal strip: three copies, re-centred after each swipe.
 /** One car gets the hero stage, with or without a photo. */
 export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length === 1; }
-
-function GarageCarousel({ cars, onOpen, onAdd, onActive }: { cars: HomeCar[]; onOpen: (c: HomeCar) => void; onAdd: () => void; onActive: (i: number) => void }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  const [w, setW] = useState(0);
-  const ref = useRef<ScrollView>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const n = cars.length;
-  const loop = n > 1; // paging only; each car appears once
-  const H = cars.some((c) => c.hasPhoto) ? metrics.heroTall : metrics.heroCompact;
-  const card = w > 0 ? Math.min(w - 36, 420) : 0, step = card + 12;
-  const items = cars;
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  const settle = (x: number) => {
-    const i = Math.round(x / step);
-    onActive(Math.max(0, Math.min(n - 1, i)));
-  };
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const x = e.nativeEvent.contentOffset.x;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => settle(x), 140);
-  };
-  const fade = Platform.OS === "web" ? ({ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 55%, ${name === "light" ? "rgba(239,234,225,0.95)" : "rgba(15,16,19,0.95)"} 100%)` } as object) : {};
-  return (
-    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: H }}>
-      {w > 0 ? (
-        n === 0 ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={onAdd} style={{ height: H, borderRadius: metrics.cardRadius, alignItems: "center", justifyContent: "center", overflow: "hidden", ...r.sheet }}>
-            <CarPanel title="Your car goes here" plate="" cta="Add a car" />
-            <View style={{ position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, ...r.quiet }}>
-              <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>Add a car</Text>
-            </View>
-          </Pressable>
-        ) : (
-          <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={loop ? step : undefined} decelerationRate="fast" scrollEventThrottle={32} onScroll={loop ? onScroll : undefined} contentContainerStyle={{ gap: 12 }}>
-            {items.map((c, i) => (
-              <Pressable key={`${c.id}-${i}`} accessibilityRole="button" accessibilityLabel={`${c.title}`} onPress={() => onOpen(c)} style={{ width: loop ? card : w, height: H, borderRadius: metrics.cardRadius, overflow: "hidden", ...r.sheet }}>
-                {c.hasPhoto && c.vehicle ? <View style={{ position: "absolute", width: "100%", height: "100%" }}><CarThumb car={c.vehicle} height={H} radius={0} /></View> : <CarPanel title={c.title} plate={c.plate} cta={c.hasPhoto === false ? "Add a photo in Garage" : ""} />}
-                {c.hasPhoto ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...fade }} /> : null}
-                {c.hasPhoto ? <View style={{ position: "absolute", left: 14, right: 14, bottom: 14, gap: 6 }}>
-                  <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "700" }}>{c.title}</Text>
-                  <Plate value={c.plate} />
-                </View> : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        )
-      ) : null}
-    </View>
-  );
-}
 
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
@@ -318,6 +265,7 @@ export function HomeView(p: HomeViewProps) {
   const [menu, setMenu] = useState(false);
   const car = p.cars[active] ?? p.cars[0];
   const pct = p.progress;
+  const liveOn = !!p.live && p.live.idle !== true;
   return (
     <View style={{ gap: metrics.sectionGap, paddingBottom: 100 }}>
       <HomeBackdrop />
@@ -338,11 +286,27 @@ export function HomeView(p: HomeViewProps) {
 
       {p.stories}
 
-      {isCompactCarRow(p.cars) ? <HeroStage car={p.cars[0]!} onOpen={() => p.onCar(p.cars[0]!)} /> : <GarageCarousel cars={p.cars} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} onActive={setActive} />}
+      {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} />}
 
       {p.banner}
 
-      <LeadCard live={p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
+      <LeadCard live={liveOn ? null : p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
+
+      {top.length ? (
+        <View style={{ gap: 12 }}>
+          <Heading title="Services for you" action="All" onAction={p.onAllServices} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP }}>
+            {top.map((t) => <View key={t.key} style={{ width: 168 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View>)}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      <View style={{ gap: 12 }}>
+        <Heading title="Club" />
+        <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
+          <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
+        </View>
+      </View>
 
       <CampaignSlot campaign={p.campaign} />
       {p.carsList && p.carsList.length > 0 && p.onOpenCar && p.onBuyCar && p.onSellCar ? <CarsCard cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
@@ -367,13 +331,6 @@ export function HomeView(p: HomeViewProps) {
               ))}
             </View>
           ) : null}
-        </View>
-      </View>
-
-      <View style={{ gap: 12 }}>
-        <Heading title="Club" />
-        <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
-          <ClubRow first icon="membership" title={p.membership ? `Membership, ${p.membership.title}` : "Join the club"} sub={p.membership ? p.membership.detail : "Regular washes at a better rate."} onPress={p.onMembership} />
         </View>
       </View>
 

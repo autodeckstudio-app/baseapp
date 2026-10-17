@@ -104,7 +104,7 @@ describe("sizes come from one rulebook",()=>{
     expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120, gap: 20");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
-    const home=read("src/ui/HomeView.tsx");expect(home).toContain("metrics.heroCompact");expect(home).toContain("HeroStage");expect(home).not.toContain("height: 210");
+    const home=read("src/ui/HomeView.tsx");expect(home).toContain("CarChips");expect(home).not.toContain("height: 210");
   });
 });
 describe("surfaces share one radius and one padding",()=>{
@@ -205,7 +205,7 @@ describe("Home hero stage", () => {
     expect(h).toContain("metrics.heroStage");
     expect(h).toMatch(/radial-gradient/);
     expect(h).not.toMatch(/\u2014/);
-    expect(read("src/ui/HomeView.tsx")).toMatch(/<HeroStage car=/);
+    expect(read("src/ui/HomeView.tsx")).toMatch(/<CarChips cars=/); // merged Home: compact car chip, HeroStage kept for other uses
   });
   it("Home keeps orange to small highlights: no orange kicker or orange text links", () => {
     const home = read("src/ui/HomeView.tsx");

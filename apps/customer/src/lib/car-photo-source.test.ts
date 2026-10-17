@@ -4,7 +4,7 @@ const read = (p: string) => readFileSync(`${__dirname}/../${p}`, "utf8");
 
 describe("one car photo source", () => {
   it("Home carousel and stage render the car through CarThumb, like Garage, for every car", () => {
-    const home = read("ui/HomeView.tsx");
+    const home = read("ui/CarChips.tsx");
     const stage = read("ui/HeroStage.tsx");
     expect(home).toContain("<CarThumb car={c.vehicle}");
     expect(stage).toContain("<CarThumb car={car.vehicle}");
