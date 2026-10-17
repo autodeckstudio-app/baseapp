@@ -18,7 +18,7 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
-import { GarageShowroom } from "../../../ui/GarageShowroom";
+import { GarageShowroom, CarPhotoCard } from "../../../ui/GarageShowroom";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
@@ -32,6 +32,31 @@ function DueChip({ text }: { text: string }) {
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
       <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
+    </View>
+  );
+}
+
+function TodayStrip({ name, job, ink, light, onTrack }: { name: string; job: ServiceJob; ink: ReturnType<typeof useExperienceTheme>["colors"]; light: boolean; onTrack: () => void }) {
+  const step = jobStep(job.status);
+  const ready = readyBy(job);
+  return (
+    <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>TODAY</Text>
+          <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 17, fontWeight: "800" }}>{`${name} is in the bay`}</Text>
+          <Text style={{ color: ink.textSecondary, fontSize: 13 }}>{ready ? `${LIVE_STEP_NAMES[step]}, ready by ${ready}` : LIVE_STEP_NAMES[step]}</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" onPress={onTrack} hitSlop={8}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "800" }}>Track</Text></Pressable>
+      </View>
+      <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
+        {LIVE_STEP_NAMES.map((n, i) => (
+          <View key={n} style={{ flex: 1, gap: 6 }}>
+            <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(128,128,128,0.3)" }} />
+            <Text numberOfLines={1} style={{ color: i <= step ? ink.textPrimary : ink.textSecondary, fontSize: 10.5, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -131,31 +156,9 @@ export default function GarageScreen() {
           <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
         </View>
       ) : one ? (
-        <View style={{ gap: metrics.sectionGap, paddingBottom: 100 }}>
-          {liveJobForCar(jobs, one.id) ? (() => {
-            const job = liveJobForCar(jobs, one.id)!;
-            const step = jobStep(job.status);
-            const target = liveTrackTarget(job, null);
-            const ready = readyBy(job);
-            return (
-              <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} /><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "800" }}>In the studio now</Text></View>
-                  {ready ? <Text style={{ color: ink.textSecondary, fontSize: 12 }}>{`Ready by ${ready}`}</Text> : null}
-                </View>
-                <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
-                  {LIVE_STEP_NAMES.map((n, i) => (
-                    <View key={n} style={{ flex: 1, gap: 6 }}>
-                      <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(128,128,128,0.3)" }} />
-                      <Text numberOfLines={1} style={{ color: i <= step ? ink.textPrimary : ink.textSecondary, fontSize: 10.5, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Button label="Track and chat" onPress={() => router.push(target ? `/(tabs)/bookings/${target}` : "/(tabs)/bookings")} />
-              </View>
-            );
-          })() : null}
+        <View style={{ gap: metrics.sectionGap }}>
           <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={(v) => (chip(v) ? <DueChip text={chip(v)!} /> : null)} />
+          {liveJobForCar(jobs, one.id) ? <TodayStrip name={`${one.make ?? ""} ${one.model ?? ""}`.trim() || one.registrationNumber} job={liveJobForCar(jobs, one.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, one.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null}
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
             return (
@@ -169,25 +172,35 @@ export default function GarageScreen() {
               </View>
             );
           })() : null}
-          <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
-            <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
-            <Button label="Service history" kind="quiet" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } })} />
-          </View>
         </View>
       ) : (
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: metrics.sectionGap }}>
+          {(() => {
+            const liveCar = list.find((v) => liveJobForCar(jobs, v.id));
+            return liveCar ? <TodayStrip name={`${liveCar.make ?? ""} ${liveCar.model ?? ""}`.trim() || liveCar.registrationNumber} job={liveJobForCar(jobs, liveCar.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, liveCar.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null;
+          })()}
           {list.map((v) => (
-            <Pressable key={v.id} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} onPress={() => open(v)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, opacity: pressed ? 0.85 : 1, ...glassPane(light) })}>
-              <View style={{ width: 64, height: 64, borderRadius: 16, overflow: "hidden" }}><CarThumb car={v} height={64} width={64} radius={16} /></View>
-              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-                <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 15, fontWeight: "800" }}>{`${v.make ?? ""} ${v.model ?? ""}`.trim()}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text numberOfLines={1} style={{ color: ink.textSecondary, fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
-              </View>
-              {chip(v) ? <DueChip text={chip(v)!} /> : null}
-            </Pressable>
+            <CarPhotoCard key={v.id} car={v} height={liveJobForCar(jobs, v.id) ? 150 : 130} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : chip(v)} onOpen={open} />
           ))}
+          {list.some((v) => chip(v)) ? (
+            <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 6 }}>
+              <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>COMING UP</Text>
+              {list.filter((v) => chip(v)).map((v) => (
+                <View key={v.id} style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, paddingVertical: 6 }}>
+                  <Text numberOfLines={1} style={{ flex: 1, color: ink.textPrimary, fontSize: 14 }}>{`${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber}</Text>
+                  <Text numberOfLines={1} style={{ color: ink.textSecondary, fontSize: 13 }}>{chip(v)}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       )}
+      {list.length > 0 ? (
+        <View style={{ gap: space.breath, marginTop: metrics.sectionGap, paddingBottom: 100 }}>
+          <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+          <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
+        </View>
+      ) : null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
     </Screen>
   );

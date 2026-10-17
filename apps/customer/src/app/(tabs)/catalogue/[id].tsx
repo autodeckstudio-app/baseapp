@@ -47,7 +47,7 @@ export default function ServiceDetailScreen() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!pickedSize) setSelectedCategory(pricingVehicle.category);
+    if (!pickedSize) setSelectedCategory(pricingVehicle.category ?? (service?.category === "garage" ? VEHICLE_CATEGORIES[0]!.value : null));
   }, [pricingVehicle.category, pickedSize]);
 
   useEffect(() => {
@@ -174,8 +174,8 @@ export default function ServiceDetailScreen() {
         </View> : null}
 
         <View style={{ gap: space.line }}>
-          {H("Price for your car")}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+          {H(service.category === "garage" ? "Price" : "Price for your car")}
+          {service.category === "garage" ? null : <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
             {VEHICLE_CATEGORIES.map(({ value, label }) => {
               const selected = selectedCategory === value;
               return (
@@ -190,7 +190,7 @@ export default function ServiceDetailScreen() {
                 </Pressable>
               );
             })}
-          </View>
+          </View>}
 
           {service.priceOnRequest === true ? (
             <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">{service.category === "garage" || service.category === "modifications" ? "Book an inspection and the studio quotes after seeing the car. You approve it before any work starts." : "The studio confirms the price for your car. You approve it before any work starts."}</T>} last /></Pane>

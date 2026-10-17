@@ -9,7 +9,7 @@ describe("one car photo source", () => {
     expect(home).toContain("<CarThumb car={c.vehicle}");
     expect(stage).toContain("<CarThumb car={car.vehicle}");
     expect(home).not.toMatch(/source=\{\{ uri: c\.photo/);
-    expect(read("app/(tabs)/garage/index.tsx")).toContain("<CarThumb car={v}");
+    expect(read("ui/GarageShowroom.tsx")).toContain("<CarThumb car={v}");
   });
   it("Home passes every vehicle's own photo fields, not only the active car's", () => {
     expect(read("app/(tabs)/index.tsx")).toContain("vehicle: { photoUrl: v.photoUrl");

@@ -30,7 +30,7 @@ describe("garage showroom guards", () => {
   it("hero is one photo: no swipe, no paging, no page dots, no parallax", () => { expect(s).not.toMatch(/ScrollView|pagingEnabled|Animated|onMomentumScrollEnd|Car \$\{index/); expect(s).toContain("chips above only"); });
   it("uses only allowed radii and no emoji", () => { expect(s).not.toMatch(/borderRadius: (?!12|16|24|9999|0\b)\d+/); });
   it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).toContain("paddingBottom: 100"); });
-  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap, paddingBottom: 100"); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
+  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).toContain("marginTop: metrics.sectionGap, paddingBottom: 100"); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
   it("Home, Garage and the booking screen agree on the step for every live status (Garage once showed Ready during Final checks)", () => {
     for (const st of ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]) {
       expect(liveStep(LIVE_PROGRESS[st]!)).toBe(jobStage(st)!.index); expect(jobStep(st)).toBe(jobStage(st)!.index);
@@ -47,4 +47,20 @@ describe("car detail cover guards", () => {
   });
   it("cover photo height comes from metrics and the name sits on the photo", () => { expect(h).toContain("metrics.heroCover"); expect(h).toContain("fontSize: 30"); });
   it("empty states are one quiet line, not a block with a button", () => { expect(d).not.toContain('<Notice title="No care plan yet"'); expect(o).not.toContain("No service history yet"); });
+});
+describe("garage services have one price for every car", () => {
+  it("the service page hides the car-size chips for garage services", () => {
+    const c = read("../app/(tabs)/catalogue/[id].tsx");
+    expect(c).toContain('service.category === "garage" ? null : <View');
+    expect(c).toContain('service.category === "garage" ? "Price" : "Price for your car"');
+  });
+});
+describe("garage All view and selected view share one language", () => {
+  const g = read("../app/(tabs)/garage/index.tsx");
+  it("both views use the Today strip and photo cards, with no swipe", () => {
+    expect((g.match(/<TodayStrip/g) ?? []).length).toBe(2); expect(g).toContain("<CarPhotoCard"); expect(g).toContain("<GarageShowroom");
+    expect(g).not.toMatch(/ScrollView horizontal pagingEnabled/);
+  });
+  it("the Today strip has a text Track link and no second button", () => { expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"'); });
+  it("All view has no plan ring", () => { const a = g.slice(g.indexOf("COMING UP") - 1500, g.indexOf("COMING UP")); expect(a).not.toContain("<CareRing"); });
 });
