@@ -1,3 +1,5 @@
+import { customerHasPriority } from "../../lib/priority-access.js";
+import { heldStartTimes, isPriorityHeld } from "../../lib/priority-hold.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob } from "@autodeck/core";
@@ -94,5 +96,22 @@ export const getAvailability = onCall({ region: "asia-south1" }, async (request)
     occupiedByBay,
   });
 
-  return { slots: slots.slice(0, MAX_RETURNED_SLOTS) };
+  // Held start times are hidden from customers without a priority slot until the hold ends (18:00 the evening before).
+  let visible = slots;
+  if (user.claims.role === "customer") {
+    const now = new Date();
+    const mine = await customerHasPriority(db, user.uid, now, config.timezone);
+    if (!mine) {
+      const heldByDate = new Map<string, string[]>();
+      visible = slots.filter((s) => {
+        let held = heldByDate.get(s.date);
+        if (!held) {
+          held = heldStartTimes({ date: s.date, serviceDurationMinutes: service.estimatedDurationMinutes, operatingHours: config.operatingHours, holidays: config.holidays, timezone: config.timezone });
+          heldByDate.set(s.date, held);
+        }
+        return !isPriorityHeld({ date: s.date, startTime: s.startTime, held, now, timezone: config.timezone });
+      });
+    }
+  }
+  return { slots: visible.slice(0, MAX_RETURNED_SLOTS) };
 });

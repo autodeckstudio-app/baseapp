@@ -1,3 +1,4 @@
+import { assertNotPriorityHeld } from "../../lib/priority-access.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, StudioConfig, ServiceJob, Service } from "@autodeck/core";
@@ -90,6 +91,8 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   if (newStart <= new Date()) {
     throw new HttpsError("invalid-argument", "New booking time must be in the future.");
   }
+
+  await assertNotPriorityHeld(db, { isCustomer, customerId: booking.customerId, date: data.newDate, time: data.newTime, serviceDurationMinutes: service.estimatedDurationMinutes, config, now: new Date() });
 
   const compatibleBays = config.bays.filter(
     (b) => b.active && b.bayType === service.requiredBayType,

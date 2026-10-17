@@ -1,3 +1,4 @@
+import { assertNotPriorityHeld } from "../../lib/priority-access.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type {
@@ -137,6 +138,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
   // its start day (Phase 5 — multi-day booking; single source of truth used
   // by both booking and job records below, and re-derived identically by
   // rescheduleBooking).
+  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: user.uid, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: service.estimatedDurationMinutes, config, now });
   const estimatedEndAt = computeScheduleEnd(
     requestedStart,
     service.estimatedDurationMinutes,
