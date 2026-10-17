@@ -58,8 +58,9 @@ h1,h2,h3,h4,b{color:var(--ink)}
 .tline li.on{opacity:1}.tline li.on i{background:var(--orange);border-color:var(--orange);box-shadow:0 0 0 8px rgba(236,134,56,.22)}
 .tline b{display:block;font:600 18px Montserrat}.tline span{font-size:14px;color:var(--ink3)}
 /* numbers */
-.nums{padding:12vh 0}.nums .wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:left}
-.nums b{display:block;font:600 clamp(64px,9vw,140px)/1 Montserrat,sans-serif;letter-spacing:-.05em;color:var(--ink)}.nums span{color:var(--ink2);font-size:17px}
+.nums{padding:12vh 0}.nums .wrap{display:grid;grid-template-columns:2fr 1fr 1fr;gap:28px;text-align:left;align-items:end}
+.nums b{display:block;font:600 clamp(56px,7vw,104px)/1 Montserrat,sans-serif;letter-spacing:-.05em;color:var(--ink2)}.nums span{color:var(--ink2);font-size:17px}
+.nums .wrap>div:first-child b{font-size:clamp(104px,14vw,208px);color:var(--ink)}
 /* brands marquee */
 .brands{padding:10vh 0}.brands .eyebrow{text-align:center;margin-bottom:28px}
 .marq{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}.marq>div{display:flex;gap:18px;width:max-content;animation:marq 38s linear infinite}
