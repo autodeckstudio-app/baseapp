@@ -10,3 +10,8 @@ describe("car filter bar",()=>{
  it("sorts price independently of search and preserves the source array",()=>{expect(filterCars(cars,{...base,query:"Ahmedabad",sort:"low"}).map(c=>c.id)).toEqual(["i10","safari","seltos"]);expect(cars[0]!.id).toBe("safari");});
  it("returns no results for a real mismatch",()=>expect(filterCars(cars,{...base,fuel:"electric"})).toEqual([]));
 });
+describe("hidden or missing prices",()=>{
+ const hid=[{id:"h",make:"Kia",model:"Seltos",year:2022,area:"A",fuel:"diesel",bodyType:null,createdAt:"2026-10-04"}] as unknown as CarListingView[];
+ it("keeps a car whose price was not sent (live bug: list showed 0 cars)",()=>expect(filterCars(hid,base).map(c=>c.id)).toEqual(["h"]));
+ it("keeps a hidden-price car under a budget filter",()=>expect(filterCars(hid,{...base,maxPrice:100}).map(c=>c.id)).toEqual(["h"]));
+});

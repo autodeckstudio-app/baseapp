@@ -2,6 +2,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import type { CarListingView } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { glassPane } from "../lib/glass-pane";
+import { hasCarPrice } from "../lib/cars-home";
 import { inr, kmLabel } from "../lib/carsale-service";
 
 /** Home marketing card for buying and selling cars. Real photo of a live listing, two actions, nothing else. */
@@ -18,7 +19,7 @@ export function CarsCard({ car, onBuy, onSell }: { car: CarListingView; onBuy: (
             <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>{car.year} {car.make} {car.model} · {kmLabel(car.kmDriven)}</Text>
           </View>
           <View style={{ backgroundColor: "rgba(10,10,12,0.72)", borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 6 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>{car.priceHidden ? "Ask price" : inr(car.askingPrice)}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>{hasCarPrice(car) ? inr(car.askingPrice) : "Ask price"}</Text>
           </View>
         </View>
       </Pressable>

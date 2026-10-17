@@ -5,3 +5,6 @@ export function pickFeaturedCar(listings: CarListingView[] | null | undefined): 
   const ok = (listings ?? []).filter((l) => l.status === "live" && !!l.photoUrls[0]);
   return ok.find((l) => l.source === "studio") ?? ok[0] ?? null;
 }
+
+/** A price is shown only when the server sent a real one. Missing or hidden means "ask the studio", never NaN and never filtered out. */
+export const hasCarPrice = (l: Pick<CarListingView, "askingPrice" | "priceHidden">): boolean => !l.priceHidden && typeof l.askingPrice === "number" && Number.isFinite(l.askingPrice) && l.askingPrice > 0;

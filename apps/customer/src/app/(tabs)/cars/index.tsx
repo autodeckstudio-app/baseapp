@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, Field, Kicker, Notice, Screen, Skeleton, T } from "../../../ui/kit";
+import { hasCarPrice } from "../../../lib/cars-home";
 import { glassPane } from "../../../lib/glass-pane";
 import { filterCars } from "../../../lib/car-filters";
 import { getCarListings, inr, kmLabel } from "../../../lib/carsale-service";
@@ -43,11 +44,11 @@ function Choice({label,value,onChange,options}:{label:string;value:string;onChan
 
 function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
   const day = useExperienceTheme().name === "light";
-  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${l.priceHidden ? "price on request" : inr(l.askingPrice)}`} onPress={onPress} style={({pressed}) => ({width:"100%",overflow:"hidden",opacity:pressed?.85:1,...glassPane(day)})}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`View ${l.year} ${l.make} ${l.model}, ${hasCarPrice(l) ? inr(l.askingPrice) : "price on request"}`} onPress={onPress} style={({pressed}) => ({width:"100%",overflow:"hidden",opacity:pressed?.85:1,...glassPane(day)})}>
     <View style={{aspectRatio:3/2,backgroundColor:"rgba(128,128,136,0.2)"}}>{l.photoUrls[0] ? <Image source={{uri:l.photoUrls[0]}} resizeMode="cover" style={{width:"100%",height:"100%"}}/> : <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><T tone="tertiary">Photo unavailable</T></View>}
       <View style={{position:"absolute",top:14,left:14,backgroundColor:"rgba(10,10,12,.82)",borderRadius:9999,paddingHorizontal:12,paddingVertical:6}}><T role="caption" style={{color:"#FFFFFF"}}>{l.status==="reserved" ? "Reserved" : l.source==="studio" ? "Studio listing" : "Customer listing"}</T></View>
     </View>
-    <View style={{padding:16,gap:12}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{l.priceHidden ? "Ask price" : inr(l.askingPrice)}</T></View>
+    <View style={{padding:16,gap:12}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{hasCarPrice(l) ? inr(l.askingPrice) : "Ask price"}</T></View>
       <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area}</T><T role="caption" tone="accent">View car</T></View>
     </View>
   </Pressable>;
@@ -112,7 +113,7 @@ export default function CarsScreen() {
               <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 12 }} />
               <View style={{ flex: 1, gap: 2 }}>
                 <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
-                <T role="caption" tone="tertiary">{l.priceHidden ? "Price on request" : inr(l.askingPrice)}</T>
+                <T role="caption" tone="tertiary">{hasCarPrice(l) ? inr(l.askingPrice) : "Price on request"}</T>
                 {l.status === "rejected" && l.rejectionReason ? <T role="caption" tone="secondary" numberOfLines={2}>{l.rejectionReason}</T> : null}
               </View>
               <Chip label={STATE[l.status] ?? l.status} tone={l.status === "live" ? "accent" : l.status === "rejected" ? "danger" : "neutral"} />
