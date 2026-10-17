@@ -34,6 +34,9 @@ import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { HomeView } from "../../ui/HomeView";
+import { getCarListings } from "../../lib/carsale-service";
+import { pickFeaturedCar } from "../../lib/cars-home";
+import type { CarListingView } from "@autodeck/core";
 import { StoryViewer } from "../../ui/StoryViewer";
 import { HeroImage, Button, Chip, Kicker, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../ui/kit";
 
@@ -98,6 +101,8 @@ export default function HomeScreen() {
   const [retryTick, setRetryTick] = useState(0);
   const [catalogue, setCatalogue] = useState<Service[]>([]);
   const [past, setPast] = useState<Booking[]>([]);
+  const [carListings, setCarListings] = useState<CarListingView[] | null>(null);
+  useEffect(() => { if (ready) void getCarListings(false).then(setCarListings).catch(() => undefined); }, [ready]);
   const pricingVehicle = usePricingVehicle();
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   useEffect(() => {
@@ -243,7 +248,12 @@ export default function HomeScreen() {
         ]}
         onAvatar={() => router.push("/(tabs)/profile")}
         displayName={(m.customer.firstName ?? auth.user.displayName ?? "AutoDeck").trim()}
+        carsCard={pickFeaturedCar(carListings)}
+        onBuyCar={() => router.push("/(tabs)/cars")}
+        onSellCar={() => router.push("/(tabs)/cars/sell")}
         drawer={[
+          { key: "buycar", label: "Buy a car", sub: "Studio and owner listings", icon: "car", onPress: () => router.push("/(tabs)/cars") },
+          { key: "sellcar", label: "Sell your car", sub: "List it with the studio", icon: "car", onPress: () => router.push("/(tabs)/cars/sell") },
           { key: "friend", label: "Bring a friend", sub: referralSubtitle(myCode), icon: "gift", onPress: () => void Share.share({ message: referralShareMessage(myCode) }).catch(() => undefined) },
           ...(GIFT_LIVE ? [{ key: "gifts", label: "Gift a wash", sub: "Use or send a gift", icon: "gift" as const, onPress: () => router.push("/(tabs)/gifts") }] : []),
         ]}

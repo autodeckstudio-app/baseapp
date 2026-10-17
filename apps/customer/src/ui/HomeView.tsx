@@ -20,6 +20,8 @@ import { HeroStage } from "./HeroStage";
 import { CarThumb } from "./CarThumb";
 import type { Vehicle } from "@autodeck/core";
 import { CampaignSlot } from "./CampaignSlot";
+import { CarsCard } from "./CarsCard";
+import type { CarListingView } from "@autodeck/core";
 import type { Campaign } from "../lib/campaign";
 
 export type HomeCar = { id: string; title: string; plate: string; /** The vehicle record. Photo comes from the same source as Garage (CarThumb), for every car. */ vehicle?: Pick<Vehicle, "photoUrl" | "category"> & { updatedAt?: string }; category?: string | null; hasPhoto?: boolean };
@@ -51,6 +53,10 @@ export type HomeViewProps = {
   stories?: ReactNode;
   /** One compact campaign slot. Omit until there is real content. */
   campaign?: Campaign | null;
+  /** A live car listing for the Cars card. Null hides it. */
+  carsCard?: CarListingView | null;
+  onBuyCar?: () => void;
+  onSellCar?: () => void;
   onAvatar: () => void;
   /** Shortcuts shown in the side drawer opened from the avatar. */
   drawer?: DrawerItem[];
@@ -338,6 +344,7 @@ export function HomeView(p: HomeViewProps) {
       <LeadCard live={p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
 
       <CampaignSlot campaign={p.campaign} />
+      {p.carsCard && p.onBuyCar && p.onSellCar ? <CarsCard car={p.carsCard} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
       <View style={{ gap: 12 }}>
         <Heading title="The studio" />
         <View style={{ ...glassPane(name === "light"), padding: metrics.cardPad, gap: 12 }}>

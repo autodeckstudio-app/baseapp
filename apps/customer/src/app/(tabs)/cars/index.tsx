@@ -82,7 +82,7 @@ export default function CarsScreen() {
       }
     >
       <T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T>
-      <View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:8,borderBottomWidth:1,borderBottomColor:"rgba(255,255,255,.12)"}}><T role="caption" tone="tertiary">Have a car to sell?</T><Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/cars/sell")} style={{minHeight:44,justifyContent:"center"}}><T tone="accent">List your car ›</T></Pressable></View>
+      <Button kind="quiet" label="Sell your car" onPress={() => router.push("/(tabs)/cars/sell")} />
       {all && all.length > 0 ? (
         <View style={{ gap: space.line }}>
           <Field label="Search" value={query} onChangeText={setQuery} placeholder="Make, model, year or area" autoCapitalize="none" maxLength={60} />
