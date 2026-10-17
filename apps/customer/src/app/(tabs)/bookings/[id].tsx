@@ -239,7 +239,7 @@ export default function BookingDetailScreen() {
     month: "long",
     year: "numeric",
   });
-  const displayTime = scheduledAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
+  const displayTime = scheduledAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true });
 
   const isMultiDay = booking.estimatedEndDate !== booking.scheduledDate;
   const displayEndDate = new Date(`${booking.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", {

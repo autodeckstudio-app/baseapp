@@ -22,7 +22,7 @@ const STATUS: Record<PickupRequest["status"], string> = {
 function formatAgreed(iso: string): string {
   const d = new Date(iso);
   const date = d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
-  const time = d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
   return `${date} at ${time}`;
 }
 

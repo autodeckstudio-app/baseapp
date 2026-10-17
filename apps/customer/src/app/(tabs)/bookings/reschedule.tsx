@@ -87,7 +87,7 @@ export default function RescheduleBookingScreen() {
       weekday: "long",
       day: "numeric",
       month: "long",
-      hour: "2-digit",
+      hour: "numeric",
       minute: "2-digit",
       hour12: true,
     });

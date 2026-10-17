@@ -516,3 +516,9 @@ describe("Cars pages follow the common design rules", () => {
     expect(read(pages[0]!)).toContain("glassPane(day)");
   });
 });
+
+describe("one time format", () => {
+  it("customer times never print a leading zero hour (11:00 am vs 01:00 pm)", () => {
+    for (const p of ["src/ui/PickupCard.tsx", "src/app/(tabs)/bookings/[id].tsx", "src/app/(tabs)/bookings/reschedule.tsx"]) expect(read(p)).not.toMatch(/hour:\s*"2-digit"[^}]*hour12:\s*true|hour:\s*"2-digit",\s*\n\s*minute:\s*"2-digit",\s*\n\s*hour12/);
+  });
+});
