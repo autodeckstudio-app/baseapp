@@ -72,13 +72,17 @@ const studioConfig: Omit<StudioConfig, "updatedAt"> = {
   ],
 };
 
-// Plan prices are derived from the Rs 1000 single wash (owner, 17 Oct): washes x 1000, less the plan's own discount %.
-// Owner pick B (17 Oct 2026): Silver 4 washes 0% = Rs 4,000; Gold 8 washes 5% = Rs 7,600; Platinum 16 washes 10% = Rs 14,400. Monthly (MEMBERSHIP_DURATION_DAYS = 30).
-// Wash count and discount % are unchanged. The live plans are data: change them in the admin Memberships page.
+// Club structure from the 17 Oct 2026 owner chat (comment is a note, not authority; no % discounts in this version):
+//   Silver Rs 3,600 = 4 washes + 1 free pickup and drop
+//   Gold Rs 5,700 = 6 washes + 3 free pickups
+//   Platinum Rs 9,000 = 10 washes + 5 free pickups + priority slot
+//   Starter Rs 1,800 = 2 washes, no pickup: NOT seeded here, it needs a new tier value (server deploy, held).
+// Only price, washes and discount are stored. Free pickups and priority slot have no field yet, so the app must not promise them (see docs/SERVER-DEPLOY-CHECKLIST.md).
+// The live plans are data: change them in the admin Memberships page. Monthly (MEMBERSHIP_DURATION_DAYS = 30).
 const PLANS: Array<{ id: string; tier: MembershipTier; name: string; priceInPaise: number; includedWashes: number; discountPercent: number }> = [
-  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 4000_00, includedWashes: 4, discountPercent: 0 },
-  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 7600_00, includedWashes: 8, discountPercent: 5 },
-  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 14400_00, includedWashes: 16, discountPercent: 10 },
+  { id: "plan-silver", tier: "silver", name: "Silver", priceInPaise: 3600_00, includedWashes: 4, discountPercent: 0 },
+  { id: "plan-gold", tier: "gold", name: "Gold", priceInPaise: 5700_00, includedWashes: 6, discountPercent: 0 },
+  { id: "plan-platinum", tier: "platinum", name: "Platinum", priceInPaise: 9000_00, includedWashes: 10, discountPercent: 0 },
 ];
 
 async function seedStudio(): Promise<void> {
