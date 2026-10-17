@@ -30,3 +30,9 @@ export function membershipReminderText(daysLeft: 7 | 0, tier: string): { title: 
   if (daysLeft === 0) return { title: `${name} ends today`, body: `Your ${name} ends today. Unused washes expire. You can join a plan again once it ends.` };
   return { title: `${name} ends in 7 days`, body: `Your ${name} ends in 7 days. Unused washes expire when it ends.` };
 }
+
+/** Plain reminder before a confirmed visit. Time is the studio's local time, already formatted by the caller. No offer, price or promise. */
+export function bookingReminderText(hoursAhead: 24 | 2, whenLabel: string): { title: string; body: string } {
+  if (hoursAhead === 2) return { title: "Your visit is in 2 hours", body: `Your booking is at ${whenLabel}. Please bring your car at that time.` };
+  return { title: "Your visit is tomorrow", body: `Your booking is at ${whenLabel}. Open the app if you need to change it.` };
+}

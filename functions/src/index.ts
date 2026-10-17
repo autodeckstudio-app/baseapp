@@ -179,3 +179,4 @@ export { requestAccountDeletion } from "./functions/auth/requestAccountDeletion.
 export { standbyBooking } from "./functions/job/standbyBooking.js";
 export { createGift, listMyGifts, redeemGift, cancelGift, lookupGift, voidGift } from "./functions/gift/gift.js";
 export { expiryRemindersScheduled } from "./functions/notification/expiryRemindersScheduled.js";
+export { bookingRemindersScheduled } from "./functions/notification/bookingRemindersScheduled.js";
