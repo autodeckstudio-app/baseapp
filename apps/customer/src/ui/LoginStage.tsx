@@ -12,8 +12,8 @@ import { useReduceMotion } from "../lib/reduce-motion";
 /** What the customer gets, one line at a time. Rotates every 4 s; Reduce Motion keeps it still and the dots still work. */
 export const LOGIN_PERKS: { icon: "wash" | "chat" | "check"; text: string }[] = [
   { icon: "wash", text: "Book a wash in seconds" },
-  { icon: "chat", text: "Follow your car live and chat with the studio" },
-  { icon: "check", text: "Bills and warranties in one place" },
+  { icon: "chat", text: "Track your car and chat" },
+  { icon: "check", text: "All bills and warranties" },
 ];
 
 function PerkRotator() {
@@ -28,7 +28,7 @@ function PerkRotator() {
   return (
     <View style={{ width: "100%", borderRadius: 16, padding: 16, gap: 10, alignItems: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
       <NavIcon name={perk.icon} color="#F6F4F1" size={24} cut="#18181C" />
-      <Text accessibilityLiveRegion="polite" style={{ color: "#F6F4F1", fontSize: 15, fontWeight: "700", textAlign: "center", minHeight: 40 }}>{perk.text}</Text>
+      <Text accessibilityLiveRegion="polite" numberOfLines={1} adjustsFontSizeToFit style={{ color: "#F6F4F1", fontSize: 15, fontWeight: "700", textAlign: "center", width: "100%" }}>{perk.text}</Text>
       <View style={{ flexDirection: "row", gap: 6 }}>
         {LOGIN_PERKS.map((p, n) => (
           <Pressable key={p.text} accessibilityRole="button" accessibilityLabel={`Show tip ${n + 1} of ${LOGIN_PERKS.length}`} hitSlop={10} onPress={() => setI(n)} style={{ height: 6, width: n === i ? 18 : 6, borderRadius: 9999, backgroundColor: n === i ? "#EC8638" : "rgba(255,255,255,0.4)" }} />
