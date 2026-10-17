@@ -81,7 +81,7 @@ export default function YouScreen() {
       />
       <Pane pad="none"><View style={{ paddingHorizontal: 16 }}><Row last title="Help and contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} /></View></Pane>
       {actionMessage?<Notice title="Account update" body={actionMessage}/>:null}
-      <View style={{ gap: space.hair }}>
+      <Pane pad="inset"><View style={{ gap: space.breath }}>
         <Kicker>Appearance</Kicker>
         <View style={{ flexDirection: "row", gap: space.line }}>
           {(["auto", "light", "night"] as const).map((m) => {
@@ -93,7 +93,7 @@ export default function YouScreen() {
             );
           })}
         </View>
-      </View>
+      </View></Pane>
       {editing ? (
         <View style={{ gap: space.breath }}>
           <Field label="Your name" value={draft} onChangeText={setDraft} autoCapitalize="words" maxLength={100} />
@@ -105,14 +105,16 @@ export default function YouScreen() {
         </View>
       ) : null}
       {Platform.OS === "web" ? (
-        <View style={{ gap: space.hair }}>
+        <Pane pad="inset"><View style={{ gap: space.breath }}>
           <Kicker>Driving licence</Kicker>
           <FileUploader files={lic ? [{ blob: lic.blob, type: lic.contentType }] : []} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
           {lic ? <Button label="Save licence photo" busy={licBusy} onPress={() => void saveLicense()} /> : null}
           <T role="caption" tone={licMsg && !licMsg.endsWith("saved.") ? "danger" : "tertiary"}>{licMsg ?? "Add a clear photo of your licence (JPEG, PNG or WebP). Only you and the studio can see it."}</T>
-        </View>
+        </View></Pane>
       ) : null}
       {/* Language picker hidden until the whole app is translated (LANGS, setLang kept in lib/i18n). */}
+      <Pane pad="inset"><View style={{ gap: space.breath }}>
+        <Kicker>Account</Kicker>
       {confirm ? (
         <View style={{ gap: space.breath }}>
           <T tone="secondary">Sign out of AutoDeck on this device?</T>
@@ -138,8 +140,9 @@ export default function YouScreen() {
           </View>
         </View>
       ) : (
-        <View style={{ marginTop: 32 }}><Button kind="quiet" label="Delete my account" onPress={() => setDelStep("ask")} /></View>
+        <View><Button kind="quiet" label="Delete my account" onPress={() => setDelStep("ask")} /></View>
       )}
+      </View></Pane>
       <LegalLinks />
     </Screen>
   );

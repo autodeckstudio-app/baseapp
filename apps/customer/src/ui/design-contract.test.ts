@@ -392,3 +392,10 @@ it("lists every stock image in the imagery register",()=>{
   const missing=fs.readdirSync(dir).filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).filter(f=>!reg.includes(f));
   expect(missing).toEqual([]);
 });
+
+it("profile settings sit in glass cards, one per topic, with no stray links repeated from the tabs",()=>{
+  const p=read("src/app/(tabs)/profile.tsx");
+  for(const k of ["Appearance","Driving licence","Account"]) expect(p).toContain(`<Kicker>${k}</Kicker>`);
+  expect((p.match(/<Pane pad="inset">/g)??[]).length).toBeGreaterThanOrEqual(3);
+  expect(p).toContain('title="Help and contact"');
+});
