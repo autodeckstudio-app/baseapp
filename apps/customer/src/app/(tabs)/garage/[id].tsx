@@ -1,6 +1,6 @@
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
-import { buildCarePlan, dueText } from "../../../lib/care-plan";
+import { buildCarePlan } from "../../../lib/care-plan";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField } from "../../../ui/inputs";
 import { validateDocument, documentReference } from "../../../lib/document-validation";
@@ -32,6 +32,8 @@ import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview } from "../../../ui/CarOverview";
 import { nextDue, dueLine } from "../../../lib/car-next-due";
+import { CareTimeline } from "../../../ui/CareTimeline";
+import { buildUpcoming, buildHistory, countLabel } from "../../../lib/car-timeline";
 
 
 const PROTECTION_KIND_LABELS: Record<string, string> = {
@@ -327,51 +329,45 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
-      <Kicker>Care plan</Kicker>
-      {true ? (() => {
+      {(() => {
         const svc: Record<string, { id: string; name: string; category: string }> = {};
         for (const j of jobs) if (serviceNames[j.serviceId]) svc[j.serviceId] = { id: j.serviceId, name: serviceNames[j.serviceId]!, category: serviceCats[j.serviceId] ?? "" };
         const plan = buildCarePlan({ jobs, services: svc, warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate })) });
-        const dateOf = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-        if (plan.done.length === 0 && plan.warranties.length === 0) return <T role="caption" tone="secondary">No care plan yet. It starts once the studio finishes a service on this car.</T>;
+        const upcoming = buildUpcoming({ plan, papers: papers.map((p) => ({ id: p.id, label: PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind, expiresOn: p.expiresOn, days: daysUntil(p.expiresOn) })) });
+        return <CareTimeline title="Coming up" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
+      })()}
+
+      {(() => {
+        const past = buildHistory(jobs.map((j) => ({ id: j.id, title: visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames)), also: [visitAlso(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))].filter(Boolean).join(" "), at: j.sealedAt ?? j.createdAt, status: j.status })));
+        const bookingOf = (id?: string) => jobs.find((j) => j.id === id)?.bookingId;
         return (
-          <View style={{ gap: space.inset }}>
-            {plan.nextCoat ? (
-              <Pane pad="gap">
-                <Kicker tone="accent">Next maintenance coat</Kicker>
-                <T role="heading">{plan.nextCoat.name}</T>
-                <T tone="secondary">{dueText(plan.nextCoat.days)} · {dateOf(plan.nextCoat.dueAt)}</T>
-              </Pane>
-            ) : null}
-            {plan.due.length > 0 ? (
-              <View style={{ gap: space.breath }}>
-                <Kicker>Due</Kicker>
-                <Pane pad="gap">
-                  {plan.due.map((d, i) => <Row key={`${d.name}-${i}`} title={d.label} detail={<T role="caption" tone="secondary">{d.name} · {dueText(d.days)} · {dateOf(d.dueAt)}</T>} last={i === plan.due.length - 1} />)}
-                </Pane>
-              </View>
-            ) : null}
-            {plan.warranties.length > 0 ? (
-              <View style={{ gap: space.breath }}>
-                <Kicker>Warranty ends</Kicker>
-                <Pane pad="gap">
-                  {plan.warranties.map((w, i) => <Row key={`${w.label}-${i}`} title={w.label} detail={<T role="caption" tone="secondary">{w.days < 0 ? "Ended" : `Ends in ${w.days} day${w.days === 1 ? "" : "s"}`} · {dateOf(new Date(w.endDate))}</T>} last={i === plan.warranties.length - 1} />)}
-                </Pane>
-              </View>
-            ) : null}
-            {plan.done.length > 0 ? (
-              <View style={{ gap: space.breath }}>
-                <Kicker>Done</Kicker>
-                <Pane pad="gap">
-                  {plan.done.slice(0, 8).map((d, i, a) => <Row key={`${d.name}-${i}`} title={d.name} detail={<T role="caption" tone="secondary">{dateOf(d.at)}</T>} last={i === a.length - 1} />)}
-                </Pane>
-              </View>
+          <View style={{ gap: space.breath }}>
+            <CareTimeline
+              title="Service history"
+              count={countLabel(past.length, "visit", "visits")}
+              items={past}
+              empty="Service visits and updates for this car will appear here."
+              onItem={(it) => { const bid = bookingOf(it.jobId); if (bid) router.push(`/(tabs)/bookings/${bid}`); }}
+              renderExtra={(it) => {
+                const invoice = invoices.find((x) => x.jobId === it.jobId);
+                return invoice ? <Button label={`View invoice ${invoice.invoiceNumber}`} kind="quiet" testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} /> : null;
+              }}
+            />
+            {Platform.OS === "web" && jobs.length > 0 ? (
+<Button label="Download service history (PDF)" kind="quiet" onPress={() => {
+                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? VISIT_FALLBACK, formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null, (j) => visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))) });
+                  const w = (globalThis as unknown as { open: (u: string, t: string) => { document: { write: (h: string) => void; close: () => void }; focus: () => void; print: () => void } | null }).open("", "_blank");
+                  if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); } else setActionError("Allow pop-ups to download the history.");
+                }} />
             ) : null}
           </View>
         );
-      })() : null}
+      })()}
 
-      <Kicker>Papers</Kicker>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+        <Kicker>Papers</Kicker>
+        <T role="caption" tone="tertiary">{countLabel(papers.length + protections.length, "document", "documents")}</T>
+      </View>
       {true ? (
         <>
           {papers.length === 0 && protections.length === 0 ? (
@@ -431,81 +427,31 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
-      <Kicker>Service history</Kicker>
-      {true ? (
-        jobs.length === 0 ? (
-          <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />
-        ) : (
-          <Pane pad="gap">
-            {Platform.OS === "web" ? (
-              <View style={{ paddingBottom: space.line }}>
-                <Button label="Download service history (PDF)" kind="quiet" onPress={() => {
-                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? VISIT_FALLBACK, formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null, (j) => visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))) });
-                  const w = (globalThis as unknown as { open: (u: string, t: string) => { document: { write: (h: string) => void; close: () => void }; focus: () => void; print: () => void } | null }).open("", "_blank");
-                  if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); } else setActionError("Allow pop-ups to download the history.");
-                }} />
-              </View>
-            ) : null}
-            {jobs.map((job, i) => {
-              const invoice = invoices.find((x) => x.jobId === job.id);
-              return (
-                <View key={job.id}>
-                  <Row
-                    title={visitTitle(visitServices(job, invoice, serviceNames))}
-                    detail={[formatDate(job.sealedAt ?? job.createdAt), visitAlso(visitServices(job, invoice, serviceNames))].filter(Boolean).join(" · ")}
-                    trailing={<Chip label={job.status.replace(/_/g, " ")} />}
-                    onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
-                    last={i === jobs.length - 1 && !invoice}
-                  />
-                  {invoice ? (
-                    <View style={{ paddingBottom: space.line }}>
-                      <Button
-                        label={`View invoice ${invoice.invoiceNumber}`}
-                        kind="quiet"
-                        testID={`history-invoice-${invoice.id}`}
-                        onPress={() => router.push(invoiceHref(invoice.id))}
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })}
-          </Pane>
-        )
-      ) : null}
-
-      <Kicker>Warranty</Kicker>
-      {true ? (
-        warranties.length === 0 ? (
-          <Notice title="No warranties yet" body="Warranties are issued automatically when an eligible service is completed." />
-        ) : (
-          <View style={{ gap: space.breath }}>
-            {warranties.map((w) => {
-              const left = daysUntil(w.endDate);
-              const state = w.revokedAt ? "Revoked" : w.endDate === null ? "Lifetime" : left !== null && left < 0 ? "Expired" : "Active";
-              const countdown = w.revokedAt || w.endDate === null ? null : left === null ? null : left < 0 ? `Ended ${formatDate(w.endDate)}` : left === 0 ? "Ends today" : left <= 60 ? `${left} day${left === 1 ? "" : "s"} left` : `${Math.floor(left / 30)} months left`;
-              return (
-                <Pane key={w.id} pad="inset">
-                  <View style={{ gap: space.breath }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space.breath }}>
-                      <View style={{ flex: 1, gap: space.hair }}>
-                        <Kicker tone="accent">Warranty certificate</Kicker>
-                        <T role="heading">{w.warrantyLabel}</T>
-                        <T role="caption" tone="secondary">{w.serviceName}</T>
-                      </View>
-                      <Chip label={state} tone={state === "Active" || state === "Lifetime" ? "premium" : state === "Revoked" ? "danger" : "neutral"} />
-                    </View>
-                    <Row title="Vehicle" detail={`${vehicle.year} ${vehicle.make} ${vehicle.model} · ${vehicle.registrationNumber}`} />
-                    <Row title="Starts" detail={formatDate(w.startDate)} />
-                    <Row title="Valid until" detail={w.endDate ? formatDate(w.endDate) : "Lifetime"} trailing={countdown ? <Chip label={countdown} /> : undefined} last={!w.coverageTerms} />
-                    {w.coverageTerms && w.coverageTerms.trim().toLowerCase() !== w.warrantyLabel.trim().toLowerCase() ? <T role="caption" tone="secondary">{w.coverageTerms}</T> : null}
-                  </View>
-                </Pane>
-              );
-            })}
-          </View>
-        )
-      ) : null}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+        <Kicker>Warranty</Kicker>
+        <T role="caption" tone="tertiary">{warranties.length === 0 ? "None yet" : countLabel(warranties.length, "certificate", "certificates")}</T>
+      </View>
+      {warranties.length === 0 ? (
+        <T role="caption" tone="secondary">Warranties are issued automatically when an eligible service is completed.</T>
+      ) : (
+        <Pane pad="gap">
+          {warranties.map((w, i) => {
+            const left = daysUntil(w.endDate);
+            const state = w.revokedAt ? "Revoked" : w.endDate === null ? "Lifetime" : left !== null && left < 0 ? "Expired" : "Active";
+            const countdown = w.revokedAt || w.endDate === null ? null : left === null ? null : left < 0 ? `Ended ${formatDate(w.endDate)}` : left === 0 ? "Ends today" : left <= 60 ? `${left} day${left === 1 ? "" : "s"} left` : `${Math.floor(left / 30)} months left`;
+            const terms = w.coverageTerms && w.coverageTerms.trim().toLowerCase() !== w.warrantyLabel.trim().toLowerCase() ? w.coverageTerms : null;
+            return (
+              <Row
+                key={w.id}
+                title={w.warrantyLabel}
+                detail={[w.serviceName, `${formatDate(w.startDate)} to ${w.endDate ? formatDate(w.endDate) : "Lifetime"}`, terms].filter(Boolean).join(" · ")}
+                trailing={<Chip label={countdown && state === "Active" ? countdown : state} tone={state === "Active" || state === "Lifetime" ? "premium" : state === "Revoked" ? "danger" : "neutral"} />}
+                last={i === warranties.length - 1}
+              />
+            );
+          })}
+        </Pane>
+      )}
       {!editing ? (
         <View style={{ gap: space.breath }}>
           <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />

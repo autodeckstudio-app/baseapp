@@ -576,7 +576,7 @@ describe("car detail and add car (batch 1)", () => {
     const d = read("src/app/(tabs)/garage/[id].tsx");
     expect(d).not.toContain("TabPills");
     expect(d).not.toContain('label="Book maintenance"');
-    expect(d).toContain("<Kicker>Care plan</Kicker>");
+    expect(d).toContain('title="Coming up"');
     expect(d).toContain("<Kicker>Papers</Kicker>");
     const a = read("src/app/(tabs)/garage/add.tsx");
     expect(a).toContain("uploadVehicleRc");
