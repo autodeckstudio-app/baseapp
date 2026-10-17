@@ -538,3 +538,11 @@ describe("sell confirmation copy", () => {
     expect(read("src/app/(tabs)/cars/index.tsx")).toContain("Your cars for sale");
   });
 });
+
+describe("car lists wait for the sign-in to load", () => {
+  it("getCarListings awaits authStateReady before choosing the public or signed-in list", () => {
+    const s = read("src/lib/carsale-service.ts");
+    expect(s.indexOf("await auth.authStateReady()")).toBeGreaterThan(0);
+    expect(s.indexOf("await auth.authStateReady()")).toBeLessThan(s.indexOf("if (!auth.currentUser)"));
+  });
+});

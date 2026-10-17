@@ -3,6 +3,8 @@ import type { CarListingView } from "@autodeck/core";
 import { auth, functions } from "./firebase";
 
 export async function getCarListings(mine = false): Promise<CarListingView[]> {
+  // Wait for the saved sign-in to load first, or a signed-in customer is treated as signed out: no prices, no own listings.
+  await auth.authStateReady();
   // Browsing is open: signed-out visitors see the public list. Their own listings need a sign-in.
   if (!auth.currentUser) {
     if (mine) return [];
