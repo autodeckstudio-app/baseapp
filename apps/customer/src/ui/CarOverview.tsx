@@ -1,8 +1,7 @@
 // Car details screen pieces in the Raised theme: round tab pills and the Overview card.
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
-import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import type { IconName } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { raised } from "../lib/raised";
 
 export function TabPills<K extends string>({ tabs, value, onChange }: { tabs: Array<{ key: K; label: string }>; value: K; onChange: (k: K) => void }) {
@@ -23,12 +22,10 @@ export function TabPills<K extends string>({ tabs, value, onChange }: { tabs: Ar
 }
 
 export type OverviewProps = {
-  protections: number;
-  warranties: number;
+  due: { label: string; date: string; line: string } | null;
   next: { title: string; detail: string; note?: string | undefined; onPress: () => void } | null;
   last: { title: string; detail: string; status: string } | null;
   reminders: string[];
-  details: Array<{ label: string; value: string }>;
   onBook: () => void;
 };
 
@@ -44,30 +41,18 @@ function Card({ title, children, onPress }: { title: string; children: ReactNode
   return onPress ? <Pressable accessibilityRole="button" onPress={onPress}>{body}</Pressable> : body;
 }
 
-function Status({ icon, label, value, good }: { icon: IconName; label: string; value: string; good: boolean }) {
-  const { name, colors } = useExperienceTheme();
-  const r = raised(name);
-  return (
-    <View style={{ flex: 1, padding: 14, gap: 10, ...r.sheet }}>
-      <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center", ...r.round }}><Icon name={icon} color={good ? "#2E9E6B" : "#EC8638"} size={17} /></View>
-      <View style={{ gap: 2 }}>
-        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "700" }}>{label}</Text>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
 export function CarOverview(p: OverviewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
   return (
     <View style={{ gap: 12 }}>
-      {p.protections > 0 || p.warranties > 0 ? (
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          {p.protections > 0 ? <Status icon="shield" label="Protection" value={`${p.protections} verified`} good /> : null}
-          {p.warranties > 0 ? <Status icon="check" label="Warranty" value={`${p.warranties} active`} good /> : null}
-        </View>
+      {p.due ? (
+        <Card title="Next due">
+          <View style={{ gap: 2 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{p.due.label}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{p.due.line} · {p.due.date}</Text>
+          </View>
+        </Card>
       ) : null}
 
       {p.reminders.length > 0 ? (
@@ -110,14 +95,6 @@ export function CarOverview(p: OverviewProps) {
         )}
       </Card>
 
-      {p.details.length ? <Card title="Car details">
-        {p.details.map((d, i) => (
-          <View key={d.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.borderSubtle }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{d.label}</Text>
-            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "700" }}>{d.value}</Text>
-          </View>
-        ))}
-      </Card> : null}
     </View>
   );
 }

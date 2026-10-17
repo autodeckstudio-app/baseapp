@@ -30,6 +30,7 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview, TabPills } from "../../../ui/CarOverview";
+import { nextDue, dueLine } from "../../../lib/car-next-due";
 
 type TabKey = "overview" | "passport" | "protection" | "warranty";
 
@@ -258,6 +259,8 @@ export default function VehicleDetailScreen() {
     if (since >= 45) reminders.push(`Last service was ${since} days ago. Time for a wash or check-up.`);
   }
 
+  const due = nextDue([...papers.map((p) => ({ label: PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind, date: p.expiresOn })), ...activeWarranties.map((w) => ({ label: w.warrantyLabel, date: w.endDate }))], new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date()));
+
   return (
     <Screen
       header={
@@ -270,6 +273,7 @@ export default function VehicleDetailScreen() {
               { label: "Year", value: String(vehicle.year ?? "-") },
               { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
               ...(vehicle.category ? [{ label: "Type", value: vehicle.category.charAt(0).toUpperCase() + vehicle.category.slice(1) }] : []),
+              ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
               ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
             ]}
             compact={!vehicle.photoUrl && !newPhoto}
@@ -282,14 +286,10 @@ export default function VehicleDetailScreen() {
       {tab === "overview" ? (
         <>
           <CarOverview
-            protections={verifiedProtections.length}
-            warranties={activeWarranties.length}
+            due={due ? { label: due.label, date: due.date, line: dueLine(due) } : null}
             next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: "Upcoming booking", note: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : undefined, onPress: () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) } : null}
             last={mostRecentJob ? { title: visitTitle(visitServices(mostRecentJob, invoices.find((x) => x.jobId === mostRecentJob.id), serviceNames)), detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
             reminders={reminders}
-            details={[
-              ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
-            ]}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
 

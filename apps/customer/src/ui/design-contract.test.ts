@@ -399,3 +399,10 @@ it("profile settings sit in glass cards, one per topic, with no stray links repe
   expect((p.match(/<Pane pad="inset">/g)??[]).length).toBeGreaterThanOrEqual(3);
   expect(p).toContain('title="Help and contact"');
 });
+
+it("car overview shows a concrete Next due, not vague count tiles or a one-row details card",()=>{
+  const o=read("src/ui/CarOverview.tsx");
+  expect(o).toContain('title="Next due"');
+  expect(o).not.toContain('title="Car details"');
+  expect(o).not.toMatch(/label="Protection"|label="Warranty"/);
+});
