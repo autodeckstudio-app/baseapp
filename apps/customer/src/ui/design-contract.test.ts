@@ -370,6 +370,11 @@ describe("nav order and drawer", () => {
     const idx = read("src/app/(tabs)/index.tsx");
     for (const key of ["membership", "notifications", "studio", "help"]) expect(idx).not.toContain(`{ key: "${key}", label:`);
   });
+  it("Day hero: the car name gets a light pill when a photo sits under it", () => {
+    const h = read("src/ui/HeroStage.tsx");
+    expect(h).toContain("titleNeedsPill(day, !!car.hasPhoto)");
+    expect(h).toContain("export const titleNeedsPill = (day: boolean, hasPhoto: boolean): boolean => day && hasPhoto;");
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);

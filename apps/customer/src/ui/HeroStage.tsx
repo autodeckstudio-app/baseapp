@@ -13,6 +13,9 @@ const glow = web ? ({ backgroundImage: "radial-gradient(ellipse at 50% 50%, rgba
 // Customer photos are not cutouts, so the photo is feathered into the page instead of boxed.
 const feather = web ? ({ WebkitMaskImage: "radial-gradient(ellipse 72% 68% at 50% 46%, #000 52%, transparent 100%)", maskImage: "radial-gradient(ellipse 72% 68% at 50% 46%, #000 52%, transparent 100%)" } as object) : {};
 
+/** Day text is dark, but a car photo under it is dark too: give the name a light pill so it stays readable. */
+export const titleNeedsPill = (day: boolean, hasPhoto: boolean): boolean => day && hasPhoto;
+
 /** The customer's car as the hero: floating on black with a soft orange glow beneath. */
 export function HeroStage({ car, onOpen }: { car: StageCar; onOpen: () => void }) {
   const day = useExperienceTheme().name === "light";
@@ -23,7 +26,7 @@ export function HeroStage({ car, onOpen }: { car: StageCar; onOpen: () => void }
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 52, ...feather } as object}><CarThumb car={car.vehicle} height={metrics.heroStage - 52} radius={0} /></View>
       ) : null}
       <View style={{ alignItems: "center", gap: 6, paddingBottom: metrics.innerGap }}>
-        <Text numberOfLines={1} style={{ color: day ? "#1D1B26" : "#FFFFFF", fontSize: 24, fontWeight: "800", textAlign: "center" }}>{car.title}</Text>
+        <Text numberOfLines={1} style={{ color: day ? "#1D1B26" : "#FFFFFF", fontSize: 24, fontWeight: "800", textAlign: "center", ...(titleNeedsPill(day, !!car.hasPhoto) ? { backgroundColor: "rgba(251,248,243,0.88)", borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 4, overflow: "hidden" } : null) }}>{car.title}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Plate value={car.plate} />
           {!car.hasPhoto ? <View style={{ borderRadius: 9999, borderWidth: 1, borderColor: day ? "rgba(29,27,38,0.30)" : "rgba(255,255,255,0.28)", paddingHorizontal: 12, paddingVertical: 5 }}><Text style={{ color: day ? "#1D1B26" : "#F4F2EF", fontSize: 12, fontWeight: "700" }}>Add your car photo</Text></View> : null}
