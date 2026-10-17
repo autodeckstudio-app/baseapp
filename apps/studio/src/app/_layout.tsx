@@ -1,6 +1,6 @@
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
-import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
+import { nightGroundStyle, nightSurfaceStyle, DAY_ATMOSPHERE } from "@autodeck/ui/theme";
 import "../lib/webAlert";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
@@ -65,6 +65,14 @@ export default function RootLayout() {
       const backdrop = Platform.OS === "web" ? (isNightPalette ? "#141413" : "#E6DFD4") : colors.background;
       doc.documentElement.style.backgroundColor = backdrop;
       doc.body.style.backgroundColor = backdrop;
+      if (Platform.OS === "web" && !isNightPalette) {
+        // One Day background across customer, studio and admin (see DAY_ATMOSPHERE).
+        const rs = doc.documentElement.style as unknown as Record<string, string>;
+        rs.backgroundImage = DAY_ATMOSPHERE;
+        rs.backgroundAttachment = "fixed";
+        rs.backgroundRepeat = "no-repeat";
+        doc.body.style.backgroundColor = "transparent";
+      }
       (doc.documentElement.style as unknown as { colorScheme: string }).colorScheme = isNightPalette ? "dark" : "light";
       const meta = (doc as unknown as { querySelector: (s: string) => { setAttribute: (k: string, v: string) => void } | null }).querySelector('meta[name="theme-color"]');
       meta?.setAttribute("content", colors.background);
@@ -74,9 +82,9 @@ export default function RootLayout() {
   }, []);
   return (
     <AutoExperienceThemeProvider>
-    <View style={{ flex: 1, backgroundColor: colors.background, ...canvasFrame(width), ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
+    <View style={{ flex: 1, backgroundColor: NightPlatform.OS === "web" && !nightMaterial ? "transparent" : colors.background, ...canvasFrame(width), ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) }}>
     <NavigationGuard>
-      <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) } }}>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: NightPlatform.OS === "web" && !nightMaterial ? "transparent" : colors.background, ...(NightPlatform.OS === "web" && nightMaterial ? nightGroundStyle : {}) } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

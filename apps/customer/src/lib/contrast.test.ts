@@ -26,3 +26,17 @@ describe("text contrast meets WCAG AA (4.5:1)", () => {
     expect(ratio(nightColors.accentStrong, "#1B1B1F")).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+import { DAY_ATMOSPHERE as ATM, contrastRatio } from "@autodeck/ui/theme";
+describe("Day atmosphere keeps text readable at its strongest light", () => {
+  it("primary and secondary text pass 4.5:1 over every light at full strength", () => {
+    const base = [251, 248, 243];
+    const lights = [...ATM.matchAll(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g)].map((m) => m.slice(1).map(Number));
+    expect(lights.length).toBe(4);
+    for (const l of lights) {
+      const c = base.map((b, i) => Math.round(b * (1 - l[3]!) + l[i]! * l[3]!));
+      const hex = "#" + c.map((x) => x.toString(16).padStart(2, "0")).join("");
+      for (const t of [lightColors.textPrimary, lightColors.textSecondary]) expect(contrastRatio(t, hex)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});

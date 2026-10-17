@@ -3,7 +3,7 @@
 // (night). Orange is the only colour fill. One recipe per theme so every page
 // matches. Use raised(name) with the name from useExperienceTheme().
 import { Platform, type ViewStyle } from "react-native";
-import { lightColors, nightColors } from "@autodeck/ui/theme";
+import { lightColors, nightColors, DAY_ATMOSPHERE } from "@autodeck/ui/theme";
 
 const web = Platform.OS === "web";
 export type Mode = "light" | "night" | "dark";
@@ -56,6 +56,6 @@ export function raised(mode: Mode): Raised {
     ground: c.canvas,
     groundImage: night
       ? "radial-gradient(120% 50% at 80% -10%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #14151A 0%, #0F1013 60%, #0B0B0E 100%)"
-      : "radial-gradient(110% 45% at 85% -8%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #F3EFE8 0%, #EFEAE1 60%, #E8E1D6 100%)",
+      : DAY_ATMOSPHERE,
   };
 }

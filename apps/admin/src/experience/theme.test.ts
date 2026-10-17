@@ -85,3 +85,11 @@ describe("theme tokens", () => {
     expect(resolveMode(at(12), true)).toBe("night");
   });
 });
+
+import { readFileSync as rf } from "node:fs";
+import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
+describe("one Day background", () => {
+  it("admin canvas.css carries exactly the shared DAY_ATMOSPHERE", () => {
+    expect(rf(new URL("./canvas.css", import.meta.url), "utf8")).toContain(DAY_ATMOSPHERE);
+  });
+});

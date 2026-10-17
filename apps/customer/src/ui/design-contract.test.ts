@@ -546,3 +546,19 @@ describe("car lists wait for the sign-in to load", () => {
     expect(s.indexOf("await auth.authStateReady()")).toBeLessThan(s.indexOf("if (!auth.currentUser)"));
   });
 });
+
+import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
+describe("one Day background across the apps", () => {
+  it("customer Day ground is the shared atmosphere, studio applies it, Home photo dissolves into it", () => {
+    expect(read("src/lib/raised.ts")).toContain(": DAY_ATMOSPHERE,");
+    expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
+    const h = read("src/ui/HomeBackdrop.tsx");
+    expect(h).toContain("maskImage");
+    expect(h).not.toContain("#EFEAE1");
+  });
+  it("the atmosphere is warm off-white with only a faint orange glow", () => {
+    expect(DAY_ATMOSPHERE).toContain("#FBF8F3");
+    expect((DAY_ATMOSPHERE.match(/rgba\(255,178,122/g) ?? []).length).toBe(1);
+    expect(DAY_ATMOSPHERE).not.toMatch(/#EC8638|236,134,56/);
+  });
+});

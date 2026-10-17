@@ -376,3 +376,8 @@ html[data-theme="day"] .ax-ocar { border-color: rgba(60,40,20,.12); background: 
   .ax-side .ax-nav-group[data-tier="3"][data-first] { margin-top: auto; padding-top: 22px !important; }
 }
 @media (max-width: 860px) { .ax-corner--l .ax-lg--mark.ax-lg-d { display: block !important; height: 28px; filter: drop-shadow(0 1px 8px rgba(0,0,0,.6)); } .ax-corner--l .ax-lg--mark.ax-lg-l { display: none !important; } }
+
+/* One Day background, identical to DAY_ATMOSPHERE in packages/ui/src/theme/glass.ts (a guard test keeps them equal). */
+html[data-theme="day"], html[data-theme="day"] body { background: radial-gradient(90vmax 70vmax at 6% 0%, rgba(150,164,238,0.26), transparent 62%), radial-gradient(80vmax 65vmax at 100% 28%, rgba(255,178,122,0.20), transparent 64%), radial-gradient(90vmax 70vmax at 14% 100%, rgba(236,168,190,0.20), transparent 66%), radial-gradient(70vmax 60vmax at 96% 100%, rgba(168,200,236,0.20), transparent 66%), linear-gradient(180deg, #FBF8F3 0%, #F4EFE7 100%); background-attachment: fixed; background-repeat: no-repeat; }
+html[data-theme="day"] .ax-shell, html[data-theme="day"] .ax-login { background: transparent !important; }
+html[data-theme="day"] .ax-ambient { background: none; animation: none; }

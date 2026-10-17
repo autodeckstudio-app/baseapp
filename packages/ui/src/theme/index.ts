@@ -8,6 +8,7 @@ export {
   ambient,
   ambientDrift,
   ambientBackground,
+  DAY_ATMOSPHERE,
   type GlassRecipe,
   type GlassFill,
   type AmbientLight,

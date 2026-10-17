@@ -143,3 +143,11 @@ export function ambientBackground(lights: readonly AmbientLight[], base: string)
   });
   return [...layers, base].join(", ");
 }
+
+/**
+ * The one Day background for every app: warm off-white with soft sky, peach, rose and periwinkle light,
+ * fixed to the viewport so glass panes always have the same atmosphere behind them. Orange is a faint warm
+ * glow only. Copied verbatim into apps/admin canvas.css, a guard test keeps them identical.
+ */
+export const DAY_ATMOSPHERE =
+  "radial-gradient(90vmax 70vmax at 6% 0%, rgba(150,164,238,0.26), transparent 62%), radial-gradient(80vmax 65vmax at 100% 28%, rgba(255,178,122,0.20), transparent 64%), radial-gradient(90vmax 70vmax at 14% 100%, rgba(236,168,190,0.20), transparent 66%), radial-gradient(70vmax 60vmax at 96% 100%, rgba(168,200,236,0.20), transparent 66%), linear-gradient(180deg, #FBF8F3 0%, #F4EFE7 100%)";
