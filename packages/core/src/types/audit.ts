@@ -30,6 +30,7 @@ export type AuditAction =
   | "membership.plan_activated"
   | "membership.plan_deactivated"
   | "membership.purchased"
+  | "membership.upgrade_requested"
   | "membership.activated"
   | "membership.cancelled"
   | "membership.wash_used"

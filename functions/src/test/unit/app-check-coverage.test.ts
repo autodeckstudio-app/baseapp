@@ -133,6 +133,7 @@ const DEFERRED = [
   "membership/getMembershipUsage.ts",
   "membership/getMyMemberships.ts",
   "membership/purchaseMembership.ts",
+  "membership/upgradeMembership.ts",
   "notification/markNotificationRead.ts",
   "payment/confirmManualPayment.ts",
   "payment/confirmPaymentMock.ts",

@@ -16,7 +16,7 @@ Not published. Not wired into the app. Have it reviewed by a lawyer before use.
 
 **7. Payments and invoices.** You can pay at the studio or online. Online payments are processed by Razorpay. You get an invoice for each completed job. Refunds, where due, go back to the original payment method.
 
-**8. Club plans.** A plan gives a set number of washes and pickups for the price shown when you buy. Washes and pickups are for the car on the plan and are used through the app. Plan terms (validity and refunds) are shown on the plan page before you pay. [Owner to confirm validity period and refund rule.]
+**8. Club plans.** Every Club plan lasts 30 days from the day it starts. A plan gives a set number of washes and pickups for the price shown when you buy. Washes and pickups are for the car on the plan and are used through the app. Unused washes and pickups end when the plan ends. They do not carry over to a renewal or to an upgrade. If you upgrade, your current plan ends when the upgrade is paid and the new plan starts fresh for 30 days. [Owner to confirm the refund rule and the final upgrade price rule.]
 
 **9. Warranty.** Some services carry a warranty from AutoDeck. The terms are on your warranty record under your car in Garage. A warranty covers workmanship and the product named on that record. It does not cover damage from accidents, misuse, harsh chemicals or unapproved repairs, or normal wear. To claim, contact the studio with your warranty record. We inspect the car and tell you if the claim is covered. [Owner to confirm exclusions and claim period.]
 

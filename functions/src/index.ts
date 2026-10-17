@@ -58,6 +58,7 @@ export { updateMembershipPlan } from "./functions/membership/updateMembershipPla
 export { setMembershipPlanActive } from "./functions/membership/setMembershipPlanActive.js";
 export { getMembershipPlans } from "./functions/membership/getMembershipPlans.js";
 export { purchaseMembership } from "./functions/membership/purchaseMembership.js";
+export { upgradeMembership } from "./functions/membership/upgradeMembership.js";
 export { confirmMembershipPayment } from "./functions/membership/confirmMembershipPayment.js";
 export { createWalkinMembership } from "./functions/membership/createWalkinMembership.js";
 export { activateMembership } from "./functions/membership/activateMembership.js";

@@ -1,25 +1,31 @@
 import { useState, useEffect } from "react";
-import { View, Linking } from "react-native";
+import { View, Linking, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
-import type { Membership, MembershipPlan } from "@autodeck/core";
+import { upgradePricePaise, washesLostOnUpgrade, type Membership, type MembershipPlan } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
-import { purchaseMembership, generateIdempotencyKey } from "../../../lib/membership-service";
+import { purchaseMembership, upgradeMembership, generateIdempotencyKey } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { useAuth } from "../../../hooks/useAuth";
 import { carryOverLine } from "../../../lib/membership-rules";
 import { pickupsLine } from "../../../lib/membership-view";
+import { upgradeConfirmCopy } from "../../../lib/upgrade-copy";
 
 export default function PurchaseMembershipScreen() {
   const { planId } = useLocalSearchParams<{ planId: string }>();
   const router = useRouter();
   const auth = useAuth();
+  const { colors } = useExperienceTheme();
   const [plan, setPlan] = useState<MembershipPlan | null>(null);
   const [existing, setExisting] = useState<Membership | null>(null);
+  const [active, setActive] = useState<Membership | null>(null);
+  const [activePlan, setActivePlan] = useState<MembershipPlan | null>(null);
+  const [askUpgrade, setAskUpgrade] = useState(false);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,18 +57,49 @@ export default function PurchaseMembershipScreen() {
       tenantId,
       uid,
       (memberships) => {
-        setExisting(memberships.find((m) => m.status === "active" || m.status === "pending") ?? null);
+        setExisting(memberships.find((m) => m.status === "pending") ?? memberships.find((m) => m.status === "active") ?? null);
+        setActive(memberships.find((m) => m.status === "active") ?? null);
       },
       () => undefined,
     );
   }, [uid, tenantId]);
+
+  // The plan being replaced, to price the upgrade.
+  useEffect(() => {
+    if (!active) { setActivePlan(null); return; }
+    let alive = true;
+    void getDoc(doc(db, COLLECTIONS.membershipPlans(), active.planId)).then((snap) => { if (alive) setActivePlan(snap.exists() ? (snap.data() as MembershipPlan) : null); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [active?.planId]);
+  const upgradeQuote = plan && active && activePlan ? upgradePricePaise({ currentPlanPricePaise: activePlan.priceInPaise, newPlanPricePaise: plan.priceInPaise, unusedWashes: washesLostOnUpgrade(active) }) : null;
+  const pendingIsUpgrade = existing?.status === "pending" && Boolean(existing.upgradeFromMembershipId);
+
+  // Reachable only from the Confirm upgrade button in the pop-up.
+  async function confirmUpgrade(method: "razorpay_payment_link" | "cash") {
+    if (!plan || purchasing) return;
+    setAskUpgrade(false);
+    setPurchasing(true);
+    setError(null);
+    try {
+      const result = await upgradeMembership(plan.id, method, idempotencyKey);
+      if (method === "razorpay_payment_link" && checkoutSupported && result.paymentId) {
+        try { await payWithCheckout(result.paymentId, { name: "AutoDeck Studio", description: `${plan.name} upgrade` }); } catch { /* payment link fallback below */ }
+      }
+      setDone(method === "cash" ? "studio" : "online");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  }
 
   async function handlePurchase(method: "razorpay_payment_link" | "cash") {
     if (!plan || purchasing) return;
     setPurchasing(true);
     setError(null);
     try {
-      const result = await purchaseMembership(plan.id, method, idempotencyKey);
+      // A pending upgrade is paid again through the same call (the server replays it, never makes a second one).
+      const result = pendingIsUpgrade ? await upgradeMembership(plan.id, method, idempotencyKey) : await purchaseMembership(plan.id, method, idempotencyKey);
       if (method === "razorpay_payment_link") {
         let opened = false;
         if (checkoutSupported && result.paymentId) {
@@ -85,6 +122,35 @@ export default function PurchaseMembershipScreen() {
 
   if (loading) return <Loading label="Preparing checkout" />;
   if (!plan) return <Screen><Notice title={error?"Could not load plan":"Plan unavailable"} body={error??"This plan may no longer be offered."} action={<Button label={error?"Retry":"See plans"} onPress={()=>error?setRetryTick(n=>n+1):router.replace("/(tabs)/membership")}/>} /></Screen>;
+
+  if (active && !existing?.upgradeFromMembershipId && existing?.status !== "pending" && upgradeQuote !== null && !done) {
+    const lost = washesLostOnUpgrade(active);
+    const copy = upgradeConfirmCopy(lost, active.tier, plan.name, rupees(upgradeQuote));
+    return (
+      <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Upgrade</Kicker><T role="title">{plan.name}</T></View>}>
+        <Pane pad="gap">
+          <Row title="Included washes" detail={`${plan.includedWashes} / month`} />
+          {pickupsLine(plan.freePickups) ? <Row title="Free pickups" detail={`${plan.freePickups} / month`} /> : null}
+          {plan.prioritySlot ? <Row title="Priority slot" detail="Included" /> : null}
+          <Row title="You pay now" detail={rupees(upgradeQuote)} last />
+        </Pane>
+        <T role="caption" tone="tertiary">Your {active.tier} plan ends when the upgrade is paid. Unused washes do not carry over. The new plan runs 30 days from the day it starts.</T>
+        {error ? <Notice title="Upgrade failed" body={error} /> : null}
+        <Button label="Upgrade" busy={purchasing} onPress={() => setAskUpgrade(true)} />
+        <Modal visible={askUpgrade} transparent animationType="fade" onRequestClose={() => setAskUpgrade(false)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <View style={{ width: "100%", maxWidth: 420, borderRadius: 24, padding: 20, gap: 14, backgroundColor: colors.surface }}>
+              <T role="heading">{copy.title}</T>
+              <T tone="secondary">{copy.body}</T>
+              <Button label={copy.confirm} onPress={() => void confirmUpgrade("razorpay_payment_link")} />
+              <Button kind="quiet" label="Pay at studio instead" onPress={() => void confirmUpgrade("cash")} />
+              <Button kind="quiet" label={copy.cancel} onPress={() => setAskUpgrade(false)} />
+            </View>
+          </View>
+        </Modal>
+      </Screen>
+    );
+  }
 
   if (existing?.status === "active") {
     return (

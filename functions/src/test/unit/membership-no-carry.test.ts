@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { freshGrant, upgradeDifferencePaise } from "../../lib/membership-grant.js";
+import { freshGrant } from "../../lib/membership-grant.js";
+import { upgradePricePaise, washesLostOnUpgrade, UPGRADE_PRICING_CONFIRMED } from "@autodeck/core";
 
 const plan = (price: number, washes: number, pickups = 0) => ({ priceInPaise: price, includedWashes: washes, freePickups: pickups, prioritySlot: false, discountPercent: 0 });
 
@@ -33,10 +34,29 @@ describe("no washes carry forward (owner rule, 18 Oct)", () => {
   });
 });
 
-describe("upgrade price (ASSUMED difference-only, not yet confirmed by the owner)", () => {
-  it("charges the difference for a dearer plan", () => { expect(upgradeDifferencePaise(plan(360000, 4), plan(540000, 6))).toBe(180000); });
-  it("is not an upgrade for the same or a cheaper plan", () => {
-    expect(upgradeDifferencePaise(plan(360000, 4), plan(360000, 4))).toBeNull();
-    expect(upgradeDifferencePaise(plan(540000, 6), plan(360000, 4))).toBeNull();
+describe("upgrade price (ON HOLD: owner is settling the loophole fix)", () => {
+  const q = (cur: number, next: number, unused = 0) => upgradePricePaise({ currentPlanPricePaise: cur, newPlanPricePaise: next, unusedWashes: unused });
+  it("a cheaper or equal plan is not an upgrade", () => { expect(q(360000, 360000)).toBeNull(); expect(q(540000, 360000)).toBeNull(); });
+  it("a dearer plan has a price", () => { expect(q(360000, 540000, 2)).toBeGreaterThan(0); });
+  it("counts washes lost, never negative", () => { expect(washesLostOnUpgrade({ washesTotal: 4, washesUsed: 1 })).toBe(3); expect(washesLostOnUpgrade({ washesTotal: 4, washesUsed: 9 })).toBe(0); });
+  it("stays flagged unconfirmed until the owner settles the price", () => { expect(UPGRADE_PRICING_CONFIRMED).toBe(false); });
+});
+
+describe("upgrade wiring", () => {
+  const read = (p: string) => readFileSync(join(__dirname, "../..", p), "utf8");
+  it("every place that activates a pending plan also ends the plan it replaces", () => {
+    for (const f of ["functions/membership/activateMembership.ts", "functions/membership/confirmMembershipPayment.ts", "lib/razorpay-webhook.ts", "functions/payment/confirmPaymentMock.ts"]) {
+      const s = read(f);
+      expect(s, f).toContain("readUpgradeSource(");
+      expect(s, f).toContain("endUpgradedMembership(");
+    }
+  });
+  it("the upgrade callable starts fresh, charges the difference and needs an active plan", () => {
+    const s = read("functions/membership/upgradeMembership.ts");
+    expect(s).toContain("...freshGrant(plan)");
+    expect(s).toContain("upgradePricePaise(");
+    expect(s).toContain("amount: difference");
+    expect(s).toMatch(/need an active plan/);
+    expect(s).not.toMatch(/washesUsed: [^0]/);
   });
 });

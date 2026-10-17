@@ -15,12 +15,3 @@ export function freshGrant(plan: Pick<MembershipPlan, "includedWashes" | "freePi
     discountPercent: plan.discountPercent,
   };
 }
-
-/**
- * ASSUMED, NOT CONFIRMED BY THE OWNER: an upgrade charges only the price difference.
- * Never negative; a same-price or cheaper plan is not an upgrade (returns null).
- */
-export function upgradeDifferencePaise(current: Pick<MembershipPlan, "priceInPaise">, next: Pick<MembershipPlan, "priceInPaise">): number | null {
-  const d = next.priceInPaise - current.priceInPaise;
-  return d > 0 ? d : null;
-}

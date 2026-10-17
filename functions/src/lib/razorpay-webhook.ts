@@ -9,6 +9,7 @@
 //    nothing is marked paid and the event is recorded for review.
 import type { Firestore } from "firebase-admin/firestore";
 import type { Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
+import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import type { AuthorizedUser } from "@autodeck/auth";
@@ -93,6 +94,7 @@ export async function processProviderEvent(
       if (payment.targetType === "membership") {
         const mRef = payment.membershipId ? db.collection(COLLECTIONS.memberships()).doc(payment.membershipId) : null;
         const mSnap = mRef ? await tx.get(mRef) : null;
+        const upgradeSrc = mSnap?.exists && (mSnap.data() as Membership).status === "pending" ? await readUpgradeSource(tx, db, mSnap.data() as Membership) : null;
         record("completed");
         tx.update(paymentRef, {
           status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
@@ -103,6 +105,7 @@ export async function processProviderEvent(
         if (mRef && mSnap?.exists && (mSnap.data() as Membership).status === "pending") {
           const startDate = now.slice(0, 10);
           const endDate = new Date(Date.parse(now) + MEMBERSHIP_DURATION_DAYS * 86400000).toISOString().slice(0, 10);
+          endUpgradedMembership(tx, upgradeSrc, mRef.id, now);
           tx.update(mRef, { status: "active", startDate, endDate, activatedAt: now, activatedBy: "system", updatedAt: now });
           writeAuditLog(tx, { action: "membership.activated", entityType: "Membership", entityId: mRef.id, user, studioId: null,
             before: { status: "pending" }, after: { status: "active", startDate, endDate, via: "payment_verified" } });

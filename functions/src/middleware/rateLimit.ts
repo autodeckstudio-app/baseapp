@@ -31,6 +31,7 @@ export type RateLimitAction =
   | "payment.refund"
   | "payment.recordManual"
   | "membership.purchase"
+  | "membership.upgrade"
   | "membership.confirmPayment"
   | "membership.walkin"
   | "membership.activate"
@@ -149,6 +150,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "payment.refund": { limit: 30, windowMs: 60_000 },
   "payment.recordManual": { limit: 60, windowMs: 60_000 },
   "membership.purchase": { limit: 5, windowMs: 60_000 },
+  "membership.upgrade": { limit: 5, windowMs: 60_000 },
   "membership.confirmPayment": { limit: 30, windowMs: 60_000 },
   "membership.walkin": { limit: 30, windowMs: 60_000 },
   "membership.activate": { limit: 60, windowMs: 60_000 },

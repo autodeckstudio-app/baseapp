@@ -7,6 +7,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership, Payment } from "@autodeck/core";
+import { readUpgradeSource, endUpgradedMembership } from "../../lib/membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -38,6 +39,7 @@ export const confirmMembershipPayment = onCall({ region: "asia-south1" }, async 
         .where("status", "in", ["pending", "processing", "completed"])
         .limit(1),
     );
+    const upgradeSrc = membership.status === "pending" ? await readUpgradeSource(tx, db, membership) : null;
     const payDoc = paySnap.docs[0];
     const payment = payDoc?.data() as Payment | undefined;
 
@@ -83,6 +85,7 @@ export const confirmMembershipPayment = onCall({ region: "asia-south1" }, async 
       });
     }
 
+    endUpgradedMembership(tx, upgradeSrc, data.membershipId, nowIso);
     tx.update(membershipRef, {
       status: "active",
       startDate,

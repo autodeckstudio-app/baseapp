@@ -6,6 +6,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership } from "@autodeck/core";
+import { readUpgradeSource, endUpgradedMembership } from "../../lib/membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -52,6 +53,7 @@ export const activateMembership = onCall({ region: "asia-south1", enforceAppChec
       );
     }
 
+    const upgradeSrc = await readUpgradeSource(tx, db, membership);
     const now = new Date();
     const nowIso = now.toISOString();
     const startDate = nowIso.slice(0, 10);
@@ -59,6 +61,7 @@ export const activateMembership = onCall({ region: "asia-south1", enforceAppChec
       .toISOString()
       .slice(0, 10);
 
+    endUpgradedMembership(tx, upgradeSrc, data.membershipId, nowIso);
     tx.update(membershipRef, {
       status: "active",
       startDate,

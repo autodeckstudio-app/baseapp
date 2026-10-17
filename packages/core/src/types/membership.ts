@@ -37,6 +37,8 @@ export interface Membership {
   endDate: string | null; // ISO date
   activatedAt: string | null;
   activatedBy: string | null; // adminId
+  /** Set on a plan bought as an upgrade: the active membership this one replaces when it is paid. Unused washes on that one are forfeited. */
+  upgradeFromMembershipId?: string | null;
   cancelledAt: string | null;
   cancelledBy: string | null;
   cancellationReason: string | null;

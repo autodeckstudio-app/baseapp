@@ -38,6 +38,12 @@ export const purchaseMembershipSchema = z.object({
   idempotencyKey: z.string().min(1).max(128),
 }).strict();
 
+export const upgradeMembershipSchema = z.object({
+  planId: z.string().min(1),
+  method: z.enum(["razorpay_payment_link", "cash", "upi_manual", "bank_transfer"]),
+  idempotencyKey: z.string().min(1).max(128),
+}).strict();
+
 export const activateMembershipSchema = z.object({
   membershipId: z.string().min(1),
 }).strict();

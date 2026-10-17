@@ -20,6 +20,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmPaymentMockSchema } from "../../schemas/payment.js";
+import { readUpgradeSource, endUpgradedMembership } from "../../lib/membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { prepareJobInvoice } from "../../lib/job-invoice.js";
 import { isProductionProject } from "../../lib/environment.js";
@@ -92,6 +93,7 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
         ? db.collection(COLLECTIONS.memberships()).doc(payment.membershipId)
         : null;
       const membershipSnap = membershipRef ? await tx.get(membershipRef) : null;
+      const upgradeSrc = membershipSnap?.exists && (membershipSnap.data() as Membership).status === "pending" ? await readUpgradeSource(tx, db, membershipSnap.data() as Membership) : null;
 
       tx.set(eventRef, { paymentId: data.paymentId, result: data.mockResult, processedAt: now });
       tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
@@ -116,6 +118,7 @@ export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (reque
           const endDate = new Date(Date.parse(now) + MEMBERSHIP_DURATION_DAYS * 86400000)
             .toISOString()
             .slice(0, 10);
+          endUpgradedMembership(tx, upgradeSrc, membershipRef.id, now);
           tx.update(membershipRef, {
             status: "active",
             startDate,

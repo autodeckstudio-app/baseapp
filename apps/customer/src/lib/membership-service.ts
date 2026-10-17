@@ -34,6 +34,12 @@ export async function purchaseMembership(
   return result.data;
 }
 
+/** Upgrade the active plan to a dearer one. The server prices it (core upgradePricePaise) and ends the old plan on payment. */
+export async function upgradeMembership(planId: string, method: PaymentMethod, idempotencyKey: string): Promise<PurchaseMembershipOutput> {
+  const fn = httpsCallable<PurchaseMembershipInput, PurchaseMembershipOutput>(functions, "upgradeMembership");
+  return (await fn({ planId, method, idempotencyKey })).data;
+}
+
 export async function getMyMemberships(): Promise<Membership[]> {
   const fn = httpsCallable<Record<string, never>, GetMyMembershipsOutput>(
     functions,
