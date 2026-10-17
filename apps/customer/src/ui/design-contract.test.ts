@@ -522,3 +522,12 @@ describe("one time format", () => {
     for (const p of ["src/ui/PickupCard.tsx", "src/app/(tabs)/bookings/[id].tsx", "src/app/(tabs)/bookings/reschedule.tsx"]) expect(read(p)).not.toMatch(/hour:\s*"2-digit"[^}]*hour12:\s*true|hour:\s*"2-digit",\s*\n\s*minute:\s*"2-digit",\s*\n\s*hour12/);
   });
 });
+
+describe("form controls follow the theme", () => {
+  it("SelectField and DateField read Day/Night, no fixed dark box", () => {
+    const s = read("src/ui/inputs.tsx");
+    expect(s).toContain("controlFor(useExperienceTheme().name==='light')");
+    expect(s).not.toContain("#202023");
+    expect(s).not.toContain("borderRadius:14");
+  });
+});
