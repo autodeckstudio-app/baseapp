@@ -394,6 +394,11 @@ describe("nav order and drawer", () => {
   it("plan page never claims a discount the plan does not have", () => {
     expect(read("src/app/(tabs)/membership/[planId].tsx")).toContain('plan.discountPercent > 0 ? "Non-wash services receive the discount');
   });
+  it("pickupRequests rule lets a customer listen to a request that does not exist yet", () => {
+    const rules = require("node:fs").readFileSync("../../firestore.rules", "utf8");
+    const block = rules.slice(rules.indexOf("match /pickupRequests/"));
+    expect(block.slice(0, 600)).toContain("resource == null");
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);

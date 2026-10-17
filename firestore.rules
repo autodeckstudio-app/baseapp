@@ -123,9 +123,10 @@ service cloud.firestore {
 
     // âââ /pickupRequests/{id}: pickup and drop requests, written by Cloud Functions only âââ
     match /pickupRequests/{requestId} {
+      // resource == null: the customer's card listens to a request that does not exist yet; without this the read errors and the form cannot load.
       allow read: if isAuthenticated()
-                  && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (resource == null || ((isSuperadmin() || ownTenant(resource.data))
+                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid)));
       allow write: if false;
     }
 
