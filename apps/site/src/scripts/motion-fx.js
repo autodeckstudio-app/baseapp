@@ -33,6 +33,8 @@ export function initMotionFx() {
       delay,
       onComplete: () => split.revert(),
     });
+    /* safety: if the tween never finishes (throttled tab, script error), show the headline anyway */
+    setTimeout(() => { gsap.killTweensOf(split.lines); split.revert(); }, (delay + 4) * 1000);
   }
 
   /* chapter big-number and heading drift while the story is pinned */
