@@ -391,6 +391,9 @@ describe("nav order and drawer", () => {
   it("booking detail hero always has a title, even when the service record is gone", () => {
     expect(read("src/app/(tabs)/bookings/[id].tsx")).toContain('svc?.name ?? "Your visit"');
   });
+  it("plan page never claims a discount the plan does not have", () => {
+    expect(read("src/app/(tabs)/membership/[planId].tsx")).toContain('plan.discountPercent > 0 ? "Non-wash services receive the discount');
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);

@@ -63,7 +63,7 @@ export default function PlanDetailScreen() {
       </Pane>
 
       <T role="caption" tone="tertiary">
-        {[carryOverLine(), "Non-wash services receive the discount automatically at booking."].filter(Boolean).join(" ")}
+        {[carryOverLine(), plan.discountPercent > 0 ? "Non-wash services receive the discount automatically at booking." : ""].filter(Boolean).join(" ")}
       </T>
 
       <Button
