@@ -62,7 +62,7 @@ describe("one design system and one place for everything",()=>{
     expect(bad).toEqual([]);
   });
   it("opens every tab page with the shared PageHeader and the shared section title",()=>{
-    for(const f of ["bookings/index","garage/index","membership/index","notifications/index"]) expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("<PageHeader");
+    for(const f of ["bookings/index","membership/index","notifications/index"]) expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("<PageHeader");
     expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain("fontSize: 19");
   });
   it("keeps one entry point per destination",()=>{
@@ -139,7 +139,6 @@ it("every journey element has a reason: no None status rows, a call route when o
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
   expect(read("src/ui/GarageCard.tsx")).toContain(">Remove<");expect(read("src/ui/GarageCard.tsx")).not.toContain('name="close"');
-  expect(read("src/app/(tabs)/garage/index.tsx")).toContain("v.photoUrl ? <CarThumb");
   expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You">'); // the common header is the only title (no second "Your account")
   expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
   const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
@@ -278,11 +277,14 @@ describe("catalogue loading", () => {
   });
 });
 
-describe("garage brand filter", () => {
-  it("filters the account's cars by make with an All chip", () => {
+describe("garage switcher (concept C)", () => {
+  it("has an All chip, one chip per car, the due chip, and one Book button; removal lives in car detail only", () => {
     const g = read("src/app/(tabs)/garage/index.tsx");
-    expect(g).toContain("const brands =");
-    expect(g).toContain('b ?? "All"');
+    expect(g).toContain('label: "All"');
+    expect(g).toContain("dueChip(");
+    expect(g.split('label="Book a service"').length - 1).toBe(1);
+    expect(g).not.toContain("GarageCard");
+    expect(g).toContain("glassPane(");
   });
 });
 
@@ -566,5 +568,18 @@ describe("one Day background across the apps", () => {
     expect(DAY_ATMOSPHERE).toContain("#FFFFFF");
     expect((DAY_ATMOSPHERE.match(/rgba\(255,178,122/g) ?? []).length).toBe(1);
     expect(DAY_ATMOSPHERE).not.toMatch(/#EC8638|236,134,56/);
+  });
+});
+
+describe("car detail and add car (batch 1)", () => {
+  it("car detail is one page with no tabs and one Book a service; add car has RC and photo upload", () => {
+    const d = read("src/app/(tabs)/garage/[id].tsx");
+    expect(d).not.toContain("TabPills");
+    expect(d).not.toContain('label="Book maintenance"');
+    expect(d).toContain("<Kicker>Care plan</Kicker>");
+    expect(d).toContain("<Kicker>Papers</Kicker>");
+    const a = read("src/app/(tabs)/garage/add.tsx");
+    expect(a).toContain("uploadVehicleRc");
+    expect(a).toContain("uploadVehiclePhoto");
   });
 });

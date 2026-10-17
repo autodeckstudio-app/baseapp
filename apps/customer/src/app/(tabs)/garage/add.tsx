@@ -11,7 +11,7 @@ import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { ModalCard } from "../../../ui/ModalCard";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
-import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
 
 type FormState = {
   registrationNumber: string;
@@ -58,6 +58,7 @@ export default function AddVehicleScreen() {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
+  const [rc, setRc] = useState<{ blob: Blob; contentType: string } | null>(null);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   // Stale-response guard: every submission bumps the sequence and captures the
   // plate it was for; async answers from an older submission or plate are dropped.
@@ -203,6 +204,13 @@ export default function AddVehicleScreen() {
           return;
         }
       }
+      if (rc) {
+        try {
+          await uploadVehicleRc(vehicle.id, rc.blob, rc.contentType);
+        } catch {
+          // The car is saved; the RC can be added again from the car page.
+        }
+      }
       router.replace(GARAGE_ROUTE);
     } catch (err) {
       if (isStale(seq, plate)) return;
@@ -309,6 +317,14 @@ export default function AddVehicleScreen() {
             <Kicker>Photo (optional)</Kicker>
             <FileUploader files={photo?[{blob:photo.blob,type:photo.contentType}]:[]} onChange={fs=>pickPhoto(fs[0]?{blob:fs[0].blob,type:fs[0].type}:null)}/>
             {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
+          </View>
+        ) : null}
+
+        {Platform.OS === "web" ? (
+          <View style={{ gap: space.hair }}>
+            <Kicker>RC photo (optional)</Kicker>
+            <FileUploader files={rc ? [{ blob: rc.blob, type: rc.contentType }] : []} onChange={(fs) => setRc(fs[0] ? { blob: fs[0].blob, contentType: fs[0].type } : null)} />
+            {rc ? <T role="caption" tone="tertiary">RC photo ready - it uploads when the car is added.</T> : null}
           </View>
         ) : null}
 

@@ -30,10 +30,9 @@ import { listenToInvoicesForVehicle } from "../../../lib/invoice-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
-import { CarOverview, TabPills } from "../../../ui/CarOverview";
+import { CarOverview } from "../../../ui/CarOverview";
 import { nextDue, dueLine } from "../../../lib/car-next-due";
 
-type TabKey = "overview" | "careplan" | "passport" | "protection" | "warranty";
 
 const PROTECTION_KIND_LABELS: Record<string, string> = {
   insurance: "Insurance",
@@ -43,14 +42,6 @@ const PROTECTION_KIND_LABELS: Record<string, string> = {
   extended_warranty: "Extended Warranty",
   other: "Other",
 };
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "careplan", label: "Care plan" },
-  { key: "passport", label: "History" },
-  { key: "protection", label: "Documents" },
-  { key: "warranty", label: "Warranty" },
-];
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -71,7 +62,6 @@ export default function VehicleDetailScreen() {
   const [newPhoto, setNewPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   useEffect(()=>()=>{if(newPhoto?.previewUrl)URL.revokeObjectURL(newPhoto.previewUrl);},[newPhoto]);
   const [form, setForm] = useState({ make: "", model: "", color: "", odometer: "" });
-  const [tab, setTab] = useState<TabKey>("overview");
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -281,11 +271,10 @@ export default function VehicleDetailScreen() {
             compact={!vehicle.photoUrl && !newPhoto}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
-          <TabPills tabs={TABS} value={tab} onChange={setTab} />
         </View>
       }
     >
-      {tab === "overview" ? (
+      {true ? (
         <>
           <CarOverview
             due={due ? { label: due.label, date: due.date, line: dueLine(due) } : null}
@@ -335,29 +324,11 @@ export default function VehicleDetailScreen() {
 
           {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
 
-          {!editing ? (
-            <View style={{ gap: space.breath }}>
-              <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />
-              {confirmingArchive ? (
-                <Notice
-                  title="Remove from your garage?"
-                  body="Service history stays on record."
-                  action={
-                    <View style={{ gap: space.breath }}>
-                      <Button label="Yes, remove" kind="danger" onPress={() => void handleArchiveConfirmed()} />
-                      <Button label="Keep it" kind="quiet" onPress={() => setConfirmingArchive(false)} />
-                    </View>
-                  }
-                />
-              ) : (
-                <Button label="Remove from garage" kind="danger" onPress={() => setConfirmingArchive(true)} />
-              )}
-            </View>
-          ) : null}
         </>
       ) : null}
 
-      {tab === "careplan" ? (() => {
+      <Kicker>Care plan</Kicker>
+      {true ? (() => {
         const svc: Record<string, { id: string; name: string; category: string }> = {};
         for (const j of jobs) if (serviceNames[j.serviceId]) svc[j.serviceId] = { id: j.serviceId, name: serviceNames[j.serviceId]!, category: serviceCats[j.serviceId] ?? "" };
         const plan = buildCarePlan({ jobs, services: svc, warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate })) });
@@ -370,7 +341,6 @@ export default function VehicleDetailScreen() {
                 <Kicker tone="accent">Next maintenance coat</Kicker>
                 <T role="heading">{plan.nextCoat.name}</T>
                 <T tone="secondary">{dueText(plan.nextCoat.days)} · {dateOf(plan.nextCoat.dueAt)}</T>
-                <Button label="Book maintenance" onPress={() => router.push("/(tabs)/catalogue")} />
               </Pane>
             ) : null}
             {plan.due.length > 0 ? (
@@ -401,49 +371,8 @@ export default function VehicleDetailScreen() {
         );
       })() : null}
 
-      {tab === "passport" ? (
-        jobs.length === 0 ? (
-          <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />
-        ) : (
-          <Pane pad="gap">
-            {Platform.OS === "web" ? (
-              <View style={{ paddingBottom: space.line }}>
-                <Button label="Download service history (PDF)" kind="quiet" onPress={() => {
-                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? VISIT_FALLBACK, formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null, (j) => visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))) });
-                  const w = (globalThis as unknown as { open: (u: string, t: string) => { document: { write: (h: string) => void; close: () => void }; focus: () => void; print: () => void } | null }).open("", "_blank");
-                  if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); } else setActionError("Allow pop-ups to download the history.");
-                }} />
-              </View>
-            ) : null}
-            {jobs.map((job, i) => {
-              const invoice = invoices.find((x) => x.jobId === job.id);
-              return (
-                <View key={job.id}>
-                  <Row
-                    title={visitTitle(visitServices(job, invoice, serviceNames))}
-                    detail={[formatDate(job.sealedAt ?? job.createdAt), visitAlso(visitServices(job, invoice, serviceNames))].filter(Boolean).join(" · ")}
-                    trailing={<Chip label={job.status.replace(/_/g, " ")} />}
-                    onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
-                    last={i === jobs.length - 1 && !invoice}
-                  />
-                  {invoice ? (
-                    <View style={{ paddingBottom: space.line }}>
-                      <Button
-                        label={`View invoice ${invoice.invoiceNumber}`}
-                        kind="quiet"
-                        testID={`history-invoice-${invoice.id}`}
-                        onPress={() => router.push(invoiceHref(invoice.id))}
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })}
-          </Pane>
-        )
-      ) : null}
-
-      {tab === "protection" ? (
+      <Kicker>Papers</Kicker>
+      {true ? (
         <>
           {papers.length === 0 && protections.length === 0 ? (
             <Notice title="No documents yet" body="Add your RC, insurance or PUC. Clear photos are checked automatically for the vehicle plate and expiry. Anything we cannot confirm is kept safely and checked by the studio." />
@@ -502,7 +431,51 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
-      {tab === "warranty" ? (
+      <Kicker>Service history</Kicker>
+      {true ? (
+        jobs.length === 0 ? (
+          <Notice title="No service history yet" body="Service visits and updates for this car will appear here." />
+        ) : (
+          <Pane pad="gap">
+            {Platform.OS === "web" ? (
+              <View style={{ paddingBottom: space.line }}>
+                <Button label="Download service history (PDF)" kind="quiet" onPress={() => {
+                  const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? VISIT_FALLBACK, formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null, (j) => visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))) });
+                  const w = (globalThis as unknown as { open: (u: string, t: string) => { document: { write: (h: string) => void; close: () => void }; focus: () => void; print: () => void } | null }).open("", "_blank");
+                  if (w) { w.document.write(html); w.document.close(); w.focus(); w.print(); } else setActionError("Allow pop-ups to download the history.");
+                }} />
+              </View>
+            ) : null}
+            {jobs.map((job, i) => {
+              const invoice = invoices.find((x) => x.jobId === job.id);
+              return (
+                <View key={job.id}>
+                  <Row
+                    title={visitTitle(visitServices(job, invoice, serviceNames))}
+                    detail={[formatDate(job.sealedAt ?? job.createdAt), visitAlso(visitServices(job, invoice, serviceNames))].filter(Boolean).join(" · ")}
+                    trailing={<Chip label={job.status.replace(/_/g, " ")} />}
+                    onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
+                    last={i === jobs.length - 1 && !invoice}
+                  />
+                  {invoice ? (
+                    <View style={{ paddingBottom: space.line }}>
+                      <Button
+                        label={`View invoice ${invoice.invoiceNumber}`}
+                        kind="quiet"
+                        testID={`history-invoice-${invoice.id}`}
+                        onPress={() => router.push(invoiceHref(invoice.id))}
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </Pane>
+        )
+      ) : null}
+
+      <Kicker>Warranty</Kicker>
+      {true ? (
         warranties.length === 0 ? (
           <Notice title="No warranties yet" body="Warranties are issued automatically when an eligible service is completed." />
         ) : (
@@ -533,6 +506,26 @@ export default function VehicleDetailScreen() {
           </View>
         )
       ) : null}
+      {!editing ? (
+        <View style={{ gap: space.breath }}>
+          <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />
+          {confirmingArchive ? (
+            <Notice
+              title="Remove from your garage?"
+              body="Service history stays on record."
+              action={
+                <View style={{ gap: space.breath }}>
+                  <Button label="Yes, remove" kind="danger" onPress={() => void handleArchiveConfirmed()} />
+                  <Button label="Keep it" kind="quiet" onPress={() => setConfirmingArchive(false)} />
+                </View>
+              }
+            />
+          ) : (
+            <Button label="Remove from garage" kind="danger" onPress={() => setConfirmingArchive(true)} />
+          )}
+        </View>
+      ) : null}
+
     </Screen>
   );
 }

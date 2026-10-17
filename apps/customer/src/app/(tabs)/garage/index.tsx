@@ -10,15 +10,28 @@ import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { archiveVehicle, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
-import { GarageCard } from "../../../ui/GarageCard";
 import { CarThumb } from "../../../ui/CarThumb";
-import { sceneImagery } from "../../../lib/imagery";
+import { glassPane } from "../../../lib/glass-pane";
+import { dueChip } from "../../../lib/garage-due";
+import { listenToMyJobs } from "../../../lib/job-service";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
-import { HeroImage, Button, CanvasTitle, Kicker, Loading, Notice, PageHeader, Pane, Plate, Screen, T } from "../../../ui/kit";
+import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
 
+
+function DueChip({ text }: { text: string }) {
+  const { colors } = useExperienceTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
+      <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
+    </View>
+  );
+}
 
 export default function GarageScreen() {
-  const { colors: ink } = useExperienceTheme();
+  const { colors: ink, name: themeName } = useExperienceTheme();
   const auth = useAuth();
   const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
@@ -29,7 +42,9 @@ export default function GarageScreen() {
   const [removing, setRemoving] = useState<Vehicle | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [brand, setBrand] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<ServiceJob[]>([]);
+  const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>({});
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.user.uid : null;
@@ -40,6 +55,8 @@ export default function GarageScreen() {
     return listenToMyVehicles(uid, tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
   }, [uid, tenantId, retryTick]);
 
+  useEffect(() => { if (!uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
   useEffect(()=>{if(!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
   async function restore(v:Vehicle){setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not restore the car.");}finally{setArchiveActionBusy(null);}}
   // Watchdog: if the vehicles stream never delivers (no data, no error),
@@ -78,54 +95,63 @@ export default function GarageScreen() {
     }
   }
   const list = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const brands = [...new Set(list.map((v) => (v.make ?? "").trim()).filter(Boolean))];
-  const shown = brand && brands.includes(brand) ? list.filter((v) => (v.make ?? "").trim() === brand) : list;
-  const lead = list[0];
+  const sel = pick && list.some((v) => v.id === pick) ? pick : null; // null = the All view
+  const one = sel ? list.find((v) => v.id === sel) ?? null : null;
+  const light = themeName === "light";
+  const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
 
   return (
-    <Screen appBar="Garage" header={<PageHeader title={list.length === 0 ? "Add your first car" : list.length === 1 ? "One car in your garage" : `${list.length} cars in your garage`} sub={list.length === 0 ? "Papers, warranties and visit history live with each car." : list.map((v) => v.registrationNumber).join(" \u00b7 ")} />}>
+    <Screen appBar="Garage">
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
-      {removing ? (
-        <Notice
-          title={`Remove ${removing.registrationNumber} from your garage?`}
-          body={removeError ?? "This removes the car from your garage. Past services and invoices stay on record."}
-          action={
-            <View style={{ gap: space.breath }}>
-              <Button label="Archive car" kind="danger" busy={removeBusy} onPress={() => void confirmRemove()} />
-              <Button label="Keep it" kind="quiet" onPress={() => { setRemoving(null); setRemoveError(null); }} />
-            </View>
-          }
-        />
-      ) : null}
-      {brands.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingRight: 8 }}>
-          {[null, ...brands].map((b) => {
-            const on = (brand && brands.includes(brand) ? brand : null) === b;
+      {list.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+          {[{ id: null as string | null, label: "All" }, ...list.map((v) => ({ id: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))].map((c) => {
+            const on = sel === c.id;
             return (
-              <Pressable key={b ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setBrand(b)} style={{ paddingVertical: 6 }}>
-                <Text style={{ color: on ? ink.accentStrong : ink.textSecondary, fontSize: 15, fontWeight: on ? "700" : "500" }}>{b ?? "All"}</Text>
-                <View style={{ height: 2, borderRadius: 1, marginTop: 4, backgroundColor: on ? "#EC8638" : "transparent" }} />
+              <Pressable key={c.id ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setPick(c.id)} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#F3F1ED") : "rgba(128,128,128,0.14)" }}>
+                <Text style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : ink.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
               </Pressable>
             );
           })}
+          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>+ Add</Text></Pressable>
         </ScrollView>
       ) : null}
-      {list.length > 0 ? (
-        <View style={{ gap: space.breath }}>
-          {shown.map((v, i) => (
-            <GarageCard key={v.id} photo={v.photoUrl ? <CarThumb car={v} height={i === 0 ? metrics.heroTall : 170} radius={0} /> : <View style={{ height: metrics.heroCompact }} />} height={v.photoUrl ? (i === 0 ? metrics.heroTall : 170) : metrics.heroCompact} kicker={i === 0 && list.length > 1 ? "Most recent" : undefined} title={`${v.make} ${v.model}`} lead={i === 0} plate={v.registrationNumber} chips={[v.year, v.color, v.category ? segmentLabel(v.category) : null].filter(Boolean).map(String)} onPress={() => open(v)} onRemove={() => { setRemoveError(null); setRemoving(v); }} />
+      {list.length === 0 && !error ? (
+        <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
+          <T role="heading">No cars yet</T>
+          <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
+          <Button label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
+        </View>
+      ) : one ? (
+        <View style={{ ...glassPane(light), overflow: "hidden" }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${one.make} ${one.model}`} onPress={() => open(one)}>
+            {one.photoUrl ? <CarThumb car={one} height={metrics.heroTall} radius={0} /> : <View style={{ height: metrics.heroCompact }} />}
+          </Pressable>
+          <View style={{ padding: metrics.cardPad, gap: space.breath }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 18, fontWeight: "800" }}>{`${one.make ?? ""} ${one.model ?? ""}`.trim()}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={one.registrationNumber} />{segmentLabel(one.category) ? <Text style={{ color: ink.textSecondary, fontSize: 12 }}>{segmentLabel(one.category)}</Text> : null}</View>
+              </View>
+              {chip(one) ? <DueChip text={chip(one)!} /> : null}
+            </View>
+            <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+          </View>
+        </View>
+      ) : (
+        <View style={{ gap: 10 }}>
+          {list.map((v) => (
+            <Pressable key={v.id} accessibilityRole="button" accessibilityLabel={`${v.make} ${v.model}`} onPress={() => open(v)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, opacity: pressed ? 0.85 : 1, ...glassPane(light) })}>
+              <View style={{ width: 64, height: 64, borderRadius: 16, overflow: "hidden" }}><CarThumb car={v} height={64} width={64} radius={16} /></View>
+              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 15, fontWeight: "800" }}>{`${v.make ?? ""} ${v.model ?? ""}`.trim()}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text numberOfLines={1} style={{ color: ink.textSecondary, fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+              </View>
+              {chip(v) ? <DueChip text={chip(v)!} /> : null}
+            </Pressable>
           ))}
         </View>
-      ) : !error ? (
-        <Pane pad="none" round="hero">
-          <HeroImage source={sceneImagery.heroAlt} />
-          <View style={{ padding: metrics.cardPad, gap: space.breath }}>
-            <T role="heading">No cars yet</T>
-            <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
-          </View>
-        </Pane>
-      ) : null}
-      <Button kind={lead ? "quiet" : "primary"} label="Add a car" onPress={() => router.push("/(tabs)/garage/add")} testID="garage-add" />
+      )}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
     </Screen>
   );
