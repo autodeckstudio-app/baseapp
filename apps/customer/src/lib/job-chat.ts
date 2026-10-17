@@ -1,2 +1,2 @@
-/** Job chat is built and tested but stays off until its functions, rules and index are deployed. Flip with the server deploy. */
-export const CHAT_LIVE = false;
+/** Job chat is live: its functions, rules and index are deployed (sendJobMessage, 17 Oct). */
+export const CHAT_LIVE = true;
