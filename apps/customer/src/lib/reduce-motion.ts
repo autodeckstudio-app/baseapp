@@ -8,10 +8,12 @@ export function useReduceMotion(): boolean {
     let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled().then((v) => { if (alive) setReduce(v); }).catch(() => undefined);
     const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (v) => setReduce(v));
-    let mq: MediaQueryList | null = null;
+    type MQ = { matches: boolean; addEventListener?: (t: string, f: () => void) => void; removeEventListener?: (t: string, f: () => void) => void };
+    const w = globalThis as unknown as { matchMedia?: (q: string) => MQ };
+    let mq: MQ | null = null;
     const onMq = () => { if (mq) setReduce(mq.matches); };
-    if (Platform.OS === "web" && typeof window !== "undefined" && window.matchMedia) {
-      mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (Platform.OS === "web" && w.matchMedia) {
+      mq = w.matchMedia("(prefers-reduced-motion: reduce)");
       if (mq.matches) setReduce(true);
       mq.addEventListener?.("change", onMq);
     }
