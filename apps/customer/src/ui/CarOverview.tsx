@@ -23,10 +23,8 @@ export function TabPills<K extends string>({ tabs, value, onChange }: { tabs: Ar
 
 export type OverviewProps = {
   due: { label: string; date: string; line: string } | null;
-  next: { title: string; detail: string; note?: string | undefined; onPress: () => void } | null;
   last: { title: string; detail: string; status: string } | null;
   reminders: string[];
-  onBook: () => void;
 };
 
 function Card({ title, children, onPress }: { title: string; children: ReactNode; onPress?: (() => void) | undefined }) {
@@ -66,34 +64,16 @@ export function CarOverview(p: OverviewProps) {
         </Card>
       ) : null}
 
-      <Card title="Next up" onPress={p.next?.onPress ?? p.onBook}>
-        {p.next ? (
-          <View style={{ gap: 2 }}>
-            <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{p.next.title}</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{p.next.detail}</Text>
-            {p.next.note ? <Text style={{ color: colors.accentStrong, fontSize: 12, fontWeight: "600", marginTop: 4 }}>{p.next.note}</Text> : null}
+      {p.last ? (
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Last service</Text>
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{p.last.title}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{p.last.detail}</Text>
           </View>
-        ) : (
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 14 }}>No booking yet. Book a wash or check-up.</Text>
-            <View style={{ paddingHorizontal: 14, paddingVertical: 8, ...r.quiet }}><Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700" }}>Book</Text></View>
-          </View>
-        )}
-      </Card>
-
-      <Card title="Last service">
-        {p.last ? (
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "700" }}>{p.last.title}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{p.last.detail}</Text>
-            </View>
-            <View style={{ paddingHorizontal: 10, paddingVertical: 5, ...r.well, borderRadius: 12 }}><Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>{p.last.status}</Text></View>
-          </View>
-        ) : (
-          <Text style={{ color: colors.textTertiary, fontSize: 14 }}>No service history yet</Text>
-        )}
-      </Card>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 }}>{p.last.status}</Text>
+        </View>
+      ) : null}
 
     </View>
   );

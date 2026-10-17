@@ -269,6 +269,8 @@ export default function VehicleDetailScreen() {
               ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
             ]}
             compact={!vehicle.photoUrl && !newPhoto}
+            next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : "Upcoming booking" } : null}
+            onNext={upcomingBooking ? () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) : undefined}
             onBook={() => router.push("/(tabs)/catalogue")}
           />
         </View>
@@ -278,10 +280,8 @@ export default function VehicleDetailScreen() {
         <>
           <CarOverview
             due={due ? { label: due.label, date: due.date, line: dueLine(due) } : null}
-            next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: "Upcoming booking", note: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : undefined, onPress: () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) } : null}
             last={mostRecentJob ? { title: visitTitle(visitServices(mostRecentJob, invoices.find((x) => x.jobId === mostRecentJob.id), serviceNames)), detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
             reminders={reminders}
-            onBook={() => router.push("/(tabs)/catalogue")}
           />
 
           {vehicle && editing ? (
@@ -333,7 +333,7 @@ export default function VehicleDetailScreen() {
         for (const j of jobs) if (serviceNames[j.serviceId]) svc[j.serviceId] = { id: j.serviceId, name: serviceNames[j.serviceId]!, category: serviceCats[j.serviceId] ?? "" };
         const plan = buildCarePlan({ jobs, services: svc, warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate })) });
         const dateOf = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-        if (plan.done.length === 0 && plan.warranties.length === 0) return <Notice title="No care plan yet" body="Once the studio finishes a service on this car, what was done and what is due next will show here." action={<Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />} />;
+        if (plan.done.length === 0 && plan.warranties.length === 0) return <T role="caption" tone="secondary">No care plan yet. It starts once the studio finishes a service on this car.</T>;
         return (
           <View style={{ gap: space.inset }}>
             {plan.nextCoat ? (
