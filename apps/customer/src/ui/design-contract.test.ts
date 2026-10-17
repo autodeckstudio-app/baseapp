@@ -375,6 +375,12 @@ describe("nav order and drawer", () => {
     expect(h).toContain("titleNeedsPill(day, !!car.hasPhoto)");
     expect(h).toContain("export const titleNeedsPill = (day: boolean, hasPhoto: boolean): boolean => day && hasPhoto;");
   });
+  it("no back button on a tab root: tab names never appear in the back bar's SUB_ROOTS", () => {
+    const kit = read("src/ui/kit.tsx");
+    const m = kit.match(/const SUB_ROOTS: Record<string, string> = \{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    for (const tab of ["index", "bookings", "catalogue", "garage", "profile"]) expect(m![1]).not.toMatch(new RegExp(`\\b${tab}:`));
+  });
   it("the drawer does not repeat anything already in the nav", () => {
     for (const f of ["src/ui/AppBar.tsx", "src/app/(tabs)/index.tsx"]) {
       const s = read(f);
