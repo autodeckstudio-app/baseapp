@@ -37,7 +37,7 @@ const SH = {
 
 export function raised(mode: Mode): Raised {
   const night = isNight(mode);
-  const c = night ? nightColors : { ...lightColors, surface: "#FBF8F3", surfaceElevated: "#F4EFE7", canvas: "#EFEAE1" };
+  const c = night ? nightColors : { ...lightColors, surface: "#FFFFFF", surfaceElevated: "#F7F6F3", canvas: "#F3F2EF" };
   const s = night ? SH.night : SH.light;
   // One dark card colour everywhere (the same charcoal as Home and Garage), never the theme palette grey.
   const surf = night ? "#1B1B1F" : c.surface;

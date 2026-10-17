@@ -8,7 +8,7 @@ const lum = (hex: string) => { const n = parseInt(hex.slice(1), 16); return 0.21
 const ratio = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p) as [number, number]; return (x + 0.05) / (y + 0.05); };
 
 // Surfaces the customer app really draws on (lib/raised.ts): Day card, Day ground, Night card, Night ground.
-const DAY = ["#FBF8F3", "#EFEAE1"];
+const DAY = ["#FFFFFF", "#F3F2EF"];
 const NIGHT = ["#1B1B1F", "#0F1013"];
 
 describe("text contrast meets WCAG AA (4.5:1)", () => {
@@ -22,7 +22,7 @@ describe("text contrast meets WCAG AA (4.5:1)", () => {
     }
   }
   it("Day and Night accent text (accentStrong) on the card", () => {
-    expect(ratio(lightColors.accentStrong, "#FBF8F3")).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(lightColors.accentStrong, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
     expect(ratio(nightColors.accentStrong, "#1B1B1F")).toBeGreaterThanOrEqual(4.5);
   });
 });

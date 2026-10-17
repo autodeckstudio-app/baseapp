@@ -11,7 +11,7 @@ export function glassPane(light = false): ViewStyle {
       borderRadius: 24,
       borderWidth: 1,
       borderColor: "rgba(60,48,36,0.10)",
-      backgroundColor: "#FBF8F3",
+      backgroundColor: "#FFFFFF",
       ...(Platform.OS === "web" ? ({ boxShadow: "0 10px 28px rgba(70,55,40,0.12), 0 1px 3px rgba(70,55,40,0.08), inset 0 1px 0 rgba(255,255,255,0.7)" } as object) : { shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 }),
     };
   }

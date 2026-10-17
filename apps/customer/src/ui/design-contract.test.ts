@@ -240,7 +240,7 @@ describe("home cars", () => {
   it("light surfaces are warm and flat: no white offset highlights", () => {
     const src = read("src/lib/raised.ts");
     expect(src).not.toContain("-8px -8px 20px rgba(255,255,255,0.95)");
-    expect(src).toContain("#FBF8F3");
+    expect(src).toContain("#FFFFFF");
   });
 });
 
@@ -554,10 +554,10 @@ describe("one Day background across the apps", () => {
     expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
     const h = read("src/ui/HomeBackdrop.tsx");
     expect(h).toContain("maskImage");
-    expect(h).not.toContain("#EFEAE1");
+    expect(h).not.toContain("#F3F2EF");
   });
   it("the atmosphere is warm off-white with only a faint orange glow", () => {
-    expect(DAY_ATMOSPHERE).toContain("#FBF8F3");
+    expect(DAY_ATMOSPHERE).toContain("#FFFFFF");
     expect((DAY_ATMOSPHERE.match(/rgba\(255,178,122/g) ?? []).length).toBe(1);
     expect(DAY_ATMOSPHERE).not.toMatch(/#EC8638|236,134,56/);
   });

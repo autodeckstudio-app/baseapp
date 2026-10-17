@@ -10,7 +10,7 @@ export type DrawerItem = { key: string; label: string; sub?: string; icon: IconN
 export function SideDrawer({ open, onClose, name, initial, items }: { open: boolean; onClose: () => void; name: string; initial: string; items: DrawerItem[] }) {
   const { colors, name: mode } = useExperienceTheme();
   const day = mode === "light";
-  const bg = day ? "#F6F2EA" : "#15161A";
+  const bg = day ? "#FFFFFF" : "#15161A";
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, flexDirection: "row" }}>

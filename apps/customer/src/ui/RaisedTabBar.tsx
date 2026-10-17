@@ -58,7 +58,7 @@ export function RaisedTabBar({ state, descriptors, navigation, icons }: Props) {
                 </View>
               ) : (
               <View style={{ width: 52, height: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: focused ? "rgba(236,134,56,0.26)" : "transparent" }}>
-                <NavIcon name={icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={26} filled={focused} cut={light ? "#FBF8F3" : "#18181C"} />
+                <NavIcon name={icons[route.name] ?? "home"} color={focused ? colors.textPrimary : colors.textSecondary} size={26} filled={focused} cut={light ? "#FFFFFF" : "#18181C"} />
               </View>
               )}
             </Pressable>
