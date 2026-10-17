@@ -465,11 +465,11 @@ it("lists every stock image in the imagery register",()=>{
   expect(missing).toEqual([]);
 });
 
-it("profile settings sit in glass cards, one per topic, with no stray links repeated from the tabs",()=>{
+it("profile settings sit in glass panes (concept A), Help once, no repeated tab links",()=>{
   const p=read("src/app/(tabs)/profile.tsx");
-  for(const k of ["Appearance","Driving licence","Account"]) expect(p).toContain(`<Kicker>${k}</Kicker>`);
-  expect((p.match(/<Pane pad="inset">/g)??[]).length).toBeGreaterThanOrEqual(3);
-  expect(p).toContain('title="Help and contact"');
+  expect(p).toContain("<Kicker>Appearance</Kicker>");expect(p).toContain('title="Driving licence"');
+  expect((p.match(/glassPane\(light\)/g)??[]).length).toBeGreaterThanOrEqual(2);
+  expect(p.split('title="Help and contact"').length-1).toBe(1);
 });
 
 it("car overview shows a concrete Next due, not vague count tiles or a one-row details card",()=>{
