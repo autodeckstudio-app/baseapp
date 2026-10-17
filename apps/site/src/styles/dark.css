@@ -158,3 +158,13 @@ a.from span{color:var(--orange)}
 .merch-card:hover{transform:translateY(-8px)}
 .merch-card .tx{padding-bottom:24px}
 @media(hover:none),(prefers-reduced-motion:reduce){.merch-card:hover{transform:none}}
+
+/* motion tokens (taste pass): one easing family, short feedback times */
+:root{--ease-out:cubic-bezier(0.22,1,0.36,1);--ease-soft:cubic-bezier(0.33,1,0.68,1);--t-press:140ms;--t-hover:180ms}
+.btn{transition:transform var(--t-press) var(--ease-out),box-shadow var(--t-hover) var(--ease-out),background var(--t-hover) var(--ease-out)}
+.btn:active{transform:scale(.965)}
+a.from{transition:border-color var(--t-hover) var(--ease-out),background var(--t-hover) var(--ease-out)}
+.merch-card{transition:transform var(--t-hover) var(--ease-out)}
+.film-card{transition:transform var(--t-hover) var(--ease-out)}
+.film-card:hover{transform:scale(1.015)}
+.r4 a{transition-timing-function:var(--ease-soft)}
