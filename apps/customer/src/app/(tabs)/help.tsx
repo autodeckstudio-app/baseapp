@@ -1,16 +1,18 @@
 // Help: call, WhatsApp, location, hours and a short FAQ.
 import { useEffect, useState } from "react";
 import { Linking, View } from "react-native";
-import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { NavIcon } from "../../ui/NavIcon";
 import { useLang } from "../../lib/i18n";
 import { FAQ, STUDIO_INFO, formatHours } from "../../lib/studio-info";
 import { getStudioInfo } from "../../lib/booking-service";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
-import { Button, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
+import { Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
 
 export default function HelpScreen() {
-  const router = useRouter();
+  const { colors, name } = useExperienceTheme();
+  const cut = name === "light" ? "#FFFFFF" : "#18181C";
   const { t } = useLang();
   const [open, setOpen] = useState<number | null>(null);
   const [liveHours, setLiveHours] = useState<string | null>(null);
@@ -22,19 +24,19 @@ export default function HelpScreen() {
   const s = { ...STUDIO_INFO, hours: liveHours ?? STUDIO_INFO.hours };
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">{t("Help")}</Kicker><T role="title">{t("We are here")}</T></View>}>
+    <Screen>
       {hasContact ? (
-        <View style={{ gap: space.breath }}>
-          {s.phone ? <Button label={t("Call the studio")} onPress={() => void Linking.openURL(`tel:${s.phone}`)} /> : null}
-          {s.whatsapp ? <Button kind="quiet" label={t("Message on WhatsApp")} onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} /> : null}
-        </View>
+        <Pane pad="gap">
+          {s.phone ? <Row title={t("Call the studio")} detail={s.hours || undefined} trailing={<NavIcon name="call" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`tel:${s.phone}`)} last={!s.whatsapp} /> : null}
+          {s.whatsapp ? <Row title="WhatsApp" detail="Message the studio" trailing={<NavIcon name="whatsapp" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} last /> : null}
+        </Pane>
       ) : (
         <Notice title="Contact details coming soon" body="Calling and messaging the studio will appear here." />
       )}
-      {s.address || s.hours ? (
+      {s.address ? (
         <Pane pad="gap">
-          {s.address ? <Row title="Studio" detail={s.address} {...(s.mapsUrl ? { onPress: () => void Linking.openURL(s.mapsUrl) } : {})} /> : null}
-          {s.hours ? <Row title="Hours" detail={s.hours} last /> : null}
+          {s.address ? <Row title="Studio" detail={s.address} last {...(s.mapsUrl ? { onPress: () => void Linking.openURL(s.mapsUrl) } : {})} /> : null}
+          
         </Pane>
       ) : null}
       <Kicker>{t("Questions")}</Kicker>

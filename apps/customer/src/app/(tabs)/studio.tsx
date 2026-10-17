@@ -2,11 +2,11 @@
 // screen 2): address, hours, services to start from, call and directions.
 import { useEffect, useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
+import { NavIcon } from "../../ui/NavIcon";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { raised } from "../../lib/raised";
-import { STUDIO_INFO, formatHours } from "../../lib/studio-info";
+import { STUDIO_INFO, formatHours, isOpenNow, type LiveStudioInfo } from "../../lib/studio-info";
 import { getStudioInfo } from "../../lib/booking-service";
 import { Screen } from "../../ui/kit";
 
@@ -21,7 +21,7 @@ function MapCanvas({ onPress }: { onPress: () => void }) {
   const label = night ? "#7C8088" : "#8A9099";
   const bar = (style: object) => <View style={{ position: "absolute", backgroundColor: road, borderRadius: 6, ...style }} />;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Open the studio in maps" onPress={onPress} style={{ height: 330, borderRadius: 24, overflow: "hidden", backgroundColor: land }}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Open the studio in maps" onPress={onPress} style={{ height: 230, borderRadius: 24, overflow: "hidden", backgroundColor: land }}>
       <View style={{ position: "absolute", left: 20, top: 150, width: 120, height: 90, borderRadius: 16, backgroundColor: park }} />
       {[[16, 24, 90, 60], [124, 24, 110, 60], [250, 24, 120, 60], [20, 260, 100, 70], [140, 262, 90, 70], [250, 160, 120, 80]].map(([l, t, w, h], i) => (
         <View key={i} style={{ position: "absolute", left: l!, top: t!, width: w!, height: h!, borderRadius: 12, backgroundColor: block }} />
@@ -42,38 +42,39 @@ function MapCanvas({ onPress }: { onPress: () => void }) {
 }
 
 export default function StudioScreen() {
-  const router = useRouter();
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
-  const [hours, setHours] = useState<string>(STUDIO_INFO.hours);
+  const light = name === "light";
+  const [live, setLive] = useState<LiveStudioInfo["operatingHours"] | null>(null);
   useEffect(() => {
     let alive = true;
-    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) setHours(formatHours(i.operatingHours)); }).catch(() => undefined);
+    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) setLive(i.operatingHours); }).catch(() => undefined);
     return () => { alive = false; };
   }, []);
+  const hours = live ? formatHours(live) : STUDIO_INFO.hours;
+  const open = isOpenNow(live, new Date());
+  const pill = (label: string, icon: "call" | "whatsapp" | "directions", url: string, dark: boolean) => (
+    <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} onPress={() => void Linking.openURL(url)} style={({ pressed }) => ({ flex: 1, height: 54, borderRadius: 9999, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: pressed ? 0.85 : 1, ...(dark ? r.dark : r.round) })}>
+      <NavIcon name={icon} color={dark ? (light ? "#FFFFFF" : "#16181C") : colors.textPrimary} size={18} cut={light ? "#FFFFFF" : "#18181C"} />
+      <Text style={{ color: dark ? (light ? "#FFFFFF" : "#16181C") : colors.textPrimary, fontSize: 14, fontWeight: "800" }}>{label}</Text>
+    </Pressable>
+  );
   return (
     <Screen>
       <View style={{ gap: 14, paddingBottom: 20 }}>
-        <View>
+        <View style={{ padding: 8, gap: 12, borderRadius: 24, ...r.sheet }}>
           <MapCanvas onPress={() => void Linking.openURL(STUDIO_INFO.mapsUrl)} />
-          <View pointerEvents="box-none" style={{ position: "absolute", left: 14, right: 14, top: 14, flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Directions" onPress={() => void Linking.openURL(STUDIO_INFO.mapsUrl)} style={{ width: 46, height: 46, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: name === "light" ? "#16181C" : "#F3F1ED" }}>
-              <Text style={{ color: name === "light" ? "#FFFFFF" : "#16181C", fontSize: 20, fontWeight: "800" }}>{"\u2197"}</Text>
-            </Pressable>
+          <View style={{ paddingHorizontal: 10, paddingBottom: 10, gap: 4 }}>
+            {open !== null ? <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>{open ? "OPEN NOW" : "CLOSED NOW"}</Text> : null}
+            <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>AutoDeck Studio</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{STUDIO_INFO.address}</Text>
+            <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{hours}</Text>
           </View>
         </View>
-        <View style={{ marginTop: -46, marginHorizontal: 8, padding: 16, gap: 12, borderRadius: 24, ...r.sheet }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800" }}>AutoDeck Studio</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{STUDIO_INFO.address}</Text>
-          <Text style={{ color: colors.textTertiary, fontSize: 12 }}>{hours}</Text>
-          <View style={{ flexDirection: "row", gap: 10, alignItems: "center", marginTop: 4 }}>
-            <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/catalogue")} style={({ pressed }) => ({ flex: 1, height: 54, borderRadius: 24, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1, ...r.dark })}>
-              <Text style={{ color: name === "light" ? "#FFFFFF" : "#16181C", fontSize: 15, fontWeight: "800" }}>Start booking</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Call the studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} style={{ width: 54, height: 54, borderRadius: 24, alignItems: "center", justifyContent: "center", ...r.round }}>
-              <Icon name="phone" color={colors.textPrimary} size={22} />
-            </Pressable>
-          </View>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {pill("Call", "call", `tel:${STUDIO_INFO.phone}`, true)}
+          {pill("WhatsApp", "whatsapp", `https://wa.me/${STUDIO_INFO.whatsapp}`, false)}
+          {pill("Directions", "directions", STUDIO_INFO.mapsUrl, false)}
         </View>
       </View>
     </Screen>

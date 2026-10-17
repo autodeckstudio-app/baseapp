@@ -14,7 +14,7 @@ export const FAQ: { q: string; a: string }[] = [
   { q: "Can I change or cancel a booking?", a: "Open your booking to change or cancel it at least 24 hours before the slot. You can reschedule up to three times. Within 24 hours, contact the studio. If you miss your slot, the booking stays valid that day during studio hours. At close (7 pm Sunday, 9 pm other days), unarrived bookings are auto-cancelled. Make a new booking when you are ready." },
   { q: "How will I know my car is ready?", a: "Your booking page shows each step, and you get an update in Notifications." },
   { q: "Where do I find my invoice and warranty?", a: "Invoices are on the booking. Warranties and papers are under your car in Garage." },
-  { q: "I need something not listed", a: "Use the call or WhatsApp button above and we will help." },
+  { q: "I need something not listed", a: "Call or message us on WhatsApp above and we will help." },
 ];
 
 // Live studio info from the same record the booking engine uses (read-only public subset).
@@ -64,3 +64,15 @@ export const TERMS_URL = "";
 export const WHATSAPP_CHANNEL_URL = "https://whatsapp.com/channel/0029Vb90oya8aKvHK2DjRt2k";
 export const INSTAGRAM_HANDLE = "autodeck.studio";
 export const INSTAGRAM_URL = INSTAGRAM_HANDLE ? `https://www.instagram.com/${INSTAGRAM_HANDLE}/` : "";
+
+/** "Open now" only when live hours are known. Returns null when unknown so the screen shows nothing rather than guess. */
+export function isOpenNow(hours: LiveStudioInfo["operatingHours"] | null | undefined, now: Date): boolean | null {
+  if (!hours?.length) return null;
+  const today = hours.find((h) => h.dayOfWeek === now.getDay());
+  if (!today) return null;
+  if (today.closed) return false;
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const [oh = "0", om = "0"] = today.open.split(":");
+  const [ch = "0", cm = "0"] = today.close.split(":");
+  return mins >= Number(oh) * 60 + Number(om) && mins < Number(ch) * 60 + Number(cm);
+}

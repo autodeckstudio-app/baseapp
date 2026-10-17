@@ -1,7 +1,12 @@
 import { FileUploader, SelectField } from "../../../ui/inputs";
 // Sell your car: a short form plus photos. It goes to the studio for review first, then shows to other customers.
 import { createElement, useEffect, useState } from "react";
-import { Image, Platform, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import type { Vehicle } from "@autodeck/core";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { useAuth } from "../../../hooks/useAuth";
+import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { sellCarLabel, sellPrefillFromVehicle } from "../../../lib/sell-prefill";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Pane, Screen, T } from "../../../ui/kit";
@@ -13,6 +18,17 @@ const FUELS = ["petrol", "diesel", "cng", "electric", "hybrid"];
 
 export default function SellScreen() {
   const router = useRouter();
+  const auth = useAuth();
+  const { name: themeName, colors: ink } = useExperienceTheme();
+  const light = themeName === "light";
+  const [garage, setGarage] = useState<Vehicle[]>([]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
+  useEffect(() => {
+    if (!uid || !tenantId) return;
+    return listenToMyVehicles(uid, tenantId, setGarage, () => undefined);
+  }, [uid, tenantId]);
   const [f, setF] = useState<F>({ make: "", model: "", variant: "", year: "", km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", name: "", phone: "", reg: "" });
   const [photos, setPhotos] = useState<Array<{ blob: Blob; type: string }>>([]);
   const [previews,setPreviews] = useState<string[]>([]);
@@ -68,6 +84,19 @@ export default function SellScreen() {
     <Screen appBar="Sell your car">
       <T tone="secondary">A clear listing starts with your car's story. The studio reviews it before buyers see it.</T>
       <View style={{flexDirection:"row",gap:8}}>{steps.map((label,i)=><View key={label} style={{flex:1,gap:8}}><View style={{height:3,backgroundColor:i<=step?"#EC8638":"rgba(128,128,136,0.35)",borderRadius:9999}}/><T role="caption" tone={i===step?"accent":"tertiary"}>{i+1}. {label}</T></View>)}</View>
+      {step===0 && garage.length > 0 && <View style={{ gap: space.hair }}>
+        <Kicker tone="accent">Pick your car</Kicker>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+          {[...garage.map((v) => ({ id: v.id as string | null, label: sellCarLabel(v), v })), { id: null as string | null, label: "Another car", v: null as Vehicle | null }].map((c) => {
+            const on = picked === c.id;
+            return (
+              <Pressable key={c.id ?? "other"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setPicked(c.id); if (c.v) setF((p) => ({ ...p, ...sellPrefillFromVehicle(c.v!) })); }} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#F3F1ED") : "rgba(128,128,128,0.14)" }}>
+                <Text style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : ink.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>}
       {step===0 && <View style={{ gap: space.line }}>
         <Kicker>Your vehicle</Kicker>
         <Field label="Make" value={f.make} error={fieldErrors.make} onBlur={() => setFieldErrors((p) => ({ ...p, make: validateSellStep(f, step, photos.length).make }))} onChangeText={(v) => up("make", v)} placeholder="Tata" autoCapitalize="words" maxLength={50} />
