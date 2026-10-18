@@ -8,7 +8,7 @@ import { Plate, T } from "./kit";
 import { metrics } from "../lib/metrics";
 
 export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, onNext, compact }: { compact?: boolean; photo: ReactNode; title: string; subtitle?: string; plate: string; facts: Array<{ label: string; value: string }>; next?: { title: string; detail: string } | null; onBook: () => void; onNext?: (() => void) | undefined }) {
-  const { colors: ink } = useExperienceTheme();
+  const { colors: ink, name: themeName } = useExperienceTheme();
   const heroH = compact ? metrics.heroCompact + 60 : metrics.heroCover;
   const line = facts.filter((f) => f.label !== "Protection").map((f) => f.value).filter((v) => v && v !== "-").join("  \u00b7  ");
   return (
@@ -32,7 +32,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, on
           <T role="caption" tone="secondary" numberOfLines={1}>{next ? next.detail : "Pick a time that suits you"}</T>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={onBook} style={({ pressed }) => ({ height: 44, paddingHorizontal: 18, borderRadius: 9999, backgroundColor: ink.textPrimary, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.88 : 1 })}>
-          <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Book a service</Text>
+          <Text style={{ color: themeName === "night" ? "#14141A" : "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Book a service</Text>
         </Pressable>
       </View>
     </View>

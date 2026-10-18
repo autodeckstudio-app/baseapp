@@ -38,7 +38,7 @@ export function CareTimeline({ title, count, items, empty, renderExtra, onItem }
                 {it.pill ? <Chip label={it.pill} tone={it.soon ? "accent" : "neutral"} /> : null}
               </View>
               {it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}
-              {renderExtra ? renderExtra(it) : null}
+              {renderExtra ? <View style={{ marginTop: space.breath }}>{renderExtra(it)}</View> : null}
             </View>
           </View>
         );
