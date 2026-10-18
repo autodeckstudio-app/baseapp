@@ -1,0 +1,11 @@
+# AutoDeck Store: Editions + Edit
+
+18 October 2026. Editorial opening plus simple department filters and quick-view product panels. Current collection is deliberately empty. The page states that it is in the making, with no opening date, stock claim, fake products, prices, checkout or mailing-list collection. Old logo-merch names, archive T-shirt image and placeholder product drawings removed from the Store and Home store teaser. The data files no longer contain those names.
+
+## Add real content
+`src/data/shop.json` contains `edition` (null until ready) and `products` (empty until ready). An edition accepts title, description, image and imageAlt. Product fields: id (unique slug), name, department (Scent or Clothing), description, image, imageAlt, optional detailImage/detailImageAlt, optional provenance (Made for AutoDeck or Selected by AutoDeck), optional maker, and details [{label,value}]. Only supplied and verified material, fit, size, care, scent, format and volume should enter details. Do not infer personal vs car perfume. Cards without identifying information and a real image are excluded. No synthetic example products shipped.
+
+Quick view uses native dialog: keyboard focus trap, Escape to close, labelled heading, close button, click-outside close and focus return. Base detail content remains available without JS through noscript. All/Scent/Clothing filters work on real products and show contextual empty states; the department links use the same filters. Second supplied photograph appears on hover and inside quick view. No purchasing action is enabled. Future checkout, variants, prices, availability, sourcing and policies remain separate work once real product data is given.
+
+## QA
+Production build, empty-data/source guards, real local pixels at 320, 390, 820 and 1280, reduced motion and no overflow checks. Filter pressed state and matching empty-state copy checked at every width. No photos or product claims invented to fill the opening. Dynamic interaction is subtle pointer-follow lighting and hover states; reduced motion disables that pointer light. The full product dialog visual is not verified with real product data because none is supplied yet. No live deployment.
