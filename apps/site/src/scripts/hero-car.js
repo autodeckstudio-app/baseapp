@@ -19,7 +19,7 @@ export function initHeroCar(host) {
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 600 ? 1.25 : 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.08;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -29,17 +29,26 @@ export function initHeroCar(host) {
   camera.lookAt(0, 0.48, 0);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.12).texture;
 
   /* studio light: soft white key, one quiet orange rim from the brand */
   scene.add(new THREE.HemisphereLight(0xf6f3ec, 0x1b1b19, 0.8));
   const key = new THREE.DirectionalLight(0xffffff, 1.5);
   key.position.set(4, 7, 3);
   key.castShadow = true;
+  key.shadow.mapSize.set(1024,1024);
+  key.shadow.camera.left = -3; key.shadow.camera.right = 3;
+  key.shadow.camera.top = 3; key.shadow.camera.bottom = -3;
+  key.shadow.normalBias = .025;
+  key.shadow.bias = -.00015;
+  key.shadow.radius = 4;
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0xec8638, 0.7);
+  const rim = new THREE.DirectionalLight(0xf0aa70, 0.28);
   rim.position.set(-7, 2.5, -5);
   scene.add(rim);
+
+  const fill = new THREE.DirectionalLight(0xdce7f5, .9);
+  fill.position.set(-4, 3, 4); scene.add(fill);
 
   /* soft contact shadow only, no visible floor */
   const floor = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.ShadowMaterial({ opacity: 0.45 }));
@@ -56,7 +65,13 @@ export function initHeroCar(host) {
     car.traverse(o => {
       if (!o.isMesh) return;
       o.castShadow = true;
-      if(o.material) o.material.envMapIntensity = 1.25;
+      if(o.material) {
+        o.material.envMapIntensity = 1.05;
+        if(o.material.name === 'Paint 1 Carmine') {
+          o.material.clearcoat = 1;
+          o.material.clearcoatRoughness = .12;
+        }
+      }
     });
     const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(new THREE.Vector3());
