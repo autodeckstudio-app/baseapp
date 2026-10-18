@@ -251,10 +251,11 @@ describe("home menu", () => {
 });
 
 describe("services filters", () => {
-  it("a chip opens the group's products, not a card for the same group", () => {
+  it("level 1 is the car-first picker: a category pill switches the picker in place, no card for the same group", () => {
     const src = read("src/app/(tabs)/catalogue/index.tsx");
     expect(src).toContain("const cat = fromRoute ?? grp ?? undefined");
-    expect(src).toContain("!fromRoute && !searching ? <GroupChips");
+    expect(src).toContain("onPress={() => choose(g.key, null)}");
+    expect(src).not.toContain("<GroupChips");
   });
 });
 
