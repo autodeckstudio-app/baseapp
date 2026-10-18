@@ -64,5 +64,9 @@ export function buildHistory(jobs: HistoryInput[]): Array<TimelineItem & { jobId
     .sort((a, b) => b.at - a.at);
 }
 
+/** The car room shows only the latest visits; the full list lives on the Service history screen. */
+export const HISTORY_PREVIEW = 3;
+export const latestVisits = <T,>(past: T[]): T[] => past.slice(0, HISTORY_PREVIEW);
+
 /** Count label shown beside a group heading. */
 export const countLabel = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

@@ -33,7 +33,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview } from "../../../ui/CarOverview";
 import { nextDue, dueLine } from "../../../lib/car-next-due";
 import { CareTimeline } from "../../../ui/CareTimeline";
-import { buildUpcoming, buildHistory, countLabel } from "../../../lib/car-timeline";
+import { buildUpcoming, buildHistory, countLabel, latestVisits, HISTORY_PREVIEW } from "../../../lib/car-timeline";
 
 
 const PROTECTION_KIND_LABELS: Record<string, string> = {
@@ -345,7 +345,7 @@ export default function VehicleDetailScreen() {
             <CareTimeline
               title="Service history"
               count={countLabel(past.length, "visit", "visits")}
-              items={past}
+              items={latestVisits(past)}
               empty="Service visits and updates for this car will appear here."
               onItem={(it) => { const bid = bookingOf(it.jobId); if (bid) router.push(`/(tabs)/bookings/${bid}`); }}
               renderExtra={(it) => {
@@ -353,6 +353,9 @@ export default function VehicleDetailScreen() {
                 return invoice ? <Button label={`View invoice ${invoice.invoiceNumber}`} kind="quiet" testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} /> : null;
               }}
             />
+            {past.length > HISTORY_PREVIEW ? (
+              <Button label={`See all ${past.length} visits`} kind="quiet" testID="history-see-all" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />
+            ) : null}
             {Platform.OS === "web" && jobs.length > 0 ? (
 <Button label="Download service history (PDF)" kind="quiet" onPress={() => {
                   const html = historyReportHtml({ studioName: STUDIO_INFO.name, studioAddress: STUDIO_INFO.address, studioPhone: STUDIO_INFO.phone, carTitle: `${vehicle.make} ${vehicle.model}`, plate: vehicle.registrationNumber, generatedOn: formatDate(new Date().toISOString()), rows: historyRows(jobs, (sid) => serviceNames[sid] ?? VISIT_FALLBACK, formatDate, (jid) => invoices.find((x) => x.jobId === jid)?.invoiceNumber ?? null, (j) => visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))) });

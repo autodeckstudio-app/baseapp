@@ -57,3 +57,19 @@ describe("car detail lower sections use one timeline, not stacked blocks", () =>
     expect(c).not.toMatch(/Rs\s?\d/);
   });
 });
+
+describe("car room shows only the latest 3 visits", () => {
+  it("latestVisits keeps the newest 3 and leaves shorter lists alone", async () => {
+    const { latestVisits, HISTORY_PREVIEW } = await import("./car-timeline");
+    expect(HISTORY_PREVIEW).toBe(3);
+    expect(latestVisits([1, 2, 3, 4, 5])).toEqual([1, 2, 3]);
+    expect(latestVisits([1, 2])).toEqual([1, 2]);
+  });
+  it("the car page passes only the preview to the timeline and links to the full history screen", () => {
+    const page = readFileSync(`${__dirname}/../app/(tabs)/garage/[id].tsx`, "utf8");
+    expect(page).toContain("items={latestVisits(past)}");
+    expect(page).not.toContain("items={past}");
+    expect(page).toContain("history-see-all");
+    expect(page).toContain('pathname: "/(tabs)/garage/history", params: { vehicleId: id }');
+  });
+});
