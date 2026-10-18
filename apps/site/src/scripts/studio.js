@@ -21,8 +21,16 @@ function selectChapter(id) {
   chapters.forEach(el => el.classList.toggle('is-active', el.dataset.chapter === id));
   screens.forEach(el => { const active = el.dataset.screen === id; el.classList.toggle('is-active', active); el.setAttribute('aria-hidden', String(!active)); });
   dots.forEach(el => el.classList.toggle('is-active', el.dataset.dot === id));
+  const activeChapter = chapters.find(el => el.dataset.chapter === id);
+  if (activeChapter) {
+    document.querySelector('[data-stage-index]').textContent = activeChapter.querySelector('.chapter-index').textContent;
+    document.querySelector('[data-stage-title]').textContent = activeChapter.querySelector('h3').textContent;
+    document.querySelector('[data-stage-body]').textContent = activeChapter.querySelector('p:not(.chapter-index)').textContent;
+  }
 }
 if (chapters.length && !reduced) {
+  document.querySelector('.app-story').classList.add('app-story-enhanced');
+  chapters.forEach(el => el.setAttribute('aria-hidden', 'true'));
   let queued = false;
   const update = () => {
     queued = false;

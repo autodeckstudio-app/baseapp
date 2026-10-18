@@ -14,3 +14,21 @@
 @media(max-width:360px){.header nav{gap:18px}.header .logo img{width:118px}.home-service-grid{grid-template-columns:1fr}.service-card{padding:20px}.app-story-grid{grid-template-columns:44% 1fr;gap:15px}.app-chapter h3{font-size:22px}.app-chapter>p:not(.chapter-index){font-size:11px}.app-chapter .text-link{font-size:10px}.app-device-stage{top:85px}.phone-shell{border-radius:18px}}
 @media(prefers-reduced-motion:reduce){.app-device-stage{display:none}.app-story-grid{display:block}.app-chapter{min-height:0;display:grid;grid-template-columns:1fr 200px;column-gap:40px;padding-block:35px;opacity:1;border-top:1px solid var(--line)}.app-chapter .chapter-index,.app-chapter h3,.app-chapter>p,.app-chapter>a{grid-column:1}.static-app-screen{display:block;grid-column:2;grid-row:1/6;width:200px;border:4px solid #303235;border-radius:22px}.app-chapter .text-link{justify-self:start}.app-chapter>p:not(.chapter-index){font-size:14px}@media(max-width:600px){.app-chapter{display:flex;padding-block:30px}.static-app-screen{width:220px;align-self:center;margin-top:24px}}}
 .static-app-screen{height:auto}
+
+/* The screen stays on the page centreline at every breakpoint. Chapters are
+   normal-flow scroll markers; one centred caption changes with the screen. */
+.app-stage-copy{display:none}
+.app-story-enhanced .app-story-grid{display:grid;grid-template-columns:1fr;gap:0}
+.app-story-enhanced .app-device-stage{grid-column:1;grid-row:1;top:80px;height:calc(100svh - 90px);max-height:850px;z-index:1;justify-content:center;gap:0}
+.app-story-enhanced .app-chapters{grid-column:1;grid-row:1;pointer-events:none}
+.app-story-enhanced .app-chapter{height:100svh;min-height:700px;visibility:hidden}
+.app-story-enhanced .phone-shell{height:min(48svh,440px);width:auto;max-height:none;max-width:100%;flex-shrink:0;border-width:5px;border-radius:27px}
+.app-story-enhanced .screen-caption{margin-top:12px;font-size:9px;max-width:none}
+.app-story-enhanced .screen-progress{margin-top:9px}
+.app-story-enhanced .app-stage-copy{display:block;text-align:center;max-width:480px;padding:20px 15px 0}
+.app-stage-copy .chapter-index{font-size:9px;margin-bottom:9px}
+.app-stage-copy h3{font-size:30px;letter-spacing:-.035em;margin-bottom:10px}
+.app-stage-copy>p:not(.chapter-index){font-size:13px;color:var(--muted);line-height:1.65}
+.app-stage-copy .text-link{font-size:12px;margin-top:13px}
+@media(max-width:800px){.app-story-enhanced .app-device-stage{top:75px;height:calc(100svh - 85px)}.app-story-enhanced .phone-shell{height:min(46svh,420px)}.app-stage-copy h3{font-size:26px}.app-story-enhanced .app-stage-copy{padding-top:16px;max-width:360px}.app-story-enhanced .app-chapter{min-height:600px}.app-story-enhanced .screen-caption{line-height:1.4}}
+@media(max-height:700px){.app-story-enhanced .phone-shell{height:39svh}.app-story-enhanced .app-stage-copy{padding-top:10px}.app-stage-copy h3{font-size:23px}.app-stage-copy .chapter-index{margin-bottom:5px}.app-stage-copy>p:not(.chapter-index){font-size:11px}.app-stage-copy .text-link{margin-top:8px}}
