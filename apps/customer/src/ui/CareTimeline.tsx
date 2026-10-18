@@ -5,6 +5,9 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Chip, T } from "./kit";
 import type { TimelineItem } from "../lib/car-timeline";
 
+/** Width of the rail column. Extras (a button under a row) pull back left by rail + gap so they line up with full-width buttons below the list. */
+const RAIL = 12;
+
 /** One thin vertical thread of dated items. Orange dot only for what is due soon. Count label beside the group heading. */
 export function CareTimeline({ title, count, items, empty, renderExtra, onItem }: {
   title: string;
@@ -25,7 +28,7 @@ export function CareTimeline({ title, count, items, empty, renderExtra, onItem }
         const last = n === items.length - 1;
         const body = (
           <View style={{ flexDirection: "row", gap: space.inset }}>
-            <View style={{ alignItems: "center", width: 12 }}>
+            <View style={{ alignItems: "center", width: RAIL }}>
               <View style={{ width: 8, height: 8, borderRadius: 9999, marginTop: 6, backgroundColor: it.soon ? "#EC8638" : colors.textTertiary }} />
               {last ? null : <View style={{ flex: 1, width: 1, backgroundColor: colors.borderSubtle, marginTop: 4 }} />}
             </View>
@@ -38,7 +41,7 @@ export function CareTimeline({ title, count, items, empty, renderExtra, onItem }
                 {it.pill ? <Chip label={it.pill} tone={it.soon ? "accent" : "neutral"} /> : null}
               </View>
               {it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}
-              {renderExtra ? <View style={{ marginTop: space.line }}>{renderExtra(it)}</View> : null}
+              {renderExtra ? <View style={{ marginTop: space.line, marginLeft: -(RAIL + space.inset) }}>{renderExtra(it)}</View> : null}
             </View>
           </View>
         );

@@ -8,4 +8,9 @@ describe("car detail timeline spacing", () => {
   it("the history block separates the timeline from the PDF button by the standard gap", () => {
     expect(page).toMatch(/<View style=\{\{ gap: space\.gap \}\}>\s*<CareTimeline\s+title="Service history"/);
   });
+  it("extras pull back by rail + gap so the invoice button lines up with the full-width PDF button", () => {
+    expect(tl).toContain("const RAIL = 12;");
+    expect(tl).toContain("marginLeft: -(RAIL + space.inset)");
+    expect(tl).toContain("width: RAIL");
+  });
 });
