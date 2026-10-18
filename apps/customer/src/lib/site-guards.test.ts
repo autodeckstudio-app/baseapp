@@ -29,6 +29,8 @@ describe("public site guards", () => {
     const t = readFileSync(join(site, "src/pages/terms.astro"), "utf8");
     const pr = readFileSync(join(site, "src/pages/privacy.astro"), "utf8");
     for (const x of [t, pr]) { expect(x).not.toMatch(/lawyer|Not published|DRAFT|Owner to confirm/i); expect(x).toContain("Shalin Sheth"); }
+    // Owner rule 18 Oct: a Club plan belongs to the account and works for any car in the garage.
+    expect(t).toContain("any car in your garage"); expect(t).not.toMatch(/car on the plan/i);
     expect(t).not.toMatch(/include GST/i); expect(t).toContain("30 days"); expect(t).toContain("autodeckstudio@gmail.com");
   });
   it("the app links Terms and Privacy to the published pages", () => {
