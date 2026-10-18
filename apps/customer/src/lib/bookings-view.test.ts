@@ -19,7 +19,10 @@ describe("bookings view helpers", () => {
 describe("Bookings screen holds only booking content", () => {
   const s = read("app/(tabs)/bookings/index.tsx");
   it("has no Explore, membership, referral or documents blocks", () => {
-    for (const w of ["Explore", "Membership", "referral", "Bring a friend", "PhotoCard", "Care map", "papers"]) expect(s).not.toContain(w);
+    for (const w of ["Explore", "Membership", "referral", "Bring a friend", "Care map", "papers"]) expect(s).not.toContain(w);
+  });
+  it("image cards are used only for the approved Combos block", () => {
+    expect(s.match(/<PhotoCard /g)?.length).toBe(1);
   });
   it("sections come in the agreed order", () => {
     const at = ["In the studio", "Waiting for your OK", "Next visit", "Book again", "No past visits"].map((k) => s.indexOf(k));

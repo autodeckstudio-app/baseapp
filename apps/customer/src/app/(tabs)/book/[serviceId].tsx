@@ -8,6 +8,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { pickDay } from "../../../lib/booking-ideas";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
 import { getAvailability, peekAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
@@ -29,7 +30,8 @@ const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 const durationText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 
 export default function BookServiceScreen() {
-  const { serviceId, extras: extrasParam } = useLocalSearchParams<{ serviceId: string; extras?: string }>();
+  const { serviceId, extras: extrasParam, day } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string }>();
+  const [dayMissed, setDayMissed] = useState(false);
   const router = useRouter();
   const auth = useAuth();
 
@@ -137,7 +139,11 @@ export default function BookServiceScreen() {
     return () => { alive = false; };
   }, [serviceId, service, retryTick, extraKey]);
 
-  useEffect(()=>{setSelectedDate(cur=>slots.some(s=>s.date===cur)?cur:slots[0]?.date??null);},[slots]);
+  useEffect(()=>{
+    const want = day ? pickDay([...new Set(slots.map(s=>s.date))], day, todayIST()) : null;
+    setDayMissed(!!day && slots.length>0 && !want);
+    setSelectedDate(cur=>want ?? (slots.some(s=>s.date===cur)?cur:slots[0]?.date??null));
+  },[slots,day]);
 
   async function handleSelectSlot(slot: AvailableSlot) {
     if (!selectedVehicle || !serviceId || sizeSaving) return;
@@ -238,6 +244,7 @@ export default function BookServiceScreen() {
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>
+        {dayMissed ? <T role="caption" tone="secondary">No free time {day === "weekend" ? "this weekend" : day} for this service. Showing the earliest day instead.</T> : null}
         {slotsError ? <Notice title="Can't load times" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /> : null}
         {slotsLoading ? (
           <View style={{ gap: space.line }}><View style={{ flexDirection: "row", gap: 8 }}><Skeleton height={40} width={110} /><Skeleton height={40} width={110} /></View><Skeleton height={150} /></View>

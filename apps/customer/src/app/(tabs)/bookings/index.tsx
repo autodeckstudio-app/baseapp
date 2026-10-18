@@ -5,6 +5,8 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DAYS, comboCards, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
@@ -17,6 +19,7 @@ import { getMyBookings } from "../../../lib/booking-service";
 
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
+import { PhotoCard } from "../../../ui/HomeView";
 import { CarThumb } from "../../../ui/CarThumb";
 import { NextVisitHero } from "../../../ui/NextVisitHero";
 import { sceneImagery } from "../../../lib/imagery";
@@ -61,6 +64,8 @@ export default function BookingsScreen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [extraNames, setExtraNames] = useState<Record<string, string>>({});
   const [svcs, setSvcs] = useState<Record<string, Service>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
+  useEffect(() => { void AsyncStorage.getItem("autodeck.activeVehicle").then(setActiveId); }, [cars]);
   useEffect(() => {
     if (auth.status !== "ready") return;
     const un = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
@@ -133,6 +138,15 @@ export default function BookingsScreen() {
   const nextElig = next ? getRescheduleEligibility(next) : null;
   const nextCancel = next ? cancelState(next, Date.now(), svcs[next.serviceId]?.category) : null;
   const rebook = recentDistinctServices(all, 3).filter((b) => svcs[b.serviceId] && !svcs[b.serviceId]!.priceOnRequest);
+  // Ideas for the empty page: only from this car's real history and the live catalogue. A block with no data is not drawn.
+  const carList = Object.values(cars);
+  const selCar = carList.find((c) => c.id === activeId) ?? carList[0] ?? null;
+  const lastId = lastServiceFor(all, selCar?.id ?? null);
+  const lastSvc = lastId ? svcs[lastId] : undefined;
+  const due = dueSoonFor(jobs as never, selCar?.id ?? null, svcs, Date.now());
+  const target = due?.service ?? (lastSvc && !lastSvc.priceOnRequest ? lastSvc : undefined);
+  const combos = comboCards(Object.values(svcs));
+  const carName = selCar ? `${selCar.make} ${selCar.model}` : "";
   const doCancel = async () => {
     if (!next) return;
     setCancelBusy(true);
@@ -220,7 +234,46 @@ export default function BookingsScreen() {
         </Pane>
       ) : null}
 
-      {seg === "upcoming" && rebook.length > 0 ? (
+      {seg === "upcoming" && !error && !next && lastSvc ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Book again</SectionTitle>
+          <VisitCard onPress={() => router.push(`/(tabs)/book/${lastSvc.id}`)} photo={<ServicePhoto service={lastSvc} height={64} />} title={lastSvc.name.replace(/^Kovalent\s+/i, "")} car={carName} when="Your last service" price="" chip={<Chip label="Book again" tone="accent" />} />
+        </View>
+      ) : null}
+
+      {seg === "upcoming" && !error && !next && due ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Due soon</SectionTitle>
+          <VisitCard onPress={() => router.push(`/(tabs)/book/${due.service.id}`)} photo={<ServicePhoto service={due.service} height={64} />} title={due.label} car={carName} when={due.days < 0 ? `Overdue ${-due.days} d` : due.days === 0 ? "Due today" : `Due in ${due.days} d`} price="" chip={<Chip label="Book" tone="accent" />} />
+        </View>
+      ) : null}
+
+      {seg === "upcoming" && !error && !next && target ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Earliest time for {target.name.replace(/^Kovalent\s+/i, "")}</SectionTitle>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {DAYS.map((d) => (
+              <Pressable key={d.key} accessibilityRole="button" accessibilityLabel={`${d.label}, ${target.name}`} onPress={() => router.push({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: target.id, day: d.key } })} style={{ flex: 1, minHeight: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", ...glassInner }}>
+                <T role="bodyStrong">{d.label}</T>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {seg === "upcoming" && !error && !next && combos.length > 0 ? (
+        <View style={{ gap: space.line }}>
+          <SectionTitle>Combos</SectionTitle>
+          {combos.map((c) => (
+            <View key={c.service.id} style={{ gap: 6 }}>
+              <PhotoCard hearted={false} title={c.service.name} pill="Book" onPress={() => router.push(`/(tabs)/book/${c.service.id}`)} media={<ServicePhoto service={c.service} height={400} />} />
+              <T role="caption" tone="secondary">{c.parts.join(" + ")}</T>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {seg === "upcoming" && !!next && rebook.length > 0 ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Book again</SectionTitle>
           {rebook.map((b) => {
