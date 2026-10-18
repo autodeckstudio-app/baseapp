@@ -11,7 +11,7 @@ const listing = {
 describe("anonymous car listing is an allowlist of safe fields", () => {
   const v = publicListingView(listing);
   it("has no price, owner info, description, plate, seller, notes or photos", () => {
-    for (const k of ["askingPrice", "reservePrice", "owners", "description", "insuranceValidTill", "registrationNumber", "sellerId", "sellerName", "sellerPhone", "adminNotes", "photoPaths", "rejectionReason", "tenantId"]) expect(v, k).not.toHaveProperty(k);
+    for (const k of ["askingPrice", "reservePrice", "owners", "description", "insuranceValidTill", "registrationNumber", "sellerId", "sellerName", "sellerPhone", "adminNotes", "photoPaths", "rejectionReason", "tenantId", "area"]) expect(v, k).not.toHaveProperty(k);
     expect(v.photoUrls).toEqual([]);
     expect(JSON.stringify(v)).not.toMatch(/9999999999|GJ01AB1234|850000/);
   });

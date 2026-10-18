@@ -1,8 +1,8 @@
 import type { CarListing } from "@autodeck/core";
 
 /** The only fields an anonymous visitor ever gets for a car. An explicit allowlist: new listing fields stay private until added here.
- *  No price, owner count, description, insurance date, seller, plate or photos (photo files are not plate-redacted, so none are sent). */
-export const PUBLIC_LISTING_FIELDS = ["id", "status", "make", "model", "variant", "year", "kmDriven", "fuel", "gearbox", "bodyType", "colour", "area", "createdAt"] as const;
+ *  No price, owner count, description, insurance date, seller, plate, area or photos (photo files are not plate-redacted, so none are sent). */
+export const PUBLIC_LISTING_FIELDS = ["id", "status", "make", "model", "variant", "year", "kmDriven", "fuel", "gearbox", "bodyType", "colour", "createdAt"] as const;
 
 export function publicListingView(l: CarListing): Record<string, unknown> {
   const src = l as unknown as Record<string, unknown>;

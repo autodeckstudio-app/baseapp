@@ -49,7 +49,7 @@ function Card({ l, onPress }: { l: CarListingView; onPress: () => void }) {
       <View style={{position:"absolute",top:14,left:14,backgroundColor:"rgba(10,10,12,.82)",borderRadius:9999,paddingHorizontal:12,paddingVertical:6}}><T role="caption" style={{color:"#FFFFFF"}}>{l.status==="reserved" ? "Reserved" : l.source==="studio" ? "Studio listing" : "Customer listing"}</T></View>
     </View>
     <View style={{padding:16,gap:12}}><View style={{flexDirection:"row",justifyContent:"space-between",gap:12}}><View style={{flex:1,gap:4}}><T role="heading">{l.make} {l.model}</T><T role="caption" tone="secondary">{l.year}{l.variant ? ` · ${l.variant}` : ""}</T></View><T role="heading" tone="accent">{hasCarPrice(l) ? inr(l.askingPrice) : "Ask price"}</T></View>
-      <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area}</T><T role="caption" tone="accent">View car</T></View>
+      <T role="caption" tone="tertiary" style={{textTransform:"capitalize"}}>{kmLabel(l.kmDriven)} · {l.fuel} · {l.gearbox}</T><View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{l.area ?? ""}</T><T role="caption" tone="accent">View car</T></View>
     </View>
   </Pressable>;
 }

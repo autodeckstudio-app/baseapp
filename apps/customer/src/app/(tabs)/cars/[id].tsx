@@ -70,7 +70,7 @@ export default function CarDetail() {
   if (car === undefined) return <Screen><Skeleton height={300} /><Skeleton height={120} /></Screen>;
   if (car === null) return <Screen><Notice title="Car not found" body="It may have been sold or taken down." action={<Button kind="quiet" label="Back to cars" onPress={() => router.replace("/(tabs)/cars")} />} /></Screen>;
 
-  const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ...(car.bodyType ? [["Body", car.bodyType] as [string, string]] : []), ...(typeof car.owners === "number" ? [["Owners", String(car.owners)] as [string, string]] : []), ["Colour", car.colour], ["Area", car.area], ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
+  const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ...(car.bodyType ? [["Body", car.bodyType] as [string, string]] : []), ...(typeof car.owners === "number" ? [["Owners", String(car.owners)] as [string, string]] : []), ["Colour", car.colour], ...(car.area ? [["Area", car.area] as [string, string]] : []), ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
 
   return (
     <Screen>
@@ -79,7 +79,7 @@ export default function CarDetail() {
           <Image key={u} source={{ uri: u }} resizeMode="cover" style={{ width: photoWidth, aspectRatio: 3 / 2, borderRadius: 24 }} />
         ))}
       </ScrollView>
-      <View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{car.photoUrls.length ? `${photoIndex+1} / ${car.photoUrls.length} photos · swipe to explore` : "No photos available"}</T><T role="caption" tone="tertiary">{car.area}</T></View>
+      <View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{car.photoUrls.length ? `${photoIndex+1} / ${car.photoUrls.length} photos · swipe to explore` : "No photos available"}</T><T role="caption" tone="tertiary">{car.area ?? ""}</T></View>
       <View style={{ gap: 8 }}>
         <Kicker tone="accent">{car.status === "reserved" ? "Reserved" : car.status === "live" ? "For sale" : car.status}</Kicker>
         <T role="title" numberOfLines={2}>{car.year} {car.make} {car.model}{car.variant ? ` ${car.variant}` : ""}</T>
