@@ -27,6 +27,9 @@ export function floatCard(night: boolean) {
       };
 }
 
+/** The page light: brand orange from the top edge, low opacity, fading to nothing. Replaces the studio photo behind pages. */
+export const LAMP_GLOW = "radial-gradient(90vmax 46vmax at 50% 0%, rgba(236,134,56,0.16), rgba(236,134,56,0) 70%)";
+
 export function floatHero(night: boolean, canvas: string) {
   const wash = night
     ? `linear-gradient(180deg, rgba(20,20,18,.10) 0%, rgba(40,40,38,.18) 34%, rgba(54,54,51,.78) 78%, ${canvas} 100%)`
@@ -37,23 +40,17 @@ export function floatHero(night: boolean, canvas: string) {
     left: 0,
     right: 0,
     height: 560,
-    backgroundImage: `${wash}, url(/hero-studio.jpg)`,
-    backgroundSize: "cover",
-    backgroundPosition: "center 34%",
-    backgroundRepeat: "no-repeat",
+    backgroundImage: `${LAMP_GLOW}, ${wash}`,
     pointerEvents: "none",
   } as const;
 }
 
-// Full-bleed studio photograph behind every screen, veiled so cards read.
+// Soft orange lamp light behind every screen, veiled so cards read.
 export function floatScene(night: boolean) {
   const veil = night
     ? "linear-gradient(180deg, rgba(28,28,28,.72) 0%, rgba(34,34,34,.86) 50%, rgba(40,40,40,.94) 100%)"
     : "linear-gradient(180deg, rgba(251,247,241,.45) 0%, rgba(251,247,241,.72) 50%, rgba(251,247,241,.90) 100%)";
   return {
-    backgroundImage: `${veil}, url(/hero-studio.jpg)`,
-    backgroundSize: "cover",
-    backgroundPosition: "center 38%",
-    backgroundRepeat: "no-repeat",
+    backgroundImage: `${LAMP_GLOW}, ${veil}`,
   } as const;
 }

@@ -10,3 +10,13 @@ describe('retained history routing contracts',()=>{
  it('global history does not require a garage car and shows orphan invoices',()=>{const s=source('app/(tabs)/garage/history.tsx');expect(s).toContain('listenToMyJobs');expect(s).toContain('listenToMyInvoices');expect(s).toContain('invoices.filter(inv=>!jobs.some');expect(s).not.toContain('if (!vehicleId || auth.status');});
  it('invoice uses immutable snapshots after vehicle removal',()=>{const s=source('app/(tabs)/bookings/invoice.tsx');expect(s).toContain('snapshots.vehicleSnapshot');expect(s).toContain('snapshots.customerSnapshot');});
 });
+
+import { readFileSync as _rf } from "node:fs";
+describe("licence photo names the customer", () => {
+  it("both callables get customerId from the signed-in uid, so staff and test sign-ins do not hit 'customerId is required'", () => {
+    const s = _rf("src/lib/vehicle-service.ts", "utf8");
+    expect(s).toContain("auth.currentUser?.uid");
+    expect(s).toContain("fn({ customerId, contentType })");
+    expect(s).toContain("({ customerId, path, publish: true })");
+  });
+});

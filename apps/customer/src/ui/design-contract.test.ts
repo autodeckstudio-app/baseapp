@@ -709,3 +709,10 @@ describe("Home ambient light is brand orange at low opacity",()=>{
     expect(Math.max(...alphas)).toBeLessThanOrEqual(0.2);
   });
 });
+
+describe("no studio photo behind app pages; the page light is the orange lamp glow",()=>{
+  it("float theme, admin float.css and orizon.css carry no hero-studio photo (login screens keep theirs)",()=>{
+    for (const f of ["../../packages/ui/src/theme/float.ts","../admin/src/experience/float.css","../admin/src/experience/orizon.css"]) expect(read(f)).not.toContain("hero-studio");
+    expect(read("../../packages/ui/src/theme/float.ts")).toContain("export const LAMP_GLOW");
+  });
+});

@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { getDownloadURL, ref as storageRef } from "firebase/storage";
-import { db, functions, storage } from "./firebase";
+import { auth, db, functions, storage } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle, VehicleCategory } from "@autodeck/core";
 
@@ -170,13 +170,16 @@ export async function uploadVehicleRc(vehicleId: string, blob: Blob, contentType
 
 /** Uploads the signed-in customer's driving licence photo and records it as licensePhotoUrl. Returns the storage path. */
 export async function uploadLicensePhoto(blob: Blob, contentType: string): Promise<string> {
+  // Always name the customer: the server infers it only for a "customer" sign-in, and staff or test sign-ins get "customerId is required".
+  const customerId = auth.currentUser?.uid;
+  if (!customerId) throw new Error("Sign in again to save your licence photo.");
   const fn = httpsCallable<
-    { contentType: string },
+    { customerId: string; contentType: string },
     { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
   >(functions, "issueLicensePhotoUploadUrl");
-  const { uploadUrl, path, requiredHeaders } = (await fn({ contentType })).data;
+  const { uploadUrl, path, requiredHeaders } = (await fn({ customerId, contentType })).data;
   const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
   if (!res.ok) throw new Error(`Licence upload failed (${res.status}).`);
-  await httpsCallable<{ path: string; publish: boolean }, { url: string }>(functions, "publishLicensePhoto")({ path, publish: true });
+  await httpsCallable<{ customerId: string; path: string; publish: boolean }, { url: string }>(functions, "publishLicensePhoto")({ customerId, path, publish: true });
   return path;
 }
