@@ -251,11 +251,18 @@ describe("home menu", () => {
 });
 
 describe("services filters", () => {
-  it("level 1 is the car-first picker: a category pill switches the picker in place, no card for the same group", () => {
+  it("Services is simple tiles: category tiles, then type tiles, then brand and product; no heading, no 3D car or goal chips", () => {
     const src = read("src/app/(tabs)/catalogue/index.tsx");
     expect(src).toContain("const cat = fromRoute ?? grp ?? undefined");
-    expect(src).toContain("onPress={() => choose(g.key, null)}");
-    expect(src).not.toContain("<GroupChips");
+    expect(src).not.toMatch(/What does your car need/);
+    expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
+    expect(src).toContain("<Screen appBar=");
+    expect(src).toContain("typePhoto(");
+  });
+  it("type tiles use a photo only where it shows that work, else an icon panel, never an unrelated stock picture", () => {
+    const src = read("src/lib/imagery.ts");
+    const block = src.slice(src.indexOf("const TYPE_TOPIC"), src.indexOf("export function typePhoto"));
+    for (const k of ["glass", "matte", "trim", "decon", "odour", "rust", "audio", "cameras", "mats", "interior-style", "exterior-style", "periodic-x"]) expect(block).not.toMatch(new RegExp(`(^|[ ,{])"?${k}"?:`));
   });
 });
 

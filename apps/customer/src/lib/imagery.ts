@@ -140,3 +140,21 @@ export function brandHero(_name: string): ImageSourcePropType | null {
 export function hasGaragePhoto(name: string): boolean {
   return GARAGE_PHOTO_TOPICS.includes(topicOf({ name, category: "garage" }));
 }
+
+/**
+ * Photo for a Services type tile, by type key. These are the licensed placeholder photos already in the app (see assets/imagery/REGISTER.md),
+ * used only where the picture really shows that work. A type with no honest match returns null and its tile shows a plain icon panel,
+ * never a stock image of something else. Swap an entry for a studio photo when one exists.
+ */
+const TYPE_TOPIC: Record<string, string | [string, number]> = {
+  exterior: "washExt", interior: "interior", complete: "roof", polish: "polish", "leather-care": "interior", "wheel-clean": "wheel", lamps: "headlight",
+  ceramic: "coating", graphene: "coating", wheels: "wheel", tyre: "wheel", leather: "interior", fabric: "interior", dashboard: "interior", "ppf-coat": "ppf",
+  "brand-film": "ppf", "matte-ppf": ["ppf", 1], colour: "wrap",
+  checks: "gInspect", periodic: "engine", battery: "battery", ac: "ac", tyres: "align", brakes: "wheel", suspension: "inspection", repairs: "repair",
+  wraps: "wrap", styling: "styling", film: "tint", alloys: "wheel", seats: "interior",
+};
+export function typePhoto(key: string): ImageSourcePropType | null {
+  const t = TYPE_TOPIC[key];
+  if (!t) return null;
+  return Array.isArray(t) ? pooledPhoto(t[0], t[1]) ?? null : TOPICS[t] ?? null;
+}
