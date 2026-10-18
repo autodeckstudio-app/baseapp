@@ -2,13 +2,14 @@ import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../l
 import { lastFinishedJob } from "../../../lib/care-due";
 import { buildCarePlan } from "../../../lib/care-plan";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
-import { FileUploader, DateField } from "../../../ui/inputs";
+import { FileUploader, DateField, SelectField } from "../../../ui/inputs";
+import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import { validateDocument, documentReference } from "../../../lib/document-validation";
 import { useState, useEffect, createElement } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
-import type { Invoice, Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
+import type { VehicleCategory, Invoice, Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -178,6 +179,17 @@ export default function VehicleDetailScreen() {
       .catch(()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [id, auth.status,retryTick]);
 
+  const [typePick, setTypePick] = useState<VehicleCategory | "">("");
+  const [typeSaving, setTypeSaving] = useState(false);
+  async function saveType() {
+    if (!id || !typePick) return;
+    setTypeSaving(true);
+    setActionError(null);
+    try { await updateVehicle({ vehicleId: id, category: typePick }); }
+    catch (e) { setActionError(e instanceof Error ? e.message : "The car type could not be saved. Try again."); }
+    finally { setTypeSaving(false); }
+  }
+
   async function handleSave() {
     if (!id) return;
     setSaving(true);
@@ -278,6 +290,16 @@ export default function VehicleDetailScreen() {
         </View>
       }
     >
+      {!vehicle.category ? (
+        <Pane pad="inset">
+          <View style={{ gap: space.line }}>
+            <Kicker>Add car type</Kicker>
+            <T role="caption" tone="secondary">Saved once with this car. Prices and booking use it from now on.</T>
+            <SelectField label="Car type" value={typePick} placeholder="Choose type" options={VEHICLE_SIZES} onChange={(v) => setTypePick(v as VehicleCategory)} />
+            <Button label="Save car type" busy={typeSaving} disabled={!typePick} onPress={() => void saveType()} />
+          </View>
+        </Pane>
+      ) : null}
       {true ? (
         <>
           <CarOverview

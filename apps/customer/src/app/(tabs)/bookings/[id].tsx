@@ -173,6 +173,8 @@ export default function BookingDetailScreen() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const store = (globalThis as any).localStorage as { getItem(k: string): string | null; setItem(k: string, v: string): void } | undefined;
+  const calKey = `autodeck.cal.${id}`;
+  const [calAdded, setCalAdded] = useState<boolean>(() => { try { return store?.getItem(calKey) === "1"; } catch { return false; } });
   const [pushAsked, setPushAsked] = useState<boolean>(() => { try { return store?.getItem(PUSH_ASKED_KEY) === "1"; } catch { return false; } });
   const [pushBusy, setPushBusy] = useState(false);
   const [pushResult, setPushResult] = useState<"on" | "denied" | null>(null);
@@ -297,8 +299,12 @@ export default function BookingDetailScreen() {
       {!walkIn && (booking.status === "PENDING" || booking.status === "CONFIRMED") ? (
         <Button
           kind="quiet"
-          label="Add to calendar"
+          label={calAdded ? "Added to calendar" : "Add to calendar"}
+          disabled={calAdded}
           onPress={() => {
+            if (calAdded) return;
+            try { store?.setItem(calKey, "1"); } catch { /* private mode */ }
+            setCalAdded(true);
             const name = svc?.name ?? "AutoDeck visit";
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const doc = (globalThis as any).document;

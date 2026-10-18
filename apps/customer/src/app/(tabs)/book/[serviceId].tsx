@@ -1,7 +1,4 @@
-import { ensureVehicleSize } from "../../../lib/saved-size";
 import { CarThumb } from "../../../ui/CarThumb";
-import { SelectField } from "../../../ui/inputs";
-import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -147,14 +144,8 @@ export default function BookServiceScreen() {
 
   async function handleSelectSlot(slot: AvailableSlot) {
     if (!selectedVehicle || !serviceId || sizeSaving) return;
-    if (!selectedCategory) { setSizeError("Choose your car size before continuing."); return; }
+    if (!selectedCategory || !selectedVehicle.category) { setSizeError("Add your car type to book. It is saved once with the car."); return; }
     const vehicleId=selectedVehicle.id;
-    if(!selectedVehicle.category){
-      setSizeSaving(true);setSizeError(null);
-      try{await ensureVehicleSize(selectedVehicle,selectedCategory,updateVehicle);}
-      catch(e){setSizeError(e instanceof Error?e.message:"Could not save the car size. Try again.");setSizeSaving(false);return;}
-      setSizeSaving(false);
-    }
     router.push({
       pathname: "/(tabs)/book/confirm",
       params: {
@@ -214,11 +205,9 @@ export default function BookServiceScreen() {
       </View>
 
       {selectedVehicle && !selectedVehicle.category ? <View style={{gap:space.line}}>
-        <Kicker>Save your car size</Kicker>
-        <T role="caption" tone="secondary">Choose once. We save it with this car for future bookings.</T>
-        <SelectField label="Car size" value={selectedCategory??""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>setSelectedCategory(v as VehicleCategory)}/>
-        {sizeError?<T role="caption" tone="danger">{sizeError}</T>:null}
-        {sizeSaving?<T role="caption">Saving your car size...</T>:null}
+        <Kicker>Car type needed</Kicker>
+        <T role="caption" tone="secondary">This car has no type saved yet. Add it once in your garage, then book.</T>
+        <Button label="Add car type" kind="quiet" onPress={() => router.push(`/(tabs)/garage/${selectedVehicle.id}`)} />
       </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{segmentLabel(selectedVehicle.category)} · Saved with your car</T>:null}
 
       {service.priceOnRequest !== true && eligibleExtras(service, catalogue).length > 0 ? (
