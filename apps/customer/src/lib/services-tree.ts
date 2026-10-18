@@ -1,12 +1,72 @@
-import { COATING_BRANDS, PPF_BRANDS, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
+import { COATING_BRANDS, PPF_BRANDS, type MenuGroup, type Service } from "@autodeck/core";
 
-/** One level of the Services drill-down. A branch opens another level; a leaf is a bookable service. */
+/** One level of the Services drill-down. A branch opens another level, a leaf is a bookable service, an enquiry is a market type we do not list yet. */
 export type TreeNode =
   | { kind: "branch"; key: string; label: string; blurb?: string; children: TreeNode[] }
-  | { kind: "leaf"; service: Service; section?: string };
+  | { kind: "leaf"; service: Service }
+  | { kind: "enquiry"; key: string; label: string; blurb?: string };
+
+interface TypeDef {
+  key: string;
+  label: string;
+  blurb?: string;
+  /** Catalogue services (by id) that belong to this type. */
+  ids?: string[];
+  /** Fallback match for services whose id is not listed. */
+  test?: (s: Service) => boolean;
+  /** Split the type's services by brand before showing products. */
+  byBrand?: readonly string[];
+  /** A real market type with no AutoDeck service behind it. Shown as "Ask the studio", never bookable. */
+  enquiryOnly?: true;
+}
+
+// The type vocabulary comes from the sourced India-market research (docs/SERVICE-TAXONOMY.md). Market existence is not AutoDeck stock:
+// only types with a real catalogue service are bookable. The rest are enquiry-only rows with no price, term or warranty.
+const E = (key: string, label: string, blurb?: string): TypeDef => ({ key, label, ...(blurb ? { blurb } : {}), enquiryOnly: true });
+
+export const SERVICE_TYPES: Record<string, TypeDef[]> = {
+  wash: [
+    { key: "exterior", label: "Exterior wash", blurb: "Foam and detail washes.", ids: ["menu-wash-foam", "menu-wash-exterior"], test: (s) => s.category === "washing" },
+    { key: "interior", label: "Interior cleaning", blurb: "Vacuum, steam and conditioning.", ids: ["menu-wash-interior"] },
+    { key: "complete", label: "Complete detailing", blurb: "Interior and exterior together.", ids: ["menu-wash-full"] },
+    E("decon", "Paint decontamination"), E("polish", "Polish and paint correction"), E("glass-clean", "Glass cleaning and water spots"),
+    E("leather-care", "Leather cleaning and conditioning"), E("wheel-clean", "Wheel and tyre cleaning"), E("trim-restore", "Trim restoration"),
+    E("lamps", "Headlight and tail-light restoration"), E("odour", "Odour treatment"),
+  ],
+  coatings: [
+    { key: "ceramic", label: "Ceramic paint coating", blurb: "Gloss paint protection, by brand.", ids: ["menu-coat-autodeck-1", "menu-coat-autodeck-2", "menu-coat-fireball-1", "menu-coat-fireball-2", "menu-coat-fireball-3", "menu-coat-kovalent-prolong", "menu-coat-kovalent-borophene", "menu-coat-3m-ceramic"], test: (s) => s.category === "ceramic", byBrand: COATING_BRANDS },
+    { key: "graphene", label: "Graphene paint coating", blurb: "Graphene-based paint protection.", ids: ["menu-coat-kovalent-graphene"], byBrand: COATING_BRANDS },
+    { key: "glass", label: "Glass protection", blurb: "Water-repellent coating for glass.", ids: ["menu-coat-glass"] },
+    { key: "wheels", label: "Wheel and alloy protection", blurb: "Coating for wheel faces and barrels.", ids: ["menu-coat-wheels"] },
+    { key: "leather", label: "Leather protection", blurb: "Protective coating for leather.", ids: ["menu-coat-leather"] },
+    { key: "fabric", label: "Fabric and upholstery protection", blurb: "Stain-repellent coating for fabric.", ids: ["menu-coat-fabric"] },
+    { key: "trim", label: "Exterior plastic and trim protection", blurb: "Restores faded trim and seals it.", ids: ["menu-coat-trim"], test: (s) => s.category === "coating" },
+    E("matte", "Matte paint protection"), E("tyre", "Tyre protection"), E("dashboard", "Dashboard and interior trim protection"), E("ppf-coat", "PPF coating and aftercare"),
+  ],
+  ppf: [
+    { key: "brand-film", label: "Film by brand", blurb: "Garware, XPEL, LLumar and 3M, by coverage.", test: (s) => s.category === "ppf" && s.priceOnRequest !== true, byBrand: PPF_BRANDS },
+    { key: "colour", label: "Colour film", blurb: "Coloured and black films. Priced after we see the car.", ids: ["menu-ppf-colour"], test: (s) => s.category === "ppf" && s.priceOnRequest === true },
+    E("matte-ppf", "Matte and satin film"),
+  ],
+  garage: [
+    { key: "checks", label: "Checks and diagnostics", blurb: "Multi-point health check.", ids: ["menu-garage-inspection"], test: (s) => s.category === "garage" || s.category === "inspection" || s.category === "other" },
+    { key: "tyres", label: "Wheels and tyres", blurb: "Alignment and balancing.", ids: ["menu-garage-alignment"] },
+    { key: "battery", label: "Battery and electrical", blurb: "Battery health and charging test.", ids: ["menu-garage-battery"] },
+    { key: "ac", label: "AC service", blurb: "Cooling, gas level and leak check.", ids: ["menu-garage-ac"] },
+    { key: "repairs", label: "Repairs and inspection-led work", blurb: "Tell us what is wrong. We inspect, then quote.", ids: ["menu-garage-repairs"] },
+    E("periodic", "Periodic service"), E("brakes", "Brakes"), E("suspension", "Suspension"), E("rust", "Anti-rust protection"),
+  ],
+  mods: [
+    { key: "wraps", label: "Vinyl wraps and graphics", blurb: "Full and partial wraps. Quoted after seeing the car.", ids: ["menu-mods-wrap"] },
+    { key: "styling", label: "Accessories and styling", blurb: "Quoted per job.", ids: ["menu-mods-styling"], test: (s) => s.category === "modifications" },
+    { key: "film", label: "Window film (fitment check first)", blurb: "Quoted by car and film, after a legality and fitment check.", ids: ["menu-mods-tint"], test: (s) => s.category === "tinting" },
+    E("audio", "Audio and infotainment"), E("cameras", "Cameras and parking assistance"), E("seats", "Seats and upholstery"),
+    E("interior-style", "Interior styling"), E("exterior-style", "Exterior styling"), E("alloys", "Alloy upgrades and refinishing"), E("mats", "Mats and fitted accessories"),
+  ],
+};
 
 const byPrice = (a: Service, b: Service) => Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice;
-const leaves = (xs: Service[], section?: (s: Service) => string): TreeNode[] => [...xs].sort(byPrice).map((service) => ({ kind: "leaf" as const, service, ...(section ? { section: section(service) } : {}) }));
+const leaves = (xs: Service[]): TreeNode[] => [...xs].sort(byPrice).map((service) => ({ kind: "leaf" as const, service }));
 
 function byBrand(xs: Service[], order: readonly string[]): TreeNode[] {
   const m = new Map<string, Service[]>();
@@ -15,30 +75,30 @@ function byBrand(xs: Service[], order: readonly string[]): TreeNode[] {
   return [...m.entries()].sort((a, b) => rank(a[0]) - rank(b[0])).map(([k, v]) => ({ kind: "branch" as const, key: k, label: k, children: leaves(v) }));
 }
 
+/** The type a service belongs to: listed id first, then the type's fallback test, else the group's last bookable type so nothing drops out of the app. */
+export function typeKeyOf(groupKey: string, s: Service): string | null {
+  const defs = SERVICE_TYPES[groupKey];
+  if (!defs) return null;
+  const real = defs.filter((d) => !d.enquiryOnly);
+  return (real.find((d) => d.ids?.includes(s.id)) ?? real.find((d) => d.test?.(s)) ?? real[real.length - 1])?.key ?? null;
+}
+
 /**
- * The Services hierarchy for one menu group, built only from what the catalogue holds:
- *  Coatings: type (Ceramic and graphene | Add-ons) > brand > product (1-year, 2-year, ...)
- *  PPF: brand > product (coverage tiers)
- *  Garage: one list in sections (a handful of items, nothing to drill into)
- *  Wash, Modifications, Pickup: a short flat list
- * Types the catalogue has no services for (dashboard, tyre care ...) do not appear; they show up once such services exist.
+ * The Services hierarchy for one menu group: type > (brand) > product. Types with services are bookable; market types with no
+ * service come last as enquiry-only rows. Groups without a type list (pickup) are a flat list.
  */
 export function buildTree(group: Pick<MenuGroup, "key" | "categories">, all: Service[]): TreeNode[] {
   const xs = all.filter((s) => (group.categories as string[]).includes(s.category));
-  if (group.key === "coatings") {
-    const ceramic = xs.filter((s) => s.category === "ceramic");
-    const addons = xs.filter((s) => s.category !== "ceramic");
-    const out: TreeNode[] = [];
-    if (ceramic.length) out.push({ kind: "branch", key: "ceramic", label: "Ceramic and graphene", blurb: "Long-life paint protection, by brand.", children: byBrand(ceramic, COATING_BRANDS) });
-    if (addons.length) out.push({ kind: "branch", key: "addons", label: "Surface add-ons", blurb: "Glass, wheels, leather, fabric and trim.", children: leaves(addons) });
-    return out;
+  const defs = SERVICE_TYPES[group.key];
+  if (!defs) return leaves(xs);
+  const offered: TreeNode[] = [];
+  for (const d of defs.filter((x) => !x.enquiryOnly)) {
+    const mine = xs.filter((s) => typeKeyOf(group.key, s) === d.key);
+    if (mine.length === 0) continue;
+    offered.push({ kind: "branch", key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}), children: d.byBrand ? byBrand(mine, d.byBrand) : leaves(mine) });
   }
-  if (group.key === "ppf") return byBrand(xs, PPF_BRANDS);
-  if (group.key === "garage") {
-    const rank = (s: Service) => GARAGE_SECTIONS.indexOf(garageSectionOf(s.id));
-    return [...xs].sort((a, b) => rank(a) - rank(b) || byPrice(a, b)).map((service) => ({ kind: "leaf" as const, service, section: garageSectionOf(service.id) }));
-  }
-  return leaves(xs);
+  const asks: TreeNode[] = defs.filter((d) => d.enquiryOnly).map((d) => ({ kind: "enquiry" as const, key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}) }));
+  return [...offered, ...asks];
 }
 
 /** Descend by path keys; a branch with exactly one branch child is opened automatically so nobody taps through a pointless level. */
@@ -59,7 +119,7 @@ export function resolvePath(tree: TreeNode[], path: string[]): { nodes: TreeNode
 
 /** Services under a node, for the "n options, from price" line on a tile. */
 export function leafServices(n: TreeNode): Service[] {
-  return n.kind === "leaf" ? [n.service] : n.children.flatMap(leafServices);
+  return n.kind === "leaf" ? [n.service] : n.kind === "branch" ? n.children.flatMap(leafServices) : [];
 }
 
 /** Path to the first branch with this label, for old ?brand= links. */
@@ -71,4 +131,23 @@ export function pathToLabel(tree: TreeNode[], label: string, prefix: string[] = 
     if (sub) return sub;
   }
   return null;
+}
+
+/** Words people type that name a type rather than a product. A service matches when its name, brand or type label has the word, or an alias points at its type. */
+export const TYPE_ALIASES: Record<string, string[]> = {
+  graphene: ["graphene"], ceramic: ["ceramic", "nano"], glass: ["glass", "windshield", "windscreen"], wheels: ["wheel", "alloy", "rim"],
+  leather: ["leather"], fabric: ["fabric", "upholstery", "seat cover"], trim: ["trim", "plastic", "bumper"], tyres: ["tyre", "tire", "alignment", "balancing"],
+  battery: ["battery", "electrical"], ac: ["ac", "a/c", "air con", "cooling"], checks: ["check", "inspection", "diagnostic"], wraps: ["wrap", "vinyl", "colour change", "color change"],
+  film: ["tint", "window film", "sun film"], colour: ["colour", "color", "black ppf"], exterior: ["wash", "foam"], interior: ["interior", "vacuum"], complete: ["detail", "detailing"],
+};
+
+export function matchesQuery(s: Service, q: string): boolean {
+  if (`${s.name} ${s.brand ?? ""}`.toLowerCase().includes(q)) return true;
+  const groups = Object.keys(SERVICE_TYPES);
+  for (const g of groups) {
+    const key = typeKeyOf(g, s);
+    if (!key || !SERVICE_TYPES[g]!.some((d) => !d.enquiryOnly && d.key === key && (d.ids?.includes(s.id) || d.test?.(s)))) continue;
+    if ((TYPE_ALIASES[key] ?? []).some((a) => a.includes(q) || q.includes(a))) return true;
+  }
+  return false;
 }

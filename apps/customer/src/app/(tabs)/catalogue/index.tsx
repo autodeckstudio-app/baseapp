@@ -16,7 +16,7 @@ import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, GroupChips, groupCategories, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
 import { Button, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
-import { buildTree, leafServices, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
+import { buildTree, leafServices, matchesQuery, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
 
 // Old "?need=" deep links map onto a menu group.
 const NEED_TO_GROUP: Record<string, string> = { wash: "wash", shine: "coatings", ceramic: "coatings", ppf: "ppf", tint: "mods", check: "garage" };
@@ -80,7 +80,7 @@ export default function CatalogueScreen() {
   const go = (params: Record<string, string>) => router.push({ pathname: "/(tabs)/catalogue", params });
   const t = q.trim().toLowerCase();
   const searching = t.length > 0;
-  const found = searching ? all.filter((x) => `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)).sort(byPrice) : [];
+  const found = searching ? all.filter((x) => matchesQuery(x, t)).sort(byPrice) : [];
   const level: 1 | 2 = !catGroup ? 1 : 2;
   const soleLeaf = nodes.length === 1 && nodes[0]!.kind === "leaf" ? nodes[0]!.service.id : undefined;
   // A category with exactly one service has nothing to choose from: open it directly.
@@ -111,12 +111,13 @@ export default function CatalogueScreen() {
       const from = pricedFrom(xs);
       return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">{[`${xs.length} ${xs.length === 1 ? "option" : "options"}`, from].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="heading" tone="tertiary">{"\u203A"}</T>} onPress={() => go({ cat: cat!, p: [...trail.map((t) => t.key), n.key].join(",") })} />;
     }
+    if (n.kind === "enquiry") return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">Ask the studio. Not bookable online.</T>} trailing={<T role="caption" tone="tertiary">Ask</T>} onPress={() => router.push("/(tabs)/help")} />;
     const sv = n.service;
     const price = pricedLabel(sv);
     return <Row key={sv.id} last={last} title={sv.name.replace(/^Kovalent\s+/i, "")} detail={<T role="caption" tone="secondary">{[duration(sv.estimatedDurationMinutes), sv.warrantyLabel ?? null].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="bodyStrong">{price === "Quote on request" || !price ? "Consult" : price}</T>} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} />;
   };
   const renderNodes = (ns: TreeNode[]) => {
-    const sectionOf = (n: TreeNode) => (n.kind === "leaf" ? n.section ?? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
+    const sectionOf = (n: TreeNode) => (n.kind === "enquiry" ? "Ask the studio" : n.kind === "leaf" ? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
     const order: string[] = [];
     for (const n of ns) { const k = sectionOf(n); if (!order.includes(k)) order.push(k); }
     return order.map((k) => {
