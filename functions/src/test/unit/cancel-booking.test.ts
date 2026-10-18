@@ -144,6 +144,14 @@ describe("every bookable bay type has a bay in the studio seed", () => {
   });
 });
 
+describe("studio layout: 6 bays as lanes (owner 18 Oct 6:25)", () => {
+  it("seed has 2 wash, 2 protection, 2 general bays", () => {
+    const seed = src("scripts/seed-studio.ts");
+    const n = (t: string) => (seed.match(new RegExp(`bayType: "${t}"`, "g")) ?? []).length;
+    expect([n("wash"), n("protection"), n("general")]).toEqual([2, 2, 2]);
+  });
+});
+
 import { extrasProblem } from "../../lib/booking-lines.js";
 describe("server refuses a bundle together with what it includes", () => {
   const svc = (id: string, name: string) => ({ id, name, active: true, requiredBayType: "wash", priceOnRequest: false }) as never;
@@ -153,8 +161,19 @@ describe("server refuses a bundle together with what it includes", () => {
     expect(extrasProblem(full, [ext], { gift: false })).toContain("Full detail wash already includes Exterior detail wash");
     expect(extrasProblem(ext, [full], { gift: false })).toContain("already includes");
   });
-  it("still allows Foam with Exterior alone", () => {
-    expect(extrasProblem(foam, [ext], { gift: false })).toBeNull();
+  it("owner 18 Oct 6:26 PM: Foam cannot go with Exterior or Full, either order", () => {
+    expect(extrasProblem(foam, [ext], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(ext, [foam], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(foam, [full], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(foam, [int], { gift: false })).toBeNull();
+  });
+  it("two ceramic coatings and two PPF tiers or brands are refused; a coating with its add-on is fine", () => {
+    const p = (id: string) => ({ id, name: id, active: true, requiredBayType: "protection", priceOnRequest: false }) as never;
+    expect(extrasProblem(p("menu-coat-autodeck-1"), [p("menu-coat-autodeck-2")], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(p("menu-coat-fireball-1"), [p("menu-coat-3m-ceramic")], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(p("menu-ppf-xpel-full-front"), [p("menu-ppf-xpel-full-body")], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(p("menu-ppf-xpel-full-front"), [p("menu-ppf-3m-full-front")], { gift: false })).toContain("cannot be booked together");
+    expect(extrasProblem(p("menu-coat-fireball-1"), [p("menu-coat-glass")], { gift: false })).toBeNull();
   });
 });
 

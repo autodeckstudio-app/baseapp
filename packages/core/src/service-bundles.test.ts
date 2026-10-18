@@ -24,3 +24,15 @@ describe("a bundle never costs more than its parts, for any car size", () => {
     expect(priceFor("menu-wash-exterior", "hatchback") + priceFor("menu-wash-interior", "hatchback")).toBe(600000);
   });
 });
+
+import { conflictingPair } from "./service-bundles";
+describe("services that cannot be booked together (owner relay, 18 Oct 6:26 PM)", () => {
+  it("foam with exterior or full; two ceramics; two PPF; not a coating with its add-on", () => {
+    expect(conflictingPair(["menu-wash-foam", "menu-wash-exterior"])).not.toBeNull();
+    expect(conflictingPair(["menu-wash-full", "menu-wash-foam"])).not.toBeNull();
+    expect(conflictingPair(["menu-coat-autodeck-1", "menu-coat-autodeck-2"])).not.toBeNull();
+    expect(conflictingPair(["menu-ppf-xpel-full-front", "menu-ppf-3m-high-impact"])).not.toBeNull();
+    expect(conflictingPair(["menu-coat-fireball-1", "menu-coat-glass"])).toBeNull();
+    expect(conflictingPair(["menu-wash-foam", "menu-wash-interior"])).toBeNull();
+  });
+});

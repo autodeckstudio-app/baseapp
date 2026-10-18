@@ -1,4 +1,4 @@
-import { SERVICE_INCLUDES, bundleFor, redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
+import { SERVICE_INCLUDES, bundleFor, conflictingPair, redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
 import { calculatePrice, calculateTax, type CalculatePriceInput } from "./pricing.js";
 
 /** Most extra services on top of the main one (so 5 lines in all). */
@@ -30,6 +30,11 @@ export function extrasProblem(primary: Service, extras: Service[], opts: { gift:
   if (overlap) {
     const nameOf = (id: string) => [primary, ...extras].find((x) => x.id === id)?.name ?? "that service";
     return `${nameOf(overlap[0])} already includes ${nameOf(overlap[1])}. Remove ${nameOf(overlap[1])} from this booking.`;
+  }
+  const clash = conflictingPair(all.map((x) => x.id));
+  if (clash) {
+    const nameOf = (id: string) => all.find((x) => x.id === id)?.name ?? "that service";
+    return `${nameOf(clash[0])} and ${nameOf(clash[1])} cannot be booked together. Choose one.`;
   }
   return null;
 }

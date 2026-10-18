@@ -68,9 +68,9 @@ const studioConfig: Omit<StudioConfig, "updatedAt"> = {
     { id: "bay-wash-2", tenantId: FIRST_TENANT_ID, studioId: FIRST_STUDIO_ID, name: "Wash Bay 2", bayType: "wash", active: true },
     { id: "bay-protection-1", tenantId: FIRST_TENANT_ID, studioId: FIRST_STUDIO_ID, name: "Protection Bay 1", bayType: "protection", active: true },
     { id: "bay-protection-2", tenantId: FIRST_TENANT_ID, studioId: FIRST_STUDIO_ID, name: "Protection Bay 2", bayType: "protection", active: true },
-    { id: "bay-protection-3", tenantId: FIRST_TENANT_ID, studioId: FIRST_STUDIO_ID, name: "Protection Bay 3", bayType: "protection", active: true },
     // Inspection, tinting, alignment, AC, battery and wraps use the "general" bay type. With no active general bay the booking page shows "Fully booked" for them.
     { id: "bay-general-1", tenantId: FIRST_TENANT_ID, studioId: FIRST_STUDIO_ID, name: "General Bay 1", bayType: "general", active: true },
+    { id: "bay-general-2", tenantId: FIRST_TENANT_ID, studioId: FIRST_STUDIO_ID, name: "General Bay 2", bayType: "general", active: true },
   ],
 };
 

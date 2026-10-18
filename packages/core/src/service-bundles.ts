@@ -7,8 +7,31 @@ export const SERVICE_INCLUDES: Readonly<Record<string, readonly string[]>> = {
 /** True when `big` already contains `small`. */
 export const includesService = (big: string, small: string): boolean => (SERVICE_INCLUDES[big] ?? []).includes(small);
 
-/** Two services overlap when either one contains the other. */
-export const servicesOverlap = (a: string, b: string): boolean => includesService(a, b) || includesService(b, a);
+const COAT_ADDONS = new Set(["glass", "wheels", "leather", "fabric", "trim"]);
+/** Families where only one can be booked in a visit (owner, 18 Oct 6:26 PM): two ceramic coatings, two PPF tiers or brands (so also Ceramic 1-year with 2-year). Surface add-ons are not coatings. */
+const exclusiveFamily = (id: string): string | null => {
+  if (id.startsWith("menu-ppf-")) return "ppf";
+  if (id.startsWith("menu-coat-") && !COAT_ADDONS.has(id.slice("menu-coat-".length))) return "ceramic";
+  return null;
+};
+/** Foam wash cannot be booked with Exterior detail wash or Full detail wash (owner, 18 Oct 6:26 PM). */
+const FOAM_CLASH = new Set(["menu-wash-exterior", "menu-wash-full"]);
+
+/** Pairs in a visit that cannot be booked together, though neither contains the other. */
+export function conflictingPair(ids: readonly string[]): [string, string] | null {
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const a = ids[i]!, b = ids[j]!;
+    if (a === b) continue;
+    const fa = exclusiveFamily(a);
+    if (fa && fa === exclusiveFamily(b)) return [a, b];
+    if ((a === "menu-wash-foam" && FOAM_CLASH.has(b)) || (b === "menu-wash-foam" && FOAM_CLASH.has(a))) return [a, b];
+  }
+  return null;
+}
+export const conflicts = (a: string, b: string): boolean => conflictingPair([a, b]) !== null;
+
+/** Two services overlap when either one contains the other, or they cannot be booked together. */
+export const servicesOverlap = (a: string, b: string): boolean => includesService(a, b) || includesService(b, a) || conflicts(a, b);
 
 /** Pairs in a visit (main service first, then extras) where one already contains the other: [bundleId, includedId]. */
 export function redundantPairs(ids: readonly string[]): Array<[string, string]> {
