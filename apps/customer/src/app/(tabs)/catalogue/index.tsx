@@ -15,7 +15,8 @@ import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, GroupChips, groupCategories, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
-import { Button, Kicker, Notice, Screen, Skeleton, T, rupees } from "../../../ui/kit";
+import { Button, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
+import { buildTree, leafServices, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
 
 // Old "?need=" deep links map onto a menu group.
 const NEED_TO_GROUP: Record<string, string> = { wash: "wash", shine: "coatings", ceramic: "coatings", ppf: "ppf", tint: "mods", check: "garage" };
@@ -35,7 +36,7 @@ function duration(min: number): string {
 export default function CatalogueScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
-  const { need, cat: catParam, brand: brandParam } = useLocalSearchParams<{ need?: string; cat?: string; brand?: string }>();
+  const { need, cat: catParam, brand: brandParam, p: pathParam } = useLocalSearchParams<{ need?: string; cat?: string; brand?: string; p?: string }>();
   const [services, setServices] = useState<Service[] | null>(() => peekCatalogue());
   const [error, setError] = useState(false);
   const pricingVehicle = usePricingVehicle();
@@ -68,34 +69,22 @@ export default function CatalogueScreen() {
   const byPrice = (a: Service, b: Service) => Number(a.priceOnRequest === true) - Number(b.priceOnRequest === true) || a.basePrice - b.basePrice;
   const inGroup = (g: MenuGroup) => all.filter((x) => (g.categories as string[]).includes(x.category));
   const visibleGroups = MENU_GROUPS.filter((g) => inGroup(g).length > 0 && (!grp || g.key === grp));
-  // Level 2: brands for coatings and PPF, otherwise a flat list. Items without a brand go under "More".
-  const groups = useMemo(() => {
-    if (!catGroup) return [] as [string, Service[]][];
-    const xs = all.filter((x) => (catGroup.categories as string[]).includes(x.category));
-    if (catGroup.key === "garage") {
-      const gm = new Map<string, Service[]>();
-      for (const sv of xs) { const k = garageSectionOf(sv.id); gm.set(k, [...(gm.get(k) ?? []), sv]); }
-      return GARAGE_SECTIONS.filter((k) => gm.has(k)).map((k) => [k, [...(gm.get(k) ?? [])].sort(byPrice)] as [string, Service[]]);
-    }
-    if (!catGroup.byBrand) return [[catGroup.label, [...xs].sort(byPrice)]] as [string, Service[]][];
-    const order: string[] = catGroup.key === "ppf" ? [...PPF_BRANDS] : [...COATING_BRANDS];
-    const m = new Map<string, Service[]>();
-    for (const sv of xs) { const k = sv.brand?.trim() || "More"; m.set(k, [...(m.get(k) ?? []), sv]); }
-    const rank = (k: string) => { const i = order.indexOf(k); return i < 0 ? 99 : i; };
-    return [...m.entries()].map(([k, v]) => [k, [...v].sort(byPrice)] as [string, Service[]]).sort((a, b) => rank(a[0]) - rank(b[0]));
-  }, [all, cat]);
+  const tree = useMemo(() => (catGroup ? buildTree(catGroup, all) : []), [all, cat]);
+  const pathKeys = useMemo(() => {
+    const fromParam = (pathParam ?? "").split(",").filter(Boolean);
+    if (fromParam.length) return fromParam;
+    return brand ? pathToLabel(tree, brand) ?? [] : [];
+  }, [pathParam, brand, tree]);
+  const { nodes, trail } = useMemo(() => resolvePath(tree, pathKeys), [tree, pathKeys]);
 
   const go = (params: Record<string, string>) => router.push({ pathname: "/(tabs)/catalogue", params });
   const t = q.trim().toLowerCase();
   const searching = t.length > 0;
   const found = searching ? all.filter((x) => `${x.name} ${x.brand ?? ""}`.toLowerCase().includes(t)).sort(byPrice) : [];
-  // Skip a pointless level: one group means go straight to its products.
-  const level: 1 | 2 | 3 = !catGroup ? 1 : brand || groups.length === 1 ? 3 : 2;
-  const groupKey = brand ?? groups[0]?.[0];
-  const products = level === 3 ? (groups.find(([k]) => k === groupKey)?.[1] ?? []) : [];
-
+  const level: 1 | 2 = !catGroup ? 1 : 2;
+  const soleLeaf = nodes.length === 1 && nodes[0]!.kind === "leaf" ? nodes[0]!.service.id : undefined;
   // A category with exactly one service has nothing to choose from: open it directly.
-  const soleId = !searching && !!fromRoute && level === 3 && !brand && products.length === 1 ? products[0]?.id : undefined;
+  const soleId = !searching && !!fromRoute && catGroup && !!soleLeaf ? soleLeaf : undefined;
   useEffect(() => { if (soleId) router.replace(`/(tabs)/catalogue/${soleId}`); }, [soleId, router]);
 
   const tile = (key: string, title: string, _sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
@@ -115,12 +104,47 @@ export default function CatalogueScreen() {
   );
 
 
-  const levelBack = !fromRoute ? undefined : level === 3 && groups.length > 1 && cat ? () => go({ cat }) : level >= 2 && cat ? () => router.push("/(tabs)/catalogue") : undefined;
+  // One list language at every level: glass rows, title left, a short facts line, price or chevron right.
+  const rowFor = (n: TreeNode, last: boolean) => {
+    if (n.kind === "branch") {
+      const xs = leafServices(n);
+      const from = pricedFrom(xs);
+      return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">{[`${xs.length} ${xs.length === 1 ? "option" : "options"}`, from].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="heading" tone="tertiary">{"\u203A"}</T>} onPress={() => go({ cat: cat!, p: [...trail.map((t) => t.key), n.key].join(",") })} />;
+    }
+    const sv = n.service;
+    const price = pricedLabel(sv);
+    return <Row key={sv.id} last={last} title={sv.name.replace(/^Kovalent\s+/i, "")} detail={<T role="caption" tone="secondary">{[duration(sv.estimatedDurationMinutes), sv.warrantyLabel ?? null].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="bodyStrong">{price === "Quote on request" || !price ? "Consult" : price}</T>} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} />;
+  };
+  const renderNodes = (ns: TreeNode[]) => {
+    const sectionOf = (n: TreeNode) => (n.kind === "leaf" ? n.section ?? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
+    const order: string[] = [];
+    for (const n of ns) { const k = sectionOf(n); if (!order.includes(k)) order.push(k); }
+    return order.map((k) => {
+      const xs = ns.filter((n) => sectionOf(n) === k);
+      return (
+        <View key={k || "all"} style={{ gap: 8 }}>
+          {k ? <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{k}</Text> : null}
+          <Pane pad="gap">{xs.map((n, i) => rowFor(n, i === xs.length - 1))}</Pane>
+        </View>
+      );
+    });
+  };
+
+  // Back climbs one real level. A level that was opened automatically is skipped so Back never lands on it again.
+  const levelBack = !fromRoute || !cat ? undefined : () => {
+    let up = trail.map((t) => t.key).slice(0, -1);
+    while (up.length > 0 && resolvePath(tree, up).trail.length >= trail.length) up = up.slice(0, -1);
+    if (up.length === 0 && resolvePath(tree, []).trail.length >= trail.length && trail.length > 0) { router.push("/(tabs)/catalogue"); return; }
+    if (trail.length === 0) { router.push("/(tabs)/catalogue"); return; }
+    go(up.length ? { cat, p: up.join(",") } : { cat });
+  };
+  const here = trail[trail.length - 1];
   const top = (
     <View style={{ gap: 16 }}>
       <View style={{ gap: 4 }}>
-                <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700", lineHeight: 32 }}>{level === 3 && groupKey ? groupKey : catGroup ? catGroup.label : "What does your car need?"}</Text>
-        {level === 3 && groupKey ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === groupKey)?.blurb ?? ""}</T> : null}
+                <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "700", lineHeight: 32 }}>{here ? here.label : catGroup ? catGroup.label : "What does your car need?"}</Text>
+        {catGroup && trail.length > 0 ? <T role="caption" tone="tertiary">{[catGroup.label, ...trail.slice(0, -1).map((t) => t.label)].join("  /  ")}</T> : null}
+        {here ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === here.label)?.blurb ?? ""}</T> : !trail.length && catGroup ? <T role="caption" tone="secondary">{catGroup.blurb}</T> : null}
       </View>
       {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}{GST_ENABLED ? " · incl. GST" : ""}</T> : null}
       <View style={{ height: 48, borderRadius: 24, ...glassInner, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
@@ -153,36 +177,10 @@ export default function CatalogueScreen() {
         grid(visibleGroups.map((g) => tile(g.key, g.label, g.blurb, g.pricing === "consult" ? "Consult" : g.key === "pickup" ? PICKUP_TILE_TEXT : pricedFrom(inGroup(g)) ?? undefined, "tools", () => go({ cat: g.key }), serviceImagery[GROUP_IMAGE[g.key] ?? "other"])))
       ) : null}
       {services && !searching && level === 2 ? (
-        <View style={{ gap: 22 }}>
-          {groups.map(([name, xs]) => (
-            <View key={name} style={{ gap: 10 }}>
-              <View style={{ gap: 2 }}>
-                <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{name}</Text>
-                {BRANDS.find((b) => b.name === name)?.blurb ? <T role="caption" tone="secondary">{BRANDS.find((b) => b.name === name)?.blurb}</T> : null}
-              </View>
-              {grid(xs.map(card))}
-            </View>
-          ))}
+        <View style={{ gap: 18 }}>
+          {renderNodes(nodes)}
+          {cat === "ppf" || cat === "coatings" ? <T role="caption" tone="secondary">{PAINT_INSPECTION_NOTE}</T> : null}
         </View>
-      ) : null}
-      {services && !searching && level >= 2 && cat && (cat === "ppf" || cat === "coatings") ? <T role="caption" tone="secondary">{PAINT_INSPECTION_NOTE}</T> : null}
-      {services && !searching && level === 3 ? (
-        cat === "ppf" ? (
-          <View style={{ gap: 18 }}>
-            {[...COVERAGE_LEVELS.map((c) => ({ key: c.key as string, label: c.label, blurb: c.blurb })), { key: "none", label: "Other films", blurb: "" }]
-              .map((lv) => ({ lv, xs: products.filter((x) => (x.coverageLevel ?? "none") === lv.key) }))
-              .filter((r) => r.xs.length > 0)
-              .map(({ lv, xs }) => (
-                <View key={lv.key} style={{ gap: 10 }}>
-                  <View style={{ gap: 2 }}>
-                    <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{lv.label}</Text>
-                    {lv.blurb ? <T role="caption" tone="secondary">{lv.blurb}</T> : null}
-                  </View>
-                  {grid(xs.map(card))}
-                </View>
-              ))}
-          </View>
-        ) : grid(products.map(card))
       ) : null}
     </Screen>
   );
