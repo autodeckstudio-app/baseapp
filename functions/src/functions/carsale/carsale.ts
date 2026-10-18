@@ -1,5 +1,6 @@
 // Cars for sale: studio stock plus customer submissions behind admin approval.
 // Everything goes through callables so private seller data never reaches a buyer.
+import { publicListingView } from "../../lib/public-listing.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -263,7 +264,7 @@ export const listPublicCarListings = onCall({ region: "asia-south1", cors: true 
     .filter((l) => (l.status === "live" || l.status === "reserved") && (!l.expiresAt || Date.parse(l.expiresAt) > now))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 60);
-  // The asking price is never part of the anonymous response: customers sign in and request it.
-  const listings = await Promise.all(keep.map(async (l) => { const { askingPrice: _hidden, ...rest } = await view(l, ""); return { ...rest, mine: false, rejectionReason: null }; }));
+  // Anonymous response is an explicit allowlist (see lib/public-listing.ts): no price, owner info, description or photos.
+  const listings = keep.map(publicListingView);
   return { listings };
 });
