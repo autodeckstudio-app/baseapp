@@ -133,3 +133,13 @@ describe("guards on the server code", () => {
     expect(src("functions/booking/createBooking.ts")).toContain("cancelCategories: cancelCategories");
   });
 });
+
+describe("every bookable bay type has a bay in the studio seed", () => {
+  it("wash, protection and general are all seeded, so no service shows Fully booked for lack of a bay", () => {
+    const seed = src("scripts/seed-studio.ts");
+    const menu = readFileSync(`${__dirname}/../../../../packages/core/src/menu.ts`, "utf8");
+    for (const t of ["wash", "protection", "general"]) {
+      if (menu.includes(`bay: "${t}"`)) expect(seed, t).toContain(`bayType: "${t}"`);
+    }
+  });
+});
