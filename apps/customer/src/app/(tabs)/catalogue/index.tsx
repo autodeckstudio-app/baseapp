@@ -16,6 +16,9 @@ import { serviceVisual, brandHero, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, GroupChips, groupCategories, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
 import { Button, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
+import { ZoneCar, zoneCarSupported } from "../../../ui/ZoneCar";
+import { GOALS, zonesOf, type ZoneKey } from "../../../lib/service-zones";
+import { Linking } from "react-native";
 import { buildTree, leafServices, matchesQuery, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
 
 // Old "?need=" deep links map onto a menu group.
@@ -42,6 +45,9 @@ export default function CatalogueScreen() {
   const pricingVehicle = usePricingVehicle();
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState<string | null>(null);
+  const [pickGroup, setPickGroup] = useState<string>("coatings");
+  const [zone, setZone] = useState<ZoneKey | null>(null);
+  const [carW, setCarW] = useState(340);
   const fromRoute = catParam ?? (need ? NEED_TO_GROUP[need] : undefined);
   // A chip opens that group's brands or products directly, never a card for the group you just picked.
   const cat = fromRoute ?? grp ?? undefined; // a menu group key
@@ -105,11 +111,11 @@ export default function CatalogueScreen() {
 
 
   // One list language at every level: glass rows, title left, a short facts line, price or chevron right.
-  const rowFor = (n: TreeNode, last: boolean) => {
+  const rowFor = (n: TreeNode, last: boolean, inCat?: string) => {
     if (n.kind === "branch") {
       const xs = leafServices(n);
       const from = pricedFrom(xs);
-      return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">{[`${xs.length} ${xs.length === 1 ? "option" : "options"}`, from].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="heading" tone="tertiary">{"\u203A"}</T>} onPress={() => go({ cat: cat!, p: [...trail.map((t) => t.key), n.key].join(",") })} />;
+      return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">{[`${xs.length} ${xs.length === 1 ? "option" : "options"}`, from].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="heading" tone="tertiary">{"\u203A"}</T>} onPress={() => go({ cat: inCat ?? cat!, p: [...(inCat ? [] : trail.map((t) => t.key)), n.key].join(",") })} />;
     }
     if (n.kind === "enquiry") return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">Get a quote from the studio.</T>} trailing={<T role="caption" tone="tertiary">Get a quote</T>} onPress={() => router.push("/(tabs)/help")} />;
     const sv = n.service;
@@ -159,7 +165,55 @@ export default function CatalogueScreen() {
           style={{ flex: 1, color: colors.textPrimary, fontSize: 15, outlineStyle: "none" } as never}
         />
       </View>
-      {!fromRoute && !searching ? <GroupChips value={grp} onChange={setGrp} /> : null}
+    </View>
+  );
+
+  // Car-first entry: a goal or a category, a zone on the car, then that zone's types. A type opens the same drill-down as everywhere else.
+  const pickTree = useMemo(() => {
+    const g = MENU_GROUPS.find((x) => x.key === pickGroup);
+    return g ? buildTree(g, all) : [];
+  }, [all, pickGroup]);
+  const zones = zonesOf(pickGroup).filter((z) => pickTree.some((n) => n.kind !== "leaf" && z.types.includes(n.key)));
+  const shown = zone && zones.some((z) => z.key === zone) ? zone : null;
+  const shownTypes = shown ? pickTree.filter((n) => n.kind !== "leaf" && zones.find((z) => z.key === shown)!.types.includes(n.key)) : pickTree;
+  const choose = (g: string, z: ZoneKey | null) => { setPickGroup(g); setZone(z); };
+  const pickable = MENU_GROUPS.filter((g) => g.key !== "pickup" && inGroup(g).length > 0);
+  const night = useExperienceTheme().name === "night";
+  const pill = (on: boolean) => ({ minHeight: 44, borderRadius: 9999, paddingHorizontal: 16, alignItems: "center" as const, justifyContent: "center" as const, ...(on ? glassOrange : glassInner) });
+  const picker = (
+    <View style={{ gap: 16 }}>
+      <View style={{ gap: 8 }}>
+        <T role="caption" tone="tertiary">What do you want?</T>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {GOALS.map((gl) => {
+            const on = pickGroup === gl.group && zone === gl.zone;
+            return <Pressable key={gl.key} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => choose(gl.group, gl.zone)} style={pill(on)}><Text style={{ color: on ? colors.accentStrong : colors.textPrimary, fontSize: 14, fontWeight: "600" }}>{gl.label}</Text></Pressable>;
+          })}
+        </View>
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {pickable.map((g) => (
+          <Pressable key={g.key} accessibilityRole="button" accessibilityState={{ selected: pickGroup === g.key }} onPress={() => choose(g.key, null)} style={{ paddingVertical: 8, minHeight: 44, justifyContent: "center" }}>
+            <Text style={{ color: pickGroup === g.key ? colors.accentStrong : colors.textSecondary, fontSize: 15, fontWeight: pickGroup === g.key ? "700" : "500" }}>{g.key === "mods" ? "Modifications" : g.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View onLayout={(e) => setCarW(Math.round(e.nativeEvent.layout.width))} style={{ width: "100%" }}>
+        {zoneCarSupported ? <ZoneCar zones={zones} selected={shown} onSelect={(k) => setZone(shown === k ? null : k)} night={night} width={carW} height={Math.round(carW * 0.62)} /> : null}
+        {zoneCarSupported ? <Pressable accessibilityRole="link" onPress={() => void Linking.openURL("https://github.com/KhronosGroup/glTF-Sample-Assets/blob/main/Models/CarConcept/README.md")} hitSlop={8}><T role="caption" tone="tertiary">A generic concept car, not your car. Car Concept by Eric Chadwick, CC BY 4.0.</T></Pressable> : null}
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {zones.map((z) => (
+          <Pressable key={z.key} accessibilityRole="button" accessibilityState={{ selected: shown === z.key }} onPress={() => setZone(shown === z.key ? null : z.key)} style={pill(shown === z.key)}>
+            <Text style={{ color: shown === z.key ? colors.accentStrong : colors.textPrimary, fontSize: 14, fontWeight: "600" }}>{z.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={{ gap: 8 }}>
+        <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{shown ? zones.find((z) => z.key === shown)!.label : (pickable.find((g) => g.key === pickGroup)?.label ?? "")}</Text>
+        <Pane pad="gap">{shownTypes.map((n, i) => rowFor(n, i === shownTypes.length - 1, pickGroup))}</Pane>
+      </View>
+      {inGroup(MENU_GROUPS.find((g) => g.key === "pickup")!).length > 0 ? <Pane pad="gap"><Row last title="Pickup and drop" detail={<T role="caption" tone="secondary">{PICKUP_TILE_TEXT}</T>} trailing={<T role="heading" tone="tertiary">{"\u203A"}</T>} onPress={() => go({ cat: "pickup" })} /></Pane> : null}
     </View>
   );
 
@@ -174,9 +228,7 @@ export default function CatalogueScreen() {
       {services && searching ? (
         found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : grid(found.map(card))
       ) : null}
-      {services && !searching && level === 1 ? (
-        grid(visibleGroups.map((g) => tile(g.key, g.label, g.blurb, g.pricing === "consult" ? "Consult" : g.key === "pickup" ? PICKUP_TILE_TEXT : pricedFrom(inGroup(g)) ?? undefined, "tools", () => go({ cat: g.key }), serviceImagery[GROUP_IMAGE[g.key] ?? "other"])))
-      ) : null}
+      {services && !searching && level === 1 ? picker : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: 18 }}>
           {renderNodes(nodes)}
