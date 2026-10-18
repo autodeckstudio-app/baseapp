@@ -1,4 +1,4 @@
-import type { PriceBreakdown, Service, VehicleCategory } from "@autodeck/core";
+import { redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
 import { calculatePrice, calculateTax, type CalculatePriceInput } from "./pricing.js";
 
 /** Most extra services on top of the main one (so 5 lines in all). */
@@ -23,6 +23,11 @@ export function extrasProblem(primary: Service, extras: Service[], opts: { gift:
   if (primary.priceOnRequest === true || extras.some((e) => e.priceOnRequest === true)) return "Services priced after inspection cannot be combined. Book them separately.";
   if (extras.some((e) => !e.active)) return "One of the services is not available right now.";
   if (extras.some((e) => e.requiredBayType !== primary.requiredBayType)) return "These services use different bays. Book them separately.";
+  const overlap = redundantPairs([primary.id, ...extras.map((e) => e.id)])[0];
+  if (overlap) {
+    const nameOf = (id: string) => [primary, ...extras].find((x) => x.id === id)?.name ?? "that service";
+    return `${nameOf(overlap[0])} already includes ${nameOf(overlap[1])}. Remove ${nameOf(overlap[1])} from this booking.`;
+  }
   return null;
 }
 

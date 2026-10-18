@@ -16,11 +16,11 @@ import { COLLECTIONS } from "@autodeck/database";
 // V1 is explicitly single-studio-per-tenant (seeded once) - FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
-import { CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
+import { SERVICE_INCLUDES, CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
-import { eligibleExtras, extrasToParam, toggleExtra } from "../../../lib/visit-extras";
+import { eligibleExtras, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
@@ -209,7 +209,7 @@ export default function BookServiceScreen() {
         <View style={{ gap: space.hair }}>
           <Kicker>Add to this visit</Kicker>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-            {eligibleExtras(service, catalogue).map((e) => {
+            {offeredExtras(eligibleExtras(service, catalogue), extraIds).map((e) => {
               const on = extraIds.includes(e.id);
               return (
                 <Pressable key={e.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setExtraIds((p) => toggleExtra(p, e.id))} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (colors.textPrimary) : "rgba(128,128,128,0.14)" }}>
@@ -218,6 +218,9 @@ export default function BookServiceScreen() {
               );
             })}
           </ScrollView>
+          {extraIds.flatMap((id) => (SERVICE_INCLUDES[id] ?? []).map((inc) => ({ big: id, inc }))).length > 0 ? (
+            <T role="caption" tone="tertiary">{extraIds.filter((id) => (SERVICE_INCLUDES[id] ?? []).length > 0).map((id) => `${catalogue.find((c) => c.id === id)?.name ?? "That service"} already includes ${(SERVICE_INCLUDES[id] ?? []).map((i) => catalogue.find((c) => c.id === i)?.name ?? "").filter(Boolean).join(" and ")}.`).join(" ")}</T>
+          ) : null}
           {extraIds.length > 0 ? <T role="caption" tone="tertiary">One visit, one slot. Times below fit all {extraIds.length + 1} services.</T> : null}
         </View>
       ) : null}
