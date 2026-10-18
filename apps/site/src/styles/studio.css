@@ -32,3 +32,42 @@
 .app-stage-copy .text-link{font-size:12px;margin-top:13px}
 @media(max-width:800px){.app-story-enhanced .app-device-stage{top:75px;height:calc(100svh - 85px)}.app-story-enhanced .phone-shell{height:min(46svh,420px)}.app-stage-copy h3{font-size:26px}.app-story-enhanced .app-stage-copy{padding-top:16px;max-width:360px}.app-story-enhanced .app-chapter{min-height:600px}.app-story-enhanced .screen-caption{line-height:1.4}}
 @media(max-height:700px){.app-story-enhanced .phone-shell{height:39svh}.app-story-enhanced .app-stage-copy{padding-top:10px}.app-stage-copy h3{font-size:23px}.app-stage-copy .chapter-index{margin-bottom:5px}.app-stage-copy>p:not(.chapter-index){font-size:11px}.app-stage-copy .text-link{margin-top:8px}}
+
+/* Pin the complete presentation, including its heading, below the site header. */
+.app-story-enhanced{padding-block:12px 25px}
+.app-story-enhanced .app-story-grid{margin-top:0}
+.app-story-enhanced .app-device-stage{top:80px;height:calc(100svh - 90px);max-height:none;display:flex;justify-content:flex-start}
+.app-story-enhanced .app-story-heading{width:100%;display:block;text-align:center;padding:12px 0 0;flex-shrink:0}
+.app-story-enhanced .app-story-heading>.eyebrow{margin-bottom:9px;font-size:9px}
+.app-story-enhanced .app-story-heading h2{font-size:clamp(28px,3.5vw,44px);line-height:1.08}
+.app-story-enhanced .app-story-heading h2 br{display:none}
+.app-story-enhanced .app-story-heading .intro{font-size:12px;margin:11px auto 0;max-width:40em}
+.app-story-enhanced .app-stage-layout{display:grid;grid-template-columns:1fr 1fr;gap:60px;width:100%;flex:1;min-height:0;align-items:center;max-width:850px}
+.app-story-enhanced .app-visual{position:relative;display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:0}
+.app-story-enhanced .phone-shell{height:min(54svh,calc(100svh - 275px));border-radius:25px}
+.app-story-enhanced .app-stage-copy{display:block;text-align:left;max-width:none;padding:0}
+.app-story-enhanced .app-stage-copy h3{font-size:36px}
+.app-story-enhanced .app-stage-copy>p:not(.chapter-index){font-size:15px;line-height:1.8}
+.app-story-enhanced .app-stage-copy .text-link{font-size:13px;margin-top:22px}
+@media(max-width:600px){
+.app-story-enhanced .app-device-stage{top:74px;height:calc(100svh - 84px)}
+.app-story-enhanced .app-story-heading{padding-top:8px}
+.app-story-enhanced .app-story-heading h2{font-size:28px}
+.app-story-enhanced .app-story-heading .intro{font-size:11px;max-width:26em;margin-top:8px}
+.app-story-enhanced .app-story-heading>.eyebrow{font-size:8px;margin-bottom:7px}
+.app-story-enhanced .app-stage-layout{display:flex;flex-direction:column;gap:13px;justify-content:center}
+.app-story-enhanced .phone-shell{height:min(46svh,calc(100svh - 390px));border-radius:23px}
+.app-story-enhanced .screen-caption{font-size:8px;margin-top:9px}
+.app-story-enhanced .screen-progress{margin-top:7px}
+.app-story-enhanced .app-stage-copy{text-align:center;max-width:340px;padding:0}
+.app-story-enhanced .app-stage-copy .chapter-index{font-size:8px;margin-bottom:7px}
+.app-story-enhanced .app-stage-copy h3{font-size:24px;margin-bottom:7px}
+.app-story-enhanced .app-stage-copy>p:not(.chapter-index){font-size:11px;line-height:1.65}
+.app-story-enhanced .app-stage-copy .text-link{font-size:11px;margin-top:10px}
+}
+/* Static fallbacks do not pin; retain the section heading and all chapters. */
+.app-story:not(.app-story-enhanced) .app-device-stage{height:auto;position:static;display:block}
+.app-story:not(.app-story-enhanced) .app-stage-layout{display:none}
+.app-story:not(.app-story-enhanced) .app-story-grid{display:block}
+.app-story-enhanced .app-story-heading h2 em{display:inline-block;margin-left:.18em}
+@media(max-width:360px){.app-story-enhanced .app-story-heading h2 br{display:block}.app-story-enhanced .app-story-heading h2 em{margin-left:0}}
