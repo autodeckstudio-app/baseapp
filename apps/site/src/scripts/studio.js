@@ -13,3 +13,29 @@ document.querySelectorAll('[data-filter]').forEach(button => button.addEventList
   document.querySelectorAll('[data-category]').forEach(card=>{card.hidden=button.dataset.filter!=='All'&&card.dataset.category!==button.dataset.filter;});
   ScrollTrigger.refresh();
 }));
+// The page scrolls normally. Only the preview changes; no scroll interception or artificial pin spacer.
+const chapters = [...document.querySelectorAll('[data-chapter]')];
+const screens = [...document.querySelectorAll('[data-screen]')];
+const dots = [...document.querySelectorAll('[data-dot]')];
+function selectChapter(id) {
+  chapters.forEach(el => el.classList.toggle('is-active', el.dataset.chapter === id));
+  screens.forEach(el => { const active = el.dataset.screen === id; el.classList.toggle('is-active', active); el.setAttribute('aria-hidden', String(!active)); });
+  dots.forEach(el => el.classList.toggle('is-active', el.dataset.dot === id));
+}
+if (chapters.length && !reduced) {
+  let queued = false;
+  const update = () => {
+    queued = false;
+    const middle = window.innerHeight * .52;
+    const closest = chapters.reduce((best, el) => {
+      const rect = el.getBoundingClientRect();
+      const distance = Math.abs(rect.top + rect.height / 2 - middle);
+      return !best || distance < best.distance ? {id: el.dataset.chapter, distance} : best;
+    }, null);
+    if (closest) selectChapter(closest.id);
+  };
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+  window.addEventListener('scroll', queue, {passive:true});
+  window.addEventListener('resize', queue);
+  update();
+}

@@ -2,13 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/services",
+      "destination": "/#services",
+      "statusCode": 301
+    },
+    {
       "source": "/gallery",
       "destination": "/#studio",
       "statusCode": 301
     },
     {
       "source": "/app",
-      "destination": "/services#app",
+      "destination": "/#app",
       "statusCode": 301
     },
     {

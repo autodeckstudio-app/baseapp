@@ -1,4 +1,8 @@
-# AutoDeck local redesign preview
+# AutoDeck local preview
+
+The current layout and verification record is in ONE-HOMEPAGE.md (18 October 2026). Header is Cars and Store only. Home includes services, app showcase, studio concepts and Visit. The old Services + app page now redirects to Home. Store remains at /shop. This supersedes the older page-map notes below.
+
+# Previous redesign record
 
 Local review only. Do not publish this design before Meet's visual approval and the preview image/product checks below.
 
