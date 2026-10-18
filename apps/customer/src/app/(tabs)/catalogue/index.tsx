@@ -111,13 +111,13 @@ export default function CatalogueScreen() {
       const from = pricedFrom(xs);
       return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">{[`${xs.length} ${xs.length === 1 ? "option" : "options"}`, from].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="heading" tone="tertiary">{"\u203A"}</T>} onPress={() => go({ cat: cat!, p: [...trail.map((t) => t.key), n.key].join(",") })} />;
     }
-    if (n.kind === "enquiry") return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">Ask the studio. Not bookable online.</T>} trailing={<T role="caption" tone="tertiary">Ask</T>} onPress={() => router.push("/(tabs)/help")} />;
+    if (n.kind === "enquiry") return <Row key={n.key} last={last} title={n.label} detail={<T role="caption" tone="secondary">Get a quote from the studio.</T>} trailing={<T role="caption" tone="tertiary">Get a quote</T>} onPress={() => router.push("/(tabs)/help")} />;
     const sv = n.service;
     const price = pricedLabel(sv);
     return <Row key={sv.id} last={last} title={sv.name.replace(/^Kovalent\s+/i, "")} detail={<T role="caption" tone="secondary">{[duration(sv.estimatedDurationMinutes), sv.warrantyLabel ?? null].filter(Boolean).join("  \u00b7  ")}</T>} trailing={<T role="bodyStrong">{price === "Quote on request" || !price ? "Consult" : price}</T>} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} />;
   };
   const renderNodes = (ns: TreeNode[]) => {
-    const sectionOf = (n: TreeNode) => (n.kind === "enquiry" ? "Ask the studio" : n.kind === "leaf" ? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
+    const sectionOf = (n: TreeNode) => (n.kind === "enquiry" ? "Get a quote" : n.kind === "leaf" ? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
     const order: string[] = [];
     for (const n of ns) { const k = sectionOf(n); if (!order.includes(k)) order.push(k); }
     return order.map((k) => {

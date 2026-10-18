@@ -16,7 +16,7 @@ interface TypeDef {
   test?: (s: Service) => boolean;
   /** Split the type's services by brand before showing products. */
   byBrand?: readonly string[];
-  /** A real market type with no AutoDeck service behind it. Shown as "Ask the studio", never bookable. */
+  /** An AutoDeck offering with no price or booking flow yet. Shown as a normal type with "Get a quote" (opens Help), no price, term or warranty. */
   enquiryOnly?: true;
 }
 
