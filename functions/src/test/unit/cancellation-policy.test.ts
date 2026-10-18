@@ -25,14 +25,17 @@ describe("cancellation policy", () => {
     expect(cancellationLine("washing")).toContain("4 hours"); expect(cancellationLine("washing")).toContain("Rs 100");
     expect(cancellationLine("ceramic")).toContain("24 hours"); expect(cancellationLine("ceramic")).toContain("20%");
   });
-  it("the server records the fee, moves no money, blocks started work and keeps the paid-booking guard", () => {
+  it("round 5: customer cancel uses the shared path with a real refund, later days only, same fee policy", () => {
     const src = readFileSync(`${__dirname}/../../functions/booking/cancelBooking.ts`, "utf8");
-    expect(src).toContain("cancellationTerms(");
-    expect(src).toContain("cancellationFeePaise");
-    expect(src).not.toContain("CANCELLATION_FREE_WINDOW_HOURS");
-    expect(src).not.toMatch(/initiateRefund|razorpay/i);
+    const run = readFileSync(`${__dirname}/../../functions/booking/adminCancelBooking.ts`, "utf8");
+    expect(src).toContain('runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "charge" }, "customer")');
+    expect(src).toContain("RAZORPAY_KEY_SECRET");
+    expect(run).toContain("cancellationTerms(");
+    expect(run).toContain("isCancellableDay(booking.scheduledDate");
+    expect(run).toContain("getPaymentProvider().initiateRefund");
+    expect(run).toContain("refund_${paymentRef.id}");
+    expect(run).toContain("The refund did not go through, so the booking is NOT cancelled");
     expect(src).toContain("Work on your car has already started");
-    expect(src).toContain("arrange any refund");
   });
   it("the Terms page states the same numbers as the config", () => {
     const terms = readFileSync(`${__dirname}/../../../../apps/site/src/pages/terms.astro`, "utf8");

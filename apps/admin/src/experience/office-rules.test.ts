@@ -26,3 +26,14 @@ describe("hoursProblem", () => {
   it("flags close before open", () => expect(hoursProblem([day("19:00", "09:00")])).toMatch(/closes before/));
   it("ignores closed days", () => expect(hoursProblem([day("", "", true)])).toBeNull());
 });
+
+import { readFileSync } from "node:fs";
+describe("no GST in the admin", () => {
+  it("the Invoices page has no GST column or KPI and Studio settings has no GST input; old invoices keep their stored tax", () => {
+    const o = readFileSync(new URL("./OfficeViews.tsx", import.meta.url), "utf8");
+    const v = readFileSync(new URL("./StudioView.tsx", import.meta.url), "utf8");
+    expect(o).not.toContain("GST billed");
+    expect(o).not.toContain('head: "GST"');
+    expect(v).not.toContain("GST (%)");
+  });
+});

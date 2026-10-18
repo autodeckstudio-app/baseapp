@@ -1,5 +1,4 @@
-import { SlideToConfirm } from "../../../ui/SlideToConfirm";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { extrasFromParam } from "../../../lib/visit-extras";
 import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -65,6 +64,16 @@ export default function BookingConfirmScreen() {
   const [wash, setWash] = useState<WashDecision | null>(null);
   const [useWash, setUseWash] = useState(false);
   const [payAtStudio, setPayAtStudio] = useState(false);
+  // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
+  const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const heldOver = held !== null && now >= held.expiresAt;
+  const payBusy = useRef(false);
+  useEffect(() => {
+    if (!held) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [held]);
   // More services in the same visit. The server prices them again; this is what the customer sees first.
   const extraIds = useMemo(() => extrasFromParam(params.extras), [params.extras]);
   const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number }>>([]);
@@ -121,11 +130,36 @@ export default function BookingConfirmScreen() {
 
   const payHow = service && breakdown ? bookingPayment(service, breakdown.total) : { online: false, studioChoice: false };
 
+  const payNow = payHow.online && !payAtStudio && !washOn;
+  const holdLeft = held ? Math.max(0, Math.ceil((held.expiresAt - now) / 1000)) : 0;
+
+  /** Opens checkout for the held booking. Success goes to the booking; a failure or close stays here with the slot held. */
+  async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number }) {
+    if (payBusy.current || !service) return;
+    payBusy.current = true;
+    setBooking(true);
+    setBookError(null);
+    try {
+      if (!h.paymentJobId || !checkoutSupported) throw new Error("no checkout");
+      const pay = await initiatePayment(h.paymentJobId, "razorpay_payment_link");
+      const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: service.name }) : "failed";
+      if (out === "paid") { router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid" } }); return; }
+      setBookError(out === "failed" ? "Payment failed, please retry." : "Payment not completed. Your slot is held for a few more minutes.");
+    } catch {
+      setBookError("We could not open the payment. Please retry.");
+    } finally {
+      payBusy.current = false;
+      setBooking(false);
+    }
+  }
+
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
+    if (held) { if (!heldOver) await payHeld(held); return; }
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
     setBooking(true);
     setBookError(null);
+    let created = false;
     try {
       const result = await createBooking({
         serviceId: params.serviceId,
@@ -136,28 +170,27 @@ export default function BookingConfirmScreen() {
         scheduledDate: params.scheduledDate,
         scheduledTime: params.scheduledTime,
         idempotencyKey,
+        payMode: payNow ? "online" : "studio",
         ...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {}),
         ...(sendCode ? { referralCode: sendCode } : {}),
         ...(giftCode ? { giftCode } : {}),
       });
-      // Pay in the app for regular services (or when a bigger service chose it). The job exists with the booking, so the same
-      // payment path as the Club is used. If checkout does not open or is closed, the booking stands and can be paid at the studio.
-      let paidNote: string | undefined;
-      if (payHow.online && !payAtStudio && !washOn && auth.status === "ready" && result.totalAmount > 0) {
-        try {
-          const jobId = await getJobIdForBooking(result.id, auth.claims.tenantId, auth.user.uid);
-          if (jobId && checkoutSupported) {
-            const pay = await initiatePayment(jobId, "razorpay_payment_link");
-            if (pay.paymentId) paidNote = (await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: service.name })) === "paid" ? "paid" : "unpaid";
-          } else paidNote = "unpaid";
-        } catch { paidNote = "unpaid"; }
+      created = true;
+      if (result.status === "PENDING" && auth.status === "ready") {
+        // Held for 15 minutes until paid. Pay now; if it fails the customer retries on this page.
+        const jobId = await getJobIdForBooking(result.id, auth.claims.tenantId, auth.user.uid).catch(() => null);
+        const h = { bookingId: result.id, paymentJobId: jobId, expiresAt: Date.parse(result.holdExpiresAt ?? "") || Date.now() + 15 * 60_000 };
+        setHeld(h);
+        setBooking(false);
+        await payHeld(h);
+        return;
       }
-      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(paidNote ? { pay: paidNote } : {}) } });
+      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
     } catch (err) {
       console.warn("create booking failed", err);
-      setBookError("We could not send your request. Check your bookings before trying again. If the request reached the studio, it will appear there.");
+      setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings before trying again. If the request reached the studio, it will appear there.");
     } finally {
-      setBooking(false);
+      if (!payBusy.current) setBooking(false);
     }
   }
 
@@ -188,7 +221,7 @@ export default function BookingConfirmScreen() {
         </View>
       ) : null}
       <Sheet>
-        {washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total, pay at the studio" value={rupees(visitTotal ?? breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
+        {washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
         <SheetDivider />
         <SheetLine label="Service" value={service?.name ?? "-"} />
         {extraRows.map((r) => <SheetLine key={r.id} label="Also" value={r.name} />)}
@@ -243,19 +276,19 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        The studio confirms your slot after you send this. Price may vary based on final work.
+        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
       </T>
       {washOn ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
           {payHow.online ? (
-            <Pressable accessibilityRole="button" accessibilityState={{ selected: !payAtStudio }} onPress={() => setPayAtStudio(false)}>
-              <Row title="Pay in the app" detail={<T role="caption" tone="secondary">{washOn ? "Not needed, this wash is on your plan." : "Secure online payment right after you confirm."}</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!payHow.studioChoice} />
+            <Pressable accessibilityRole="button" accessibilityState={{ selected: !payAtStudio }} onPress={() => { if (!held) setPayAtStudio(false); }}>
+              <Row title="Pay online" detail={<T role="caption" tone="secondary">Secure payment now. Your slot is held for 15 minutes.</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={false} />
             </Pressable>
           ) : null}
-          {!payHow.online || payHow.studioChoice ? (
-            <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => setPayAtStudio(true)}>
-              <Row title="Pay at the studio" detail={<T role="caption" tone="secondary">Pay when you collect your car. Nothing is charged now.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last />
+          {true ? (
+            <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
+              <Row title="Pay at studio" detail={<T role="caption" tone="secondary">Your slot is confirmed now. Pay when you collect your car.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last />
             </Pressable>
           ) : null}
         </Pane>
@@ -263,9 +296,12 @@ export default function BookingConfirmScreen() {
 
       {bookError ? <Notice title="Could not confirm the request" body={bookError} /> : null}
 
+      {held && !heldOver ? <T role="caption" tone="secondary" style={{ textAlign: "center" }}>{`Slot held for ${Math.floor(holdLeft / 60)}:${String(holdLeft % 60).padStart(2, "0")}`}</T> : null}
+      {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}
+
       <View style={{ gap: space.breath }}>
-        <SlideToConfirm label={service?.priceOnRequest === true ? "Slide to request a quote" : "Slide to request booking"} busy={booking} onConfirm={() => void handleConfirm()} />
-        {bookError ? <Button label="Back to my details" kind="quiet" onPress={() => router.back()} /> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
+        {heldOver ? null : <Button label={service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : "Confirm booking"} busy={booking} disabled={booking} onPress={() => void handleConfirm()} />}
+        {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
     </Screen>
   );

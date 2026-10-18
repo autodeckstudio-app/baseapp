@@ -35,15 +35,20 @@ const settleFeeSchema = z.object({
 
 const CANCELLABLE_JOB = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
 
-export const adminCancelBooking = onCall(
-  { region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() },
-  async (request) => {
-    const user = extractUser(request);
-    assertRole(user, "admin", "superadmin");
-    assertTenant(user, user.claims.tenantId);
-    const data = validate(adminCancelSchema, request.data);
-    if (!data.preview) await enforceRateLimit(subjectFrom(user), "booking.adminCancel");
+export const SAME_DAY_MESSAGE = "Bookings can be cancelled until the day before. For a same-day change, please call the studio.";
 
+/** Customers cancel only bookings that start on a later day (studio timezone is India). */
+export function isCancellableDay(scheduledDate: string, nowMs: number): boolean {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(nowMs));
+  return scheduledDate > today;
+}
+
+/** The one cancel path: fee, refund through the payment provider, credits back, slot released. Admin and customer share it. */
+export async function runCancel(
+  user: ReturnType<typeof extractUser>,
+  data: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean | undefined },
+  actor: "admin" | "customer",
+) {
     const db = getFirestore();
     const bookingRef = db.collection(COLLECTIONS.bookings()).doc(data.bookingId);
     const snap = await bookingRef.get();
@@ -51,6 +56,11 @@ export const adminCancelBooking = onCall(
     const booking = snap.data() as Booking;
     assertTenant(user, booking.tenantId);
     assertStudio(user, booking.studioId, "Booking");
+    if (actor === "customer") {
+      if (booking.customerId !== user.uid) throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
+      // Only a booking on a later day can be cancelled by the customer: a same-day cancel leaves the slot empty with no time to refill it.
+      if (!isCancellableDay(booking.scheduledDate, Date.now())) throw new HttpsError("failed-precondition", SAME_DAY_MESSAGE);
+    }
     if (booking.status === "CANCELLED") return { success: true, alreadyCancelled: true };
     if (booking.status === "COMPLETED" || booking.status === "EXPIRED") {
       throw new HttpsError("failed-precondition", `Cannot cancel a booking with status ${booking.status}.`);
@@ -136,7 +146,7 @@ export const adminCancelBooking = onCall(
       for (const d of pays?.docs ?? []) {
         if (d.data()["status"] === "pending") tx.update(d.ref, { status: "cancelled", updatedAt: now });
       }
-      writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by admin: ${data.bookingId}`);
+      writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by ${actor}: ${data.bookingId}`);
 
       if (needsRefund && paymentRef && payment) {
         tx.update(paymentRef, { status: "refunded", razorpayRefundId: providerRefundId, refundAmount: plan.refundPaise, refundedAt: now, updatedAt: now });
@@ -155,13 +165,13 @@ export const adminCancelBooking = onCall(
       tx.update(bookingRef, {
         status: "CANCELLED",
         cancelledAt: now,
-        cancelledBy: "admin",
+        cancelledBy: actor,
         cancellationReason: data.reason,
         cancellationFeePaise: plan.feePaise,
         ...(plan.feeStatus !== "none" ? { cancellationFeeStatus: plan.feeStatus } : {}),
         ...(plan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
         refundedPaise: plan.refundPaise,
-        ...(needsRefund ? { paymentStatus: "refunded" } : {}),
+        ...(needsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: providerRefundId } : {}),
         updatedAt: now,
       });
       writeAuditLog(tx, {
@@ -172,11 +182,22 @@ export const adminCancelBooking = onCall(
         studioId: booking.studioId,
         before: { status: fresh.status },
         after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: plan.refundPaise, feeStatus: plan.feeStatus },
-        metadata: { cancelledBy: "admin", providerRefundId },
+        metadata: { cancelledBy: actor, providerRefundId },
       });
     });
 
     return { success: true, ...summary, providerRefundId, manualRefund };
+}
+
+export const adminCancelBooking = onCall(
+  { region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() },
+  async (request) => {
+    const user = extractUser(request);
+    assertRole(user, "admin", "superadmin");
+    assertTenant(user, user.claims.tenantId);
+    const data = validate(adminCancelSchema, request.data);
+    if (!data.preview) await enforceRateLimit(subjectFrom(user), "booking.adminCancel");
+    return runCancel(user, data, "admin");
   },
 );
 

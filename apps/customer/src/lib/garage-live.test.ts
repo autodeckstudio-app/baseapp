@@ -76,7 +76,7 @@ describe("pay in the app at booking", () => {
   });
   it("the confirm screen pays through the existing job payment path, never for a wash on the plan, and keeps the booking if checkout is closed", () => {
     const c = read("../app/(tabs)/book/confirm.tsx");
-    expect(c).toContain("initiatePayment(jobId"); expect(c).toContain("payWithCheckout"); expect(c).toContain("!washOn");
-    expect(c).toContain('paidNote = "unpaid"'); expect(c).not.toContain("Opens when online payments go live");
+    expect(c).toContain("initiatePayment(h.paymentJobId"); expect(c).toContain("payWithCheckout"); expect(c).toContain("!washOn");
+    expect(c).not.toContain("Opens when online payments go live");
   });
 });

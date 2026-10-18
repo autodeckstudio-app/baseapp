@@ -63,6 +63,13 @@ export interface Booking {
   membershipDiscountApplied: boolean; // true for either wash-credit or percent-discount redemption
   membershipWashUsed: boolean; // true only when an included wash credit was consumed
   paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
+  /** How the customer chose to pay. */
+  payMode?: "online" | "studio";
+  /** PENDING online bookings hold their slot until this time (ISO). */
+  holdExpiresAt?: string | null;
+  /** Refund tracking on a cancelled, paid booking. */
+  refundStatus?: "initiated" | "failed";
+  refundId?: string | null;
   notes: string | null;
   idempotencyKey: string;
   rescheduleCount: number; // starts at 0; max enforced by Cloud Function

@@ -8,9 +8,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelBookingSchema } from "../../schemas/booking.js";
+import { runCancel } from "./adminCancelBooking.js";
 import { readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
-export const cancelBooking = onCall({ region: "asia-south1" }, async (request) => {
+export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (request) => {
   const data = validate(cancelBookingSchema, request.data);
   const user = data.customerContext ? extractCustomerUser(request) : extractUser(request);
   await enforceRateLimit(subjectFrom(user), "booking.cancel");
@@ -38,6 +39,9 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
   // studio employee at Studio A cancel a booking belonging to Studio B in
   // the same tenant.
   assertStudio(user, booking.studioId, "Booking");
+
+  // Customers use the shared cancel path: later-day bookings only, policy fee, real refund through Razorpay, credits back.
+  if (isCustomer) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "charge" }, "customer");
 
   if (booking.status === "CANCELLED") {
     return { success: true, alreadyCancelled: true };

@@ -90,6 +90,7 @@ const EXCLUDED_NON_CALLABLE = [
   "booking/flagMissedBookingsScheduled.ts",
   "membership/expireStaleMembershipsScheduled.ts",
   "membership/expireStalePendingMembershipsScheduled.ts",
+  "booking/expirePendingBookingsScheduled.ts",
   "notification/onAuditLogCreated.ts",
   "notification/winbackScheduled.ts",
   "notification/bookingRemindersScheduled.ts",

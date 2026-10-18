@@ -39,7 +39,7 @@ import { glassInner } from "../../../lib/glass";
 import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
-  PENDING: { label: "Awaiting confirm", tone: "accent" },
+  PENDING: { label: "Pending", tone: "accent" },
   CONFIRMED: { label: "Confirmed", tone: "premium" },
   ACTIVE: { label: "In the studio", tone: "accent" },
   COMPLETED: { label: "Done", tone: "neutral" },
@@ -121,7 +121,7 @@ export default function BookingsScreen() {
         const car = cars[b.vehicleId] ?? (b.vehicleSnapshot ? { ...b.vehicleSnapshot, photoUrl: null, category: b.vehicleCategory } : undefined);
         const missed = isBookingMissed(b);
         return (
-          <VisitCard key={b.id} onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} photo={car?.photoUrl || !svcs[b.serviceId] ? <CarThumb car={car} height={64} width={64} radius={0} /> : <ServicePhoto service={svcs[b.serviceId]!} height={64} width={64} />} title={visitTitle(nameOf(b))} car={[car ? `${car.make} ${car.model}` : "Car", visitAlso(nameOf(b))].filter(Boolean).join(" \u00b7 ")} when={`${formatDateShort(b.scheduledDate)} \u00b7 ${b.scheduledTime}`} price={rupees(b.totalAmount)} chip={<Chip label={missed ? "Missed" : STATUS[b.status].label} tone={missed ? "danger" : STATUS[b.status].tone} />} />
+          <VisitCard key={b.id} onPress={() => router.push(`/(tabs)/bookings/${b.id}`)} photo={car?.photoUrl || !svcs[b.serviceId] ? <CarThumb car={car} height={64} width={64} radius={0} /> : <ServicePhoto service={svcs[b.serviceId]!} height={64} width={64} />} title={visitTitle(nameOf(b))} car={[car ? `${car.make} ${car.model}` : "Car", visitAlso(nameOf(b))].filter(Boolean).join(" \u00b7 ")} when={`${formatDateShort(b.scheduledDate)} \u00b7 ${b.scheduledTime}`} price={rupees(b.totalAmount)} chip={<Chip label={missed ? "Missed" : (b.status === "PENDING" && b.payMode === "online" ? "Pending payment" : STATUS[b.status].label)} tone={missed ? "danger" : STATUS[b.status].tone} />} />
         );
       })}
     </View>
@@ -197,7 +197,7 @@ export default function BookingsScreen() {
       {seg === "upcoming" && next ? (
         <View style={{ gap: space.line }}>
           <SectionTitle>Next visit</SectionTitle>
-          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : STATUS[next.status].label} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
+          <NextVisitHero date={next.scheduledDate} today={todayIst} time={next.scheduledTime} title={visitTitle(nameOf(next))} car={nextCar ? `${nextCar.make} ${nextCar.model}` : "Car"} status={isBookingMissed(next) ? "Missed" : (next.status === "PENDING" && next.payMode === "online" ? "Pending payment" : STATUS[next.status].label)} onPress={() => router.push(`/(tabs)/bookings/${next.id}`)} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {nextElig?.eligible ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Reschedule" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: next.id } })} /></View> : null}
             {nextCancel?.canCancel && !confirmCancel ? <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Cancel" onPress={() => setConfirmCancel(true)} /></View> : null}

@@ -1,3 +1,4 @@
+import { bookingStartState } from "../../lib/booking-hold.js";
 import { assertNotPriorityHeld } from "../../lib/priority-access.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -340,6 +341,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     finalBreakdown = addExtrasToBreakdown(finalBreakdown, extraLines);
     const lines = extraLines.length ? [{ serviceId: data.serviceId, name: service.name, price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : undefined;
 
+    const start = bookingStartState({ payMode: data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: service.priceOnRequest === true, nowMs: now.getTime() });
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
@@ -365,7 +367,9 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       durationMinutes: visitMinutes,
       bayId: assignedBayId,
       assignedEmployeeId: null,
-      status: "CONFIRMED",
+      status: start.status,
+      payMode: data.payMode ?? "studio",
+      holdExpiresAt: start.holdExpiresAt,
       ...(service.priceOnRequest === true ? { priceOnRequest: true, quoteStatus: "requested" as const } : {}),
       priceBreakdown: finalBreakdown,
       ...(lines ? { lines } : {}),
@@ -379,7 +383,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       notes: data.notes ?? null,
       idempotencyKey: data.idempotencyKey,
       rescheduleCount: 0,
-      confirmedAt: nowIso,
+      confirmedAt: start.status === "CONFIRMED" ? nowIso : null,
       cancelledAt: null,
       cancellationReason: null,
       createdAt: nowIso,
@@ -451,7 +455,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
         scheduledAt: requestedStart.toISOString(),
         bayId: assignedBayId,
         totalAmount: breakdown.total,
-        status: "CONFIRMED",
+        status: start.status,
       },
     });
 

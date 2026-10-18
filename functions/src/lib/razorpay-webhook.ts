@@ -8,7 +8,7 @@
 //  - the amount in the event must equal the stored payment amount, otherwise
 //    nothing is marked paid and the event is recorded for review.
 import type { Firestore } from "firebase-admin/firestore";
-import type { Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
+import type { Booking, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
 import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -117,6 +117,8 @@ export async function processProviderEvent(
       const jobRef = db.collection(COLLECTIONS.jobs()).doc(payment.jobId);
       const jobSnap = await tx.get(jobRef);
       const job = jobSnap.data() as ServiceJob | undefined;
+      const bookingRef = job?.bookingId ? db.collection(COLLECTIONS.bookings()).doc(job.bookingId) : null;
+      const booking = bookingRef ? ((await tx.get(bookingRef)).data() as Booking | undefined) : undefined;
       // Money has arrived. If the job is gone, cancelled or already settled another way we still
       // record the payment as completed (it IS received) but touch nothing else, and flag it.
       const anomaly = !job ? "job_missing" : job.status === "CANCELLED" ? "job_cancelled" : job.paymentStatus === "paid" ? "job_already_paid" : null;
@@ -134,7 +136,12 @@ export async function processProviderEvent(
         invoiceId: invoiceRef.id, providerEventId: ev.providerEventId, completedAt: now, updatedAt: now });
       tx.set(invoiceRef, invoice);
       tx.update(jobRef, { paymentStatus: "paid", updatedAt: now });
-      if (job.bookingId) tx.update(db.collection(COLLECTIONS.bookings()).doc(job.bookingId), { paymentStatus: "paid", updatedAt: now });
+      if (bookingRef) {
+        // Paying a held (PENDING) online booking confirms it. Paid bookings that were already confirmed only get the payment flag.
+        const confirms = booking?.status === "PENDING";
+        tx.update(bookingRef, { paymentStatus: "paid", ...(confirms ? { status: "CONFIRMED", confirmedAt: now, holdExpiresAt: null } : {}), updatedAt: now });
+        if (confirms) writeAuditLog(tx, { action: "booking.confirmed", entityType: "Booking", entityId: bookingRef.id, user, studioId: payment.studioId, before: { status: "PENDING" }, after: { status: "CONFIRMED", via: "payment" } });
+      }
       writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
         after: { status: "completed", invoiceId: invoiceRef.id, via: "razorpay_webhook" } });
       writeAuditLog(tx, { action: "invoice.issued", entityType: "Invoice", entityId: invoiceRef.id, user, studioId: payment.studioId,

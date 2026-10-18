@@ -8,6 +8,9 @@ import { Linking, Platform, View } from "react-native";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
+import { getJobIdForBooking } from "../../../lib/job-service";
+import { initiatePayment } from "../../../lib/payment-service";
+import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking, listenToJobById, bookingFromJob } from "../../../lib/job-service";
 import { listenToPaymentForJob } from "../../../lib/payment-service";
@@ -20,7 +23,7 @@ import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "
 import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody, SAME_DAY_CANCEL_LINE } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -56,7 +59,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const BOOKING_STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pending confirmation",
+  PENDING: "Pending",
   CONFIRMED: "Confirmed",
   ACTIVE: "Vehicle at studio",
   COMPLETED: "Completed",
@@ -93,6 +96,7 @@ export default function BookingDetailScreen() {
   const [walkIn, setWalkIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [payingNow, setPayingNow] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [job, setJob] = useState<ServiceJob | null>(null);
@@ -215,6 +219,24 @@ export default function BookingDetailScreen() {
     }
   }
 
+  async function handlePayNow() {
+    if (payingNow || authB.status !== "ready" || !booking) return;
+    setPayingNow(true);
+    setActionError(null);
+    try {
+      if (!checkoutSupported) throw new Error("no checkout");
+      const jobId = await getJobIdForBooking(booking.id, authB.claims.tenantId, authB.user.uid);
+      if (!jobId) throw new Error("no job");
+      const pay = await initiatePayment(jobId, "razorpay_payment_link");
+      const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: "Booking" }) : "failed";
+      if (out === "failed") setActionError("Payment failed, please retry.");
+    } catch {
+      setActionError("We could not open the payment. Please retry, or call the studio.");
+    } finally {
+      setPayingNow(false);
+    }
+  }
+
   async function handleCancelConfirmed() {
     if (!booking || !id) return;
     setCancelling(true);
@@ -268,14 +290,14 @@ export default function BookingDetailScreen() {
           <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" ? <Chip label="Live" tone="accent" /> : null}<Chip label={missed ? "Missed" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
+            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" ? <Chip label="Live" tone="accent" /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && booking.payMode === "online" ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
           </View>
         </View>
       }
     >
-      {placed === "1" && booking.status === "PENDING" ? (
+      {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" ? (
         <Notice
           title="Request sent"
           body="Pending means the studio has your request and will confirm your slot. You will see the status change here once they do. Nothing is charged now."
@@ -443,7 +465,16 @@ export default function BookingDetailScreen() {
         )}
       </View>
 
-      {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
+      {booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
+        <Notice
+          title="Payment pending"
+          body="Your slot is held until the payment goes through. If it is not paid in time, the slot is released."
+          action={<Button label="Pay now" busy={payingNow} disabled={payingNow} onPress={() => void handlePayNow()} />}
+        />
+      ) : null}
+      {booking.status === "EXPIRED" ? <Notice title="Slot released" body="The payment was not completed in time, so this booking expired. You can book again any time." /> : null}
+      {booking.refundStatus === "initiated" ? <Notice title="Refund initiated" body="Your refund has been sent to Razorpay. It reaches your original payment method in 5-7 working days." /> : null}
+      {actionError ? <Notice title="We could not finish that" body={actionError} /> : null}
 
       {showRescheduleSection ? (
         rescheduleEligibility.eligible ? (
@@ -472,6 +503,7 @@ export default function BookingDetailScreen() {
         <Notice title="Booking auto-cancelled" body="Your car was not checked in by studio close (7 pm Sunday, 9 pm other days). This booking is closed. Make a new booking when you are ready." />
       ) : null}
 
+      {cancel.sameDay ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>{SAME_DAY_CANCEL_LINE}</T> : null}
       {lateToCancel ? (
         <>
           <Notice title="Cancelling" body="Work on your car has started, so it cannot be cancelled online. Please call the studio." />

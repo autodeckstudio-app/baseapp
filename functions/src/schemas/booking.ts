@@ -35,6 +35,8 @@ export const createBookingSchema = z.object({
   membershipId: z.string().min(1).optional(),
   /** A gift code that was already claimed by this account; books the gifted wash. */
   giftCode: z.string().min(1).max(32).optional(),
+  /** How the customer will pay. online holds the slot for 15 minutes until paid; studio confirms at once. Omitted = studio (older apps). */
+  payMode: z.enum(["online", "studio"]).optional(),
 }).strict();
 
 export const cancelBookingSchema = z.object({

@@ -23,7 +23,7 @@ function loadScript(): Promise<RzpCtor> {
 }
 
 /** Standard Checkout: order from the server, modal in the browser, signature verified on the server. */
-export async function payWithCheckout(paymentId: string, opts: { name: string; description: string }): Promise<"paid" | "dismissed"> {
+export async function payWithCheckout(paymentId: string, opts: { name: string; description: string }): Promise<"paid" | "dismissed" | "failed"> {
   const order = (await httpsCallable<{ paymentId: string }, OrderOut>(functions, "createCheckoutOrder")({ paymentId })).data;
   const Razorpay = await loadScript();
   return new Promise((resolve, reject) => {
@@ -42,7 +42,8 @@ export async function payWithCheckout(paymentId: string, opts: { name: string; d
       },
       modal: { ondismiss: () => resolve("dismissed") },
     });
-    rzp.on("payment.failed", () => undefined);
+    // A failed attempt closes checkout and returns to the booking page with a retry message.
+    rzp.on("payment.failed", () => { try { (rzp as unknown as { close?: () => void }).close?.(); } catch { /* already closed */ } resolve("failed"); });
     rzp.open();
   });
 }

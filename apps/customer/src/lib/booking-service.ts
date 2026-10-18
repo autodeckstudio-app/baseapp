@@ -54,6 +54,8 @@ type CreateBookingInput = {
   referralCode?: string;
   /** A claimed gift code. The server checks and uses it; only sent while GIFT_LIVE is true. */
   giftCode?: string;
+  /** online holds the slot 15 minutes until paid; studio confirms at once. */
+  payMode?: "online" | "studio";
 };
 type CreateBookingOutput = { booking: Booking };
 

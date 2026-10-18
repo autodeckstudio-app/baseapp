@@ -67,6 +67,7 @@ export { cancelMembership } from "./functions/membership/cancelMembership.js";
 export { getMyMemberships } from "./functions/membership/getMyMemberships.js";
 export { getMembershipUsage } from "./functions/membership/getMembershipUsage.js";
 export { expireStaleMemberships } from "./functions/membership/expireStaleMemberships.js";
+export { expirePendingBookingsScheduled } from "./functions/booking/expirePendingBookingsScheduled.js";
 export { expireStalePendingMembershipsScheduled } from "./functions/membership/expireStalePendingMembershipsScheduled.js";
 export { cancelAccountDeletion } from "./functions/auth/cancelAccountDeletion.js";
 export { processAccountDeletionsScheduled } from "./functions/auth/processAccountDeletionsScheduled.js";

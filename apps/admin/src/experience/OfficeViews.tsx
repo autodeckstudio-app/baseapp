@@ -237,13 +237,11 @@ export function InvoicesView(p: {
   });
   const outstanding = p.invoices.filter((i) => i.status === "issued");
   const outstandingSum = outstanding.reduce((s, i) => s + i.total, 0);
-  const gst = p.invoices.filter((i) => i.status === "paid" || i.status === "issued").reduce((s, i) => s + i.tax, 0);
   const cols: Column<Invoice>[] = [
     { key: "no", head: "Invoice", kind: "data", width: "minmax(0, 1.1fr)", cell: (i) => i.invoiceNumber || "Draft" },
     { key: "who", head: "Customer", kind: "strong", width: "minmax(0, 1.6fr)", cell: (i) => p.names[i.customerId] ?? "Customer" },
     { key: "status", head: "Status", width: "110px", cell: (i) => <StatusBadge label={i.status} /> },
     { key: "issued", head: "Issued", kind: "muted", width: "150px", cell: (i) => formatDateTime(i.issuedAt) },
-    { key: "gst", head: "GST", kind: "data", align: "end", width: "100px", cell: (i) => formatPaise(i.tax) },
     { key: "total", head: "Total", kind: "data", align: "end", width: "120px", cell: (i) => formatPaise(i.total) },
   ];
   if (p.error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Records unavailable</p><p>{p.error}</p><button type="button" className="ax-button" onClick={() => window.location.reload()}>Retry</button></div>;
@@ -255,7 +253,6 @@ export function InvoicesView(p: {
         title="Invoices"
         kpis={[
           { value: formatPaise(outstandingSum), label: `${outstanding.length} unpaid`, tone: outstanding.length ? "accent" : undefined },
-          { value: formatPaise(gst), label: "GST billed" },
         ]}
       />
       <Toolbar count={{ shown: rows.length, total: p.invoices.length }}>

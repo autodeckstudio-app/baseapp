@@ -213,14 +213,17 @@ describe("Home hero stage", () => {
   });
 });
 
-describe("slide to confirm", () => {
-  it("the Review step confirms by slide with a visible tap fallback, and the booking still goes through handleConfirm", () => {
+describe("one confirm button", () => {
+  it("the Review step has one full-width confirm button with a busy state, no slide and no tap-here link, and keeps Go back", () => {
     const c = read("src/app/(tabs)/book/confirm.tsx");
-    expect(c).toMatch(/<SlideToConfirm /);
-    expect(c).toMatch(/onConfirm=\{\(\) => void handleConfirm\(\)\}/);
-    const s = read("src/ui/SlideToConfirm.tsx");
-    expect(s).toMatch(/Or tap here to confirm/);
-    expect(s).not.toMatch(/\u2014/);
+    expect(c).not.toMatch(/SlideToConfirm/);
+    expect(c).not.toMatch(/Or tap here/);
+    expect(c).toMatch(/Pay & confirm/);
+    expect(c).toMatch(/Confirm booking/);
+    expect(c).toMatch(/busy=\{booking\} disabled=\{booking\}/);
+    expect(c).toMatch(/Go back/);
+    expect(c).toMatch(/payMode:/);
+    expect(c).toMatch(/Payment failed, please retry/);
   });
 });
 

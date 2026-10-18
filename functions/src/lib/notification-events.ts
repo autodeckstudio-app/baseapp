@@ -103,7 +103,28 @@ export async function buildNotification(
   log: AuditLog,
 ): Promise<NotificationDraft | null> {
   switch (log.action) {
-    case "booking.created": {
+    case "booking.created":
+    case "booking.confirmed": {
+      const booking = (await db.collection(COLLECTIONS.bookings()).doc(log.entityId).get()).data() as
+        | Booking
+        | undefined;
+      if (!booking) return null;
+      // A held online booking is not confirmed yet: it is confirmed (and notified) when the payment lands.
+      if (log.action === "booking.created" && booking.status === "PENDING") return null;
+      const vehicle = await vehicleLabel(db, booking.vehicleId);
+      const paidOnline = log.action === "booking.confirmed";
+      return {
+        userId: booking.customerId,
+        type: "booking_confirmed",
+        title: paidOnline ? "Booking confirmed" : "You are booked",
+        body: `${cap(vehicle)}, ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)}.${paidOnline ? " Payment received." : " We will have the bay ready."}`,
+        entityType: "Booking",
+        entityId: booking.id,
+        dedupeKey: `booking-confirmed-${booking.id}`,
+      };
+    }
+
+    case "booking.expired": {
       const booking = (await db.collection(COLLECTIONS.bookings()).doc(log.entityId).get()).data() as
         | Booking
         | undefined;
@@ -111,11 +132,12 @@ export async function buildNotification(
       const vehicle = await vehicleLabel(db, booking.vehicleId);
       return {
         userId: booking.customerId,
-        type: "booking_confirmed",
-        title: "You are booked",
-        body: `${cap(vehicle)}, ${formatDateIST(booking.scheduledAt)} at ${formatTimeIST(booking.scheduledAt)}. We will have the bay ready.`,
+        type: "booking_cancelled",
+        title: "Slot released",
+        body: `Payment for your ${vehicle} booking was not completed in 15 minutes, so we released the slot. Book again whenever you like.`,
         entityType: "Booking",
         entityId: booking.id,
+        dedupeKey: `booking-expired-${booking.id}`,
       };
     }
 
@@ -128,8 +150,9 @@ export async function buildNotification(
       return {
         userId: booking.customerId,
         type: "booking_cancelled",
-        title: log.metadata?.["autoCancelled"] ? "We missed you today" : "Booking cancelled",
-        body: log.metadata?.["autoCancelled"] ? `Your ${vehicle} did not make it in, so we released the slot. Pick a new time whenever you like.` : `Your ${vehicle} booking is cancelled. Rebook whenever it suits you.`,
+        title: log.metadata?.["autoCancelled"] ? "We missed you today" : Number(log.after?.["refundedPaise"] ?? 0) > 0 ? "Booking cancelled, refund started" : "Booking cancelled",
+        body: log.metadata?.["autoCancelled"] ? `Your ${vehicle} did not make it in, so we released the slot. Pick a new time whenever you like.` : Number(log.after?.["refundedPaise"] ?? 0) > 0 ? `Your ${vehicle} booking is cancelled. ${formatPaise(Number(log.after?.["refundedPaise"]))} will reach your original payment method in 5-7 working days.` : `Your ${vehicle} booking is cancelled. Rebook whenever it suits you.`,
+        dedupeKey: `booking-cancelled-${booking.id}`,
         entityType: "Booking",
         entityId: booking.id,
       };
