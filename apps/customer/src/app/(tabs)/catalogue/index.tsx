@@ -146,6 +146,7 @@ export default function CatalogueScreen() {
   const here = trail[trail.length - 1];
   const top = (
     <View style={{ gap: 16 }}>
+      {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}{GST_ENABLED ? " · incl. GST" : ""}</T> : null}
       <View style={{ height: 48, borderRadius: 24, ...glassInner, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
         <Icon name="search" color={colors.textTertiary} size={20} />
         <TextInput
