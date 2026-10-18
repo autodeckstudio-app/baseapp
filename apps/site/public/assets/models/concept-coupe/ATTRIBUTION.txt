@@ -1,0 +1,7 @@
+Car Concept, copyright 2024 Darmstadt Graphics Group GmbH.
+Model and textures by Eric Chadwick. Source:
+https://github.com/KhronosGroup/glTF-Sample-Assets/blob/main/Models/CarConcept/README.md
+Licence: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+Adapted for AutoDeck: licence plate and steering emblem removed (no Khronos/3D Commerce marks used); model simplified, textures resized and compressed, meshopt compression, paint changed to deep teal and fine-noise paint normal removed. Original was itself adapted from a public-domain model by Unity Fan, as documented at the source. This is an independent illustrative concept car, not an AutoDeck build, stock vehicle or brand endorsement. Licence carries no warranties. Source credit does not imply endorsement.

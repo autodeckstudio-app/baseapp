@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-/* Hero: the car under its studio cover, waiting for handover. Drag to turn.
+/* Hero: generic uncovered concept coupe, independent illustrative asset. Drag to turn.
    Loaded lazily by main.js, never under prefers-reduced-motion. */
 export function initHeroCar(host) {
   const canvas = document.createElement('canvas');
@@ -16,16 +17,16 @@ export function initHeroCar(host) {
     console.warn('[hero-car] WebGL unavailable, studio photos stay as the hero', e);
     return { destroy() {} };
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 600 ? 1.25 : 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  camera.position.set(3.4, 1.35, 5.5);
-  camera.lookAt(0, 0.34, 0);
+  const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 100);
+  camera.position.set(3.4, 1.5, 5.0);
+  camera.lookAt(0, 0.48, 0);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
@@ -46,38 +47,30 @@ export function initHeroCar(host) {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  /* the car under its studio cover, as it waits for handover. Poly Haven CC0 scan. */
-  const trim = new THREE.MeshStandardMaterial({ color: 0x0d0d0f, metalness: 0.3, roughness: 0.65 });
-
   const carGroup = new THREE.Group();
   scene.add(carGroup);
 
-  new GLTFLoader().load('/assets/models/covered-car/covered_car.gltf', (g) => {
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  loader.load('/assets/models/concept-coupe/hero-coupe.glb', (g) => {
     const car = g.scene;
-    car.traverse((o) => {
+    car.traverse(o => {
       if (!o.isMesh) return;
       o.castShadow = true;
-      const n = (o.name || '').toLowerCase();
-      if (n.includes('wheel')) { o.material = trim; }
-      else if (o.material) {
-        o.material.color.setHex(0x77777b); /* pull the cover down to studio charcoal */
-        o.material.envMapIntensity = 1.15; /* cloth picks up the studio room */
-        o.material.needsUpdate = true;
-      }
+      if(o.material) o.material.envMapIntensity = 1.25;
     });
     const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(new THREE.Vector3());
-    car.scale.setScalar(2.9 / Math.max(size.x, size.z));
+    car.scale.setScalar(3.6 / Math.max(size.x, size.z));
     const box2 = new THREE.Box3().setFromObject(car);
     car.position.set(-(box2.min.x + box2.max.x) / 2, -box2.min.y, -(box2.min.z + box2.max.z) / 2);
     carGroup.add(car);
-    carGroup.rotation.y = -0.55; /* three-quarter front */
+    carGroup.rotation.y = -0.45; /* three-quarter front */
     host.classList.add('ready');
   }, undefined, (err) => console.warn('[hero-car] model failed to load', err));
 
   /* drag to turn, with a slow idle rotation and inertia */
   let dragging = false, px = 0, vel = 0;
-  const idle = 0.0032;
+  const idle = 0.0016;
   host.addEventListener('pointerdown', (e) => { dragging = true; px = e.clientX; host.setPointerCapture(e.pointerId); });
   host.addEventListener('pointerup', () => { dragging = false; });
   host.addEventListener('pointercancel', () => { dragging = false; });
@@ -104,9 +97,11 @@ export function initHeroCar(host) {
   let visible = true;
   new IntersectionObserver((es) => { visible = es[0] ? es[0].isIntersecting : true; }, { threshold: 0.02 }).observe(host);
 
-  const loop = () => {
-    if (!visible) return;
-    if (!dragging) { carGroup.rotation.y += idle + vel; vel *= 0.94; }
+  let lastFrame = 0;
+  const loop = (time) => {
+    if (!visible || time - lastFrame < 1000/30) return;
+    lastFrame = time;
+    if (!dragging) { carGroup.rotation.y += idle + vel; vel *= 0.9; }
     renderer.render(scene, camera);
   };
   renderer.setAnimationLoop(loop);
