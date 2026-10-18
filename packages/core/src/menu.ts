@@ -144,7 +144,7 @@ export const MENU_SEED: MenuSeed[] = [
   wash("foam", "Foam wash", 900, 60, "Foam wash, rinse and dry.", 10),
   wash("exterior", "Exterior detail wash", 1500, 90, "Detailed exterior wash with wheels, tyres and door shuts.", 20),
   wash("interior", "Interior deep clean", 4500, 180, "Vacuum, steam clean and conditioning of seats, mats and trim.", 30),
-  wash("full", "Full detail wash", 6500, 300, "Interior deep clean and exterior detail wash together.", 40),
+  wash("full", "Full detail wash", 5750, 300, "Interior deep clean and exterior detail wash together.", 40),
   // Coatings by brand
   coat("autodeck-1", "AutoDeck Care Ceramic 1-year", "AutoDeck Care", 10000, 1, "Entry ceramic coating for daily cars.", 100, true),
   coat("autodeck-2", "AutoDeck Care Ceramic 2-year", "AutoDeck Care", 14000, 2, "Entry ceramic coating, two-year protection.", 110, true),
