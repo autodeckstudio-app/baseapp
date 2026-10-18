@@ -93,3 +93,21 @@ export async function searchVehiclesByPlate(tenantId: string, rawQuery: string):
   if (target.length < 2) return [];
   return (await tenantVehicles(tenantId)).filter((v) => normalizePlate(v.registrationNumber ?? "").includes(target));
 }
+
+export interface CustomerDirectory { customers: Customer[]; plates: Map<string, string[]> }
+
+/** Everyone in the tenant (name order) plus the plates they own, so lists and search work without a round trip per key press. */
+export async function loadCustomerDirectory(tenantId: string): Promise<CustomerDirectory> {
+  const [custSnap, vehicles] = await Promise.all([
+    getDocs(query(collection(db, COLLECTIONS.customers()), where("tenantId", "==", tenantId), limit(500))),
+    tenantVehicles(tenantId),
+  ]);
+  const customers = custSnap.docs.map((d) => ({ ...d.data(), id: d.id }) as Customer).filter((c) => !c.deletedAt);
+  customers.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "en", { sensitivity: "base" }));
+  return { customers, plates: plateIndex(vehicles) };
+}
+
+/** An empty search shows everyone. */
+export function filterDirectory(dir: CustomerDirectory, rawQuery: string): Customer[] {
+  return dir.customers.filter((c) => customerMatches(c, rawQuery, dir.plates));
+}

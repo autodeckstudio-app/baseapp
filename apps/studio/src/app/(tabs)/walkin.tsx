@@ -16,6 +16,7 @@ import {
   createVehicleForCustomer,
   previewServicePrice,
 } from "../../lib/walkin-service";
+import { loadCustomerDirectory, filterDirectory, type CustomerDirectory } from "../../lib/lookup-service";
 import { getActiveServices } from "../../lib/approval-service";
 import { STAFF_SEGMENTS, normalizeSegment } from "@autodeck/core";
 import type { Customer, Vehicle, Service, ServiceJob, StudioConfig, VehicleCategory, PriceBreakdown } from "@autodeck/core";
@@ -46,6 +47,7 @@ export default function WalkinScreen() {
   const [feedError,setFeedError] = useState<string|null>(null);
   const [retryTick,setRetryTick] = useState(0);
   const [phone, setPhone] = useState("");
+  const [directory, setDirectory] = useState<CustomerDirectory | null>(null);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -58,11 +60,13 @@ export default function WalkinScreen() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [newVehicle, setNewVehicle] = useState({ registrationNumber: "", make: "", model: "", year: "", color: "" });
+  const [newVehicleType, setNewVehicleType] = useState<VehicleCategory | null>(null);
   const [addingVehicle, setAddingVehicle] = useState(false);
 
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
-  const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>("hatchback");
+  // No default size: the car's saved type is used, and when it has none the staff must pick one.
+  const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory | null>(null);
 
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdown | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
@@ -81,6 +85,10 @@ export default function WalkinScreen() {
     void getActiveServices().then(setServices).catch(()=>setFeedError("Could not load services. Try again."));
   }, [retryTick]);
 
+  const dirTenant = auth.status === "ready" ? auth.claims.tenantId : null;
+  const reloadDirectory = () => { if (dirTenant) void loadCustomerDirectory(dirTenant).then(setDirectory).catch(() => setDirectory({ customers: [], plates: new Map() })); };
+  useEffect(() => { reloadDirectory(); }, [dirTenant]);
+
   useEffect(() => {
     if (!studioId) return;
     void getStudioConfig(studioId).then(setConfig).catch(()=>setFeedError("Could not load studio bays. Try again."));
@@ -95,11 +103,11 @@ export default function WalkinScreen() {
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) ?? null;
 
   useEffect(() => {
-    if (selectedVehicle?.category) setVehicleCategory(normalizeSegment(selectedVehicle.category) ?? "hatchback");
+    setVehicleCategory(selectedVehicle?.category ? normalizeSegment(selectedVehicle.category) : null);
   }, [selectedVehicleId]);
 
   useEffect(() => {
-    if (!selectedServiceId) {
+    if (!selectedServiceId || !vehicleCategory) {
       setPriceBreakdown(null);
       return;
     }
@@ -118,29 +126,18 @@ export default function WalkinScreen() {
     config?.bays.filter((b) => b.active && (!selectedService || b.bayType === selectedService.requiredBayType)) ?? [];
   const freeBays = compatibleBays.filter((b) => !occupiedBayIds.has(b.id));
 
-  async function handleSearch() {
-    if (!auth.status || auth.status !== "ready" || searching || !phone.trim()) return;
-    setActionError(null);setSearching(true);
-    setSearched(false);
-    setJustRegistered(false);
-    setCustomer(null);
-    setVehicles([]);
-    setSelectedVehicleId(null);
+  /** Picks an existing customer from the list and goes straight to their cars. */
+  async function chooseCustomer(found: Customer) {
+    if (auth.status !== "ready") return;
+    setActionError(null); setJustRegistered(false); setShowNew(false);
+    setCustomer(found); setVehicles([]); setSelectedVehicleId(null);
     try {
-      const term = phone.trim();
-      const results = await findCustomersBySearch(auth.claims.tenantId, term);
-      const found = results[0] ?? null;
-      setSearched(true);
-      setCustomer(found);
-      if (found) {
-        const custVehicles = await getVehiclesForCustomer(auth.claims.tenantId, found.id);
-        setVehicles(custVehicles);
-        if (custVehicles.length === 1 && custVehicles[0]) setSelectedVehicleId(custVehicles[0].id);
-      }
+      const custVehicles = await getVehiclesForCustomer(auth.claims.tenantId, found.id);
+      setVehicles(custVehicles);
+      if (custVehicles.length === 1 && custVehicles[0]) setSelectedVehicleId(custVehicles[0].id);
+      setStep("vehicle");
     } catch (err) {
-      showActionError("Search failed", err instanceof Error ? err.message : "Please try again.");
-    } finally {
-      setSearching(false);
+      showActionError("Could not load their cars", err instanceof Error ? err.message : "Please try again.");
     }
   }
 
@@ -157,7 +154,9 @@ export default function WalkinScreen() {
       setCustomer(c);
       setJustRegistered(created);
       setShowNew(false);
+      reloadDirectory();
       if (auth.status === "ready") setVehicles(await getVehiclesForCustomer(auth.claims.tenantId, c.id));
+      setStep("vehicle");
     } catch (err) {
       showActionError("Could not add customer", err instanceof Error ? err.message : "Please try again.");
     } finally {
@@ -168,8 +167,8 @@ export default function WalkinScreen() {
   async function handleAddVehicle() {
     if (!customer || addingVehicle) return;
     const yearNum = parseInt(newVehicle.year, 10);
-    if (!newVehicle.registrationNumber.trim() || !newVehicle.make.trim() || !newVehicle.model.trim() || isNaN(yearNum)) {
-      showActionError("Missing details", "Fill in registration, make, model, and year.");
+    if (!newVehicle.registrationNumber.trim() || !newVehicle.make.trim() || !newVehicle.model.trim() || isNaN(yearNum) || !newVehicleType) {
+      showActionError("Missing details", "Fill in registration, make, model, year and car type.");
       return;
     }
     setActionError(null);setAddingVehicle(true);
@@ -181,12 +180,14 @@ export default function WalkinScreen() {
         model: newVehicle.model.trim(),
         year: yearNum,
         color: newVehicle.color.trim() || "Unspecified",
+        category: newVehicleType,
       });
       setVehicles((prev) => [...prev, vehicle]);
       setSelectedVehicleId(vehicle.id);
       setShowAddVehicle(false);
       setStep("service");
       setNewVehicle({ registrationNumber: "", make: "", model: "", year: "", color: "" });
+      setNewVehicleType(null);
     } catch (err) {
       showActionError("Error", err instanceof Error ? err.message : "Failed to add vehicle.");
     } finally {
@@ -195,7 +196,7 @@ export default function WalkinScreen() {
   }
 
   async function handleCreateJob() {
-    if (submitting || feedError || !studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
+    if (submitting || feedError || !vehicleCategory || !studioId || !customer || !selectedVehicleId || !selectedServiceId || !selectedBayId) return;
     setActionError(null);setSubmitting(true);
     try {
       const result = await createWalkinJobCall({
@@ -207,6 +208,8 @@ export default function WalkinScreen() {
         studioId,
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
+      // Clear the flow first: this tab stays mounted, so the next walk-in must not open on the last customer.
+      startOver();
       router.replace(`/(tabs)/jobs/${result.job.id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create walk-in job.";
@@ -223,7 +226,8 @@ export default function WalkinScreen() {
     }
   }
 
-  const canSubmit = Boolean(customer && selectedVehicleId && selectedServiceId && selectedBayId && !feedError);
+  const shownCustomers = directory ? filterDirectory(directory, phone) : [];
+  const canSubmit = Boolean(vehicleCategory && customer && selectedVehicleId && selectedServiceId && selectedBayId && !feedError);
 
   // Guided flow: one decision per screen, big tap targets, back always available.
   type Step = "customer" | "vehicle" | "service" | "review";
@@ -270,6 +274,8 @@ export default function WalkinScreen() {
   function startOver() {
     setStep("customer"); setPhone(""); setSearched(false); setCustomer(null); setVehicles([]);
     setSelectedVehicleId(null); setSelectedServiceId(null); setSelectedBayId(null); setNotes(""); setJustRegistered(false);
+    setShowNew(false); setShowAddVehicle(false); setActionError(null); setVehicleCategory(null); setNewVehicleType(null); setCatFilter("all"); setPriceBreakdown(null);
+    reloadDirectory();
   }
   const priceText = (s: Service) => (s.priceOnRequest === true ? "Consult" : typeof s.basePrice === "number" ? `from ₹${(s.basePrice / 100).toLocaleString("en-IN")}` : "");
 
@@ -315,21 +321,18 @@ export default function WalkinScreen() {
         </View>
       ) : null}
 
+      {justRegistered && customer?.email ? (
+        <Text style={{ ...typography.caption, color: colors.success }}>Added. Tell them to open the AutoDeck app and continue with Google using {customer.email}. They will see this same record.</Text>
+      ) : null}
       {actionError ? <ErrorState title="Check walk-in details" message={actionError} fill={false} /> : null}
       {feedError ? <ErrorState title="Walk-in setup unavailable" message={feedError} fill={false} onRetry={() => setRetryTick((n) => n + 1)} /> : null}
 
       {step === "customer" && (
         <View style={{ gap: spacing.md }}>
           <View style={panel}>
-            <TextInput label="Phone, email, name or plate" placeholder="98765 43210, name@gmail.com or GJ01AB1234" keyboardType="email-address" autoCapitalize="none" value={phone} onChangeText={setPhone} />
-            <Button label="Find customer" onPress={() => void handleSearch()} loading={searching} />
+            <TextInput label="Search customers" placeholder="Name, phone, email or plate" autoCapitalize="none" value={phone} onChangeText={setPhone} />
+            <Button label="Add new customer" variant="secondary" onPress={() => { setShowNew((v) => !v); setNewCust((p) => ({ ...p, ...(phone.includes("@") ? { email: phone.trim() } : /^[\d\s+()-]{5,}$/.test(phone.trim()) ? { phone: phone.trim() } : phone.trim() ? { name: phone.trim() } : {}) })); }} />
           </View>
-          {searched && !customer && !showNew && (
-            <View style={{ ...panel, gap: spacing.sm }}>
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>No customer with that number or email yet.</Text>
-              <Button label="Add new customer" onPress={() => { setShowNew(true); setNewCust((p) => ({ ...p, ...(phone.includes("@") ? { email: phone.trim() } : { phone: phone.trim() }) })); }} />
-            </View>
-          )}
           {showNew && (
             <View style={panel}>
               <TextInput label="Name" value={newCust.name} onChangeText={(v) => setNewCust((p) => ({ ...p, name: v }))} />
@@ -338,14 +341,17 @@ export default function WalkinScreen() {
               <Button label="Save and continue" loading={registering} onPress={() => void handleRegister()} />
             </View>
           )}
-          {customer && (
-            <View style={{ ...panel, gap: spacing.sm }}>
-              <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{customer.name}</Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>{[customer.phone, customer.email].filter(Boolean).join("  |  ")}</Text>
-              {justRegistered && customer.email ? (
-                <Text style={{ ...typography.caption, color: colors.success }}>Added. Tell them to open the AutoDeck app and continue with Google using {customer.email}. They will see this same record.</Text>
-              ) : null}
-              <Button label="Continue" onPress={() => setStep("vehicle")} />
+          {directory === null ? <LoadingState fill={false} /> : (
+            <View style={{ gap: spacing.sm }}>
+              <Text style={{ ...typography.captionMedium, color: colors.textMuted }}>{phone.trim() ? `${shownCustomers.length} match${shownCustomers.length === 1 ? "" : "es"}` : `Existing customers (${directory.customers.length})`}</Text>
+              {shownCustomers.slice(0, 40).map((c) => (
+                <TouchableOpacity key={c.id} activeOpacity={0.8} accessibilityRole="button" onPress={() => void chooseCustomer(c)} style={tapRow(customer?.id === c.id)}>
+                  <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{c.name}</Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>{[c.phone, c.email].filter(Boolean).join("  |  ") || "No contact on file"}</Text>
+                </TouchableOpacity>
+              ))}
+              {shownCustomers.length > 40 ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Showing the first 40. Type to narrow the list.</Text> : null}
+              {shownCustomers.length === 0 ? <Text style={{ ...typography.body, color: colors.textMuted }}>{phone.trim() ? "No customer matches. Use Add new customer above." : "No customers yet. Use Add new customer above."}</Text> : null}
             </View>
           )}
         </View>
@@ -374,6 +380,17 @@ export default function WalkinScreen() {
               <TextInput label="Model" value={newVehicle.model} onChangeText={(v) => setNewVehicle((p) => ({ ...p, model: v }))} />
               <TextInput label="Year" keyboardType="numeric" value={newVehicle.year} onChangeText={(v) => setNewVehicle((p) => ({ ...p, year: v }))} />
               <TextInput label="Color" value={newVehicle.color} onChangeText={(v) => setNewVehicle((p) => ({ ...p, color: v }))} />
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Car type</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.sm }}>
+                {VEHICLE_CATEGORIES.map(({ value, label }) => {
+                  const on = newVehicleType === value;
+                  return (
+                    <TouchableOpacity key={value} onPress={() => setNewVehicleType(value)} style={{ minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: on ? colors.accent : colors.border, backgroundColor: on ? colors.accentMuted : "transparent" }}>
+                      <Text style={{ ...typography.caption, color: on ? colors.accentPressed : colors.textSecondary }}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
               <Button label="Save vehicle" onPress={() => void handleAddVehicle()} loading={addingVehicle} />
             </View>
           )}
@@ -412,7 +429,7 @@ export default function WalkinScreen() {
         <View style={{ gap: spacing.md }}>
           <View style={panel}>
             <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{selectedService.name}</Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>Vehicle type</Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>{vehicleCategory ? "Vehicle type" : "This car has no type saved. Pick one to see the price."}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
               {VEHICLE_CATEGORIES.map(({ value, label }) => {
                 const on = vehicleCategory === value;

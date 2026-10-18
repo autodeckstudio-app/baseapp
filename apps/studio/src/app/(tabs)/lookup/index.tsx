@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../hooks/useAuth";
 import { registerWalkinCustomer } from "../../../lib/walkin-service";
-import { searchCustomersAnyField, searchVehiclesByPlate } from "../../../lib/lookup-service";
+import { searchCustomersAnyField, searchVehiclesByPlate, loadCustomerDirectory, filterDirectory, type CustomerDirectory } from "../../../lib/lookup-service";
 import type { Customer, Vehicle } from "@autodeck/core";
 import { colors, spacing, typography, Button, TextInput, SearchInput, ErrorState, LoadingState } from "@autodeck/ui";
 import { CanvasTitle } from "../../../components/CanvasTitle";
@@ -25,8 +25,11 @@ export default function LookupScreen() {
   const [adding, setAdding] = useState(false);
   const [newCust, setNewCust] = useState({ name: "", email: "", phone: "" });
   const [addMsg, setAddMsg] = useState<string | null>(null);
+  const [directory, setDirectory] = useState<CustomerDirectory | null>(null);
   const seq = useRef(0);
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
+
+  useEffect(() => { if (tenantId) void loadCustomerDirectory(tenantId).then(setDirectory).catch(() => setDirectory({ customers: [], plates: new Map() })); }, [tenantId, adding]);
 
   // One box, searches as you type. Customers and cars are looked up together, so staff never choose a mode.
   useEffect(() => {
@@ -98,6 +101,14 @@ export default function LookupScreen() {
           <View style={{ ...glass, borderRadius: 28, padding: spacing.xl, alignItems: "center", gap: spacing.sm }}>
             <Text style={{ ...typography.title, color: colors.textPrimary }}>No match for "{query.trim()}"</Text>
             <Text style={{ ...typography.body, color: colors.textMuted, textAlign: "center" }}>Check the spelling or try the plate. If they are new, add them below.</Text>
+          </View>
+        ) : null}
+
+        {query.trim().length < 2 ? (
+          <View style={{ gap: spacing.sm }}>
+            <Text style={{ ...typography.title, color: colors.textPrimary }}>{directory ? `All customers (${directory.customers.length})` : "All customers"}</Text>
+            {directory === null ? <LoadingState fill={false} /> : directory.customers.length === 0 ? <Text style={{ ...typography.body, color: colors.textMuted }}>No customers yet. Add the first one below.</Text> : filterDirectory(directory, "").slice(0, 60).map(customerRow)}
+            {directory && directory.customers.length > 60 ? <Text style={{ ...typography.caption, color: colors.textMuted }}>Showing the first 60. Search to find the rest.</Text> : null}
           </View>
         ) : null}
 

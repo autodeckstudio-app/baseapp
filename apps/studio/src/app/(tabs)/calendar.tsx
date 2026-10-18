@@ -42,9 +42,14 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [show, setShow] = useState<"active" | "done" | "cancelled">("active");
   const labels = useJobLabels(auth.status === "ready" ? FIRST_STUDIO_ID : null);
   const people = useJobPeople(jobs);
 
+  const isCancelled = (j: ServiceJob) => j.status === "CANCELLED";
+  const isDone = (j: ServiceJob) => j.status === "DELIVERED";
+  const counts = { active: jobs.filter((j) => !isCancelled(j) && !isDone(j)).length, done: jobs.filter(isDone).length, cancelled: jobs.filter(isCancelled).length };
+  const shown = jobs.filter((j) => (show === "cancelled" ? isCancelled(j) : show === "done" ? isDone(j) : !isCancelled(j) && !isDone(j)));
   const today = todayIST();
   const dateDays = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
@@ -92,14 +97,24 @@ export default function CalendarScreen() {
             );
           })}
         </View>
+        <View style={{ flexDirection: "row", gap: spacing.xs, marginBottom: spacing.md }}>
+          {(["active", "done", "cancelled"] as const).map((k) => {
+            const on = show === k;
+            return (
+              <TouchableOpacity key={k} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setShow(k)} style={{ minHeight: 40, justifyContent: "center", paddingHorizontal: spacing.md, borderRadius: radius.full, borderWidth: 1.5, borderColor: on ? colors.accent : colors.border, backgroundColor: on ? colors.accentMuted : "transparent" }}>
+                <Text style={{ ...typography.captionMedium, color: on ? colors.accentPressed : colors.textSecondary }}>{`${k === "active" ? "Active" : k === "done" ? "Done" : "Cancelled"} ${counts[k]}`}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         {loading ? (
           <LoadingState />
         ) : (
           <FlatList
             contentContainerStyle={{ paddingBottom: 130, flexGrow: 1 }}
-            data={jobs}
+            data={shown}
             keyExtractor={(j) => j.id}
-            ListEmptyComponent={<EmptyState title="No jobs" message={`Nothing scheduled for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
+            ListEmptyComponent={<EmptyState title={show === "active" ? "No active jobs" : show === "done" ? "Nothing finished yet" : "No cancelled jobs"} message={show === "active" && (counts.cancelled > 0 || counts.done > 0) ? `${formatDisplayDate(selectedDate)} has ${counts.done} done and ${counts.cancelled} cancelled. Use the filters above to see them.` : show === "active" ? `Nothing scheduled for ${formatDisplayDate(selectedDate)}. Start a walk-in from the Today tab or pick another day.` : `Nothing here for ${formatDisplayDate(selectedDate)}.`} fill={false} />}
             renderItem={({ item }) => (
               <JobCard job={item} carName={people.car(item)} customerName={people.customer(item)} viewDate={selectedDate} bayName={labels.bays[item.bayId]} serviceName={labels.services[item.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${item.id}`)} />
             )}
