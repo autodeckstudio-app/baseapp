@@ -24,4 +24,8 @@ describe("anonymous car listing is an allowlist of safe fields", () => {
     expect(fn).toContain("publicListingView");
     expect(fn).not.toContain("view(l");
   });
+  it("the car page never prints an owners row the anonymous response does not have", () => {
+    const app = readFileSync(`${__dirname}/../../../../apps/customer/src/app/(tabs)/cars/[id].tsx`, "utf8");
+    expect(app).toContain('typeof car.owners === "number"');
+  });
 });

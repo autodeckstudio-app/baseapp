@@ -70,7 +70,7 @@ export default function CarDetail() {
   if (car === undefined) return <Screen><Skeleton height={300} /><Skeleton height={120} /></Screen>;
   if (car === null) return <Screen><Notice title="Car not found" body="It may have been sold or taken down." action={<Button kind="quiet" label="Back to cars" onPress={() => router.replace("/(tabs)/cars")} />} /></Screen>;
 
-  const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ...(car.bodyType ? [["Body", car.bodyType] as [string, string]] : []), ["Owners", String(car.owners)], ["Colour", car.colour], ["Area", car.area], ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
+  const facts: Array<[string, string]> = [["Year", String(car.year)], ["Driven", kmLabel(car.kmDriven)], ["Fuel", car.fuel], ["Gearbox", car.gearbox], ...(car.bodyType ? [["Body", car.bodyType] as [string, string]] : []), ...(typeof car.owners === "number" ? [["Owners", String(car.owners)] as [string, string]] : []), ["Colour", car.colour], ["Area", car.area], ...(car.insuranceValidTill ? [["Insurance till", car.insuranceValidTill] as [string, string]] : [])];
 
   return (
     <Screen>
