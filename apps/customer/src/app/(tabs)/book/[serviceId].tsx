@@ -16,11 +16,11 @@ import { COLLECTIONS } from "@autodeck/database";
 // V1 is explicitly single-studio-per-tenant (seeded once) - FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
-import { SERVICE_INCLUDES, CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
+import { SERVICE_INCLUDES, servicesOverlap, CAR_SEGMENTS, FIRST_STUDIO_ID, normalizeSegment, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
-import { eligibleExtras, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
+import { applyBundleUpgrade, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
@@ -29,7 +29,7 @@ const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 const durationText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 
 export default function BookServiceScreen() {
-  const { serviceId } = useLocalSearchParams<{ serviceId: string }>();
+  const { serviceId, extras: extrasParam } = useLocalSearchParams<{ serviceId: string; extras?: string }>();
   const router = useRouter();
   const auth = useAuth();
 
@@ -54,7 +54,17 @@ export default function BookServiceScreen() {
 
   // More services in the same visit: same bay type only, so one slot fits them all. The server checks again.
   const [catalogue, setCatalogue] = useState<Service[]>([]);
-  const [extraIds, setExtraIds] = useState<string[]>([]);
+  const [extraIds, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
+  const [upgradeNote, setUpgradeNote] = useState<string | null>(null);
+  useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pickExtra = (id: string) => {
+    const next = toggleExtra(extraIds, id);
+    const up = applyBundleUpgrade(serviceId ?? "", next);
+    if (!up.upgradedTo) { setUpgradeNote(null); setExtraIds(next); return; }
+    setUpgradeNote("Full detail wash already covers both. We switched you to it.");
+    if (up.primaryId !== serviceId) router.replace({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: up.primaryId, ...(up.extras.length ? { extras: extrasToParam(up.extras) } : {}) } });
+    else setExtraIds(up.extras);
+  };
   const [extraTotals, setExtraTotals] = useState<Record<string, number>>({});
   useEffect(() => { let alive = true; void getServiceCatalogue().then((c) => { if (alive) setCatalogue(c); }).catch(() => undefined); return () => { alive = false; }; }, []);
   useEffect(() => {
@@ -212,12 +222,13 @@ export default function BookServiceScreen() {
             {offeredExtras(eligibleExtras(service, catalogue), extraIds).map((e) => {
               const on = extraIds.includes(e.id);
               return (
-                <Pressable key={e.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setExtraIds((p) => toggleExtra(p, e.id))} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (colors.textPrimary) : "rgba(128,128,128,0.14)" }}>
+                <Pressable key={e.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => pickExtra(e.id)} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (colors.textPrimary) : "rgba(128,128,128,0.14)" }}>
                   <T role="bodyStrong" style={{ color: on ? (themeName === "light" ? "#F4F1EC" : "#16181C") : colors.textPrimary, fontSize: 13 }}>{on ? "\u2713 " : "+ "}{e.name}</T>
                 </Pressable>
               );
             })}
           </ScrollView>
+          {upgradeNote ? <T role="caption" tone="accent">{upgradeNote}</T> : null}
           {extraIds.flatMap((id) => (SERVICE_INCLUDES[id] ?? []).map((inc) => ({ big: id, inc }))).length > 0 ? (
             <T role="caption" tone="tertiary">{extraIds.filter((id) => (SERVICE_INCLUDES[id] ?? []).length > 0).map((id) => `${catalogue.find((c) => c.id === id)?.name ?? "That service"} already includes ${(SERVICE_INCLUDES[id] ?? []).map((i) => catalogue.find((c) => c.id === i)?.name ?? "").filter(Boolean).join(" and ")}.`).join(" ")}</T>
           ) : null}

@@ -149,11 +149,19 @@ describe("server refuses a bundle together with what it includes", () => {
   const svc = (id: string, name: string) => ({ id, name, active: true, requiredBayType: "wash", priceOnRequest: false }) as never;
   const foam = svc("menu-wash-foam", "Foam wash"), ext = svc("menu-wash-exterior", "Exterior detail wash"), int = svc("menu-wash-interior", "Interior deep clean"), full = svc("menu-wash-full", "Full detail wash");
   it("rejects Full with Exterior or Interior, either as main or as extra", () => {
-    expect(extrasProblem(foam, [ext, int, full], { gift: false })).toContain("already includes");
+    expect(extrasProblem(foam, [ext, full], { gift: false })).toContain("already includes");
     expect(extrasProblem(full, [ext], { gift: false })).toContain("Full detail wash already includes Exterior detail wash");
     expect(extrasProblem(ext, [full], { gift: false })).toContain("already includes");
   });
-  it("still allows Foam with Exterior and Interior", () => {
-    expect(extrasProblem(foam, [ext, int], { gift: false })).toBeNull();
+  it("still allows Foam with Exterior alone", () => {
+    expect(extrasProblem(foam, [ext], { gift: false })).toBeNull();
+  });
+});
+
+describe("server points Exterior + Interior at the Full detail wash", () => {
+  const s = (id: string, name: string) => ({ id, name, active: true, requiredBayType: "wash", priceOnRequest: false }) as never;
+  it("rejects with an upgrade message, not a silent change", () => {
+    const msg = extrasProblem(s("menu-wash-exterior", "Exterior detail wash"), [s("menu-wash-interior", "Interior deep clean")], { gift: false });
+    expect(msg).toContain("together is the Full detail wash");
   });
 });

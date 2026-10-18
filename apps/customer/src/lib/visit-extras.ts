@@ -1,4 +1,4 @@
-import { includesService, servicesOverlap, type Service } from "@autodeck/core";
+import { SERVICE_INCLUDES, bundleFor, includesService, servicesOverlap, type Service } from "@autodeck/core";
 
 /** Extra services on top of the main one. The server enforces the same cap. */
 export const MAX_EXTRAS = 4;
@@ -33,4 +33,13 @@ export const extrasToParam = (ids: string[]): string => ids.join(",");
 export function extrasFromParam(p: string | undefined): string[] {
   if (!p) return [];
   return [...new Set(p.split(",").map((x) => x.trim()).filter(Boolean))].slice(0, MAX_EXTRAS);
+}
+
+/** When the main service plus extras add up to a bundle (Exterior + Interior), switch to the bundle. The bundle becomes the main service if either part was the main one, otherwise it replaces the two extras. */
+export function applyBundleUpgrade(primaryId: string, extras: string[]): { primaryId: string; extras: string[]; upgradedTo: string | null } {
+  const big = bundleFor([primaryId, ...extras]);
+  if (!big) return { primaryId, extras, upgradedTo: null };
+  const parts = SERVICE_INCLUDES[big] ?? [];
+  const rest = extras.filter((x) => !parts.includes(x));
+  return parts.includes(primaryId) ? { primaryId: big, extras: rest, upgradedTo: big } : { primaryId, extras: [...rest, big], upgradedTo: big };
 }

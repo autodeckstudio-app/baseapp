@@ -1,4 +1,4 @@
-import { redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
+import { SERVICE_INCLUDES, bundleFor, redundantPairs, type PriceBreakdown, type Service, type VehicleCategory } from "@autodeck/core";
 import { calculatePrice, calculateTax, type CalculatePriceInput } from "./pricing.js";
 
 /** Most extra services on top of the main one (so 5 lines in all). */
@@ -23,6 +23,9 @@ export function extrasProblem(primary: Service, extras: Service[], opts: { gift:
   if (primary.priceOnRequest === true || extras.some((e) => e.priceOnRequest === true)) return "Services priced after inspection cannot be combined. Book them separately.";
   if (extras.some((e) => !e.active)) return "One of the services is not available right now.";
   if (extras.some((e) => e.requiredBayType !== primary.requiredBayType)) return "These services use different bays. Book them separately.";
+  const all = [primary, ...extras];
+  const up = bundleFor(all.map((x) => x.id));
+  if (up) return `${all.filter((x) => (SERVICE_INCLUDES[up] ?? []).includes(x.id)).map((x) => x.name).join(" and ")} together is the Full detail wash. Choose ${up === "menu-wash-full" ? "Full detail wash" : "the bundle"} instead.`;
   const overlap = redundantPairs([primary.id, ...extras.map((e) => e.id)])[0];
   if (overlap) {
     const nameOf = (id: string) => [primary, ...extras].find((x) => x.id === id)?.name ?? "that service";

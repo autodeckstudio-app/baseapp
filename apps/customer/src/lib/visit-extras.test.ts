@@ -41,3 +41,17 @@ describe("a bundle and the services it includes are never in one visit", () => {
     expect(shown).toEqual(["menu-wash-full"]);
   });
 });
+
+import { applyBundleUpgrade } from "./visit-extras";
+describe("Exterior + Interior becomes the Full detail wash", () => {
+  it("main Exterior + extra Interior: Full becomes the main service, other extras stay", () => {
+    expect(applyBundleUpgrade("menu-wash-exterior", ["menu-wash-interior", "menu-wash-foam"])).toEqual({ primaryId: "menu-wash-full", extras: ["menu-wash-foam"], upgradedTo: "menu-wash-full" });
+  });
+  it("main Foam + both as extras: Full replaces the two extras", () => {
+    expect(applyBundleUpgrade("menu-wash-foam", ["menu-wash-exterior", "menu-wash-interior"])).toEqual({ primaryId: "menu-wash-foam", extras: ["menu-wash-full"], upgradedTo: "menu-wash-full" });
+  });
+  it("one part alone, or Full already present, changes nothing", () => {
+    expect(applyBundleUpgrade("menu-wash-foam", ["menu-wash-exterior"]).upgradedTo).toBeNull();
+    expect(applyBundleUpgrade("menu-wash-full", []).upgradedTo).toBeNull();
+  });
+});
