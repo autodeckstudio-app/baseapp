@@ -6,7 +6,7 @@ export const floatRadius = 28;
 export function floatCard(night: boolean) {
   return night
     ? {
-        backgroundColor: "rgba(76,76,72,.58)",
+        backgroundColor: "rgba(22,22,24,.80)",
         backgroundImage: "linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.045))",
         borderWidth: 1,
         borderColor: "rgba(255,255,255,.17)",
@@ -48,7 +48,7 @@ export function floatHero(night: boolean, canvas: string) {
 // Full-bleed studio photograph behind every screen, veiled so cards read.
 export function floatScene(night: boolean) {
   const veil = night
-    ? "linear-gradient(180deg, rgba(40,40,38,.55) 0%, rgba(52,52,49,.78) 50%, rgba(62,62,59,.92) 100%)"
+    ? "linear-gradient(180deg, rgba(28,28,28,.72) 0%, rgba(34,34,34,.86) 50%, rgba(40,40,40,.94) 100%)"
     : "linear-gradient(180deg, rgba(251,247,241,.45) 0%, rgba(251,247,241,.72) 50%, rgba(251,247,241,.90) 100%)";
   return {
     backgroundImage: `${veil}, url(/hero-studio.jpg)`,

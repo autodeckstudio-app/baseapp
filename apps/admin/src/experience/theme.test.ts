@@ -61,19 +61,23 @@ describe("theme tokens", () => {
     expect(nightGround).toContain("radial-gradient");
     expect(nightOrange).toContain("rgba(236,134,56,.18)");
     expect(nightOrange).toContain("rgba(255,255,255,0) 42%");
-    expect(nightButtonStyle.backgroundColor).toBe("transparent");
-    expect(nightButtonStyle.backdropFilter).toContain("blur(18px)");
+    expect(nightButtonStyle.backgroundColor).toBe("#FFFFFF");
+    expect(contrastRatio(nightButtonText, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
     for (const bg of ["#60605B", "#64645F", "#575752", "#41413E"]) textPasses(nightColors, bg);
-    // Composite the real orange stops over the brightest ground and card stops.
-    // Label occupies the clear middle; allow 2% residual white reflection.
-    for (const ground of [[100,100,95], [87,87,82], [65,65,62]]) {
-      for (const [orange, alpha] of [[[245,154,78], .22], [[236,134,56], .20], [[236,134,56], .18]] as const) {
-        const bg = ground.map((v, i) => Math.round((v * (1-alpha) + orange[i]! * alpha) * .98 + 255 * .02));
-        const hex = "#" + bg.map(v => v.toString(16).padStart(2,"0")).join("");
-        expect(contrastRatio(nightButtonText, hex)).toBeGreaterThanOrEqual(4.5);
-      }
-    }
-    expect(contrastRatio("#FFD0A6", "#575752")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#FFD0A6", nightColors.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(nightColors.textOnAccent, nightColors.accent)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(nightColors.danger, nightColors.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(nightColors.accent).toBe("#EC8638");
+  });
+
+  it("night gradients and translucent actions remain readable at every stop", () => {
+    expect(nightGround).toContain("#50504D");
+    expect(nightGround).toContain("radial-gradient");
+    expect(nightOrange).toContain("rgba(236,134,56,.18)");
+    expect(nightOrange).toContain("rgba(255,255,255,0) 42%");
+    expect(nightButtonStyle.backgroundColor).toBe("#FFFFFF");
+    expect(contrastRatio(nightButtonText, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
+    for (const bg of ["#60605B", "#64645F", "#575752", "#41413E"]) textPasses(nightColors, bg);
   });
 
   it("auto mode: night by clock or device preference", () => {

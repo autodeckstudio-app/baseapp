@@ -132,7 +132,7 @@ export function PhotoCard({ media, title, pill, onPress, hearted = true }: { med
           <Text style={{ color: liked ? "#E5484D" : "#9A9AA0", fontSize: 16, marginTop: -1 }}>{liked ? "\u2665" : "\u2661"}</Text>
         </Pressable>
       ) : null}
-      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: "#F59A4E", fontSize: 10, fontWeight: "700" }}>{pill}</Text></View> : null}
+      {pill ? <View style={{ position: "absolute", right: 10, bottom: 10, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "700" }}>{pill}</Text></View> : null}
     </Pressable>
   );
 }
