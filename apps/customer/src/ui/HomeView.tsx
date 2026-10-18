@@ -173,25 +173,23 @@ export function pickIdleNudge(p: { reminder: HomeReminder | null; need?: { title
 }
 function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pct: number | null; nudge: IdleNudge | null; car: HomeCar | undefined; onBook: () => void }) {
   const { name, colors } = useExperienceTheme();
-  const r = raised(name);
   const idle = !live || live.idle === true;
   const n = idle ? nudge : null;
   const kicker = n ? n.kicker : idle ? "Ready when you are" : live!.kicker;
   const title = n ? n.title : idle ? (car ? `Book care for your ${car.title}` : "Add your car to begin") : live!.title;
   const detail = n ? n.detail : idle ? (live?.detail ?? "") : live!.detail;
   const press = n ? n.onPress : idle ? (live?.onPress ?? onBook) : live!.onPress;
+  const cta = n ? n.cta : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track";
+  const showDetail = !!detail && (n !== null || !idle);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ borderRadius: metrics.cardRadius, padding: metrics.cardPad, gap: 8, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light"), ...glassBg(name !== "light") })}>
-      <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
-      <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "800", lineHeight: 28 }}>{title}</Text>
-      {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
-      {!idle && pct !== null ? (
-        <View style={{ height: 8, overflow: "hidden", ...r.well, borderRadius: 6 }}>
-          <View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: colors.textPrimary }} />
-        </View>
-      ) : null}
-      <View style={{ alignSelf: "flex-start", marginTop: 4, borderRadius: 9999, paddingHorizontal: 22, paddingVertical: 12, backgroundColor: "#F4F2EF" }}>
-        <Text style={{ color: "#0B0B0D", fontSize: 15, fontWeight: "800" }}>{n ? n.cta : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track"}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 10, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light") })}>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text numberOfLines={1} style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
+        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{title}</Text>
+        {showDetail ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{detail}</Text> : null}
+      </View>
+      <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: name === "light" ? "#1D1B26" : "#F4F2EF" }}>
+        <Text style={{ color: name === "light" ? "#F4F1EC" : "#0B0B0D", fontSize: 13, fontWeight: "800" }}>{cta}</Text>
       </View>
     </Pressable>
   );
@@ -291,7 +289,7 @@ export function HomeView(p: HomeViewProps) {
   const pct = p.progress;
   const liveOn = !!p.live && p.live.idle !== true;
   return (
-    <View style={{ gap: metrics.sectionGap, paddingBottom: 100 }}>
+    <View style={{ gap: metrics.sectionGap, paddingBottom: 100, paddingTop: 20 }}>
       <HomeBackdrop />
       {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -299,8 +297,8 @@ export function HomeView(p: HomeViewProps) {
           <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>
-          <Text numberOfLines={1} style={{ color: "#D5D1CA", fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
+          <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>
+          <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{car ? p.stage : "Add your car to begin"}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={p.unread > 0 ? `Notifications, ${p.unread} unread` : "Notifications"} onPress={p.onBell} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
           <NavIcon name="bell" color={colors.textPrimary} size={22} cut="#18181C" />
@@ -310,11 +308,11 @@ export function HomeView(p: HomeViewProps) {
 
       {p.stories}
 
-      {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} />}
+      <LeadCard live={liveOn ? null : p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
 
       {p.banner}
 
-      <LeadCard live={liveOn ? null : p.live} pct={pct} nudge={pickIdleNudge({ reminder: p.reminders[0] ?? null, need: p.need, rebook: p.rebook, onReminder: p.onReminders })} car={car} onBook={p.onBook} />
+      {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} />}
 
       {top.length ? (
         <View style={{ gap: 12 }}>

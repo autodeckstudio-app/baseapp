@@ -645,7 +645,9 @@ describe("home header blends into the page (PWA and web)", () => {
     expect(b).toContain("maskImage: BACKDROP_FADE");
     expect(b).toContain("transparent 100%");
     expect(b).not.toContain("top: -140");
-    expect(b).not.toContain("useExperienceTheme");
+    expect(b).not.toContain("hero-studio");
+    expect(b).not.toContain("backgroundSize: \"cover\"");
+    expect(b).toContain("radial-gradient");
   });
 });
 
@@ -687,5 +689,14 @@ describe("visit history rows: plain status text and a small invoice link",()=>{
     expect(hist).not.toContain("<Chip");
     expect(tl).toContain("it.soon ? <Chip");
     expect(read("src/ui/kit.tsx")).toContain("export function LinkAction");
+  });
+});
+
+describe("Home: ambient light, slim book bar on top, car card below",()=>{
+  it("no photo behind the header; header text uses theme colours; the book bar comes before the car card",()=>{
+    const h=read("src/ui/HomeView.tsx");
+    expect(h).not.toContain('color: "#FFFFFF", fontSize: 17');
+    expect(h.indexOf("<LeadCard")).toBeLessThan(h.indexOf("<CarChips cars="));
+    expect(h).toContain("paddingTop: 20");
   });
 });

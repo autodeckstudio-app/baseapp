@@ -1,5 +1,5 @@
-// The car on Home: a compact glass chip (photo, name, plate, size). Several cars scroll sideways.
-// Tap a chip to make it the active car; tap the active chip to open it in Garage.
+// The car on Home: one card with the active car (photo, name, plate, size). With several cars a row of small names switches the active one.
+// Tap the car to open it in Garage.
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { segmentLabel } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -19,26 +19,35 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd }: { cars: Home
       </Pressable>
     );
   }
-  const one = cars.length === 1;
+  const car = cars[Math.min(active, cars.length - 1)] ?? cars[0]!;
+  const seg = segmentLabel(car.category ?? car.vehicle?.category);
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} scrollEnabled={!one} contentContainerStyle={{ gap: 10, flexGrow: one ? 1 : 0 }}>
-      {cars.map((c, i) => {
-        const seg = segmentLabel(c.category ?? c.vehicle?.category);
-        const on = one || i === active;
-        return (
-          <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={on ? `Open ${c.title}` : `Select ${c.title}`} accessibilityState={{ selected: on }} onPress={() => (on ? onOpen(c) : onActive(i))}
-            style={({ pressed }) => ({ flex: one ? 1 : undefined, minWidth: one ? 0 : 250, flexDirection: "row", alignItems: "center", gap: 12, padding: 10, opacity: pressed ? 0.85 : on ? 1 : 0.6, ...glassPane(light) })}>
-            <View style={{ width: 52, height: 52, borderRadius: 12, overflow: "hidden" }}><CarThumb car={c.vehicle} height={52} width={52} radius={12} /></View>
-            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-              <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>{c.title}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                {c.plate ? <Plate value={c.plate} /> : null}
-                {seg ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{seg}</Text> : null}
-              </View>
+    <View style={{ padding: metrics.cardPad, gap: 12, ...glassPane(light) }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, opacity: pressed ? 0.88 : 1 })}>
+        <View style={{ borderRadius: 16, overflow: "hidden" }}><CarThumb car={car.vehicle} height={160} radius={16} /></View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+            <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800" }}>{car.title}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {car.plate ? <Plate value={car.plate} /> : null}
+              {seg ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{seg}</Text> : null}
             </View>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+          </View>
+        </View>
+      </Pressable>
+      {cars.length > 1 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {cars.map((c, i) => {
+            const on = i === active;
+            return (
+              <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`Select ${c.title}`} accessibilityState={{ selected: on }} onPress={() => onActive(i)}
+                style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: on ? colors.textPrimary : "rgba(128,128,128,0.14)" }}>
+                <Text numberOfLines={1} style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.title}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+    </View>
   );
 }
