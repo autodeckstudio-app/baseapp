@@ -12,6 +12,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { glassPane } from "../../../lib/glass-pane";
+import { FilterPills } from "../../../ui/FilterPills";
 import { dueChip } from "../../../lib/garage-due";
 import { listenToMyJobs } from "../../../lib/job-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
@@ -137,17 +138,7 @@ export default function GarageScreen() {
     <Screen appBar="Garage">
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-          {[{ id: null as string | null, label: "All" }, ...list.map((v) => ({ id: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))].map((c) => {
-            const on = sel === c.id;
-            return (
-              <Pressable key={c.id ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setPick(c.id)} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#F3F1ED") : "rgba(128,128,128,0.14)" }}>
-                <Text style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : ink.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
-              </Pressable>
-            );
-          })}
-          <Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>+ Add</Text></Pressable>
-        </ScrollView>
+        <FilterPills items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>+ Add</Text></Pressable>} />
       ) : null}
       {list.length === 0 && !error ? (
         <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>

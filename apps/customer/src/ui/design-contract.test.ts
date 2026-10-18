@@ -253,7 +253,9 @@ describe("home menu", () => {
 describe("services filters", () => {
   it("Services is simple tiles: category tiles, then type tiles, then brand and product; no heading, no 3D car or goal chips", () => {
     const src = read("src/app/(tabs)/catalogue/index.tsx");
-    expect(src).toContain("const cat = fromRoute ?? grp ?? undefined");
+    expect(src).toContain("const cat = fromRoute ?? undefined");
+    expect(src).toContain("<FilterPills");
+    expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills");
     expect(src).not.toMatch(/What does your car need/);
     expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
     expect(src).toContain("<Screen appBar=");

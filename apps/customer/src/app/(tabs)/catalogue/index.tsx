@@ -13,8 +13,9 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { serviceVisual, brandHero, serviceImagery, typePhoto } from "../../../lib/imagery";
-import { PhotoCard, GroupChips, groupCategories, TILE_GAP } from "../../../ui/HomeView";
+import { PhotoCard, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
+import { FilterPills } from "../../../ui/FilterPills";
 import { Button, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 import { SERVICE_TYPES, buildTree, leafServices, matchesQuery, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
 
@@ -33,6 +34,8 @@ function duration(min: number): string {
   return h >= 8 ? `${Math.round(h / 8)} day${h >= 16 ? "s" : ""}` : `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
 }
 
+const groupLabel = (g: MenuGroup): string => (g.key === "mods" ? "Modifications" : g.label);
+
 export default function CatalogueScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
@@ -44,7 +47,7 @@ export default function CatalogueScreen() {
   const [grp, setGrp] = useState<string | null>(null);
   const fromRoute = catParam ?? (need ? NEED_TO_GROUP[need] : undefined);
   // A chip opens that group's brands or products directly, never a card for the group you just picked.
-  const cat = fromRoute ?? grp ?? undefined; // a menu group key
+  const cat = fromRoute ?? undefined; // a menu group key; the filter pills (grp) only narrow level 1
   const catGroup = MENU_GROUPS.find((g) => g.key === cat);
   const brand = brandParam;
 
@@ -111,17 +114,19 @@ export default function CatalogueScreen() {
       <Icon name={icon} color="#F4F1EC" size={40} />
     </View>
   );
-  const nodeTile = (n: TreeNode, i: number) => {
+  const nodeTile = (n: TreeNode, i: number, inCat?: string) => {
+    const catKey = inCat ?? cat;
+    const base = inCat ? [] : trail.map((t) => t.key);
     if (n.kind === "leaf") return card(n.service, i);
     if (n.kind === "enquiry") {
       const photo = typePhoto(n.key);
       return <PhotoCard key={n.key} title={n.label} pill="Get a quote" hearted={false} onPress={() => router.push("/(tabs)/help")} media={photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
     }
     const xs = leafServices(n);
-    const photo = trail.length === 0 ? typePhoto(n.key) : null;
+    const photo = base.length === 0 ? typePhoto(n.key) : null;
     const first = xs[0];
-    const media = trail.length === 0 && n.kind === "branch" && SERVICE_TYPES[cat ?? ""] ? (photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")) : first ? <ServicePhoto service={first} height={400} variant={i} /> : iconPanel("tools");
-    return <PhotoCard key={n.key} title={n.label} pill={pricedFrom(xs)?.replace(/^From /, "From ")} hearted={false} onPress={() => go({ cat: cat!, p: [...trail.map((t) => t.key), n.key].join(",") })} media={media} />;
+    const media = base.length === 0 && n.kind === "branch" && SERVICE_TYPES[catKey ?? ""] ? (photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")) : first ? <ServicePhoto service={first} height={400} variant={i} /> : iconPanel("tools");
+    return <PhotoCard key={n.key} title={n.label} pill={pricedFrom(xs)?.replace(/^From /, "From ")} hearted={false} onPress={() => go({ cat: catKey!, p: [...base, n.key].join(",") })} media={media} />;
   };
   const renderNodes = (ns: TreeNode[]) => {
     const sectionOf = (n: TreeNode) => (n.kind === "leaf" ? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
@@ -158,6 +163,7 @@ export default function CatalogueScreen() {
           style={{ flex: 1, color: colors.textPrimary, fontSize: 15, outlineStyle: "none" } as never}
         />
       </View>
+      {!fromRoute && !searching ? <FilterPills items={[{ key: null as string | null, label: "All" }, ...MENU_GROUPS.filter((g) => inGroup(g).length > 0).map((g) => ({ key: g.key as string | null, label: groupLabel(g) }))]} value={grp} onChange={setGrp} /> : null}
     </View>
   );
 
@@ -173,7 +179,14 @@ export default function CatalogueScreen() {
         found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : grid(found.map(card))
       ) : null}
       {services && !searching && level === 1 ? (
-        grid(visibleGroups.map((g) => tile(g.key, g.label, g.blurb, g.pricing === "consult" ? "Consult" : g.key === "pickup" ? PICKUP_TILE_TEXT : pricedFrom(inGroup(g)) ?? undefined, "tools", () => go({ cat: g.key }), serviceImagery[GROUP_IMAGE[g.key] ?? "other"])))
+        <View style={{ gap: 18 }}>
+          {visibleGroups.filter((g) => !grp || g.key === grp).map((g) => (
+            <View key={g.key} style={{ gap: 8 }}>
+              <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{groupLabel(g)}</Text>
+              {grid(buildTree(g, all).map((n, i) => nodeTile(n, i, g.key)))}
+            </View>
+          ))}
+        </View>
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: 18 }}>
