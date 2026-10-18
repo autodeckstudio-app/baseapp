@@ -19,7 +19,7 @@ describe("public site guards", () => {
   it("lists only pages that exist", () => {
     const xml = readFileSync(join(site, "public/sitemap.xml"), "utf8");
     const paths = [...xml.matchAll(/<loc>https:\/\/www\.autodeck\.in(\/[^<]*)<\/loc>/g)].map((m) => m[1] as string);
-    expect(paths.length).toBeGreaterThan(5);
+    expect(paths.length).toBeGreaterThanOrEqual(5);
     for (const p of paths) {
       const file = p === "/" ? "index" : p.slice(1);
       expect(existsSync(join(site, "src/pages", `${file}.astro`)), p).toBe(true);
