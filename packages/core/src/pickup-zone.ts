@@ -33,8 +33,9 @@ export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; l
 
 export type PickupTier = "near" | "far";
 
-/** The distance is rounded to 0.1 km first, and the fee is read from that rounded value, so what the customer sees is what is charged. */
+/** The distance is cut down to 0.1 km (never rounded up) and the fee is read from that value, so what the customer sees is what is charged
+ *  and the 3 km line is the real line: 2.96 km shows 2.9 km and is Rs 100, 3.0 km is Rs 150. */
 export function pickupZone(point: { lat: number; lng: number }): { km: number; tier: PickupTier; feePerLegPaise: number } {
-  const km = Math.round(haversineKm(STUDIO_COORDS, point) * 10) / 10;
+  const km = Math.floor(haversineKm(STUDIO_COORDS, point) * 10 + 1e-9) / 10;
   return { km, tier: km < PICKUP_NEAR_KM ? "near" : "far", feePerLegPaise: pickupLegFeePaise(km) };
 }

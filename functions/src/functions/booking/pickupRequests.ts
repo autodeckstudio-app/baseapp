@@ -35,6 +35,8 @@ const updateSchema = z.object({
   staffNote: z.string().trim().max(300).optional(),
   agreedPickupAt: z.string().trim().max(60).optional(),
   agreedDropAt: z.string().trim().max(60).optional(),
+  /** Admin only, and only when the customer sent no pin (fee unknown). Total fee in paise for the whole request. */
+  feePaise: z.number().int().min(0).max(100000).optional(),
 }).strict();
 
 interface PickupRequestDoc {
@@ -81,6 +83,9 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
   const booking = bookingSnap.data() as Booking;
   assertTenant(user, booking.tenantId);
   if (booking.customerId !== user.uid) throw new HttpsError("permission-denied", "That is not your booking.");
+  if (booking.status === "CANCELLED" || booking.status === "COMPLETED" || booking.status === "EXPIRED") {
+    throw new HttpsError("failed-precondition", "This booking is closed, so pickup and drop cannot be requested.");
+  }
   const ref = db.collection(COLLECTIONS.pickupRequests()).doc(`${data.bookingId}`);
   const now = new Date().toISOString();
   const doc = {
@@ -131,6 +136,23 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     assertTenant(user, cur.tenantId);
     if (user.claims.role === "studio" && user.claims.studioId !== cur.studioId) throw new HttpsError("permission-denied", "Different studio.");
 
+    // One way forward only: REQUESTED -> CONFIRMED or DECLINED, CONFIRMED -> DONE or DECLINED. DONE and DECLINED are final,
+    // so a free pickup is handed back at most once and a closed request cannot be revived.
+    const NEXT: Record<string, string[]> = { REQUESTED: ["CONFIRMED", "DECLINED"], CONFIRMED: ["DONE", "DECLINED"], DONE: [], DECLINED: [] };
+    if (data.status !== cur.status && !(NEXT[cur.status] ?? []).includes(data.status)) {
+      throw new HttpsError("failed-precondition", `A ${cur.status.toLowerCase()} request cannot be changed to ${data.status.toLowerCase()}.`);
+    }
+    if (data.feePaise !== undefined) {
+      if (user.claims.role !== "admin" && user.claims.role !== "superadmin") throw new HttpsError("permission-denied", "Only an admin can set the pickup fee.");
+      if (cur.feePaise !== null && cur.feePaise !== undefined) throw new HttpsError("failed-precondition", "The fee was already worked out from the customer's pin.");
+      if (cur.status !== "REQUESTED") throw new HttpsError("failed-precondition", "Set the fee before confirming the request.");
+    }
+    const curFeePaise = data.feePaise ?? cur.feePaise ?? null;
+    if ((data.status === "CONFIRMED" || data.status === "DONE") && cur.bookingId) {
+      const bk = (await tx.get(db.collection(COLLECTIONS.bookings()).doc(cur.bookingId))).data() as Booking | undefined;
+      if (bk && (bk.status === "CANCELLED" || bk.status === "EXPIRED")) throw new HttpsError("failed-precondition", "This booking is cancelled.");
+    }
+
     // Agreed timing comes from the phone call with the customer. Confirming
     // a service requires a valid agreed date/time for that service -
     // supplied now, or already stored from an earlier confirmation (so a
@@ -164,7 +186,8 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       cur.status === data.status &&
       staffNote === cur.staffNote &&
       agreedPickupAt === cur.agreedPickupAt &&
-      agreedDropAt === cur.agreedDropAt
+      agreedDropAt === cur.agreedDropAt &&
+      data.feePaise === undefined
     ) {
       return { requestId: data.requestId, status: data.status, idempotent: true };
     }
@@ -176,7 +199,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     // Member free pickup: a request that has a fee uses one free pickup if the customer has one. Decided once (when first
     // confirmed) and kept on repeat clicks; given back if the request is declined.
     let memberMembershipId = cur.memberMembershipId ?? null;
-    const memberRows = wantFee && !memberMembershipId && (cur.feePaise ?? 0) > 0 && cur.customerId
+    const memberRows = wantFee && !memberMembershipId && (curFeePaise ?? 0) > 0 && cur.customerId
       ? await tx.get(db.collection(COLLECTIONS.memberships()).where("customerId", "==", cur.customerId).where("status", "==", "active"))
       : null;
     const heldRef = memberMembershipId ? db.collection(COLLECTIONS.memberships()).doc(memberMembershipId) : null;
@@ -195,7 +218,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       chargeMembership = { ref: heldRef, used: Math.max(0, (hm.pickupsUsed ?? 0) - 1) };
       memberMembershipId = null;
     }
-    const fees = wantFee && !memberMembershipId ? legFees(cur.kind, cur.feePaise) : { pickup: 0, drop: 0 };
+    const fees = wantFee && !memberMembershipId ? legFees(cur.kind, curFeePaise) : { pickup: 0, drop: 0 };
     if ((fees.pickup + fees.drop > 0 || feeBilled) && cur.bookingId && (wantFee || data.status === "DECLINED")) {
       const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", cur.bookingId).limit(1));
       const jobDoc = jobs.docs[0];
@@ -229,7 +252,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     const feeUnbilled = wantFee && (fees.pickup + fees.drop > 0) && !feeBilled;
 
     if (chargeMembership) tx.update(chargeMembership.ref, { pickupsUsed: chargeMembership.used, updatedAt: now });
-    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, memberMembershipId, updatedAt: now });
+    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, memberMembershipId, ...(data.feePaise !== undefined ? { feePaise: data.feePaise } : {}), updatedAt: now });
     writeAuditLog(tx, {
       action: "pickup.updated",
       entityType: "PickupRequest",

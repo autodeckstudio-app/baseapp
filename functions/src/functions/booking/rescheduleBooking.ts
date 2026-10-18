@@ -82,6 +82,8 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
 
   const service = serviceSnap.data() as Service;
+  // The whole visit (primary plus extras) is what holds the bay, so use the minutes saved at booking time, not the primary service alone.
+  const visitMinutes = booking.durationMinutes || service.estimatedDurationMinutes;
   const config = configSnap.data() as StudioConfig;
   assertTenant(user, service.tenantId);
   assertTenant(user, config.tenantId);
@@ -92,7 +94,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
     throw new HttpsError("invalid-argument", "New booking time must be in the future.");
   }
 
-  await assertNotPriorityHeld(db, { isCustomer, customerId: booking.customerId, date: data.newDate, time: data.newTime, serviceDurationMinutes: service.estimatedDurationMinutes, config, now: new Date() });
+  await assertNotPriorityHeld(db, { isCustomer, customerId: booking.customerId, date: data.newDate, time: data.newTime, serviceDurationMinutes: visitMinutes, config, now: new Date() });
 
   const compatibleBays = config.bays.filter(
     (b) => b.active && b.bayType === service.requiredBayType,
@@ -105,7 +107,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
   // calculation to createBooking (single source of truth).
   const newEstimatedEndAt = computeScheduleEnd(
     newStart,
-    service.estimatedDurationMinutes,
+    visitMinutes,
     config.operatingHours,
     config.holidays,
     config.timezone,
@@ -171,7 +173,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" }, async (reques
       const hours = config.operatingHours.find(h => h.dayOfWeek === localDay);
       const offered = hours && !hours.closed && !config.holidays.includes(data.newDate) ? generateDaySlots({
         date: data.newDate, openTime: hours.open, closeTime: hours.close,
-        serviceDurationMinutes: service.estimatedDurationMinutes, occupiedIntervals: occupied,
+        serviceDurationMinutes: visitMinutes, occupiedIntervals: occupied,
         timezone: config.timezone, operatingHours: config.operatingHours, holidays: config.holidays,
       }) : [];
       if (offered.some(slot => slot.startAt === newStart.toISOString())) {

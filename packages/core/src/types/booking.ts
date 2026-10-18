@@ -75,6 +75,16 @@ export interface Booking {
   cancellationReason: string | null;
   /** Fee in paise for a customer cancel inside the free window (cancellation-policy.ts). Recorded only; the studio settles it. Absent or 0 = no fee. */
   cancellationFeePaise?: number;
+  /** Who settles the fee and how it ended: "due" until the studio marks it, then "collected", "withheld" (kept from a refund) or "waived". */
+  cancellationFeeStatus?: "due" | "collected" | "withheld" | "waived";
+  cancelledBy?: "customer" | "admin" | "system";
+  cancellationFeeSettledBy?: string;
+  cancellationFeeSettledAt?: string;
+  cancellationFeeNote?: string;
+  /** Paise sent back to the customer when an admin cancelled a paid booking. */
+  refundedPaise?: number;
+  /** Service categories of the visit (primary first), saved at booking time so the cancel band cannot change later. */
+  cancelCategories?: string[];
   createdAt: string;
   updatedAt: string;
 }

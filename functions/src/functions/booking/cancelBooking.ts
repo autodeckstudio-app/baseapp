@@ -1,13 +1,14 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Booking, ServiceJob, Membership } from "@autodeck/core";
-import { cancellationTerms, isBookingMissed } from "@autodeck/core";
+import type { Booking, ServiceJob } from "@autodeck/core";
+import { cancellationTerms } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelBookingSchema } from "../../schemas/booking.js";
+import { readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
 export const cancelBooking = onCall({ region: "asia-south1" }, async (request) => {
   const data = validate(cancelBookingSchema, request.data);
@@ -24,10 +25,8 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
 
   // Customers can only cancel their own bookings
   const isCustomer = user.claims.role === "customer";
-  const isStudioOrAbove =
-    user.claims.role === "studio" ||
-    user.claims.role === "admin" ||
-    user.claims.role === "superadmin";
+  // Cancelling for a customer is admin-only for now (owner decision). Studio staff do not get a cancel here.
+  const isStudioOrAbove = user.claims.role === "admin" || user.claims.role === "superadmin";
 
   if (isCustomer && booking.customerId !== user.uid) {
     throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
@@ -51,143 +50,77 @@ export const cancelBooking = onCall({ region: "asia-south1" }, async (request) =
   }
 
   // Customers can cancel up to the start. Inside the free window a fee applies (cancellation-policy.ts); it is recorded on the booking and the studio settles it. No money moves here.
+  // The fee also applies after studio close (a missed visit cancelled late costs the normal tier fee).
   let cancellationFeePaise = 0;
-  if (isCustomer && !isBookingMissed(booking)) {
-    const svcSnap = await db.collection(COLLECTIONS.services()).doc(booking.serviceId).get();
-    const category = svcSnap.exists ? (svcSnap.data() as { category?: string }).category : undefined;
-    cancellationFeePaise = cancellationTerms({ category, totalPaise: booking.totalAmount, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: Date.now() }).feePaise;
+  if (isCustomer) {
+    let categories = (booking as { cancelCategories?: string[] }).cancelCategories ?? [];
+    if (!categories.length) {
+      const svcSnap = await db.collection(COLLECTIONS.services()).doc(booking.serviceId).get();
+      categories = svcSnap.exists ? [String((svcSnap.data() as { category?: string }).category ?? "")] : [];
+    }
+    cancellationFeePaise = cancellationTerms({ categories, totalPaise: booking.totalAmount, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: Date.now() }).feePaise;
   }
 
   const now = new Date().toISOString();
   const bookingRef = db.collection(COLLECTIONS.bookings()).doc(data.bookingId);
 
-  await db.runTransaction(async (tx) => {
-    // All reads before any writes. Find the associated job INSIDE the
-    // transaction (Phase 5B P1-3 fix) — this was previously a plain query
-    // fetched before the transaction started, then its stale snapshot's
-    // job.status and job.statusHistory were used both to decide
-    // cancel-eligibility and to build the new statusHistory array. A
-    // concurrent advanceJobStatus call landing between that outer read and
-    // this transaction's commit would have its transition silently
-    // overwritten (statusHistory is a full-array replace) and could let a
-    // job that has since moved out of the cancellable window get cancelled
-    // anyway, since the eligibility check ran against stale data. Fetching
-    // via tx.get() makes Firestore's transaction conflict detection cover
-    // this read, so a genuinely concurrent status change causes a retry
-    // against fresh data instead of a silent overwrite.
-    const jobsSnap = await tx.get(
-      db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1),
-    );
-
-    // Restore the membership wash credit if one was consumed by this
-    // booking — doc07 §7.9 step 3. Discount-type usage is NOT reversed
-    // (docs are silent; treated as historical fact, matching the
-    // append-only MembershipUsage record, which has no reversal field).
-    const membershipRef = booking.membershipId
-      ? db.collection(COLLECTIONS.memberships()).doc(booking.membershipId)
-      : null;
-    const membershipSnap = membershipRef ? await tx.get(membershipRef) : null;
-
-    // Financial integrity guard: no refund/recharge model exists for
-    // cancelling a booking that already has a payment in flight or settled
-    // (same architectural boundary createApproval.ts already enforces for
-    // additional-work requests — see that file's comment). Without this,
-    // a job could be cancelled while paid/pending, then still get its
-    // payment manually confirmed afterward, invoicing cancelled work
-    // (Phase 6 hostile-audit finding).
+  const outcome = await db.runTransaction(async (tx) => {
+    // Re-read the booking inside the transaction: a second tap, a studio cancel or the close-time auto-cancel
+    // landing at the same moment must not restore a credit twice.
+    const freshSnap = await tx.get(bookingRef);
+    const fresh = freshSnap.data() as Booking | undefined;
+    if (!fresh) throw new HttpsError("not-found", "Booking not found.");
+    if (fresh.status === "CANCELLED") return { alreadyCancelled: true };
+    if (fresh.status === "COMPLETED" || fresh.status === "EXPIRED") {
+      throw new HttpsError("failed-precondition", `Cannot cancel a booking with status ${fresh.status}.`);
+    }
+    const jobsSnap = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1));
     const paymentsOnJob = !jobsSnap.empty
-      ? await tx.get(
-          db
-            .collection(COLLECTIONS.payments())
-            .where("jobId", "==", jobsSnap.docs[0]?.id ?? "")
-            .where("status", "in", ["pending", "processing", "completed"])
-            .limit(10),
-        )
+      ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", jobsSnap.docs[0]?.id ?? "").where("status", "in", ["pending", "processing", "completed"]).limit(10))
       : null;
-    // Money already taken, or being taken, needs the studio to settle it first.
-    // A payment that was only started (pending) holds no money, so it is simply closed.
+    // Money already taken, or being taken, needs an admin to settle it (adminCancelBooking). A payment that was only started (pending) holds no money, so it is simply closed.
     if (paymentsOnJob && paymentsOnJob.docs.some((d) => d.data()["status"] !== "pending")) {
-      throw new HttpsError(
-        "failed-precondition",
-        "This booking has a payment on it. Please contact the studio to cancel it and arrange any refund.",
-      );
+      throw new HttpsError("failed-precondition", "This booking has a payment on it. Please contact the studio to cancel it and arrange any refund.");
     }
-    // A pickup/drop request belongs to its booking (same id). Cancelling the booking closes any open request.
-    const pickupRef = db.collection(COLLECTIONS.pickupRequests()).doc(data.bookingId);
-    const pickupSnap = await tx.get(pickupRef);
-    for (const p of paymentsOnJob?.docs ?? []) {
-      tx.update(p.ref, { status: "cancelled", updatedAt: now });
-    }
-    if (pickupSnap.exists) {
-      const st = (pickupSnap.data() as { status?: string }).status;
-      if (st === "REQUESTED" || st === "CONFIRMED") tx.update(pickupRef, { status: "DECLINED", staffNote: "Booking cancelled", updatedAt: now });
+    const reads = await readCancelReads(tx, db, fresh, data.bookingId);
+
+    const cancellableStatuses: string[] = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
+    const jobDoc = jobsSnap.docs[0];
+    const job = jobDoc ? (jobDoc.data() as ServiceJob) : null;
+    // Work already started: a customer cannot cancel online and the advance is not refunded. The studio handles it.
+    if (job && !cancellableStatuses.includes(job.status)) {
+      throw new HttpsError("failed-precondition", isCustomer ? "Work on your car has already started. Please contact the studio." : "Work has already started on this job, so the booking cannot be cancelled here.");
     }
 
+    for (const p of paymentsOnJob?.docs ?? []) tx.update(p.ref, { status: "cancelled", updatedAt: now });
+    writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled: ${data.bookingId}`);
     tx.update(bookingRef, {
       status: "CANCELLED",
       cancelledAt: now,
+      cancelledBy: isCustomer ? "customer" : "admin",
       cancellationReason: data.reason,
       cancellationFeePaise,
+      ...(cancellationFeePaise > 0 ? { cancellationFeeStatus: "due" } : {}),
       updatedAt: now,
     });
-
-    if (booking.membershipWashUsed && membershipRef && membershipSnap?.exists) {
-      const membership = membershipSnap.data() as Membership;
-      tx.update(membershipRef, {
-        washesUsed: Math.max(0, membership.washesUsed - 1),
+    if (jobDoc && job) {
+      tx.update(jobDoc.ref, {
+        status: "CANCELLED",
+        statusHistory: [...job.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled: ${data.reason}` }],
         updatedAt: now,
       });
-      writeAuditLog(tx, {
-        action: "membership.wash_restored",
-        entityType: "Membership",
-        entityId: booking.membershipId as string,
-        user,
-        studioId: booking.studioId,
-        before: { washesUsed: membership.washesUsed },
-        after: { washesUsed: Math.max(0, membership.washesUsed - 1), reason: `Booking cancelled: ${data.bookingId}` },
-      });
     }
-
-    // Cancel the associated job if it hasn't progressed past VEHICLE_RECEIVED
-    if (!jobsSnap.empty) {
-      const jobDoc = jobsSnap.docs[0];
-      if (!jobDoc) {
-        // no-op
-      } else {
-        const job = jobDoc.data() as ServiceJob;
-        const cancellableStatuses: string[] = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
-        // Work already started: a customer cannot cancel online and the advance is not refunded. The studio handles it.
-        if (isCustomer && !cancellableStatuses.includes(job.status)) {
-          throw new HttpsError("failed-precondition", "Work on your car has already started. Please contact the studio.");
-        }
-        if (cancellableStatuses.includes(job.status)) {
-          tx.update(db.collection(COLLECTIONS.jobs()).doc(jobDoc.id), {
-            status: "CANCELLED",
-            statusHistory: [
-              ...job.statusHistory,
-              {
-                status: "CANCELLED",
-                changedAt: now,
-                changedBy: user.uid,
-                notes: `Booking cancelled: ${data.reason}`,
-              },
-            ],
-            updatedAt: now,
-          });
-        }
-      }
-    }
-
     writeAuditLog(tx, {
       action: "booking.cancelled",
       entityType: "Booking",
       entityId: data.bookingId,
       user,
       studioId: booking.studioId,
-      before: { status: booking.status },
+      before: { status: fresh.status },
       after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise },
     });
+    return { alreadyCancelled: false };
   });
 
-  return { success: true };
+  return outcome.alreadyCancelled ? { success: true, alreadyCancelled: true } : { success: true };
 });

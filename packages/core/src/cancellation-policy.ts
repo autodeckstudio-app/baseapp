@@ -14,14 +14,20 @@ export const REFUND_TIMELINE_TEXT = "5 to 7 working days";
 
 export type CancellationTerms = { bigger: boolean; freeUntilHours: number; free: boolean; feePaise: number };
 
+/** Bigger if ANY service on the visit is bigger (primary or extras): the stricter rule wins. */
+export function isBiggerVisit(categories: ReadonlyArray<ServiceCategory | string | null | undefined>): boolean {
+  const known = categories.filter((c) => c !== null && c !== undefined && c !== "");
+  return known.length ? known.some((c) => isBiggerService(c)) : isBiggerService(undefined);
+}
+
 export function isBiggerService(category: ServiceCategory | string | null | undefined): boolean {
   if (!category) return false;
   return (PAY_AT_STUDIO_GROUPS as readonly string[]).includes(menuGroupOf(category as ServiceCategory).key);
 }
 
 /** Terms for a customer cancelling now. totalPaise is the booking total. */
-export function cancellationTerms(i: { category: ServiceCategory | string | null | undefined; totalPaise: number; scheduledAtMs: number; nowMs: number }): CancellationTerms {
-  const bigger = isBiggerService(i.category);
+export function cancellationTerms(i: { category?: ServiceCategory | string | null | undefined; categories?: ReadonlyArray<ServiceCategory | string | null | undefined>; totalPaise: number; scheduledAtMs: number; nowMs: number }): CancellationTerms {
+  const bigger = isBiggerVisit([i.category, ...(i.categories ?? [])]);
   const freeUntilHours = bigger ? CANCEL_BIGGER.freeUntilHours : CANCEL_SHORT.freeUntilHours;
   const hoursUntil = (i.scheduledAtMs - i.nowMs) / 3_600_000;
   const free = hoursUntil >= freeUntilHours;

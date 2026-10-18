@@ -90,6 +90,8 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
 
   // More services in the same visit. All checks are server side; the app only mirrors them.
   let extraLines: BookingLine[] = [];
+  // Categories of the whole visit, saved on the booking so the cancel band cannot change if a service is edited later.
+  const cancelCategories: string[] = [String((service as { category?: string }).category ?? "")];
   if (data.extraServiceIds?.length) {
     const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
     if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
@@ -97,6 +99,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     if (extras.some((e) => e.tenantId !== user.claims.tenantId)) throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     const problem = extrasProblem({ ...service, id: serviceSnap.id }, extras, { gift: data.giftCode !== undefined });
     if (problem) throw new HttpsError("failed-precondition", problem);
+    for (const e of extras) cancelCategories.push(String((e as { category?: string }).category ?? ""));
     extraLines = priceExtras(extras, { vehicleCategory: data.vehicleCategory, tax: taxFor(config), currency: config.currency });
   }
   const visitMinutes = totalMinutes(service.estimatedDurationMinutes, extraLines);
@@ -369,6 +372,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
       totalAmount: finalBreakdown.total,
       membershipId: data.membershipId ?? null,
       ...(giftToUse ? { giftId: giftToUse.gift.id } : {}),
+      cancelCategories: cancelCategories.filter(Boolean),
       membershipDiscountApplied,
       membershipWashUsed,
       paymentStatus: "unpaid",

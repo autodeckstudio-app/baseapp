@@ -14,6 +14,8 @@ export type RateLimitAction =
   | "auth.resolveClaims"
   | "booking.create"
   | "booking.cancel"
+  | "booking.adminCancel"
+  | "booking.settleFee"
   | "booking.quote"
   | "booking.quoteRespond"
   | "booking.reschedule"
@@ -133,6 +135,8 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "auth.resolveClaims": { limit: 20, windowMs: 60_000 },
   "booking.create": { limit: 10, windowMs: 60_000 },
   "booking.cancel": { limit: 10, windowMs: 60_000 },
+  "booking.adminCancel": { limit: 20, windowMs: 60_000 },
+  "booking.settleFee": { limit: 30, windowMs: 60_000 },
   "booking.quote": { limit: 60, windowMs: 60_000 },
   "booking.quoteRespond": { limit: 20, windowMs: 60_000 },
   "booking.reschedule": { limit: 10, windowMs: 60_000 },
