@@ -32,9 +32,9 @@ describe("customer cancel rules", () => {
 
 import { readFileSync } from "node:fs";
 describe("Round 5 booking page", () => {
-  const d = readFileSync(new URL("../app/(tabs)/bookings/[id].tsx", import.meta.url), "utf8");
+  const d = readFileSync(new URL("../app/(tabs)/bookings/[id].tsx", import.meta.url).pathname, "utf8");
   it("shows Pending payment with a Pay now retry, an Expired notice, the refund line and a specific error title", () => {
     expect(d).toContain("Pending payment"); expect(d).toContain('label="Pay now"'); expect(d).toContain("Slot released");
-    expect(d).toContain("Refund initiated"); expect(d).not.toContain('title="Something went wrong"');
+    expect(d).toContain("Refund initiated"); expect(d).toContain("Reschedule instead"); expect(d).not.toContain('title="Something went wrong"');
   });
 });

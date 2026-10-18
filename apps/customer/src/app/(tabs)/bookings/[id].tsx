@@ -519,6 +519,7 @@ export default function BookingDetailScreen() {
             action={
               <View style={{ gap: space.breath }}>
                 <Button label="Yes, cancel booking" kind="danger" busy={cancelling} onPress={() => void handleCancelConfirmed()} />
+                {rescheduleEligibility.eligible ? <Button label="Reschedule instead" kind="primary" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })} /> : null}
                 <Button label="Keep it" kind="quiet" onPress={() => setConfirmingCancel(false)} />
               </View>
             }
