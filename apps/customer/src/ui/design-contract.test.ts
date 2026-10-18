@@ -700,3 +700,12 @@ describe("Home: ambient light, slim book bar on top, car card below",()=>{
     expect(h).toContain("paddingTop: 20");
   });
 });
+
+describe("Home ambient light is brand orange at low opacity",()=>{
+  it("uses 236,134,56 glows, none above 0.2 alpha",()=>{
+    const b=read("src/ui/HomeBackdrop.tsx");
+    const alphas=[...b.matchAll(/rgba\(236,134,56,([0-9.]+)\)/g)].map((m)=>Number(m[1]));
+    expect(alphas.length).toBeGreaterThanOrEqual(4);
+    expect(Math.max(...alphas)).toBeLessThanOrEqual(0.2);
+  });
+});
