@@ -78,7 +78,7 @@ export function PillTabBar({ state, descriptors, navigation, icons, activeColor,
             style={({ pressed }) => ({ flex: 1, height: barH, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
           >
             <View style={{ width: compact ? 54 : labels ? 70 : 58, height: compact ? 38 : labels ? 54 : 46, borderRadius: compact ? 19 : labels ? 27 : 23, backgroundColor: focused && !dark ? "rgba(240,125,40,0.16)" : "transparent", ...(Platform.OS === "web" ? ({ display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 180ms ease, transform 180ms ease", transform: focused ? "scale(1)" : "scale(0.94)" } as object) : { alignItems: "center", justifyContent: "center" }) }}>
-              <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={compact ? 22 : 24} filled={focused} />
+              <Icon name={icons[route.name] ?? "home"} color={focused ? activeColor : inactiveColor} size={compact ? 22 : 24} filled={focused} mono={!focused} />
               {labels?.[route.name] ? <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11, fontWeight: focused ? "700" : "500", color: focused ? activeColor : inactiveColor }}>{labels[route.name]}</Text> : null}
               {badges?.[route.name] ? <View style={{ position: "absolute", top: 8, right: 14, width: 9, height: 9, borderRadius: 5, backgroundColor: "#E5484D", borderWidth: 2, borderColor: dark ? "#0B0B0D" : "#fff" }} /> : null}
             </View>

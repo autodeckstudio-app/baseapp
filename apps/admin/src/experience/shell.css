@@ -705,20 +705,19 @@ html[data-theme="night"] .ax-login button { background: #EC8638 !important; colo
 html[data-theme="night"] svg [stroke="#2E2E33"] { stroke: #F2F0EC; }
 html[data-theme="night"] svg [fill="#2E2E33"] { fill: #F2F0EC; }
 
-/* Night action glass: translucent orange, quiet highlight, dark readable ink. */
+/* Night main button: solid white with dark ink. Orange is for the active nav only (60-30-10). */
 html[data-theme="night"] .ax-shell .ax-button--primary,
 html[data-theme="night"] .ax-shell button[type="submit"],
 html[data-theme="night"] .ax-shell button[type="submit"]:hover:not(:disabled),
 html[data-theme="night"] .ax-login button {
-  background: var(--ad-accent-grad) !important;
-  border: 1px solid rgba(255,202,155,.62);
-  backdrop-filter: blur(18px) saturate(125%);
-  -webkit-backdrop-filter: blur(18px) saturate(125%);
-  box-shadow: inset 0 1px 0 rgba(255,244,232,.65), inset 0 -1px 0 rgba(236,134,56,.12), 0 5px 16px rgba(0,0,0,.12);
-  color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border: 0;
+  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+  color: #1A1410 !important;
 }
 html[data-theme="night"] .ax-shell .ax-kpi-v,
-html[data-theme="night"] .ax-shell .ax-linkbtn { color: #FFD0A6; }
+html[data-theme="night"] .ax-shell .ax-linkbtn { color: #F2F0EC; }
+html[data-theme="night"] .ax-shell .ax-main a:not([class]) { color: #F2F0EC; text-decoration: underline; }
 /* Pickup and drop: calm cards, one clear action per state */
 .ax-pu-policy { margin: 0; flex: 1 1 260px; font-size: 13px; line-height: 1.45; color: var(--ad-text-secondary); }
 .ax-pu-error { margin: 0 0 12px; color: var(--ad-danger); }

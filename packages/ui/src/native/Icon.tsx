@@ -6,13 +6,15 @@ import { useExperienceTheme } from "./ThemeContext.js";
 // The duotone art draws its linework in one dark ink; on a dark ground that ink flips to light.
 const DARK_INK = /#2E2E33/gi;
 const LIGHT_INK = "#F2F0EC";
+// Inactive nav icons are one ink, orange belongs to the active item only (60-30-10).
+function monoInk(svg: string, mono: boolean, night: boolean): string { return mono ? svg.replace(/#EC8638/gi, night ? LIGHT_INK : "#2E2E33") : svg; }
 
-export function Icon({ name, color, size = 24, filled = false }: { name: IconName; color: string; size?: number; filled?: boolean }) {
+export function Icon({ name, color, size = 24, filled = false, mono = false }: { name: IconName; color: string; size?: number; filled?: boolean; mono?: boolean }) {
   const { name: theme } = useExperienceTheme();
   const flip = theme === "night";
   if (Platform.OS === "web") {
     if (duotoneInner(name)) {
-      return createElement("svg", { "aria-hidden": true, width: size, height: size, viewBox: DUO_VIEWBOX, style: { flexShrink: 0, display: "block", opacity: filled || color === "#FFFFFF" ? 1 : 0.92 }, dangerouslySetInnerHTML: { __html: flip ? iconInner(name).replace(DARK_INK, LIGHT_INK) : iconInner(name) } });
+      return createElement("svg", { "aria-hidden": true, width: size, height: size, viewBox: DUO_VIEWBOX, style: { flexShrink: 0, display: "block", opacity: filled || color === "#FFFFFF" ? 1 : 0.92 }, dangerouslySetInnerHTML: { __html: monoInk(flip ? iconInner(name).replace(DARK_INK, LIGHT_INK) : iconInner(name), mono, flip) } });
     }
     return createElement("svg", {
       "aria-hidden": true,

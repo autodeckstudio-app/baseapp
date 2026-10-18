@@ -34,7 +34,7 @@ export function SideRail({ state, navigation }: Props) {
         onPress={() => navigation.navigate(name)}
         style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: big ? 48 : 38, paddingHorizontal: 14, borderRadius: 14, ...(on ? ({ backgroundImage: "linear-gradient(180deg, #F08A3C, #D9701F)", boxShadow: "0 10px 22px -10px rgba(217,112,31,.7)" } as object) : {}) }}
       >
-        {icon ? <Icon name={icon} size={20} color={on ? "#FFFFFF" : colors.textPrimary} /> : null}
+        {icon ? <Icon name={icon} size={20} mono={!on} color={on ? "#FFFFFF" : colors.textPrimary} /> : null}
         <Text style={{ fontSize: big ? 16 : 13, fontWeight: big ? "600" : "500", color: on ? "#FFFFFF" : colors.textPrimary, opacity: big || on ? 1 : 0.82 }}>{label}</Text>
       </Pressable>
     );

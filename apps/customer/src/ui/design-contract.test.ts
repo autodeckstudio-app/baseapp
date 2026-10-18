@@ -672,3 +672,8 @@ describe("orange stays a small highlight (60-30-10)",()=>{
     for(const f of ["LiveJobCard.tsx","JobTimeline.tsx"]) expect(read("src/ui/"+f)).not.toContain("#EC8638");
   });
 });
+describe("inactive tab icons are one ink",()=>{
+  it("tab bar passes mono for inactive icons",()=>{
+    expect(read("../../packages/ui/src/native/PillTabBar.tsx")).toContain("mono={!focused}");
+  });
+});
