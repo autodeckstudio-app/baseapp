@@ -16,7 +16,7 @@ export function JobTimeline({ status, history }: { status: string; history: Arra
       <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>Progress</Text>
       {steps.map((s) => (
         <View key={s.label} accessibilityLabel={`${s.label}${s.at ? `, ${clock(s.at)}` : s.state === "next" ? ", next" : ""}`} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.state === "next" ? "transparent" : "#EC8638", borderWidth: 1.5, borderColor: s.state === "next" ? colors.textTertiary : "#EC8638" }} />
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.state === "next" ? "transparent" : colors.textPrimary, borderWidth: 1.5, borderColor: s.state === "next" ? colors.textTertiary : colors.textPrimary }} />
           <Text style={{ flex: 1, color: s.state === "next" ? colors.textTertiary : colors.textPrimary, fontSize: 15, fontWeight: s.state === "now" ? "800" : "600" }}>{s.label}</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{s.at ? clock(s.at) : ""}</Text>
         </View>

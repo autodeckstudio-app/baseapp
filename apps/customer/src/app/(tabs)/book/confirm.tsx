@@ -245,7 +245,7 @@ export default function BookingConfirmScreen() {
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         The studio confirms your slot after you send this. Price may vary based on final work.
       </T>
-      <View style={{ gap: space.line }}>
+      {washOn ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
           {payHow.online ? (
@@ -259,7 +259,7 @@ export default function BookingConfirmScreen() {
             </Pressable>
           ) : null}
         </Pane>
-      </View>
+      </View>}
 
       {bookError ? <Notice title="Could not confirm the request" body={bookError} /> : null}
 

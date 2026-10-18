@@ -53,9 +53,10 @@ export function Button({
     if (variant === "primary" && isNightPalette) return nightButtonStyle;
     if (variant === "secondary" && isNightPalette) return { backgroundColor: "rgba(255,255,255,.08)", borderWidth: 1, borderColor: "rgba(255,255,255,.24)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" };
     if (variant === "primary") {
+      // Day main button is neutral ink, not orange (60-30-10, owner pick 18 Oct 2026).
       return {
-        backgroundImage: "linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%)",
-        boxShadow: raised && !pressed ? "0 4px 12px rgba(194,84,10,0.16), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(160,70,10,0.28)" : "0 3px 8px rgba(236,134,56,0.3), inset 0 1px 0 rgba(255,255,255,0.35)",
+        backgroundColor: "#1A1410",
+        boxShadow: raised && !pressed ? "0 4px 12px rgba(26,20,16,0.18)" : "0 2px 6px rgba(26,20,16,0.2)",
       };
     }
     if (variant === "secondary") {
@@ -90,9 +91,9 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={web && variant === "primary" ? (isNightPalette ? nightButtonText : "#1A1410") : v.text} />
+        <ActivityIndicator color={web && variant === "primary" ? (isNightPalette ? nightButtonText : "#FFFFFF") : v.text} />
       ) : (
-        <Text style={{ color: web && variant === "primary" ? (isNightPalette ? nightButtonText : "#1A1410") : v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
+        <Text style={{ color: web && variant === "primary" ? (isNightPalette ? nightButtonText : "#FFFFFF") : v.text, fontSize: s.fontSize, fontWeight: "600" }}>{label}</Text>
       )}
     </Pressable>
   );

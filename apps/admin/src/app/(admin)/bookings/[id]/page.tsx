@@ -111,6 +111,7 @@ export default function BookingDetailPage() {
           <p className="ax-label">Booking · {formatDayLong(booking.scheduledDate)} at {formatTime(booking.scheduledAt)}</p>
           <h1>{vehicle?.registrationNumber ?? "Vehicle"}</h1>
           <p className="ax-hero-sub">{[service?.name, car, customer?.name].filter(Boolean).join(" · ")}</p>
+          {booking.status === "CANCELLED" ? <p className="ax-hero-sub">{booking.cancellationFeePaise ? `Cancelled by the customer. Cancellation fee ${formatPaise(booking.cancellationFeePaise)}, collect or waive at the studio.` : "Cancelled. No cancellation fee."}</p> : null}
         </div>
         <div className="ax-hero-side">
           <StatusBadge label={isBookingMissed(booking) ? "MISSED" : booking.status} />

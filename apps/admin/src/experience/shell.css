@@ -112,8 +112,10 @@
 .ax-shell th { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 400; letter-spacing: 1.2px; color: var(--ad-text-tertiary); }
 .ax-shell td { color: var(--ad-text-primary); }
 .ax-shell button { border-radius: var(--ad-radius-pill); min-height: 36px; }
-.ax-shell button[type="submit"] { background: linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%); border-color: transparent; }
-.ax-shell button[type="submit"]:hover:not(:disabled) { background: linear-gradient(180deg, #F59A4E 0%, #EC8638 52%, #DC7428 100%); filter: brightness(1.06); }
+/* Main buttons are neutral ink (white in Night), not orange. 60-30-10, owner pick 18 Oct 2026. */
+.ax-shell button[type="submit"] { background: #1A1410; color: #FFFFFF; border-color: transparent; }
+html[data-theme="night"] .ax-shell button[type="submit"] { background: #FFFFFF; color: #1A1410; }
+.ax-shell button[type="submit"]:hover:not(:disabled) { filter: brightness(1.15); }
 .ax-shell input, .ax-shell select, .ax-shell textarea { background: rgba(255, 255, 255, 0.04); border-color: var(--ad-border-subtle); border-radius: var(--ad-radius-chip); }
 .ax-shell select option { background: var(--ad-surface); color: var(--ad-text-primary); }
 .ax-shell .detail-card, .ax-shell .stat-tile { border-radius: var(--ad-radius-card); box-shadow: inset 0 1px 0 var(--ad-glass-sheen); }
@@ -158,7 +160,7 @@
 .ax-kpis { display: flex; gap: var(--ad-space-section); }
 .ax-kpis > div { display: flex; flex-direction: column; gap: 2px; }
 .ax-kpi-v { font-family: var(--ad-font-display, Montserrat), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; font-weight: 600; font-size: 36px; line-height: 40px; color: var(--ad-text-primary); font-variant-numeric: tabular-nums; }
-.ax-kpi-v--accent { color: var(--ad-accent); }
+.ax-kpi-v--accent { color: inherit; }
 .ax-kpi-v--premium { color: var(--ad-premium); }
 
 .ax-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ad-space-line); margin-bottom: var(--ad-space-inset); }
@@ -274,7 +276,8 @@
 .ax-alert-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ad-warning); }
 .ax-alert-row--danger .ax-alert-dot { background: var(--ad-danger); }
 .ax-shell a.ax-button { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 0 var(--ad-space-gap); text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ad-text-primary); }
-.ax-shell a.ax-button--primary { color: var(--ad-text-on-accent); }
+.ax-shell a.ax-button--primary { color: #FFFFFF; }
+html[data-theme="night"] .ax-shell a.ax-button--primary { color: #1A1410; }
 .ax-allclear { display: flex; align-items: center; gap: var(--ad-space-gap); padding: var(--ad-space-breath) 0; }
 .ax-allclear-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--ad-premium); box-shadow: 0 0 0 6px var(--ad-premium-haze); flex: none; }
 .ax-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--ad-space-line); }
@@ -331,7 +334,7 @@
 .ax-person-name { font-size: 15px; color: var(--ad-text-primary); }
 .ax-shell .ax-person select { width: auto; min-height: 34px; padding: 0 10px; }
 .ax-avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 600; color: var(--ad-text-secondary); background: rgba(122,111,208,0.05); border: 1px solid var(--ad-border-subtle); }
-.ax-avatar--studio { color: var(--ad-accent-strong); background: var(--ad-accent-haze); border-color: var(--ad-accent-haze); }
+.ax-avatar--studio { color: inherit; }
 .ax-avatar--admin { color: var(--ad-premium); background: var(--ad-premium-haze); border-color: var(--ad-premium-haze); }
 .ax-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ax-shell .ax-choice-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 0; padding: 10px 12px; border-radius: var(--ad-radius-card); border: 1px solid var(--ad-border-subtle); background: rgba(122,111,208,0.02); text-align: left; font-weight: 400; }
@@ -554,7 +557,7 @@
 .ax-svc-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .ax-svc-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
 .ax-svc-card-price { display: flex; flex-direction: column; gap: 2px; }
-.ax-svc-from { font-size: 22px; color: var(--ad-accent-strong); }
+.ax-svc-from { font-size: 22px; }
 .ax-svc-card .ax-row-actions { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 860px) { .ax-svc-cards { grid-template-columns: 1fr; } }
 
@@ -589,7 +592,7 @@
 
 .ax-shell, .ax-shell * { color-scheme: light; }
 /* Shared state and contrast contract. White panels must never inherit white KPI text. */
-.ax-shell .ax-tile--featured .ax-kpi-v { color: var(--ad-accent-strong); }
+.ax-shell .ax-tile--featured .ax-kpi-v { color: inherit; }
 .ax-shell .ax-tile--featured .ax-label { color: var(--ad-text-secondary); }
 .ax-shell .ax-tile--featured { background: rgba(255,255,255,0.88); }
 .ax-shell .ax-button:focus-visible, .ax-shell button:focus-visible, .ax-shell input:focus-visible, .ax-shell select:focus-visible { outline: 2px solid var(--ad-accent-strong); outline-offset: 3px; }
@@ -601,7 +604,8 @@
 .ax-shell, .ax-shell * { color-scheme: light; }
 .ax-shell button, .ax-shell .ax-nav-link, .ax-shell .ax-toolbar input, .ax-shell .ax-toolbar select, .ax-shell .ax-daynav button { min-height:44px; }
 .ax-shell .ax-seg button { min-height:44px; }
-.ax-shell button[type="submit"], .ax-shell .ax-button--primary { color:#1A1410; background:linear-gradient(180deg,#F59A4E,#DC7428); }
+.ax-shell button[type="submit"], .ax-shell .ax-button--primary { color:#FFFFFF; background:#1A1410; }
+html[data-theme="night"] .ax-shell button[type="submit"], html[data-theme="night"] .ax-shell .ax-button--primary { color:#1A1410; background:#FFFFFF; }
 .ax-shell .ax-col, .ax-shell table { backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(255,255,255,.96); box-shadow:none; }
 .ax-shell .ax-sheet { max-height:calc(100dvh - 24px); overflow-y:auto; }
 .ax-shell textarea:focus-visible, .ax-shell a:focus-visible { outline:2px solid var(--ad-accent-strong); outline-offset:3px; }

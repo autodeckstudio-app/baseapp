@@ -187,7 +187,7 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
       {detail ? <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{detail}</Text> : null}
       {!idle && pct !== null ? (
         <View style={{ height: 8, overflow: "hidden", ...r.well, borderRadius: 6 }}>
-          <View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: "#EC8638" }} />
+          <View style={{ width: `${pct}%`, height: "100%", borderRadius: 6, backgroundColor: colors.textPrimary }} />
         </View>
       ) : null}
       <View style={{ alignSelf: "flex-start", marginTop: 4, borderRadius: 9999, paddingHorizontal: 22, paddingVertical: 12, backgroundColor: "#F4F2EF" }}>
@@ -220,7 +220,7 @@ function LiveCard({ live, pct, car }: { live: HomeLive; pct: number | null; car:
         <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
           {LIVE_STEPS.map((n, i) => (
             <View key={n} style={{ flex: 1, gap: 6 }}>
-              <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(255,255,255,0.28)" }} />
+              <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#FFFFFF" : "rgba(255,255,255,0.28)" }} />
               <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 10.5, opacity: i <= step ? 1 : 0.6, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
             </View>
           ))}
@@ -296,7 +296,7 @@ export function HomeView(p: HomeViewProps) {
       {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => (p.drawer?.length ? setMenu(true) : p.onAvatar())} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-          <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{p.initial}</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: "center", minWidth: 0 }}>
           <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{p.greeting}</Text>

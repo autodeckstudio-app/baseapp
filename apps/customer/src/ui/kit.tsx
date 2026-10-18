@@ -46,6 +46,7 @@ export function textStyle(role: keyof typeof typeScale): TextStyle {
   };
 }
 
+import { ACCENT_TEXT_ROLES } from "../lib/accent";
 export function T({
   role = "body",
   tone = "primary",
@@ -60,6 +61,8 @@ export function T({
   numberOfLines?: number;
 }) {
   const { name, colors } = useExperienceTheme();
+  // Accent text is for small highlights only. Large roles (prices, titles, data) stay neutral. See lib/accent.ts.
+  if (tone === "accent" && !ACCENT_TEXT_ROLES.includes(role as string)) tone = "primary";
   const color = {
     primary: colors.textPrimary,
     secondary: colors.textSecondary,

@@ -14,8 +14,8 @@ export function BackButton({ fallback = "/(tabs)" }: { fallback?: string }) {
       onPress={() => (router.canGoBack() ? router.back() : router.replace(fallback as never))}
       style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6, paddingRight: 12 }}
     >
-      <Text style={{ color: colors.accent, fontSize: 28, lineHeight: 28, marginTop: -3 }}>‹</Text>
-      <Text style={{ color: colors.accent, fontSize: 16, fontWeight: "600" }}>Back</Text>
+      <Text style={{ color: colors.textPrimary, fontSize: 28, lineHeight: 28, marginTop: -3 }}>‹</Text>
+      <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "600" }}>Back</Text>
     </Pressable>
   );
 }

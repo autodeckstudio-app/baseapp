@@ -658,3 +658,14 @@ describe("Home live card (concept C)", () => {
     expect(h).toContain("Ready by ${live.ready}");
   });
 });
+
+describe("orange stays a small highlight (60-30-10)",()=>{
+  it("accent text is limited to small roles",()=>{
+    expect(read("src/lib/accent.ts")).toContain('["label", "caption"]');
+    expect(read("src/ui/kit.tsx")).toContain("ACCENT_TEXT_ROLES");
+  });
+  it("avatar and progress are not orange",()=>{
+    expect(read("src/ui/AppBar.tsx")).not.toMatch(/accentStrong[^\n]*initial/);
+    for(const f of ["LiveJobCard.tsx","JobTimeline.tsx"]) expect(read("src/ui/"+f)).not.toContain("#EC8638");
+  });
+});

@@ -289,7 +289,7 @@ export default function WalkinScreen() {
       {/* progress */}
       <View style={{ flexDirection: "row", gap: 6, marginBottom: spacing.md }}>
         {STEPS.map((s, k) => (
-          <View key={s} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: k <= stepIndex ? colors.accent : colors.border }} />
+          <View key={s} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: k <= stepIndex ? colors.textPrimary : colors.border }} />
         ))}
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>

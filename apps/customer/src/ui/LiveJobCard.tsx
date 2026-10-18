@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import type { ApprovalRequest } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
+import { useExperienceTheme } from "@autodeck/ui/native";
 import { metrics } from "../lib/metrics";
 import { Button, Kicker, Pane, T, rupees } from "./kit";
 import { STAGES, jobStage } from "./job-stage";
@@ -14,6 +15,7 @@ export function LiveJobCard({ status, readyText, approvals, busyId, error, onDec
   error: string | null;
   onDecide: (id: string, decision: "approved" | "rejected") => void;
 }) {
+  const { colors } = useExperienceTheme();
   const stage = jobStage(status);
   if (!stage) return null;
   return (
@@ -25,7 +27,7 @@ export function LiveJobCard({ status, readyText, approvals, busyId, error, onDec
           <T role="body" tone="secondary">{stage.line}</T>
           <View accessibilityRole="progressbar" accessibilityLabel={`Step ${Math.max(stage.index + 1, 0)} of ${STAGES.length}`} style={{ flexDirection: "row", gap: 6 }}>
             {STAGES.map((s, i) => (
-              <View key={s} style={{ flex: 1, height: 6, borderRadius: 4, backgroundColor: i <= stage.index ? "#EC8638" : "rgba(255,255,255,0.14)" }} />
+              <View key={s} style={{ flex: 1, height: 6, borderRadius: 4, backgroundColor: i <= stage.index ? colors.textPrimary : "rgba(255,255,255,0.14)" }} />
             ))}
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

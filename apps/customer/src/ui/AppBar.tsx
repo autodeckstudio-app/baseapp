@@ -37,7 +37,7 @@ export function AppBar({ title, onBack }: { title: string; onBack?: (() => void)
         </Pressable>
       ) : (
         <Pressable accessibilityRole="button" accessibilityLabel="Menu" onPress={() => setOpen(true)} style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", ...r.round }}>
-        <Text style={{ color: colors.accentStrong, fontSize: 18, fontWeight: "800" }}>{initial}</Text>
+        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800" }}>{initial}</Text>
       </Pressable>
       )}
       <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>{title}</Text>
