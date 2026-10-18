@@ -123,3 +123,18 @@ export async function setBookingQuote(bookingId: string, basePricePaise: number)
   const { functions } = await import("./firebase");
   await httpsCallable<{ bookingId: string; basePricePaise: number }, { bookingId: string }>(functions, "setBookingQuote")({ bookingId, basePricePaise });
 }
+
+export interface CancelSummary { paidPaise: number; policyFeePaise: number; feePaise: number; feeStatus: string; refundPaise: number; method: string | null; manualRefund?: boolean }
+
+export async function adminCancelBooking(input: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean }): Promise<CancelSummary> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<typeof input, CancelSummary>(functions, "adminCancelBooking")(input);
+  return res.data;
+}
+
+export async function settleCancellationFee(bookingId: string, action: "collected" | "waived", note?: string): Promise<void> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  await httpsCallable(functions, "settleCancellationFee")({ bookingId, action, ...(note?.trim() ? { note: note.trim() } : {}) });
+}

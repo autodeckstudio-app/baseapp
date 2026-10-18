@@ -17,6 +17,7 @@ import {
 import { setBookingQuote } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
+import { CancelBookingPanel } from "../../../../components/CancelBookingPanel";
 import { formatPaise, formatDateTime, formatDayLong, formatTime } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
 
@@ -111,7 +112,7 @@ export default function BookingDetailPage() {
           <p className="ax-label">Booking · {formatDayLong(booking.scheduledDate)} at {formatTime(booking.scheduledAt)}</p>
           <h1>{vehicle?.registrationNumber ?? "Vehicle"}</h1>
           <p className="ax-hero-sub">{[service?.name, car, customer?.name].filter(Boolean).join(" · ")}</p>
-          {booking.status === "CANCELLED" ? <p className="ax-hero-sub">{booking.cancellationFeePaise ? `Cancelled by the customer. Cancellation fee ${formatPaise(booking.cancellationFeePaise)}, collect or waive at the studio.` : "Cancelled. No cancellation fee."}</p> : null}
+          {booking.status === "CANCELLED" ? <p className="ax-hero-sub">{booking.cancellationFeePaise ? `Cancelled${booking.cancelledBy === "admin" ? " by the studio" : booking.cancelledBy === "system" ? " (visitor did not arrive)" : " by the customer"}. Cancellation fee ${formatPaise(booking.cancellationFeePaise)}${booking.cancellationFeeStatus === "due" || !booking.cancellationFeeStatus ? ", collect or waive at the studio." : booking.cancellationFeeStatus === "withheld" ? ", kept from the refund." : booking.cancellationFeeStatus === "collected" ? ", collected." : ", waived."}` : "Cancelled. No cancellation fee."}</p> : null}
         </div>
         <div className="ax-hero-side">
           <StatusBadge label={isBookingMissed(booking) ? "MISSED" : booking.status} />
@@ -130,6 +131,8 @@ export default function BookingDetailPage() {
             <div className="kv"><span>Bay</span><span>{bayName || "Assigned bay"}</span></div>
             {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
           </section>
+
+          <CancelBookingPanel booking={booking} job={job} />
 
           {booking.priceOnRequest === true && (
             <section className="ax-panel">

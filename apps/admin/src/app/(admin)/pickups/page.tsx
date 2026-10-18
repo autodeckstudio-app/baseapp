@@ -32,6 +32,7 @@ export default function PickupsPage() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [agreedPickup, setAgreedPickup] = useState<Record<string, string>>({});
   const [agreedDrop, setAgreedDrop] = useState<Record<string, string>>({});
+  const [fees, setFees] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -67,7 +68,15 @@ export default function PickupsPage() {
           agreed.agreedDropAt = v;
         }
       }
-      await setPickupStatus(r.id, status, notes[r.id] ?? r.staffNote, agreed);
+      // No pin shared: the fee is unknown until the distance is agreed on the call. Admin enters it here (whole request, in rupees).
+      let feePaise: number | undefined;
+      const feeRaw = (fees[r.id] ?? "").trim();
+      if (status === "CONFIRMED" && r.status === "REQUESTED" && (r.feePaise === null || r.feePaise === undefined) && feeRaw !== "") {
+        const n = Math.round(Number(feeRaw) * 100);
+        if (!Number.isFinite(n) || n < 0 || n > 100000) { setError("Enter the pickup fee in rupees, for example 150."); return; }
+        feePaise = n;
+      }
+      await setPickupStatus(r.id, status, notes[r.id] ?? r.staffNote, agreed, feePaise);
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : "Couldn't update the request.");
     } finally { setBusy(null); }
@@ -153,6 +162,11 @@ export default function PickupsPage() {
                         </label>
                       ) : null}
                     </div>
+                    {r.feePaise === null || r.feePaise === undefined ? (
+                      <label>Fee for this request (Rs, whole request)
+                        <input inputMode="numeric" aria-label="Pickup fee in rupees" placeholder="e.g. 150" value={fees[r.id] ?? ""} onChange={(e) => setFees({ ...fees, [r.id]: e.target.value })} />
+                      </label>
+                    ) : null}
                   </div>
                 ) : null}
 

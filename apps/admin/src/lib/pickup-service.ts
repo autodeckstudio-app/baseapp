@@ -43,6 +43,7 @@ export async function setPickupStatus(
   status: PickupRequestRow["status"],
   staffNote: string,
   agreed: { agreedPickupAt?: string; agreedDropAt?: string } = {},
+  feePaise?: number,
 ): Promise<void> {
   await httpsCallable(functions, "updatePickupRequest")({
     requestId,
@@ -50,5 +51,6 @@ export async function setPickupStatus(
     ...(staffNote.trim() ? { staffNote: staffNote.trim() } : {}),
     ...(agreed.agreedPickupAt?.trim() ? { agreedPickupAt: agreed.agreedPickupAt.trim() } : {}),
     ...(agreed.agreedDropAt?.trim() ? { agreedDropAt: agreed.agreedDropAt.trim() } : {}),
+    ...(feePaise !== undefined ? { feePaise } : {}),
   });
 }
