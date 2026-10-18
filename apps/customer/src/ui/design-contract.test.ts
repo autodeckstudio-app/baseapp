@@ -677,3 +677,15 @@ describe("inactive tab icons are one ink",()=>{
     expect(read("../../packages/ui/src/native/PillTabBar.tsx")).toContain("mono={!focused}");
   });
 });
+
+describe("visit history rows: plain status text and a small invoice link",()=>{
+  it("no status capsule and no full-width invoice button in history rows",()=>{
+    const car=read("src/app/(tabs)/garage/[id].tsx"), hist=read("src/app/(tabs)/garage/history.tsx"), tl=read("src/ui/CareTimeline.tsx");
+    expect(car).toContain("<LinkAction label={`View invoice");
+    expect(hist).toContain("<LinkAction label={`View invoice");
+    expect(car+hist).not.toMatch(/<Button label=\{`View invoice/);
+    expect(hist).not.toContain("<Chip");
+    expect(tl).toContain("it.soon ? <Chip");
+    expect(read("src/ui/kit.tsx")).toContain("export function LinkAction");
+  });
+});

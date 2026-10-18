@@ -27,6 +27,6 @@ describe("what a visit was for", () => {
 
 describe("history invoice button spacing", () => {
   it("is padded away from the row divider and the card edge", () => {
-    expect(readFileSync("src/app/(tabs)/garage/history.tsx", "utf8")).toMatch(/paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12/);
+    expect(readFileSync("src/app/(tabs)/garage/history.tsx", "utf8")).toMatch(/paddingHorizontal: 16, paddingBottom: 12/);
   });
 });

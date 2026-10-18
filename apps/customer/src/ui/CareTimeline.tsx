@@ -5,7 +5,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Chip, T } from "./kit";
 import type { TimelineItem } from "../lib/car-timeline";
 
-/** Width of the rail column. Extras (a button under a row) pull back left by rail + gap so they line up with full-width buttons below the list. */
+/** Width of the rail column. Extras (a small link under a row) sit in the text column. */
 const RAIL = 12;
 
 /** One thin vertical thread of dated items. Orange dot only for what is due soon. Count label beside the group heading. */
@@ -38,10 +38,10 @@ export function CareTimeline({ title, count, items, empty, renderExtra, onItem }
                   {it.when ? <T role="caption" tone="tertiary">{it.when}</T> : null}
                   <T role="heading">{it.title}</T>
                 </View>
-                {it.pill ? <Chip label={it.pill} tone={it.soon ? "accent" : "neutral"} /> : null}
+                {it.pill ? (it.soon ? <Chip label={it.pill} tone="accent" /> : <T role="caption" tone="tertiary" style={{ textTransform: "capitalize", marginTop: 2 }}>{it.pill}</T>) : null}
               </View>
               {it.sub ? <T role="caption" tone="secondary">{it.sub}</T> : null}
-              {renderExtra ? <View style={{ marginTop: space.line, marginLeft: -(RAIL + space.inset) }}>{renderExtra(it)}</View> : null}
+              {renderExtra ? <View style={{ marginTop: 2 }}>{renderExtra(it)}</View> : null}
             </View>
           </View>
         );

@@ -10,7 +10,7 @@ import { doc, getDoc } from "firebase/firestore";
 import type { Invoice, ServiceJob, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
-import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
+import { Button, Kicker, LinkAction, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToJobsForVehicle, listenToMyJobs } from "../../../lib/job-service";
@@ -82,13 +82,13 @@ export default function ServiceHistoryScreen() {
                 <Row
                   title={visitTitle(svc)}
                   detail={[fmt(job.sealedAt ?? job.createdAt),also,!vehicleId?((job as unknown as {vehicleSnapshot?:{make:string;model:string;registrationNumber:string}}).vehicleSnapshot?.registrationNumber??"Recorded visit"):null].filter(Boolean).join(" · ")}
-                  trailing={<Chip label={job.status.replace(/_/g, " ")} />}
+                  trailing={<T role="caption" tone="tertiary" style={{ textTransform: "capitalize" }}>{job.status.replace(/_/g, " ").toLowerCase()}</T>}
                   onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
                   last={i === jobs.length - 1 && !invoice}
                 />
                 {invoice ? (
-                  <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 }}>
-                    <Button label={`View invoice ${invoice.invoiceNumber}`} kind="quiet" testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} />
+                  <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+                    <LinkAction label={`View invoice ${invoice.invoiceNumber}`} testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} />
                   </View>
                 ) : null}
               </View>
@@ -96,7 +96,7 @@ export default function ServiceHistoryScreen() {
           })}
         </Pane>
       )}
-      {invoices.filter(inv=>!jobs.some(j=>j.id===inv.jobId)).map(inv=><Pane key={inv.id} pad="inset"><T role="heading">Invoice {inv.invoiceNumber}</T><T role="caption" tone="secondary">{inv.vehicleSnapshot?.registrationNumber??"Recorded visit"}</T><Button kind="quiet" label="View invoice" onPress={()=>router.push(invoiceHref(inv.id))}/></Pane>)}
+      {invoices.filter(inv=>!jobs.some(j=>j.id===inv.jobId)).map(inv=><Pane key={inv.id} pad="inset"><T role="heading">Invoice {inv.invoiceNumber}</T><T role="caption" tone="secondary">{inv.vehicleSnapshot?.registrationNumber??"Recorded visit"}</T><LinkAction label="View invoice" onPress={()=>router.push(invoiceHref(inv.id))}/></Pane>)}
       <Button label="Back to garage" kind="quiet" onPress={() => router.push("/(tabs)/garage")} />
     </Screen>
   );

@@ -376,6 +376,15 @@ export function PhotoCard({
   );
 }
 
+/** A small inline action: plain underlined text, not a full-width button. For secondary actions that sit inside a row, such as View invoice. */
+export function LinkAction({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) {
+  return (
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={8} style={{ alignSelf: "flex-start", paddingVertical: 4 }}>
+      <T role="caption" tone="primary" style={{ textDecorationLine: "underline" }}>{label}</T>
+    </Pressable>
+  );
+}
+
 export function Chip({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger" }) {
   const { colors, name } = useExperienceTheme();
   const c = tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;

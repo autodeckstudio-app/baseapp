@@ -13,7 +13,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { Button, Chip, Field, Kicker, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
+import { Button, Chip, Field, Kicker, LinkAction, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
 import { metrics } from "../../../lib/metrics";
@@ -350,7 +350,7 @@ export default function VehicleDetailScreen() {
               onItem={(it) => { const bid = bookingOf(it.jobId); if (bid) router.push(`/(tabs)/bookings/${bid}`); }}
               renderExtra={(it) => {
                 const invoice = invoices.find((x) => x.jobId === it.jobId);
-                return invoice ? <Button label={`View invoice ${invoice.invoiceNumber}`} kind="quiet" testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} /> : null;
+                return invoice ? <LinkAction label={`View invoice ${invoice.invoiceNumber}`} testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} /> : null;
               }}
             />
             {past.length > HISTORY_PREVIEW ? (
