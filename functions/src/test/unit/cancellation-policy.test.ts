@@ -34,4 +34,11 @@ describe("cancellation policy", () => {
     expect(src).toContain("Work on your car has already started");
     expect(src).toContain("arrange any refund");
   });
+  it("the Terms page states the same numbers as the config", () => {
+    const terms = readFileSync(`${__dirname}/../../../../apps/site/src/pages/terms.astro`, "utf8");
+    expect(terms).toContain(`${CANCEL_SHORT.freeUntilHours} hours before the start; after that, Rs ${CANCEL_SHORT.feePaise / 100}`);
+    expect(terms).toContain(`${CANCEL_BIGGER.freeUntilHours} hours before the start; after that, ${CANCEL_BIGGER.feePercent}%`);
+    expect(terms).toContain("5 to 7 working days");
+    expect(terms).not.toContain("\u2014");
+  });
 });
