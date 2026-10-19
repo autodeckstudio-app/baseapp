@@ -55,7 +55,7 @@ export default function BookServiceScreen() {
   const [catalogue, setCatalogue] = useState<Service[]>([]);
   const [extraIds, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
   const [upgradeNote, setUpgradeNote] = useState<string | null>(null);
-  useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]);
   const pickExtra = (id: string) => {
     const next = toggleExtra(extraIds, id);
     const up = applyBundleUpgrade(serviceId ?? "", next);

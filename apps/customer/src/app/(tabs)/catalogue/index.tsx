@@ -12,7 +12,8 @@ import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { serviceVisual, brandHero, serviceImagery, typePhoto } from "../../../lib/imagery";
+import { serviceVisual, brandHero, typePhoto } from "../../../lib/imagery";
+import type { serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
 import { FilterPills } from "../../../ui/FilterPills";
@@ -94,9 +95,9 @@ export default function CatalogueScreen() {
     <PhotoCard key={key} title={title} pill={meta?.replace(/^From /, "From ")} hearted={false} onPress={onPress} media={image ? <FadeImage source={image} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : null} />
   );
   const pairs = <X,>(xs: X[]): X[][] => { const r: X[][] = []; for (let i = 0; i < xs.length; i += 2) r.push(xs.slice(i, i + 2)); return r; };
-  const grid = (nodes: ReactElement[]) => (
+  const grid = (cells: ReactElement[]) => (
     <View style={{ gap: TILE_GAP }}>
-      {pairs(nodes).map((r, i) => (
+      {pairs(cells).map((r, i) => (
         <View key={i} style={{ flexDirection: "row", gap: TILE_GAP }}>{r}{r.length === 1 ? <View style={{ flex: 1 }} /> : null}</View>
       ))}
     </View>
@@ -116,7 +117,7 @@ export default function CatalogueScreen() {
   );
   const nodeTile = (n: TreeNode, i: number, inCat?: string) => {
     const catKey = inCat ?? cat;
-    const base = inCat ? [] : trail.map((t) => t.key);
+    const base = inCat ? [] : trail.map((step) => step.key);
     if (n.kind === "leaf") return card(n.service, i);
     if (n.kind === "enquiry") {
       const photo = typePhoto(n.key);
@@ -142,7 +143,7 @@ export default function CatalogueScreen() {
 
   // Back climbs one real level. A level that was opened automatically is skipped so Back never lands on it again.
   const levelBack = !fromRoute || !cat ? undefined : () => {
-    let up = trail.map((t) => t.key).slice(0, -1);
+    let up = trail.map((step) => step.key).slice(0, -1);
     while (up.length > 0 && resolvePath(tree, up).trail.length >= trail.length) up = up.slice(0, -1);
     if (up.length === 0 && resolvePath(tree, []).trail.length >= trail.length && trail.length > 0) { router.push("/(tabs)/catalogue"); return; }
     if (trail.length === 0) { router.push("/(tabs)/catalogue"); return; }

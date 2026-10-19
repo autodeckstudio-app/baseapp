@@ -23,7 +23,7 @@ describe("pickup rule v3: under 3 km Rs 100, 3 km and above Rs 150, per leg, no 
   it("the server prices from the distance, stores it, and has no distance block", () => {
     const src = readFileSync(`${__dirname}/../../functions/booking/pickupRequests.ts`, "utf8");
     expect(src).toContain("pickupZone(");
-    expect(src).toContain("pickupFeePaise(z.km, data.kind)");
+    expect(src).toContain("pickupFeePaise(zone.km, data.kind)");
     expect(src).toContain("distanceKm");
     expect(src).not.toContain('"blocked"');
     expect(src).not.toContain("PICKUP_MAX_KM");

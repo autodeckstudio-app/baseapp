@@ -1,3 +1,5 @@
+import type * as NodeFs from "node:fs";
+import type * as NodePath from "node:path";
 import { describe, expect, it } from "vitest";
 import { MENU_SEED } from "@autodeck/core";
 import { comboCards, dueSoonFor, lastServiceFor, pickDay } from "./booking-ideas";
@@ -43,8 +45,8 @@ describe("booking ideas", () => {
     expect(comboCards(cat.filter((s: { id: string }) => s.id !== "menu-wash-interior"))).toEqual([]);
   });
   it("the empty Bookings blocks only show with no next booking, and never mention discounts or invented prices", () => {
-    const { readFileSync } = require("node:fs") as typeof import("node:fs");
-    const { join } = require("node:path") as typeof import("node:path");
+    const { readFileSync } = require("node:fs") as typeof NodeFs;
+    const { join } = require("node:path") as typeof NodePath;
     const page = readFileSync(join(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
     for (const h of ["Book again", "Due soon", "Earliest time for", "Combos"]) expect(page).toMatch(new RegExp(`seg === "upcoming" && !error && !next && [^\\n]*\\n[^\\n]*\\n[^\\n]*${h}`));
     const src = readFileSync(join(__dirname, "booking-ideas.ts"), "utf8") + page.slice(page.indexOf("Ideas for the empty page"), page.indexOf("const doCancel"));

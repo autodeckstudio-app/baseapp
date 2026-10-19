@@ -8,7 +8,7 @@ export function sellPrefillFromVehicle(v: Pick<Vehicle, "make" | "model" | "year
     model: v.model ?? "",
     year: v.year ? String(v.year) : "",
     colour: v.color ?? "",
-    km: v.odometer != null ? String(v.odometer) : "",
+    km: v.odometer !== null && v.odometer !== undefined ? String(v.odometer) : "",
     reg: v.registrationNumber ?? "",
   };
 }

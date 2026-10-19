@@ -383,7 +383,7 @@ export default function BookingDetailScreen() {
       ) : null}
 
       {job && jobStage(job.status) ? (
-        <LiveJobCard status={job.status} readyText={job.status === "DELIVERED" || !readyIsAhead(booking.estimatedEndDate, booking.estimatedEndTime) ? null : `${displayEndDate}, ${booking.estimatedEndTime}`} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(id, d) => void handleDecide(id, d)} />
+        <LiveJobCard status={job.status} readyText={job.status === "DELIVERED" || !readyIsAhead(booking.estimatedEndDate, booking.estimatedEndTime) ? null : `${displayEndDate}, ${booking.estimatedEndTime}`} approvals={approvals.filter((a) => a.status === "pending")} busyId={decidingId} error={decideError} onDecide={(approvalId, d) => void handleDecide(approvalId, d)} />
       ) : job ? (
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>

@@ -361,7 +361,7 @@ export default function VehicleDetailScreen() {
 
       {(() => {
         const past = buildHistory(jobs.map((j) => ({ id: j.id, title: visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames)), also: [visitAlso(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))].filter(Boolean).join(" "), at: j.sealedAt ?? j.createdAt, status: j.status })));
-        const bookingOf = (id?: string) => jobs.find((j) => j.id === id)?.bookingId;
+        const bookingOf = (jobId?: string) => jobs.find((j) => j.id === jobId)?.bookingId;
         return (
           <View style={{ gap: space.gap }}>
             <CareTimeline

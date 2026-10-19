@@ -1,3 +1,5 @@
+import type * as FsT from "fs";
+import type * as PathT from "path";
 import {describe,it,expect} from "vitest";
 import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
@@ -473,7 +475,7 @@ describe("care map is gone", () => {
 });
 
 it("lists every stock image in the imagery register",()=>{
-  const fs=require("fs") as typeof import("fs");const path=require("path") as typeof import("path");
+  const fs=require("fs") as typeof FsT;const path=require("path") as typeof PathT;
   const dir=path.join(__dirname,"../../assets/imagery/stock");
   const reg=fs.readFileSync(path.join(__dirname,"../../assets/imagery/REGISTER.md"),"utf8");
   const missing=fs.readdirSync(dir).filter(f=>/\.(jpe?g|png|webp)$/i.test(f)).filter(f=>!reg.includes(f));

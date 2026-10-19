@@ -73,9 +73,9 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
   // The fee is decided here from the distance. null = no location sent, so the studio confirms the distance and fee by phone.
   let feePaise: number | null = null;
   if (data.lat !== undefined && data.lng !== undefined) {
-    const z = pickupZone({ lat: data.lat, lng: data.lng });
-    distanceKm = z.km;
-    feePaise = pickupFeePaise(z.km, data.kind);
+    const zone = pickupZone({ lat: data.lat, lng: data.lng });
+    distanceKm = zone.km;
+    feePaise = pickupFeePaise(zone.km, data.kind);
   }
   const db = getFirestore();
   const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();

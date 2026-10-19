@@ -30,18 +30,18 @@ import { eligibleExtras as _el, offeredExtras, toggleExtra as _tg } from "./visi
 describe("a bundle and the services it includes are never in one visit", () => {
   const cat = ["menu-wash-foam", "menu-wash-exterior", "menu-wash-interior", "menu-wash-full"].map((id) => ({ id, requiredBayType: "wash" as const, priceOnRequest: false, active: true }));
   it("main Full detail wash: Exterior, Interior and Foam are not offered", () => {
-    expect(_el(cat[3]!, cat).map((s) => s.id)).toEqual([]);
+    expect(_el(cat[3]!, cat).map((x) => x.id)).toEqual([]);
   });
   it("main Exterior: Full detail wash is not offered either (book Full instead)", () => {
-    expect(_el(cat[1]!, cat).map((s) => s.id)).toEqual(["menu-wash-interior"]);
+    expect(_el(cat[1]!, cat).map((x) => x.id)).toEqual(["menu-wash-interior"]);
   });
   it("picking Full drops Exterior and Interior already picked; once Full is picked they are hidden", () => {
     expect(_tg(["menu-wash-exterior", "menu-wash-interior"], "menu-wash-full")).toEqual(["menu-wash-full"]);
-    const shown = offeredExtras(_el(cat[2]!, cat), ["menu-wash-full"]).map((s) => s.id);
+    const shown = offeredExtras(_el(cat[2]!, cat), ["menu-wash-full"]).map((x) => x.id);
     expect(shown).toEqual([]);
   });
   it("Foam is not offered with Exterior or Full, and they are not offered with Foam", () => {
-    expect(_el(cat[0]!, cat).map((s) => s.id)).toEqual(["menu-wash-interior"]);
+    expect(_el(cat[0]!, cat).map((x) => x.id)).toEqual(["menu-wash-interior"]);
   });
 });
 
