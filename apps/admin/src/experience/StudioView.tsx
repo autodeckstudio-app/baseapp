@@ -41,8 +41,8 @@ export function StudioView(p: {
   const [bayName, setBayName] = useState("");
   const [bayType, setBayType] = useState<BayType>("wash");
 
-  if (p.loading) return <div className="ax-page"><PageHead eyebrow="Office" title="Studio" /><div className="ax-skel" style={{ height: 320 }} /></div>;
-  if (!cfg) return <div className="ax-page"><PageHead eyebrow="Office" title="Studio" /><div className="ax-panel ax-empty"><p className="ax-title">Studio not set up</p><p>{p.error ?? "No studio settings were found for this business."}</p></div></div>;
+  if (p.loading) return <div className="ax-page"><PageHead eyebrow="Office" title="Studio setup" /><div className="ax-skel" style={{ height: 320 }} /></div>;
+  if (!cfg) return <div className="ax-page"><PageHead eyebrow="Office" title="Studio setup" /><div className="ax-panel ax-empty"><p className="ax-title">Studio not set up</p><p>{p.error ?? "No studio settings were found for this business."}</p></div></div>;
 
   const cur: StudioProfile = prof ?? { name: cfg.name, timezone: cfg.timezone, taxRatePercent: String(cfg.taxRatePercent), hours: cfg.operatingHours };
   const dirty = prof !== null;
@@ -54,7 +54,7 @@ export function StudioView(p: {
 
   return (
     <div className="ax-page">
-      <PageHead eyebrow="Office" title="Studio" kpis={[{ value: openDays, label: "Days open a week" }, { value: cfg.bays.filter((b) => b.active).length, label: "Bays in use", tone: "premium" }]} />
+      <PageHead eyebrow="Office" title="Studio setup" kpis={[{ value: openDays, label: "Days open a week" }, { value: cfg.bays.filter((b) => b.active).length, label: "Bays in use", tone: "premium" }]} />
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
 

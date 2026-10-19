@@ -32,7 +32,7 @@ export function DailyCloseView(p: {
     <div className="ax-page">
       <PageHead
         eyebrow="Office"
-        title="Daily Close"
+        title="Day close"
         kpis={p.live ? [
           { value: formatPaise(p.live.totalRevenuePaise), label: "Revenue" },
           { value: formatPaise(p.live.expensesPaise), label: "Expenses" },

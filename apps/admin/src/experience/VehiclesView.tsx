@@ -62,7 +62,7 @@ export function VehiclesView(p: {
 
   return (
     <div className="ax-page">
-      <PageHead eyebrow="Office" title="Vehicles" />
+      <PageHead eyebrow="Office" title="Cars" />
       <form className="ax-panel ax-plate-search" onSubmit={(e) => { e.preventDefault(); p.onSearch(plate); }}>
         <span className="ax-label">Find a car</span>
         <div className="ax-plate-row">
