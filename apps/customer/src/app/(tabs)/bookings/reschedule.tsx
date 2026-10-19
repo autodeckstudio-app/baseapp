@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, getAvailability, rescheduleBooking, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
+import { extraServiceIdsOf } from "../../../lib/booking-rules";
 import type { Booking } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -43,7 +44,7 @@ export default function RescheduleBookingScreen() {
     if (!booking) return;
     setSlotsLoading(true);
     setSlotsError(null);
-    void getAvailability(booking.serviceId, booking.studioId, todayIST(), 14)
+    void getAvailability(booking.serviceId, booking.studioId, todayIST(), 14, extraServiceIdsOf(booking))
       .then(setSlots)
       .catch((err: unknown) => {
         setSlotsError(err instanceof Error ? err.message : "Could not load available times.");

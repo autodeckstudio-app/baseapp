@@ -57,3 +57,8 @@ export function cancelConfirmBody(c: { feePaise: number; line: string }, paid: b
   const money = paid ? ` Your payment will be refunded to your original payment method in ${REFUND_TIMELINE_TEXT}.` : " The slot is released straight away and nothing is charged.";
   return `${c.line}${fee}${money} This can't be undone.`;
 }
+
+/** Extra services of a saved multi-service booking (lines minus the primary). Reschedule must ask for times that fit the whole visit, not the primary service alone. */
+export function extraServiceIdsOf(booking: { serviceId: string; lines?: Array<{ serviceId: string }> }): string[] {
+  return (booking.lines ?? []).map((l) => l.serviceId).filter((id) => id !== booking.serviceId);
+}
