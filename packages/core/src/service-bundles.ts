@@ -20,8 +20,8 @@ const FOAM_CLASH = new Set(["menu-wash-exterior", "menu-wash-full"]);
 /** Pairs in a visit that cannot be booked together, though neither contains the other. */
 export function conflictingPair(ids: readonly string[]): [string, string] | null {
   for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
-    const a = ids[i]!, b = ids[j]!;
-    if (a === b) continue;
+    const a = ids[i], b = ids[j];
+    if (a === undefined || b === undefined || a === b) continue;
     const fa = exclusiveFamily(a);
     if (fa && fa === exclusiveFamily(b)) return [a, b];
     if ((a === "menu-wash-foam" && FOAM_CLASH.has(b)) || (b === "menu-wash-foam" && FOAM_CLASH.has(a))) return [a, b];

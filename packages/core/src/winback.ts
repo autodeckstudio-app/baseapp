@@ -22,7 +22,8 @@ export function selectWinbackTargets(i: WinbackInput, days = WINBACK_DAYS, coold
     const t = Date.parse(last);
     if (Number.isNaN(t) || i.now - t < days * DAY) continue;
     if (i.hasOpenBooking.has(id)) continue;
-    const n = i.lastNudge[id] ? Date.parse(i.lastNudge[id]!) : NaN;
+    const nudged = i.lastNudge[id];
+    const n = nudged ? Date.parse(nudged) : NaN;
     if (!Number.isNaN(n) && i.now - n < cooldownDays * DAY) continue;
     out.push(id);
   }

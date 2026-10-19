@@ -75,7 +75,7 @@ export function giftLockedUntil(failedAtIso: string[], now: number): number | nu
   const windowMs = GIFT_LOCK_MINUTES * 60_000;
   const recent = failedAtIso.map(Date.parse).filter((t) => !Number.isNaN(t) && now - t < windowMs).sort((a, b) => a - b);
   if (recent.length < GIFT_MAX_FAILED_ATTEMPTS) return null;
-  return recent[recent.length - GIFT_MAX_FAILED_ATTEMPTS]! + windowMs;
+  return (recent[recent.length - GIFT_MAX_FAILED_ATTEMPTS] ?? 0) + windowMs;
 }
 
 /** Can the buyer cancel for a refund? Only while unused. */

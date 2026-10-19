@@ -35,8 +35,9 @@ describe("lockout", () => {
   const t = (m: number) => new Date(now - m * 60_000).toISOString();
   it("locks after 5 failures in 15 minutes", () => {
     expect(giftLockedUntil([t(1), t(2), t(3), t(4)], now)).toBeNull();
-    const until = giftLockedUntil([t(1), t(2), t(3), t(4), t(5)], now)!;
-    expect(until).toBeGreaterThan(now);
+    const until = giftLockedUntil([t(1), t(2), t(3), t(4), t(5)], now);
+    expect(until).not.toBeNull();
+    expect(until ?? 0).toBeGreaterThan(now);
     expect(GIFT_MAX_FAILED_ATTEMPTS).toBe(5);
   });
   it("old failures do not count", () => expect(giftLockedUntil([t(20), t(21), t(22), t(23), t(24)], now)).toBeNull());
