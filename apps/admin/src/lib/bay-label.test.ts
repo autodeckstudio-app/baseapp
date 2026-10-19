@@ -9,3 +9,12 @@ describe("bayLabel", () => {
   it("returns nothing for no bay", () => expect(bayLabel(undefined, bays)).toBeUndefined());
   it("does not double the word Bay", () => { expect(bayChip("General Bay 1")).toBe("General Bay 1"); expect(bayChip("wash-1")).toBe("Bay wash-1"); });
 });
+
+import { readFileSync } from "node:fs";
+describe("jobs page never prints a raw bay id", () => {
+  it("list view cells use bayLabel", () => {
+    const s = readFileSync(`${__dirname}/../app/(admin)/jobs/page.tsx`, "utf8");
+    expect(s).not.toMatch(/<td>\{j\.bayId\}<\/td>/);
+    expect(s).toContain("bayLabel(j.bayId, bays)");
+  });
+});

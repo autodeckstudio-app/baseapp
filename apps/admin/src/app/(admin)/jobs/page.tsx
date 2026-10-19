@@ -190,7 +190,7 @@ export default function JobsPage() {
                 <td className="ax-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>
                 <td>{customerNames[j.customerId] ?? "-"}</td>
                 <td>{serviceNames[j.serviceId] ?? "-"}</td>
-                <td>{j.bayId}</td>
+                <td>{bayLabel(j.bayId, bays) ?? ""}</td>
                 <td><StatusBadge label={j.paymentStatus} /></td>
                 <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>
               </tr>
