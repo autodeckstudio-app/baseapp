@@ -98,7 +98,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => void handleGoogle()}
                   disabled={submitting || loading}
-                  style={{ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, background: "linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%)", color: "#1A1410", border: 0, fontFamily: "inherit", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: submitting || loading ? 0.6 : 1 }}
+                  style={{ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, background: "#F3F1EC", color: "#0C0D0F", border: 0, fontFamily: "inherit", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: submitting || loading ? 0.6 : 1 }}
                 >
                   <GoogleMark />
                   {submitting ? "Opening Google…" : "Continue with Google"}

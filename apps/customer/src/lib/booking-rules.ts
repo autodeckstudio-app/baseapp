@@ -13,6 +13,7 @@ const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
 export function getRescheduleEligibility(booking: Booking): { eligible: boolean; reason: string | null } {
   if (isBookingMissed(booking)) return { eligible: false, reason: "This booking was auto-cancelled at studio close. Make a new booking." };
   if (booking.status !== "CONFIRMED") {
+    if (booking.status === "PENDING" && booking.payMode === "online") return { eligible: false, reason: "This booking is waiting for payment. Pay to confirm it, then you can reschedule." };
     return { eligible: false, reason: NON_RESCHEDULABLE_STATUS_REASONS[booking.status] ?? "This booking can't be rescheduled." };
   }
   if (booking.rescheduleCount >= MAX_CUSTOMER_RESCHEDULES) {

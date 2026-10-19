@@ -120,7 +120,7 @@ export default function ApprovalDetailScreen() {
         <Row title={<T role="heading">New total</T>} trailing={<T role="heading">{rupees(approval.newTotal)}</T>} last />
       </Pane>
 
-      {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
+      {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 
       {isPending ? (
         confirming ? (

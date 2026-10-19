@@ -294,7 +294,7 @@ export default function BookingConfirmScreen() {
         </Pane>
       </View>}
 
-      {bookError ? <Notice title="Could not confirm the request" body={bookError} /> : null}
+      {bookError ? <Notice title={held ? "Payment pending" : "Could not confirm the request"} body={bookError} /> : null}
 
       {held && !heldOver ? <T role="caption" tone="secondary" style={{ textAlign: "center" }}>{`Slot held for ${Math.floor(holdLeft / 60)}:${String(holdLeft % 60).padStart(2, "0")}`}</T> : null}
       {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}

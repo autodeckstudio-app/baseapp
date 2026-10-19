@@ -346,7 +346,7 @@ export default function VehicleDetailScreen() {
             </View>
           ) : null}
 
-          {actionError ? <Notice title="Something went wrong" body={actionError} /> : null}
+          {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 
         </>
       ) : null}
