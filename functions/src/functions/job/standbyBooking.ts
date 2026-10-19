@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
+import { jobHoldsBay } from "@autodeck/core";
 import type { ServiceJob, Booking, Service, StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -77,7 +78,7 @@ export const standbyBooking = onCall({ region: "asia-south1" }, async (request) 
     const bayLock = db.collection(COLLECTIONS.bayLocks()).doc(`${job.tenantId}__${job.studioId}__${bay.id}`);
     await tx.get(bayLock);
     const end = computeScheduleEnd(nowDate, job.estimatedDurationMinutes, config.operatingHours, config.holidays, config.timezone);
-    const occupants = jobs.filter(j => j.id !== job.id && j.bayId === bay.id && !["DELIVERED", "CANCELLED", "STANDBY"].includes(j.status));
+    const occupants = jobs.filter(j => j.id !== job.id && j.bayId === bay.id && !["DELIVERED", "CANCELLED", "STANDBY"].includes(j.status) && !(j.status === "PENDING_VEHICLE" && !jobHoldsBay(j, nowDate.getTime())));
     // Physically present cars occupy the bay until handover even past estimate.
     if (occupants.some(j => j.status !== "PENDING_VEHICLE" && Date.parse(j.scheduledAt) <= nowDate.getTime()) || hasConflict(nowDate, end, occupants.map(j => buildOccupiedInterval(j.scheduledAt, j.estimatedEndAt)))) throw new HttpsError("resource-exhausted", "Bay is occupied or reserved during this service. Wait or choose another compatible bay.");
     const schedule = { bayId: bay.id, scheduledAt: now, scheduledDate: date, estimatedEndAt: end.toISOString(), estimatedEndDate: utcToLocalDate(end, config.timezone), standbyAdmittedAt: now, updatedAt: now };

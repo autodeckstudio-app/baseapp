@@ -48,6 +48,19 @@ export function isBookingLateToday(b: { status: string; scheduledAt: string; sta
     now >= Date.parse(b.scheduledAt) && now < bookingMissedAt(b.scheduledAt);
 }
 
+/**
+ * Does this job still hold its bay right now? A car that has arrived (vehicle received through ready for pickup) holds it until done.
+ * An "Awaiting vehicle" job holds it only until its slot end (start + duration) has passed; after that it is a no-show and the bay shows free.
+ * One rule for the studio screens and the server bay checks.
+ */
+export function jobHoldsBay(j: { status: string; estimatedEndAt: string }, now: number = Date.now()): boolean {
+  if (j.status === "PENDING_VEHICLE") {
+    const end = Date.parse(j.estimatedEndAt);
+    return Number.isFinite(end) ? now < end : true;
+  }
+  return ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"].includes(j.status);
+}
+
 export const JOB_STATUS_TRANSITIONS: Record<string, string[]> = {
   PENDING_VEHICLE: ["VEHICLE_RECEIVED", "CANCELLED"],
   STANDBY: ["VEHICLE_RECEIVED", "CANCELLED"],

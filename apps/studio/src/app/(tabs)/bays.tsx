@@ -10,6 +10,7 @@ import { db } from "../../lib/firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import { listenToJobsByDate, getStudioConfig } from "../../lib/studio-service";
 import { listenToPendingApprovalsForStudio, getActiveServices } from "../../lib/approval-service";
+import { jobHoldsBay } from "@autodeck/core";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, ErrorState, jobStatusLabel } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -24,15 +25,11 @@ function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
-const ACTIVE_STATUSES: ServiceJob["status"][] = [
-  "PENDING_VEHICLE",
-  "VEHICLE_RECEIVED",
-  "IN_PROGRESS",
-  "QUALITY_CHECK",
-  "READY_FOR_DELIVERY",
-];
 
 export default function BayBoardScreen() {
+  // Re-check bay occupancy every minute: a no-show frees its bay when the slot end passes.
+  const [, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 60000); return () => clearInterval(t); }, []);
   const auth = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState<StudioConfig | null>(null);
@@ -81,7 +78,7 @@ export default function BayBoardScreen() {
   // Lazily resolve vehicle/customer display labels for whichever jobs are
   // currently occupying a bay — small dataset (today's active jobs only).
   useEffect(() => {
-    const occupying = jobs.filter((j) => ACTIVE_STATUSES.includes(j.status));
+    const occupying = jobs.filter((j) => jobHoldsBay(j));
     const missingVehicleIds = [...new Set(occupying.map((j) => j.vehicleId))].filter((id) => !(id in vehicleLabels));
     const missingCustomerIds = [...new Set(occupying.map((j) => j.customerId))].filter(
       (id) => !(id in customerNames),
@@ -128,7 +125,7 @@ export default function BayBoardScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
         <CanvasTitle eyebrow="Studio floor" title="Bays" />
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.caption, color: colors.textMuted }}>{jobs.filter((j) => ACTIVE_STATUSES.includes(j.status)).length} on the floor</Text>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>{jobs.filter((j) => jobHoldsBay(j)).length} on the floor</Text>
           <Button label="New walk-in" size="md" onPress={() => router.push("/(tabs)/walkin")} />
         </View>
 
@@ -138,7 +135,7 @@ export default function BayBoardScreen() {
               {BAY_TYPE_LABELS[bayType] ?? bayType} ({bays.length})
             </Text>
             {bays.map((bay) => {
-              const job = jobs.find((j) => j.bayId === bay.id && ACTIVE_STATUSES.includes(j.status));
+              const job = jobs.find((j) => j.bayId === bay.id && jobHoldsBay(j));
               const hasPendingApproval = job ? pendingApprovals.some((a) => a.jobId === job.id) : false;
 
               if (!bay.active) {

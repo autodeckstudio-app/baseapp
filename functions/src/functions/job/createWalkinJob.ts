@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob, Vehicle, Customer } from "@autodeck/core";
-import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
+import { MAX_SERVICE_SPAN_DAYS, jobHoldsBay } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -133,6 +133,8 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
     for (const doc of activeJobsSnap.docs) {
       const job = doc.data() as ServiceJob;
       if (job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+      // A booked car that never came and whose slot has ended no longer holds the bay.
+      if (job.status === "PENDING_VEHICLE" && !jobHoldsBay(job, now.getTime())) continue;
       occupied.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
     }
 

@@ -18,26 +18,22 @@ import {
 } from "../../lib/walkin-service";
 import { loadCustomerDirectory, filterDirectory, type CustomerDirectory } from "../../lib/lookup-service";
 import { getActiveServices } from "../../lib/approval-service";
-import { STAFF_SEGMENTS, normalizeSegment } from "@autodeck/core";
+import { STAFF_SEGMENTS, normalizeSegment, jobHoldsBay } from "@autodeck/core";
 import type { Customer, Vehicle, Service, ServiceJob, StudioConfig, VehicleCategory, PriceBreakdown } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, TextInput, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 
 const VEHICLE_CATEGORIES = STAFF_SEGMENTS;
 
-const ACTIVE_STATUSES: ServiceJob["status"][] = [
-  "PENDING_VEHICLE",
-  "VEHICLE_RECEIVED",
-  "IN_PROGRESS",
-  "QUALITY_CHECK",
-  "READY_FOR_DELIVERY",
-];
 
 function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
 export default function WalkinScreen() {
+  // Re-check bay occupancy every minute: a no-show frees its bay when the slot end passes.
+  const [, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 60000); return () => clearInterval(t); }, []);
   const auth = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ bayId?: string }>();
@@ -121,7 +117,7 @@ export default function WalkinScreen() {
   // Bays compatible with the selected service's required type and currently
   // free — the server re-validates this transactionally at submit time
   // regardless, so this is a helpful preview, not the authority.
-  const occupiedBayIds = new Set(jobs.filter((j) => ACTIVE_STATUSES.includes(j.status)).map((j) => j.bayId));
+  const occupiedBayIds = new Set(jobs.filter((j) => jobHoldsBay(j)).map((j) => j.bayId));
   const compatibleBays =
     config?.bays.filter((b) => b.active && (!selectedService || b.bayType === selectedService.requiredBayType)) ?? [];
   const freeBays = compatibleBays.filter((b) => !occupiedBayIds.has(b.id));
