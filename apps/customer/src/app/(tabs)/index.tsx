@@ -1,6 +1,6 @@
 import { RateCard } from "../../ui/RateCard";
 import { rateCandidate } from "../../lib/rate-card";
-import { liveTrackTarget } from "../../lib/bookings-view";
+import { liveTrackTarget, sinceLabel } from "../../lib/bookings-view";
 import { LIVE_PROGRESS } from "../../lib/garage-live";
 import { buildDrawerItems } from "../../lib/drawer-items";
 import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
@@ -220,7 +220,7 @@ export default function HomeScreen() {
   const live = m.pendingApproval
     ? { kicker: "Needs your OK", title: m.pendingApproval.serviceName, detail: m.pendingApproval.reason, onPress: () => router.push(`/(tabs)/approvals/${m.pendingApproval!.id}`) }
     : m.liveJob
-      ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: `Since ${new Date(m.liveJob.scheduledAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`, ready: m.liveJob.estimatedEndAt && new Date(m.liveJob.estimatedEndAt).getTime() > Date.now() ? new Date(m.liveJob.estimatedEndAt).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" }) : null, onPress: () => router.push(liveId ? `/(tabs)/bookings/${liveId}` : "/(tabs)/bookings") }
+      ? { kicker: "Live now", title: JOB_STAGE[m.liveJob.status] ?? "In the studio", detail: sinceLabel(m.liveJob.scheduledAt), ready: m.liveJob.estimatedEndAt && new Date(m.liveJob.estimatedEndAt).getTime() > Date.now() ? new Date(m.liveJob.estimatedEndAt).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" }) : null, onPress: () => router.push(liveId ? `/(tabs)/bookings/${liveId}` : "/(tabs)/bookings") }
       : m.upcomingBooking
         ? { kicker: "Next visit", title: `${formatDateShort(m.upcomingBooking.scheduledDate)} \u00b7 ${m.upcomingBooking.scheduledTime}`, detail: m.upcomingBooking.status === "PENDING" ? "Waiting for the studio to confirm" : "Confirmed", onPress: () => router.push(nextId ? `/(tabs)/bookings/${nextId}` : "/(tabs)/bookings") }
         : { kicker: copy.kicker, title: m.primaryAction.label, detail: copy.line, onPress: act, idle: true };

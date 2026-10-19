@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { liveJobOf, recentDistinctServices } from "./bookings-view";
+import { liveJobOf, recentDistinctServices, sinceLabel } from "./bookings-view";
 
 const read = (f: string) => readFileSync(`${__dirname}/../${f}`, "utf8");
 
@@ -83,4 +83,10 @@ describe("booking rows name the booked service", () => {
     expect(s).toContain("visitTitle(nameOf(");
     expect(s).toContain("loadServiceNames");
   });
+});
+
+describe("sinceLabel", () => {
+  const now = new Date("2026-10-19T12:00:00+05:30");
+  it("shows only the time for today", () => { expect(sinceLabel("2026-10-19T11:29:00+05:30", now)).toMatch(/^Since 11:29/); });
+  it("adds the date for an older job", () => { expect(sinceLabel("2026-10-09T11:29:00+05:30", now)).toMatch(/^Since 9 Oct, 11:29/); });
 });
