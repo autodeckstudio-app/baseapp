@@ -1,0 +1,13 @@
+---
+interface Props {
+  dir?: 'ne' | 'e' | 'se' | 's';
+  close?: boolean;
+}
+const { dir = 'ne', close = false } = Astro.props;
+const rot = { e: 0, se: 45, s: 90, ne: -45 }[dir];
+---
+{close ? (
+  <svg class="ico" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+) : (
+  <svg class="ico" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style={`transform:rotate(${rot}deg)`}><path d="M1.5 6h9M7 2.5L10.5 6 7 9.5" /></svg>
+)}
