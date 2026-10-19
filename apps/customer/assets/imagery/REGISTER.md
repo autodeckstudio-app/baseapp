@@ -107,3 +107,6 @@ Every file under stock/ and curated/ is a placeholder until the studio shoot. Pr
 | stock/x-white-seats.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-window-clean.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-wipe-gloss.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+
+## Category photographs (approved by the owner, 19 Oct)
+Six studio-style category images in category/ (also copied to the site as service-*.jpg): paint-protection, ceramic-coating, detailing, wash-and-care, garage, modifications. Used for the matching service categories. Tinting and inspection keep their earlier photos until the owner says otherwise.

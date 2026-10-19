@@ -22,19 +22,28 @@ import servicePpf from "../../assets/imagery/stock/ppf-install.jpg";
 import serviceTinting from "../../assets/imagery/stock/tint-install.jpg";
 import serviceInspection from "../../assets/imagery/stock/x-underbody-b.jpg";
 import serviceOther from "../../assets/imagery/curated/care.jpg";
+import catPpf from "../../assets/imagery/category/paint-protection.jpg";
+import catCeramic from "../../assets/imagery/category/ceramic-coating.jpg";
+import catDetailing from "../../assets/imagery/category/detailing.jpg";
+import catWash from "../../assets/imagery/category/wash-and-care.jpg";
+import catGarage from "../../assets/imagery/category/garage.jpg";
+import catMods from "../../assets/imagery/category/modifications.jpg";
 import vehicleSedan from "../../assets/imagery/stock/x-polish-red.jpg";
 
 /** One photograph per service category, shown on catalogue cards and detail heroes. */
+/** Approved category photographs. Detailing has no category of its own: it is the Complete detailing type under Wash & Care. */
+export const detailingImage: ImageSourcePropType = catDetailing;
+
 export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
-  washing: serviceWashing,
-  ceramic: serviceCeramic,
-  coating: serviceCoating,
-  ppf: servicePpf,
+  washing: catWash,
+  ceramic: catCeramic,
+  coating: catCeramic,
+  ppf: catPpf,
   tinting: serviceTinting,
   inspection: serviceInspection,
   other: serviceOther,
-  garage: serviceInspection,
-  modifications: serviceTinting,
+  garage: catGarage,
+  modifications: catMods,
   pickup: serviceOther,
 };
 
@@ -154,6 +163,7 @@ const TYPE_TOPIC: Record<string, string | [string, number]> = {
   wraps: "wrap", styling: "styling", film: "tint", alloys: "wheel", seats: "interior",
 };
 export function typePhoto(key: string): ImageSourcePropType | null {
+  if (key === "complete") return detailingImage;
   const t = TYPE_TOPIC[key];
   if (!t) return null;
   return Array.isArray(t) ? pooledPhoto(t[0], t[1]) ?? null : TOPICS[t] ?? null;

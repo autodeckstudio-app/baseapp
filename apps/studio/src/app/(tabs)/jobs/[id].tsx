@@ -479,7 +479,7 @@ export default function JobDetailScreen() {
         <Row label="Amount" value={formatPaise(job.totalAmount)} />
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
-        {!payment && (
+        {!payment && job.status !== "CANCELLED" && (
           <Button
             label="Record cash payment"
             onPress={() => void handleRecordCashPayment()}

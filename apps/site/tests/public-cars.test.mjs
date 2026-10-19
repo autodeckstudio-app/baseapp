@@ -16,3 +16,12 @@ test('Cars page reads the public listing endpoint, spec text only: no photo, pri
   assert.ok(script.includes('textContent'));
   assert.ok(!/innerHTML|\.area|price|photoUrls|registration/i.test(script.replace('Price requests continue in the app.', '').replace('for price and details', '')));
 });
+
+test('Home service tiles each have a photo that exists, with neutral file names', async () => {
+  const { existsSync } = await import('node:fs');
+  const page = source('src/pages/index.astro');
+  const names = [...page.matchAll(/'(paint-protection|ceramic-coating|detailing|wash-and-care|garage|modifications)'\]/g)].map(m => m[1]);
+  assert.equal(names.length, 6);
+  for (const n of names) assert.ok(existsSync(new URL(`../public/assets/img/service-${n}.jpg`, import.meta.url)), n);
+  assert.ok(page.includes('class="service-photo"'));
+});
