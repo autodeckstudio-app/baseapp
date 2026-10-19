@@ -51,6 +51,7 @@ export type AuditAction =
   | "booking.missed"
   | "booking.standby_arrived"
   | "job.walkin_created"
+  | "job.walkin_cancelled"
   | "job.bay_reassigned"
   | "payment.initiated"
   | "payment.completed"

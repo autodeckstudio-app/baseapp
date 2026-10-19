@@ -38,6 +38,7 @@ export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
 export { createWalkinJob } from "./functions/job/createWalkinJob.js";
 export { advanceJobStatus } from "./functions/job/advanceJobStatus.js";
 export { getStudioJobs } from "./functions/job/getStudioJobs.js";
+export { cancelWalkinJob } from "./functions/job/cancelWalkinJob.js";
 export { assignBay } from "./functions/job/assignBay.js";
 
 // âââ Payments ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ

@@ -31,6 +31,11 @@ export const advanceJobStatusSchema = z.object({
   notes: z.string().max(500).optional(),
 }).strict();
 
+export const cancelWalkinJobSchema = z.object({
+  jobId: z.string().min(1),
+  reason: z.string().trim().min(3).max(300),
+}).strict();
+
 export const getStudioJobsSchema = z.object({
   studioId: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),

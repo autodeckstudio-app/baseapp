@@ -2,6 +2,7 @@
 
 // One studio day as a timeline: each booking sits at its start time with
 // the car, customer, service, bay and state. Pure view.
+import { bayChip } from "../lib/bay-label";
 import { StatusBadge } from "../components/StatusBadge";
 
 export interface AgendaItem {
@@ -51,7 +52,7 @@ export function DayAgenda({ items, loading, onOpen }: { items: AgendaItem[]; loa
               </span>
               <span className="ax-job-what">
                 {b.service}
-                {b.bay ? ` · Bay ${b.bay}` : ""}
+                {b.bay ? ` · ${bayChip(b.bay)}` : ""}
               </span>
             </span>
             <span className="ax-slot-side">

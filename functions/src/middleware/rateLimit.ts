@@ -20,6 +20,7 @@ export type RateLimitAction =
   | "booking.quoteRespond"
   | "booking.reschedule"
   | "job.walkinCreate"
+  | "job.walkinCancel"
   | "job.advanceStatus"
   | "job.assignBay"
   | "approval.create"
@@ -141,6 +142,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "booking.quoteRespond": { limit: 20, windowMs: 60_000 },
   "booking.reschedule": { limit: 10, windowMs: 60_000 },
   "job.walkinCreate": { limit: 60, windowMs: 60_000 },
+  "job.walkinCancel": { limit: 30, windowMs: 60_000 },
   "job.advanceStatus": { limit: 60, windowMs: 60_000 },
   "job.assignBay": { limit: 60, windowMs: 60_000 },
   "approval.create": { limit: 60, windowMs: 60_000 },

@@ -6,7 +6,7 @@ import { Platform, View, Text, ScrollView, TouchableOpacity, Alert } from "react
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
-import { updateStandby, advanceJobStatus, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
+import { updateStandby, advanceJobStatus, cancelWalkinJob, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
 import {
   recordManualPayment,
   confirmManualPayment,
@@ -335,6 +335,15 @@ export default function JobDetailScreen() {
     }
   }
 
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  async function handleCancelWalkin() {
+    if (!job || !id || advancing) return;
+    setActionError(null); setAdvancing(true);
+    try { await cancelWalkinJob(id, "Walk-in started by mistake"); setCancelConfirm(false); }
+    catch (err) { setActionError(err instanceof Error ? err.message : "Could not cancel this walk-in."); }
+    finally { setAdvancing(false); }
+  }
+
   async function handleReassignBay(bayId: string) {
     if (!job || !id || reassigning) return;
     setActionError(null);setReassigning(true);
@@ -635,6 +644,12 @@ export default function JobDetailScreen() {
             </View>
           )}
         </Section>
+      ) : null}
+
+      {job.isWalkIn && !job.bookingId && job.status === "VEHICLE_RECEIVED" && job.paymentStatus === "unpaid" ? (
+        cancelConfirm
+          ? <Section><Text style={{color:colors.textPrimary}}>Cancel this walk-in? It was started by mistake. The bay is freed and nothing is charged.</Text><Button label="Confirm cancel" onPress={()=>void handleCancelWalkin()} loading={advancing}/><Button label="Keep walk-in" variant="secondary" disabled={advancing} onPress={()=>setCancelConfirm(false)}/></Section>
+          : <Button label="Cancel walk-in" variant="secondary" onPress={()=>setCancelConfirm(true)} style={{marginBottom: spacing.lg}} />
       ) : null}
 
       {compatibleBays.length > 0 && job.status !== "STANDBY" && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (

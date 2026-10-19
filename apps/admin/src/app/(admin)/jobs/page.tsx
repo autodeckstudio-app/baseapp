@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ServiceJob, JobStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { getStudioConfig } from "../../../lib/studio-service";
+import { bayLabel } from "../../../lib/bay-label";
 import { listenToJobs } from "../../../lib/jobs-service";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { formatPaise, formatDateTime } from "../../../lib/format";
@@ -48,6 +50,17 @@ export default function JobsPage() {
     );
   }, [claims]);
 
+  const [bays, setBays] = useState<Array<{ id: string; name: string }>>([]);
+  const studioKey = Array.from(new Set(jobs.map((j) => j.studioId))).sort().join(",");
+  useEffect(() => {
+    if (!studioKey) return;
+    let live = true;
+    void Promise.all(studioKey.split(",").map((id) => getStudioConfig(id).catch(() => null))).then((cfgs) => {
+      if (live) setBays(cfgs.flatMap((c) => c?.bays ?? []));
+    });
+    return () => { live = false; };
+  }, [studioKey]);
+
   const customerNames = useLabels(COLLECTIONS.customers(), jobs.map((j) => j.customerId), (d) => (d as Customer).name);
   const vehicleRegs = useLabels(COLLECTIONS.vehicles(), jobs.map((j) => j.vehicleId), (d) => (d as Vehicle).registrationNumber);
   const serviceNames = useLabels(COLLECTIONS.services(), jobs.map((j) => j.serviceId), (d) => (d as Service).name);
@@ -91,7 +104,7 @@ export default function JobsPage() {
     plate: vehicleRegs[j.vehicleId] ?? "-",
     customer: customerNames[j.customerId] ?? "Customer",
     service: serviceNames[j.serviceId] ?? "Service",
-    bay: j.status !== "STANDBY" && j.bayId ? j.bayId.replace(/^bay[-_]?/i, "") : undefined,
+    bay: j.status !== "STANDBY" ? bayLabel(j.bayId, bays) : undefined,
     when: j.status === "STANDBY" ? `Waiting since ${formatDateTime(j.standbyArrivedAt ?? j.createdAt)}` : formatDateTime(j.scheduledAt),
     walkIn: j.isWalkIn,
     payment: j.paymentStatus,

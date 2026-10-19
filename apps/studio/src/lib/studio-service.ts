@@ -70,6 +70,12 @@ export async function advanceJobStatus(
   return result.data;
 }
 
+export async function cancelWalkinJob(jobId: string, reason: string): Promise<{ jobId: string; alreadyCancelled: boolean }> {
+  const fn = httpsCallable<{ jobId: string; reason: string }, { jobId: string; alreadyCancelled: boolean }>(functions, "cancelWalkinJob");
+  const result = await fn({ jobId, reason });
+  return result.data;
+}
+
 export async function createWalkinJob(
   input: CreateWalkinJobInput,
 ): Promise<CreateWalkinJobOutput> {

@@ -128,6 +128,7 @@ const DEFERRED = [
   "job/standbyBooking.ts",
   "job/assignBay.ts",
   "job/createWalkinJob.ts",
+  "job/cancelWalkinJob.ts",
   "job/getStudioJobs.ts",
   "membership/getMembershipPlans.ts",
   "membership/confirmMembershipPayment.ts",

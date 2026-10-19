@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { getStudioConfig } from "../../../lib/studio-service";
+import { bayLabel } from "../../../lib/bay-label";
 import { listenToBookings } from "../../../lib/bookings-service";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatTime, formatDayLong, shiftDay, studioToday } from "../../../lib/format";
@@ -45,6 +47,17 @@ export default function BookingsPage() {
   }, [claims]);
 
   const serviceIds = useMemo(() => Array.from(new Set(bookings.map((b) => b.serviceId))).sort(), [bookings]);
+  const [bays, setBays] = useState<Array<{ id: string; name: string }>>([]);
+  const studioKey = Array.from(new Set(bookings.map((b) => b.studioId))).sort().join(",");
+  useEffect(() => {
+    if (!studioKey) return;
+    let live = true;
+    void Promise.all(studioKey.split(",").map((id) => getStudioConfig(id).catch(() => null))).then((cfgs) => {
+      if (live) setBays(cfgs.flatMap((c) => c?.bays ?? []));
+    });
+    return () => { live = false; };
+  }, [studioKey]);
+
   const customerNames = useLabels(COLLECTIONS.customers(), bookings.map((b) => b.customerId), (d) => (d as Customer).name);
   const vehicleRegs = useLabels(COLLECTIONS.vehicles(), bookings.map((b) => b.vehicleId), (d) => (d as Vehicle).registrationNumber);
   const serviceNames = useLabels(COLLECTIONS.services(), bookings.map((b) => b.serviceId), (d) => (d as Service).name);
@@ -86,7 +99,7 @@ export default function BookingsPage() {
     plate: vehicleRegs[b.vehicleId] ?? "-",
     customer: customerNames[b.customerId] ?? "Customer",
     service: serviceNames[b.serviceId] ?? "Service",
-    bay: b.bayId ? b.bayId.replace(/^bay[-_]?/i, "") : undefined,
+    bay: bayLabel(b.bayId, bays),
     status: b.status,
     payment: b.paymentStatus,
     amount: formatPaise(b.totalAmount),

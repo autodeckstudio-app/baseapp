@@ -2,6 +2,7 @@
 
 // Studio floor board: one column per stage the car moves through. Pure view;
 // the Jobs page supplies rows and handles navigation.
+import { bayChip } from "../lib/bay-label";
 import { StatusBadge } from "../components/StatusBadge";
 
 export interface BoardJob {
@@ -53,7 +54,7 @@ export function JobBoard({ jobs, loading, onOpen }: { jobs: BoardJob[]; loading?
                   <span className="ax-jc-svc">{j.service}</span>
                   <span className="ax-jc-who">{j.customer}</span>
                   <span className="ax-jc-meta">
-                    {j.bay ? <span className="ax-jc-chip">Bay {j.bay}</span> : null}
+                    {j.bay ? <span className="ax-jc-chip">{bayChip(j.bay)}</span> : null}
                     {j.walkIn ? <span className="ax-jc-chip ax-jc-chip--walk">Walk-in</span> : null}
                     <span className="ax-jc-time">{j.when}</span>
                   </span>
