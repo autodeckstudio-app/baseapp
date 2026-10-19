@@ -15,8 +15,11 @@ describe("admin cancel UI", () => {
     expect(panel).toContain("Waive fee");
     expect(panel).not.toContain("\u2014");
   });
-  it("is on the booking page and the pickups page can set a no-pin fee", () => {
-    expect(read("app/(admin)/bookings/[id]/page.tsx")).toContain("<CancelBookingPanel");
+  it("is on the booking and job pages and the pickups page can set a no-pin fee", () => {
+    // The panel is mounted by BookingPanels, which the booking page and the job page both render.
+    expect(read("components/BookingPanels.tsx")).toContain("<CancelBookingPanel");
+    expect(read("app/(admin)/bookings/[id]/page.tsx")).toContain("<BookingPanels");
+    expect(read("app/(admin)/jobs/[id]/page.tsx")).toContain("<BookingPanels");
     expect(read("app/(admin)/pickups/page.tsx")).toContain("Pickup fee in rupees");
   });
 });

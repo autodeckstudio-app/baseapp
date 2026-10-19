@@ -14,10 +14,9 @@ import {
   getVehicle,
   getService,
 } from "../../../../lib/bookings-service";
-import { setBookingQuote } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
-import { CancelBookingPanel } from "../../../../components/CancelBookingPanel";
+import { BookingPanels } from "../../../../components/BookingPanels";
 import { formatPaise, formatDateTime, formatDayLong, formatTime } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
 
@@ -37,22 +36,6 @@ export default function BookingDetailPage() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [service, setService] = useState<Service | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [quoteRupees, setQuoteRupees] = useState("");
-  const [quoteBusy, setQuoteBusy] = useState(false);
-  async function submitQuote() {
-    if (!booking) return;
-    const n = Math.round(Number(quoteRupees) * 100);
-    if (!Number.isFinite(n) || n < 100) { setError("Enter the quote in rupees, at least 1."); return; }
-    setQuoteBusy(true);
-    try {
-      await setBookingQuote(booking.id, n);
-      setError(null);
-      window.location.reload();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save the quote.");
-    } finally { setQuoteBusy(false); }
-  }
-
   useEffect(() => {
     setError(null);
     if (!id) {setBooking(null);return undefined;}
@@ -89,6 +72,11 @@ export default function BookingDetailPage() {
     void getStudioConfig(booking.studioId).then(c=>setBayName(c?.bays.find(b=>b.id===booking.bayId)?.name??"")).catch(()=>setBayName(""));
   },[booking?.studioId,booking?.bayId,attempt]);
 
+  // One detail page per visit: once the car is checked in, the Job page shows the booking too.
+  useEffect(() => {
+    if (job) router.replace(`/jobs/${job.id}`);
+  }, [job, router]);
+
   if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
   if (booking === undefined) return <p className="ax-label" role="status">Loading…</p>;
   if (booking === null) {
@@ -123,45 +111,7 @@ export default function BookingDetailPage() {
 
       <div className="ax-detail">
         <div className="ax-detail-main">
-          <section className="ax-panel">
-            <span className="ax-label">Slot</span>
-            <div className="kv"><span>Date</span><span>{formatDayLong(booking.scheduledDate)}</span></div>
-            <div className="kv"><span>Time</span><span>{formatTime(booking.scheduledAt)} to {formatTime(booking.estimatedEndAt)}</span></div>
-            <div className="kv"><span>Length</span><span>{booking.durationMinutes} min</span></div>
-            <div className="kv"><span>Bay</span><span>{bayName || "Assigned bay"}</span></div>
-            {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
-          </section>
-
-          <CancelBookingPanel booking={booking} job={job} />
-
-          {booking.priceOnRequest === true && (
-            <section className="ax-panel">
-              <span className="ax-label">Quote</span>
-              <div className="kv"><span>{service?.brand ? `${service.brand} · ` : ""}{service?.name ?? "Product"}</span><span>{booking.quoteStatus === "approved" ? "Customer approved" : booking.quoteStatus === "quoted" ? "Waiting for customer" : "Needs a price"}</span></div>
-              {booking.quoteStatus !== "approved" && (
-                <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
-                  <input className="ax-input" inputMode="decimal" placeholder="Price in rupees, before tax" value={quoteRupees} onChange={(e) => setQuoteRupees(e.target.value)} />
-                  <button type="button" className="ax-button ax-button--primary" disabled={quoteBusy} onClick={() => void submitQuote()}>{booking.quoteStatus === "quoted" ? "Update quote" : "Send quote"}</button>
-                </div>
-              )}
-              <p className="ax-note">Work cannot start until the customer approves the quote.</p>
-            </section>
-          )}
-
-          <section className="ax-panel">
-            <span className="ax-label">Price</span>
-            <div className="kv"><span>{service?.name ?? "Service"}</span><span className="ax-data">{formatPaise(pb.basePrice)}</span></div>
-            {pb.scopeAdjustment !== 0 && <div className="kv"><span>Size and scope</span><span className="ax-data">{formatPaise(pb.scopeAdjustment)}</span></div>}
-            {pb.membershipDiscount !== null && (
-              <div className="kv"><span>Membership</span><span className="ax-data" style={{ color: "var(--ad-premium)" }}>-{formatPaise(pb.membershipDiscount)}</span></div>
-            )}
-            <div className="kv"><span>Subtotal</span><span className="ax-data">{formatPaise(pb.subtotal)}</span></div>
-            {pb.tax > 0 ? <div className="kv"><span>{pb.taxDescription}</span><span className="ax-data">{formatPaise(pb.tax)}</span></div> : null}
-            <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(pb.total)}</span></div>
-            {booking.membershipDiscountApplied && (
-              <p className="ax-note">{booking.membershipWashUsed ? "Paid with a membership wash credit." : "Membership discount applied."}</p>
-            )}
-          </section>
+          <BookingPanels booking={booking} job={job} service={service} bayName={bayName} onError={setError} />
 
           {approvals.length > 0 && (
             <section className="ax-panel">

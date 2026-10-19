@@ -3,15 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
-import type { ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
+import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
-import { listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
+import { listenToBooking, listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
 import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format";
 import { statusLabel } from "../../../../lib/status-label";
+import { BookingPanels } from "../../../../components/BookingPanels";
 import { JobControls } from "../../../../components/JobControls";
 import { JobChatPanel } from "../../../../experience/JobChatPanel";
 import { StageTrack } from "../../../../experience/StageTrack";
@@ -26,6 +27,7 @@ export default function JobDetailPage() {
 
   const [attempt,setAttempt] = useState(0);
   const [bayName,setBayName] = useState("");
+  const [booking, setBooking] = useState<Booking | null>(null);
   const [job, setJob] = useState<ServiceJob | null | undefined>(undefined);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -50,6 +52,12 @@ export default function JobDetailPage() {
     if (!id) {setJob(null);return undefined;}
     return listenToJob(id, value=>{setJob(value);setError(null);}, (err) => setError(err.message));
   }, [id,attempt]);
+
+  const bookingId = job?.bookingId ?? null;
+  useEffect(() => {
+    if (!bookingId) { setBooking(null); return undefined; }
+    return listenToBooking(bookingId, setBooking, (err) => setError(err.message));
+  }, [bookingId, attempt]);
 
   useEffect(() => {
     if (!job || !claims) return undefined;
@@ -183,6 +191,7 @@ export default function JobDetailPage() {
 
       <div className="ax-detail">
         <div className="ax-detail-main">
+          {booking ? <BookingPanels booking={booking} job={job} service={service} bayName={bayName} onError={setError} /> : null}
           <section className="ax-panel">
             <span className="ax-label">Timeline</span>
             <ol className="ax-timeline">
@@ -269,7 +278,7 @@ export default function JobDetailPage() {
             <div className="kv"><span>Vehicle</span><span>{car || "-"}</span></div>
             <div className="kv"><span>Plate</span><span className="ax-data">{vehicle?.registrationNumber ?? "-"}</span></div>
             <div className="ax-panel-actions">
-              {job.bookingId && <button type="button" className="ax-button" onClick={() => router.push(`/bookings/${job.bookingId}`)}>Open booking</button>}
+              {customer?.id && <button type="button" className="ax-button" onClick={() => router.push(`/customers/${customer.id}`)}>Open customer</button>}
             </div>
           </section>
 
