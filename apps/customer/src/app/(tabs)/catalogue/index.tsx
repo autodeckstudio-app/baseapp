@@ -7,18 +7,18 @@ import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "reac
 import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS} from "../../../lib/brands";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { GROUP_PHOTO_CATEGORY, overviewGroups } from "../../../lib/catalogue-overview";
 import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, GST_ENABLED, menuGroupOf, PICKUP_TILE_TEXT, needsInspectionNote, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
 import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { serviceVisual, brandHero, typePhoto } from "../../../lib/imagery";
-import type { serviceImagery } from "../../../lib/imagery";
+import { serviceVisual, brandHero, typePhoto, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
 import { FilterPills } from "../../../ui/FilterPills";
 import { Button, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
-import { SERVICE_TYPES, buildTree, leafServices, matchesQuery, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
+import { AREA_SECTIONS, areaSections, SERVICE_TYPES, buildTree, leafServices, matchesQuery, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
 
 // Old "?need=" deep links map onto a menu group.
 const NEED_TO_GROUP: Record<string, string> = { wash: "wash", shine: "coatings", ceramic: "coatings", ppf: "ppf", tint: "mods", check: "garage" };
@@ -35,6 +35,7 @@ function duration(min: number): string {
   return h >= 8 ? `${Math.round(h / 8)} day${h >= 16 ? "s" : ""}` : `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
 }
 
+const groupPhoto = (key: string): ImageSourcePropType | null => { const c = GROUP_PHOTO_CATEGORY[key]; return c ? serviceImagery[c] : null; };
 const groupLabel = (g: MenuGroup): string => (g.key === "mods" ? "Modifications" : g.label);
 
 export default function CatalogueScreen() {
@@ -130,6 +131,14 @@ export default function CatalogueScreen() {
     return <PhotoCard key={n.key} title={n.label} pill={pricedFrom(xs)?.replace(/^From /, "From ")} hearted={false} onPress={() => go({ cat: catKey!, p: [...base, n.key].join(",") })} media={media} />;
   };
   const renderNodes = (ns: TreeNode[]) => {
+    if (trail.length === 0 && catGroup && AREA_SECTIONS[catGroup.key]) {
+      return areaSections(catGroup.key, ns).map((sec) => (
+        <View key={sec.label || "all"} style={{ gap: 8 }}>
+          {sec.label ? <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{sec.label}</Text> : null}
+          {grid(sec.nodes.map((n, i) => nodeTile(n, i)))}
+        </View>
+      ));
+    }
     const sectionOf = (n: TreeNode) => (n.kind === "leaf" ? COVERAGE_LEVELS.find((c) => c.key === n.service.coverageLevel)?.label ?? "" : "");
     const order: string[] = [];
     for (const n of ns) { const k = sectionOf(n); if (!order.includes(k)) order.push(k); }
@@ -179,12 +188,28 @@ export default function CatalogueScreen() {
       {services && searching ? (
         found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : grid(found.map(card))
       ) : null}
-      {services && !searching && level === 1 ? (
+      {services && !searching && level === 1 && !grp ? (
+        // All: one card per category, same as the filter pills. Tapping one opens that filter view.
+        <View style={{ gap: 8 }} testID="category-cards">
+          {grid(overviewGroups(MENU_GROUPS, (g) => inGroup(g).length).map((g) => {
+            const photo = groupPhoto(g.key);
+            const pill = pricedFrom(inGroup(g)) ?? (g.pricing === "consult" ? "Get a quote" : undefined);
+            return <PhotoCard key={g.key} title={groupLabel(g)} pill={pill} hearted={false} onPress={() => { setGrp(g.key); }}
+              media={photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
+          }))}
+        </View>
+      ) : null}
+      {services && !searching && level === 1 && grp ? (
         <View style={{ gap: 18 }}>
           {visibleGroups.filter((g) => !grp || g.key === grp).map((g) => (
             <View key={g.key} style={{ gap: 8 }}>
               <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{groupLabel(g)}</Text>
-              {grid(buildTree(g, all).map((n, i) => nodeTile(n, i, g.key)))}
+              {areaSections(g.key, buildTree(g, all)).map((sec) => (
+                <View key={sec.label || "all"} style={{ gap: 8 }}>
+                  {sec.label ? <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{sec.label}</Text> : null}
+                  {grid(sec.nodes.map((n, i) => nodeTile(n, i, g.key)))}
+                </View>
+              ))}
             </View>
           ))}
         </View>

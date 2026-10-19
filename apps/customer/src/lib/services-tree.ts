@@ -151,3 +151,38 @@ export function matchesQuery(s: Service, q: string): boolean {
   }
   return false;
 }
+
+// Sub-headings inside a category, by the part of the car the work is on (Meet picked this grouping, 19 Oct). Types are placed by key,
+// so no stored data changes. Every type of a sectioned category must be listed exactly once (guarded in services-tree.test.ts).
+export const AREA_SECTIONS: Record<string, Array<{ label: string; keys: string[] }>> = {
+  wash: [
+    { label: "Exterior", keys: ["exterior", "complete", "trim-restore"] },
+    { label: "Interior", keys: ["interior", "leather-care", "odour"] },
+    { label: "Wheels and tyres", keys: ["wheel-clean"] },
+    { label: "Glass and lights", keys: ["glass-clean", "lamps"] },
+    { label: "Paint", keys: ["decon", "polish"] },
+  ],
+  coatings: [
+    { label: "Paint", keys: ["ceramic", "graphene", "matte", "ppf-coat"] },
+    { label: "Exterior", keys: ["trim"] },
+    { label: "Interior", keys: ["leather", "fabric", "dashboard"] },
+    { label: "Wheels and tyres", keys: ["wheels", "tyre"] },
+    { label: "Glass and lights", keys: ["glass"] },
+  ],
+  garage: [
+    { label: "Health checks", keys: ["checks", "battery", "ac", "periodic"] },
+    { label: "Wheels and tyres", keys: ["tyres"] },
+    { label: "Repairs", keys: ["repairs", "brakes", "suspension", "rust"] },
+  ],
+};
+
+/** Split a category's top-level nodes into area sections, in section order. A category with no sections, or a node with an unknown key, stays visible (unknown keys go last, unlabelled). */
+export function areaSections(groupKey: string, nodes: TreeNode[]): Array<{ label: string; nodes: TreeNode[] }> {
+  const defs = AREA_SECTIONS[groupKey];
+  if (!defs) return [{ label: "", nodes }];
+  const keyOf = (n: TreeNode): string => (n.kind === "leaf" ? n.service.id : n.key);
+  const out = defs.map((d) => ({ label: d.label, nodes: nodes.filter((n) => d.keys.includes(keyOf(n))) })).filter((s) => s.nodes.length > 0);
+  const placed = new Set(defs.flatMap((d) => d.keys));
+  const rest = nodes.filter((n) => !placed.has(keyOf(n)));
+  return rest.length ? [...out, { label: out.length ? "More" : "", nodes: rest }] : out;
+}
