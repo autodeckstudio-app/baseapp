@@ -174,7 +174,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
                     <p className="ax-label">{sec.label}</p>
                     <div className="ax-sheet-grid">
                       {sec.links.map((l) => (
-                        <Link key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}><Icon name={(LINK_ICON[l.href] ?? "dot") as never} size={18} /><span>{l.label}</span></Link>
+                        <Link key={l.href} href={l.href} className="ax-sheet-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}><Icon name={(RAIL_ICON[l.href] ?? LINK_ICON[l.href] ?? "dot") as never} size={18} /><span>{l.label}</span></Link>
                       ))}
                     </div>
                   </div>
