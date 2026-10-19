@@ -84,7 +84,11 @@ const check = (png, frameNo) => {
 // multi-word rule is skipped (dissolving captions OCR as random letter clusters)
 // and a big word fails only when it is not within edit distance 2 of our
 // allowlisted vocabulary, so a foreign wordmark still cannot hide there.
-const WINDOWS = (process.env.HERO_GUARD_ALLOW_FRAMES || "")
+// Defaults for the shipped hero cut (Meet's Gemini reference ad recut to the
+// AutoDeck end card, approved by Meet 19 Oct 2026): his three baked caption
+// lines live in these frame ranges. Env var overrides.
+const DEFAULT_WINDOWS = "1-45,68-106,107-142";
+const WINDOWS = (process.env.HERO_GUARD_ALLOW_FRAMES || DEFAULT_WINDOWS)
   .split(",").map((r) => r.trim().split("-").map(Number)).filter((r) => r.length === 2 && !isNaN(r[0]) && !isNaN(r[1]));
 const VOCAB = ["the","day","you","bring","home","your","dream","car","every","journey","starts","changing","it","some","damage","is","permanent","autodeck","complete","care","all","under","one","roof"];
 const lev = (a, b) => {
@@ -101,7 +105,11 @@ const nearVocab = (w) => { w = w.toLowerCase(); return VOCAB.some((v) => lev(w, 
 
 // Documented OCR false positives (scenery that reads as a word, verified by eye):
 // pass frame numbers via HERO_GUARD_IGNORE_FRAMES="59". Each skip is printed.
-const IGNORE = (process.env.HERO_GUARD_IGNORE_FRAMES || "").split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => !isNaN(n));
+// Verified-by-eye OCR false positives in the shipped hero cut: f-0017/f-0031
+// caption dissolve mid-words (his own caption line), f-0153 machine/blur texture, f-0200 + f-0204 wiper/window
+// texture, f-0214 blurred storefront-sign texture. Each crop-checked 19 Oct 2026.
+const DEFAULT_IGNORE = "17,31,153,200,204,214";
+const IGNORE = (process.env.HERO_GUARD_IGNORE_FRAMES || DEFAULT_IGNORE).split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => !isNaN(n));
 
 // OCR reads our own captions as random letter clusters for a frame or two while
 // they dissolve in or out. A small-word (rule a) hit that sits within NEIGHBOR
