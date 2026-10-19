@@ -4,7 +4,7 @@ import { GIFT_LIVE, GIFT_STATE_LABEL, setPendingGiftCode, takePendingGiftCode } 
 import { giftShareMessage } from "@autodeck/core";
 const read = (p: string) => readFileSync(`${__dirname}/../${p}`, "utf8");
 describe("gift client", () => {
-  it("is dark until the server is deployed", () => expect(GIFT_LIVE).toBe(false));
+  it("is live (owner said go live, 19 Oct 10:00 PM; server deployed 6:35 PM)", () => expect(GIFT_LIVE).toBe(true));
   it("never sends a gift code while dark, and never computes a price", () => {
     const c = read("app/(tabs)/book/confirm.tsx");
     expect(c).toContain("GIFT_LIVE ? takePendingGiftCode()");
