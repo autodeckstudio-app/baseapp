@@ -19,8 +19,14 @@ import { join, extname } from "node:path";
 
 const DEFAULTS = ["apps/site/public/assets/hero/hero-loop.mp4", "apps/site/public/assets/hero/hero-poster.jpg"];
 const targets = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULTS;
-// Official end-card copy. Anything else with real words is a burned-in caption.
-const ALLOW = [/autodeck/i, /complete\s*car\s*care/i, /all\s*under\s*one\s*roof/i];
+// Official end-card copy plus our own overlay caption lines. Anything else with real words is a burned-in caption.
+const ALLOW = [
+  /autodeck/i, /complete\s*car\s*care/i, /all\s*under\s*one\s*roof/i,
+  // Our own hero overlay captions (added by us in the AutoDeck font, not the generator):
+  /the\s*day\s*you\s*bring\s*home/i, /dream\s*car/i,
+  /every\s*journey\s*starts/i, /changing\s*it/i,
+  /some\s*damage\s*is\s*permanent/i, /permanent/i,
+];
 const WORD = /^[A-Za-z]{3,}$/;
 const WORD4 = /^[A-Za-z]{4,}$/;
 const MIN_H = 22;     // px; below this is scene microtext (labels, stickers)
