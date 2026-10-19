@@ -75,7 +75,7 @@ html:root:root:root .ax-shell .ax-login .ax-login-card { background: rgba(18,18,
 html:root:root:root .ax-shell .ax-login h1 { color: #F6F4F1 !important; }
 html:root:root:root .ax-shell .ax-login p, html:root:root:root .ax-shell .ax-login span { color: #CDCBC8 !important; }
 html:root:root:root .ax-shell .ax-login .ax-login-card > span:first-of-type { color: #F59A45 !important; }
-html:root:root:root .ax-shell .ax-login button:not(.zz):not(.yy):not(.xx) { background: linear-gradient(180deg, #F9B060 0%, #F59A45 55%, #EC8638 100%) !important; color: #1A1410 !important; border: 0 !important; border-radius: 26px !important; box-shadow: none !important; opacity: 1; }
+html:root:root:root .ax-shell .ax-login button:not(.zz):not(.yy):not(.xx) { background: #F3F1EC !important; color: #0C0D0F !important; border: 0 !important; border-radius: 26px !important; box-shadow: none !important; opacity: 1; }
 html:root:root:root .ax-shell .ax-login button:disabled { opacity: .6; }
 html:root:root:root .ax-shell .ax-login input { background: rgba(255,255,255,0.08) !important; color: #F6F4F1 !important; border: 1px solid rgba(255,255,255,0.18) !important; }
 
