@@ -139,3 +139,6 @@ html{overflow-x:clip}
   .app-story-enhanced .app-chapter{min-height:auto;padding:28px 0}
 }
 body{overflow-x:clip}
+/* old grid skin: light line background showed through the 16px card gaps as grey bands */
+.home-service-grid{background:transparent}
+.home-service-grid{border:0;border-radius:0;overflow:visible}
