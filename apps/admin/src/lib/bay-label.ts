@@ -10,3 +10,4 @@ export function bayLabel(bayId: string | null | undefined, bays: ReadonlyArray<{
 export function bayChip(label: string): string {
   return /bay/i.test(label) ? label : `Bay ${label}`;
 }
+
