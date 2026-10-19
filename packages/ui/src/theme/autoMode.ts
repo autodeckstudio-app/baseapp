@@ -47,7 +47,18 @@ export function setThemePref(pref: ThemePref): void {
   prefListeners.forEach((f) => f());
 }
 
+/** Studio and admin set this to "light" at build time (white theme only). The customer app leaves it unset. */
+function lockedMode(): "light" | null {
+  try {
+    const v = process.env.EXPO_PUBLIC_THEME_LOCK || process.env.NEXT_PUBLIC_THEME_LOCK;
+    return v === "light" ? "light" : null;
+  } catch {
+    return null;
+  }
+}
+
 export function currentMode(): "light" | "night" {
+  if (lockedMode()) return "light";
   // Dev only: ?theme=light or ?theme=night on web pins the mode so both can be checked at any hour.
   const q = (globalThis as { location?: { search?: string } }).location?.search ?? "";
   const m = /[?&]theme=(light|night)/.exec(q);

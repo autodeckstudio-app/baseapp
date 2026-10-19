@@ -1,0 +1,19 @@
+/* Shell v2: labelled bottom nav, wrapping sub tabs, full Menu sheet. Loaded last. */
+.ax-shell .ax-subtabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; padding: 0; }
+.ax-shell .ax-subtab {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 9999px;
+  background: #fff; border: 1px solid rgba(60,50,40,.14); color: #3A322B; font-size: 14px; font-weight: 500; text-decoration: none;
+}
+.ax-shell .ax-subtab[aria-current="page"] { background: #1A1410; border-color: #1A1410; color: #fff; }
+@media (max-width: 860px) {
+  .ax-shell .ax-tabbar { left: 12px; right: 12px; padding: 4px; }
+  .ax-shell .ax-tab { height: 56px !important; gap: 2px !important; line-height: 1.1 !important; }
+  .ax-shell .ax-tab span {
+    position: static !important; width: auto !important; height: auto !important; overflow: visible !important; clip: auto !important;
+    font-size: 11px !important; font-weight: 600 !important; letter-spacing: .1px;
+  }
+  .ax-shell .ax-tab svg { width: 22px; height: 22px; }
+  .ax-shell .ax-sheet { max-height: 82vh; overflow-y: auto; }
+  .ax-shell .ax-sheet-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 861px) { .ax-shell .ax-sheet-back { display: none !important; } }

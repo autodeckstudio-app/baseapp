@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Admin is white theme only: the shared palette code reads this at build time.
+  env: { NEXT_PUBLIC_THEME_LOCK: "light" },
   devIndicators: false,
   // Lets the built-in optimizer serve small thumbnails of listing photos.
   images: {

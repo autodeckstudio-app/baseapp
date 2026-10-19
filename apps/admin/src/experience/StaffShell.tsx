@@ -12,6 +12,7 @@ import "./shell.css";
 import "./float.css";
 import "./orizon.css";
 import "./canvas.css";
+import "./shell-v2.css";
 
 export const STUDIO_LINKS = [
   { href: "/bookings", label: "Bookings" },
@@ -40,31 +41,7 @@ export const OFFICE_LINKS = [
   { href: "/cars", label: "Cars for sale" },
 ] as const;
 
-// Sidebar and More sheet: sections ordered by daily use. Studio-role staff only see sections with office:false links.
-type NavLink = { href: string; label: string; office: boolean };
-const SECTIONS: { group: string; key: string; label: string; icon: string; links: NavLink[] }[] = [
-  { group: "Daily", key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard", office: true }, { href: "/jobs", label: "Jobs", office: false }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/attendance", label: "Attendance", office: false }] },
-  { group: "Daily", key: "customers", label: "Customers", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
-  { group: "Daily", key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Daily close", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/reports", label: "Reports", office: true }] },
-  { group: "Grow", key: "cars", label: "Cars for sale", icon: "car", links: [{ href: "/cars", label: "Cars for sale", office: true }] },
-  { group: "Grow", key: "stories", label: "Stories", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }] },
-  { group: "Grow", key: "offers", label: "Offers", icon: "star", links: [{ href: "/offers", label: "Offers", office: true }] },
-  { group: "Set up", key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
-  { group: "Set up", key: "admin", label: "Admin", icon: "profile", links: [{ href: "/staff", label: "Team", office: true }, { href: "/studio", label: "Studio", office: true }, { href: "/papers", label: "Papers", office: true }, { href: "/audit", label: "Audit log", office: true }] },
-];
-
-// Phone bottom bar: five groups. A group lights up for any page inside it and shows its sibling pages as chips.
-const GROUPS = [
-  { key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard" }], office: true },
-  { key: "floor", label: "Floor", icon: "wrench", links: [{ href: "/jobs", label: "Jobs" }, { href: "/bookings", label: "Bookings" }, { href: "/attendance", label: "Attendance" }], office: false },
-  { key: "people", label: "People", icon: "users", links: [{ href: "/customers", label: "Customers" }, { href: "/vehicles", label: "Vehicles" }, { href: "/memberships", label: "Memberships" }], office: true },
-  { key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments" }, { href: "/expenses", label: "Expenses" }, { href: "/daily-close", label: "Daily close" }, { href: "/invoices", label: "Invoices" }, { href: "/reports", label: "Reports" }], office: true },
-] as const;
-const MORE_LINKS = [
-  { href: "/papers", label: "Papers" }, { href: "/inventory", label: "Inventory" }, { href: "/services", label: "Services" },
-  { href: "/staff", label: "Team" }, { href: "/studio", label: "Studio" }, { href: "/stories", label: "Stories" }, { href: "/offers", label: "Offers" },
-  { href: "/cars", label: "Cars for sale" }, { href: "/pickups", label: "Pickup and drop" }, { href: "/audit", label: "Audit log" },
-] as const;
+import { SECTIONS, GROUPS, MORE_LINKS } from "./nav";
 
 const LINK_ICON: Record<string, string> = { "/services": "services", "/inventory": "tools", "/stories": "star", "/offers": "star", "/cars": "car", "/pickups": "car", "/staff": "users", "/studio": "pin", "/papers": "shield", "/audit": "search" };
 
@@ -133,7 +110,7 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
   const moreActive = !activeGroup && MORE_LINKS.some((l) => isActive(pathname, l.href));
   const sections = SECTIONS.map((sec) => ({ ...sec, links: sec.links.filter((l) => office || !l.office) })).filter((sec) => sec.links.length > 0);
   const activeSection = sections.find((sec) => sec.links.some((l) => isActive(pathname, l.href)));
-  const moreSections = sections.filter((sec) => sec.key === "catalogue" || sec.key === "stories" || sec.key === "offers" || sec.key === "cars" || sec.key === "admin");
+  const moreSections = sections;
 
   return (
     <div className="ax-shell">
@@ -146,15 +123,6 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
             <img className="ax-lg ax-lg--mark ax-lg-l" src={logoDataUri(LOGO_MARK_SVG)} alt="" aria-hidden="true" />
             <img className="ax-lg ax-lg--mark ax-lg-d" src={logoDataUri(LOGO_MARK_ON_DARK_SVG)} alt="" aria-hidden="true" />
           </Link>
-          {activeSection && activeSection.links.length > 1 ? (
-            <div className="ax-notch">
-              <nav className="ax-chips" aria-label={activeSection.label}>
-                {activeSection.links.map((l) => (
-                  <Link key={l.href} href={l.href} className="ax-chip-link" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</Link>
-                ))}
-              </nav>
-            </div>
-          ) : null}
           <div className="ax-corner ax-corner--r">
             <PushAlertsButton />
             <span className="ax-avatar" title={`${who} - ${ROLE_LABEL[role] ?? role}`} aria-label={`${who}, ${ROLE_LABEL[role] ?? role}`}>{(who.trim()[0] ?? "A").toUpperCase()}</span>
@@ -176,6 +144,13 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
             </div>
           </aside>
           <main className="ax-main">
+            {activeSection && activeSection.links.length > 1 ? (
+              <nav className="ax-subtabs" aria-label={activeSection.label}>
+                {activeSection.links.map((l) => (
+                  <Link key={l.href} href={l.href} className="ax-subtab" aria-current={isActive(pathname, l.href) ? "page" : undefined}>{l.label}</Link>
+                ))}
+              </nav>
+            ) : null}
             {children}
           </main>
           <nav className="ax-tabbar" aria-label="Main">
@@ -185,14 +160,14 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
                 <span>{g.label}</span>
               </Link>
             ))}
-            <button type="button" className="ax-tab" aria-label="More" title="More" aria-current={moreActive || moreOpen ? "page" : undefined} onClick={() => setMoreOpen((v) => !v)}>
+            <button type="button" className="ax-tab" aria-label="Menu" title="Menu" aria-current={moreActive || moreOpen ? "page" : undefined} onClick={() => setMoreOpen((v) => !v)}>
               <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
-              <span>More</span>
+              <span>Menu</span>
             </button>
           </nav>
           {moreOpen ? (
             <div className="ax-sheet-back" onClick={() => setMoreOpen(false)}>
-              <div ref={sheet} className="ax-sheet" role="dialog" aria-modal="true" aria-label="More" onClick={(e) => e.stopPropagation()}>
+              <div ref={sheet} className="ax-sheet" role="dialog" aria-modal="true" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
                 <button type="button" className="ax-button" style={{alignSelf:"flex-end"}} onClick={() => setMoreOpen(false)}>Close</button>
                 {moreSections.map((sec) => (
                   <div key={sec.key}>
