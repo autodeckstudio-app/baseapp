@@ -10,6 +10,7 @@ import { typography } from "../tokens/typography.js";
 import { Card } from "./Card.js";
 import { StatusBadge, statusTone } from "./StatusBadge.js";
 import { formatTime } from "../format.js";
+import { shortDate } from "./shortDate";
 
 const JOB_STATUS_LABELS: Record<string, string> = {
   STANDBY: "Arrived - standby",
@@ -50,7 +51,7 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName,
     <Card onPress={onPress} padding="md" flat style={Platform.OS === "web" ? (floatCard(isNightPalette) as unknown as ViewStyle) : undefined}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs }}>
         <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-          {job.status === "STANDBY" ? `Waiting since ${formatTime(job.standbyArrivedAt ?? job.createdAt)}` : isOngoingFromEarlierDay ? `Started ${job.scheduledDate}` : formatTime(job.scheduledAt)}
+          {job.status === "STANDBY" ? `Waiting since ${formatTime(job.standbyArrivedAt ?? job.createdAt)}` : isOngoingFromEarlierDay ? `Started ${shortDate(job.scheduledDate)}` : formatTime(job.scheduledAt)}
         </Text>
         <StatusBadge label={JOB_STATUS_LABELS[job.status] ?? job.status} tone={statusTone(job.status)} />
       </View>
@@ -59,7 +60,7 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName,
       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{job.status === "STANDBY" ? "No bay reserved" : bayName ?? "Bay"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs }}>
         {job.isWalkIn && <Tag label="WALK-IN" />}
-        {isMultiDay && <Tag label={`MULTI-DAY · until ${job.estimatedEndDate}`} />}
+        {isMultiDay && <Tag label={`MULTI-DAY · until ${shortDate(job.estimatedEndDate)}`} />}
       </View>
     </Card>
   );
@@ -80,3 +81,4 @@ function Tag({ label }: { label: string }) {
     </View>
   );
 }
+
