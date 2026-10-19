@@ -124,7 +124,7 @@ it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/ind
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
     const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: 480");expect(svc).toContain('alignItems: "center", paddingHorizontal: 20');expect(svc).not.toContain('width: "92%"');
-    expect(read("src/ui/StoryCircles.tsx")).toContain("groups.filter((g) => g.cover)");
+    expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
 it("keeps Home glass to three blur surfaces, hides the campaign slot without real content",async()=>{

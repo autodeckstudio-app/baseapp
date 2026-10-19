@@ -12,3 +12,12 @@ describe("groupStories", () => {
     expect(g.find((x) => x.title === "Coatings")!.items.map((s) => s.id)).toEqual(["3", "2"]);
   });
 });
+
+import { readFileSync } from "node:fs";
+describe("story circles never hide a group for lacking a photo", () => {
+  it("StoryCircles shows an initial instead of filtering on cover", () => {
+    const s = readFileSync(`${__dirname}/../ui/StoryCircles.tsx`, "utf8");
+    expect(s).not.toMatch(/filter\(\(g\) => g\.cover\)/);
+    expect(s).toContain("toUpperCase()");
+  });
+});
