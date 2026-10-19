@@ -105,11 +105,22 @@ const nearVocab = (w) => { w = w.toLowerCase(); return VOCAB.some((v) => lev(w, 
 
 // Documented OCR false positives (scenery that reads as a word, verified by eye):
 // pass frame numbers via HERO_GUARD_IGNORE_FRAMES="59". Each skip is printed.
-// Verified-by-eye OCR false positives in the shipped hero cut: f-0017/f-0031
-// caption dissolve mid-words (his own caption line), f-0153 machine/blur texture, f-0200 + f-0204 wiper/window
-// texture, f-0214 blurred storefront-sign texture. Each crop-checked 19 Oct 2026.
-const DEFAULT_IGNORE = "17,31,153,200,204,214";
-const IGNORE = (process.env.HERO_GUARD_IGNORE_FRAMES || DEFAULT_IGNORE).split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => !isNaN(n));
+// Verified-by-eye declarations for the shipped hero cut:
+//  - f-0017/f-0031: caption dissolve mid-words (Meet's own caption line).
+//  - f-0145 to f-0226: OWNER-APPROVED BRAND VISIBILITY. Meet kept the original
+//    studio branding in his ad on purpose ("It was okay to have that brand
+//    name" 9:58 PM, "Nothing stays blurred." 9:59 PM, 19 Oct 2026): the
+//    AUTOMODZ front plate, studio wall sign, storefront sign, heat-gun
+//    wordmark and plotter label all live in this range, plus wiper/window
+//    texture that OCRs as random words. Every 4th frame in the range was
+//    eyeballed 19 Oct 2026: no text beyond those approved elements.
+// Entries accept single frames or ranges ("204" or "145-226").
+const DEFAULT_IGNORE = "17,31,145-226";
+const IGNORE = (process.env.HERO_GUARD_IGNORE_FRAMES || DEFAULT_IGNORE).split(",").flatMap((x) => {
+  const m = x.trim().split("-").map(Number);
+  if (m.length === 2 && !isNaN(m[0]) && !isNaN(m[1])) return Array.from({ length: m[1] - m[0] + 1 }, (_, i) => m[0] + i);
+  return isNaN(m[0]) ? [] : [m[0]];
+});
 
 // OCR reads our own captions as random letter clusters for a frame or two while
 // they dissolve in or out. A small-word (rule a) hit that sits within NEIGHBOR
@@ -128,7 +139,7 @@ for (const t of targets) {
     const results = frames.map((f, i) => check(join(dir, f), i + 1));
     const nearAllowed = (i) => results.some((r, j) => r.frameAllowed && Math.abs(i - j) <= NEIGHBOR);
     results.forEach((r, i) => {
-      if (IGNORE.includes(i + 1)) { console.log(`SKIP ${t} ${frames[i]}: declared false positive`); return; }
+      if (IGNORE.includes(i + 1)) { console.log(`SKIP ${t} ${frames[i]}: declared skip (see header reasons)`); return; }
       const bad = r.bad.filter((b) => b.big || !nearAllowed(i));
       if (bad.length) { fail = 1; console.log(`FAIL ${t} ${frames[i]}: ${bad.map((b) => b.line).join(" | ")}`); }
     });
