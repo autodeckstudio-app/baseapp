@@ -8,7 +8,7 @@ import { Button, Chip, Kicker, Loading, Notice, PageHeader, Pane, Row, Screen, T
 import { getMembershipPlans, getMembershipUsage } from "../../../lib/membership-service";
 import { PlanCompare } from "../../../ui/PlanCompare";
 import { MembershipCard } from "../../../ui/MembershipCard";
-import { compareCols, valueRedeemed } from "../../../lib/membership-view";
+import { compareCols, reconcileRedeemed, valueRedeemed } from "../../../lib/membership-view";
 import { MEMBERSHIP_WASH_LIVE, todayInIndia } from "../../../lib/membership-wash";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
@@ -66,12 +66,13 @@ export default function MembershipScreen() {
   }, [uid, tenantId]);
 
   const currentId = current?.status === "active" ? current.id : null;
+  const washesUsedNow = current?.washesUsed ?? 0;
   useEffect(() => {
     if (!currentId) { setRedeemed(null); return; }
     let alive = true;
-    void getMembershipUsage(currentId).then((u) => { if (alive) setRedeemed(valueRedeemed(u)); }).catch(() => { if (alive) setRedeemed(null); });
+    void getMembershipUsage(currentId).then((u) => { if (alive) setRedeemed(reconcileRedeemed(valueRedeemed(u), washesUsedNow)); }).catch(() => { if (alive) setRedeemed(null); });
     return () => { alive = false; };
-  }, [currentId]);
+  }, [currentId, washesUsedNow]);
   // The "book with my membership" button exists only once the server records included washes (see lib/membership-wash.ts).
   useEffect(() => {
     if (!MEMBERSHIP_WASH_LIVE || !currentId) return;

@@ -41,6 +41,12 @@ export function valueRedeemed(usage: Pick<MembershipUsage, "usageType" | "valueR
   return { total: washValue + discountValue, washes, washValue, discountValue };
 }
 
+/** The plan card counts washes from the membership itself; the ledger can hold credits that were later restored. When the two disagree the card wins, so the wash part is dropped instead of contradicting it. */
+export function reconcileRedeemed(r: { total: number; washes: number; washValue: number; discountValue: number }, washesUsed: number): { total: number; washes: number; washValue: number; discountValue: number } {
+  if (r.washes === washesUsed) return r;
+  return { total: r.discountValue, washes: 0, washValue: 0, discountValue: r.discountValue };
+}
+
 export type CompareCol = { id: string; name: string; price: number; washes: number; discount: number; perWash: number | null; pickups: number; priority: boolean; best: boolean; current: boolean };
 
 /** Plans side by side, cheapest first. perWash is the plan price divided by its washes, computed only for display. */

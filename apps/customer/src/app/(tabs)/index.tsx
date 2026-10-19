@@ -24,7 +24,7 @@ import { space } from "@autodeck/ui/theme";
 import { formatDateShort } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
 import { useCustomerHome } from "../../hooks/useCustomerHome";
-import { sceneImagery, vehicleImagery, serviceImagery } from "../../lib/imagery";
+import { sceneImagery, serviceImagery } from "../../lib/imagery";
 import { listenToMyNotifications } from "../../lib/notification-service";
 import { listenToVehiclePapers, daysUntil, type MyPaper } from "../../lib/paper-service";
 import { listenToVehicleWarranties } from "../../lib/warranty-service";

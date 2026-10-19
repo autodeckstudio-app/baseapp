@@ -18,3 +18,12 @@ describe("approved category photographs", () => {
     expect(s).toContain('if (key === "complete") return detailingImage;');
   });
 });
+
+import { readdirSync, statSync } from "node:fs";
+describe("a car is shown with its own photo or a neutral icon, never a stock car", () => {
+  it("no screen outside the preview pages uses the stock vehicleImagery", () => {
+    const walk = (d: string): string[] => readdirSync(d).flatMap((f) => { const p = `${d}/${f}`; return statSync(p).isDirectory() ? walk(p) : /\.tsx?$/.test(f) ? [p] : []; });
+    const offenders = walk(`${root}/src`).filter((p) => !/preview|imagery\.ts|\.test\./.test(p)).filter((p) => readFileSync(p, "utf8").includes("vehicleImagery"));
+    expect(offenders).toEqual([]);
+  });
+});
