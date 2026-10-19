@@ -31,7 +31,7 @@ export type NotificationType =
 // Entities the customer app can navigate to from a notification. Job/Payment
 // source events are resolved down to their owning Booking at write time
 // (the customer app has no standalone job or payment detail screen).
-export type NotificationEntityType = "Booking" | "Invoice" | "Membership" | "Approval" | "Job";
+export type NotificationEntityType = "Booking" | "Invoice" | "Membership" | "Gift" | "Approval" | "Job";
 
 export interface Notification {
   id: string; // == auditLogId â deterministic idempotency key (see spec)

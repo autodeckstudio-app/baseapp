@@ -13,7 +13,7 @@ export type PaymentStatus =
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 
-export type PaymentTargetType = "job" | "membership";
+export type PaymentTargetType = "job" | "membership" | "gift";
 
 export interface Payment {
   id: string;
@@ -23,6 +23,7 @@ export interface Payment {
   jobId: string | null; // set when targetType === "job"
   bookingId: string | null;
   membershipId: string | null; // set when targetType === "membership"
+  giftId?: string | null; // set when targetType === "gift"
   customerId: string;
   // Amount is ALWAYS taken from booking.totalAmount — never from client request
   amount: number; // paise

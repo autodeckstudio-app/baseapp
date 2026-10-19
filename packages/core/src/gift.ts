@@ -5,7 +5,8 @@
 export const GIFT_SERVICE_ID = "menu-wash-foam";
 /** One flat price for any car: the SUV rate of the gifted wash, read from the catalogue. */
 export const GIFT_PRICE_CATEGORY = "suv";
-export const GIFT_VALID_MONTHS = 12;
+/** A gift is valid for 60 days from the verified payment. Shown on the buy screen, the gift card and the redeem screen. */
+export const GIFT_VALID_DAYS = 60;
 export const GIFT_MAX_FAILED_ATTEMPTS = 5;
 export const GIFT_LOCK_MINUTES = 15;
 
@@ -50,13 +51,36 @@ export function giftState(g: Pick<Gift, "status" | "expiresAt">, now: number): G
   return "unused";
 }
 
-/** Expiry: the same calendar day, 12 months later (a 29 Feb gift ends 28 Feb). */
+/** Expiry: exactly 60 days after the verified payment. */
 export function giftExpiry(purchasedAtIso: string): string {
-  const d = new Date(purchasedAtIso);
-  const y = d.getUTCFullYear() + Math.floor((d.getUTCMonth() + GIFT_VALID_MONTHS) / 12);
-  const m = (d.getUTCMonth() + GIFT_VALID_MONTHS) % 12;
-  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(y, m, Math.min(d.getUTCDate(), last), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds())).toISOString();
+  return new Date(Date.parse(purchasedAtIso) + GIFT_VALID_DAYS * 86_400_000).toISOString();
+}
+
+/** Whole days left, rounded up, never below 0. */
+export function giftDaysLeft(expiresAtIso: string | null, now: number): number {
+  if (!expiresAtIso) return 0;
+  return Math.max(0, Math.ceil((Date.parse(expiresAtIso) - now) / 86_400_000));
+}
+
+const istDate = (iso: string): string => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+
+/** The terms, in one place so the buy screen, the card, the redeem screen and the share message cannot drift apart. */
+export const GIFT_TERMS = {
+  validity: `Valid for ${GIFT_VALID_DAYS} days from the day you buy it. It expires after that and cannot be extended.`,
+  nonRefundable: "Gifts cannot be refunded, exchanged for cash or transferred after payment.",
+  oneWash: "One foam wash for any car. One use only.",
+} as const;
+
+/** Redeem-screen line: the date, and how long is left. */
+export function giftValidityLine(expiresAtIso: string, now: number): string {
+  const d = giftDaysLeft(expiresAtIso, now);
+  return `Use it by ${istDate(expiresAtIso)} (${d} ${d === 1 ? "day" : "days"} left). It expires after that.`;
+}
+
+/** Reminder copy: 7 days before it ends, and on its last day. Plain, no offer. */
+export function giftReminderText(daysLeft: 7 | 0): { title: string; body: string } {
+  if (daysLeft === 0) return { title: "Your gift wash ends today", body: "Your gift wash expires today. Book it now or it will be lost." };
+  return { title: "Your gift wash ends in 7 days", body: "Your gift wash expires in 7 days. Open the app and book it before it ends." };
 }
 
 // No 0, 1, I or O, so a code typed from a message is hard to get wrong. Format: GW-XXXX-XXXX (8 characters).
@@ -78,12 +102,12 @@ export function giftLockedUntil(failedAtIso: string[], now: number): number | nu
   return (recent[recent.length - GIFT_MAX_FAILED_ATTEMPTS] ?? 0) + windowMs;
 }
 
-/** Can the buyer cancel for a refund? Only while unused. */
-export const giftRefundable = (g: Pick<Gift, "status" | "expiresAt">, now: number): boolean => giftState(g, now) === "unused";
+/** Gifts are not refundable. Kept as a function so a screen or a function that asks always gets no. */
+export const giftRefundable = (_g: Pick<Gift, "status" | "expiresAt">, _now: number): boolean => false;
 
 /** The message the buyer shares. First name only, studio name, code and expiry. No phone numbers or private details. */
 export function giftShareMessage(args: { buyerFirstName: string | null; code: string; expiresAt: string; studioName: string }): string {
   const who = args.buyerFirstName ? `${args.buyerFirstName} has gifted you` : "You have been gifted";
   const until = new Date(args.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
-  return `${who} a car wash at ${args.studioName}. Your code: ${formatGiftCode(args.code)}. Valid until ${until}. Redeem it in the app: https://app.autodeck.in`;
+  return `${who} a car wash at ${args.studioName}. Your code: ${formatGiftCode(args.code)}. Valid until ${until} (${GIFT_VALID_DAYS} days from purchase, then it expires). Redeem it in the app: https://app.autodeck.in`;
 }

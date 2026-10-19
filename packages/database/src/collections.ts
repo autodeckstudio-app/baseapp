@@ -41,6 +41,8 @@ export const COLLECTIONS = {
   gifts: () => "gifts",
   /** Failed gift-code attempts per account and per network address, for the lockout. Server only. */
   giftAttempts: () => "giftAttempts",
+  /** Server only (default-deny rules): the plain gift code, so a buyer who closed the app after paying can get it again. */
+  giftSecrets: () => "giftSecrets",
   carListings: () => "carListings",
   carLeads: () => "carLeads",
   studioConfig: () => "studioConfig",

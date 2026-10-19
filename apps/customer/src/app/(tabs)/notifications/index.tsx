@@ -85,6 +85,10 @@ export default function NotificationsScreen() {
       router.push("/(tabs)/membership");
       return;
     }
+    if (n.entityType === "Gift") {
+      router.push("/(tabs)/gifts");
+      return;
+    }
     if (n.entityType === "Approval" && n.entityId) {
       router.push(`/(tabs)/approvals/${n.entityId}`);
       return;

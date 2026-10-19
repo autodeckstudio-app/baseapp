@@ -1,12 +1,14 @@
 // Gift a wash. Buyer side: createGift, listMyGifts, cancelGift. Recipient side: redeemGift (claims the code for the
 // account; the wash itself is booked through createBooking with giftCode). Studio side: lookupGift, voidGift.
-// Money is not taken here: createGift makes a PENDING_PAYMENT gift, and activateGift (lib) turns it on once the verified
-// payment lands. Dark until the payment keys exist and the client flag GIFT_LIVE is turned on.
+// Buying: createGift makes a PENDING_PAYMENT gift and its payment (amount from the catalogue, never from the client). The
+// app pays through createCheckoutOrder / verifyCheckoutPayment; the verified payment turns the gift ACTIVE (razorpay-webhook.ts)
+// and starts the 60 days. getGiftCode then returns the code to the buyer. Gifts are not refundable.
+// Dark until the client flag GIFT_LIVE is turned on.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import {
-  GIFT_PRICE_CATEGORY, GIFT_SERVICE_ID, giftExpiry, giftRefundable, giftState, type Gift, type Service, type StudioConfig,
+  GIFT_PRICE_CATEGORY, GIFT_SERVICE_ID, giftState, type Gift, type Payment, type Service, type StudioConfig,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -14,6 +16,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { calculatePrice } from "../../lib/pricing.js";
+import { planGiftActivation } from "../../lib/gift-activate.js";
 import { generateGiftCode, hashGiftCode } from "../../lib/gift-code.js";
 import { assertNotLocked, attemptKeys, findGiftByHash, giftBlockReason, recordFailure } from "../../lib/gift-store.js";
 
@@ -40,10 +43,11 @@ export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: 
 
 /** What a client may see of a gift. Never the hash. */
 function view(g: Gift, now: number) {
-  return { id: g.id, state: giftState(g, now), tail: g.codeTail, amountPaise: g.amountPaise, expiresAt: g.expiresAt, purchasedAt: g.purchasedAt, redeemedAt: g.redeemedAt, refundRequested: g.refundRequested, refundable: giftRefundable(g, now) && !g.refundRequested };
+  return { id: g.id, state: giftState(g, now), tail: g.codeTail, amountPaise: g.amountPaise, expiresAt: g.expiresAt, purchasedAt: g.purchasedAt, redeemedAt: g.redeemedAt, refundRequested: g.refundRequested, refundable: false };
 }
 
-/** Buyer starts a gift. Returns the code ONCE; it is stored only as a hash. It does nothing until payment activates it. */
+/** Buyer starts a gift. Makes the gift and its payment (both unpaid) and returns the payment id for checkout. The code is made now but
+ *  is only handed out by getGiftCode after the payment is verified. A buyer who retries gets the same unpaid gift back. */
 export const createGift = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
@@ -51,20 +55,56 @@ export const createGift = onCall({ region: "asia-south1" }, async (request) => {
   await enforceRateLimit(subjectFrom(user), "gift.create");
   const db = getFirestore();
   const amountPaise = await giftPricePaise(db, user.claims.tenantId);
+  const recent = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", user.uid).orderBy("createdAt", "desc").limit(5).get();
+  for (const d of recent.docs) {
+    const g = d.data() as Gift;
+    if (g.status !== "PENDING_PAYMENT" || g.amountPaise !== amountPaise || Date.now() - Date.parse(g.createdAt) > 24 * 3_600_000) continue;
+    const p = await db.collection(COLLECTIONS.payments()).where("giftId", "==", g.id).limit(1).get();
+    const pay = p.empty ? null : (p.docs[0]!.data() as Payment);
+    if (pay && (pay.status === "pending" || pay.status === "processing")) return { giftId: g.id, paymentId: pay.id, amountPaise };
+  }
   const code = generateGiftCode();
   const codeHash = hashGiftCode(code)!;
   const ref = db.collection(COLLECTIONS.gifts()).doc();
+  const payRef = db.collection(COLLECTIONS.payments()).doc();
   const nowIso = new Date().toISOString();
   const gift: Gift = {
     id: ref.id, tenantId: user.claims.tenantId, buyerId: user.uid, serviceId: GIFT_SERVICE_ID, amountPaise, codeHash, codeTail: code.slice(-4),
     status: "PENDING_PAYMENT", createdAt: nowIso, purchasedAt: null, expiresAt: null, claimedBy: null, redeemedBy: null, redeemedAt: null,
     bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null,
   };
+  const payment: Payment = {
+    id: payRef.id, tenantId: user.claims.tenantId, studioId: null, targetType: "gift", jobId: null, bookingId: null, membershipId: null, giftId: ref.id,
+    customerId: user.uid, amount: amountPaise, currency: "INR", method: "razorpay_payment_link", status: "pending",
+    razorpayPaymentLinkId: null, razorpayPaymentId: null, razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
+    manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null, completedAt: null, failedAt: null, cancelledAt: null,
+    refundedAt: null, createdAt: nowIso, updatedAt: nowIso,
+  };
   await db.runTransaction(async (tx) => {
     tx.create(ref, gift);
+    tx.create(payRef, payment);
+    tx.create(db.collection(COLLECTIONS.giftSecrets()).doc(ref.id), { giftId: ref.id, buyerId: user.uid, tenantId: user.claims.tenantId, code, createdAt: nowIso });
     writeAuditLog(tx, { action: "gift.created", entityType: "Gift", entityId: ref.id, user, studioId: null, after: { amountPaise, tail: gift.codeTail } });
   });
-  return { giftId: ref.id, code, amountPaise };
+  return { giftId: ref.id, paymentId: payRef.id, amountPaise };
+});
+
+/** The buyer's code, only once the payment is verified (gift ACTIVE) and only to the buyer. This is how a buyer who closed the app
+ *  after paying gets it again. An unpaid, void, used or expired gift never returns a code. */
+export const getGiftCode = onCall({ region: "asia-south1" }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "customer");
+  const data = validate(idSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "gift.read");
+  const db = getFirestore();
+  const snap = await db.collection(COLLECTIONS.gifts()).doc(data.giftId).get();
+  const g = snap.exists ? (snap.data() as Gift) : null;
+  if (!g || g.buyerId !== user.uid || g.tenantId !== user.claims.tenantId) throw new HttpsError("not-found", "Gift not found.");
+  if (giftState(g, Date.now()) !== "unused") throw new HttpsError("failed-precondition", "This gift has no code to show.");
+  const sec = await db.collection(COLLECTIONS.giftSecrets()).doc(g.id).get();
+  const code = sec.exists ? ((sec.data() as { code?: string }).code ?? null) : null;
+  if (!code || hashGiftCode(code) !== g.codeHash) throw new HttpsError("not-found", "Gift not found.");
+  return { code, expiresAt: g.expiresAt };
 });
 
 export const listMyGifts = onCall({ region: "asia-south1" }, async (request) => {
@@ -74,7 +114,8 @@ export const listMyGifts = onCall({ region: "asia-south1" }, async (request) => 
   const db = getFirestore();
   const snap = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", user.uid).orderBy("createdAt", "desc").limit(50).get();
   const now = Date.now();
-  return { gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT").map((g) => view(g, now)) };
+  const offer = await giftPricePaise(db, user.claims.tenantId).then((amountPaise) => ({ amountPaise })).catch(() => null);
+  return { gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT").map((g) => view(g, now)), offer };
 });
 
 /** Recipient claims a code. It binds to this account; a second account cannot claim it. Wrong codes are counted and locked out. */
@@ -111,24 +152,12 @@ export const redeemGift = onCall({ region: "asia-south1" }, async (request) => {
   return result.ok;
 });
 
-/** Buyer asks to cancel an unused gift for a refund. The studio refunds through payments. The code stops working at once. */
+/** Gifts are not refundable (Meet's decision). Kept so an older app gets a clear answer; it changes nothing. */
 export const cancelGift = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
-  const data = validate(idSchema, request.data);
-  await enforceRateLimit(subjectFrom(user), "gift.create");
-  const db = getFirestore();
-  const ref = db.collection(COLLECTIONS.gifts()).doc(data.giftId);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new HttpsError("not-found", "Gift not found.");
-    const g = snap.data() as Gift;
-    if (g.buyerId !== user.uid) throw new HttpsError("permission-denied", "That is not your gift.");
-    if (!giftRefundable(g, Date.now())) throw new HttpsError("failed-precondition", "Only an unused gift can be cancelled.");
-    tx.update(ref, { status: "VOID", voidedAt: new Date().toISOString(), voidReason: "Cancelled by the buyer", refundRequested: true });
-    writeAuditLog(tx, { action: "gift.cancel_requested", entityType: "Gift", entityId: g.id, user, studioId: null, after: { tail: g.codeTail } });
-  });
-  return { ok: true };
+  validate(idSchema, request.data);
+  throw new HttpsError("failed-precondition", "Gifts cannot be refunded after payment. Please call the studio if something went wrong.");
 });
 
 /** Studio: look a gift up by the code a customer reads out, or by id. */
@@ -167,7 +196,7 @@ export const voidGift = onCall({ region: "asia-south1" }, async (request) => {
   return { ok: true };
 });
 
-/** Called by the verified-payment path (not a client callable). Turns a paid gift on and starts the 12 months. Safe to call twice. */
+/** Same rule the verified-payment path applies, as a standalone call. Safe to call twice. Throws when the gift cannot be activated. */
 export async function activateGift(db: FirebaseFirestore.Firestore, giftId: string, paymentId: string, paidPaise: number): Promise<void> {
   const ref = db.collection(COLLECTIONS.gifts()).doc(giftId);
   await db.runTransaction(async (tx) => {
@@ -175,8 +204,8 @@ export async function activateGift(db: FirebaseFirestore.Firestore, giftId: stri
     if (!snap.exists) throw new HttpsError("not-found", "Gift not found.");
     const g = snap.data() as Gift;
     if (g.status !== "PENDING_PAYMENT") return;
-    if (paidPaise !== g.amountPaise) throw new HttpsError("failed-precondition", "Paid amount does not match the gift price.");
-    const nowIso = new Date().toISOString();
-    tx.update(ref, { status: "ACTIVE", purchasedAt: nowIso, expiresAt: giftExpiry(nowIso), paymentId });
+    const plan = planGiftActivation(g, { id: paymentId, amount: paidPaise, customerId: g.buyerId, tenantId: g.tenantId }, new Date().toISOString());
+    if (!plan.activate) throw new HttpsError("failed-precondition", "Paid amount does not match the gift price.");
+    tx.update(ref, plan.patch);
   });
 }

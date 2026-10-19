@@ -8,7 +8,8 @@
 //  - the amount in the event must equal the stored payment amount, otherwise
 //    nothing is marked paid and the event is recorded for review.
 import type { Firestore } from "firebase-admin/firestore";
-import type { Booking, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
+import type { Booking, Gift, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
+import { planGiftActivation } from "./gift-activate.js";
 import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -113,6 +114,25 @@ export async function processProviderEvent(
         return "completed";
       }
 
+      if (payment.targetType === "gift") {
+        // A verified gift payment: complete the payment and turn the gift on (60 days start now), in this one transaction.
+        const gRef = payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
+        const gSnap = gRef ? await tx.get(gRef) : null;
+        const plan = planGiftActivation(gSnap?.exists ? (gSnap.data() as Gift) : undefined, payment, now);
+        record("completed");
+        tx.update(paymentRef, { status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
+          providerEventId: ev.providerEventId, completedAt: now, updatedAt: now });
+        writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: null,
+          after: { status: "completed", targetType: "gift", giftId: payment.giftId ?? null, via: "razorpay_webhook" },
+          ...(plan.activate ? {} : { metadata: { needsReview: plan.reason } }) });
+        if (gRef && plan.activate) {
+          tx.update(gRef, plan.patch);
+          writeAuditLog(tx, { action: "gift.activated", entityType: "Gift", entityId: gRef.id, user, studioId: null,
+            before: { status: "PENDING_PAYMENT" }, after: { status: "ACTIVE", expiresAt: plan.patch.expiresAt, via: "payment_verified" } });
+        }
+        return "completed";
+      }
+
       if (!payment.jobId) { record("ignored"); return "ignored"; }
       const jobRef = db.collection(COLLECTIONS.jobs()).doc(payment.jobId);
       const jobSnap = await tx.get(jobRef);
@@ -174,7 +194,14 @@ export async function processProviderEvent(
     if (payment.status === "refunded") { record("already_final"); return "already_final"; }
     if (payment.status !== "completed") { record("ignored"); return "ignored"; }
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
+    const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
+    const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;
     record("refunded");
+    // A refunded gift payment (done in the Razorpay dashboard) stops the code working, unless the wash was already used.
+    if (giftRefRefund && giftSnapRefund?.exists && (giftSnapRefund.data() as Gift).status !== "REDEEMED") {
+      tx.update(giftRefRefund, { status: "REFUNDED", voidedAt: now, voidReason: "Payment refunded" });
+      writeAuditLog(tx, { action: "gift.voided", entityType: "Gift", entityId: giftRefRefund.id, user, studioId: null, after: { reason: "payment_refunded" } });
+    }
     tx.update(paymentRef, { status: "refunded", razorpayRefundId: ev.providerRefundId, refundAmount: ev.amount || payment.amount,
       refundedAt: now, providerEventId: ev.providerEventId, updatedAt: now });
     if (payment.invoiceId && invSnap?.exists && (invSnap.data() as Invoice).status !== "void") {

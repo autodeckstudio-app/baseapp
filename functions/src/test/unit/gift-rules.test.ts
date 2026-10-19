@@ -7,7 +7,7 @@ import { giftBlockReason } from "../../lib/gift-store.js";
 const now = Date.parse("2026-10-16T00:00:00Z");
 const g = (o: Partial<Gift> = {}): Gift => ({
   id: "g1", tenantId: "t", buyerId: "b", serviceId: "menu-wash-foam", amountPaise: 1, codeHash: "h", codeTail: "2345", status: "ACTIVE",
-  createdAt: "2026-10-01T00:00:00Z", purchasedAt: "2026-10-01T00:00:00Z", expiresAt: "2027-10-01T00:00:00Z", claimedBy: null, redeemedBy: null,
+  createdAt: "2026-10-01T00:00:00Z", purchasedAt: "2026-10-01T00:00:00Z", expiresAt: "2026-11-30T00:00:00Z", claimedBy: null, redeemedBy: null,
   redeemedAt: null, bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null, ...o,
 });
 describe("gift block reasons", () => {
@@ -37,9 +37,9 @@ describe("gift guardrails (source)", () => {
     expect(src).toContain("assertNotLocked");
     expect(src).toContain("recordFailure");
   });
-  it("the code is never stored, only hashed", () => {
+  it("the gift record holds only the hash of the code (the plain code is in the server-only giftSecrets, see gift-purchase.test.ts)", () => {
     expect(src).toContain("codeHash");
-    expect(src).not.toMatch(/code:\s*code[,\s}]/);
+    expect(src).toMatch(/giftId: ref\.id, buyerId: user\.uid, tenantId: user\.claims\.tenantId, code, createdAt/);
   });
   it("booking marks the gift used in the same transaction, with no stacking", () => {
     expect(booking).toContain('status: "REDEEMED"');
