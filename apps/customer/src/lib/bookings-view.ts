@@ -60,8 +60,8 @@ export function daysUntilLabel(date: string, today: string): string {
 /** "Since 11:29 am" for a job started today, "Since 9 Oct, 11:29 am" for an older one, so a stale job never looks like it began this morning. */
 export function sinceLabel(iso: string, now: Date = new Date()): string {
   const d = new Date(iso);
-  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
   const day = (x: Date) => x.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
   if (day(d) === day(now)) return `Since ${time}`;
-  return `Since ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}, ${time}`;
+  return `Since ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, ${time}`;
 }

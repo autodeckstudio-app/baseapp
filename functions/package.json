@@ -11,7 +11,7 @@
     "build:watch": "node esbuild.config.mjs --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "test": "TZ=UTC vitest run",
     "test:emulator": "vitest run --config vitest.emulator.config.ts",
     "seed:emulator": "tsx src/test/emulator/seed.ts",
     "seed:catalogue": "tsx src/scripts/seed-catalogue.ts",
