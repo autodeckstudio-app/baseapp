@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import { listenToJobsByDate, listenToStandby } from "../../lib/studio-service";
 import type { ServiceJob } from "@autodeck/core";
-import { colors, spacing, radius, typography, JobCard, LoadingState, ErrorState, Button } from "@autodeck/ui";
+import { colors, spacing, radius, typography, phoneFont, JobCard, LoadingState, ErrorState, Button } from "@autodeck/ui";
 import { Icon, FadeUp } from "@autodeck/ui/native";
 import { useJobLabels } from "../../hooks/useBayNames";
 import { useJobPeople } from "../../hooks/useJobPeople";
@@ -64,7 +64,7 @@ export default function TodaysJobsScreen() {
   const glass = { backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}) };
   const Stat = ({ label, value }: { label: string; value: number }) => (
     <View style={{ flex: 1, ...glass, borderRadius: 20, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, alignItems: "center" }}>
-      <Text style={{ fontSize: 34, fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
+      <Text style={{ fontSize: phoneFont(34, 26), fontWeight: "700", color: colors.textPrimary }}>{value}</Text>
       <Text style={{ ...typography.caption, color: colors.textMuted }}>{label}</Text>
     </View>
   );
@@ -112,10 +112,10 @@ export default function TodaysJobsScreen() {
   return (
     <View style={{ flex: 1 }}>
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xl, paddingBottom: 130, flexGrow: 1, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.lg }}>
-      <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "flex-start", justifyContent: "space-between", gap: spacing.md, minHeight: wide ? 180 : 150 }}>
+      <View style={{ flexDirection: wide ? "row" : "column", alignItems: wide ? "flex-end" : "flex-start", justifyContent: "space-between", gap: spacing.md, minHeight: wide ? 180 : phoneFont(150, 108) }}>
         <View style={{ justifyContent: "flex-end" }}>
           <Text style={{ ...typography.caption, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 1.6, fontWeight: "600" } as never}>{longDate}</Text>
-          <Text style={{ fontSize: wide ? 72 : 56, lineHeight: wide ? 74 : 58, fontWeight: "500", letterSpacing: -3, color: colors.textPrimary } as never}>Today</Text>
+          <Text style={{ fontSize: wide ? 72 : phoneFont(56, 40), lineHeight: wide ? 74 : phoneFont(58, 44), fontWeight: "500", letterSpacing: wide ? -3 : phoneFont(-3, -1.8), color: colors.textPrimary } as never}>Today</Text>
         </View>
         <View style={{ width: wide ? 260 : "100%" }}>
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />

@@ -1,6 +1,9 @@
 // Automatic day/night. Night when the device asks for dark mode, or when
 // the user's local clock is outside day hours (6 AM to 7 PM). No manual
 // toggle: the device's own setting and the clock decide.
+// Bundlers (Metro, Next) replace process.env.* at build time; this keeps the package free of node types.
+declare const process: { env: Record<string, string | undefined> };
+
 export const DAY_START_HOUR = 6;
 export const DAY_END_HOUR = 19;
 

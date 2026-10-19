@@ -2,7 +2,7 @@ import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle, floatScene } from "@autodeck/ui/theme";
 import { Tabs } from "expo-router";
-import { colors, isNightPalette } from "@autodeck/ui";
+import { colors, isNightPalette, phoneFont } from "@autodeck/ui";
 import { PillTabBar } from "@autodeck/ui/native";
 import { useWindowDimensions } from "react-native";
 import { SideRail } from "../../components/SideRail";
@@ -22,7 +22,7 @@ export default function StudioTabsLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         headerStyle: { backgroundColor: "transparent" },
         headerShadowVisible: false,
-        headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: 22, letterSpacing: -0.4 },
+        headerTitleStyle: { color: colors.textPrimary, fontWeight: "500", fontSize: phoneFont(22, 18), letterSpacing: -0.4 },
         sceneStyle: { backgroundColor: colors.background, ...(NightPlatform.OS === "web" ? floatScene(nightMaterial) : {}), ...(wide ? { paddingLeft: 252 } : {}) },
       })}
     >

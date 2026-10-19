@@ -17,3 +17,20 @@
   .ax-shell .ax-sheet-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (min-width: 861px) { .ax-shell .ax-sheet-back { display: none !important; } }
+
+/* Phone type scale (430px and narrower). One scale: page title 30, section title 18, body 14, small 12, label 11. */
+@media (max-width: 430px) {
+  .ax-shell .ax-page-head h1,
+  .ax-shell .ax-dash .ax-page-head h1,
+  .ax-shell .ax-shell-frame .ax-page-head h1,
+  .ax-shell-frame[data-hero="on"] .ax-page-head h1,
+  .ax-shell-frame:not([data-hero="on"]) .ax-page-head h1,
+  .ax-dash .ax-page-head h1 { font-size: clamp(26px, 8vw, 32px) !important; line-height: 1.1 !important; letter-spacing: -.8px !important; }
+  .ax-shell .ax-hero h1 { font-size: clamp(24px, 7.4vw, 30px) !important; line-height: 1.12 !important; }
+  .ax-shell .ax-display { font-size: 28px; line-height: 34px; }
+  .ax-shell .ax-title { font-size: 18px; line-height: 24px; }
+  .ax-shell .ax-kpis .ax-kpi-v, .ax-shell-frame[data-hero="on"] .ax-hero-total, .ax-shell .ax-hero-total { font-size: 22px !important; line-height: 28px !important; }
+  .ax-shell .ax-main { font-size: 14px; }
+  .ax-shell .ax-label { font-size: 11px; }
+  .ax-shell .ax-note, .ax-shell .kv { font-size: 13px; }
+}

@@ -3,5 +3,5 @@
 export { colors, isNightPalette, applyCustomerDark, applyCustomerRaised, type ColorToken } from "./colors.js";
 export { spacing, type SpacingToken } from "./spacing.js";
 export { radius, type RadiusToken } from "./radius.js";
-export { typography, type TypographyToken } from "./typography.js";
+export { typography, typographyFor, desktopTypography, phoneFont, isPhoneWidth, PHONE_SIZES, PHONE_MAX_WIDTH, type TypographyToken } from "./typography.js";
 export { elevation, type ElevationToken } from "./elevation.js";
