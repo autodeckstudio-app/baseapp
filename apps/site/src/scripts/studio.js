@@ -5,8 +5,11 @@ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const heroVideo = document.querySelector('.hero-video');
 if (heroVideo && (reduced || navigator.connection?.saveData)) { heroVideo.removeAttribute('autoplay'); heroVideo.pause(); }
 if (!reduced) {
-  gsap.fromTo('.landing-copy > *',{y:14,opacity:0},{y:0,opacity:1,stagger:.07,duration:.55,clearProps:'all'});
-  window.setTimeout(()=>gsap.set('.landing-copy > *',{opacity:1,y:0,clearProps:'all'}),1600);
+  const landingKids = document.querySelectorAll('.landing-copy > *');
+  if (landingKids.length) {
+    gsap.fromTo(landingKids,{y:14,opacity:0},{y:0,opacity:1,stagger:.07,duration:.55,clearProps:'all'});
+    window.setTimeout(()=>gsap.set(landingKids,{opacity:1,y:0,clearProps:'all'}),1600);
+  }
   document.querySelectorAll('.reveal').forEach(el => gsap.fromTo(el,{y:20},{y:0,duration:.65,ease:'power2.out',scrollTrigger:{trigger:el,start:'top 96%',once:true},clearProps:'transform'}));
 }
 document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click',()=>{

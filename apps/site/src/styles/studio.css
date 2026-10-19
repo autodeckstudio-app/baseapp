@@ -75,12 +75,13 @@
 /* Car belongs to the hero, not a bordered product card. */
 .landing{grid-template-columns:.9fr 1.3fr;gap:0;position:relative;min-height:450px;padding-block:40px 25px}
 .landing-copy{position:relative;z-index:2;pointer-events:none}.landing-copy a{pointer-events:auto}
-.model-stage{border:0;border-radius:0;overflow:visible;background:none;height:440px;margin-left:-60px;margin-right:-45px}
+.model-stage{border:0;border-radius:0;overflow:visible;background:none;height:440px}
+@media(min-width:1280px){.model-stage{margin-left:-60px;margin-right:-45px}}
 .model-stage:before{inset:auto 8% 10%;height:30%;border:0;background:radial-gradient(ellipse,#ec863817,transparent 70%);filter:blur(18px)}
 .hero-video{mask-image:linear-gradient(to bottom,#000 88%,transparent)}
 .stage-note{bottom:4px;left:16%;right:8%;font-size:9px}
 
-@media(max-width:800px){.landing{grid-template-columns:1fr;min-height:0;padding-top:30px;gap:0}.model-stage{height:320px;margin:16px -20px 0}.landing-copy{position:relative;z-index:2}.stage-note{left:12%;right:12%;bottom:0}}
+@media(max-width:800px){.landing{grid-template-columns:1fr;min-height:0;padding-top:30px;gap:0}.model-stage{height:320px;margin:16px 0 0}.landing-copy{position:relative;z-index:2}.stage-note{left:12%;right:12%;bottom:0}}
 @media(max-width:360px){.model-stage{height:270px;margin-inline:-20px}}
 
 .stage-note{pointer-events:auto}.stage-note a{pointer-events:auto;border-bottom:1px solid #ffffff30}.drag-note{pointer-events:none}
@@ -138,4 +139,5 @@ html{overflow-x:clip}
   .app-story-enhanced .phone-shell{height:auto;width:min(272px,74vw);aspect-ratio:390/844;max-height:none}
   .app-story-enhanced .app-chapter{min-height:auto;padding:28px 0}
 }
-@media (max-width:800px){.model-stage{margin-inline:calc(50% - 50vw)}}
+@media (max-width:700px){.model-stage{margin-inline:calc(50% - 50vw)}}
+body{overflow-x:clip}
