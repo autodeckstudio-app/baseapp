@@ -122,22 +122,8 @@
 /* ambient: full-bleed layer, glow fades before any layer edge; bleeds off screen right/left */
 html{overflow-x:clip}
 .home-services::before{inset:auto;top:-22%;bottom:-22%;left:50%;right:auto;width:100vw;height:auto;transform:translateX(-50%);-webkit-mask-image:none;mask-image:none;background:radial-gradient(38vmax 38vmax at 78% 42%,rgba(236,134,56,.30),transparent 62%),radial-gradient(34vmax 34vmax at 12% 55%,rgba(120,110,255,.14),transparent 60%)}
-/* phone mockup: on small screens the side-by-side 44% column squished the shell and cropped
-   every app screen (text cut off). Single column, phone at natural aspect, chapters below. */
-@media (max-width:800px){
-  .app-story-grid{grid-template-columns:1fr;gap:26px}
-  .app-device-stage{position:sticky;top:86px;height:auto;min-height:0;align-items:center;padding-block:6px}
-  .app-device-copy{margin:0}
-  .phone-shell{width:min(272px,74vw);height:auto;aspect-ratio:390/844;max-height:none}
-  .app-chapters{padding-block:8px}
-  .app-chapter{min-height:auto;padding:28px 0}
-}
-@media (max-width:800px){
-  .app-story-enhanced .app-story-grid{grid-template-columns:1fr;gap:26px}
-  .app-story-enhanced .app-device-stage{height:auto;min-height:0;top:86px;padding-block:6px}
-  .app-story-enhanced .phone-shell{height:auto;width:min(272px,74vw);aspect-ratio:390/844;max-height:none}
-  .app-story-enhanced .app-chapter{min-height:auto;padding:28px 0}
-}
+/* The pinned stage owns phone layout (see the max-width:600px block above):
+   heading + phone shell + chapter copy are sized together to fit 100svh. */
 body{overflow-x:clip}
 /* old grid skin: light line background showed through the 16px card gaps as grey bands */
 .home-service-grid{background:transparent}
