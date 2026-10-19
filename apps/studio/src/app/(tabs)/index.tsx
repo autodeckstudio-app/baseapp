@@ -133,7 +133,7 @@ export default function TodaysJobsScreen() {
           {standby.map((j) => <JobCard key={j.id} job={j} carName={people.car(j)} customerName={people.customer(j)} serviceName={labels.services[j.serviceId]} onPress={() => router.push(`/(tabs)/jobs/${j.id}`)} />)}
         </View>
       )}
-      <View style={{ flexDirection: wide ? "row" : "column", gap: spacing.lg, alignItems: "flex-start" }}>
+      <View style={{ flexDirection: wide ? "row" : "column", gap: spacing.lg, alignItems: wide ? "flex-start" : "stretch" }}>
         {jobsList}
         {baysBoard}
       </View>

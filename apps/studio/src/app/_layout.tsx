@@ -40,8 +40,8 @@ function canvasFrame(width: number): Record<string, unknown> {
   if (Platform.OS !== "web") return {};
   const phone = width <= 860;
   return {
-    position: "fixed", top: phone ? 6 : 16, left: phone ? 6 : 16, right: phone ? 6 : 16, bottom: phone ? 6 : 16,
-    borderRadius: phone ? 32 : 44, overflow: "hidden", borderWidth: 2,
+    position: "fixed", top: phone ? 0 : 16, left: phone ? 0 : 16, right: phone ? 0 : 16, bottom: phone ? 0 : 16,
+    borderRadius: phone ? 0 : 44, overflow: "hidden", borderWidth: phone ? 0 : 2,
     borderColor: isNightPalette ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.92)",
     boxShadow: isNightPalette ? "0 40px 90px -30px rgba(0,0,0,.8)" : "0 40px 90px -30px rgba(70,45,20,.55)",
   };
