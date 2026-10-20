@@ -338,8 +338,8 @@ describe("one icon set", () => {
       expect(read(f)).toContain("NavIcon");
     }
   });
-  it("top services cards carry a photo", () => {
-    expect(read("src/ui/HomeView.tsx")).toContain("<ServicePhoto service={{ name: pick.service.name");
+  it("top services cards carry the approved category photo", () => {
+    expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*serviceImagery/);
   });
   it("night surfaces use one charcoal card colour", () => {
     expect(read("src/lib/raised.ts")).toContain('#1B1B1F');

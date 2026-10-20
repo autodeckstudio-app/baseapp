@@ -3,8 +3,15 @@
 import { Screen } from "../ui/kit";
 import { useLocalSearchParams } from "expo-router";
 import { HomeView } from "../ui/HomeView";
+import type { CarListingView } from "@autodeck/core";
 
 const noop = () => undefined;
+
+const saleCars: CarListingView[] = [
+  { id: "s1", source: "studio", status: "live", make: "BMW", model: "M340i", variant: "xDrive", year: 2022, kmDriven: 18500, fuel: "petrol", gearbox: "automatic", bodyType: "sedan", owners: 1, colour: "Portimao Blue", area: "Ahmedabad", askingPrice: 525000000, description: null, insuranceValidTill: null, photoUrls: ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800"], mine: false, rejectionReason: null, createdAt: "2026-10-01T10:00:00Z" },
+  { id: "s2", source: "customer", status: "live", make: "Mahindra", model: "Thar", variant: "LX 4x4", year: 2023, kmDriven: 9200, fuel: "diesel", gearbox: "manual", bodyType: "suv", owners: 1, colour: "Napoli Black", area: "Ahmedabad", askingPrice: 0, priceHidden: true, description: null, insuranceValidTill: null, photoUrls: ["https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800"], mine: false, rejectionReason: null, createdAt: "2026-10-05T10:00:00Z" },
+  { id: "s3", source: "studio", status: "live", make: "Mercedes-Benz", model: "GLC", variant: "300", year: 2021, kmDriven: 31000, fuel: "petrol", gearbox: "automatic", bodyType: "suv", owners: 2, colour: "Polar White", area: "Ahmedabad", askingPrice: 410000000, description: null, insuranceValidTill: null, photoUrls: ["https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800"], mine: false, rejectionReason: null, createdAt: "2026-10-08T10:00:00Z" },
+];
 export default function Preview() {
   const { chip } = useLocalSearchParams<{ chip?: string }>();
   if (!__DEV__) return null;
@@ -23,6 +30,7 @@ export default function Preview() {
         ]}
         reminders={[{ title: "Insurance", detail: "Expires 3 Nov", chip: "22 days", danger: false }]}
         live={{ kicker: "Live now", title: "Work under way", detail: "Since 10:00 am", onPress: noop }}
+        carsList={saleCars} onOpenCar={noop} onBuyCar={noop} onSellCar={noop}
         onSearch={noop} onBell={noop} onAllServices={noop} onCategory={noop} onService={noop} onCar={noop} onAddCar={noop} onReminders={noop}
       />
     </Screen>
