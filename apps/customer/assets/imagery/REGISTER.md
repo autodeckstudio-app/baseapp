@@ -110,3 +110,12 @@ Every file under stock/ and curated/ is a placeholder until the studio shoot. Pr
 
 ## Category photographs (approved by the owner, 19 Oct)
 Six studio-style category images in category/ (also copied to the site as service-*.jpg): paint-protection, ceramic-coating, detailing, wash-and-care, garage, modifications. Used for the matching service categories. Tinting and inspection keep their earlier photos until the owner says otherwise.
+
+## Generated studio-style images (approved by Meet, 20 Oct 2026)
+Made with a free image generator using Meet's six category photos as style references. Not stock, not brand art. Replace with real studio photos when available.
+| File | Used for |
+| --- | --- |
+| generated/pickup.jpg | Pickup and drop (key handover) |
+| generated/coating.jpg | Coating category |
+| generated/garage-ac.jpg, garage-battery.jpg, garage-inspection.jpg, garage-alignment.jpg, garage-repairs.jpg | Garage services |
+| generated/mods-tint.jpg, mods-wrap.jpg, mods-accessories.jpg | Modification services |

@@ -28,6 +28,8 @@ import catDetailing from "../../assets/imagery/category/detailing.jpg";
 import catWash from "../../assets/imagery/category/wash-and-care.jpg";
 import catGarage from "../../assets/imagery/category/garage.jpg";
 import catMods from "../../assets/imagery/category/modifications.jpg";
+import genPickup from "../../assets/imagery/generated/pickup.jpg";
+import genCoating from "../../assets/imagery/generated/coating.jpg";
 import vehicleSedan from "../../assets/imagery/stock/x-polish-red.jpg";
 
 /** One photograph per service category, shown on catalogue cards and detail heroes. */
@@ -37,14 +39,14 @@ export const detailingImage: ImageSourcePropType = catDetailing;
 export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
   washing: catWash,
   ceramic: catCeramic,
-  coating: catCeramic,
+  coating: genCoating,
   ppf: catPpf,
   tinting: serviceTinting,
   inspection: serviceInspection,
   other: serviceOther,
   garage: catGarage,
   modifications: catMods,
-  pickup: serviceOther,
+  pickup: genPickup,
 };
 
 /** Fallback portrait per vehicle category until customers add their own car photos. */
@@ -91,11 +93,11 @@ const TOPICS: Record<string, ImageSourcePropType> = {
   washExt: require("../../assets/imagery/stock/x-white-garage.jpg"), roof: require("../../assets/imagery/curated/roof.jpg"),
   interior: require("../../assets/imagery/stock/x-white-seats.jpg"), polish: require("../../assets/imagery/stock/x-polish-red.jpg"),
   headlight: require("../../assets/imagery/curated/headlight.jpg"), coating: require("../../assets/imagery/curated/coating.jpg"),
-  ppf: require("../../assets/imagery/stock/ppf-install.jpg"), tint: require("../../assets/imagery/stock/tint-install.jpg"),
+  ppf: require("../../assets/imagery/stock/ppf-install.jpg"), tint: require("../../assets/imagery/generated/mods-tint.jpg"),
   wheel: require("../../assets/imagery/stock/x-rim-clean.jpg"), engine: require("../../assets/imagery/stock/x-engine-bay.jpg"),
-  inspection: require("../../assets/imagery/stock/x-underbody-b.jpg"), gInspect: require("../../assets/imagery/stock/g-inspection.jpg"), align: require("../../assets/imagery/stock/g-alignment.jpg"),
-  ac: require("../../assets/imagery/stock/g-ac.jpg"), battery: require("../../assets/imagery/stock/g-battery.jpg"), repair: require("../../assets/imagery/stock/g-repairs.jpg"),
-  wrap: require("../../assets/imagery/stock/g-wrap.jpg"), styling: require("../../assets/imagery/stock/g-styling.jpg"), pickup: require("../../assets/imagery/stock/g-pickup.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
+  inspection: require("../../assets/imagery/stock/x-underbody-b.jpg"), gInspect: require("../../assets/imagery/generated/garage-inspection.jpg"), align: require("../../assets/imagery/generated/garage-alignment.jpg"),
+  ac: require("../../assets/imagery/generated/garage-ac.jpg"), battery: require("../../assets/imagery/generated/garage-battery.jpg"), repair: require("../../assets/imagery/generated/garage-repairs.jpg"),
+  wrap: require("../../assets/imagery/generated/mods-wrap.jpg"), styling: require("../../assets/imagery/generated/mods-accessories.jpg"), pickup: require("../../assets/imagery/generated/pickup.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { topicOf, GARAGE_PHOTO_TOPICS, type Svc } from "./imagery-topic";
@@ -105,7 +107,7 @@ const POOLS: Record<string, ImageSourcePropType[]> = {
   coating: [require("../../assets/imagery/curated/coating.jpg"), require("../../assets/imagery/stock/coating-water-beading.jpg"), require("../../assets/imagery/stock/x-glossy-black.jpg"), require("../../assets/imagery/stock/x-black-reflect.jpg")],
   washExt: [require("../../assets/imagery/stock/x-white-garage.jpg"), require("../../assets/imagery/stock/wash-foam.jpg"), require("../../assets/imagery/stock/wash-suds.jpg"), require("../../assets/imagery/stock/x-foam-street.jpg")],
   ppf: [require("../../assets/imagery/stock/ppf-install.jpg"), require("../../assets/imagery/stock/ppf-hood-wrap.jpg"), require("../../assets/imagery/stock/x-foil-garage.jpg")],
-  tint: [require("../../assets/imagery/stock/tint-install.jpg"), require("../../assets/imagery/stock/x-film-window.jpg"), require("../../assets/imagery/stock/x-car-window.jpg")],
+  tint: [require("../../assets/imagery/generated/mods-tint.jpg"), require("../../assets/imagery/stock/x-film-window.jpg"), require("../../assets/imagery/stock/x-car-window.jpg")],
   polish: [require("../../assets/imagery/stock/x-polish-red.jpg"), require("../../assets/imagery/stock/paint-polish.jpg"), require("../../assets/imagery/stock/x-buff-rear.jpg"), require("../../assets/imagery/stock/x-buff-roof.jpg")],
   interior: [require("../../assets/imagery/stock/x-white-seats.jpg"), require("../../assets/imagery/stock/interior-detail.jpg"), require("../../assets/imagery/stock/x-seat-clean.jpg")],
 };
