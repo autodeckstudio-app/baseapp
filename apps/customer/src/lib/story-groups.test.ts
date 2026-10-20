@@ -15,6 +15,10 @@ describe("groupStories", () => {
   it("a title outside the five, and hidden stories, never show", () => {
     expect(groupStories([S("1", 5, "Coatings"), S("2", 5, "Washing", { hidden: true })], now)).toEqual([]);
   });
+  it("a live story with an old title outside the five still shows under Today until it expires", () => {
+    const g = groupStories([S("1", 0.2, "Coatings")], now);
+    expect(g.map((x) => x.title)).toEqual(["Today"]);
+  });
   it("a video-only group still shows (no photo cover is fine)", () => {
     expect(groupStories([S("1", 5, "Detailing", { mediaType: "video" })], now)[0]!.cover).toBeNull();
   });
