@@ -2,7 +2,7 @@ import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useState, useEffect } from "react";
-import { Platform, View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Platform, View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -249,45 +249,33 @@ export default function JobDetailScreen() {
     }
   }
 
-  async function handleRecordCashPayment() {
-    const jobId = job?.id;
-    if (!jobId) return;
-    Alert.alert("Record cash payment?", "Confirms the customer paid in full at the studio.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Confirm",
-        onPress: async () => {
-          setPaymentActionLoading(true);
-          try {
-            await recordManualPayment({ jobId, method: "cash" });
-          } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to record payment.");
-          } finally {
-            setPaymentActionLoading(false);
-          }
-        },
-      },
-    ]);
+  const [cashConfirm, setCashConfirm] = useState<"record" | "confirm" | null>(null);
+  const [cashError, setCashError] = useState<string | null>(null);
+
+  function handleRecordCashPayment() {
+    if (!job?.id) return;
+    setCashError(null); setCashConfirm("record");
   }
 
   function handleConfirmCashPayment() {
     if (!payment) return;
-    Alert.alert("Confirm cash received?", "Marks this payment complete and issues the invoice.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Confirm",
-        onPress: async () => {
-          setPaymentActionLoading(true);
-          try {
-            await confirmManualPayment(payment.id);
-          } catch (err) {
-            Alert.alert("Error", err instanceof Error ? err.message : "Failed to confirm payment.");
-          } finally {
-            setPaymentActionLoading(false);
-          }
-        },
-      },
-    ]);
+    setCashError(null); setCashConfirm("confirm");
+  }
+
+  async function performCashAction() {
+    const mode = cashConfirm;
+    const jobId = job?.id;
+    if (!mode || paymentActionLoading) return;
+    setPaymentActionLoading(true); setCashError(null);
+    try {
+      if (mode === "record") { if (!jobId) return; await recordManualPayment({ jobId, method: "cash" }); }
+      else if (payment) await confirmManualPayment(payment.id);
+      setCashConfirm(null);
+    } catch (err) {
+      setCashError(err instanceof Error ? err.message : mode === "record" ? "Failed to record payment." : "Failed to confirm payment.");
+    } finally {
+      setPaymentActionLoading(false);
+    }
   }
 
   async function openReslot() {
@@ -619,6 +607,12 @@ export default function JobDetailScreen() {
       {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {cashConfirm ? <Section>
+        <Text style={{color: colors.textPrimary}}>{cashConfirm === "record" ? "Record cash payment? Confirms the customer paid in full at the studio." : "Confirm cash received? Marks this payment complete and issues the invoice."}</Text>
+        {cashError ? <Text accessibilityRole="alert" style={{color: colors.textPrimary}}>{cashError}</Text> : null}
+        <Button label="Confirm" onPress={() => void performCashAction()} loading={paymentActionLoading} />
+        <Button label="Cancel" variant="secondary" disabled={paymentActionLoading} onPress={() => { setCashConfirm(null); setCashError(null); }} />
+      </Section> : null}
       {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
       {canAdvance && (

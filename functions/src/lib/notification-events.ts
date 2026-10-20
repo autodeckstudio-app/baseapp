@@ -324,7 +324,7 @@ export async function buildNotification(
         userId: approval.customerId,
         type: "approval_requested",
         title: "Quick approval needed",
-        body: `We found something on your ${vehicle}: ${approval.serviceName}, +${formatPaise(approval.priceImpact)}. Approve or decline in the app.`,
+        body: `The studio suggests ${approval.serviceName} for your ${vehicle}, ${formatPaise(approval.priceImpact)} extra. It only goes ahead if you approve it in the app.`,
         entityType: "Approval",
         entityId: approval.id,
       };

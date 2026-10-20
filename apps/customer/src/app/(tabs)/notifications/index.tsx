@@ -19,6 +19,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { clearable, isProtected, loadHidden, saveHidden, visibleNotifications } from "../../../lib/notification-hidden";
 
 
+export const NOTIFICATIONS_LOAD_TIMEOUT_MS = 12_000;
 export const NOTIFICATION_ACTION: Record<string, string> = { Approval: "Review request", Booking: "View booking", Membership: "View membership", Invoice: "View invoice" };
 
 function formatWhen(iso: string): string {
@@ -61,6 +62,14 @@ export default function NotificationsScreen() {
     const unsub = load();
     return unsub;
   }, [load, retryTick]);
+
+  // Never sit on "Checking for updates" for ever (a direct page load once hung 20 s+): signed-out stops at once, a slow load ends in a retry.
+  useEffect(() => {
+    if (auth.status === "unauthenticated" || auth.status === "authenticated_no_claims") { setLoading(false); setError("Sign in again to see your updates."); return undefined; }
+    if (!loading) return undefined;
+    const t = setTimeout(() => { setLoading(false); setError("This is taking longer than expected. Check your connection and try again."); }, NOTIFICATIONS_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [loading, auth.status, retryTick]);
 
   // Opening the list reads everything on it: mark each unread item read once,
   // and show it read right away instead of waiting for the server round trip.
