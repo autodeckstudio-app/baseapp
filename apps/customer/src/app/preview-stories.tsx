@@ -16,7 +16,7 @@ const LIST = [S(1, 2, null, "Ceramic coat delivery"), S(2, 30, "Ceramic", "Gtech
 export default function PreviewStories() {
   if (!__DEV__) return null;
   const groups = groupStories(LIST);
-  const [open, setOpen] = useState<StoryGroup | null>(typeof window !== "undefined" && window.location.search.includes("open=1") ? groups[0] ?? null : null);
+  const [open, setOpen] = useState<StoryGroup | null>(String((globalThis as { location?: { search?: string } }).location?.search ?? "").includes("open=1") ? groups[0] ?? null : null);
   const [seen, setSeen] = useState<Set<string>>(new Set([seenKeyOf(groups[1]!)]));
   return (
     <Screen>
