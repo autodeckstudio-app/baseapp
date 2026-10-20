@@ -4,6 +4,7 @@ if (root) {
   const cards = [...root.querySelectorAll('[data-store-category]')];
   const empty = root.querySelector('.collection-empty');
   const title = root.querySelector('[data-empty-title]');
+  const heading = root.querySelector('[data-collection-title]');
   const copy = root.querySelector('[data-empty-copy]');
   function select(department) {
     filters.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.storeFilter === department)));
@@ -11,6 +12,7 @@ if (root) {
     const count = cards.filter(card => !card.hidden).length;
     empty.hidden = count > 0;
     title.textContent = department === 'All' ? 'Collection in the making.' : `${department}, in the making.`;
+    if (heading) heading.textContent = department === 'All' ? 'All products' : department;
     copy.textContent = 'Products and details will appear here when they are ready. Nothing is available to order yet.';
   }
   empty.setAttribute('role', 'status');

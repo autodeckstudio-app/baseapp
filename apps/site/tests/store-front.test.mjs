@@ -16,3 +16,9 @@ test("no dummy controls, no prices, no products on the store", () => {
 test("store says plainly it is not taking orders", () => {
   assert.match(read("src/pages/shop.astro"), /Not taking orders yet/);
 });
+test("selecting a department retitles the collection and keeps the empty state truthful", () => {
+  const js = read("src/scripts/store.js");
+  assert.match(js, /data-collection-title/);
+  assert.match(js, /department === 'All' \? 'All products' : department/);
+  assert.doesNotMatch(read("src/pages/shop.astro"), /Browse <Arrow/);
+});
