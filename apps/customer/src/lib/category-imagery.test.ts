@@ -12,7 +12,7 @@ describe("approved category photographs", () => {
   });
   it("each category uses its own photo, and tinting and inspection are not given a photo of another service", () => {
     const s = readFileSync(`${root}/src/lib/imagery.ts`, "utf8");
-    for (const [cat, img] of [["washing", "catWash"], ["ceramic", "catCeramic"], ["coating", "catCeramic"], ["ppf", "catPpf"], ["garage", "catGarage"], ["modifications", "catMods"]]) expect(s).toContain(`${cat}: ${img},`);
+    for (const [cat, img] of [["washing", "catWash"], ["ceramic", "catCeramic"], ["coating", "genCoating"], ["ppf", "catPpf"], ["garage", "catGarage"], ["modifications", "catMods"]]) expect(s).toContain(`${cat}: ${img},`);
     expect(s).toContain("tinting: serviceTinting,");
     expect(s).toContain("inspection: serviceInspection,");
     expect(s).toContain('if (key === "complete") return detailingImage;');
