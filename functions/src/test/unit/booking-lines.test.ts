@@ -11,7 +11,7 @@ const tax0 = { taxRatePercent: 0, taxDescription: "No tax" };
 describe("booking lines", () => {
   const main = svc("wash", 900, 60);
   it("sums price and minutes, tax stays 0", () => {
-    const bd = calculatePrice({ basePrice: main.basePrice, vehicleCategory: "sedan", vehicleCategoryPricing: [], ...tax0 });
+    const bd = calculatePrice({ serviceCategory: "ppf", basePrice: main.basePrice, vehicleCategory: "sedan", vehicleCategoryPricing: [], ...tax0 });
     const lines = priceExtras([svc("polish", 1500, 45), svc("vac", 300, 15)], { vehicleCategory: "sedan", tax: tax0 });
     const out = addExtrasToBreakdown(bd, lines);
     expect(out.subtotal).toBe(270000);
@@ -20,19 +20,22 @@ describe("booking lines", () => {
     expect(out.addOns.map((a) => a.name)).toEqual(["polish", "vac"]);
     expect(totalMinutes(60, lines)).toBe(120);
   });
-  it("applies size pricing per extra", () => {
-    const e = svc("polish", 1500, 45, { vehicleCategoryPricing: [{ vehicleCategory: "suv", additionalPricePaise: 50000 }] as never });
+  it("applies size pricing per extra only for PPF", () => {
+    const rows = [{ vehicleCategory: "suv", additionalPricePaise: 50000 }] as never;
+    const e = svc("polish", 1500, 45, { category: "ppf" as never, vehicleCategoryPricing: rows });
     expect(priceExtras([e], { vehicleCategory: "suv", tax: tax0 })[0]!.price).toBe(200000);
+    const flat = svc("polish", 1500, 45, { category: "washing" as never, vehicleCategoryPricing: rows });
+    expect(priceExtras([flat], { vehicleCategory: "suv", tax: tax0 })[0]!.price).toBe(150000);
   });
   it("a wash credit covers only the main service", () => {
-    const bd = applyMembershipBenefit(calculatePrice({ basePrice: main.basePrice, vehicleCategory: "sedan", vehicleCategoryPricing: [], ...tax0 }), { discountPercent: 0, consumeWash: true });
+    const bd = applyMembershipBenefit(calculatePrice({ serviceCategory: "ppf", basePrice: main.basePrice, vehicleCategory: "sedan", vehicleCategoryPricing: [], ...tax0 }), { discountPercent: 0, consumeWash: true });
     const out = addExtrasToBreakdown(bd, priceExtras([svc("polish", 1500, 45)], { vehicleCategory: "sedan", tax: tax0 }));
     expect(out.membershipDiscount).toBe(90000);
     expect(out.total).toBe(150000);
   });
   it("recomputes tax on the unpaid part when tax is on", () => {
     const t = { taxRatePercent: 18, taxDescription: "GST 18%" };
-    const bd = calculatePrice({ basePrice: 100000, vehicleCategory: "sedan", vehicleCategoryPricing: [], ...t });
+    const bd = calculatePrice({ serviceCategory: "ppf", basePrice: 100000, vehicleCategory: "sedan", vehicleCategoryPricing: [], ...t });
     const out = addExtrasToBreakdown(bd, priceExtras([svc("x", 1000, 10)], { vehicleCategory: "sedan", tax: t }));
     expect(out.tax).toBe(36000);
     expect(out.total).toBe(236000);

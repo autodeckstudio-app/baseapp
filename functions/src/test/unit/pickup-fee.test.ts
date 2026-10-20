@@ -5,7 +5,7 @@ import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
 import { calculatePrice, applyMembershipBenefit } from "../../lib/pricing.js";
 import { buildInvoice } from "../../lib/invoice-builder.js";
 
-const base = (rate: number): PriceBreakdown => calculatePrice({ basePrice: 50000, vehicleCategory: "suv", vehicleCategoryPricing: [], taxRatePercent: rate, taxDescription: rate ? `GST ${rate}%` : "No GST" });
+const base = (rate: number): PriceBreakdown => calculatePrice({ serviceCategory: "ppf", basePrice: 50000, vehicleCategory: "suv", vehicleCategoryPricing: [], taxRatePercent: rate, taxDescription: rate ? `GST ${rate}%` : "No GST" });
 
 describe("pickup fee legs", () => {
   it("per leg from the stored fee", () => {

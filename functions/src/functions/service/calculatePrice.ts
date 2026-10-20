@@ -41,6 +41,7 @@ export const calculateServicePrice = onCall({ region: "asia-south1" }, async (re
 
   const breakdown = calculatePrice({
     basePrice: service.basePrice,
+    serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
     currency: service.currency,

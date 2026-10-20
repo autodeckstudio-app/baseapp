@@ -3,7 +3,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import type { Booking, StudioConfig } from "@autodeck/core";
+import type { Booking, StudioConfig, ServiceCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -34,10 +34,12 @@ export const setBookingQuote = onCall({ region: "asia-south1" }, async (request)
     const cfgSnap = await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(b.studioId));
     const cfg = cfgSnap.data() as StudioConfig | undefined;
     const serviceSnap = await tx.get(db.collection(COLLECTIONS.services()).doc(b.serviceId));
-    const pricing = (serviceSnap.data() as { vehicleCategoryPricing?: never[] } | undefined)?.vehicleCategoryPricing ?? [];
+    const svcData = serviceSnap.data() as { vehicleCategoryPricing?: never[]; category?: ServiceCategory } | undefined;
+    const pricing = svcData?.vehicleCategoryPricing ?? [];
     if (b.status === "CANCELLED" || b.status === "COMPLETED" || b.status === "EXPIRED") throw new HttpsError("failed-precondition", `Cannot quote a ${b.status.toLowerCase()} booking.`);
     const quoted = calculatePrice({
       basePrice: data.basePricePaise,
+      serviceCategory: svcData?.category ?? "other",
       vehicleCategory: b.vehicleCategory,
       vehicleCategoryPricing: pricing,
       ...taxFor(cfg),

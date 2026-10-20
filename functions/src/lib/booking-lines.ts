@@ -42,7 +42,7 @@ export function extrasProblem(primary: Service, extras: Service[], opts: { gift:
 /** One line per extra service, priced for the car's size with the same rule as the main service. */
 export function priceExtras(extras: Service[], p: { vehicleCategory: VehicleCategory; tax: Pick<CalculatePriceInput, "taxRatePercent" | "taxDescription">; currency?: string }): BookingLine[] {
   return extras.map((e) => {
-    const b = calculatePrice({ basePrice: e.basePrice, vehicleCategory: p.vehicleCategory, vehicleCategoryPricing: e.vehicleCategoryPricing, ...p.tax, ...(p.currency ? { currency: p.currency } : {}) });
+    const b = calculatePrice({ basePrice: e.basePrice, serviceCategory: e.category, vehicleCategory: p.vehicleCategory, vehicleCategoryPricing: e.vehicleCategoryPricing, ...p.tax, ...(p.currency ? { currency: p.currency } : {}) });
     return { serviceId: e.id, name: e.name, price: b.subtotal, durationMinutes: e.estimatedDurationMinutes };
   });
 }

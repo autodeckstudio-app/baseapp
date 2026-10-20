@@ -2,14 +2,14 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
 import { rupees } from "../ui/kit";
 import { primeVisuals } from "./imagery";
-import { MENU_SEED, sizePricingFor } from "@autodeck/core";
+import { MENU_SEED, sizePricingForCategory } from "@autodeck/core";
 import { applyBrandWarranty } from "./warranty-labels";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 // Dev-only: ?mock=1 on web renders the real screens from the seeded menu (no Firebase session needed).
 const devMock = (): Service[] | null => {
   if (!__DEV__ || !/mock=1/.test((globalThis as { location?: { search?: string } }).location?.search ?? "")) return null;
-  return MENU_SEED.map((m) => ({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingFor(m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service);
+  return MENU_SEED.map((m) => ({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingForCategory(m.category, m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service);
 };
 
 const KEY = "autodeck.catalogue.v1";

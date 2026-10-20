@@ -13,7 +13,7 @@ const SECRET = "whsec_test";
 const provider = new RazorpayProvider("rzp_test_x", "secret", SECRET);
 const sign = (body: string) => createHmac("sha256", SECRET).update(body).digest("hex");
 
-const pb = calculatePrice({ basePrice: 500000, vehicleCategory: "hatchback", vehicleCategoryPricing: [] });
+const pb = calculatePrice({ serviceCategory: "ppf", basePrice: 500000, vehicleCategory: "hatchback", vehicleCategoryPricing: [] });
 const AMOUNT = pb.total;
 
 function seed(over: Record<string, unknown> = {}) {

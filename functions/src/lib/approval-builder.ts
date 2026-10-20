@@ -22,6 +22,7 @@ export function buildApproval(params: BuildApprovalParams): ApprovalRequest {
 
   const breakdown = calculatePrice({
     basePrice: service.basePrice,
+    serviceCategory: service.category,
     vehicleCategory: job.priceBreakdown.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
     taxRatePercent: job.priceBreakdown.taxRatePercent,

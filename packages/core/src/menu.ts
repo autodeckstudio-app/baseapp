@@ -71,6 +71,17 @@ export function sizeTierOf(vehicle: VehicleCategory | null | undefined): SizeTie
   return SIZE_TIERS.find((t) => vehicle && t.vehicles.includes(vehicle))?.key ?? "hatch";
 }
 
+/** Only PPF is priced by car size (panel area). Washing, coating, ceramic, garage, modifications and pickup are one flat price for every car. */
+export const SIZE_PRICED_CATEGORIES: ServiceCategory[] = ["ppf"];
+export function isSizePriced(category: ServiceCategory): boolean {
+  return SIZE_PRICED_CATEGORIES.includes(category);
+}
+
+/** Size surcharge table for a service: PPF follows the size tiers, every other category is empty (flat price). */
+export function sizePricingForCategory(category: ServiceCategory, basePaise: number) {
+  return isSizePriced(category) ? sizePricingFor(basePaise) : [];
+}
+
 /** Paise surcharge per vehicle category for a hatchback base price, per the size tiers above. */
 export function sizePricingFor(basePaise: number) {
   return (["hatchback", "sedan", "suv", "luxury", "commercial", "van"] as VehicleCategory[]).map((v) => {
@@ -94,7 +105,7 @@ export function menuPriceText(
   rupees: (paise: number) => string,
 ): { text: string; consult: boolean; note: string | null } {
   if (s.priceOnRequest === true) return { text: "Consult", consult: true, note: null };
-  const extra = vehicle ? (s.vehicleCategoryPricing?.find((p) => p.vehicleCategory === vehicle)?.additionalPricePaise ?? 0) : 0;
+  const extra = vehicle && isSizePriced(s.category) ? (s.vehicleCategoryPricing?.find((p) => p.vehicleCategory === vehicle)?.additionalPricePaise ?? 0) : 0;
   const amount = rupees(s.basePrice + extra);
   const from = s.priceFrom === true || !vehicle;
   return { text: from ? `From ${amount}` : amount, consult: false, note: needsInspectionNote(s.category) ? PAINT_INSPECTION_NOTE : null };

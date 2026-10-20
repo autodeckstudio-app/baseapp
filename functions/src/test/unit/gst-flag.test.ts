@@ -12,8 +12,8 @@ describe("GST switch", () => {
   });
   it("Foam wash on an SUV is 1,125 with no tax, from the studio config path too", () => {
     const pricing = [{ vehicleCategory: "suv" as const, additionalPricePaise: 22500, additionalMinutes: 0 }];
-    const viaConfig = calculatePrice({ basePrice: 90000, vehicleCategory: "suv", vehicleCategoryPricing: pricing, ...taxFor({ taxRatePercent: 18, taxDescription: "GST 18%" }) });
-    const viaDefault = calculatePrice({ basePrice: 90000, vehicleCategory: "suv", vehicleCategoryPricing: pricing, ...taxFor(null) });
+    const viaConfig = calculatePrice({ serviceCategory: "ppf", basePrice: 90000, vehicleCategory: "suv", vehicleCategoryPricing: pricing, ...taxFor({ taxRatePercent: 18, taxDescription: "GST 18%" }) });
+    const viaDefault = calculatePrice({ serviceCategory: "ppf", basePrice: 90000, vehicleCategory: "suv", vehicleCategoryPricing: pricing, ...taxFor(null) });
     for (const b of [viaConfig, viaDefault]) { expect(b.tax).toBe(0); expect(b.total).toBe(112500); expect(b.total).toBe(b.subtotal); }
   });
 });

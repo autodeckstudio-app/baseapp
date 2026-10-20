@@ -69,7 +69,7 @@ describe("assertValidMinorUnits", () => {
 
 describe("calculatePrice", () => {
   it("returns correct total for hatchback at base price", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000, // ₹5000.00
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: CATEGORY_PRICING,
@@ -85,7 +85,7 @@ describe("calculatePrice", () => {
   });
 
   it("applies SUV category adjustment to price", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000,
       vehicleCategory: "suv",
       vehicleCategoryPricing: CATEGORY_PRICING,
@@ -97,7 +97,7 @@ describe("calculatePrice", () => {
   });
 
   it("applies luxury category adjustment", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000,
       vehicleCategory: "luxury",
       vehicleCategoryPricing: CATEGORY_PRICING,
@@ -108,7 +108,7 @@ describe("calculatePrice", () => {
   });
 
   it("uses zero adjustment for categories not in pricing list", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 300000,
       vehicleCategory: "sedan",
       vehicleCategoryPricing: NO_CATEGORY_PRICING, // empty — no overrides
@@ -118,7 +118,7 @@ describe("calculatePrice", () => {
   });
 
   it("returns zero total for free service", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 0,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -130,7 +130,7 @@ describe("calculatePrice", () => {
   });
 
   it("handles van category", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 200000,
       vehicleCategory: "van",
       vehicleCategoryPricing: CATEGORY_PRICING,
@@ -140,7 +140,7 @@ describe("calculatePrice", () => {
   });
 
   it("returns empty add-ons array in V1", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -149,7 +149,7 @@ describe("calculatePrice", () => {
   });
 
   it("returns null membership discount in V1", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -159,7 +159,7 @@ describe("calculatePrice", () => {
   });
 
   it("returns zero pickup/drop fees in V1", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -169,7 +169,7 @@ describe("calculatePrice", () => {
   });
 
   it("uses custom tax rate when provided", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -184,7 +184,7 @@ describe("calculatePrice", () => {
 
   it("rejects negative base price", () => {
     expect(() =>
-      calculatePrice({
+      calculatePrice({ serviceCategory: "ppf",
         basePrice: -1,
         vehicleCategory: "hatchback",
         vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -194,7 +194,7 @@ describe("calculatePrice", () => {
 
   it("rejects floating-point base price", () => {
     expect(() =>
-      calculatePrice({
+      calculatePrice({ serviceCategory: "ppf",
         basePrice: 100.5,
         vehicleCategory: "hatchback",
         vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -203,7 +203,7 @@ describe("calculatePrice", () => {
   });
 
   it("produces only integers in the result", () => {
-    const result = calculatePrice({
+    const result = calculatePrice({ serviceCategory: "ppf",
       basePrice: 333333,
       vehicleCategory: "sedan",
       vehicleCategoryPricing: CATEGORY_PRICING,
@@ -221,18 +221,18 @@ describe("calculatePrice", () => {
       vehicleCategory: "suv" as const,
       vehicleCategoryPricing: CATEGORY_PRICING,
     };
-    const r1 = calculatePrice(input);
-    const r2 = calculatePrice(input);
+    const r1 = calculatePrice({ serviceCategory: "ppf", ...input });
+    const r2 = calculatePrice({ serviceCategory: "ppf", ...input });
     expect(r1).toEqual(r2);
   });
 
   it("sedan pricing is independent of suv pricing (no cross-category contamination)", () => {
-    const sedan = calculatePrice({
+    const sedan = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000,
       vehicleCategory: "sedan",
       vehicleCategoryPricing: CATEGORY_PRICING,
     });
-    const suv = calculatePrice({
+    const suv = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000,
       vehicleCategory: "suv",
       vehicleCategoryPricing: CATEGORY_PRICING,
@@ -252,11 +252,11 @@ describe("historical price snapshot immutability", () => {
       vehicleCategory: "hatchback" as const,
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
     };
-    const snapshot = calculatePrice(originalInput);
+    const snapshot = calculatePrice({ serviceCategory: "ppf", ...originalInput });
 
     // Admin changes basePrice to 600000 — existing snapshot must not change
     const newInput = { ...originalInput, basePrice: 600000 };
-    const newQuote = calculatePrice(newInput);
+    const newQuote = calculatePrice({ serviceCategory: "ppf", ...newInput });
 
     // Snapshot values are frozen at point of calculation
     expect(snapshot.total).toBe(590000); // original price
@@ -266,7 +266,7 @@ describe("historical price snapshot immutability", () => {
 });
 
 describe("applyMembershipBenefit", () => {
-  const base = calculatePrice({
+  const base = calculatePrice({ serviceCategory: "ppf",
     basePrice: 500000,
     vehicleCategory: "hatchback",
     vehicleCategoryPricing: NO_CATEGORY_PRICING,

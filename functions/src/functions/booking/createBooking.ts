@@ -143,6 +143,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
   // Compute server-authoritative price
   const breakdown = calculatePrice({
     basePrice: service.basePrice,
+    serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
     ...taxFor(config),

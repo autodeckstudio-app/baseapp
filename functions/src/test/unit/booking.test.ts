@@ -66,7 +66,7 @@ describe("BOOKING_STATUS_TRANSITIONS", () => {
 
 describe("Price computation for bookings", () => {
   it("server price is integer paise — never a float", () => {
-    const breakdown = calculatePrice({
+    const breakdown = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100001,
       vehicleCategory: "suv",
       vehicleCategoryPricing: [
@@ -78,7 +78,7 @@ describe("Price computation for bookings", () => {
   });
 
   it("snapshotting: changing base price after snapshot does not affect original total", () => {
-    const breakdown1 = calculatePrice({
+    const breakdown1 = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: [],
@@ -86,7 +86,7 @@ describe("Price computation for bookings", () => {
     const savedTotal = breakdown1.total;
 
     // Simulate price change on the service
-    const breakdown2 = calculatePrice({
+    const breakdown2 = calculatePrice({ serviceCategory: "ppf",
       basePrice: 200000, // price doubled
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: [],
@@ -98,7 +98,7 @@ describe("Price computation for bookings", () => {
   });
 
   it("GST is computed on subtotal (base + vehicle adjustment)", () => {
-    const breakdown = calculatePrice({
+    const breakdown = calculatePrice({ serviceCategory: "ppf",
       basePrice: 100000,
       vehicleCategory: "suv",
       vehicleCategoryPricing: [

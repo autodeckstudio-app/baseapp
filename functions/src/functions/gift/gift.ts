@@ -35,6 +35,7 @@ export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: 
   const config = cfg.empty ? null : (cfg.docs[0]!.data() as StudioConfig);
   return calculatePrice({
     basePrice: service.basePrice,
+    serviceCategory: service.category,
     vehicleCategory: GIFT_PRICE_CATEGORY,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
     ...(config ? { taxRatePercent: config.taxRatePercent, taxDescription: config.taxDescription, currency: config.currency } : {}),

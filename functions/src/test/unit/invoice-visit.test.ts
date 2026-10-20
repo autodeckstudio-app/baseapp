@@ -5,7 +5,7 @@ import { prepareJobInvoice, invoiceIdForJob } from "../../lib/job-invoice.js";
 import { displayLineItemName } from "@autodeck/core";
 import { fakeFirestore } from "./fake-firestore.js";
 
-const pb = calculatePrice({ basePrice: 500000, vehicleCategory: "hatchback", vehicleCategoryPricing: [] });
+const pb = calculatePrice({ serviceCategory: "ppf", basePrice: 500000, vehicleCategory: "hatchback", vehicleCategoryPricing: [] });
 
 function approval(id: string, name: string, unitPrice: number, quantity = 1, status = "approved") {
   return {

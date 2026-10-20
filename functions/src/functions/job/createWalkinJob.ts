@@ -76,6 +76,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
   // Resolved once, at creation, from (service, vehicleCategory); immutable thereafter.
   const priceBreakdown = calculatePrice({
     basePrice: service.basePrice,
+    serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
     ...taxFor(config),

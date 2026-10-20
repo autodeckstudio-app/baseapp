@@ -13,7 +13,7 @@
  */
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { FIRST_TENANT_ID, MENU_SEED, menuGroupOf, sizePricingFor, type Service } from "@autodeck/core";
+import { FIRST_TENANT_ID, MENU_SEED, menuGroupOf, sizePricingForCategory, type Service } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
 if (!getApps().length) initializeApp();
@@ -53,7 +53,7 @@ async function main() {
       id: m.id, tenantId, name: m.name, category: m.category, brand: m.brand, description: m.description,
       basePrice: base, currency: "INR", estimatedDurationMinutes: m.minutes,
       warrantyLabel: m.warrantyLabel ?? null, warrantyDurationValue: m.warrantyYears ?? null, warrantyDurationUnit: m.warrantyYears ? "years" : null,
-      vehicleCategoryPricing: m.consult || m.group === "pickup" || m.group === "garage" ? [] : sizePricingFor(base),
+      vehicleCategoryPricing: m.consult || m.group === "pickup" || m.group === "garage" ? [] : sizePricingForCategory(m.category, base),
       requiredBayType: m.bay, membershipWashEligible: m.group === "wash", priceOnRequest: m.consult === true,
       coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true,
       ...(m.placeholder ? { internalNotes: "Starting price for the owner to tune. No study anchor for this item." } : {}),

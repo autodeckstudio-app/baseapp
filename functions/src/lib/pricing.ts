@@ -1,16 +1,19 @@
 // Pure pricing calculation. No Firebase imports — fully unit-testable.
 // All monetary values are in paise (INR * 100). No floating-point arithmetic for money.
-import type { VehicleCategoryPricing, VehicleCategory, PriceBreakdown } from "@autodeck/core";
+import type { VehicleCategoryPricing, VehicleCategory, PriceBreakdown, ServiceCategory } from "@autodeck/core";
 import {
   DEFAULT_CURRENCY,
   DEFAULT_TAX_RATE_PERCENT,
   GST_ENABLED,
+  isSizePriced,
   DEFAULT_TAX_DESCRIPTION,
 } from "@autodeck/core";
 
 export interface CalculatePriceInput {
   basePrice: number; // paise
   vehicleCategory: VehicleCategory;
+  /** Only PPF is priced by car size; every other category is one flat price. */
+  serviceCategory: ServiceCategory;
   vehicleCategoryPricing: VehicleCategoryPricing[];
   taxRatePercent?: number; // defaults to DEFAULT_TAX_RATE_PERCENT (18)
   taxDescription?: string; // defaults to DEFAULT_TAX_DESCRIPTION ("GST 18%")
@@ -24,7 +27,7 @@ export function calculatePrice(input: CalculatePriceInput): PriceBreakdown {
   const taxDescription = input.taxDescription ?? DEFAULT_TAX_DESCRIPTION;
   const currency = input.currency ?? DEFAULT_CURRENCY;
 
-  const categoryRule = input.vehicleCategoryPricing.find(
+  const categoryRule = !isSizePriced(input.serviceCategory) ? undefined : input.vehicleCategoryPricing.find(
     (r) => r.vehicleCategory === input.vehicleCategory,
   );
   const scopeAdjustment = categoryRule?.additionalPricePaise ?? 0;

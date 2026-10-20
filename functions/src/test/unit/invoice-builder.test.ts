@@ -27,7 +27,7 @@ function baseParams(priceBreakdown: PriceBreakdown): BuildInvoiceParams {
 
 describe("buildInvoice — reconciliation (Phase 5B P1-9)", () => {
   it("normal paid job (no membership benefit): discount is 0, subtotal - discount + tax = total", () => {
-    const pb = calculatePrice({
+    const pb = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -43,7 +43,7 @@ describe("buildInvoice — reconciliation (Phase 5B P1-9)", () => {
   });
 
   it("partially discounted membership job: gross subtotal preserved, discount explicit, tax computed on the post-discount amount, reconciles", () => {
-    const base = calculatePrice({
+    const base = calculatePrice({ serviceCategory: "ppf",
       basePrice: 500000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -69,7 +69,7 @@ describe("buildInvoice — reconciliation (Phase 5B P1-9)", () => {
   });
 
   it("fully covered membership job (wash credit): discount equals the full gross subtotal, tax and total are 0, but subtotal is still preserved and reconciles", () => {
-    const base = calculatePrice({
+    const base = calculatePrice({ serviceCategory: "ppf",
       basePrice: 400000,
       vehicleCategory: "hatchback",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
@@ -89,7 +89,7 @@ describe("buildInvoice — reconciliation (Phase 5B P1-9)", () => {
   });
 
   it("tax reconciliation: tax is always computed on the post-discount taxable amount, never on the gross subtotal", () => {
-    const base = calculatePrice({
+    const base = calculatePrice({ serviceCategory: "ppf",
       basePrice: 1000000,
       vehicleCategory: "sedan",
       vehicleCategoryPricing: NO_CATEGORY_PRICING,
