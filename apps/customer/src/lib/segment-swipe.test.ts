@@ -26,4 +26,12 @@ describe("swipeable booking tabs", () => {
     expect(src).toContain("setSegPick");
     expect(src).toMatch(/<TabPills[^>]*onChange=\{setSegPick\}/);
   });
+  it("the swipe hook is called before the loading early return (hooks order crash seen live on 20 Oct)", () => {
+    const src = readFileSync(join(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
+    const hookAt = src.indexOf("useSegmentSwipe(");
+    const earlyAt = src.indexOf("return <Loading");
+    expect(hookAt).toBeGreaterThan(0);
+    expect(earlyAt).toBeGreaterThan(0);
+    expect(hookAt).toBeLessThan(earlyAt);
+  });
 });

@@ -2,7 +2,7 @@ import { metrics } from "../../../lib/metrics";
 import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -58,6 +58,9 @@ export default function BookingsScreen() {
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [segPick, setSegPick] = useState<"active" | "upcoming" | "past" | null>(null);
+  const segRef = useRef<"active" | "upcoming" | "past">("upcoming");
+  // Hooks must run before the loading early return below, or the screen crashes when data arrives.
+  const swipe = useSegmentSwipe(["active", "upcoming", "past"] as const, () => segRef.current, setSegPick);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -129,7 +132,7 @@ export default function BookingsScreen() {
   );
 
   const seg = segPick ?? (liveJob || approvals.some((a) => a.status === "pending") ? "active" : "upcoming");
-  const swipe = useSegmentSwipe(["active", "upcoming", "past"] as const, seg, setSegPick);
+  segRef.current = seg;
   const stage = liveJob ? jobStage(liveJob.status) : null;
   const liveBooking = liveJob ? all.find((b) => b.id === (liveJob.bookingId ?? liveJob.id)) : undefined;
   const readyText = liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
