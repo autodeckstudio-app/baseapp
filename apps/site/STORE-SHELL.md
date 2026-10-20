@@ -9,3 +9,13 @@ Quick view uses native dialog: keyboard focus trap, Escape to close, labelled he
 
 ## QA
 Production build, empty-data/source guards, real local pixels at 320, 390, 820 and 1280, reduced motion and no overflow checks. Filter pressed state and matching empty-state copy checked at every width. No photos or product claims invented to fill the opening. Dynamic interaction is subtle pointer-follow lighting and hover states; reduced motion disables that pointer light. The full product dialog visual is not verified with real product data because none is supplied yet. No live deployment.
+
+## Candidate list and scope record (data only, nothing here is approved for sale)
+
+Source: agent-authored menu "AutoDeck-first-shop-menu-18-Oct-2026.pdf", sent in the owner chat on 18 Oct 2026 at 1:13 AM (message phonemsg-01M55P8VZC3YVT0MZRS0N9Z7YV). It was never picked from. The owner's "we can try the flip" at 1:14 AM replied to a different message.
+
+Candidates (public retail references checked 18 Oct 2026, not AutoDeck prices, nothing ordered): 01 car perfume, Involve ONE Musk; 02 personal perfume, Bella Vita CEO Man 100 ml; 03 Studio Tee reference; 04 Shield Cap reference; 05 hoodie later; 06 audio upgrade, Sony XS-FB162E; 07 ambient interior, Genfrid K4 Ultra; 08 reverse camera, Woodman. Mod prices are hardware only.
+
+Owner decisions: range is perfumes, clothing and car accessories or mods (covers, key chains); own-brand made or selected; no logo merchandise (18 Oct 6:02 PM, which removes 03 and 04); concept is Editions plus Edit; the owner said he will share the product list later.
+
+Open: actual products and suppliers, made vs selected, car or personal perfume, photos, prices, online sale vs catalogue, and sourcing/authenticity for any third-party item. The site shows no prices.
