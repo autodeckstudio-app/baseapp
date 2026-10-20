@@ -34,4 +34,23 @@ describe("swipeable booking tabs", () => {
     expect(earlyAt).toBeGreaterThan(0);
     expect(hookAt).toBeLessThan(earlyAt);
   });
+  it("every tab can be swiped to its neighbours, whatever the list holds", () => {
+    const next: Record<string, string | null> = { active: "upcoming", upcoming: "past", past: null };
+    const prev: Record<string, string | null> = { active: null, upcoming: "active", past: "upcoming" };
+    for (const k of keys) {
+      expect(swipeTarget(keys, k, -140, 4)).toBe(next[k]);
+      expect(swipeTarget(keys, k, 140, 4)).toBe(prev[k]);
+    }
+  });
+  it("the swipe area fills the screen height so an empty tab is swipeable too (Meet, 20 Oct)", () => {
+    const src = readFileSync(join(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
+    expect(src).toMatch(/\{\.\.\.swipe\.handlers\} style=\{\[\{[^}]*minHeight: Math\.max\(winH/);
+    expect(src.indexOf("useWindowDimensions()")).toBeLessThan(src.indexOf("return <Loading"));
+    // the wrapper encloses all three panes and the empty notices
+    const open = src.indexOf("{...swipe.handlers}");
+    for (const marker of ["No past visits", "tab === \"active\"|seg === \"active\"", "seg === \"upcoming\""]) {
+      const m = src.search(new RegExp(marker));
+      expect(m, marker).toBeGreaterThan(open);
+    }
+  });
 });

@@ -3,7 +3,7 @@ import { bookingSections } from "../../../lib/booking-sections";
 import { useExperienceTheme } from "@autodeck/ui/native";
 // Bookings: what's coming first, then history.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Linking, Pressable, View } from "react-native";
+import { Linking, Pressable, View, useWindowDimensions } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DAYS, comboCards, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
@@ -60,6 +60,7 @@ export default function BookingsScreen() {
   const [segPick, setSegPick] = useState<"active" | "upcoming" | "past" | null>(null);
   const segRef = useRef<"active" | "upcoming" | "past">("upcoming");
   // Hooks must run before the loading early return below, or the screen crashes when data arrives.
+  const { height: winH } = useWindowDimensions();
   const swipe = useSegmentSwipe(["active", "upcoming", "past"] as const, () => segRef.current, setSegPick);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -169,7 +170,7 @@ export default function BookingsScreen() {
 
   return (
     <Screen appBar="Bookings" header={<PageHeader title={liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={[upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
-      <View {...swipe.handlers} style={[{ gap: 20 }, swipe.style]}>
+      <View {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 220, 480) }, swipe.style]}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
 
       <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
