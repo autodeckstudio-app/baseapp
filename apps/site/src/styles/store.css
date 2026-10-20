@@ -22,3 +22,26 @@
 .promise-grid p{font-size:13px;color:var(--muted);line-height:1.7}
 @media(max-width:820px){.store-departments{grid-template-columns:1fr}.store-departments>a+a{border-left:0;border-top:1px solid var(--line);padding-left:0}.promise-grid{grid-template-columns:1fr}.store-bar nav{margin-left:0;width:100%}.store-promise{padding-block:40px 56px}}
 @media(max-width:560px){.store-filters{flex-wrap:wrap;border-radius:24px}.store-filters button{flex:1 1 auto;white-space:nowrap}}
+
+/* storefront v2: compact head, departments first */
+.store-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-block:44px 28px;flex-wrap:wrap}
+.store-head h1{font-size:clamp(32px,4vw,48px);margin:10px 0 8px}
+.store-head .intro{font-size:15px;color:var(--muted);margin:0}
+.store-status{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:9999px;padding:10px 16px;margin:0}
+.store-status i{width:6px;height:6px;border-radius:9999px;background:var(--orange)}
+.store-departments{display:grid!important;grid-template-columns:repeat(3,1fr);gap:16px;padding-block:0 24px}
+.store-departments>a.dept{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;gap:56px;min-height:260px;padding:26px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(160deg,#1c1e22,#111214);border-left:1px solid var(--line)}
+.store-departments>a.dept:hover{border-color:#ffffff30}
+.dept-mark{position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:9999px;border:1px solid #ffffff0d}
+.dept-1 .dept-mark{background:radial-gradient(circle,#ec86381c,transparent 70%)}
+.store-departments .dept h2{font-size:clamp(24px,2.4vw,32px);margin:0 0 8px}
+.store-departments .dept p{font-size:13px;color:var(--muted);line-height:1.6;max-width:26ch}
+.dept-go{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--ink)}
+.store-collection{padding-top:32px}
+@media(max-width:820px){.store-head{padding-block:28px 20px}.store-departments{grid-template-columns:1fr}.store-departments>a.dept{min-height:132px;gap:18px;padding:22px}.dept-go{font-size:11px}.store-departments .dept p{max-width:none}}
+.store-departments{border-block:0!important}
+.store-departments>a.dept,.store-departments>a.dept+a.dept{align-items:stretch;padding:26px!important;margin:0}
+.store-departments>a.dept>span.dept-go{margin-left:0;align-self:flex-end}
+.store-departments .dept h2{font-size:clamp(24px,2.4vw,32px)}
+.store-departments .dept p{font-size:13px}
+@media(max-width:820px){.store-departments>a.dept,.store-departments>a.dept+a.dept{padding:22px!important}}

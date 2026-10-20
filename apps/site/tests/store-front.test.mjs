@@ -2,20 +2,17 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = (p) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
-
-test("store has a storefront bar and the three departments Meet named, with no dummy controls", () => {
+test("departments come first as three tiles, ahead of the collection", () => {
   const x = read("src/pages/shop.astro");
-  assert.match(x, /class="store-bar"/);
-  for (const d of ["Scent", "Clothing", "Car accessories"]) assert.match(x, new RegExp(`data-store-filter=\\{d\\}|data-department="${d}"`));
-  assert.match(x, /Car accessories/);
-  // no controls that would do nothing: search, sort, cart, checkout
-  assert.doesNotMatch(x, /type="search"|<select|cart|checkout|Add to bag/i);
+  for (const d of ["Scent", "Clothing", "Car accessories"]) assert.match(x, new RegExp(`data-department="${d}"`));
+  assert.ok(x.indexOf("store-departments") < x.indexOf('id="collection"'));
+  assert.doesNotMatch(x, /edition-statement|store-promise|store-bar|store-filters/);
 });
-test("store shows a price only when a real product supplies one, and ships no products", () => {
+test("no dummy controls, no prices, no products on the store", () => {
   const x = read("src/pages/shop.astro");
-  assert.match(x, /typeof p\.price === 'number'/);
+  assert.doesNotMatch(x, /type="search"|<select|cart|checkout|Add to bag|price/i);
   assert.deepEqual(JSON.parse(read("src/data/shop.json")).products, []);
 });
-test("the department filter pills wrap on phones instead of overflowing", () => {
-  assert.match(read("src/styles/store.css"), /max-width:560px\)\{\.store-filters\{flex-wrap:wrap/);
+test("store says plainly it is not taking orders", () => {
+  assert.match(read("src/pages/shop.astro"), /Not taking orders yet/);
 });
