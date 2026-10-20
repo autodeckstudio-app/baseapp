@@ -1,7 +1,7 @@
 "use client";
 
 import { httpsCallable } from "firebase/functions";
-import type { StoryView } from "@autodeck/core";
+import type { StoryHighlight, StoryView } from "@autodeck/core";
 import { functions } from "./firebase";
 
 export async function listAllStories(): Promise<StoryView[]> {
@@ -10,7 +10,7 @@ export async function listAllStories(): Promise<StoryView[]> {
 }
 
 /** Upload the file with a signed PUT, then publish it as a story. */
-export async function publishStory(input: { studioId: string; file: File; caption?: string; highlightTitle?: string }): Promise<{ id: string }> {
+export async function publishStory(input: { studioId: string; file: File; caption?: string; highlightTitle?: StoryHighlight }): Promise<{ id: string }> {
   const contentType = input.file.type;
   const issue = httpsCallable<{ studioId: string; contentType: string }, { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }>(functions, "issueStoryUploadUrl");
   const { uploadUrl, path, requiredHeaders } = (await issue({ studioId: input.studioId, contentType })).data;
@@ -28,7 +28,12 @@ export async function publishStory(input: { studioId: string; file: File; captio
   ).data;
 }
 
-export async function updateStory(input: { storyId: string; pinned?: boolean; highlightTitle?: string | null; hidden?: boolean }): Promise<void> {
+export async function updateStory(input: { storyId: string; pinned?: boolean; highlightTitle?: StoryHighlight | null; hidden?: boolean }): Promise<void> {
   const fn = httpsCallable<typeof input, { id: string }>(functions, "updateStory");
   await fn(input);
+}
+
+export async function deleteStory(storyId: string): Promise<void> {
+  const fn = httpsCallable<{ storyId: string }, { id: string }>(functions, "deleteStory");
+  await fn({ storyId });
 }

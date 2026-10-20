@@ -91,6 +91,7 @@ export type AuditAction =
   | "gallery.imageDeleted"
   | "story.created"
   | "story.updated"
+  | "story.deleted"
   | "gift.created"
   | "gift.activated"
   | "gift.claimed"

@@ -6,7 +6,7 @@ export const SECTIONS: { group: string; key: string; label: string; icon: string
   { group: "Daily", key: "floor", label: "Floor", icon: "wrench", links: [{ href: "/jobs", label: "Jobs", office: false }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/attendance", label: "Attendance", office: false }] },
   { group: "Daily", key: "people", label: "People", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/vehicles", label: "Cars", office: true }, { href: "/papers", label: "Documents", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
   { group: "Daily", key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Day close", office: true }, { href: "/reports", label: "Reports", office: true }] },
-  { group: "Grow", key: "marketing", label: "Marketing", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }, { href: "/offers", label: "Offers", office: true }, { href: "/gallery", label: "Gallery", office: false }, { href: "/cars", label: "Cars for sale", office: true }] },
+  { group: "Grow", key: "marketing", label: "Marketing", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }, { href: "/offers", label: "Offers", office: true }, { href: "/cars", label: "Cars for sale", office: true }] },
   { group: "Set up", key: "catalogue", label: "Catalogue", icon: "services", links: [{ href: "/services", label: "Pricing", office: true }, { href: "/inventory", label: "Inventory", office: true }] },
   { group: "Set up", key: "admin", label: "Studio and team", icon: "profile", links: [{ href: "/studio", label: "Studio setup", office: true }, { href: "/staff", label: "Team", office: true }, { href: "/audit", label: "Audit log", office: true }] },
 ];
@@ -20,7 +20,7 @@ export const GROUPS = [
 ] as const;
 export const MORE_LINKS = [
   { href: "/papers", label: "Documents" }, { href: "/inventory", label: "Inventory" }, { href: "/services", label: "Services" },
-  { href: "/staff", label: "Team" }, { href: "/studio", label: "Studio" }, { href: "/stories", label: "Stories" }, { href: "/gallery", label: "Gallery" }, { href: "/offers", label: "Offers" },
+  { href: "/staff", label: "Team" }, { href: "/studio", label: "Studio" }, { href: "/stories", label: "Stories" }, { href: "/offers", label: "Offers" },
   { href: "/cars", label: "Cars for sale" }, { href: "/pickups", label: "Pickup and drop" }, { href: "/audit", label: "Audit log" },
 ] as const;
 

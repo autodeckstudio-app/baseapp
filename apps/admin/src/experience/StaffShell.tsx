@@ -90,6 +90,8 @@ export function StaffShell({ pathname, office, role, who, home, onSignOut, child
 
   const [moreOpen, setMoreOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
+  // The menu sheet closes as soon as a page is chosen (the route changes).
+  useEffect(() => { setMoreOpen(false); }, [pathname]);
   useEffect(() => {
     if (!moreOpen) return;
     const previous = document.activeElement as HTMLElement | null;

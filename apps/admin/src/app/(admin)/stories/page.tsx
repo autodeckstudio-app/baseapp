@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import type { StoryView } from "@autodeck/core";
-import { listAllStories, publishStory, updateStory } from "../../../lib/story-service";
+import { deleteStory, listAllStories, publishStory, updateStory } from "../../../lib/story-service";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { StoriesView } from "../../../experience/StoriesView";
 
@@ -41,8 +41,9 @@ export default function StoriesPage() {
       busy={busy}
       error={error}
       message={message}
-      onPublish={(i) => void run(() => publishStory({ studioId, file: i.file, caption: i.caption, highlightTitle: i.highlightTitle }), "Story posted.", "Couldn't post the story.")}
-      onPin={(s, title) => void run(() => updateStory(title ? { storyId: s.id, pinned: true, highlightTitle: title } : { storyId: s.id, pinned: false, highlightTitle: null }), title ? "Pinned to Highlights." : "Unpinned.", "Couldn't update the story.")}
+      onPublish={(i) => void run(() => publishStory({ studioId, file: i.file, caption: i.caption, ...(i.highlightTitle ? { highlightTitle: i.highlightTitle } : {}) }), "Story posted.", "Couldn't post the story.")}
+      onPin={(s, title) => void run(() => updateStory(title ? { storyId: s.id, pinned: true, highlightTitle: title } : { storyId: s.id, pinned: false, highlightTitle: null }), title ? `Moved to ${title}.` : "Removed from highlights.", "Couldn't update the story.")}
+      onDelete={(s) => void run(() => deleteStory(s.id), "Story deleted.", "Couldn't delete the story.")}
       onHide={(s) => void run(() => updateStory({ storyId: s.id, hidden: !s.hidden }), s.hidden ? "Story shown." : "Story hidden.", "Couldn't update the story.")}
     />
   );

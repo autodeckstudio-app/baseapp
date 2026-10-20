@@ -28,6 +28,10 @@ export const updateStory = onCall({ region: "asia-south1" }, async (request) => 
     if (data.hidden !== undefined) patch.hidden = data.hidden;
     if (data.pinned !== undefined) patch.pinned = data.pinned;
     if (data.highlightTitle !== undefined) patch.highlightTitle = data.highlightTitle;
+    // A story sits in one highlight or none: pinning needs a collection, unpinning clears it.
+    if (patch.pinned === true && !(patch.highlightTitle ?? cur.highlightTitle)) throw new HttpsError("invalid-argument", "Pick a highlight for this story.");
+    if (patch.pinned === false) patch.highlightTitle = null;
+    if (patch.highlightTitle && patch.pinned === undefined) patch.pinned = true;
     tx.update(ref, patch);
     writeAuditLog(tx, { action: "story.updated", entityType: "story", entityId: ref.id, user, studioId: cur.studioId, after: { pinned: patch.pinned ?? cur.pinned, hidden: patch.hidden ?? cur.hidden } });
   });

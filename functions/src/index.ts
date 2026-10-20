@@ -148,6 +148,7 @@ export { listGalleryImages } from "./functions/gallery/listGalleryImages.js";
 export { issueStoryUploadUrl } from "./functions/story/issueStoryUploadUrl.js";
 export { createStory } from "./functions/story/createStory.js";
 export { updateStory } from "./functions/story/updateStory.js";
+export { deleteStory } from "./functions/story/deleteStory.js";
 export { listStories } from "./functions/story/listStories.js";
 // Win-back nudge (weekly, plain message)
 export { winbackScheduled } from "./functions/notification/winbackScheduled.js";

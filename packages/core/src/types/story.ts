@@ -4,6 +4,10 @@
  * in Storage and is read through short-lived signed URLs from the listStories
  * callable, so no storage rule change is involved.
  */
+/** The only highlight collections (owner, 20 Oct 12:05 AM). A story sits in one of them, or none. Order here is the order of the circles. */
+export const STORY_HIGHLIGHTS = ["PPF", "Ceramic", "Detailing", "Washing", "Modifications"] as const;
+export type StoryHighlight = (typeof STORY_HIGHLIGHTS)[number];
+
 export interface Story {
   id: string;
   tenantId: string;
