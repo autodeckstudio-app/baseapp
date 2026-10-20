@@ -35,13 +35,6 @@ const settleFeeSchema = z.object({
 
 const CANCELLABLE_JOB = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
 
-export const SAME_DAY_MESSAGE = "Bookings can be cancelled until the day before. For a same-day change, please call the studio.";
-
-/** Customers cancel only bookings that start on a later day (studio timezone is India). */
-export function isCancellableDay(scheduledDate: string, nowMs: number): boolean {
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(nowMs));
-  return scheduledDate > today;
-}
 
 /** The one cancel path: fee, refund through the payment provider, credits back, slot released. Admin and customer share it. */
 export async function runCancel(
@@ -58,8 +51,6 @@ export async function runCancel(
     assertStudio(user, booking.studioId, "Booking");
     if (actor === "customer") {
       if (booking.customerId !== user.uid) throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
-      // Only a booking on a later day can be cancelled by the customer: a same-day cancel leaves the slot empty with no time to refill it.
-      if (!isCancellableDay(booking.scheduledDate, Date.now())) throw new HttpsError("failed-precondition", SAME_DAY_MESSAGE);
     }
     if (booking.status === "CANCELLED") return { success: true, alreadyCancelled: true };
     if (booking.status === "COMPLETED" || booking.status === "EXPIRED") {

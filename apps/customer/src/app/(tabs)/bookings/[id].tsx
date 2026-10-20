@@ -23,7 +23,7 @@ import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "
 import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState, cancelConfirmBody, SAME_DAY_CANCEL_LINE } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -503,7 +503,6 @@ export default function BookingDetailScreen() {
         <Notice title="Booking auto-cancelled" body="Your car was not checked in by studio close (7 pm Sunday, 9 pm other days). This booking is closed. Make a new booking when you are ready." />
       ) : null}
 
-      {cancel.sameDay ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>{SAME_DAY_CANCEL_LINE}</T> : null}
       {lateToCancel ? (
         <>
           <Notice title="Cancelling" body="Work on your car has started, so it cannot be cancelled online. Please call the studio." />

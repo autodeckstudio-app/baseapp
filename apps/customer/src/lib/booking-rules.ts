@@ -35,20 +35,12 @@ export function getRescheduleEligibility(booking: Booking): { eligible: boolean;
 
 /** Whether the customer can cancel online. A cancel inside the free window costs a fee (core cancellation-policy), so it is allowed with the fee shown first.
  *  Once the car is at the studio (ACTIVE) work has started: no online cancel, call the studio. */
-export const SAME_DAY_CANCEL_LINE = "Bookings can be cancelled until the day before. For a same-day change, please call the studio.";
 
-/** True when the booking is today or earlier in India. Same-day slots cannot be cancelled online, so a cancel does not leave a slot nobody can fill. */
-export function isSameDayBooking(booking: Booking, now = Date.now()): boolean {
-  const day = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(ms));
-  return day(new Date(booking.scheduledAt).getTime()) <= day(now);
-}
-
-export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; sameDay: boolean; feePaise: number; line: string } {
+export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; feePaise: number; line: string } {
   const missed = isBookingMissed(booking, now);
-  const sameDay = isSameDayBooking(booking, now);
-  const open = !missed && !sameDay && (booking.status === "CONFIRMED" || booking.status === "PENDING");
+  const open = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
   const terms = cancellationTerms({ category, totalPaise: booking.totalAmount ?? 0, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: now });
-  return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", sameDay: !missed && sameDay && (booking.status === "CONFIRMED" || booking.status === "PENDING"), feePaise: terms.feePaise, line: cancellationLine(category) };
+  return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", feePaise: terms.feePaise, line: cancellationLine(category) };
 }
 
 /** Text for the cancel confirmation: the rule, and the fee if one applies now. */

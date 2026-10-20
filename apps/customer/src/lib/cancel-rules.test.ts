@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { cancelState, cancelConfirmBody } from "./booking-rules";
 import type { Booking } from "@autodeck/core";
@@ -9,7 +10,7 @@ const b = (hoursAhead: number, status = "CONFIRMED", total = 100_000) => ({ stat
 describe("customer cancel rules", () => {
   it("a wash is free early and Rs 100 inside 4 h, and can always be cancelled before the start", () => {
     expect(cancelState(b(30), now, "washing")).toMatchObject({ canCancel: true, feePaise: 0 });
-    expect(cancelState(b(2), now, "washing")).toMatchObject({ canCancel: false, sameDay: true });
+    expect(cancelState(b(2), now, "washing")).toMatchObject({ canCancel: true, feePaise: 10_000 });
   });
   it("a bigger service is free past 24 h and 20% inside", () => {
     expect(cancelState(b(30), now, "ceramic").feePaise).toBe(0);
@@ -18,10 +19,16 @@ describe("customer cancel rules", () => {
   it("once the car is at the studio there is no online cancel", () => {
     expect(cancelState(b(1, "ACTIVE"), now, "washing")).toMatchObject({ canCancel: false, lateToCancel: true });
   });
-  it("a same-day booking cannot be cancelled online and shows the call-the-studio line; the next day can", () => {
-    expect(cancelState(b(5), now, "ceramic")).toMatchObject({ canCancel: false, sameDay: true });
-    expect(cancelState(b(20), now, "ceramic").canCancel).toBe(true);
-    expect(cancelState(b(5, "ACTIVE"), now, "ceramic").sameDay).toBe(false);
+  it("same-day cancel is allowed (owner, 20 Oct 4:35 PM): a wash inside 4 h costs Rs 100 and is shown before confirming; a big service keeps 24 h / 20%", () => {
+    const w = cancelState(b(2), now, "washing");
+    expect(w).toMatchObject({ canCancel: true, feePaise: 10_000 });
+    expect(cancelConfirmBody(w, false)).toContain("Cancelling now costs Rs 100");
+    expect(cancelState(b(5), now, "ceramic")).toMatchObject({ canCancel: true, feePaise: 20_000 });
+    expect(cancelState(b(5), now, "washing")).toMatchObject({ canCancel: true, feePaise: 0 });
+    expect(cancelState(b(5, "ACTIVE"), now, "ceramic")).toMatchObject({ canCancel: false, lateToCancel: true });
+  });
+  it("no day-before block or line is left anywhere in the app", () => {
+    for (const f of ["./booking-rules.ts", "../app/(tabs)/bookings/[id].tsx"]) { const t = readFileSync(new URL(f, import.meta.url).pathname, "utf8"); expect(t).not.toContain("until the day before"); expect(t).not.toContain("SAME_DAY"); }
   });
   it("the confirm text shows the fee and, if paid, the refund timeline, with no em dash", () => {
     const t = cancelConfirmBody({ feePaise: 10000, line: "Line." }, true);
@@ -30,7 +37,6 @@ describe("customer cancel rules", () => {
   });
 });
 
-import { readFileSync } from "node:fs";
 describe("Round 5 booking page", () => {
   const d = readFileSync(new URL("../app/(tabs)/bookings/[id].tsx", import.meta.url).pathname, "utf8");
   it("shows Pending payment with a Pay now retry, an Expired notice, the refund line and a specific error title", () => {

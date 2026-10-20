@@ -31,7 +31,7 @@ describe("cancellation policy", () => {
     expect(src).toContain('runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "charge" }, "customer")');
     expect(src).toContain("RAZORPAY_KEY_SECRET");
     expect(run).toContain("cancellationTerms(");
-    expect(run).toContain("isCancellableDay(booking.scheduledDate");
+    expect(run).not.toContain("isCancellableDay"); expect(run).not.toContain("until the day before");
     expect(run).toContain("getPaymentProvider().initiateRefund");
     expect(run).toContain("refund_${paymentRef.id}");
     expect(run).toContain("The refund did not go through, so the booking is NOT cancelled");
