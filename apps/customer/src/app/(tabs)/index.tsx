@@ -33,6 +33,7 @@ import { getMyBookings } from "../../lib/booking-service";
 import { lastCompletedService } from "../../lib/booking-sections";
 import { getServiceCatalogue} from "../../lib/catalogue-service";
 import { getStories, groupStories, type StoryGroup } from "../../lib/story-service";
+import { seenKeyOf } from "../../lib/story-groups";
 import { StoryCircles } from "../../ui/StoryCircles";
 import { HomeView } from "../../ui/HomeView";
 import { getCarListings } from "../../lib/carsale-service";
@@ -265,7 +266,7 @@ export default function HomeScreen() {
         reminders={reminders}
         live={live}
         rebook={(() => { const b = lastCompletedService(past); const sv = b ? catalogue.find((x) => x.id === b.serviceId) : undefined; return b && sv && !sv.priceOnRequest ? { serviceName: sv.name, onPress: () => router.push(`/(tabs)/book/${sv.id}`) } : null; })()}
-        stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, g.key])); }} /> : null}
+        stories={groups.length > 0 ? <StoryCircles groups={groups} seen={seen} onOpen={(g) => { setOpen(g); setSeen(new Set([...seen, seenKeyOf(g)])); }} /> : null}
         banner={<>{home.error ? <Notice title="Some details are unavailable" body={home.error} action={<Button kind="quiet" label="Retry" onPress={home.refresh} />} /> : null}{rateB ? <RateCard key={rateB.id} bookingId={rateB.id} serviceName={catalogue.find((x) => x.id === rateB.serviceId)?.name ?? "visit"} /> : null}</>}
         onSearch={() => router.push("/(tabs)/catalogue")}
         onBell={() => router.push("/(tabs)/notifications")}
@@ -276,7 +277,12 @@ export default function HomeScreen() {
         onAddCar={() => router.push("/(tabs)/garage/add")}
         onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}
       />
-      <StoryViewer group={open} onClose={() => setOpen(null)} />
+      <StoryViewer
+        group={open}
+        onClose={() => setOpen(null)}
+        onNextGroup={() => { const n = open ? groups[groups.findIndex((x) => x.key === open.key) + 1] : undefined; if (n) { setOpen(n); setSeen(new Set([...seen, seenKeyOf(n)])); } else setOpen(null); }}
+        onPrevGroup={() => { const n = open ? groups[groups.findIndex((x) => x.key === open.key) - 1] : undefined; if (n) setOpen(n); }}
+      />
     </Screen>
   );
 }
