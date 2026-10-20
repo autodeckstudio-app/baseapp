@@ -64,7 +64,7 @@ export default function VehicleDetailScreen() {
   const [newRc, setNewRc] = useState<{ blob: Blob; contentType: string } | null>(null);
   const [newPhoto, setNewPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   useEffect(()=>()=>{if(newPhoto?.previewUrl)URL.revokeObjectURL(newPhoto.previewUrl);},[newPhoto]);
-  const [form, setForm] = useState({ make: "", model: "", color: "", odometer: "" });
+  const [form, setForm] = useState<{ make: string; model: string; color: string; odometer: string; category: VehicleCategory | "" }>({ make: "", model: "", color: "", odometer: "", category: "" });
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -97,6 +97,7 @@ export default function VehicleDetailScreen() {
           model: v.model,
           color: v.color,
           odometer: v.odometer?.toString() ?? "",
+          category: (v.category ?? "") as VehicleCategory | "",
         });
       }
       setLoading(false);
@@ -202,6 +203,7 @@ export default function VehicleDetailScreen() {
         ...(form.model.trim() ? { model: form.model.trim() } : {}),
         ...(form.color.trim() ? { color: form.color.trim() } : {}),
         ...(odometerNum !== null ? { odometer: odometerNum } : {}),
+        ...(form.category && form.category !== vehicle?.category ? { category: form.category } : {}),
       });
       if (newPhoto) {
         try {
@@ -338,6 +340,7 @@ export default function VehicleDetailScreen() {
               <Field label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
               <Field label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
               <Field label="Colour" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
+              <SelectField label="Car type" value={form.category} placeholder="Choose type" options={VEHICLE_SIZES} onChange={(v) => setForm((p) => ({ ...p, category: v as VehicleCategory }))} />
               <Field label="Odometer (km)" value={form.odometer} onChangeText={(v) => setForm((p) => ({ ...p, odometer: v }))} keyboardType="numeric" />
               <View style={{ gap: space.breath }}>
                 <Button label="Save changes" busy={saving} onPress={() => void handleSave()} />
