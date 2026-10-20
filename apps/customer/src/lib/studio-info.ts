@@ -1,3 +1,4 @@
+import { cancellationPolicySummary } from "@autodeck/core";
 // Public contact details shown on the Help screen. Fill these in once with the
 // studio's real details; any empty value hides its button. No private data here.
 export const STUDIO_INFO = {
@@ -11,7 +12,7 @@ export const STUDIO_INFO = {
 
 export const FAQ: { q: string; a: string }[] = [
   { q: "How do I book a service?", a: "Tap Services below, choose a service, then pick your car and a time. Review the details and request your booking." },
-  { q: "Can I change or cancel a booking?", a: "Open your booking to change or cancel it at least 24 hours before the slot. You can reschedule up to three times. Within 24 hours, contact the studio. If you miss your slot, the booking stays valid that day during studio hours. At close (7 pm Sunday, 9 pm other days), unarrived bookings are auto-cancelled. Make a new booking when you are ready." },
+  { q: "Can I change or cancel a booking?", a: `You can reschedule up to three times, at least 24 hours before the slot. ${cancellationPolicySummary()} If you miss your slot, the booking stays valid that day during studio hours. At close (7 pm Sunday, 9 pm other days), unarrived bookings are auto-cancelled. Make a new booking when you are ready.` },
   { q: "How will I know my car is ready?", a: "Your booking page shows each step, and you get an update in Notifications." },
   { q: "Where do I find my invoice and warranty?", a: "Invoices are on the booking. Warranties and papers are under your car in Garage." },
   { q: "I need something not listed", a: "Call or message us on WhatsApp above and we will help." },

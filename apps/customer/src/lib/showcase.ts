@@ -4,7 +4,7 @@
 // claims beyond what the catalogue data (brand, price, time, warranty label) already says.
 // Warranty is never written here: pages read it from the service record only.
 // "Studio pick" is an editorial tag the owner chooses, not a sales statistic.
-import type { Service } from "@autodeck/core";
+import { cancellationPolicySummary, type Service } from "@autodeck/core";
 
 export interface Showcase {
   tagline: string;
@@ -19,7 +19,7 @@ export const SHOW_BEFORE_AFTER = false;
 
 const FAQ_COMMON: { q: string; a: string }[] = [
   { q: "How long will my car be with you?", a: "The time shown on the service is our estimate. We confirm it when you book." },
-  { q: "Can I change or cancel my booking?", a: "Change or cancel from Bookings at least 24 hours before your slot. Within 24 hours, contact the studio. A missed slot stays valid that day during studio hours until studio close (7 pm Sunday, 9 pm other days); after that, unarrived bookings are auto-cancelled. Make a new booking when you are ready." },
+  { q: "Can I change or cancel my booking?", a: `You can reschedule from Bookings up to three times, at least 24 hours before your slot. ${cancellationPolicySummary()} A missed slot stays valid that day during studio hours until studio close (7 pm Sunday, 9 pm other days); after that, unarrived bookings are auto-cancelled. Make a new booking when you are ready.` },
   { q: "Will I see what was done?", a: "Yes. You can follow your car's progress in the app and see the bill once the work is done." },
 ];
 
