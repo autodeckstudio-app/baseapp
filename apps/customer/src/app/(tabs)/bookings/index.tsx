@@ -31,6 +31,7 @@ import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bo
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
 import { TabPills } from "../../../ui/CarOverview";
+import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { loadServiceNames, missingNameIds } from "../../../lib/service-names";
 import { listenToMyInvoices } from "../../../lib/invoice-service";
 import { visitServices, visitTitle, visitAlso } from "../../../lib/visit-services";
@@ -128,6 +129,7 @@ export default function BookingsScreen() {
   );
 
   const seg = segPick ?? (liveJob || approvals.some((a) => a.status === "pending") ? "active" : "upcoming");
+  const swipe = useSegmentSwipe(["active", "upcoming", "past"] as const, seg, setSegPick);
   const stage = liveJob ? jobStage(liveJob.status) : null;
   const liveBooking = liveJob ? all.find((b) => b.id === (liveJob.bookingId ?? liveJob.id)) : undefined;
   const readyText = liveBooking && stage && stage.index < 3 && readyIsAhead(liveBooking.estimatedEndDate, liveBooking.estimatedEndTime) ? `${formatDateShort(liveBooking.estimatedEndDate)}, ${liveBooking.estimatedEndTime}` : null;
@@ -164,6 +166,7 @@ export default function BookingsScreen() {
 
   return (
     <Screen appBar="Bookings" header={<PageHeader title={liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={[upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
+      <View {...swipe.handlers} style={[{ gap: 20 }, swipe.style]}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
 
       <TabPills tabs={[{ key: "active", label: "Active" }, { key: "upcoming", label: "Upcoming" }, { key: "past", label: "Past" }]} value={seg} onChange={setSegPick} />
@@ -292,6 +295,7 @@ export default function BookingsScreen() {
           </View>
         ) : <Notice title="No past visits" body="Finished and cancelled visits show here." />
       ) : null}
+      </View>
     </Screen>
   );
 }
