@@ -13,6 +13,11 @@ describe("Services All view: one card per category", () => {
   it("every popular chip category has an approved photo mapped", () => {
     for (const k of MENU_CHIPS) expect(GROUP_PHOTO_CATEGORY[k]).toBeTruthy();
   });
+  it("every category card has a photo, including Pickup and drop (no fallback icon tile)", () => {
+    for (const g of MENU_GROUPS) expect(GROUP_PHOTO_CATEGORY[g.key], g.key).toBeTruthy();
+    expect(GROUP_PHOTO_CATEGORY["pickup"]).toBe("pickup");
+    expect(readFileSync(`${__dirname}/imagery.ts`, "utf8")).toMatch(/pickup: genPickup/);
+  });
   it("the cards and the pills use the same list, and a card tap opens that filter", () => {
     expect(src).toContain("overviewGroups(MENU_GROUPS, (g) => inGroup(g).length)");
     expect(src).toContain("onPress={() => { setGrp(g.key); }}");

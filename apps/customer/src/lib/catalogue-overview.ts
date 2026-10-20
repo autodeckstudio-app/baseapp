@@ -2,14 +2,14 @@
 // Tapping a card opens that category's filter view. Pure, so the mapping is tested.
 import type { MenuGroup, ServiceCategory } from "@autodeck/core";
 
-/** Which approved category photograph each menu group uses. Pickup has no approved photo, so it gets the icon tile instead. */
+/** Which approved category photograph each menu group uses. Pickup uses the approved key-handover image (generated/pickup.jpg), never the icon tile. */
 export const GROUP_PHOTO_CATEGORY: Record<string, ServiceCategory | null> = {
   wash: "washing",
   coatings: "ceramic",
   ppf: "ppf",
   garage: "garage",
   mods: "modifications",
-  pickup: null,
+  pickup: "pickup",
 };
 
 /** The categories shown as cards: exactly the ones the filter pills offer (those with at least one service), in the same order. */
