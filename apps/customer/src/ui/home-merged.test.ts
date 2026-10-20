@@ -9,7 +9,7 @@ const at = (needle: string) => body.indexOf(needle);
 
 describe("merged Home", () => {
   it("renders blocks in the agreed order, each once", () => {
-    const order = ["<LeadCard", "{liveOn ? <LiveCard", 'title="Services for you"', '<Heading title="Club"', "<CarsCard", '<Heading title="The studio"'];
+    const order = ["<LeadCard", "{liveOn ? <LiveCard", 'title="Services for you"', '<Heading title="Club"', "<CarsCard", 'accessibilityLabel="Open the studio page"'];
     const pos = order.map(at);
     expect(pos.every((x) => x > 0)).toBe(true);
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);

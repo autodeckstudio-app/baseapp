@@ -63,6 +63,7 @@ export const sceneImagery = {
   heroAlt,
   membership,
   login: loginHero,
+  studio: loginHero,
 } as const;
 
 // ---------------------------------------------------------------------------

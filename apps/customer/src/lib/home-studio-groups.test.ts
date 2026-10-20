@@ -3,10 +3,15 @@ import { readFileSync } from "node:fs";
 const read = (p: string) => readFileSync(`${__dirname}/../${p}`, "utf8");
 describe("Home studio, club and follow groups", () => {
   const v = read("ui/HomeView.tsx");
-  it("is three groups, with quick actions inside the studio card and no separate row", () => {
-    for (const h of ['title="The studio"', 'title="Club"', 'title="Follow us"']) expect(v).toContain(h);
+  it("is one studio photo card: quick actions and social rows inside it, no separate sections", () => {
+    expect(v).toContain('title="Club"');
+    expect(v).not.toContain('title="The studio"');
+    expect(v).not.toContain('title="Follow us"');
     expect(v).not.toContain('title="Studio and club"');
+    expect(v).toContain('accessibilityLabel="Open the studio page"');
+    expect(v).toContain("sceneImagery.studio");
     expect(v.match(/p\.quick\?\.length/g)?.length).toBe(1);
+    expect(v.match(/\(p\.social \?\? \[\]\)\.length/g)?.length).toBe(1);
   });
   it("call, WhatsApp, Instagram, channel and directions each have their own icon", () => {
     const art = read("ui/NavIcon.tsx");

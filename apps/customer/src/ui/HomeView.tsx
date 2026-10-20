@@ -4,17 +4,16 @@
 import { CarThumb } from "./CarThumb";
 import { liveStep } from "../lib/live-step";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, Platform, useWindowDimensions, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Image, Platform, Pressable, ScrollView, Text, View, type ImageSourcePropType, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { pickTopServices, type TopPick } from "../lib/top-services";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import type { NavIconName } from "./NavIcon";
-import { serviceImagery } from "../lib/imagery";
+import { sceneImagery, serviceImagery } from "../lib/imagery";
 import { raised } from "../lib/raised";
 import { metrics } from "../lib/metrics";
 import { glassPane } from "../lib/glass-pane";
 import { Plate } from "./kit";
-import { ServicePhoto } from "./ServicePhoto";
 import { NavIcon, navIconFor } from "./NavIcon";
 import { HomeBackdrop } from "./HomeBackdrop";
 import { SideDrawer, type DrawerItem } from "./SideDrawer";
@@ -244,7 +243,7 @@ export type { TopPick } from "../lib/top-services";
 function TopPickCard({ pick, onPress }: { pick: TopPick; onPress: () => void }) {
   const price = pick.service.price === "Quote on request" ? "Quote" : pick.service.price ? `From ${pick.service.price.replace(/^From\s+/i, "")}` : undefined;
   return (
-    <PhotoCard hearted={false} title={pick.title} pill={price} onPress={onPress} media={<ServicePhoto service={{ name: pick.service.name, category: pick.service.category, brand: pick.service.brand ?? null }} height={400} />} />
+    <PhotoCard hearted={false} title={pick.title} pill={price} onPress={onPress} media={<Image source={(serviceImagery as Record<string, ImageSourcePropType>)[pick.service.category] ?? serviceImagery.other} resizeMode="cover" style={{ width: "100%", height: "100%" }} />} />
   );
 }
 
@@ -281,7 +280,6 @@ export function isCompactCarRow(cars: HomeCar[]): boolean { return cars.length =
 export function HomeView(p: HomeViewProps) {
   const { name, colors } = useExperienceTheme();
   const r = raised(name);
-  const narrow = useWindowDimensions().width < 350;
   const top = pickTopServices(p.services);
   const [active, setActive] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -318,7 +316,7 @@ export function HomeView(p: HomeViewProps) {
         <View style={{ gap: 12 }}>
           <Heading title="Services for you" action="All" onAction={p.onAllServices} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP }}>
-            {top.map((t) => <View key={t.key} style={{ width: 168 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View>)}
+            {top.map((t) => <View key={t.key} style={{ width: 204 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View>)}
           </ScrollView>
         </View>
       ) : null}
@@ -332,46 +330,43 @@ export function HomeView(p: HomeViewProps) {
 
       <CampaignSlot campaign={p.campaign} />
       {p.carsList && p.carsList.length > 0 && p.onOpenCar && p.onBuyCar && p.onSellCar ? <CarsCard cars={p.carsList} onOpen={p.onOpenCar} onBuy={p.onBuyCar} onSell={p.onSellCar} /> : null}
-      <View style={{ gap: 12 }}>
-        <Heading title="The studio" />
-        <View style={{ ...glassPane(name === "light"), padding: metrics.cardPad, gap: 12 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="The studio" onPress={p.onStudio} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-            <NavIcon name="pin" color={colors.textSecondary} size={20} cut="#18181C" />
-            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              {p.studio.openText ? <Text style={{ color: p.studio.open === false ? colors.textSecondary : colors.accentStrong, fontSize: 13, fontWeight: "800" }}>{p.studio.openText}</Text> : null}
-              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{p.studio.address}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{p.studio.hours}</Text>
+      <View style={{ overflow: "hidden", ...glassPane(name === "light") }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open the studio page" onPress={p.onStudio} style={{ height: 132 }}>
+          <Image source={sceneImagery.studio} resizeMode="cover" style={{ position: "absolute", width: "100%", height: "100%" }} />
+          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.3)" }) }}>
+            {p.studio.openText ? (
+              <View style={{ position: "absolute", left: 12, top: 10, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 4 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 9999, backgroundColor: "#EC8638" }} />
+                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700" }}>{p.studio.openText}</Text>
+              </View>
+            ) : null}
+            <View style={{ position: "absolute", left: 12, right: 12, bottom: 10, gap: 1 }}>
+              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{p.studio.address}</Text>
+              <Text numberOfLines={1} style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>{p.studio.hours}</Text>
             </View>
-          </Pressable>
-          {p.quick?.length ? (
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {p.quick.map((q) => (
-                <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, opacity: pressed ? 0.8 : 1, ...r.round })}>
-                  {narrow ? null : <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={16} cut="#18181C" />}
-                  <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "700" }}>{q.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      </View>
-
-      {(p.social ?? []).length ? (
-        <View style={{ gap: 12 }}>
-          <Heading title="Follow us" />
-          <View style={{ flexDirection: narrow ? "column" : "row", gap: TILE_GAP }}>
-            {(p.social ?? []).map((x) => (
-              <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={x.title} onPress={x.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, padding: 14, opacity: pressed ? 0.85 : 1, ...glassPane(name === "light") })}>
-                <NavIcon name={x.icon} color={colors.accentStrong} size={22} cut="#18181C" />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "700" }}>{x.title}</Text>
-                  <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{x.sub}</Text>
-                </View>
+          </View>
+        </Pressable>
+        {p.quick?.length ? (
+          <View style={{ flexDirection: "row" }}>
+            {p.quick.map((q, i) => (
+              <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, height: 46, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderLeftWidth: i === 0 ? 0 : 1, borderLeftColor: "rgba(128,128,128,0.18)", opacity: pressed ? 0.8 : 1 })}>
+                <NavIcon name={navIconFor(q.icon)} color={colors.textPrimary} size={15} cut="#18181C" />
+                <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>{q.label}</Text>
               </Pressable>
             ))}
           </View>
-        </View>
-      ) : null}
+        ) : null}
+        {(p.social ?? []).length ? (
+          <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(128,128,128,0.18)" }}>
+            {(p.social ?? []).map((x, i) => (
+              <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={x.title} onPress={x.onPress} style={({ pressed }) => ({ flex: 1, height: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderLeftWidth: i === 0 ? 0 : 1, borderLeftColor: "rgba(128,128,128,0.18)", opacity: pressed ? 0.8 : 1 })}>
+                <NavIcon name={x.icon} color={colors.textSecondary} size={15} cut="#18181C" />
+                <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>{x.sub}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }

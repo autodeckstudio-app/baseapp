@@ -1,15 +1,14 @@
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import type { CarListingView } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { glassPane } from "../lib/glass-pane";
 import { hasCarPrice } from "../lib/cars-home";
 import { inr, kmLabel } from "../lib/carsale-service";
+import { PhotoCard, TILE_GAP } from "./HomeView";
 
-/** Home section "Cars for sale": every live listing in a sideways scrolling list, then Buy and Sell. Real photos only. */
+/** Home section "Cars for sale": every live listing in a sideways scrolling list, then Buy and Sell. Real photos only. Same tile language as the services cards. */
 export function CarsCard({ cars, onOpen, onBuy, onSell }: { cars: CarListingView[]; onOpen: (id: string) => void; onBuy: () => void; onSell: () => void }) {
   const day = useExperienceTheme().name === "light";
   const ink = day ? "#1D1B26" : "#FAF8F5";
-  const sub = day ? "#4A4756" : "#D5D1CA";
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
@@ -21,18 +20,17 @@ export function CarsCard({ cars, onOpen, onBuy, onSell }: { cars: CarListingView
           <Text style={{ color: ink, fontSize: 14, fontWeight: "700" }}>See all</Text>
         </Pressable>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 4 }} style={{ marginHorizontal: -2 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP, paddingRight: 4 }} style={{ marginHorizontal: -2 }}>
         {cars.map((car) => (
-          <Pressable key={car.id} accessibilityRole="button" accessibilityLabel={`View ${car.year} ${car.make} ${car.model}`} onPress={() => onOpen(car.id)} style={{ width: 260, overflow: "hidden", ...glassPane(day) }}>
-            <View style={{ aspectRatio: 4 / 3, backgroundColor: "#202023" }}>
-              <Image source={{ uri: car.photoUrls[0] }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
-            </View>
-            <View style={{ padding: 14, gap: 4 }}>
-              <Text numberOfLines={1} style={{ color: ink, fontSize: 16, fontWeight: "800" }}>{car.year} {car.make} {car.model}</Text>
-              <Text numberOfLines={1} style={{ color: sub, fontSize: 13 }}>{kmLabel(car.kmDriven)}</Text>
-              <Text style={{ color: ink, fontSize: 15, fontWeight: "800" }}>{hasCarPrice(car) ? inr(car.askingPrice) : "Price on request"}</Text>
-            </View>
-          </Pressable>
+          <View key={car.id} style={{ width: 204 }}>
+            <PhotoCard
+              hearted={false}
+              title={`${car.year} ${car.make} ${car.model}\n${kmLabel(car.kmDriven)}`}
+              pill={hasCarPrice(car) ? inr(car.askingPrice) : "Price on request"}
+              onPress={() => onOpen(car.id)}
+              media={<Image source={{ uri: car.photoUrls[0] }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />}
+            />
+          </View>
         ))}
       </ScrollView>
       <View style={{ flexDirection: "row", gap: 8 }}>
