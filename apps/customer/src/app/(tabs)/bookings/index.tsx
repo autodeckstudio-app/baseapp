@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, View, useWindowDimensions } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { DAYS, comboCards, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
+import { DAYS, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
@@ -19,6 +19,7 @@ import { getMyBookings } from "../../../lib/booking-service";
 
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
+import { CombosSection } from "../../../ui/CombosSection";
 import { CarThumb } from "../../../ui/CarThumb";
 import { NextVisitHero } from "../../../ui/NextVisitHero";
 import { sceneImagery } from "../../../lib/imagery";
@@ -150,7 +151,6 @@ export default function BookingsScreen() {
   const lastSvc = lastId ? svcs[lastId] : undefined;
   const due = dueSoonFor(jobs as never, selCar?.id ?? null, svcs, Date.now());
   const target = due?.service ?? (lastSvc && !lastSvc.priceOnRequest ? lastSvc : undefined);
-  const combos = comboCards(Object.values(svcs));
   const carName = selCar ? `${selCar.make} ${selCar.model}` : "";
   const doCancel = async () => {
     if (!next) return;
@@ -267,14 +267,7 @@ export default function BookingsScreen() {
         </View>
       ) : null}
 
-      {seg === "upcoming" && !error && !next && combos.length > 0 ? (
-        <View style={{ gap: space.line }}>
-          <SectionTitle>Combos</SectionTitle>
-          {combos.map((c) => (
-            <VisitCard key={c.service.id} onPress={() => router.push(`/(tabs)/book/${c.service.id}`)} photo={<ServicePhoto service={c.service} height={64} />} title={c.service.name} car={c.parts.join(" + ")} when="" price="" chip={<Chip label="Book" tone="accent" />} />
-          ))}
-        </View>
-      ) : null}
+      {seg === "upcoming" && !error && !next ? <CombosSection catalogue={Object.values(svcs)} onBook={(id) => router.push(`/(tabs)/book/${id}`)} /> : null}
 
       {seg === "upcoming" && !!next && rebook.length > 0 ? (
         <View style={{ gap: space.line }}>

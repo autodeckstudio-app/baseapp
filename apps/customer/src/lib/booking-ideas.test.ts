@@ -2,6 +2,7 @@ import type * as NodeFs from "node:fs";
 import type * as NodePath from "node:path";
 import { describe, expect, it } from "vitest";
 import { MENU_SEED } from "@autodeck/core";
+import { LIVE_PACKAGE_SAMPLE } from "./live-packages-sample";
 import { comboCards, dueSoonFor, lastServiceFor, pickDay } from "./booking-ideas";
 
 const svc = (m: (typeof MENU_SEED)[number]) => ({ id: m.id, name: m.name, category: m.category, active: true, priceOnRequest: m.consult === true }) as never;
@@ -61,17 +62,31 @@ describe("booking ideas", () => {
     expect(ids(tweak({ priceOnRequest: true }))).not.toContain("svc-wash-premium");
     expect(ids(tweak({ description: "" }))).not.toContain("svc-wash-premium");
   });
+  it("with the live-read catalogue, all four stated packages show: Full detail wash, Detail SPA, Premium Wash, Ceramic wash", () => {
+    const live = LIVE_PACKAGE_SAMPLE as never[];
+    const out = comboCards(live as never);
+    expect(out.map((x) => x.service.id)).toEqual(["menu-wash-full", "svc-wash-detail-spa", "svc-wash-premium", "menu-wash-exterior"]);
+    expect(out.find((x) => x.service.id === "menu-wash-full")!.parts).toEqual(["Ceramic wash", "Interior deep clean"]);
+    // Regular Wash, Headlight buffing and Interior deep clean are in the catalogue but are not listed packages.
+    expect(out.map((x) => x.service.id)).not.toContain("svc-wash-regular");
+  });
+  it("the Bookings page renders the Combos block through CombosSection", () => {
+    const { readFileSync } = require("node:fs") as typeof NodeFs;
+    const { join } = require("node:path") as typeof NodePath;
+    const page = readFileSync(join(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
+    expect(page).toMatch(/seg === "upcoming" && !error && !next \? <CombosSection/);
+  });
   it("the empty Bookings blocks only show with no next booking, and never mention discounts or invented prices", () => {
     const { readFileSync } = require("node:fs") as typeof NodeFs;
     const { join } = require("node:path") as typeof NodePath;
     const page = readFileSync(join(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
-    for (const h of ["Book again", "Due soon", "Earliest time for", "Combos"]) expect(page).toMatch(new RegExp(`seg === "upcoming" && !error && !next && [^\\n]*\\n[^\\n]*\\n[^\\n]*${h}`));
+    for (const h of ["Book again", "Due soon", "Earliest time for"]) expect(page).toMatch(new RegExp(`seg === "upcoming" && !error && !next && [^\\n]*\\n[^\\n]*\\n[^\\n]*${h}`));
     const src = readFileSync(join(__dirname, "booking-ideas.ts"), "utf8") + page.slice(page.indexOf("Ideas for the empty page"), page.indexOf("const doCancel"));
     expect(src).not.toMatch(/discount|% off|\bsave\b|rupees\(/i);
   });
   it("combo cards are compact rows, not full-height photo cards", () => {
     const fs = require("node:fs") as typeof NodeFs; const pth = require("node:path") as typeof NodePath;
-    const page = fs.readFileSync(pth.resolve(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
+    const page = fs.readFileSync(pth.resolve(__dirname, "../ui/CombosSection.tsx"), "utf8");
     const block = page.slice(page.indexOf("combos.map"), page.indexOf("combos.map") + 500);
     expect(block).toContain("VisitCard");
     expect(block).not.toMatch(/PhotoCard|height=\{400\}/);
