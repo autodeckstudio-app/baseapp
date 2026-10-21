@@ -167,14 +167,14 @@ function SellHub({ mine, onSell, onOpen }: { mine: CarListingView[]; onSell: () 
 }
 
 
-export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen, onSell, header }: { header?: React.ReactNode; all: CarListingView[] | null; mine: CarListingView[]; error: boolean; initialTab?: Tab; onRetry: () => void; onOpen: (id: string) => void; onSell: () => void }) {
+export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen, onSell, header, initialFiltersOpen = false }: { initialFiltersOpen?: boolean; header?: React.ReactNode; all: CarListingView[] | null; mine: CarListingView[]; error: boolean; initialTab?: Tab; onRetry: () => void; onOpen: (id: string) => void; onSell: () => void }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   useEffect(() => { setTab(initialTab); }, [initialTab]);
   const [query, setQuery] = useState("");
   const [fuel, setFuel] = useState<string | null>(null);
   const [body, setBody] = useState<string | null>(null);
   const [budget, setBudget] = useState("any");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(initialFiltersOpen);
   const themeNight = useExperienceTheme().name === "night";
   const [sort, setSort] = useState<"new" | "low" | "high">("new");
   const shown = useMemo(() => filterCars(all ?? [], { query, fuel, body, maxPrice: BUDGETS.find((b) => b.id === budget)?.max ?? Infinity, sort }), [all, query, fuel, body, budget, sort]);
