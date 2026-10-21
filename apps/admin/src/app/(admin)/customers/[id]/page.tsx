@@ -1,5 +1,6 @@
 "use client";
 
+import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Service, Customer, Vehicle, Booking, ServiceJob, Membership, Payment, Invoice, Warranty, Protection, Notification, AuditLog } from "@autodeck/core";
@@ -92,7 +93,7 @@ export default function CustomerDetailPage() {
         if (doc.kind === "rc") return (await httpsCallable<{ vehicleId: string; path: string; kind: "rc" }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId: doc.vehicleId, path: doc.path, kind: "rc" })).data.url;
         return (await httpsCallable<{ customerId: string; path: string }, { url: string }>(functions, "publishLicensePhoto")({ customerId: id, path: doc.path })).data.url;
       }}
-      onBack={() => router.push("/customers")}
+      onBack={() => goBackOrTo(router, "/customers")}
       onOpen={(href) => router.push(href)}
     />
   );

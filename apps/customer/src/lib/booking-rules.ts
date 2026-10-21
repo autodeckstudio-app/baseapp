@@ -54,3 +54,18 @@ export function cancelConfirmBody(c: { feePaise: number; line: string }, paid: b
 export function extraServiceIdsOf(booking: { serviceId: string; lines?: Array<{ serviceId: string }> }): string[] {
   return (booking.lines ?? []).map((l) => l.serviceId).filter((id) => id !== booking.serviceId);
 }
+
+const IST_MS = 5.5 * 3600_000;
+
+/** "Expected ready" for the booking page. Never shows a time before the booking starts: if the stored end
+ *  (studio date and time) is earlier than the start, use estimatedEndAt when that is sane, otherwise show nothing. */
+export function expectedReady(b: Pick<Booking, "scheduledAt" | "estimatedEndAt" | "estimatedEndDate" | "estimatedEndTime">): { date: string; time: string } | null {
+  const start = new Date(b.scheduledAt).getTime();
+  if (Number.isNaN(start)) return null;
+  const fromFields = new Date(`${b.estimatedEndDate}T${b.estimatedEndTime || "00:00"}:00Z`).getTime() - IST_MS;
+  const fromInstant = new Date(b.estimatedEndAt).getTime();
+  const end = !Number.isNaN(fromFields) && fromFields >= start ? fromFields : !Number.isNaN(fromInstant) && fromInstant >= start ? fromInstant : null;
+  if (end === null) return null;
+  const ist = new Date(end + IST_MS).toISOString();
+  return { date: ist.slice(0, 10), time: ist.slice(11, 16) };
+}

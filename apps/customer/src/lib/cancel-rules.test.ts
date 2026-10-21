@@ -44,3 +44,40 @@ describe("Round 5 booking page", () => {
     expect(d).toContain("Refund initiated"); expect(d).toContain("Reschedule instead"); expect(d).not.toContain('title="Something went wrong"');
   });
 });
+
+import { expectedReady } from "./booking-rules";
+import { DEV_SAMPLE_BOOKING } from "./booking-dev-sample";
+describe("expected ready never precedes the start", () => {
+  const base = { scheduledAt: "2026-10-23T04:30:00.000Z", estimatedEndAt: "2026-10-23T06:00:00.000Z" } as const;
+  it("uses the studio end date and time when it is after the start (IST)", () => {
+    expect(expectedReady({ ...base, estimatedEndDate: "2026-10-23", estimatedEndTime: "11:30" })).toEqual({ date: "2026-10-23", time: "11:30" });
+  });
+  it("a stored end before the start falls back to estimatedEndAt, or hides when that is wrong too", () => {
+    expect(expectedReady({ ...base, estimatedEndDate: "2026-10-22", estimatedEndTime: "11:30" })).toEqual({ date: "2026-10-23", time: "11:30" });
+    expect(expectedReady({ scheduledAt: base.scheduledAt, estimatedEndAt: "2026-10-23T01:00:00.000Z", estimatedEndDate: "2026-10-22", estimatedEndTime: "11:30" })).toBeNull();
+  });
+  it("the dev sample booking is internally consistent", () => {
+    const r = expectedReady(DEV_SAMPLE_BOOKING);
+    expect(r).not.toBeNull();
+    expect(`${r!.date}T${r!.time}`).toBe(`${DEV_SAMPLE_BOOKING.scheduledDate}T11:30`);
+  });
+});
+
+describe("booking hero chips stay readable on the dark hero in Day mode", () => {
+  it("both hero chips use onDark", () => {
+    const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
+    expect(src).toContain('<Chip label="Live" tone="accent" onDark />');
+    expect(src).toMatch(/BOOKING_CHIP_TONE\[booking\.status\] \?\? "neutral"\} onDark \/>/);
+  });
+});
+
+describe("booking page text stays readable in Night", () => {
+  const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
+  it("Time, Duration, Expected ready and Payment rows use the stronger detail tone", () => {
+    for (const t of ["Time", "Duration", "Expected ready", "Payment"]) expect(src).toMatch(new RegExp(`<Row detailTone="secondary" title="${t}"`));
+  });
+  it("the reschedule explanation is not tertiary", () => {
+    expect(src).not.toMatch(/tone="tertiary">\{rescheduleEligibility\.reason\}/);
+    expect(src).not.toMatch(/tone="tertiary">Payment status is/);
+  });
+});

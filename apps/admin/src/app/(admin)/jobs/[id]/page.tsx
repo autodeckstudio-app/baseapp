@@ -1,5 +1,6 @@
 "use client";
 
+import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
@@ -14,7 +15,6 @@ import { formatPaise, formatDateTime, formatDate } from "../../../../lib/format"
 import { statusLabel } from "../../../../lib/status-label";
 import { BookingPanels } from "../../../../components/BookingPanels";
 import { JobControls } from "../../../../components/JobControls";
-import { JobChatPanel } from "../../../../experience/JobChatPanel";
 import { StageTrack } from "../../../../experience/StageTrack";
 
 type RecordManualPaymentOutput = { paymentId: string; invoiceId: string };
@@ -171,7 +171,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back" onClick={() => router.push("/jobs")}>‹ Studio floor</button>
+      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/jobs")}>‹ Studio floor</button>
 
       <header className="ax-hero">
         <div>
@@ -231,7 +231,6 @@ export default function JobDetailPage() {
             </section>
           )}
 
-          {claims ? <JobChatPanel job={job} tenantId={claims.tenantId} /> : null}
 
           {approvals.length > 0 && (
             <section className="ax-panel">

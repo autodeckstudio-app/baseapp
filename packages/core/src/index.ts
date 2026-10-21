@@ -4,6 +4,7 @@ export * from "./membership-status.js";
 export * from "./customer-home.js";
 export * from "./pricing-category.js";
 export * from "./invoice-display.js";
+export * from "./booking-code.js";
 export * from "./customer-search.js";
 export * from "./menu.js";
 export * from "./pickup-zone.js";
