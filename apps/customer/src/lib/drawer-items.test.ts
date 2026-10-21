@@ -29,4 +29,8 @@ describe("unified left menu", () => {
     expect(hub).toContain("RowCard");
     expect(read("app/(tabs)/cars/index.tsx")).toContain("<CarsHub");
   });
+  it("the result count uses the right verb for one car", () => {
+    const hub = read("ui/CarsHub.tsx");
+    expect(hub).toContain('shown.length === 1 ? " matches your search" : " match your search"');
+  });
 });
