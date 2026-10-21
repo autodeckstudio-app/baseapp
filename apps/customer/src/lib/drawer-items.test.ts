@@ -12,12 +12,21 @@ describe("unified left menu", () => {
     expect(read("ui/AppBar.tsx")).not.toMatch(/key: "membership"/);
     expect(read("app/(tabs)/index.tsx")).not.toMatch(/key: "buycar"/);
   });
-  it("lists Buy, Sell and Membership in order", () => {
+  it("Buy and Sell is one entry, ahead of Membership, and opens the one Cars screen", () => {
     const s = read("lib/drawer-items.ts");
     const i = (k: string) => s.indexOf(`key: "${k}"`);
-    expect(i("buycar")).toBeGreaterThan(-1);
-    expect(i("buycar")).toBeLessThan(i("sellcar"));
-    expect(i("sellcar")).toBeLessThan(i("membership"));
+    expect(i("cars")).toBeGreaterThan(-1);
+    expect(s).not.toContain('key: "buycar"');
+    expect(s).not.toContain('key: "sellcar"');
+    expect(s).toContain('label: "Buy & Sell"');
+    expect(i("cars")).toBeLessThan(i("membership"));
     expect(i("membership")).toBeLessThan(i("help"));
+  });
+  it("the Cars screen holds Buy and Sell behind one BUY | SELL switch and is built in CarsHub", () => {
+    const hub = read("ui/CarsHub.tsx");
+    expect(hub).toContain('"BUY" : "SELL"');
+    expect(hub).toContain("FeatureCard");
+    expect(hub).toContain("RowCard");
+    expect(read("app/(tabs)/cars/index.tsx")).toContain("<CarsHub");
   });
 });

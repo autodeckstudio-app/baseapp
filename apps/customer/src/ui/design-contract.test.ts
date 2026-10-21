@@ -25,7 +25,7 @@ describe("unified product design contract",()=>{
     expect(read("src/app/(tabs)/garage/[id].tsx")).toContain("Car records unavailable");
   });
   it("keeps car filtering available during search and normalizes legacy fuel values",()=>{
-    const source=read("src/app/(tabs)/cars/index.tsx");expect(source).not.toContain("searching ?");expect(source).toContain('filterCars(all??[]');expect(source).toContain('label="Car body type"');expect(source).toContain('label="Sort cars"');expect(source).toContain('Clear all');
+    const source=read("src/ui/CarsHub.tsx");expect(source).not.toContain("searching ?");expect(source).toContain('filterCars(all ?? []');expect(source).toContain('label="Car body type"');expect(source).toContain('label="Sort cars"');expect(source).toContain('Clear all');
   });
   it("removes inactive tab controls from the accessibility and keyboard tree",()=>{
     expect(read("src/ui/kit.tsx")).toContain("if (!focused) return null");
@@ -510,23 +510,22 @@ describe("Cars entry points (owner: buy and sell must be reachable)", () => {
   });
   it("Home drawer and Home card both link to Cars and Cars sell, and the Cars page has one Sell button", () => {
     const idx = read("src/app/(tabs)/index.tsx");
-    expect(read("src/lib/drawer-items.ts")).toContain('label: "Buy a car"');
-    expect(read("src/lib/drawer-items.ts")).toContain('label: "Sell your car"');
+    expect(read("src/lib/drawer-items.ts")).toContain('label: "Buy & Sell"');
     expect(idx).toContain("carsList={homeCars(carListings)}");
-    const cars = read("src/app/(tabs)/cars/index.tsx");
+    const cars = read("src/ui/CarsHub.tsx");
     expect(cars.match(/label="List your car"/g)?.length).toBe(1);
     expect(cars).toContain("<TabSwitch");
     expect(cars).toContain('accessibilityLabel={t === "buy" ? "Buy a car" : "Sell your car"}');
-    expect(read("src/lib/drawer-items.ts")).toContain("/(tabs)/cars?tab=sell");
+    expect(read("src/app/(tabs)/cars/index.tsx")).toContain('params.tab === "sell"');
   });
 });
 
 describe("Cars pages follow the common design rules", () => {
   const pages = ["src/app/(tabs)/cars/index.tsx", "src/app/(tabs)/cars/sell.tsx", "src/app/(tabs)/cars/[id].tsx"];
   it("no second title block: the one header names the screen", () => {
-    expect(read(pages[0]!)).toContain('<Screen appBar="Cars">');
+    expect(read("src/ui/CarsHub.tsx")).toContain('{ appBar: "Cars" }');
     expect(read(pages[1]!)).toContain('<Screen appBar="Sell your car">');
-    for (const p of pages) expect(read(p)).not.toMatch(/<Screen\s+(top|header)=/);
+    for (const p of pages.slice(1)) expect(read(p)).not.toMatch(/<Screen\s+(top|header)=/);
   });
   it("only the allowed radii and no fixed dark-only surfaces", () => {
     for (const p of pages) {
@@ -536,7 +535,7 @@ describe("Cars pages follow the common design rules", () => {
     }
   });
   it("car cards use the shared glass surface", () => {
-    expect(read(pages[0]!)).toContain("glassPane(day)");
+    expect(read("src/ui/CarsHub.tsx")).toContain("glassPane(day)");
   });
 });
 
@@ -558,7 +557,7 @@ describe("form controls follow the theme", () => {
 describe("sell confirmation copy", () => {
   it("points to the section that exists on the Cars page", () => {
     expect(read("src/app/(tabs)/cars/sell.tsx")).toContain("Your cars for sale on the Cars page");
-    expect(read("src/app/(tabs)/cars/index.tsx")).toContain("Your cars for sale");
+    expect(read("src/ui/CarsHub.tsx")).toContain("Your cars for sale");
   });
 });
 
