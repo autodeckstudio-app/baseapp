@@ -33,10 +33,10 @@ export function pickDay(dates: string[], day: Day | string | undefined, todayIst
   return null;
 }
 
-/** Services whose own description says they bundle several things ("Includes ...", "with additional ...", a bulleted list, "together"). */
-const STATES_INCLUSIONS = /\binclud(?:es|ing)\b|\bwith additional\b|\btogether\b|(?:^|\s)- [A-Z]/;
+/** Live service ids the owner's catalogue presents as packages (read from the admin catalogue, 22 Oct 2026). A service shows under Combos only when its id is listed here AND it is active, has a fixed price and states its contents in its own description. */
+export const PACKAGE_SERVICE_IDS: readonly string[] = ["svc-wash-detail-spa", "svc-wash-premium", "menu-wash-exterior"];
 
-/** Packages the live menu itself states: a service that contains other menu services (Full detail wash), or whose own description lists what is included.
+/** Packages: a service that contains other menu services (Full detail wash), or a listed package id whose own description lists what is included.
  *  Shown with the service's real id and price and its own words. Nothing is invented. */
 export function comboCards(catalogue: Service[]): Array<{ service: Service; parts: string[] }> {
   const byId = new Map(catalogue.map((s) => [s.id, s]));
@@ -48,10 +48,10 @@ export function comboCards(catalogue: Service[]): Array<{ service: Service; part
     const parts = partIds.map((p) => byId.get(p)).filter((x): x is Service => !!x);
     if (ok(s) && parts.length === partIds.length) { out.push({ service: s, parts: parts.map((p) => p.name) }); seen.add(s.id); }
   }
-  for (const s of catalogue) {
-    if (seen.has(s.id) || !ok(s)) continue;
-    const d = (s.description ?? "").trim();
-    if (d && STATES_INCLUSIONS.test(d)) out.push({ service: s, parts: [d.replace(/([.:])\s+-\s+/, "$1 ").replace(/\s+-\s+/g, ", ")] });
+  for (const id of PACKAGE_SERVICE_IDS) {
+    const s = byId.get(id);
+    const d = (s?.description ?? "").replace(/\r?\n/g, " ").trim();
+    if (ok(s) && d && !seen.has(id)) out.push({ service: s, parts: [d.replace(/([.:])\s+-\s+/, "$1 ").replace(/\s+-\s+/g, ", ")] });
   }
   return out;
 }

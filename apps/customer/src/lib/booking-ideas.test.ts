@@ -44,18 +44,22 @@ describe("booking ideas", () => {
     expect(c[0]!.parts).toEqual(["Exterior detail wash", "Interior deep clean"]);
     expect(comboCards(cat.filter((s: { id: string }) => s.id !== "menu-wash-interior"))).toEqual([]);
   });
-  it("services whose own description states inclusions become package rows, in their own words, with their own id", () => {
-    const mk = (id: string, name: string, description: string, extra = {}) => ({ id, name, description, category: "wash", active: true, ...extra }) as never;
+  it("package rows come only from listed live ids that are active, fixed-price and describe their contents, in their own words", () => {
+    const mk = (id: string, name: string, description: string, extra = {}) => ({ id, name, description, category: "washing", active: true, ...extra }) as never;
     const live = [
-      mk("a1", "Detail SPA", "Thorough wash. - Engine cleaning - Under body cleaning"),
-      mk("a2", "Ceramic wash", "Premium foam wash with additional polishing - Includes Ceramic wash & spray"),
-      mk("a3", "Regular Wash", "Standard exterior wash and dry with foam."),
-      mk("a4", "Hidden SPA", "Includes everything", { active: false }),
-      mk("a5", "Quote only", "Includes a lot", { priceOnRequest: true }),
+      mk("svc-wash-detail-spa", "Detail SPA", "Thorough wash and detailing spa treatment.\n- Engine cleaning\n- Under body cleaning"),
+      mk("svc-wash-premium", "Premium Wash", "Extended premium koach foam wash with additional interior polishing of dashboard and doors."),
+      mk("menu-wash-exterior", "Ceramic wash", "Extended premium koach foam wash - Includes Ceramic wash & spray"),
+      mk("svc-wash-regular", "Regular Wash", "Standard wash. Includes foam and dry."),
+      mk("x-unlisted", "Unlisted", "Includes everything together with additional things"),
     ];
-    const c = comboCards(live);
-    expect(c.map((x) => x.service.id)).toEqual(["a1", "a2"]);
-    expect(c[0]!.parts[0]).toBe("Thorough wash. Engine cleaning, Under body cleaning");
+    const ids = (l: unknown[]) => comboCards(l as never).map((x) => x.service.id);
+    expect(ids(live)).toEqual(["svc-wash-detail-spa", "svc-wash-premium", "menu-wash-exterior"]);
+    expect(comboCards(live as never)[0]!.parts[0]).toBe("Thorough wash and detailing spa treatment. Engine cleaning, Under body cleaning");
+    const tweak = (extra: object) => live.map((s) => ((s as unknown as { id: string }).id === "svc-wash-premium" ? { ...(s as object), ...extra } : s));
+    expect(ids(tweak({ active: false }))).not.toContain("svc-wash-premium");
+    expect(ids(tweak({ priceOnRequest: true }))).not.toContain("svc-wash-premium");
+    expect(ids(tweak({ description: "" }))).not.toContain("svc-wash-premium");
   });
   it("the empty Bookings blocks only show with no next booking, and never mention discounts or invented prices", () => {
     const { readFileSync } = require("node:fs") as typeof NodeFs;
