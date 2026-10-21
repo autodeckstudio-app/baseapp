@@ -62,7 +62,7 @@ describe("garage All view and selected view share one language", () => {
     expect(g).not.toMatch(/TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
   });
   it("Track stays reachable as a text chip on the card of a car in the bay, not a second button", () => {
-    expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"');
+    expect(g).toContain('accessibilityLabel="Track"'); expect(g).not.toContain('Track and chat');
     expect(g).toContain("const overlay");
   });
   it("car cards never use stock or generated art, and a missing photo says so", () => {
