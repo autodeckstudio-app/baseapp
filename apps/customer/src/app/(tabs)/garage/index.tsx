@@ -13,13 +13,14 @@ import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { glassPane } from "../../../lib/glass-pane";
 import { FilterPills } from "../../../ui/FilterPills";
-import { dueChip } from "../../../lib/garage-due";
+import { dueChip, lastServiceLine } from "../../../lib/garage-due";
 import { listenToMyJobs } from "../../../lib/job-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
 import { GarageShowroom, CarPhotoCard } from "../../../ui/GarageShowroom";
+import { GarageCarFacts } from "../../../ui/GarageCarFacts";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
@@ -33,31 +34,6 @@ function DueChip({ text }: { text: string }) {
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
       <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
-    </View>
-  );
-}
-
-function TodayStrip({ name, job, ink, light, onTrack }: { name: string; job: ServiceJob; ink: ReturnType<typeof useExperienceTheme>["colors"]; light: boolean; onTrack: () => void }) {
-  const step = jobStep(job.status);
-  const ready = readyBy(job);
-  return (
-    <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>TODAY</Text>
-          <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 17, fontWeight: "800" }}>{`${name} is in the bay`}</Text>
-          <Text style={{ color: ink.textSecondary, fontSize: 13 }}>{ready ? `${LIVE_STEP_NAMES[step]}, ready by ${ready}` : LIVE_STEP_NAMES[step]}</Text>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" onPress={onTrack} hitSlop={8}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "800" }}>Track</Text></Pressable>
-      </View>
-      <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
-        {LIVE_STEP_NAMES.map((n, i) => (
-          <View key={n} style={{ flex: 1, gap: 6 }}>
-            <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(128,128,128,0.3)" }} />
-            <Text numberOfLines={1} style={{ color: i <= step ? ink.textPrimary : ink.textSecondary, fontSize: 10.5, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -133,6 +109,10 @@ export default function GarageScreen() {
   const one = sel ? list.find((v) => v.id === sel) ?? null : null;
   const light = themeName === "light";
   const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
+  const facts = (v: Vehicle) => {
+    const lj = liveJobForCar(jobs, v.id);
+    return <GarageCarFacts light={light} lastService={lastServiceLine(jobs, v.id, svcMap)} due={chip(v)} live={lj ? { stepName: LIVE_STEP_NAMES[jobStep(lj.status)]!, readyBy: readyBy(lj), onTrack: () => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); } } : null} />;
+  };
 
   return (
     <Screen appBar="Garage">
@@ -149,7 +129,7 @@ export default function GarageScreen() {
       ) : one ? (
         <View style={{ gap: metrics.sectionGap }}>
           <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={(v) => (chip(v) ? <DueChip text={chip(v)!} /> : null)} />
-          {liveJobForCar(jobs, one.id) ? <TodayStrip name={`${one.make ?? ""} ${one.model ?? ""}`.trim() || one.registrationNumber} job={liveJobForCar(jobs, one.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, one.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null}
+          {facts(one)}
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
             return (
@@ -166,24 +146,12 @@ export default function GarageScreen() {
         </View>
       ) : (
         <View style={{ gap: metrics.sectionGap }}>
-          {(() => {
-            const liveCar = list.find((v) => liveJobForCar(jobs, v.id));
-            return liveCar ? <TodayStrip name={`${liveCar.make ?? ""} ${liveCar.model ?? ""}`.trim() || liveCar.registrationNumber} job={liveJobForCar(jobs, liveCar.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, liveCar.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null;
-          })()}
           {list.map((v) => (
-            <CarPhotoCard key={v.id} car={v} height={liveJobForCar(jobs, v.id) ? 150 : 130} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : chip(v)} onOpen={open} />
-          ))}
-          {list.some((v) => chip(v)) ? (
-            <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 6 }}>
-              <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>COMING UP</Text>
-              {list.filter((v) => chip(v)).map((v) => (
-                <View key={v.id} style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, paddingVertical: 6 }}>
-                  <Text numberOfLines={1} style={{ flex: 1, color: ink.textPrimary, fontSize: 14 }}>{`${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber}</Text>
-                  <Text numberOfLines={1} style={{ color: ink.textSecondary, fontSize: 13 }}>{chip(v)}</Text>
-                </View>
-              ))}
+            <View key={v.id} style={{ gap: space.line }}>
+              <CarPhotoCard car={v} height={170} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} />
+              {facts(v)}
             </View>
-          ) : null}
+          ))}
         </View>
       )}
       {list.length > 0 ? (
