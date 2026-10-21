@@ -5,7 +5,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { glassPane } from "../lib/glass-pane";
 import { metrics } from "../lib/metrics";
 
-export type CarFactsProps = { lastService: string | null; due: string | null; live: { stepName: string; readyBy: string | null; onTrack: () => void } | null; light: boolean };
+export type CarFactsProps = { lastService: string | null; due: string | null; live: { stepName: string; readyBy: string | null; onTrack: () => void } | null; light: boolean; joined?: boolean };
 
 function Row({ label, value, ink }: { label: string; value: string; ink: ReturnType<typeof useExperienceTheme>["colors"] }) {
   return (
@@ -16,10 +16,10 @@ function Row({ label, value, ink }: { label: string; value: string; ink: ReturnT
   );
 }
 
-export function GarageCarFacts({ lastService, due, live, light }: CarFactsProps) {
+export function GarageCarFacts({ lastService, due, live, light, joined }: CarFactsProps) {
   const { colors: ink } = useExperienceTheme();
   return (
-    <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
+    <View style={{ ...glassPane(light), ...(joined ? { borderRadius: 0, borderWidth: 0, shadowOpacity: 0, elevation: 0 } : null), padding: metrics.cardPad, gap: 12 }}>
       {live ? (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>

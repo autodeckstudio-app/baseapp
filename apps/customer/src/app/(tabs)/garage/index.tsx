@@ -2,7 +2,7 @@
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -26,23 +26,16 @@ import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../.
 import { liveTrackTarget } from "../../../lib/bookings-view";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import type { Membership } from "@autodeck/core";
+import { devGarage } from "../../../lib/garage-dev-sample";
 
-
-function DueChip({ text }: { text: string }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
-      <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
-    </View>
-  );
-}
 
 export default function GarageScreen() {
   const { colors: ink, name: themeName } = useExperienceTheme();
   const auth = useAuth();
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
+  const q = useLocalSearchParams<{ mock?: string; live?: string; pick?: string; empty?: string }>();
+  const mock = __DEV__ && q.mock === "1" ? devGarage({ live: !!q.live, empty: !!q.empty }) : null; // dev preview only: sample cars, never real data
+  const [vehicles, setVehicles] = useState<Vehicle[] | null>(mock ? mock.vehicles : null);
   const [archived,setArchived]=useState<Vehicle[]>([]);
   const [showArchived,setShowArchived]=useState(false);
   const [archiveActionError,setArchiveActionError]=useState<string|null>(null);
@@ -50,24 +43,24 @@ export default function GarageScreen() {
   const [removing, setRemoving] = useState<Vehicle | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [pick, setPick] = useState<string | null>(null);
-  const [jobs, setJobs] = useState<ServiceJob[]>([]);
-  const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>({});
-  const [plan, setPlan] = useState<Membership | null>(null);
+  const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
+  const [jobs, setJobs] = useState<ServiceJob[]>(mock ? mock.jobs : []);
+  const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>(mock ? mock.svcMap : {});
+  const [plan, setPlan] = useState<Membership | null>(mock ? mock.plan : null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.user.uid : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
   // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
   useEffect(() => {
-    if (!uid || !tenantId) return;
+    if (mock || !uid || !tenantId) return;
     return listenToMyVehicles(uid, tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
   }, [uid, tenantId, retryTick]);
 
-  useEffect(() => { if (!uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
-  useEffect(() => { if (!uid || !tenantId) return; return listenToMyMemberships(tenantId, uid, (ms) => setPlan(ms.find((m) => m.status === "active") ?? null), () => undefined); }, [uid, tenantId, retryTick]);
-  useEffect(() => { void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
-  useEffect(()=>{if(!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
+  useEffect(() => { if (mock || !uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { if (mock || !uid || !tenantId) return; return listenToMyMemberships(tenantId, uid, (ms) => setPlan(ms.find((m) => m.status === "active") ?? null), () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { if (mock) return; void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
+  useEffect(()=>{if(mock||!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
   async function restore(v:Vehicle){setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not restore the car.");}finally{setArchiveActionBusy(null);}}
   // Watchdog: if the vehicles stream never delivers (no data, no error),
   // show the connection notice instead of spinning forever.
@@ -111,7 +104,7 @@ export default function GarageScreen() {
   const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
   const facts = (v: Vehicle) => {
     const lj = liveJobForCar(jobs, v.id);
-    return <GarageCarFacts light={light} lastService={lastServiceLine(jobs, v.id, svcMap)} due={chip(v)} live={lj ? { stepName: LIVE_STEP_NAMES[jobStep(lj.status)]!, readyBy: readyBy(lj), onTrack: () => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); } } : null} />;
+    return <GarageCarFacts joined light={light} lastService={lastServiceLine(jobs, v.id, svcMap)} due={chip(v)} live={lj ? { stepName: LIVE_STEP_NAMES[jobStep(lj.status)]!, readyBy: readyBy(lj), onTrack: () => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); } } : null} />;
   };
 
   return (
@@ -128,8 +121,10 @@ export default function GarageScreen() {
         </View>
       ) : one ? (
         <View style={{ gap: metrics.sectionGap }}>
-          <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={(v) => (chip(v) ? <DueChip text={chip(v)!} /> : null)} />
-          {facts(one)}
+          <View style={{ borderRadius: 24, overflow: "hidden" }}>
+            <GarageShowroom joined cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={() => null} />
+            {facts(one)}
+          </View>
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
             return (
@@ -147,8 +142,8 @@ export default function GarageScreen() {
       ) : (
         <View style={{ gap: metrics.sectionGap }}>
           {list.map((v) => (
-            <View key={v.id} style={{ gap: space.line }}>
-              <CarPhotoCard car={v} height={170} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} />
+            <View key={v.id} style={{ borderRadius: 24, overflow: "hidden" }}>
+              <CarPhotoCard joined car={v} height={170} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} />
               {facts(v)}
             </View>
           ))}
