@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdminAuth } from "../../lib/auth-context";
+import { notePageView } from "../../lib/go-back";
 import { canSeeOffice, canVisit, homeFor } from "../../lib/staff-access";
 import { Ambient } from "../../experience/Ambient";
 import { StaffShell } from "../../experience/StaffShell";
@@ -19,6 +20,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, claims, loading, signOut } = useAdminAuth();
   const router = useRouter();
   const pathname = usePathname() ?? "/";
+
+  useEffect(() => { notePageView(); }, [pathname]);
 
   useEffect(() => {
     if (loading) return;
