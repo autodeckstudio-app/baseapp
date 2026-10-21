@@ -44,6 +44,19 @@ describe("booking ideas", () => {
     expect(c[0]!.parts).toEqual(["Exterior detail wash", "Interior deep clean"]);
     expect(comboCards(cat.filter((s: { id: string }) => s.id !== "menu-wash-interior"))).toEqual([]);
   });
+  it("services whose own description states inclusions become package rows, in their own words, with their own id", () => {
+    const mk = (id: string, name: string, description: string, extra = {}) => ({ id, name, description, category: "wash", active: true, ...extra }) as never;
+    const live = [
+      mk("a1", "Detail SPA", "Thorough wash. - Engine cleaning - Under body cleaning"),
+      mk("a2", "Ceramic wash", "Premium foam wash with additional polishing - Includes Ceramic wash & spray"),
+      mk("a3", "Regular Wash", "Standard exterior wash and dry with foam."),
+      mk("a4", "Hidden SPA", "Includes everything", { active: false }),
+      mk("a5", "Quote only", "Includes a lot", { priceOnRequest: true }),
+    ];
+    const c = comboCards(live);
+    expect(c.map((x) => x.service.id)).toEqual(["a1", "a2"]);
+    expect(c[0]!.parts[0]).toBe("Thorough wash. Engine cleaning, Under body cleaning");
+  });
   it("the empty Bookings blocks only show with no next booking, and never mention discounts or invented prices", () => {
     const { readFileSync } = require("node:fs") as typeof NodeFs;
     const { join } = require("node:path") as typeof NodePath;

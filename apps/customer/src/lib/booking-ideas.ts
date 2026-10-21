@@ -33,14 +33,25 @@ export function pickDay(dates: string[], day: Day | string | undefined, todayIst
   return null;
 }
 
-/** Bundles the menu itself states (Full detail wash = exterior + interior), live and priced up front. No invented combos. */
+/** Services whose own description says they bundle several things ("Includes ...", "with additional ...", a bulleted list, "together"). */
+const STATES_INCLUSIONS = /\binclud(?:es|ing)\b|\bwith additional\b|\btogether\b|(?:^|\s)- [A-Z]/;
+
+/** Packages the live menu itself states: a service that contains other menu services (Full detail wash), or whose own description lists what is included.
+ *  Shown with the service's real id and price and its own words. Nothing is invented. */
 export function comboCards(catalogue: Service[]): Array<{ service: Service; parts: string[] }> {
   const byId = new Map(catalogue.map((s) => [s.id, s]));
   const out: Array<{ service: Service; parts: string[] }> = [];
+  const seen = new Set<string>();
+  const ok = (s?: Service): s is Service => !!s && s.active !== false && !s.priceOnRequest;
   for (const [big, partIds] of Object.entries(SERVICE_INCLUDES)) {
     const s = byId.get(big);
     const parts = partIds.map((p) => byId.get(p)).filter((x): x is Service => !!x);
-    if (s && s.active !== false && !s.priceOnRequest && parts.length === partIds.length) out.push({ service: s, parts: parts.map((p) => p.name) });
+    if (ok(s) && parts.length === partIds.length) { out.push({ service: s, parts: parts.map((p) => p.name) }); seen.add(s.id); }
+  }
+  for (const s of catalogue) {
+    if (seen.has(s.id) || !ok(s)) continue;
+    const d = (s.description ?? "").trim();
+    if (d && STATES_INCLUSIONS.test(d)) out.push({ service: s, parts: [d.replace(/([.:])\s+-\s+/, "$1 ").replace(/\s+-\s+/g, ", ")] });
   }
   return out;
 }
