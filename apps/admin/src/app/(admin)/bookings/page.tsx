@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
+import { bookingCode, isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { getStudioConfig } from "../../../lib/studio-service";
 import { bayLabel } from "../../../lib/bay-label";
@@ -69,7 +69,7 @@ export default function BookingsPage() {
       if (date && b.scheduledDate !== date) return false;
       if (serviceId && b.serviceId !== serviceId) return false;
       if (q) {
-        const haystack = [b.id, b.customerId, b.vehicleId, customerNames[b.customerId], vehicleRegs[b.vehicleId]]
+        const haystack = [b.id, bookingCode(b.id), b.customerId, b.vehicleId, customerNames[b.customerId], vehicleRegs[b.vehicleId]]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();

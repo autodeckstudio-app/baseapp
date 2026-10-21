@@ -212,7 +212,6 @@ export default function BookingsScreen() {
             <View style={{ flexGrow: 1, flexBasis: "45%" }}><Button kind="quiet" label="Call studio" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} /></View>
           </View>
           {nextElig && !nextElig.eligible && nextElig.reason ? <T role="caption" tone="tertiary">{nextElig.reason}</T> : null}
-          {nextCancel?.lateToCancel ? <T role="caption" tone="tertiary">Work has started, so this cannot be cancelled online. Please call the studio.</T> : null}
           {confirmCancel ? (
             <Notice
               title="Cancel this booking?"

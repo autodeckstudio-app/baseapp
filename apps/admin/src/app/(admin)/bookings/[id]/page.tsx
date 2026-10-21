@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { isBookingMissed, type Booking, type ServiceJob, type Payment, type Invoice, type ApprovalRequest, type Customer, type Vehicle, type Service } from "@autodeck/core";
+import { bookingCode, isBookingMissed, type Booking, type ServiceJob, type Payment, type Invoice, type ApprovalRequest, type Customer, type Vehicle, type Service } from "@autodeck/core";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import {
   listenToBooking,
@@ -136,6 +136,7 @@ export default function BookingDetailPage() {
         <aside className="ax-detail-side">
           <section className="ax-panel">
             <span className="ax-label">Car and owner</span>
+            <div className="kv"><span>Booking ID</span><span className="ax-data">{bookingCode(booking.id)}</span></div>
             <div className="kv"><span>Customer</span><span>{customer?.name ?? "-"}</span></div>
             <div className="kv"><span>Phone</span><span>{customer?.phone ? <a href={`tel:${customer.phone}`}>{customer.phone}</a> : "-"}</span></div>
             <div className="kv"><span>Vehicle</span><span>{car || "-"}</span></div>
