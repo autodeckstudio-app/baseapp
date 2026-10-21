@@ -377,10 +377,10 @@ export default function BookingDetailScreen() {
       ) : null}
 
       <Pane pad="gap">
-        <Row title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
-        <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
-        {job?.status === "STANDBY" || ready ? <Row title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
-        {booking.notes !== null && booking.notes.trim() !== "" ? <Row title="Notes" detail={booking.notes} last /> : null}
+        <Row detailTone="secondary" title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
+        <Row detailTone="secondary" title="Duration" detail={formatDuration(booking.durationMinutes)} />
+        {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
+        {booking.notes !== null && booking.notes.trim() !== "" ? <Row detailTone="secondary" title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
       {isMultiDay ? (
@@ -458,7 +458,7 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row title="Payment" detail={payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated"} last />
+          <Row detailTone="secondary" title="Payment" detail={payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated"} last />
           {payment?.invoiceId && job ? (
             <View style={{ marginTop: space.line }}>
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
@@ -484,10 +484,10 @@ export default function BookingDetailScreen() {
         rescheduleEligibility.eligible ? (
           <View style={{ gap: space.breath }}>
             {hasPendingApproval ? (
-              <T role="caption" tone="tertiary">You have a pending approval on this job - rescheduling won't affect it.</T>
+              <T role="caption" tone="secondary">You have a pending approval on this job - rescheduling won't affect it.</T>
             ) : null}
             {payment && payment.status !== "pending" && payment.status !== "completed" ? (
-              <T role="caption" tone="tertiary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} - rescheduling won't change this.</T>
+              <T role="caption" tone="secondary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} - rescheduling won't change this.</T>
             ) : null}
             <Button
               label="Reschedule"
@@ -496,7 +496,7 @@ export default function BookingDetailScreen() {
             />
           </View>
         ) : (
-          <T role="caption" tone="tertiary">{rescheduleEligibility.reason}</T>
+          <T role="caption" tone="secondary">{rescheduleEligibility.reason}</T>
         )
       ) : null}
 

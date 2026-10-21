@@ -70,3 +70,14 @@ describe("booking hero chips stay readable on the dark hero in Day mode", () => 
     expect(src).toMatch(/BOOKING_CHIP_TONE\[booking\.status\] \?\? "neutral"\} onDark \/>/);
   });
 });
+
+describe("booking page text stays readable in Night", () => {
+  const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
+  it("Time, Duration, Expected ready and Payment rows use the stronger detail tone", () => {
+    for (const t of ["Time", "Duration", "Expected ready", "Payment"]) expect(src).toMatch(new RegExp(`<Row detailTone="secondary" title="${t}"`));
+  });
+  it("the reschedule explanation is not tertiary", () => {
+    expect(src).not.toMatch(/tone="tertiary">\{rescheduleEligibility\.reason\}/);
+    expect(src).not.toMatch(/tone="tertiary">Payment status is/);
+  });
+});

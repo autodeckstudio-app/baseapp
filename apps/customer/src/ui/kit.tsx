@@ -283,9 +283,11 @@ export function Row({
   trailing,
   onPress,
   last,
+  detailTone = "tertiary",
 }: {
   title: ReactNode;
   detail?: ReactNode | undefined;
+  detailTone?: "tertiary" | "secondary";
   trailing?: ReactNode | undefined;
   onPress?: (() => void) | undefined;
   last?: boolean | undefined;
@@ -309,7 +311,7 @@ export function Row({
     >
       <View style={{ flex: 1, gap: 2 }}>
         {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
-        {detail ? typeof detail === "string" ? <T role="caption" tone="tertiary">{detail}</T> : detail : null}
+        {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
       </View>
       {trailing}
       {onPress ? <View style={{ width: 28, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
