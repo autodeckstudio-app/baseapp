@@ -170,7 +170,7 @@ service cloud.firestore {
       allow delete: if false; // Jobs are permanent records
     }
 
-    // Job chat: text only. Reads by the customer who owns it or staff in the tenant. Writes only through sendJobMessage.
+    // Job chat history. The chat feature was removed (22 Oct 2026); old messages stay here untouched and nothing can write.
     match /jobMessages/{messageId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))

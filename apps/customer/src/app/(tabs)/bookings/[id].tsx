@@ -28,7 +28,6 @@ import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
 import { LiveJobCard } from "../../../ui/LiveJobCard";
-import { JobChat } from "../../../ui/JobChat";
 import { JobTimeline } from "../../../ui/JobTimeline";
 import { jobStage, readyIsAhead } from "../../../ui/job-stage";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -395,7 +394,6 @@ export default function BookingDetailScreen() {
 
       {job && jobStage(job.status) && job.status !== "PENDING_VEHICLE" ? <JobTimeline status={job.status} history={job.statusHistory ?? []} /> : null}
 
-      {job && booking ? <JobChat job={job} tenantId={booking.tenantId} customerId={booking.customerId} /> : null}
 
       {inspection?.status === "finalized" && job ? (
         <Pane pad="inset">
