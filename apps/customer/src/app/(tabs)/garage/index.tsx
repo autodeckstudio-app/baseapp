@@ -114,7 +114,7 @@ export default function GarageScreen() {
   // One chip on the card, nothing below it: Track when the car is in the bay, otherwise what is due.
   const overlay = (v: Vehicle) => {
     const lj = liveJobForCar(jobs, v.id);
-    if (lj) return <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" hitSlop={8} onPress={() => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "rgba(255,255,255,0.92)" }}><Text style={{ color: "#1D1B26", fontSize: 12, fontWeight: "800" }}>{`${LIVE_STEP_NAMES[jobStep(lj.status)]} · Track`}</Text></Pressable>;
+    if (lj) return <Pressable accessibilityRole="button" accessibilityLabel="Track" hitSlop={8} onPress={() => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "rgba(255,255,255,0.92)" }}><Text style={{ color: "#1D1B26", fontSize: 12, fontWeight: "800" }}>{`${LIVE_STEP_NAMES[jobStep(lj.status)]} · Track`}</Text></Pressable>;
     return chip(v) ? <DueChip text={chip(v)!} /> : null;
   };
 
