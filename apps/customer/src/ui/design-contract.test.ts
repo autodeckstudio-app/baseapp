@@ -749,3 +749,16 @@ describe("garage matches the website app section", () => {
     expect(g.indexOf("useStoryTray(")).toBeLessThan(g.indexOf("if (!vehicles && !error)"));
   });
 });
+
+describe("garage layout matches the reference geometry", () => {
+  it("puts name, plate and segment on one row, outlines inactive pills and the history button", () => {
+    const c = read("src/ui/GarageShowroom.tsx");
+    expect(c).toContain("<Plate value={v.registrationNumber} compact />");
+    expect(c.slice(c.indexOf("export function CarPhotoCard"), c.indexOf("export function GarageShowroom"))).toContain('flexDirection: "row", alignItems: "center", gap: 6');
+    const g = read("src/app/(tabs)/garage/index.tsx");
+    expect(g).toContain("<FilterPills outlined");
+    expect(g).toContain("<StoryCircles size={58}");
+    expect(g).toContain('label="Service history" kind="quiet" style={{ minHeight: 44');
+    expect(g).toContain("<View style={{ gap: 12 }}>");
+  });
+});

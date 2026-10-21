@@ -213,10 +213,10 @@ export function formatPlate(reg: string): string {
   return m ? [m[1], m[2], m[3], m[4]].filter(Boolean).join(" ") : s;
 }
 
-export function Plate({ value }: { value: string }) {
+export function Plate({ value, compact }: { value: string; compact?: boolean }) {
   return (
-    <View style={{ alignSelf: "flex-start", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D1D3D8", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
-      <T role="data" style={{ color: "#16181C", fontWeight: "700", letterSpacing: 1.2 }}>
+    <View style={{ alignSelf: "flex-start", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D1D3D8", borderRadius: 8, paddingHorizontal: compact ? 7 : 10, paddingVertical: compact ? 3 : 5 }}>
+      <T role="data" style={{ color: "#16181C", fontWeight: "700", letterSpacing: compact ? 0.3 : 1.2, ...(compact ? { fontSize: 11 } : null) }}>
         {formatPlate(value)}
       </T>
     </View>

@@ -19,12 +19,11 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip, photo }: { c
             <Text numberOfLines={1} style={{ color: "#1D1B26", fontSize: 11, fontWeight: "800" }}>{badge}</Text>
           </View>
         ) : null}
-        <View style={{ position: "absolute", left: 14, right: 14, bottom: 12, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
-          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800" }}>{name}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <View style={{ borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: "rgba(20,20,24,0.62)" }}><Text style={{ color: "#F1EFEC", fontSize: 12, fontWeight: "600" }}>{segmentLabel(v.category)}</Text></View> : null}</View>
-          </View>
-          {chip}
+        <View style={{ position: "absolute", left: 14, right: 14, bottom: 12, flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{name}</Text>
+          <View style={{ flexShrink: 0 }}><Plate value={v.registrationNumber} compact /></View>
+          {segmentLabel(v.category) ? <View style={{ flexShrink: 0, borderRadius: 9999, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: "rgba(20,20,24,0.62)" }}><Text numberOfLines={1} style={{ color: "#F1EFEC", fontSize: 12, fontWeight: "600" }}>{segmentLabel(v.category)}</Text></View> : null}
+          {chip ? <View style={{ marginLeft: "auto" }}>{chip}</View> : null}
         </View>
       </View>
     </Pressable>

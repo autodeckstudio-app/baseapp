@@ -117,10 +117,11 @@ export default function GarageScreen() {
   return (
     <Screen appBar="Garage">
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      <View style={{ gap: 12 }}>
       {list.length > 0 ? (
-        <FilterPills items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>+ Add</Text></Pressable>} />
+        <FilterPills outlined items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 7, borderWidth: 1, borderColor: light ? "rgba(22,24,28,0.18)" : "rgba(255,255,255,0.22)", backgroundColor: light ? "rgba(255,255,255,0.7)" : "transparent" }}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>+ Add</Text></Pressable>} />
       ) : null}
-      {list.length > 0 && tray.groups.length > 0 ? <StoryCircles groups={tray.groups} seen={tray.seen} onOpen={tray.show} /> : null}
+      {list.length > 0 && tray.groups.length > 0 ? <StoryCircles size={58} groups={tray.groups} seen={tray.seen} onOpen={tray.show} /> : null}
       {list.length === 0 && !error ? (
         <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
           <T role="heading">No cars yet</T>
@@ -168,12 +169,13 @@ export default function GarageScreen() {
         </View>
       )}
       {list.length > 0 ? (
-        <View style={{ gap: space.breath, marginTop: metrics.sectionGap, paddingBottom: 100 }}>
-          <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
-          <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
+        <View style={{ gap: 9, paddingBottom: 100 }}>
+          <Button label="Book a service" style={{ minHeight: 44, marginTop: 0 }} onPress={() => router.push("/(tabs)/catalogue")} />
+          <Button label="Service history" kind="quiet" style={{ minHeight: 44, backgroundColor: "transparent", borderWidth: 1, borderColor: light ? "rgba(22,24,28,0.3)" : "rgba(255,255,255,0.3)", shadowOpacity: 0, elevation: 0 }} onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
         </View>
       ) : null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
+      </View>
       <StoryViewer group={tray.open} onClose={tray.close} onNextGroup={tray.next} onPrevGroup={tray.prev} />
     </Screen>
   );
