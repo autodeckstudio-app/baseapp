@@ -151,7 +151,7 @@ function SellHub({ mine, onSell, onOpen }: { mine: CarListingView[]; onSell: () 
           <Kicker>Your cars for sale</Kicker>
           {mine.map((l) => (
             <Pressable key={l.id} accessibilityRole="button" onPress={() => onOpen(l.id)} style={{ flexDirection: "row", gap: space.line, alignItems: "center" }}>
-              <Image source={{ uri: l.photoUrls[0] }} resizeMode="cover" style={{ width: 72, height: 72, borderRadius: 12 }} />
+              <Photo l={l} style={{ width: 72, height: 72, borderRadius: 12 }} />
               <View style={{ flex: 1, gap: 2 }}>
                 <T role="bodyStrong" numberOfLines={1}>{l.year} {l.make} {l.model}</T>
                 <T role="caption" tone="tertiary">{hasCarPrice(l) ? inr(l.askingPrice) : "Price on request"}</T>

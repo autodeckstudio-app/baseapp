@@ -33,4 +33,11 @@ describe("unified left menu", () => {
     const hub = read("ui/CarsHub.tsx");
     expect(hub).toContain('shown.length === 1 ? " matches your search" : " match your search"');
   });
+  it("car photos come only from the listing: no stock, generated or fallback image, and a missing photo says so", () => {
+    const hub = read("ui/CarsHub.tsx");
+    expect(hub).not.toMatch(/imagery|stock\/|generated|CarThumb|require\(/);
+    expect(hub).toContain('No photo');
+    expect(hub.match(/photoUrls\[0\]/g)?.length).toBe(2);
+    expect(read("app/preview-cars.tsx")).not.toMatch(/imagery|jpg|require\(/);
+  });
 });

@@ -1,5 +1,5 @@
 // Dev-only mock of the Cars screen: the real CarsHub, real app bar and real bottom nav with sample listings.
-// Photos are stand-ins and the cars are NOT real listings.
+// The cars are NOT real listings and carry NO photos: the screen shows its honest "No photo" state. No stock or generated image is used.
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -7,16 +7,14 @@ import type { CarListingView } from "@autodeck/core";
 import { CarsHub } from "../ui/CarsHub";
 import { RaisedTabBar } from "../ui/RaisedTabBar";
 
-const mk = (id: string, make: string, model: string, year: number, fuel: string, km: number, price: number, source: "studio" | "customer", photo: string, status = "live"): CarListingView =>
-  ({ id, make, model, year, fuel, kmDriven: km, askingPrice: price * 100, createdAt: "2026-10-2" + (id === "a" ? "9" : id === "b" ? "8" : "7"), source, status, photoUrls: [photo], gearbox: "manual", variant: null, area: null } as unknown as CarListingView);
-const raw = require("../../assets/imagery/generated/garage-inspection.jpg");
-const img: string = typeof raw === "string" ? raw : raw?.uri ?? raw?.default?.uri ?? raw?.default;
+const mk = (id: string, make: string, model: string, year: number, fuel: string, km: number, price: number, source: "studio" | "customer", status = "live"): CarListingView =>
+  ({ id, make, model, year, fuel, kmDriven: km, askingPrice: price * 100, createdAt: "2026-10-2" + (id === "a" ? "9" : id === "b" ? "8" : "7"), source, status, photoUrls: [], gearbox: "manual", variant: null, area: null } as unknown as CarListingView);
 const cars = [
-  mk("a", "Tata", "Safari", 2023, "diesel", 58128, 1111000, "studio", img),
-  mk("b", "Kia", "Seltos", 2022, "diesel", 41000, 1350000, "customer", img),
-  mk("c", "Hyundai", "Grand i10", 2018, "petrol", 62500, 451000, "customer", img),
+  mk("a", "Tata", "Safari", 2023, "diesel", 58128, 1111000, "studio"),
+  mk("b", "Kia", "Seltos", 2022, "diesel", 41000, 1350000, "customer"),
+  mk("c", "Hyundai", "Grand i10", 2018, "petrol", 62500, 451000, "customer"),
 ];
-const mine = [mk("m", "Honda", "City", 2019, "petrol", 48000, 780000, "customer", img, "pending")];
+const mine = [mk("m", "Honda", "City", 2019, "petrol", 48000, 780000, "customer", "pending")];
 const noop = () => undefined;
 export default function PreviewCars() {
   const q = useLocalSearchParams<{ tab?: string; more?: string; empty?: string }>();
