@@ -762,3 +762,11 @@ describe("garage layout matches the reference geometry", () => {
     expect(g).toContain("<View style={{ gap: 12 }}>");
   });
 });
+
+describe("garage photo card fits a normal name on narrow phones", () => {
+  it("shrinks the name and segment pill under 380px so the plate stays full size", () => {
+    const s = require("node:fs").readFileSync(require("node:path").join(__dirname, "GarageShowroom.tsx"), "utf8");
+    expect(s).toContain("useWindowDimensions().width < 380");
+    expect(s).toContain("narrow ? 15 : 18");
+  });
+});

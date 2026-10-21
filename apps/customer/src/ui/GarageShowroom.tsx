@@ -1,5 +1,5 @@
 // Garage showroom: the selected car as one full-width hero photo. Changing car is done with the chips above only (no swipe, no dots).
-import { Platform, Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { CarThumb } from "./CarThumb";
@@ -8,6 +8,7 @@ import { metrics } from "../lib/metrics";
 
 export function CarPhotoCard({ car: v, height, badge, onOpen, chip, photo }: { car: Vehicle; height: number; badge?: string | null; onOpen: (v: Vehicle) => void; chip?: React.ReactNode; photo?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
+  const narrow = useWindowDimensions().width < 380;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open ${name}`} onPress={() => onOpen(v)}>
       <View style={{ height, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
@@ -20,9 +21,9 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip, photo }: { c
           </View>
         ) : null}
         <View style={{ position: "absolute", left: 14, right: 14, bottom: 12, flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text numberOfLines={1} style={{ flexShrink: 1, color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{name}</Text>
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: "#FFFFFF", fontSize: narrow ? 15 : 18, fontWeight: "800" }}>{name}</Text>
           <View style={{ flexShrink: 0 }}><Plate value={v.registrationNumber} compact /></View>
-          {segmentLabel(v.category) ? <View style={{ flexShrink: 0, borderRadius: 9999, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: "rgba(20,20,24,0.62)" }}><Text numberOfLines={1} style={{ color: "#F1EFEC", fontSize: 12, fontWeight: "600" }}>{segmentLabel(v.category)}</Text></View> : null}
+          {segmentLabel(v.category) ? <View style={{ flexShrink: 0, borderRadius: 9999, paddingHorizontal: narrow ? 7 : 9, paddingVertical: 5, backgroundColor: "rgba(20,20,24,0.62)" }}><Text numberOfLines={1} style={{ color: "#F1EFEC", fontSize: narrow ? 11 : 12, fontWeight: "600" }}>{segmentLabel(v.category)}</Text></View> : null}
           {chip ? <View style={{ marginLeft: "auto" }}>{chip}</View> : null}
         </View>
       </View>
