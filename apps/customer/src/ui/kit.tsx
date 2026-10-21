@@ -385,9 +385,9 @@ export function LinkAction({ label, onPress, testID }: { label: string; onPress:
   );
 }
 
-export function Chip({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger" }) {
+export function Chip({ label, tone = "neutral", onDark }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger"; onDark?: boolean }) {
   const { colors, name } = useExperienceTheme();
-  const c = tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
+  const c = onDark && tone !== "danger" ? "#FFFFFF" : tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
   return (
     <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
       <T role="label" style={{ color: c }}>
