@@ -11,3 +11,8 @@ test("Home does not repeat the Open the app button inside the app story", () => 
   const story = home.slice(home.indexOf('id="app"'), home.indexOf('class="app-install'));
   assert.doesNotMatch(story, /Open the app/);
 });
+
+test("Home shows the app showcase above the studio menu", () => {
+  const x = readFileSync(new URL("../src/pages/index.astro", import.meta.url), "utf8");
+  assert.ok(x.indexOf('id="app"') < x.indexOf('id="services"'));
+});
