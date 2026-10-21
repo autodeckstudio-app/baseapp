@@ -1,4 +1,3 @@
-import { lastServiceLine } from "./garage-due";
 import { describe, expect, it } from "vitest";
 import { liveStep } from "./live-step";
 import { jobStage } from "../ui/job-stage";
@@ -58,27 +57,19 @@ describe("garage services have one price for every car", () => {
 });
 describe("garage All view and selected view share one language", () => {
   const g = read("../app/(tabs)/garage/index.tsx");
-  it("both views show the car's own facts card under a photo card, with no swipe and no Today or Coming up blocks", () => {
+  it("cars are photo cards with nothing stacked below them, no Today or Coming up blocks, no swipe", () => {
     expect(g).toContain("<CarPhotoCard"); expect(g).toContain("<GarageShowroom");
-    expect((g.match(/\{facts\(/g) ?? []).length).toBe(2);
-    expect(g).not.toMatch(/TodayStrip|COMING UP|ScrollView horizontal pagingEnabled/);
+    expect(g).not.toMatch(/TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
   });
-  it("Track stays as a text link on the car's facts card, not a second button", () => {
-    const f = read("ui/GarageCarFacts.tsx");
-    expect(f).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"');
-    expect(f).not.toMatch(/imagery|require\(|stock/);
+  it("Track stays reachable as a text chip on the card of a car in the bay, not a second button", () => {
+    expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"');
+    expect(g).toContain("const overlay");
+  });
+  it("car cards never use stock or generated art, and a missing photo says so", () => {
+    for (const f of ["ui/GarageShowroom.tsx", "ui/CarThumb.tsx", "app/(tabs)/garage/index.tsx"]) expect(read(f)).not.toMatch(/imagery|generated\/|require\(/);
+    expect(read("ui/CarThumb.tsx")).toContain("NO PHOTO YET");
   });
   it("All view has no plan ring", () => { const i = g.indexOf("list.map((v) =>"); expect(g.slice(i - 400, i)).not.toContain("<CareRing"); });
-  it("last service is the newest DELIVERED job on that car only, and absent when there is none", () => {
-    const jobs = [
-      { vehicleId: "a", serviceId: "s1", status: "DELIVERED", createdAt: "2026-09-01T10:00:00Z", sealedAt: "2026-09-02T10:00:00Z" },
-      { vehicleId: "a", serviceId: "s2", status: "IN_PROGRESS", createdAt: "2026-10-10T10:00:00Z" },
-      { vehicleId: "b", serviceId: "s1", status: "DELIVERED", createdAt: "2026-10-12T10:00:00Z", sealedAt: "2026-10-12T10:00:00Z" },
-    ];
-    expect(lastServiceLine(jobs, "a", { s1: { name: "Detail SPA" }, s2: { name: "Other" } })).toBe("2 Sep 2026 \u00b7 Detail SPA");
-    expect(lastServiceLine(jobs, "c", {})).toBeNull();
-    expect(lastServiceLine([jobs[1]!], "a", {})).toBeNull();
-  });
 });
 import { bookingPayment, PAY_AT_STUDIO_GROUPS } from "@autodeck/core";
 describe("pay in the app at booking", () => {

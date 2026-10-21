@@ -13,14 +13,13 @@ import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { glassPane } from "../../../lib/glass-pane";
 import { FilterPills } from "../../../ui/FilterPills";
-import { dueChip, lastServiceLine } from "../../../lib/garage-due";
+import { dueChip } from "../../../lib/garage-due";
 import { listenToMyJobs } from "../../../lib/job-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
 import { GarageShowroom, CarPhotoCard } from "../../../ui/GarageShowroom";
-import { GarageCarFacts } from "../../../ui/GarageCarFacts";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
@@ -28,6 +27,16 @@ import { listenToMyMemberships } from "../../../lib/home-service";
 import type { Membership } from "@autodeck/core";
 import { devGarage } from "../../../lib/garage-dev-sample";
 
+
+function DueChip({ text }: { text: string }) {
+  const { colors } = useExperienceTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
+      <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
+    </View>
+  );
+}
 
 export default function GarageScreen() {
   const { colors: ink, name: themeName } = useExperienceTheme();
@@ -102,9 +111,11 @@ export default function GarageScreen() {
   const one = sel ? list.find((v) => v.id === sel) ?? null : null;
   const light = themeName === "light";
   const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
-  const facts = (v: Vehicle) => {
+  // One chip on the card, nothing below it: Track when the car is in the bay, otherwise what is due.
+  const overlay = (v: Vehicle) => {
     const lj = liveJobForCar(jobs, v.id);
-    return <GarageCarFacts joined light={light} lastService={lastServiceLine(jobs, v.id, svcMap)} due={chip(v)} live={lj ? { stepName: LIVE_STEP_NAMES[jobStep(lj.status)]!, readyBy: readyBy(lj), onTrack: () => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); } } : null} />;
+    if (lj) return <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" hitSlop={8} onPress={() => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "rgba(255,255,255,0.92)" }}><Text style={{ color: "#1D1B26", fontSize: 12, fontWeight: "800" }}>{`${LIVE_STEP_NAMES[jobStep(lj.status)]} · Track`}</Text></Pressable>;
+    return chip(v) ? <DueChip text={chip(v)!} /> : null;
   };
 
   return (
@@ -121,9 +132,8 @@ export default function GarageScreen() {
         </View>
       ) : one ? (
         <View style={{ gap: metrics.sectionGap }}>
-          <View style={{ borderRadius: 24, overflow: "hidden" }}>
-            <GarageShowroom joined cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={() => null} />
-            {facts(one)}
+          <View>
+            <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={overlay} />
           </View>
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
@@ -142,10 +152,7 @@ export default function GarageScreen() {
       ) : (
         <View style={{ gap: metrics.sectionGap }}>
           {list.map((v) => (
-            <View key={v.id} style={{ borderRadius: 24, overflow: "hidden" }}>
-              <CarPhotoCard joined car={v} height={170} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} />
-              {facts(v)}
-            </View>
+            <CarPhotoCard key={v.id} car={v} height={230} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} chip={overlay(v)} />
           ))}
         </View>
       )}
