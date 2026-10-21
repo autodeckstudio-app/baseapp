@@ -10,9 +10,9 @@ import { NavIcon } from "./NavIcon";
 import { useReduceMotion } from "../lib/reduce-motion";
 
 /** What the customer gets, one line at a time. Rotates every 4 s; Reduce Motion keeps it still and the dots still work. */
-export const LOGIN_PERKS: { icon: "wash" | "chat" | "check"; text: string }[] = [
+export const LOGIN_PERKS: { icon: "wash" | "pin" | "check"; text: string }[] = [
   { icon: "wash", text: "Book a wash in seconds" },
-  { icon: "chat", text: "Track your car" },
+  { icon: "pin", text: "Track your car" },
   { icon: "check", text: "All bills and warranties" },
 ];
 
