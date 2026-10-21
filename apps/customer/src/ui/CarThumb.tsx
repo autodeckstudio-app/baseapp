@@ -1,6 +1,6 @@
 // A car picture that never breaks: the customer's photo when there is one, otherwise a category placeholder.
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
 import type { Vehicle } from "@autodeck/core";
 import { resolveVehiclePhotoUrl } from "../lib/vehicle-service";
@@ -34,7 +34,7 @@ export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undef
   return (
     <View style={{ width: width ?? "100%", height, borderRadius: radius, overflow: "hidden" }}>
       {!pending && hasPhoto ? <FadeImage key={uri} source={{ uri: uri as string }} resizeMode="cover" onError={() => setFailedUri(uri)} style={{ width: "100%", height: "100%" }} /> : null}
-      {!pending && !hasPhoto ? <View style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(127,127,135,0.14)" }}><Icon name="car" color="#8A8A92" size={Math.max(18, Math.min(34, height / 3))} /></View> : null}
+      {!pending && !hasPhoto ? <View style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: height >= 100 ? "flex-start" : "center", paddingTop: height >= 100 ? Math.round(height * 0.2) : 0, gap: 4, backgroundColor: height >= 100 ? "#23232A" : "rgba(127,127,135,0.14)" }}>{height >= 100 ? <Text style={{ color: "#B4B2BB", fontSize: 12, fontWeight: "700", letterSpacing: 1.2 }}>NO PHOTO YET</Text> : <Icon name="car" color="#8A8A92" size={Math.max(18, Math.min(34, height / 3))} />}</View> : null}
     </View>
   );
 }

@@ -57,12 +57,19 @@ describe("garage services have one price for every car", () => {
 });
 describe("garage All view and selected view share one language", () => {
   const g = read("../app/(tabs)/garage/index.tsx");
-  it("both views use the Today strip and photo cards, with no swipe", () => {
-    expect((g.match(/<TodayStrip/g) ?? []).length).toBe(2); expect(g).toContain("<CarPhotoCard"); expect(g).toContain("<GarageShowroom");
-    expect(g).not.toMatch(/ScrollView horizontal pagingEnabled/);
+  it("cars are photo cards with nothing stacked below them, no Today or Coming up blocks, no swipe", () => {
+    expect(g).toContain("<CarPhotoCard"); expect(g).toContain("<GarageShowroom");
+    expect(g).not.toMatch(/TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
   });
-  it("the Today strip has a text Track link and no second button", () => { expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"'); });
-  it("All view has no plan ring", () => { const a = g.slice(g.indexOf("COMING UP") - 1500, g.indexOf("COMING UP")); expect(a).not.toContain("<CareRing"); });
+  it("Track stays reachable as a text chip on the card of a car in the bay, not a second button", () => {
+    expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"');
+    expect(g).toContain("const overlay");
+  });
+  it("car cards never use stock or generated art, and a missing photo says so", () => {
+    for (const f of ["ui/GarageShowroom.tsx", "ui/CarThumb.tsx", "app/(tabs)/garage/index.tsx"]) expect(read(f)).not.toMatch(/imagery|generated\/|require\(/);
+    expect(read("ui/CarThumb.tsx")).toContain("NO PHOTO YET");
+  });
+  it("All view has no plan ring", () => { const i = g.indexOf("list.map((v) =>"); expect(g.slice(i - 400, i)).not.toContain("<CareRing"); });
 });
 import { bookingPayment, PAY_AT_STUDIO_GROUPS } from "@autodeck/core";
 describe("pay in the app at booking", () => {
