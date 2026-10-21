@@ -20,6 +20,10 @@ import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
 import { GarageShowroom, CarPhotoCard } from "../../../ui/GarageShowroom";
+import { TodayStrip } from "../../../ui/GarageToday";
+import { StoryCircles } from "../../../ui/StoryCircles";
+import { StoryViewer } from "../../../ui/StoryViewer";
+import { useStoryTray } from "../../../hooks/useStoryTray";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
@@ -33,31 +37,6 @@ function DueChip({ text }: { text: string }) {
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
       <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
-    </View>
-  );
-}
-
-function TodayStrip({ name, job, ink, light, onTrack }: { name: string; job: ServiceJob; ink: ReturnType<typeof useExperienceTheme>["colors"]; light: boolean; onTrack: () => void }) {
-  const step = jobStep(job.status);
-  const ready = readyBy(job);
-  return (
-    <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>TODAY</Text>
-          <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 17, fontWeight: "800" }}>{`${name} is in the bay`}</Text>
-          <Text style={{ color: ink.textSecondary, fontSize: 13 }}>{ready ? `${LIVE_STEP_NAMES[step]}, ready by ${ready}` : LIVE_STEP_NAMES[step]}</Text>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" onPress={onTrack} hitSlop={8}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "800" }}>Track</Text></Pressable>
-      </View>
-      <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
-        {LIVE_STEP_NAMES.map((n, i) => (
-          <View key={n} style={{ flex: 1, gap: 6 }}>
-            <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(128,128,128,0.3)" }} />
-            <Text numberOfLines={1} style={{ color: i <= step ? ink.textPrimary : ink.textSecondary, fontSize: 10.5, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -82,6 +61,7 @@ export default function GarageScreen() {
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.user.uid : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
+  const tray = useStoryTray(uid !== null);
   // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
   useEffect(() => {
     if (!uid || !tenantId) return;
@@ -140,6 +120,7 @@ export default function GarageScreen() {
       {list.length > 0 ? (
         <FilterPills items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>+ Add</Text></Pressable>} />
       ) : null}
+      {list.length > 0 && tray.groups.length > 0 ? <StoryCircles groups={tray.groups} seen={tray.seen} onOpen={tray.show} /> : null}
       {list.length === 0 && !error ? (
         <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
           <T role="heading">No cars yet</T>
@@ -171,7 +152,7 @@ export default function GarageScreen() {
             return liveCar ? <TodayStrip name={`${liveCar.make ?? ""} ${liveCar.model ?? ""}`.trim() || liveCar.registrationNumber} job={liveJobForCar(jobs, liveCar.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, liveCar.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null;
           })()}
           {list.map((v) => (
-            <CarPhotoCard key={v.id} car={v} height={liveJobForCar(jobs, v.id) ? 150 : 130} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : chip(v)} onOpen={open} />
+            <CarPhotoCard key={v.id} car={v} height={liveJobForCar(jobs, v.id) ? 180 : 130} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : chip(v)} onOpen={open} />
           ))}
           {list.some((v) => chip(v)) ? (
             <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 6 }}>
@@ -193,6 +174,7 @@ export default function GarageScreen() {
         </View>
       ) : null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
+      <StoryViewer group={tray.open} onClose={tray.close} onNextGroup={tray.next} onPrevGroup={tray.prev} />
     </Screen>
   );
 }

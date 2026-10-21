@@ -61,7 +61,7 @@ describe("garage All view and selected view share one language", () => {
     expect((g.match(/<TodayStrip/g) ?? []).length).toBe(2); expect(g).toContain("<CarPhotoCard"); expect(g).toContain("<GarageShowroom");
     expect(g).not.toMatch(/ScrollView horizontal pagingEnabled/);
   });
-  it("the Today strip has a text Track link and no second button", () => { expect(g).toContain('accessibilityLabel="Track and chat"'); expect(g).not.toContain('label="Track and chat"'); });
+  it("the Today strip has a text Track link and no second button", () => { const t = readFileSync(resolve(".", "src/ui/GarageToday.tsx"), "utf8"); expect(t).toContain('accessibilityLabel="Track and chat"'); expect(t).not.toContain('label="Track and chat"'); expect(g).not.toContain('label="Track and chat"'); });
   it("All view has no plan ring", () => { const a = g.slice(g.indexOf("COMING UP") - 1500, g.indexOf("COMING UP")); expect(a).not.toContain("<CareRing"); });
 });
 import { bookingPayment, PAY_AT_STUDIO_GROUPS } from "@autodeck/core";

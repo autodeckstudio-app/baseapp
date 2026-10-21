@@ -731,3 +731,21 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
     expect(read("../../packages/ui/src/theme/float.ts")).toContain("export const LAMP_GLOW");
   });
 });
+
+describe("garage matches the website app section", () => {
+  const g = read("src/app/(tabs)/garage/index.tsx");
+  it("shows the story tray between the car pills and the Today card, with the viewer", () => {
+    expect(g).toContain("<StoryCircles");
+    expect(g).toContain("<StoryViewer");
+    expect(g.indexOf("<FilterPills")).toBeLessThan(g.indexOf("<StoryCircles"));
+    expect(g.indexOf("<StoryCircles")).toBeLessThan(g.indexOf("<TodayStrip"));
+  });
+  it("keeps the Today card and the live car photo (180 tall) in the All view", () => {
+    expect(g).toContain("height={liveJobForCar(jobs, v.id) ? 180 : 130}");
+    expect(read("src/ui/GarageToday.tsx")).toContain("is in the bay");
+  });
+  it("loads the tray only once signed in, and never reads hooks after an early return", () => {
+    expect(g).toContain("useStoryTray(uid !== null)");
+    expect(g.indexOf("useStoryTray(")).toBeLessThan(g.indexOf("if (!vehicles && !error)"));
+  });
+});

@@ -6,12 +6,12 @@ import { CarThumb } from "./CarThumb";
 import { Plate } from "./kit";
 import { metrics } from "../lib/metrics";
 
-export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Vehicle; height: number; badge?: string | null; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
+export function CarPhotoCard({ car: v, height, badge, onOpen, chip, photo }: { car: Vehicle; height: number; badge?: string | null; onOpen: (v: Vehicle) => void; chip?: React.ReactNode; photo?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open ${name}`} onPress={() => onOpen(v)}>
       <View style={{ height, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
-        <CarThumb car={v} height={height} radius={0} />
+        {photo ?? <CarThumb car={v} height={height} radius={0} />}
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
         {badge ? (
           <View style={{ position: "absolute", left: 12, top: 12, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.88)" }}>
@@ -21,8 +21,8 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
         ) : null}
         <View style={{ position: "absolute", left: 14, right: 14, bottom: 12, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{name}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800" }}>{name}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <View style={{ borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: "rgba(20,20,24,0.62)" }}><Text style={{ color: "#F1EFEC", fontSize: 12, fontWeight: "600" }}>{segmentLabel(v.category)}</Text></View> : null}</View>
           </View>
           {chip}
         </View>
