@@ -52,4 +52,11 @@ describe("booking ideas", () => {
     const src = readFileSync(join(__dirname, "booking-ideas.ts"), "utf8") + page.slice(page.indexOf("Ideas for the empty page"), page.indexOf("const doCancel"));
     expect(src).not.toMatch(/discount|% off|\bsave\b|rupees\(/i);
   });
+  it("combo cards are compact rows, not full-height photo cards", () => {
+    const fs = require("node:fs") as typeof NodeFs; const pth = require("node:path") as typeof NodePath;
+    const page = fs.readFileSync(pth.resolve(__dirname, "../app/(tabs)/bookings/index.tsx"), "utf8");
+    const block = page.slice(page.indexOf("combos.map"), page.indexOf("combos.map") + 500);
+    expect(block).toContain("VisitCard");
+    expect(block).not.toMatch(/PhotoCard|height=\{400\}/);
+  });
 });

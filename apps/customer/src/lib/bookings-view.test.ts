@@ -21,8 +21,8 @@ describe("Bookings screen holds only booking content", () => {
   it("has no Explore, membership, referral or documents blocks", () => {
     for (const w of ["Explore", "Membership", "referral", "Bring a friend", "Care map", "papers"]) expect(s).not.toContain(w);
   });
-  it("image cards are used only for the approved Combos block", () => {
-    expect(s.match(/<PhotoCard /g)?.length).toBe(1);
+  it("bookings use compact rows only, no full-height image cards", () => {
+    expect(s.match(/<PhotoCard /g)?.length ?? 0).toBe(0);
   });
   it("sections come in the agreed order", () => {
     const at = ["In the studio", "Waiting for your OK", "Next visit", "Book again", "No past visits"].map((k) => s.indexOf(k));

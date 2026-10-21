@@ -19,7 +19,6 @@ import { getMyBookings } from "../../../lib/booking-service";
 
 import { listenToMyJobs, bookingFromJob } from "../../../lib/job-service";
 import { VisitCard } from "../../../ui/VisitCard";
-import { PhotoCard } from "../../../ui/HomeView";
 import { CarThumb } from "../../../ui/CarThumb";
 import { NextVisitHero } from "../../../ui/NextVisitHero";
 import { sceneImagery } from "../../../lib/imagery";
@@ -272,10 +271,7 @@ export default function BookingsScreen() {
         <View style={{ gap: space.line }}>
           <SectionTitle>Combos</SectionTitle>
           {combos.map((c) => (
-            <View key={c.service.id} style={{ gap: 6 }}>
-              <PhotoCard hearted={false} title={c.service.name} pill="Book" onPress={() => router.push(`/(tabs)/book/${c.service.id}`)} media={<ServicePhoto service={c.service} height={400} />} />
-              <T role="caption" tone="secondary">{c.parts.join(" + ")}</T>
-            </View>
+            <VisitCard key={c.service.id} onPress={() => router.push(`/(tabs)/book/${c.service.id}`)} photo={<ServicePhoto service={c.service} height={64} />} title={c.service.name} car={c.parts.join(" + ")} when="" price="" chip={<Chip label="Book" tone="accent" />} />
           ))}
         </View>
       ) : null}
