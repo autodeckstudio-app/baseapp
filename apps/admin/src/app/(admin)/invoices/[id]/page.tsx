@@ -1,5 +1,6 @@
 "use client";
 
+import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Invoice, Customer, Vehicle, Payment } from "@autodeck/core";
@@ -75,7 +76,7 @@ export default function InvoiceDetailPage() {
       message={status}
       voiding={voiding}
       onVoid={(r) => void handleVoid(r)}
-      onBack={() => router.push("/invoices")}
+      onBack={() => goBackOrTo(router, "/invoices")}
       onOpen={(href) => router.push(href)}
     />
   );

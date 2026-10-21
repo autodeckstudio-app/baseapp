@@ -1,5 +1,6 @@
 "use client";
 
+import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
@@ -170,7 +171,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back" onClick={() => router.push("/jobs")}>‹ Studio floor</button>
+      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/jobs")}>‹ Studio floor</button>
 
       <header className="ax-hero">
         <div>

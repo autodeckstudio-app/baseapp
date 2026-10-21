@@ -1,5 +1,6 @@
 "use client";
 
+import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { bookingCode, isBookingMissed, type Booking, type ServiceJob, type Payment, type Invoice, type ApprovalRequest, type Customer, type Vehicle, type Service } from "@autodeck/core";
@@ -93,7 +94,7 @@ export default function BookingDetailPage() {
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back" onClick={() => router.push("/bookings")}>‹ Bookings</button>
+      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/bookings")}>‹ Bookings</button>
 
       <header className="ax-hero">
         <div>
