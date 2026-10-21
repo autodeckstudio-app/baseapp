@@ -2,7 +2,7 @@
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -25,6 +25,7 @@ import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../.
 import { liveTrackTarget } from "../../../lib/bookings-view";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import type { Membership } from "@autodeck/core";
+import { devGarage } from "../../../lib/garage-dev-sample";
 
 
 function DueChip({ text }: { text: string }) {
@@ -37,36 +38,13 @@ function DueChip({ text }: { text: string }) {
   );
 }
 
-function TodayStrip({ name, job, ink, light, onTrack }: { name: string; job: ServiceJob; ink: ReturnType<typeof useExperienceTheme>["colors"]; light: boolean; onTrack: () => void }) {
-  const step = jobStep(job.status);
-  const ready = readyBy(job);
-  return (
-    <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>TODAY</Text>
-          <Text numberOfLines={1} style={{ color: ink.textPrimary, fontSize: 17, fontWeight: "800" }}>{`${name} is in the bay`}</Text>
-          <Text style={{ color: ink.textSecondary, fontSize: 13 }}>{ready ? `${LIVE_STEP_NAMES[step]}, ready by ${ready}` : LIVE_STEP_NAMES[step]}</Text>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" onPress={onTrack} hitSlop={8}><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "800" }}>Track</Text></Pressable>
-      </View>
-      <View accessibilityRole="progressbar" accessibilityLabel={`Step ${step + 1} of 4`} style={{ flexDirection: "row", gap: 6 }}>
-        {LIVE_STEP_NAMES.map((n, i) => (
-          <View key={n} style={{ flex: 1, gap: 6 }}>
-            <View style={{ height: 5, borderRadius: 9999, backgroundColor: i <= step ? "#EC8638" : "rgba(128,128,128,0.3)" }} />
-            <Text numberOfLines={1} style={{ color: i <= step ? ink.textPrimary : ink.textSecondary, fontSize: 10.5, fontWeight: i === step ? "700" : "500" }}>{n}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 export default function GarageScreen() {
   const { colors: ink, name: themeName } = useExperienceTheme();
   const auth = useAuth();
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
+  const q = useLocalSearchParams<{ mock?: string; live?: string; pick?: string; empty?: string }>();
+  const mock = __DEV__ && q.mock === "1" ? devGarage({ live: !!q.live, empty: !!q.empty }) : null; // dev preview only: sample cars, never real data
+  const [vehicles, setVehicles] = useState<Vehicle[] | null>(mock ? mock.vehicles : null);
   const [archived,setArchived]=useState<Vehicle[]>([]);
   const [showArchived,setShowArchived]=useState(false);
   const [archiveActionError,setArchiveActionError]=useState<string|null>(null);
@@ -74,24 +52,24 @@ export default function GarageScreen() {
   const [removing, setRemoving] = useState<Vehicle | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [pick, setPick] = useState<string | null>(null);
-  const [jobs, setJobs] = useState<ServiceJob[]>([]);
-  const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>({});
-  const [plan, setPlan] = useState<Membership | null>(null);
+  const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
+  const [jobs, setJobs] = useState<ServiceJob[]>(mock ? mock.jobs : []);
+  const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>(mock ? mock.svcMap : {});
+  const [plan, setPlan] = useState<Membership | null>(mock ? mock.plan : null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.user.uid : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
   // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
   useEffect(() => {
-    if (!uid || !tenantId) return;
+    if (mock || !uid || !tenantId) return;
     return listenToMyVehicles(uid, tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
   }, [uid, tenantId, retryTick]);
 
-  useEffect(() => { if (!uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
-  useEffect(() => { if (!uid || !tenantId) return; return listenToMyMemberships(tenantId, uid, (ms) => setPlan(ms.find((m) => m.status === "active") ?? null), () => undefined); }, [uid, tenantId, retryTick]);
-  useEffect(() => { void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
-  useEffect(()=>{if(!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
+  useEffect(() => { if (mock || !uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { if (mock || !uid || !tenantId) return; return listenToMyMemberships(tenantId, uid, (ms) => setPlan(ms.find((m) => m.status === "active") ?? null), () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { if (mock) return; void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
+  useEffect(()=>{if(mock||!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
   async function restore(v:Vehicle){setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not restore the car.");}finally{setArchiveActionBusy(null);}}
   // Watchdog: if the vehicles stream never delivers (no data, no error),
   // show the connection notice instead of spinning forever.
@@ -133,6 +111,12 @@ export default function GarageScreen() {
   const one = sel ? list.find((v) => v.id === sel) ?? null : null;
   const light = themeName === "light";
   const chip = (v: Vehicle) => dueChip(jobs, v.id, svcMap);
+  // One chip on the card, nothing below it: Track when the car is in the bay, otherwise what is due.
+  const overlay = (v: Vehicle) => {
+    const lj = liveJobForCar(jobs, v.id);
+    if (lj) return <Pressable accessibilityRole="button" accessibilityLabel="Track and chat" hitSlop={8} onPress={() => { const t = liveTrackTarget(lj, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} style={{ borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "rgba(255,255,255,0.92)" }}><Text style={{ color: "#1D1B26", fontSize: 12, fontWeight: "800" }}>{`${LIVE_STEP_NAMES[jobStep(lj.status)]} · Track`}</Text></Pressable>;
+    return chip(v) ? <DueChip text={chip(v)!} /> : null;
+  };
 
   return (
     <Screen appBar="Garage">
@@ -148,8 +132,9 @@ export default function GarageScreen() {
         </View>
       ) : one ? (
         <View style={{ gap: metrics.sectionGap }}>
-          <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={(v) => (chip(v) ? <DueChip text={chip(v)!} /> : null)} />
-          {liveJobForCar(jobs, one.id) ? <TodayStrip name={`${one.make ?? ""} ${one.model ?? ""}`.trim() || one.registrationNumber} job={liveJobForCar(jobs, one.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, one.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null}
+          <View>
+            <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={overlay} />
+          </View>
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
             return (
@@ -166,24 +151,9 @@ export default function GarageScreen() {
         </View>
       ) : (
         <View style={{ gap: metrics.sectionGap }}>
-          {(() => {
-            const liveCar = list.find((v) => liveJobForCar(jobs, v.id));
-            return liveCar ? <TodayStrip name={`${liveCar.make ?? ""} ${liveCar.model ?? ""}`.trim() || liveCar.registrationNumber} job={liveJobForCar(jobs, liveCar.id)!} ink={ink} light={light} onTrack={() => { const t = liveTrackTarget(liveJobForCar(jobs, liveCar.id)!, null); router.push(t ? `/(tabs)/bookings/${t}` : "/(tabs)/bookings"); }} /> : null;
-          })()}
           {list.map((v) => (
-            <CarPhotoCard key={v.id} car={v} height={liveJobForCar(jobs, v.id) ? 150 : 130} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : chip(v)} onOpen={open} />
+            <CarPhotoCard key={v.id} car={v} height={230} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} chip={overlay(v)} />
           ))}
-          {list.some((v) => chip(v)) ? (
-            <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: 6 }}>
-              <Text style={{ color: "#EC8638", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 }}>COMING UP</Text>
-              {list.filter((v) => chip(v)).map((v) => (
-                <View key={v.id} style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, paddingVertical: 6 }}>
-                  <Text numberOfLines={1} style={{ flex: 1, color: ink.textPrimary, fontSize: 14 }}>{`${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber}</Text>
-                  <Text numberOfLines={1} style={{ color: ink.textSecondary, fontSize: 13 }}>{chip(v)}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
         </View>
       )}
       {list.length > 0 ? (
