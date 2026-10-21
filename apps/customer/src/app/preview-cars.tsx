@@ -1,6 +1,7 @@
 // Dev-only mock of the Cars screen: the real CarsHub, real app bar and real bottom nav with sample listings.
 // Photos are stand-ins and the cars are NOT real listings.
-import { View } from "react-native";
+import { useState } from "react";
+import { Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { CarsHub } from "../ui/CarsHub";
@@ -19,13 +20,15 @@ const mine = [mk("m", "Honda", "City", 2019, "petrol", 48000, 780000, "customer"
 const noop = () => undefined;
 export default function PreviewCars() {
   const q = useLocalSearchParams<{ tab?: string; more?: string; empty?: string }>();
+  const [log, setLog] = useState("");
   if (!__DEV__) return null;
   const names = ["bookings", "catalogue", "index", "garage", "profile", "cars"];
   const state = { index: 5, routes: names.map((n) => ({ key: n, name: n })) };
   const descriptors = Object.fromEntries(names.map((n) => [n, { options: n === "cars" ? { href: null } : {} }]));
   return (
     <View style={{ flex: 1 }}>
-      <CarsHub all={q.empty ? [] : cars} mine={mine} error={false} initialTab={q.tab === "sell" ? "sell" : "buy"} initialFiltersOpen={!!q.more} onRetry={noop} onOpen={noop} onSell={noop} />
+      <CarsHub all={q.empty ? [] : cars} mine={mine} error={false} initialTab={q.tab === "sell" ? "sell" : "buy"} initialFiltersOpen={!!q.more} onRetry={noop} onOpen={(id) => setLog(`opened car ${id}`)} onSell={() => setLog("sell flow opened")} />
+      {log ? <Text accessibilityLabel="press-log" style={{ position: "absolute", top: 0, left: 0, fontSize: 10, color: "#0a0" }}>{log}</Text> : null}
       <RaisedTabBar state={state} descriptors={descriptors} navigation={{ navigate: noop, emit: () => ({ defaultPrevented: false }) }} icons={{ index: "home", catalogue: "services", bookings: "bookings", garage: "garage", profile: "profile" }} />
     </View>
   );

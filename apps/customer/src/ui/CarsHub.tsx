@@ -96,12 +96,12 @@ type Tab = "buy" | "sell";
 function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
   const night = useExperienceTheme().name === "night";
   return (
-    <View accessibilityRole="tablist" style={{ flexDirection: "row", padding: 4, gap: 4, ...glassPane(!night), borderRadius: 9999 }}>
+    <View accessibilityRole="tablist" style={{ flexDirection: "row", padding: 3, gap: 3, ...glassPane(!night), borderRadius: 9999 }}>
       {(["buy", "sell"] as Tab[]).map((t) => {
         const on = tab === t;
         return (
           <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={t === "buy" ? "Buy a car" : "Sell your car"} onPress={() => onChange(t)}
-            style={{ flex: 1, minHeight: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (night ? "#FAF8F5" : "#1D1B26") : "transparent" }}>
+            style={{ flex: 1, minHeight: 36, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (night ? "#FAF8F5" : "#1D1B26") : "transparent" }}>
             <T role="label" style={{ color: on ? (night ? "#1D1B26" : "#FFFFFF") : night ? "#FAF8F5" : "#1D1B26", letterSpacing: 1, fontWeight: "800" }}>{t === "buy" ? "BUY" : "SELL"}</T>
           </Pressable>
         );
@@ -115,9 +115,9 @@ function SearchBox({ value, onChange }: { value: string; onChange: (v: string) =
   const night = useExperienceTheme().name === "night";
   const ink = night ? "#FAF8F5" : "#1D1B26";
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48, paddingHorizontal: 16, ...glassPane(!night), borderRadius: 9999 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 40, paddingHorizontal: 14, ...glassPane(!night), borderRadius: 9999 }}>
       <NavIcon name="search" color={night ? "rgba(250,248,245,0.7)" : "#6B6878"} size={20} cut="transparent" />
-      <TextInput accessibilityLabel="Search cars" value={value} onChangeText={onChange} placeholder="Make, model, year or area" placeholderTextColor={night ? "rgba(250,248,245,0.5)" : "#8A8796"} autoCapitalize="none" maxLength={60} style={[{ flex: 1, color: ink, fontSize: 15, paddingVertical: 10 }, Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null]} />
+      <TextInput accessibilityLabel="Search cars" value={value} onChangeText={onChange} placeholder="Make, model, year or area" placeholderTextColor={night ? "rgba(250,248,245,0.5)" : "#8A8796"} autoCapitalize="none" maxLength={60} style={[{ flex: 1, color: ink, fontSize: 14, paddingVertical: 6 }, Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null]} />
     </View>
   );
 }
@@ -183,22 +183,22 @@ export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen,
   const chipBorder = themeNight ? "rgba(255,255,255,0.28)" : "rgba(29,27,38,0.16)";
   return (
     <Screen {...(header ? { header } : { appBar: "Cars" })}>
+    <View style={{ gap: 14 }}>
       <TabSwitch tab={tab} onChange={setTab} />
       {tab === "sell" ? <SellHub mine={mine} onSell={onSell} onOpen={onOpen} /> : null}
-      {tab === "buy" ? <View style={{ gap: 4 }}><T role="heading">Cars for sale</T><T tone="secondary">Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T></View> : null}
+      {tab === "buy" ? <View style={{ gap: 2 }}><T role="bodyStrong" style={{ fontSize: 18 }}>Cars for sale</T><T role="caption" tone="secondary" style={{ fontSize: 12, lineHeight: 16 }}>Explore cars listed through AutoDeck. Clear facts, real photos, enquiries handled by the studio.</T></View> : null}
       {tab === "buy" && all && all.length > 0 ? (
-        <View style={{ gap: space.line }}>
+        <View style={{ gap: 8 }}>
           <SearchBox value={query} onChange={setQuery} />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
             {BUDGETS.filter((b) => b.id !== "any").map((b) => {
               const on = budget === b.id;
               return (
-                <Pressable key={b.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setBudget(on ? "any" : b.id)} style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 9999, borderWidth: 1, justifyContent: "center", borderColor: on ? "#EC8638" : chipBorder, backgroundColor: on ? "rgba(236,134,56,0.16)" : themeNight ? "rgba(255,255,255,0.08)" : "#FFFFFF" }}>
-                  <T role="label" style={{ textTransform: "none", letterSpacing: 0, color: on ? (themeNight ? "#F59A4E" : "#B8500A") : themeNight ? "#FAF8F5" : "#1D1B26" }}>{b.label}</T>
+                <Pressable key={b.id} accessibilityRole="button" accessibilityState={{ selected: on }} hitSlop={{ top: 5, bottom: 5 }} onPress={() => setBudget(on ? "any" : b.id)} style={{ flex: 1, minHeight: 34, paddingHorizontal: 6, borderRadius: 9999, borderWidth: 1, alignItems: "center", justifyContent: "center", borderColor: on ? "#EC8638" : chipBorder, backgroundColor: on ? "rgba(236,134,56,0.16)" : themeNight ? "rgba(255,255,255,0.08)" : "#FFFFFF" }}>
+                  <T role="label" numberOfLines={1} style={{ fontSize: 12, textTransform: "none", letterSpacing: 0, color: on ? (themeNight ? "#F59A4E" : "#B8500A") : themeNight ? "#FAF8F5" : "#1D1B26" }}>{b.label}</T>
                 </Pressable>
               );
             })}
-            <Pressable accessibilityRole="button" accessibilityLabel="More filters and sort" accessibilityState={{ expanded: filtersOpen }} onPress={() => setFiltersOpen(!filtersOpen)} style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 9999, borderWidth: 1, justifyContent: "center", borderColor: fuel || body || sort !== "new" ? "#EC8638" : chipBorder, backgroundColor: themeNight ? "rgba(255,255,255,0.08)" : "#FFFFFF" }}><T role="label" style={{ textTransform: "none", letterSpacing: 0 }}>More</T></Pressable>
           </View>
           {filtersOpen ? <View style={{ padding: 16, gap: 16, ...glassPane(!themeNight) }}>
             <View style={{ gap: 8 }}><Kicker>Budget</Kicker><Choice label="Car budget" value={budget} onChange={setBudget} options={BUDGETS.map((b) => ({ value: b.id, label: b.label }))} /></View>
@@ -207,7 +207,7 @@ export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen,
             <View style={{ gap: 8 }}><Kicker>Sort</Kicker><Choice label="Sort cars" value={sort} onChange={(v) => setSort(v as typeof sort)} options={[{ value: "new", label: "Newest first" }, { value: "low", label: "Price: low to high" }, { value: "high", label: "Price: high to low" }]} /></View>
             <Button label={`Show ${shown.length} car${shown.length === 1 ? "" : "s"}`} onPress={() => setFiltersOpen(false)} />
           </View> : null}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}><T role="caption" tone="tertiary">{shown.length} car{shown.length === 1 ? "" : "s"}{filtering ? " match your search" : " to explore"}</T>{filtering ? <Pressable accessibilityRole="button" accessibilityLabel="Clear car filters and search" onPress={clear} style={{ minHeight: 44, justifyContent: "center" }}><T role="caption" tone="accent">Clear all</T></Pressable> : null}</View>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}><T role="caption" tone="tertiary" style={{ fontSize: 12 }}>{shown.length} car{shown.length === 1 ? "" : "s"}{filtering ? " match your search" : " to explore"}</T><View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>{filtering ? <Pressable accessibilityRole="button" accessibilityLabel="Clear car filters and search" onPress={clear} style={{ minHeight: 22, justifyContent: "center" }} hitSlop={{ top: 10, bottom: 10 }}><T role="caption" tone="accent">Clear all</T></Pressable> : null}<Pressable accessibilityRole="button" accessibilityLabel="More filters and sort" accessibilityState={{ expanded: filtersOpen }} onPress={() => setFiltersOpen(!filtersOpen)} style={{ minHeight: 22, justifyContent: "center" }} hitSlop={{ top: 10, bottom: 10 }}><T role="caption" tone="accent">{fuel || body || sort !== "new" ? "More filters on" : "More filters"}</T></Pressable></View></View>
         </View>
       ) : null}
       {tab === "buy" && error ? <Notice title="Can't load cars" body="Check your connection and try again." action={<Button kind="quiet" label="Retry" onPress={onRetry} />} /> : null}
@@ -220,6 +220,7 @@ export function CarsHub({ all, mine, error, initialTab = "buy", onRetry, onOpen,
         </View>
       ) : null}
       <T role="caption" tone="tertiary">AutoDeck lists cars to help buyers and sellers meet. We are not a party to the sale, and ownership papers and transfer are between buyer and seller.</T>
+    </View>
     </Screen>
   );
 }
