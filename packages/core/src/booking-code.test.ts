@@ -17,10 +17,11 @@ describe("bookingCode", () => {
     const code = bookingCode("bkA");
     expect(parseBookingCode(code.toLowerCase().replace(/-/g, " "))).toBe(code);
     expect(parseBookingCode("hello")).toBeNull();
-    const r = matchBookingCode([{ id: "bkA" }, { id: "bkB" }], code)!;
+    const r = matchBookingCode([{ id: "bkA" }, { id: "bkB" }], code);
+    if (!r) throw new Error("expected a match");
     expect(r.matches.map((b) => b.id)).toEqual(["bkA"]);
     expect(r.ambiguous).toBe(false);
-    expect(matchBookingCode([{ id: "bkA" }, { id: "bkA" }], code)!.ambiguous).toBe(true);
+    expect(matchBookingCode([{ id: "bkA" }, { id: "bkA" }], code)?.ambiguous).toBe(true);
   });
 });
 
