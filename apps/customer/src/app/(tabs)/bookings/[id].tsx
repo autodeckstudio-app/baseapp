@@ -22,6 +22,7 @@ import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday, bookingCode } from "@autodeck/core";
 // Dev-only sample data: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dev-only require, type-only import() is intentional
 const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof import("../../../lib/booking-dev-sample")) : null;
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
