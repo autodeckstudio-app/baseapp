@@ -1,30 +1,46 @@
 ---
-import Base from '../layouts/Base.astro';
-import Arrow from '../components/Arrow.astro';
-const services = [
- ['01','Paint protection film','Protection for the finish you want to keep.','PPF','paint-protection'],
- ['02','Ceramic coating','Ceramic and graphene coatings, with care for glass, wheels and interior.','Coatings','ceramic-coating'],
- ['03','Detailing','Paint, cabin and the details between.','Detailing','detailing'],
- ['04','Washing','Regular washes and deeper cleaning for the everyday drive.','Wash & Care','wash-and-care'],
- ['05','Garage','Health checks, servicing and repairs. Inspection first where needed.','Garage','garage'],
- ['06','Modifications','Wraps, tint and styling, discussed with the studio.','Modifications','modifications'],
-];
-const chapters = [
- {id:'home',n:'01',label:'Home',title:'Your day, at a glance.',body:'Open to your car, its live status and the services it needs next.',image:'home',alt:'AutoDeck app Home screen design preview with stories, live visit status and services'},
- {id:'booking',n:'02',label:'Booking',title:'Follow the work.',body:'See the stage of your visit, from arrival through final checks. Open Track when your car is in the studio.',image:'bookings',alt:'AutoDeck app Booking screen design preview showing visit stages and tracking'},
- {id:'garage',n:'03',label:'Garage',title:'Your cars. Together.',body:'Keep your cars in one garage. See the visit in progress and book the next one.',image:'garage-stories',alt:'AutoDeck app Garage screen design preview with car, stories and booking controls'},
- {id:'buysell',n:'04',label:'Buy & Sell',title:'Find your next car.',body:'Browse cars by budget, or sell yours through the studio.',image:'buysell',alt:'AutoDeck app Buy and Sell screen design preview with budget filters and car listings'},
- {id:'profile',n:'05',label:'Profile',title:'Your details, your way.',body:'Manage your account, preferences and support from one place.',image:'profile',alt:'AutoDeck app Profile screen design preview with account details and settings'},
-];
+import body from '../data/home-v2-body.html?raw';
+const title = 'AutoDeck | Complete car care. All under one roof.';
+const description = 'AutoDeck car care studio in Ahmedabad: washing, detailing, ceramic coating, paint protection film, garage and modifications. Book in the app.';
+const ogImage = 'https://www.autodeck.in/assets/og.png';
+const canonical = 'https://www.autodeck.in/';
+const localBusiness = {
+  '@context': 'https://schema.org',
+  '@type': 'AutoRepair',
+  name: 'AutoDeck',
+  url: 'https://www.autodeck.in',
+  image: ogImage,
+  telephone: '+91 98986 79711',
+  address: { '@type': 'PostalAddress', streetAddress: 'Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge', addressLocality: 'Ahmedabad', postalCode: '380006', addressCountry: 'IN' },
+  openingHoursSpecification: [
+    { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '10:00', closes: '21:00' },
+    { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '10:00', closes: '19:00' },
+  ],
+  sameAs: ['https://instagram.com/autodeck.studio'],
+};
 ---
-<Base title="AutoDeck · Car care, connected" description="Car care in Ahmedabad. Explore the studio, open the AutoDeck app, or browse the merchandise collection." page="home">
-<section class="landing wrap">
- <div class="landing-copy"><p class="eyebrow"><i></i> AutoDeck · Ahmedabad</p><h1>Good cars.<br />Better <em>care.</em></h1><p class="intro">A studio for your car.<br />An app for everything around it.</p><div class="actions"><a class="button" href="https://app.autodeck.in">Open the app <Arrow /></a><a class="text-link" href="#services">Explore services <Arrow dir="e" /></a></div></div>
- <div class="model-stage"><video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="/assets/hero/hero-poster.jpg" aria-label="AutoDeck studio film: paint protection film applied to a car, ending on the AutoDeck mark." role="img"><source src="/assets/hero/hero-loop.mp4" type="video/mp4" /></video></div>
-</section>
-<section class="app-story" id="app" aria-labelledby="app-heading"><div class="wrap app-story-grid"><div class="app-device-stage"><div class="app-story-heading"><p class="eyebrow">The AutoDeck app</p><h2 id="app-heading">Your car care.<br /><em>One place.</em></h2><p class="intro">A look inside the app, from Home to Profile.</p></div><div class="app-stage-layout"><div class="app-visual"><div class="device-glow" aria-hidden="true"></div><div class="phone-shell"><div class="phone-camera" aria-hidden="true"></div>{chapters.map((c,i)=><img class:list={['app-screen',{'is-active':i===0}]} data-screen={c.id} src={`/assets/app-preview/${c.image}.webp`} width="390" height="844" alt={c.alt} loading="lazy" />)}</div><div class="screen-progress" aria-hidden="true">{chapters.map((c,i)=><i class:list={{'is-active':i===0}} data-dot={c.id}></i>)}</div></div><div class="app-stage-copy"><p class="chapter-index" data-stage-index>01 / Home</p><h3 data-stage-title>Your day, at a glance.</h3><p data-stage-body>Open to your car, its live status and the services it needs next.</p></div></div></div><div class="app-chapters">{chapters.map((c,i)=><article class:list={['app-chapter',{'is-active':i===0}]} id={`app-${c.id}`} data-chapter={c.id}><p class="chapter-index">{c.n} / {c.label}</p><h3>{c.title}</h3><p>{c.body}</p><img class="static-app-screen" src={`/assets/app-preview/${c.image}.webp`} width="390" height="844" alt={c.alt} loading="lazy" /></article>)}</div></div><div class="wrap"><div class="app-install glass"><div><p class="eyebrow">On your phone</p><h3>Open AutoDeck.</h3><p>Use the web app now. On iPhone, open it in Safari, tap Share, then Add to Home Screen. On Android, use your browser's Install app or Add to Home screen option.</p></div><a class="button" href="https://app.autodeck.in">Open the app <Arrow /></a></div></div></section>
-<section class="section wrap home-services" id="services"><div class="services-head"><span class="ghost-num" aria-hidden="true">01</span><p class="eyebrow">The studio menu</p><h2>Whatever your car needs.</h2><p class="muted">Explore the care. Book in the app.</p></div><div class="home-service-grid">{services.map(([n,t,d,label,img])=><a class="service-card" href="https://app.autodeck.in/catalogue"><img class="service-photo" src={`/assets/img/service-${img}.jpg`} width="1600" height="900" alt="" loading="lazy" decoding="async" /><span class="service-number">{n}</span><span class="service-arrow" aria-hidden="true"><Arrow /></span><div class="service-meta"><h3>{t}</h3><p>{d}</p></div><span class="sr-only">Explore {label} in the app</span></a>)}</div><div class="pickup-note"><p>Pickup and drop available. Request it with your visit; the studio confirms the time.</p><a class="text-link" href="https://app.autodeck.in">Explore the app <Arrow /></a></div></section>
-<section class="section wrap" id="studio"><div class="section-head"><div><p class="eyebrow">Inside AutoDeck</p><h2>A space built around cars.</h2></div><p class="muted">A look at the studio design.<br />Concept renders from our archive.</p></div><div class="studio-strip"><figure class="reveal"><img src="/assets/img/merch-display.jpg" alt="Studio lighting concept render from AutoDeck's design archive" loading="lazy"/><figcaption>Light, considered.</figcaption></figure><figure class="reveal"><img src="/assets/img/wash-bay.jpg" alt="Accessory wall and studio concept render from AutoDeck's design archive" loading="lazy"/><figcaption>Every corner has a purpose.</figcaption></figure><figure class="reveal"><img src="/assets/img/lounge-wall.jpg" alt="Studio with orange structural accents, concept render" loading="lazy"/><figcaption>The AutoDeck accent.</figcaption></figure></div></section>
-<section class="section wrap"><a href="/shop" class="store-teaser reveal"><div><p class="eyebrow">The AutoDeck edit</p><h2>Scent. Clothing.<br />A new point of view.</h2><span class="text-link">Explore the store <Arrow dir="e" /></span></div><div class="store-teaser-statement"><span>AutoDeck Editions</span><p>A collection<br />taking shape.</p><small>Products to follow.</small></div></a></section>
-<section class="section wrap" id="visit"><div class="section-head"><div><p class="eyebrow">Find us</p><h2>See you at AutoDeck.</h2></div><a class="text-link" href="https://www.google.com/maps/search/?api=1&query=Sunbeam+Complex+Old+Sharda+Mandir+Rd+Ellisbridge+Ahmedabad" target="_blank" rel="noopener">Get directions <Arrow /></a></div></section><section class="wrap visit-layout"><div class="visit-info"><article><small>Address</small><p>Sunbeam Complex, Old Sharda Mandir Rd,<br />Ellisbridge, Ahmedabad 380006</p></article><article><small>Studio hours</small><p>Monday to Saturday · 10 am to 9 pm<br />Sunday · 10 am to 7 pm</p></article><article><small>Talk to the studio</small><p><a href="tel:+919898679711">+91 98986 79711</a></p><a class="text-link" href="https://instagram.com/autodeck.studio" target="_blank" rel="noopener">@autodeck.studio <Arrow /></a></article></div></section>
-<noscript><style>.app-device-stage{display:block}.app-stage-layout{display:none}.app-story-grid{display:block}.app-chapter{min-height:0;opacity:1;padding-block:30px;border-top:1px solid #ffffff25}.static-app-screen{display:block;width:220px;height:auto;margin:24px auto 0;border:4px solid #303235;border-radius:22px}</style></noscript></Base>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:url" content={canonical} />
+  <script type="application/ld+json" set:html={JSON.stringify(localBusiness)} />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="preload" href="/assets/v2/inter.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/assets/v2/home.css" />
+</head>
+<body>
+  <div class="adsite" id="adsite-root"><div id="sc" class="adsc" set:html={body} /></div>
+  <script>import '../scripts/home-v2.ts';</script>
+</body>
+</html>
