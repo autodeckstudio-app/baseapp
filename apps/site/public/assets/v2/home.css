@@ -181,3 +181,6 @@ html{scroll-behavior:auto}#journey,#appst,#services{position:relative}.snp{posit
 @media(prefers-reduced-motion:reduce){.carc{transition:none}}
 .wp[hidden]{display:none}
 section[id]{scroll-margin-top:84px}
+/* water drop: tapered tip (pointing up), glossy; a rotated square with one sharp corner so the scroll script's translate/scale on .drop is untouched */
+.drop{aspect-ratio:1;border-radius:0;background:none;box-shadow:none;width:clamp(86px,17vmin,170px)}
+.drop::before{content:"";position:absolute;inset:20% 20% 12% 20%;border-radius:0 50% 50% 50%;transform:rotate(45deg) translate(6%,6%);background:radial-gradient(circle at 24% 52%,#fff 0 6%,rgba(255,255,255,.55) 7% 14%,rgba(190,215,235,.18) 30%,rgba(10,14,20,.55) 72%,rgba(255,255,255,.45) 96%);box-shadow:inset 0 -6px 12px rgba(160,200,235,.25);filter:drop-shadow(0 14px 18px rgba(0,0,0,.55))}
