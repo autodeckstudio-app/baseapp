@@ -1,9 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
 import '../../styles/store.css';
+import '../../styles/shop-flow.css';
 import collection from '../../data/shop.json';
 import fixture from '../../data/shop-fixture.json';
-interface Variant { id: string; label: string }
+interface Variant { id: string; label: string; stock?: number }
 interface Product {
   id: string; name: string; department: string; description: string; image: string; imageAlt: string;
   pricePaise?: number | null; variants?: Variant[]; details?: { label: string; value: string }[]; fixture?: boolean;
@@ -15,20 +16,29 @@ export function getStaticPaths() {
   return all.map(p => ({ params: { slug: p.id }, props: { p } }));
 }
 const { p } = Astro.props as { p: Product };
+const test = !!p.fixture && import.meta.env.DEV;
 const buyable = !!p.pricePaise && Number.isInteger(p.pricePaise) && p.pricePaise > 0 && !p.fixture;
-const price = buyable ? `Rs ${(p.pricePaise! / 100).toLocaleString('en-IN')}` : null;
+const price = (buyable || test) ? `Rs ${(p.pricePaise! / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : null;
 ---
 <Base title={`${p.name} · AutoDeck Store`} description={p.description} page="shop">
-<section class="wrap" style="padding:120px 0 60px">
-  {p.fixture && <p class="store-status"><i></i> FIXTURE: layout test only. Not a product, not for sale.</p>}
-  <p class="eyebrow"><i></i> {p.department}</p>
-  <h1>{p.name}</h1>
-  <img src={p.image} alt={p.imageAlt} style="max-width:420px;width:100%;border-radius:12px" />
-  <p>{p.description}</p>
-  {p.details && <dl>{p.details.map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
-  {p.fixture && import.meta.env.DEV ? (<div><p><strong>FIXTURE price: Rs 10.00 (test value)</strong></p><label>Size <select data-variant>{(p.variants||[]).map(v=><option value={v.id}>{v.label}</option>)}</select></label> <button type="button" data-add-to-cart={p.id}>Add to cart (test)</button> <a href="/shop/cart">View cart</a><p data-cart-msg class="store-small"></p></div>) : price ? <p><strong>{price}</strong></p> : <p class="store-small">No price yet.</p>}
-  <p class="store-small">{buyable ? 'Ordering opens when delivery and returns rules are published.' : 'Not available to order.'}</p>
-  <p><a href="/shop">Back to the store</a></p>
+<section class="wrap pp">
+  <div class="pp-photo"><img src={p.image} alt={p.imageAlt} /></div>
+  <div class="pp-copy">
+    {p.fixture && <span class="fx-tag"><i></i> Fixture. Layout test, not a product</span>}
+    <p class="eyebrow" style="margin-top:14px"><i></i> {p.department}</p>
+    <h1>{p.name}</h1>
+    <p>{p.description}</p>
+    {p.details && p.details.length > 0 && <dl>{p.details.map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
+    {price ? <p class="pp-price">{price}{test && <small style="font-size:12px;font-weight:400;color:#ffb27a"> test value</small>}</p> : <p class="pp-sub">No price yet. Not available to order.</p>}
+    {test ? (
+      <div data-pp>
+        <div class="sizes" role="radiogroup" aria-label="Size">{(p.variants || []).map((v, i) => <label><input type="radio" name="size" value={v.id} disabled={v.stock === 0} checked={i === 0 && v.stock !== 0} /><span>{v.label}{v.stock === 0 ? '' : ''}</span></label>)}</div>
+        <button class="btn-solid" type="button" data-add-to-cart={p.id}>Add to cart</button><a class="btn-link" href="/shop/cart">View cart</a>
+        <p class="pp-sub" data-cart-msg style="margin-top:12px"></p>
+      </div>
+    ) : <p class="pp-sub">{buyable ? 'Ordering opens when delivery and returns rules are published.' : ''}</p>}
+    <p style="margin-top:22px"><a class="btn-link" style="margin:0" href="/shop">Back to the store</a></p>
+  </div>
 </section>
-{p.fixture && import.meta.env.DEV && <script>import '../../scripts/cart.js';</script>}
+{test && <script>import '../../scripts/cart.js';</script>}
 </Base>

@@ -30,7 +30,7 @@ export interface GuestInput {
   address: string; city: string; state: string; pincode: string;
   clientKey: string;
 }
-export interface PricedLine { productId: string; variantId: string; quantity: number; unitPaise: number; linePaise: number }
+export interface PricedLine { productId: string; variantId: string; quantity: number; unitPaise: number; linePaise: number; name?: string; variantLabel?: string }
 export type OrderResult =
   | { ok: true; lines: PricedLine[]; subtotalPaise: number; deliveryPaise: number; totalPaise: number; idempotencyKey: string }
   | { ok: false; code: OrderError; detail?: string };
@@ -52,11 +52,19 @@ export function validateGuest(g: GuestInput): string | null {
   return null;
 }
 
+/** Price a cart for display. No guest details needed, no idempotency key. Same rules as an order. */
+export function quoteCart(cat: ShopCatalogue, input: OrderLineInput[]): OrderResult {
+  return priceLines(cat, input, null);
+}
+
 export function priceGuestOrder(cat: ShopCatalogue, input: OrderLineInput[], guest: GuestInput): OrderResult {
+  if (input.length) { const bad = validateGuest(guest); if (bad) return { ok: false, code: 'bad_guest', detail: bad }; }
+  return priceLines(cat, input, guest);
+}
+
+function priceLines(cat: ShopCatalogue, input: OrderLineInput[], guest: GuestInput | null): OrderResult {
   if (!input.length) return { ok: false, code: 'empty' };
   if (input.length > MAX_LINES) return { ok: false, code: 'too_many_lines' };
-  const bad = validateGuest(guest);
-  if (bad) return { ok: false, code: 'bad_guest', detail: bad };
   const seen = new Set<string>();
   const lines: PricedLine[] = [];
   for (const l of input) {
@@ -71,9 +79,9 @@ export function priceGuestOrder(cat: ShopCatalogue, input: OrderLineInput[], gue
     const v = p.variants.find(x => x.id === l.variantId);
     if (!v) return { ok: false, code: 'unknown_variant' };
     if (v.stock < l.quantity) return { ok: false, code: 'out_of_stock', detail: `${p.id}:${v.id}` };
-    lines.push({ productId: p.id, variantId: v.id, quantity: l.quantity, unitPaise: p.pricePaise, linePaise: p.pricePaise * l.quantity });
+    lines.push({ productId: p.id, variantId: v.id, quantity: l.quantity, unitPaise: p.pricePaise, linePaise: p.pricePaise * l.quantity, name: p.name, variantLabel: v.label });
   }
   if (cat.deliveryPaise === undefined || !Number.isInteger(cat.deliveryPaise) || cat.deliveryPaise < 0) return { ok: false, code: 'no_delivery_rule' };
   const subtotalPaise = lines.reduce((s, l) => s + l.linePaise, 0);
-  return { ok: true, lines, subtotalPaise, deliveryPaise: cat.deliveryPaise, totalPaise: subtotalPaise + cat.deliveryPaise, idempotencyKey: `shop-${guest.clientKey}` };
+  return { ok: true, lines, subtotalPaise, deliveryPaise: cat.deliveryPaise, totalPaise: subtotalPaise + cat.deliveryPaise, idempotencyKey: guest ? `shop-${guest.clientKey}` : '' };
 }

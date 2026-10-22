@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { priceGuestOrder, type ShopCatalogue, type GuestInput } from './shop-order';
+import { priceGuestOrder, quoteCart, type ShopCatalogue, type GuestInput } from './shop-order';
 
 // FIXTURE data only: labelled test values, not offers.
 const cat = (over: Partial<ShopCatalogue> = {}): ShopCatalogue => ({
@@ -38,5 +38,11 @@ describe('guest order pricing', () => {
     const a = priceGuestOrder(cat(), [{ productId: 'fixture-a', variantId: 'm', quantity: 1 }], guest);
     const b = priceGuestOrder(cat(), [{ productId: 'fixture-a', variantId: 'm', quantity: 1 }], guest);
     expect(a.ok && b.ok && a.idempotencyKey === b.idempotencyKey).toBe(true);
+  });
+  it('quotes a cart with names and totals and no guest needed', () => {
+    const r = quoteCart(cat(), [{ productId: 'fixture-a', variantId: 'm', quantity: 2 }]);
+    expect(r.ok && r.lines[0]?.name).toBe('FIXTURE item');
+    expect(r.ok && r.totalPaise).toBe(2000);
+    expect(quoteCart(cat(), [{ productId: 'fixture-noprice', variantId: 'm', quantity: 1 }])).toMatchObject({ code: 'not_for_sale' });
   });
 });
