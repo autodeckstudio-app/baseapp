@@ -9,5 +9,6 @@ if (!/now<pace&&PS<\.22&&P>PS\)PS=Math\.min\(P,PS\+dt\*\.12\)/.test(js)) bad.pus
 if (/history\.scrollRestoration\s*=/.test(js)) bad.push('scroll restoration must not be changed (it breaks back/deep-link positions)');
 if (/sweepEl\.style\.left/.test(js)) bad.push('the wash line must move by transform, not left (left forces layout every frame)');
 if (!/\.sdet\{min-height:\d+px\}/.test(fs.readFileSync('public/assets/v2/home.css', 'utf8'))) bad.push('service description block has no reserved height (the services panel jumps as text length changes)');
+if (!/#ab\{min-height:44px\}@media\(max-width:700px\)\{#ab\{min-height:65px\}\}/.test(fs.readFileSync('public/assets/v2/home.css', 'utf8'))) bad.push('app showcase copy has no reserved height (the phone shifts as text length changes)');
 if (bad.length) { console.error('first-load-guard FAIL:', bad.join('; ')); process.exit(1); }
 console.log('first-load-guard ok');

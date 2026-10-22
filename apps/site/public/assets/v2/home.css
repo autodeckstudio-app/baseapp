@@ -205,3 +205,5 @@ section[id]{scroll-margin-top:84px}
 
 /* service description length changes per service: reserve the two-line height so the panel below never jumps while scrolling the services */
 .sdet{min-height:89px}@media(max-width:820px){.sdet{min-height:80px}}
+/* app showcase copy changes length per screen: reserve the longest height (3 lines on phones) so the phone beside it does not shift */
+#ab{min-height:44px}@media(max-width:700px){#ab{min-height:65px}}
