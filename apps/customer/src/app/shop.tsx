@@ -2,6 +2,7 @@ import { Text, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Screen } from "../ui/kit";
 // Dev-only fixture shop: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports -- dev-only require, type-only import() is intentional
 const PreviewShop = __DEV__ ? (require("./preview-shop") as typeof import("./preview-shop")).default : null;
 
 // Guest Shop route. No catalogue source exists yet (the owner supplies products last), so production
