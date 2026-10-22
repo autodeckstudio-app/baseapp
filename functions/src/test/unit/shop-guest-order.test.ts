@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { SHOP_FIXTURE } from "@autodeck/core";
+import { SHOP_FIXTURE } from "@autodeck/core/shop-fixture";
 import { placeGuestShopOrder, type OrderStore } from "../../lib/shop-guest-order.js";
 
 const guest = { name: "Test Buyer", mobile: "9876543210", address: "12 Test Street", city: "Pune", state: "MH", pincode: "411001", clientKey: "test-key-0123456789" };

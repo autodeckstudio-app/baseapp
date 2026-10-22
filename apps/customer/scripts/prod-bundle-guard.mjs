@@ -5,7 +5,7 @@ import { join } from "node:path";
 const dist = new URL("../dist/", import.meta.url).pathname;
 if (!existsSync(dist)) { console.error("FAIL dist/ missing: run expo export first"); process.exit(1); }
 // Strings that exist only in dev sample data or dev preview screens.
-const MARKERS = ["Dev-only mock of the Cars screen", "Dev preview only. Sample data", "DEV_SAMPLE_BOOKING", "Grand i10", "Seltos", "MH40CQ3182"];
+const MARKERS = ["Dev-only mock of the Cars screen", "Dev preview only. Sample data", "DEV_SAMPLE_BOOKING", "Grand i10", "Seltos", "MH40CQ3182", "FIXTURE product (not for sale)", "fixture-tee"];
 const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
 let bad = 0;
 for (const f of walk(dist).filter((f) => /\.(js|html|map)$/.test(f) && !/\.map$/.test(f) || /\.js$/.test(f))) {

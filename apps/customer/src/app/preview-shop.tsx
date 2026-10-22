@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Text, View, Pressable, Image, TextInput } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { quoteCart, SHOP_FIXTURE } from "@autodeck/core";
+import { quoteCart } from "@autodeck/core";
+import { SHOP_FIXTURE } from "@autodeck/core/shop-fixture";
 import { Screen } from "../ui/kit";
 // Dev-only mock of the guest Shop screen. FIXTURE data from core, priced by the shared quoteCart. No payment.
 const inr = (p: number) => "Rs " + (p / 100).toFixed(2);

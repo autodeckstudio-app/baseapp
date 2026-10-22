@@ -1,13 +1,14 @@
 import { Text, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Screen } from "../ui/kit";
-import PreviewShop from "./preview-shop";
+// Dev-only fixture shop: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
+const PreviewShop = __DEV__ ? (require("./preview-shop") as typeof import("./preview-shop")).default : null;
 
 // Guest Shop route. No catalogue source exists yet (the owner supplies products last), so production
 // shows "not open yet" and takes no orders. The fixture shop renders only in a dev build.
 export default function Shop() {
   const { colors: ink } = useExperienceTheme();
-  if (__DEV__) return <PreviewShop />;
+  if (__DEV__ && PreviewShop) return <PreviewShop />;
   return (
     <Screen>
       <View style={{ padding: 24, gap: 8 }}>
