@@ -1,0 +1,19 @@
+import { Text, View } from "react-native";
+import { useExperienceTheme } from "@autodeck/ui/native";
+import { Screen } from "../ui/kit";
+import PreviewShop from "./preview-shop";
+
+// Guest Shop route. No catalogue source exists yet (the owner supplies products last), so production
+// shows "not open yet" and takes no orders. The fixture shop renders only in a dev build.
+export default function Shop() {
+  const { colors: ink } = useExperienceTheme();
+  if (__DEV__) return <PreviewShop />;
+  return (
+    <Screen>
+      <View style={{ padding: 24, gap: 8 }}>
+        <Text style={{ color: ink.textPrimary, fontSize: 22, fontWeight: "700" }}>Shop</Text>
+        <Text style={{ color: ink.textSecondary }}>Ordering is not open yet.</Text>
+      </View>
+    </Screen>
+  );
+}
