@@ -31,6 +31,26 @@ async function load() {
   }
   row.hidden = false; empty?.setAttribute("hidden", "");
   (empty as HTMLElement | null)?.style.setProperty("display", "none");
+  // Same behaviour as the merch row: drifts sideways, stops at the end, any touch or scroll holds it for 3 s, Pause/Play button, reduced motion starts paused.
+  const RM = matchMedia("(prefers-reduced-motion: reduce)");
+  let paused = RM.matches, hold = 0, last = 0;
+  row.tabIndex = 0; row.setAttribute("aria-label", "Cars we have listed, swipe sideways");
+  ["pointerdown", "touchstart", "wheel", "focusin"].forEach((e) => row.addEventListener(e, () => { hold = performance.now() + 3000; }, { passive: true }));
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "wp"; btn.setAttribute("aria-pressed", String(paused)); btn.hidden = true;
+  const lab = () => { btn.textContent = paused ? "Play motion" : "Pause motion"; btn.setAttribute("aria-pressed", String(paused)); };
+  btn.addEventListener("click", () => { paused = !paused; lab(); }); lab();
+  row.before(btn);
+  const tick = (ts: number) => {
+    const dt = Math.min(50, ts - (last || ts)); last = ts;
+    const max = row.scrollWidth - row.clientWidth;
+    btn.hidden = max <= 0;
+    if (max > 0 && !paused && ts >= hold) {
+      const x = row.scrollLeft + dt * 0.035;
+      if (x >= max) { row.scrollLeft = max; paused = true; lab(); } else row.scrollLeft = x;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
   const carsx = document.querySelector(".carsx") as HTMLElement | null;
   if (carsx) carsx.style.gridTemplateColumns = "1fr";
 }
