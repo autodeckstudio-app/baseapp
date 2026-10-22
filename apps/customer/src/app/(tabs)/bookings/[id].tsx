@@ -20,15 +20,15 @@ import { Pressable } from "react-native";
 import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday, bookingCode } from "@autodeck/core";
+import { DEV_SAMPLE_BOOKING, DEV_SAMPLE_SERVICE } from "../../../lib/booking-dev-sample";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
 import { LiveJobCard } from "../../../ui/LiveJobCard";
-import { JobChat } from "../../../ui/JobChat";
 import { JobTimeline } from "../../../ui/JobTimeline";
 import { jobStage, readyIsAhead } from "../../../ui/job-stage";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -85,7 +85,7 @@ function formatDuration(minutes: number): string {
 }
 
 export default function BookingDetailScreen() {
-  const { id, placed } = useLocalSearchParams<{ id: string; placed?: string }>();
+  const { id, placed, mock } = useLocalSearchParams<{ id: string; placed?: string; mock?: string }>();
   const router = useRouter();
   useLang();
   const [, tick] = useState(0);
@@ -130,6 +130,8 @@ export default function BookingDetailScreen() {
   }
 
   useEffect(() => {
+    // Dev preview only (__DEV__ is false in production builds): show sample data, no network.
+    if (__DEV__ && mock === "1") { setBooking(DEV_SAMPLE_BOOKING); setSvc(DEV_SAMPLE_SERVICE); setLoading(false); return; }
     if (!id) {setLoading(false);return;}
     setLoading(true);setFeedError(null);
     setWalkIn(false);
@@ -192,6 +194,7 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     if (!booking) return;
     let alive = true;
+    if (__DEV__ && mock === "1") return;
     void getServiceCatalogue().then((all) => { if (alive) setSvc(all.find((x) => x.id === booking.serviceId) ?? null); }).catch(() => undefined);
     return () => { alive = false; };
   }, [booking?.serviceId]);
@@ -276,8 +279,9 @@ export default function BookingDetailScreen() {
   });
   const displayTime = scheduledAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true });
 
-  const isMultiDay = booking.estimatedEndDate !== booking.scheduledDate;
-  const displayEndDate = new Date(`${booking.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", {
+  const ready = expectedReady(booking);
+  const isMultiDay = ready ? ready.date !== booking.scheduledDate : false;
+  const displayEndDate = new Date(`${ready?.date ?? booking.scheduledDate}T12:00:00Z`).toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -290,9 +294,10 @@ export default function BookingDetailScreen() {
           <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && booking.payMode === "online") ? <Chip label="Live" tone="accent" /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && booking.payMode === "online" ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} /></View>
+            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && booking.payMode === "online") ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && booking.payMode === "online" ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
+            <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
           </View>
         </View>
       }
@@ -372,10 +377,10 @@ export default function BookingDetailScreen() {
       ) : null}
 
       <Pane pad="gap">
-        <Row title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
-        <Row title="Duration" detail={formatDuration(booking.durationMinutes)} />
-        <Row title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${booking.estimatedEndTime}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} />
-        {booking.notes !== null && booking.notes.trim() !== "" ? <Row title="Notes" detail={booking.notes} last /> : null}
+        <Row detailTone="secondary" title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
+        <Row detailTone="secondary" title="Duration" detail={formatDuration(booking.durationMinutes)} />
+        {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
+        {booking.notes !== null && booking.notes.trim() !== "" ? <Row detailTone="secondary" title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
       {isMultiDay ? (
@@ -395,7 +400,6 @@ export default function BookingDetailScreen() {
 
       {job && jobStage(job.status) && job.status !== "PENDING_VEHICLE" ? <JobTimeline status={job.status} history={job.statusHistory ?? []} /> : null}
 
-      {job && booking ? <JobChat job={job} tenantId={booking.tenantId} customerId={booking.customerId} /> : null}
 
       {inspection?.status === "finalized" && job ? (
         <Pane pad="inset">
@@ -454,7 +458,7 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row title="Payment" detail={payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated"} last />
+          <Row detailTone="secondary" title="Payment" detail={payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated"} last />
           {payment?.invoiceId && job ? (
             <View style={{ marginTop: space.line }}>
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
@@ -480,10 +484,10 @@ export default function BookingDetailScreen() {
         rescheduleEligibility.eligible ? (
           <View style={{ gap: space.breath }}>
             {hasPendingApproval ? (
-              <T role="caption" tone="tertiary">You have a pending approval on this job - rescheduling won't affect it.</T>
+              <T role="caption" tone="secondary">You have a pending approval on this job - rescheduling won't affect it.</T>
             ) : null}
             {payment && payment.status !== "pending" && payment.status !== "completed" ? (
-              <T role="caption" tone="tertiary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} - rescheduling won't change this.</T>
+              <T role="caption" tone="secondary">Payment status is {PAYMENT_STATUS_LABELS[payment.status] ?? payment.status} - rescheduling won't change this.</T>
             ) : null}
             <Button
               label="Reschedule"
@@ -492,7 +496,7 @@ export default function BookingDetailScreen() {
             />
           </View>
         ) : (
-          <T role="caption" tone="tertiary">{rescheduleEligibility.reason}</T>
+          <T role="caption" tone="secondary">{rescheduleEligibility.reason}</T>
         )
       ) : null}
 
@@ -505,7 +509,6 @@ export default function BookingDetailScreen() {
 
       {lateToCancel ? (
         <>
-          <Notice title="Cancelling" body="Work on your car has started, so it cannot be cancelled online. Please call the studio." />
           <Button label="Call the studio" kind="quiet" onPress={() => void Linking.openURL(`tel:${STUDIO_INFO.phone}`)} />
         </>
       ) : null}

@@ -190,7 +190,6 @@ const DEFERRED = [
   "story/listStories.ts",
   "story/updateStory.ts",
   "story/deleteStory.ts",
-  "job/sendJobMessage.ts",
   "gift/gift.ts",
   "offer/createOffer.ts",
   "offer/issueOfferUploadUrl.ts",

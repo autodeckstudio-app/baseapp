@@ -283,9 +283,11 @@ export function Row({
   trailing,
   onPress,
   last,
+  detailTone = "tertiary",
 }: {
   title: ReactNode;
   detail?: ReactNode | undefined;
+  detailTone?: "tertiary" | "secondary";
   trailing?: ReactNode | undefined;
   onPress?: (() => void) | undefined;
   last?: boolean | undefined;
@@ -309,7 +311,7 @@ export function Row({
     >
       <View style={{ flex: 1, gap: 2 }}>
         {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
-        {detail ? typeof detail === "string" ? <T role="caption" tone="tertiary">{detail}</T> : detail : null}
+        {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
       </View>
       {trailing}
       {onPress ? <View style={{ width: 28, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
@@ -385,9 +387,9 @@ export function LinkAction({ label, onPress, testID }: { label: string; onPress:
   );
 }
 
-export function Chip({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger" }) {
+export function Chip({ label, tone = "neutral", onDark }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger"; onDark?: boolean }) {
   const { colors, name } = useExperienceTheme();
-  const c = tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
+  const c = onDark && tone !== "danger" ? "#FFFFFF" : tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
   return (
     <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
       <T role="label" style={{ color: c }}>

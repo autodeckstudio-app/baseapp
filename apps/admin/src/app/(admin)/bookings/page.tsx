@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
+import { matchBookingCode, isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { getStudioConfig } from "../../../lib/studio-service";
 import { bayLabel } from "../../../lib/bay-label";
@@ -64,6 +64,9 @@ export default function BookingsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    // A booking ID like AD-7K2M-9XQP lists every booking with that code. The code is not unique by guarantee.
+    const byCode = matchBookingCode(bookings, search);
+    if (byCode) return byCode.matches;
     return bookings.filter((b) => {
       if (status && b.status !== status) return false;
       if (date && b.scheduledDate !== date) return false;
@@ -78,6 +81,8 @@ export default function BookingsPage() {
       return true;
     });
   }, [bookings, status, date, serviceId, search, customerNames, vehicleRegs]);
+
+  const codeSearch = matchBookingCode(bookings, search);
 
   if (error) return <p className="error">{error}</p>;
 
@@ -179,6 +184,7 @@ export default function BookingsPage() {
         </select>
         </div>
         <input className="ax-search" type="search" aria-label="Search" placeholder="Search plate, customer or booking" value={search} onChange={(e) => setSearch(e.target.value)} />
+        {codeSearch ? <span className="ax-note" role="status">{codeSearch.matches.length === 0 ? "No booking has this ID." : codeSearch.ambiguous ? `${codeSearch.matches.length} bookings share this ID. Check the customer and plate before acting.` : "1 booking has this ID."}</span> : null}
         <span className="ax-count">{filtered.length} of {bookings.length}</span>
       </div>
 
