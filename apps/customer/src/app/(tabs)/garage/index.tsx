@@ -25,8 +25,7 @@ import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../.
 import { liveTrackTarget } from "../../../lib/bookings-view";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import type { Membership } from "@autodeck/core";
-// Dev-only sample data: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
-const devGarage = __DEV__ ? (require("../../../lib/garage-dev-sample") as typeof import("../../../lib/garage-dev-sample")).devGarage : null;
+import { devGarage } from "../../../lib/dev-garage-loader";
 
 
 function DueChip({ text }: { text: string }) {
