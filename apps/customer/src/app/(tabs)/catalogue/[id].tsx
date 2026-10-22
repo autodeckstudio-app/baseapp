@@ -41,7 +41,8 @@ export default function ServiceDetailScreen() {
   const needsCarType = !!service && isSizePriced(service.category) && !pricingVehicle.category;
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
-  const [priceError, setPriceError] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [priceTry, setPriceTry] = useState(0);
   const [after, setAfter] = useState(true);
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
   const [tab, setTab] = useState<"overview" | "includes">("overview");
@@ -66,16 +67,16 @@ export default function ServiceDetailScreen() {
     if (!id || !service || !selectedCategory) {setPriceLoading(false);return;}
     const category=selectedCategory;
     setPriceLoading(true);
-    setPriceError(false);
+    setPriceError(null);
     let stale = false;
     const ask = () => calculateServicePrice(id, category);
     void ask()
       .catch(() => new Promise<Awaited<ReturnType<typeof ask>>>((resolve, reject) => setTimeout(() => ask().then(resolve, reject), 900)))
       .then(({ breakdown }) => { if (!stale) setPriceBreakdown(breakdown); })
-      .catch(() => { if (!stale) setPriceError(true); })
+      .catch((e: unknown) => { if (!stale) setPriceError(String((e as { code?: string } | null)?.code ?? "unknown")); })
       .finally(() => { if (!stale) setPriceLoading(false); });
     return () => { stale = true; };
-  }, [id, service, selectedCategory]);
+  }, [id, service, selectedCategory, priceTry]);
 
   // Warm the studio calendar so Book opens with times already there.
   useEffect(() => {
@@ -183,7 +184,10 @@ export default function ServiceDetailScreen() {
           ) : !selectedCategory ? (<T role="caption" tone="secondary">Working out your car type...</T>) : priceLoading ? (
             <T role="caption" tone="tertiary">Working out the price...</T>
           ) : priceError ? (
-            <Notice title="Can't get the price" body="Check your connection and try again." />
+            <View style={{ gap: space.line }}>
+              <Notice title="Can't get the price" body={priceError === "functions/resource-exhausted" ? "Too many price lookups in a short time. Wait a minute, then try again." : priceError === "functions/unauthenticated" ? "Your sign-in has expired. Sign in again, then retry." : "The studio's price service did not answer. Try again in a moment."} />
+              <Button label="Try again" kind="quiet" onPress={() => setPriceTry((n) => n + 1)} />
+            </View>
           ) : priceBreakdown !== null ? (
             <Pane pad="gap">
               <Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />

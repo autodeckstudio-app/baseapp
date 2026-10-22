@@ -19,4 +19,10 @@ describe("service detail uses the saved car type only", () => {
     expect(src).toMatch(/isSizePriced\(service\.category\) && !pricingVehicle\.category/);
     expect(src).toContain("Price unavailable");
   });
+  it("names the real failure instead of always blaming the connection, and offers a retry", () => {
+    expect(src).toContain("functions/resource-exhausted");
+    expect(src).toContain("functions/unauthenticated");
+    expect(src).not.toContain("Can't get the price\" body=\"Check your connection");
+    expect(src).toContain("setPriceTry");
+  });
 });
