@@ -9,7 +9,7 @@
 .vig{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,0) 22%,rgba(0,0,0,0) 62%,rgba(0,0,0,.7))}
 .hd{position:absolute;inset:0 0 auto 0;display:flex;align-items:flex-start;justify-content:space-between;padding:18px var(--pad);z-index:5;pointer-events:none}
 .hd>*{pointer-events:auto}
-.logo img{height:24px;display:block}
+.logo img{height:40px;width:auto;display:block}@media(min-width:900px){.logo img{height:52px}}
 .chip{display:inline-flex;gap:8px;align-items:center;margin-top:14px;font:600 11px/1 Inter;letter-spacing:.06em;padding:8px 12px;border-radius:99px;background:rgba(10,11,14,.55);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
 .chip i{width:6px;height:6px;border-radius:9px;background:var(--o);box-shadow:0 0 10px var(--o)}
 .nav{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:26px;font:500 13px Inter;color:var(--dim);padding-top:4px}
