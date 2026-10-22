@@ -2,6 +2,7 @@
 // Window scroll at every width (the nested-scroll "boxed" mode existed only for the hosted preview viewer).
 import { s12 } from "./home-v2-s12";
 import { appr } from "./home-v2-appr";
+import "./home-v2-cars";
 
 const SC = {
   get y() { return window.scrollY; },
