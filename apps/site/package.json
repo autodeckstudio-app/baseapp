@@ -7,7 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "node scripts/no-emoji-guard.mjs && node scripts/store-carousel-guard.mjs && node scripts/reduced-motion-guard.mjs && astro build && node scripts/headers-guard.mjs"
+    "test": "node scripts/no-emoji-guard.mjs && node scripts/store-carousel-guard.mjs && node scripts/reduced-motion-guard.mjs && astro build && node scripts/headers-guard.mjs && node scripts/shop-fixture-guard.mjs"
   },
   "dependencies": {
     "astro": "^5.13.2",

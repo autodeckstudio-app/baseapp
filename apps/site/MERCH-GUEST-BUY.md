@@ -34,3 +34,8 @@ Do not copy the 18 Oct retail reference prices.
 
 ## Open decision for the owner (minimum)
 Product list with price, sizes and stock, plus delivery and returns rules. Until then the wall stays a concept preview.
+
+## Local skeleton added (22 Oct, evening). Not deployed, no payment, no function.
+- `packages/core/src/shop-order.ts` + test: server-side pricing of a guest order (id, variant, quantity only; client amounts ignored). Not placeable without owner price, delivery rule, or stock; fixtures refused in production; idempotency key from the buyer's client key. Guard verified failing when the price rule is removed. No Firebase function wraps it yet.
+- `apps/site/src/pages/shop/[slug].astro`: product page generated from `shop.json` (empty today, so no real pages). A labelled FIXTURE product renders in the dev server only; `scripts/shop-fixture-guard.mjs` (in `npm test`) fails the build if a fixture reaches dist (verified failing).
+- No cart, no Buy button, no checkout yet. Still waiting on owner: product list, price, sizes, stock, delivery and returns.

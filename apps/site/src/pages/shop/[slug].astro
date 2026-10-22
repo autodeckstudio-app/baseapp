@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/Base.astro';
+import '../../styles/store.css';
+import collection from '../../data/shop.json';
+import fixture from '../../data/shop-fixture.json';
+interface Variant { id: string; label: string }
+interface Product {
+  id: string; name: string; department: string; description: string; image: string; imageAlt: string;
+  pricePaise?: number | null; variants?: Variant[]; details?: { label: string; value: string }[]; fixture?: boolean;
+}
+export function getStaticPaths() {
+  const real = (collection.products as Product[]).filter(p => p.id && p.name && p.image && p.imageAlt);
+  // Fixtures exist only in the dev server, never in a build.
+  const all = import.meta.env.DEV ? [...real, ...(fixture.products as Product[])] : real;
+  return all.map(p => ({ params: { slug: p.id }, props: { p } }));
+}
+const { p } = Astro.props as { p: Product };
+const buyable = !!p.pricePaise && Number.isInteger(p.pricePaise) && p.pricePaise > 0 && !p.fixture;
+const price = buyable ? `Rs ${(p.pricePaise! / 100).toLocaleString('en-IN')}` : null;
+---
+<Base title={`${p.name} · AutoDeck Store`} description={p.description} page="shop">
+<section class="wrap" style="padding:120px 0 60px">
+  {p.fixture && <p class="store-status"><i></i> FIXTURE: layout test only. Not a product, not for sale.</p>}
+  <p class="eyebrow"><i></i> {p.department}</p>
+  <h1>{p.name}</h1>
+  <img src={p.image} alt={p.imageAlt} style="max-width:420px;width:100%;border-radius:12px" />
+  <p>{p.description}</p>
+  {p.details && <dl>{p.details.map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
+  {price ? <p><strong>{price}</strong></p> : <p class="store-small">No price yet.</p>}
+  <p class="store-small">{buyable ? 'Ordering opens when delivery and returns rules are published.' : 'Not available to order.'}</p>
+  <p><a href="/shop">Back to the store</a></p>
+</section>
+</Base>
