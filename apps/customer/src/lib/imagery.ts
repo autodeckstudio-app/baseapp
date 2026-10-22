@@ -16,7 +16,7 @@ import loginHero from "../../assets/imagery/studio-login.jpg";
 import heroAlt from "../../assets/imagery/stock/x-polish-red.jpg";
 import membership from "../../assets/imagery/stock/g-styling.jpg";
 import serviceWashing from "../../assets/imagery/generated/ai-wash-foam.jpg";
-import serviceCeramic from "../../assets/imagery/generated/ai-coat-apply.jpg";
+import serviceCeramic from "../../assets/imagery/generated/ai-polish.jpg";
 import serviceCoating from "../../assets/imagery/generated/ai-coat-apply.jpg";
 import servicePpf from "../../assets/imagery/category/paint-protection.jpg";
 import serviceTinting from "../../assets/imagery/generated/mods-tint.jpg";

@@ -16,3 +16,5 @@ export * from "./gift.js";
 export * from "./membership-upgrade.js";
 export * from "./expiry-reminder.js";
 export * from "./car-segments.js";
+export * from "./shop-order";
+export * from "./shop-fixture";
