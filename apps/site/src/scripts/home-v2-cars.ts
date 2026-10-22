@@ -44,7 +44,10 @@ async function load() {
     const dt = Math.min(50, ts - (last || ts)); last = ts;
     const max = row.scrollWidth - row.clientWidth;
     btn.hidden = max <= 0;
-    if (max > 0 && !paused && ts >= hold) {
+    // Scroll snap would pull every small step back to the nearest card start, so the drift never moves. Snap is off only while drifting.
+    const drifting = max > 0 && !paused && ts >= hold;
+    row.style.scrollSnapType = drifting ? "none" : "";
+    if (drifting) {
       const x = row.scrollLeft + dt * 0.035;
       if (x >= max) { row.scrollLeft = max; paused = true; lab(); } else row.scrollLeft = x;
     }
