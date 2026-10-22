@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { CAR_SEGMENTS, needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
+import { isSizePriced, needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
@@ -22,7 +22,6 @@ import { FIRST_STUDIO_ID, GST_ENABLED } from "@autodeck/core";
 import { getAvailability, todayIST } from "../../../lib/booking-service";
 import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../lib/catalogue-service";
 
-const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,8 +35,10 @@ export default function ServiceDetailScreen() {
   const [loadError, setLoadError] = useState(false);
   const auth = useAuth();
   const pricingVehicle = usePricingVehicle();
-  const [selectedCategory, setSelectedCategory] = useState<VehicleCategory|null>(null);
-  const [pickedSize, setPickedSize] = useState(false);
+  // The size comes only from the selected car's saved type (edited in Garage). Flat-priced services do not depend on size, so the server
+  // only needs a valid value there; size-priced (PPF) with no saved type has no price until the type is saved. Never a guessed size.
+  const selectedCategory: VehicleCategory | null = pricingVehicle.category ?? (service && !isSizePriced(service.category) ? "hatchback" : null);
+  const needsCarType = !!service && isSizePriced(service.category) && !pricingVehicle.category;
   const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdownData | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState(false);
@@ -45,10 +46,6 @@ export default function ServiceDetailScreen() {
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
   const [tab, setTab] = useState<"overview" | "includes">("overview");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!pickedSize) setSelectedCategory(pricingVehicle.category ?? (service?.category === "garage" ? VEHICLE_CATEGORIES[0]!.value : null));
-  }, [pricingVehicle.category, pickedSize]);
 
   useEffect(() => {
     if (!id) return;
@@ -175,26 +172,15 @@ export default function ServiceDetailScreen() {
 
         <View style={{ gap: space.line }}>
           {H(service.category === "garage" ? "Price" : "Price for your car")}
-          {service.category === "garage" ? null : <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-            {VEHICLE_CATEGORIES.map(({ value, label }) => {
-              const selected = selectedCategory === value;
-              return (
-                <Pressable
-                  key={value}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => { setPickedSize(true); setSelectedCategory(value); }}
-                  style={{ borderRadius: 9999, borderWidth: 1, borderColor: selected ? colors.accent : colors.borderSubtle, backgroundColor: selected ? colors.accentHaze : "transparent", paddingHorizontal: 14, paddingVertical: 8 }}
-                >
-                  <T role="caption" tone={selected ? "accent" : "secondary"}>{label}</T>
-                </Pressable>
-              );
-            })}
-          </View>}
 
           {service.priceOnRequest === true ? (
             <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">{service.category === "garage" || service.category === "modifications" ? "Book an inspection and the studio quotes after seeing the car. You approve it before any work starts." : "The studio confirms the price for your car. You approve it before any work starts."}</T>} last /></Pane>
-          ) : !selectedCategory ? (<T role="caption" tone="secondary">Select a size to preview the price. Your saved car size is used at booking.</T>) : priceLoading ? (
+          ) : needsCarType ? (
+            <Pane pad="gap">
+              <Row title={pricingVehicle.vehicle ? "Car type needed" : "Add your car"} detail={<T role="caption" tone="secondary">{pricingVehicle.vehicle ? "This price depends on your car's type. Add the type once in Garage, edit car." : "This price depends on your car's type. Add your car in Garage to see it."}</T>} />
+              <Button label={pricingVehicle.vehicle ? "Edit car in Garage" : "Add a car"} kind="quiet" onPress={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
+            </Pane>
+          ) : !selectedCategory ? (<T role="caption" tone="secondary">Working out your car type...</T>) : priceLoading ? (
             <T role="caption" tone="tertiary">Working out the price...</T>
           ) : priceError ? (
             <Notice title="Can't get the price" body="Check your connection and try again." />
@@ -279,8 +265,8 @@ export default function ServiceDetailScreen() {
       {focused ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : "#1B1B1F", borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
-            <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Selected size"}{GST_ENABLED ? " · incl. GST" : ""}</T>
-            <T role="heading">{service.priceOnRequest ? "Consult" : priceLoading ? "Checking price" : priceBreakdown ? `${service.priceFrom === true ? "From " : ""}${rupees(priceBreakdown.total)}` : "Pick your car size"}</T>
+            <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Your car"}{GST_ENABLED ? " · incl. GST" : ""}</T>
+            <T role="heading">{service.priceOnRequest ? "Consult" : priceLoading ? "Checking price" : priceBreakdown ? `${service.priceFrom === true ? "From " : ""}${rupees(priceBreakdown.total)}` : needsCarType ? (pricingVehicle.vehicle ? "Car type needed" : "Add your car") : priceError ? "Price unavailable" : "Checking price"}</T>
           </View>
           <View style={{ flex: 1.4 }}>
             <Button label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />

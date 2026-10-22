@@ -49,9 +49,9 @@ describe("car detail cover guards", () => {
   it("empty states are one quiet line, not a block with a button", () => { expect(d).not.toContain('<Notice title="No care plan yet"'); expect(o).not.toContain("No service history yet"); });
 });
 describe("garage services have one price for every car", () => {
-  it("the service page hides the car-size chips for garage services", () => {
+  it("the service page has no car-size chips at all (size comes from the saved car) and labels garage price plainly", () => {
     const c = read("../app/(tabs)/catalogue/[id].tsx");
-    expect(c).toContain('service.category === "garage" ? null : <View');
+    expect(c).not.toContain("setSelectedCategory");
     expect(c).toContain('service.category === "garage" ? "Price" : "Price for your car"');
   });
 });
