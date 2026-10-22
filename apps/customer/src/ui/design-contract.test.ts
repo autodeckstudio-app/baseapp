@@ -158,7 +158,7 @@ describe("booking flow guardrails", () => {
     expect(rd("app/(tabs)/index.tsx")).not.toMatch(/priceLabel\(/);
   });
   it("calculateServicePrice feeds the shared total cache the lists read", () => {
-    expect(rd("lib/catalogue-service.ts")).toMatch(/totalCache\.set\(/);
+    expect(rd("lib/catalogue-service.ts")).toMatch(/priceCache\.set\(/);
   });
   it("no timezone suffix in booking times", () => {
     for (const f of ["app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/reschedule.tsx"]) {

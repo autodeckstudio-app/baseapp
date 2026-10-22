@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
-import { functions } from "./firebase";
+import { auth, functions } from "./firebase";
+import { priceCache } from "./price-cache";
 import { rupees } from "../ui/kit";
 import { primeVisuals } from "./imagery";
 import { MENU_SEED, sizePricingForCategory } from "@autodeck/core";
@@ -65,17 +66,15 @@ export async function calculateServicePrice(
     { breakdown: PriceBreakdown; snapshot: PriceSnapshot }
   >(functions, "calculateServicePrice");
   const result = await fn({ serviceId, vehicleCategory });
-  totalCache.set(`${serviceId}:${vehicleCategory}`, { total: result.data.breakdown.total, at: Date.now() });
+  priceCache.set(auth.currentUser?.uid ?? null, serviceId, vehicleCategory, result.data.breakdown.total);
   return result.data;
 }
 
-// Server-calculated totals seen this session. Lists read from here so a tile never shows a price the detail page then contradicts.
-const totalCache = new Map<string, { total: number; at: number }>();
-/** A server total stays usable for list tiles this long, so moving between Home and Services does not ask the server for every service again. */
-export const PRICE_CACHE_MS = 5 * 60_000;
+// Server-calculated totals seen recently. Lists read from here so a tile never shows a price the detail page then contradicts.
+// Display only: a booking is always priced again by the server from the car type saved on the car.
+export { PRICE_CACHE_MS } from "./price-cache";
 export function cachedServiceTotal(serviceId: string, vehicleCategory: VehicleCategory): number | undefined {
-  const hit = totalCache.get(`${serviceId}:${vehicleCategory}`);
-  return hit && Date.now() - hit.at < PRICE_CACHE_MS ? hit.total : undefined;
+  return priceCache.get(auth.currentUser?.uid ?? null, serviceId, vehicleCategory);
 }
 
 export function priceLabel(s: { priceOnRequest?: boolean; basePrice: number }): string {

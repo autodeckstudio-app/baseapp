@@ -27,11 +27,6 @@ import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../li
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  // The price bar is positioned over the whole page, so it must go away when another screen opens on top (Book now).
-  const [focused, setFocused] = useState(true);
-  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
-  const { colors, name: mode } = useExperienceTheme();
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -45,10 +40,7 @@ export default function ServiceDetailScreen() {
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [priceTry, setPriceTry] = useState(0);
-  const [after, setAfter] = useState(true);
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
-  const [tab, setTab] = useState<"overview" | "includes">("overview");
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -91,6 +83,50 @@ export default function ServiceDetailScreen() {
     void getServiceReviews(service.id).then(setReviews).catch(() => setReviews(null));
   }, [service]);
 
+  return (
+    <ServiceDetailView
+      id={id}
+      service={service}
+      loading={loading}
+      loadError={loadError}
+      reviews={reviews}
+      pricingVehicle={pricingVehicle}
+      selectedCategory={selectedCategory}
+      needsCarType={needsCarType}
+      priceLoading={priceLoading}
+      priceError={priceError}
+      priceBreakdown={priceBreakdown}
+      onRetry={() => setPriceTry((n) => n + 1)}
+    />
+  );
+}
+
+export type ServiceDetailViewProps = {
+  id: string | undefined;
+  service: Service | null;
+  loading: boolean;
+  loadError: boolean;
+  reviews: ServiceReviews | null;
+  pricingVehicle: { vehicle: { id: string; make?: string; model?: string } | null; label: string | null | undefined; category: VehicleCategory | null };
+  selectedCategory: VehicleCategory | null;
+  needsCarType: boolean;
+  priceLoading: boolean;
+  priceError: string | null;
+  priceBreakdown: PriceBreakdownData | null;
+  onRetry: () => void;
+};
+
+/** Everything on screen for one service. The screen above only gathers data, so this renders the same with fixed fixtures in the dev preview. */
+export function ServiceDetailView(props: ServiceDetailViewProps) {
+  const { id, service, loading, loadError, reviews, pricingVehicle, selectedCategory, needsCarType, priceLoading, priceError, priceBreakdown, onRetry } = props;
+  const router = useRouter();
+  // The price bar is positioned over the whole page, so it must go away when another screen opens on top (Book now).
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
+  const { colors, name: mode } = useExperienceTheme();
+  const [after, setAfter] = useState(true);
+  const [tab, setTab] = useState<"overview" | "includes">("overview");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   if (loading) return <Loading label="Opening the menu" />;
   if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." /></Screen>;
   if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
@@ -176,7 +212,7 @@ export default function ServiceDetailScreen() {
         <View style={{ gap: space.line }}>
           {H(service.category === "garage" ? "Price" : "Price for your car")}
 
-          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={() => setPriceTry((n) => n + 1)} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
+          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
         </View>
 
           </>

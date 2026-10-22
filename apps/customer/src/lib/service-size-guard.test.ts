@@ -42,7 +42,18 @@ describe("service detail uses the saved car type only", () => {
     const vs = readFileSync(join(__dirname, "./vehicle-size.ts"), "utf8");
     const cs = readFileSync(join(__dirname, "./catalogue-service.ts"), "utf8");
     expect(vs).toMatch(/!s\.priceOnRequest&&cachedServiceTotal\(s\.id,category\)===undefined/);
-    expect(cs).toMatch(/PRICE_CACHE_MS = 5 \* 60_000/);
-    expect(cs).toMatch(/Date\.now\(\) - hit\.at < PRICE_CACHE_MS/);
+    expect(cs).toContain("auth.currentUser?.uid");
+    expect(cs).toContain("priceCache.set(");
+  });
+  it("the booking is priced by the server from the saved car type, never from a held list total", () => {
+    const fn = readFileSync(join(__dirname, "../../../../functions/src/functions/booking/createBooking.ts"), "utf8");
+    expect(fn).toMatch(/calculatePrice\(\{/);
+    const book = readFileSync(join(__dirname, "../app/(tabs)/book/[serviceId].tsx"), "utf8");
+    expect(book).toMatch(/setSelectedCategory\(normalizeSegment\(selectedVehicle\?\.category\)\)/);
+    expect(book).not.toMatch(/cachedServiceTotal/);
+  });
+  it("the service page and the booking page read the same saved car type", () => {
+    expect(page).toContain("pricingVehicle.category");
+    expect(page).not.toContain("setSelectedCategory");
   });
 });
