@@ -8,7 +8,7 @@ import { NavIcon } from "../../ui/NavIcon";
 import { useLang } from "../../lib/i18n";
 import { FAQ, STUDIO_INFO, formatHours } from "../../lib/studio-info";
 import { getStudioInfo } from "../../lib/booking-service";
-import { FIRST_STUDIO_ID, MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, REFUND_TIMELINE_TEXT, cancellationLine } from "@autodeck/core";
+import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { Field, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
 import { searchFaq } from "../../lib/faq-search";
 
@@ -61,14 +61,6 @@ export default function HelpScreen() {
           <Row title="No answer found" detail={`Please call the studio. ${s.hours || ""}`.trim()} onPress={s.phone ? () => void Linking.openURL(`tel:${s.phone}`) : undefined} last />
         </Pane>
       )}
-      <Kicker>Cancellation and refunds</Kicker>
-      <Pane pad="gap">
-        <Row title="Washes and short jobs" detail={cancellationLine(undefined)} />
-        <Row title="Bigger services" detail={`${cancellationLine("ceramic")} Bigger services are coatings, paint protection film, paint, garage work and modifications.`} />
-        <Row title="Rescheduling" detail={`You can reschedule up to ${MAX_CUSTOMER_RESCHEDULES} times, at least ${CANCELLATION_FREE_WINDOW_HOURS} hours before your slot.`} />
-        <Row title="Refunds" detail={`A refund goes back to your original payment method in ${REFUND_TIMELINE_TEXT}.`} />
-        <Row title="Work has started or the car has arrived" detail="Please call the studio." last />
-      </Pane>
     </Screen>
   );
 }
