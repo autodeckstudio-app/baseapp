@@ -184,3 +184,21 @@ section[id]{scroll-margin-top:84px}
 /* water drop: tapered tip (pointing up), glossy; a rotated square with one sharp corner so the scroll script's translate/scale on .drop is untouched */
 .drop{aspect-ratio:1;border-radius:0;background:none;box-shadow:none;width:clamp(86px,17vmin,170px)}
 .drop::before{content:"";position:absolute;inset:20% 20% 12% 20%;border-radius:0 50% 50% 50%;transform:rotate(45deg) translate(6%,6%);background:radial-gradient(circle at 24% 52%,#fff 0 6%,rgba(255,255,255,.55) 7% 14%,rgba(190,215,235,.18) 30%,rgba(10,14,20,.55) 72%,rgba(255,255,255,.45) 96%);box-shadow:inset 0 -6px 12px rgba(160,200,235,.25);filter:drop-shadow(0 14px 18px rgba(0,0,0,.55))}
+
+/* Reduced motion: no pinned scroll journey. A calm, readable stack of the same five frames and the same words. Normal mode is untouched. */
+.rmstory{display:none}
+@media(prefers-reduced-motion:reduce){
+ #journey{display:none}
+ .gh{opacity:1;pointer-events:auto;transform:none}
+ .rmstory{display:block;padding:calc(84px + 8px) var(--pad) 8px;max-width:1180px;margin:0 auto}
+ .rmtag{font:500 15px/1.4 Inter;color:var(--dim);margin:0 0 18px}.rmtag b{color:var(--o)}
+ .rmp{position:relative;margin:0 0 14px;border-radius:10px;overflow:hidden;background:#0c0d11;border:1px solid #1d2027}
+ .rmp img{display:block;width:100%;height:min(62svh,560px);object-fit:cover}
+ .rmp::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(7,8,11,.88) 0,rgba(7,8,11,.2) 46%,transparent 70%);pointer-events:none}
+ .rmt{position:absolute;z-index:2;left:clamp(16px,3vw,32px);right:clamp(16px,3vw,32px);bottom:clamp(16px,3vw,28px)}
+ .rmc{display:inline-block;font:600 11px/1 Inter;letter-spacing:.06em;padding:8px 12px;border-radius:99px;background:rgba(10,11,14,.55);border:1px solid rgba(255,255,255,.14);margin-bottom:12px}
+ .rmh{font:900 clamp(28px,4.3vw,64px)/.95 Montserrat,Inter;text-transform:uppercase;letter-spacing:-.035em;margin:0}
+ .rmsub{font:500 clamp(13px,1.3vw,16px)/1.4 Inter;color:rgba(255,255,255,.8);margin:10px 0 0}
+ .rmnote{font:500 11px/1.4 Inter;color:#8d8a84;margin:14px 0 14px}
+ .rmbook{display:inline-block;font:700 14px Inter;color:#0b0c10;background:#fff;border-radius:99px;padding:13px 22px;text-decoration:none;margin-bottom:28px}
+}
