@@ -25,7 +25,8 @@ import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../.
 import { liveTrackTarget } from "../../../lib/bookings-view";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import type { Membership } from "@autodeck/core";
-import { devGarage } from "../../../lib/garage-dev-sample";
+// Dev-only sample data: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
+const devGarage = __DEV__ ? (require("../../../lib/garage-dev-sample") as typeof import("../../../lib/garage-dev-sample")).devGarage : null;
 
 
 function DueChip({ text }: { text: string }) {
@@ -43,7 +44,7 @@ export default function GarageScreen() {
   const auth = useAuth();
   const router = useRouter();
   const q = useLocalSearchParams<{ mock?: string; live?: string; pick?: string; empty?: string }>();
-  const mock = __DEV__ && q.mock === "1" ? devGarage({ live: !!q.live, empty: !!q.empty }) : null; // dev preview only: sample cars, never real data
+  const mock = __DEV__ && devGarage && q.mock === "1" ? devGarage({ live: !!q.live, empty: !!q.empty }) : null; // dev preview only: sample cars, never real data
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(mock ? mock.vehicles : null);
   const [archived,setArchived]=useState<Vehicle[]>([]);
   const [showArchived,setShowArchived]=useState(false);

@@ -48,4 +48,16 @@ config.resolver.extraNodeModules = {
   "react-native": path.resolve(__dirname, "node_modules", "react-native"),
 };
 
+// Production bundles must not contain dev preview screens or their sample data (fake cars, bookings, packages).
+// expo export runs with NODE_ENV=production; in that mode these files are unresolvable, so they cannot ship.
+// scripts/prod-bundle-guard.mjs checks the real export. Dev (expo start) is unchanged.
+if (process.env.NODE_ENV === "production") {
+  const devOnly = [
+    /[\\/]src[\\/]app[\\/]preview[^\\/]*\.tsx$/,
+    /[\\/]src[\\/]lib[\\/](garage-dev-sample|booking-dev-sample|live-packages-sample)\.ts$/,
+  ];
+  const prior = config.resolver.blockList;
+  config.resolver.blockList = [...(Array.isArray(prior) ? prior : prior ? [prior] : []), ...devOnly];
+}
+
 module.exports = config;
