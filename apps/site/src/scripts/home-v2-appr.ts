@@ -47,7 +47,7 @@ function frame(now){
  const fall=sm(.50,.60,p),ex=sm(.60,.67,p);
  drop.style.opacity=p<.48?0:p<.60?1:1-sm(.60,.64,p);
  drop.style.transform=`translate(-50%,calc(-50% + ${((-1+fall*fall)*36).toFixed(2)}vh)) scale(${1-ex*.2})`;
- rip.style.opacity=p<.60?0:(1-ex)*.9;rip.style.transform=`translate(-50%,-50%) scale(${.3+ex*3.2})`;
+ rip.style.opacity=p<.60?0:(1-ex)*.9;rip.style.transform=`translate(-50%,-50%) scale(${.3+ex*.9})`;
  const wz=sm(.64,.78,p);const wzz=wz*wz*(3-2*wz);
  L.w.style.opacity=sm(.66,.69,p);tf(L.w,1+(1-wzz)*2.6+(RM?0:c01((p-.78)/.22)*.05),33,50);dip.style.opacity=0;
  const eo=sm(.70,.78,p);if(p>=.68){h1.classList.add('sl');h1.style.opacity=eo;h1.style.transform=`translateY(${((1-eo)*26).toFixed(1)}px)`}else{h1.classList.remove('sl');h1.style.opacity='';h1.style.transform=''}
