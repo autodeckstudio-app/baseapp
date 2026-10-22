@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Text, View, Pressable, Image } from "react-native";
+import { Text, View, Pressable, Image, TextInput } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
-import { quoteCart, SHOP_FIXTURE } from "@autodeck/core";
+import { quoteCart, priceGuestOrder, SHOP_FIXTURE } from "@autodeck/core";
 import { Screen } from "../ui/kit";
 // Dev-only mock of the guest Shop screen. FIXTURE data from core, priced by the shared quoteCart. No payment.
 const inr = (p: number) => "Rs " + (p / 100).toFixed(2);
@@ -9,6 +9,9 @@ export default function PreviewShop() {
   const { colors: ink } = useExperienceTheme();
   const [variantId, setVariantId] = useState("m");
   const [qty, setQty] = useState(2);
+  const [guestOpen, setGuestOpen] = useState(false);
+  const [g, setG] = useState({ name: "", mobile: "", address: "", city: "", state: "", pincode: "" });
+  const [msg, setMsg] = useState("");
   if (!__DEV__) return null;
   const p = SHOP_FIXTURE.products[0]!;
   const q = quoteCart(SHOP_FIXTURE, [{ productId: p.id, variantId, quantity: qty }]);
@@ -36,7 +39,17 @@ export default function PreviewShop() {
             <Row a="Total" b={inr(q.totalPaise)} c={ink} bold />
           </View>
         )}
-        <View style={{ height: 52, borderRadius: 999, backgroundColor: ink.textPrimary, alignItems: "center", justifyContent: "center" }}><Text style={{ color: ink.canvas, fontWeight: "700" }}>Continue as guest (test)</Text></View>
+        {!guestOpen ? (
+          <Pressable accessibilityRole="button" onPress={() => setGuestOpen(true)} style={{ height: 52, borderRadius: 999, backgroundColor: ink.textPrimary, alignItems: "center", justifyContent: "center" }}><Text style={{ color: ink.canvas, fontWeight: "700" }}>Continue as guest (test)</Text></Pressable>
+        ) : (
+          <View style={{ gap: 10 }}>
+            {([["name", "Full name"], ["mobile", "Mobile"], ["address", "Address"], ["city", "City"], ["state", "State"], ["pincode", "Pincode"]] as const).map(([k, label]) => (
+              <TextInput key={k} placeholder={label} placeholderTextColor={ink.textTertiary} value={g[k]} onChangeText={(v) => setG({ ...g, [k]: v })} style={{ height: 48, borderRadius: 12, borderWidth: 1, borderColor: ink.borderStrong, paddingHorizontal: 14, color: ink.textPrimary }} />
+            ))}
+            <Pressable accessibilityRole="button" onPress={() => { const r = priceGuestOrder(SHOP_FIXTURE, [{ productId: p.id, variantId, quantity: qty }], { ...g, clientKey: "preview-key-0123456789" }); setMsg(r.ok ? `Test order accepted. Total ${inr(r.totalPaise)}. No payment taken. Nothing sent anywhere.` : `Cannot place order: ${r.code}${r.detail ? " (" + r.detail + ")" : ""}`); }} style={{ height: 52, borderRadius: 999, backgroundColor: ink.textPrimary, alignItems: "center", justifyContent: "center" }}><Text style={{ color: ink.canvas, fontWeight: "700" }}>Place test order</Text></Pressable>
+            {msg ? <Text style={{ color: ink.textPrimary, fontWeight: "600" }}>{msg}</Text> : null}
+          </View>
+        )}
       </View>
     </Screen>
   );
