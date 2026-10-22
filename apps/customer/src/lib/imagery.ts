@@ -16,8 +16,8 @@ import loginHero from "../../assets/imagery/studio-login.jpg";
 import heroAlt from "../../assets/imagery/stock/x-polish-red.jpg";
 import membership from "../../assets/imagery/stock/g-styling.jpg";
 import serviceWashing from "../../assets/imagery/generated/ai-wash-foam.jpg";
-import serviceCeramic from "../../assets/imagery/generated/coating.jpg";
-import serviceCoating from "../../assets/imagery/generated/coating.jpg";
+import serviceCeramic from "../../assets/imagery/generated/ai-coat-apply.jpg";
+import serviceCoating from "../../assets/imagery/generated/ai-coat-apply.jpg";
 import servicePpf from "../../assets/imagery/category/paint-protection.jpg";
 import serviceTinting from "../../assets/imagery/generated/mods-tint.jpg";
 import serviceInspection from "../../assets/imagery/generated/ai-underbody.jpg";
@@ -29,7 +29,7 @@ import catWash from "../../assets/imagery/category/wash-and-care.jpg";
 import catGarage from "../../assets/imagery/category/garage.jpg";
 import catMods from "../../assets/imagery/category/modifications.jpg";
 import genPickup from "../../assets/imagery/generated/pickup.jpg";
-import genCoating from "../../assets/imagery/generated/coating.jpg";
+import genCoating from "../../assets/imagery/generated/ai-coat-apply.jpg";
 import vehicleSedan from "../../assets/imagery/stock/x-polish-red.jpg";
 
 /** One photograph per service category, shown on catalogue cards and detail heroes. */
@@ -92,7 +92,7 @@ const BOTTLES: Record<string, { src: ImageSourcePropType; tint: string }> = {
 const TOPICS: Record<string, ImageSourcePropType> = {
   washExt: require("../../assets/imagery/generated/ai-wash-foam.jpg"), roof: require("../../assets/imagery/generated/ai-roof.jpg"),
   interior: require("../../assets/imagery/generated/ai-interior.jpg"), polish: require("../../assets/imagery/generated/ai-polish.jpg"),
-  headlight: require("../../assets/imagery/generated/ai-headlight.jpg"), coating: require("../../assets/imagery/generated/coating.jpg"),
+  headlight: require("../../assets/imagery/generated/ai-headlight.jpg"), coating: require("../../assets/imagery/generated/ai-coat-apply.jpg"),
   ppf: require("../../assets/imagery/category/paint-protection.jpg"), tint: require("../../assets/imagery/generated/mods-tint.jpg"),
   wheel: require("../../assets/imagery/generated/ai-wheel.jpg"), engine: require("../../assets/imagery/generated/ai-engine.jpg"),
   inspection: require("../../assets/imagery/generated/ai-underbody.jpg"), gInspect: require("../../assets/imagery/generated/garage-inspection.jpg"), align: require("../../assets/imagery/generated/garage-alignment.jpg"),
@@ -104,7 +104,7 @@ import { topicOf, GARAGE_PHOTO_TOPICS, type Svc } from "./imagery-topic";
 /** Extra real photos per topic so neighbouring cards in one list never show the same picture. */
 /* eslint-disable @typescript-eslint/no-require-imports */
 const POOLS: Record<string, ImageSourcePropType[]> = {
-  coating: [require("../../assets/imagery/generated/coating.jpg"), require("../../assets/imagery/category/ceramic-coating.jpg"), require("../../assets/imagery/generated/ai-coat-apply.jpg")],
+  coating: [require("../../assets/imagery/generated/ai-coat-apply.jpg"), require("../../assets/imagery/category/ceramic-coating.jpg"), require("../../assets/imagery/generated/ai-polish.jpg")],
   washExt: [require("../../assets/imagery/generated/ai-wash-foam.jpg"), require("../../assets/imagery/generated/ai-wash-hand.jpg"), require("../../assets/imagery/generated/ai-wash-rinse.jpg"), require("../../assets/imagery/category/wash-and-care.jpg")],
   ppf: [require("../../assets/imagery/category/paint-protection.jpg"), require("../../assets/imagery/generated/ai-ppf-film.jpg"), require("../../assets/imagery/category/modifications.jpg")],
   tint: [require("../../assets/imagery/generated/mods-tint.jpg"), require("../../assets/imagery/generated/ai-tint-apply.jpg"), require("../../assets/imagery/generated/ai-tint-done.jpg")],
