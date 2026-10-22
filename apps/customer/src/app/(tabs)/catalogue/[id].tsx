@@ -15,7 +15,7 @@ import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
-import { stickyPriceLabel } from "../../../lib/sticky-price";
+import { stickyPriceLabel, sheetBarVisible } from "../../../lib/sticky-price";
 import { ServicePrice } from "../../../ui/ServicePrice";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
@@ -127,6 +127,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   const [after, setAfter] = useState(true);
   const [tab, setTab] = useState<"overview" | "includes">("overview");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  // Book now is offered only when there is a confirmed price to book against, or the service is a quote. With no car, no car type or no price the
+  // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
+  const showBar = !!service && sheetBarVisible({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
   if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." /></Screen>;
   if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
@@ -275,14 +278,14 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
         <View style={{ height: 220 }} />
       </Screen>
-      {focused ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : "#1B1B1F", borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
+      {focused && showBar ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : "#1B1B1F", borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Your car"}{GST_ENABLED ? " · incl. GST" : ""}</T>
             <T role="heading">{stickyPriceLabel({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, total: priceBreakdown ? priceBreakdown.total : null, from: service.priceFrom === true, needsCarType, hasCar: !!pricingVehicle.vehicle, error: priceError !== null }, rupees)}</T>
           </View>
           <View style={{ flex: 1.4 }}>
-            <Button label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
+            <Button disabled={!service.priceOnRequest && priceBreakdown === null} label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
           </View>
         </View>
       </View></View> : null}

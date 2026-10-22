@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
 import { onIdTokenChanged } from "../lib/auth-service";
+import { priceCache } from "../lib/price-cache";
 
 type AuthState =
   | { status: "loading" }
@@ -26,6 +27,7 @@ export function useAuth(): AuthState {
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(async (user) => {
       if (!user) {
+        priceCache.setScope(null, null);
         setState({ status: "unauthenticated" });
         return;
       }
@@ -46,9 +48,11 @@ export function useAuth(): AuthState {
               ? rawClaims["studioId"]
               : null,
         };
+        priceCache.setScope(user.uid, claims.tenantId);
         setState({ status: "ready", user, claims });
       } else {
         // User is signed in but claims not set yet (first sign-in)
+        priceCache.setScope(user.uid, null);
         setState({ status: "authenticated_no_claims", user });
       }
     });

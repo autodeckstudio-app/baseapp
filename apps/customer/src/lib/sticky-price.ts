@@ -10,3 +10,10 @@ export function stickyPriceLabel(
   if (s.error) return "Price unavailable";
   return "Checking price";
 }
+
+/** The bar (price + Book now) shows only with a confirmed price, a quote service, or while the price is loading (Book disabled). Never with a missing car, car type or failed price. */
+export function sheetBarVisible(s: { priceOnRequest: boolean; loading: boolean; hasTotal: boolean; needsCarType: boolean; error: boolean }): boolean {
+  if (s.priceOnRequest) return true;
+  if (s.needsCarType || s.error) return false;
+  return s.hasTotal || s.loading;
+}

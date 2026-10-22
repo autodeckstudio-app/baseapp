@@ -26,4 +26,16 @@ describe("held price totals", () => {
     c.clear();
     expect(c.get("u1", "ppf", "suv")).toBeUndefined();
   });
+  it("drops everything when the user or the tenant claim changes", () => {
+    const c = createPriceCache(() => 0);
+    c.setScope("u1", "t1");
+    c.set("u1", "ppf", "suv", 100);
+    c.setScope("u1", "t1");
+    expect(c.get("u1", "ppf", "suv")).toBe(100);
+    c.setScope("u1", "t2");
+    expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+    c.set("u1", "ppf", "suv", 100);
+    c.setScope(null, null);
+    expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+  });
 });

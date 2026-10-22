@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stickyPriceLabel } from "./sticky-price";
+import { stickyPriceLabel, sheetBarVisible } from "./sticky-price";
 
 const f = (p: number) => `Rs ${p / 100}`;
 const base = { priceOnRequest: false, loading: false, total: null, from: false, needsCarType: false, hasCar: true, error: false };
@@ -15,5 +15,14 @@ describe("sticky price bar", () => {
     expect(stickyPriceLabel({ ...base, loading: true }, f)).toBe("Checking price");
     expect(stickyPriceLabel({ ...base, priceOnRequest: true }, f)).toBe("Consult");
     for (const s of [base, { ...base, error: true }, { ...base, needsCarType: true }]) expect(stickyPriceLabel(s, f)).not.toMatch(/size/i);
+  });
+  it("offers Book now only with a confirmed price, a quote service or while loading", () => {
+    const b = { priceOnRequest: false, loading: false, hasTotal: false, needsCarType: false, error: false };
+    expect(sheetBarVisible({ ...b, hasTotal: true })).toBe(true);
+    expect(sheetBarVisible({ ...b, loading: true })).toBe(true);
+    expect(sheetBarVisible({ ...b, priceOnRequest: true })).toBe(true);
+    expect(sheetBarVisible({ ...b, needsCarType: true })).toBe(false);
+    expect(sheetBarVisible({ ...b, error: true })).toBe(false);
+    expect(sheetBarVisible(b)).toBe(false);
   });
 });
