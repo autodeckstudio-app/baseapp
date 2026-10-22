@@ -1,11 +1,28 @@
 {
-  "_label": "FIXTURE. Test data for the product page layout only. Not an offer, not a product, not a price. Never included in a production build.",
+  "_label": "FIXTURE. Test data for the product page layout only. Not an offer, not a product, not a price. Never included in a production build. The price (1000 paise) and stock are made-up test values.",
   "products": [
     {
-      "id": "fixture-tee", "fixture": true, "name": "FIXTURE product (not for sale)", "department": "Clothing",
+      "id": "fixture-tee",
+      "fixture": true,
+      "name": "FIXTURE product (not for sale)",
+      "department": "Clothing",
       "description": "Layout test only. Real products, prices and sizes come from the owner.",
-      "image": "/assets/v2/p_tee_black.jpg", "imageAlt": "Reference image used for layout only",
-      "pricePaise": null, "variants": [{ "id": "m", "label": "M" }], "details": []
+      "image": "/assets/v2/p_tee_black.jpg",
+      "imageAlt": "Reference image used for layout only",
+      "pricePaise": 1000,
+      "variants": [
+        {
+          "id": "m",
+          "label": "M",
+          "stock": 5
+        },
+        {
+          "id": "l",
+          "label": "L",
+          "stock": 0
+        }
+      ],
+      "details": []
     }
   ]
 }

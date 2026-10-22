@@ -26,8 +26,9 @@ const price = buyable ? `Rs ${(p.pricePaise! / 100).toLocaleString('en-IN')}` : 
   <img src={p.image} alt={p.imageAlt} style="max-width:420px;width:100%;border-radius:12px" />
   <p>{p.description}</p>
   {p.details && <dl>{p.details.map(d => <div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl>}
-  {price ? <p><strong>{price}</strong></p> : <p class="store-small">No price yet.</p>}
+  {p.fixture && import.meta.env.DEV ? (<div><p><strong>FIXTURE price: Rs 10.00 (test value)</strong></p><label>Size <select data-variant>{(p.variants||[]).map(v=><option value={v.id}>{v.label}</option>)}</select></label> <button type="button" data-add-to-cart={p.id}>Add to cart (test)</button> <a href="/shop/cart">View cart</a><p data-cart-msg class="store-small"></p></div>) : price ? <p><strong>{price}</strong></p> : <p class="store-small">No price yet.</p>}
   <p class="store-small">{buyable ? 'Ordering opens when delivery and returns rules are published.' : 'Not available to order.'}</p>
   <p><a href="/shop">Back to the store</a></p>
 </section>
+{p.fixture && import.meta.env.DEV && <script>import '../../scripts/cart.js';</script>}
 </Base>
