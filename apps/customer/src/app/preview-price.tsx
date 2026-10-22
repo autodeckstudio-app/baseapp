@@ -13,8 +13,9 @@ const cases: { label: string; props: Partial<ServicePriceProps> }[] = [
   { label: "No car at all", props: { needsCarType: true, hasCar: false, carSizeKnown: false } },
   { label: "Loading", props: { loading: true } },
   { label: "Error: rate limit", props: { error: "functions/resource-exhausted" } },
-  { label: "Error: expired sign-in", props: { error: "functions/unauthenticated" } },
-  { label: "Error: no answer", props: { error: "functions/internal" } },
+  { label: "Error: unauthenticated", props: { error: "functions/unauthenticated" } },
+  { label: "Error: internal", props: { error: "functions/internal" } },
+  { label: "Error: permission denied", props: { error: "functions/permission-denied" } },
 ];
 export default function PreviewPrice() {
   if (!__DEV__) return null;

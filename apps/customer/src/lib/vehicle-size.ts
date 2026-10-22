@@ -23,10 +23,10 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
  useEffect(()=>{
   setPrices(seed()); if(!category || !services.length)return;
   let alive=true;
-  void Promise.all(services.filter(s=>!s.priceOnRequest).map(async s=>{
+  void Promise.all(services.filter(s=>!s.priceOnRequest&&cachedServiceTotal(s.id,category)===undefined).map(async s=>{
    try { const {breakdown}=await calculateServicePrice(s.id,category);return [s.id,breakdown.total] as const; }
    catch {return null;}
-  })).then(rows=>{if(alive)setPrices(Object.fromEntries(rows.filter(x=>x!==null)));});
+  })).then(rows=>{if(alive)setPrices({...seed(),...Object.fromEntries(rows.filter(x=>x!==null))});});
   return ()=>{alive=false;};
  },[services,category]);
  return prices;

@@ -15,6 +15,7 @@ import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { stickyPriceLabel } from "../../../lib/sticky-price";
 import { ServicePrice } from "../../../ui/ServicePrice";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
@@ -242,7 +243,7 @@ export default function ServiceDetailScreen() {
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
           <View style={{ flex: 1 }}>
             <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Your car"}{GST_ENABLED ? " · incl. GST" : ""}</T>
-            <T role="heading">{service.priceOnRequest ? "Consult" : priceLoading ? "Checking price" : priceBreakdown ? `${service.priceFrom === true ? "From " : ""}${rupees(priceBreakdown.total)}` : needsCarType ? (pricingVehicle.vehicle ? "Car type needed" : "Add your car") : priceError ? "Price unavailable" : "Checking price"}</T>
+            <T role="heading">{stickyPriceLabel({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, total: priceBreakdown ? priceBreakdown.total : null, from: service.priceFrom === true, needsCarType, hasCar: !!pricingVehicle.vehicle, error: priceError !== null }, rupees)}</T>
           </View>
           <View style={{ flex: 1.4 }}>
             <Button label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />

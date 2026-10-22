@@ -65,14 +65,17 @@ export async function calculateServicePrice(
     { breakdown: PriceBreakdown; snapshot: PriceSnapshot }
   >(functions, "calculateServicePrice");
   const result = await fn({ serviceId, vehicleCategory });
-  totalCache.set(`${serviceId}:${vehicleCategory}`, result.data.breakdown.total);
+  totalCache.set(`${serviceId}:${vehicleCategory}`, { total: result.data.breakdown.total, at: Date.now() });
   return result.data;
 }
 
 // Server-calculated totals seen this session. Lists read from here so a tile never shows a price the detail page then contradicts.
-const totalCache = new Map<string, number>();
+const totalCache = new Map<string, { total: number; at: number }>();
+/** A server total stays usable for list tiles this long, so moving between Home and Services does not ask the server for every service again. */
+export const PRICE_CACHE_MS = 5 * 60_000;
 export function cachedServiceTotal(serviceId: string, vehicleCategory: VehicleCategory): number | undefined {
-  return totalCache.get(`${serviceId}:${vehicleCategory}`);
+  const hit = totalCache.get(`${serviceId}:${vehicleCategory}`);
+  return hit && Date.now() - hit.at < PRICE_CACHE_MS ? hit.total : undefined;
 }
 
 export function priceLabel(s: { priceOnRequest?: boolean; basePrice: number }): string {

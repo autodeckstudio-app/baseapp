@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { priceErrorBody } from "./price-error";
+import { priceErrorInfo } from "./price-error";
 import { describe, expect, it } from "vitest";
 
 const page = readFileSync(join(__dirname, "../app/(tabs)/catalogue/[id].tsx"), "utf8");
@@ -20,18 +20,29 @@ describe("service detail uses the saved car type only", () => {
   it("never guesses a size for size-priced services and never blames the connection for a missing type", () => {
     expect(src).toMatch(/needsCarType/);
     expect(src).toMatch(/isSizePriced\(service\.category\) && !pricingVehicle\.category/);
-    expect(src).toContain("Price unavailable");
   });
   it("names the real failure instead of always blaming the connection, and offers a retry", () => {
     expect(src).toContain("functions/resource-exhausted");
     expect(src).toContain("functions/unauthenticated");
     expect(src).not.toContain("Can't get the price\" body=\"Check your connection");
     expect(src).toContain("setPriceTry");
+    expect(block).toContain("priceErrorInfo(p.error).retry");
   });
-  it("maps the real Firebase callable codes to messages", () => {
-    expect(priceErrorBody("functions/resource-exhausted")).toMatch(/Too many/);
-    expect(priceErrorBody("functions/unauthenticated")).toMatch(/sign-in/);
-    expect(priceErrorBody("functions/internal")).toMatch(/did not answer/);
-    expect(priceErrorBody("anything-else")).toMatch(/did not answer/);
+  it("maps real Firebase callable codes without masking permission or configuration errors as retryable outages", () => {
+    expect(priceErrorInfo("functions/resource-exhausted")).toMatchObject({ retry: true });
+    expect(priceErrorInfo("functions/resource-exhausted").body).not.toMatch(/minute/i);
+    expect(priceErrorInfo("functions/unauthenticated").body).toMatch(/signed in/);
+    expect(priceErrorInfo("functions/unauthenticated").body).not.toMatch(/expired/i);
+    for (const c of ["functions/permission-denied", "functions/not-found", "functions/failed-precondition", "functions/invalid-argument", "weird"]) expect(priceErrorInfo(c).retry).toBe(false);
+    for (const c of ["functions/unavailable", "functions/deadline-exceeded", "functions/internal"]) expect(priceErrorInfo(c).retry).toBe(true);
+    expect(priceErrorInfo("weird").body).toBe("Unable to load the price.");
+    expect(priceErrorInfo("functions/internal").body).not.toMatch(/did not answer/);
+  });
+  it("list screens do not ask the server again for prices they already hold (120 calls/min per user limit)", () => {
+    const vs = readFileSync(join(__dirname, "./vehicle-size.ts"), "utf8");
+    const cs = readFileSync(join(__dirname, "./catalogue-service.ts"), "utf8");
+    expect(vs).toMatch(/!s\.priceOnRequest&&cachedServiceTotal\(s\.id,category\)===undefined/);
+    expect(cs).toMatch(/PRICE_CACHE_MS = 5 \* 60_000/);
+    expect(cs).toMatch(/Date\.now\(\) - hit\.at < PRICE_CACHE_MS/);
   });
 });

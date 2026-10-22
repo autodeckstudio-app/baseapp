@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import type { PriceBreakdown } from "@autodeck/core";
-import { priceErrorBody } from "../lib/price-error";
+import { priceErrorInfo } from "../lib/price-error";
 import { Button, Notice, Pane, Row, T, rupees } from "./kit";
 
 export type ServicePriceProps = {
@@ -34,8 +34,9 @@ export function ServicePrice(p: ServicePriceProps) {
             <T role="caption" tone="tertiary">Working out the price...</T>
           ) : p.error ? (
             <View style={{ gap: space.line }}>
-              <Notice title="Can't get the price" body={priceErrorBody(p.error)} />
-              <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} />
+              <Notice title="Can't get the price" body={priceErrorInfo(p.error).body} />
+              <T role="caption" tone="tertiary">{p.error}</T>
+              {priceErrorInfo(p.error).retry ? <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : null}
             </View>
           ) : priceBreakdown !== null ? (
             <Pane pad="gap">
