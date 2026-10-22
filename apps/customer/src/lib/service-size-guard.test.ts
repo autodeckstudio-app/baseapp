@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { priceErrorBody } from "./price-error";
 import { describe, expect, it } from "vitest";
 
-const src = readFileSync(join(__dirname, "../app/(tabs)/catalogue/[id].tsx"), "utf8");
+const page = readFileSync(join(__dirname, "../app/(tabs)/catalogue/[id].tsx"), "utf8");
+const block = readFileSync(join(__dirname, "../ui/ServicePrice.tsx"), "utf8");
+const src = page + "\n" + block + "\n" + readFileSync(join(__dirname, "./price-error.ts"), "utf8");
 
 describe("service detail uses the saved car type only", () => {
   it("has no second size picker and no 'Pick your car size' state", () => {
@@ -24,5 +27,11 @@ describe("service detail uses the saved car type only", () => {
     expect(src).toContain("functions/unauthenticated");
     expect(src).not.toContain("Can't get the price\" body=\"Check your connection");
     expect(src).toContain("setPriceTry");
+  });
+  it("maps the real Firebase callable codes to messages", () => {
+    expect(priceErrorBody("functions/resource-exhausted")).toMatch(/Too many/);
+    expect(priceErrorBody("functions/unauthenticated")).toMatch(/sign-in/);
+    expect(priceErrorBody("functions/internal")).toMatch(/did not answer/);
+    expect(priceErrorBody("anything-else")).toMatch(/did not answer/);
   });
 });

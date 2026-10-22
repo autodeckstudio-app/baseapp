@@ -15,6 +15,7 @@ import { db } from "../../../lib/firebase";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { ServicePrice } from "../../../ui/ServicePrice";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
 import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
@@ -174,36 +175,7 @@ export default function ServiceDetailScreen() {
         <View style={{ gap: space.line }}>
           {H(service.category === "garage" ? "Price" : "Price for your car")}
 
-          {service.priceOnRequest === true ? (
-            <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">{service.category === "garage" || service.category === "modifications" ? "Book an inspection and the studio quotes after seeing the car. You approve it before any work starts." : "The studio confirms the price for your car. You approve it before any work starts."}</T>} last /></Pane>
-          ) : needsCarType ? (
-            <Pane pad="gap">
-              <Row title={pricingVehicle.vehicle ? "Car type needed" : "Add your car"} detail={<T role="caption" tone="secondary">{pricingVehicle.vehicle ? "This price depends on your car's type. Add the type once in Garage, edit car." : "This price depends on your car's type. Add your car in Garage to see it."}</T>} />
-              <Button label={pricingVehicle.vehicle ? "Edit car in Garage" : "Add a car"} kind="quiet" onPress={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
-            </Pane>
-          ) : !selectedCategory ? (<T role="caption" tone="secondary">Working out your car type...</T>) : priceLoading ? (
-            <T role="caption" tone="tertiary">Working out the price...</T>
-          ) : priceError ? (
-            <View style={{ gap: space.line }}>
-              <Notice title="Can't get the price" body={priceError === "functions/resource-exhausted" ? "Too many price lookups in a short time. Wait a minute, then try again." : priceError === "functions/unauthenticated" ? "Your sign-in has expired. Sign in again, then retry." : "The studio's price service did not answer. Try again in a moment."} />
-              <Button label="Try again" kind="quiet" onPress={() => setPriceTry((n) => n + 1)} />
-            </View>
-          ) : priceBreakdown !== null ? (
-            <Pane pad="gap">
-              <Row title="Base" trailing={<T role="data">{rupees(priceBreakdown.basePrice)}</T>} />
-              {priceBreakdown.scopeAdjustment > 0 ? (
-                <Row title="Vehicle size adjustment" trailing={<T role="data">+{rupees(priceBreakdown.scopeAdjustment)}</T>} />
-              ) : null}
-              {priceBreakdown.addOns.map((addOn) => (
-                <Row key={addOn.id} title={addOn.name} trailing={<T role="data">{rupees(addOn.price)}</T>} />
-              ))}
-              {priceBreakdown.membershipDiscount !== null && priceBreakdown.membershipDiscount > 0 ? (
-                <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(priceBreakdown.membershipDiscount)}</T>} />
-              ) : null}
-              {priceBreakdown.tax > 0 ? <Row title={priceBreakdown.taxDescription} trailing={<T role="data">{rupees(priceBreakdown.tax)}</T>} /> : null}
-              <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(priceBreakdown.total)}</T>} last />
-            </Pane>
-          ) : null}
+          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={() => setPriceTry((n) => n + 1)} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
         </View>
 
           </>

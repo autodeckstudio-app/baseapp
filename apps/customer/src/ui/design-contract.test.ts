@@ -176,7 +176,7 @@ describe("booking flow guardrails", () => {
     expect(read("packages/core/src/constants.ts".replace(/^/, "../../"))).toMatch(/export const GST_ENABLED = false/);
     expect(rd("app/(tabs)/catalogue/[id].tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
     expect(rd("app/(tabs)/catalogue/index.tsx")).toMatch(/GST_ENABLED \? " · incl\. GST"/);
-    for (const f of ["app/(tabs)/catalogue/[id].tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
+    for (const f of ["ui/ServicePrice.tsx", "app/(tabs)/book/confirm.tsx", "app/(tabs)/bookings/[id].tsx", "app/(tabs)/bookings/invoice.tsx"]) {
       expect(rd(f)).toMatch(/\.tax > 0/);
       expect(rd(f)).not.toMatch(/[^_]incl\. GST[^"]/);
     }
