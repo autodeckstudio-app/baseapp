@@ -24,12 +24,15 @@ function ui(p){
  railItems.forEach((e,i)=>e.classList.toggle('on',(k==='b'&&i===0)||(k==='c'&&i===1)));
 }
 const tf=(el,s,ox,oy,x=0,y=0)=>{if(RM){s=1;x=0;y=0}el.style.transformOrigin=ox+'% '+oy+'%';el.style.transform=`translate(${x}%,${y}%) scale(${s})`};
-let P=0,PS=0,last=performance.now(),jH=0,jEnd=0,done=false;
-const meas=()=>{jH=journey.offsetHeight;jEnd=journey.getBoundingClientRect().top+SC.y+jH};meas();addEventListener('resize',meas);addEventListener('load',meas);
+const T0=performance.now();let first=true,P=0,PS=0,last=performance.now(),jH=0,jEnd=0,done=false;
+const meas=()=>{jH=journey.offsetHeight;jEnd=journey.getBoundingClientRect().top+SC.y+jH};meas();
+const cleanReady=()=>L.c.complete&&L.c.naturalWidth>0&&L.d.complete&&L.d.naturalWidth>0;addEventListener('resize',meas);addEventListener('load',meas);
 function frame(now){
  const dt=Math.min(.1,(now-last)/1000);last=now;
  if(window.__p==null&&SC.y>jEnd+SC.h){if(done){requestAnimationFrame(frame);return}}else done=false;const maxS=jH-SC.h;P=RM?.80:c01(SC.y/maxS);if(window.__p!=null)P=window.__p;
- PS=SNAP?P:PS+(P-PS)*(1-Math.exp(-dt*7));const p=PS;
+ /* hold the wash until both the dirty and clean frames are loaded, so the slide never reveals an empty stage */
+ if(!RM&&window.__p==null&&SC.y<jEnd&&P>.035&&now-T0<8000&&!(cleanReady()&&document.documentElement.classList.contains('ready')))P=.035;
+ if(first){PS=P;first=false}PS=SNAP?P:PS+(P-PS)*(1-Math.exp(-dt*7));const p=PS;
  /* wash: bright line L->R, clean behind it, dirty ahead of it (the reel's mechanic) */
  const sw=p<.04?-.03:p>=.19?1.05:-.03+sm(.04,.19,p)*1.08;
  if(RM){L.d.style.clipPath='none';L.d.style.opacity=1-sm(.08,.19,p);sweepEl.style.opacity=0}else{L.d.style.clipPath=`inset(0 0 0 ${Math.max(0,sw*100)}%)`;
@@ -67,6 +70,6 @@ $('#bookbtn').onclick=()=>RM?location.assign('https://app.autodeck.in'):goP(.97)
 ['veh','svc'].forEach(id=>$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#'+id).children].forEach(x=>x.setAttribute('aria-pressed',x===b))}));
 const days=$('#days');const d0=new Date();for(let i=0;i<4;i++){const d=new Date(d0.getTime()+(i+1)*864e5);const b=document.createElement('button');b.className='o c';b.setAttribute('aria-pressed','false');b.textContent=d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric'});days.appendChild(b)}
 days.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...days.children].forEach(x=>x.setAttribute('aria-pressed',x===b))});
-Promise.all([...document.images].map(i=>i.decode().catch(()=>{}))).then(()=>{window.__ready=true;document.documentElement.classList.add('ready')});setTimeout(()=>document.documentElement.classList.add('ready'),3000);
+Promise.all([...document.querySelectorAll('#layers img')].map(i=>i.decode().catch(()=>{}))).then(()=>{window.__ready=true;document.documentElement.classList.add('ready')});setTimeout(()=>document.documentElement.classList.add('ready'),2500);
 
 }
