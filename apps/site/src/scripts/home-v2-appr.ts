@@ -6,6 +6,7 @@ const E=t=>t*t*(3-2*t),c01=x=>Math.min(1,Math.max(0,x)),sm=(a,b,x)=>E(c01((x-a)/
 const drop=$('#drop'),rip=$('#rip');
 const L={d:$('#idirty'),c:$('#iclean'),s:$('#iswirl'),g:$('#igloss'),w:$('#iwarm')};
 const dip=$('#dip'),layers=$('#layers'),sweepEl=$('#sweep'),h1=$('#h1'),h2=$('#h2'),tag=$('#tag'),chip=$('#chiptxt'),rail=$('#rail'),hint=$('#hint'),sub=$('#sub'),book=$('#book'),journey=$('#journey');
+const SWW=()=>(sweepEl.offsetParent||sweepEl.parentElement).clientWidth;
 const railItems=[...rail.children];
 const mob=()=>matchMedia('(max-width:700px)').matches;
 let lastKey='';
@@ -40,7 +41,7 @@ function frame(now){
  /* wash: bright line L->R, clean behind it, dirty ahead of it (the reel's mechanic) */
  const sw=p<.04?-.03:p>=.19?1.05:-.03+sm(.04,.19,p)*1.08;
  if(RM){L.d.style.clipPath='none';L.d.style.opacity=1-sm(.08,.19,p);sweepEl.style.opacity=0}else{L.d.style.clipPath=`inset(0 0 0 ${Math.max(0,sw*100)}%)`;
- sweepEl.style.opacity=(p>.035&&p<.195)?1:0;sweepEl.style.left=(sw*100)+'%';
+ sweepEl.style.opacity=(p>.035&&p<.195)?1:0;sweepEl.style.transform=`translate3d(${(sw*SWW()).toFixed(1)}px,0,0)`;
  L.d.style.opacity=p>.2?0:1;}
  /* slow push-in on the stage while scrolling, then fly into the hood */
  const fly=sm(.19,.30,p);

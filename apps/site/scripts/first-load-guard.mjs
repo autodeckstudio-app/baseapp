@@ -7,5 +7,7 @@ if (!/P>\.035&&!ready&&!failed\(L\.c\)&&!failed\(L\.d\)\)\{P=\.035/.test(js)) ba
 if (/now-T0|8000/.test(js)) bad.push('a timeout must not reveal an unloaded stage');
 if (!/now<pace&&PS<\.22&&P>PS\)PS=Math\.min\(P,PS\+dt\*\.12\)/.test(js)) bad.push('release after loading is not paced (the wash would snap)');
 if (/history\.scrollRestoration\s*=/.test(js)) bad.push('scroll restoration must not be changed (it breaks back/deep-link positions)');
+if (/sweepEl\.style\.left/.test(js)) bad.push('the wash line must move by transform, not left (left forces layout every frame)');
+if (!/\.sdet\{min-height:\d+px\}/.test(fs.readFileSync('public/assets/v2/home.css', 'utf8'))) bad.push('service description block has no reserved height (the services panel jumps as text length changes)');
 if (bad.length) { console.error('first-load-guard FAIL:', bad.join('; ')); process.exit(1); }
 console.log('first-load-guard ok');
