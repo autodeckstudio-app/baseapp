@@ -1,5 +1,9 @@
 ---
 import body from '../data/home-v2-body.html?raw';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+// /assets/* is cached as immutable for a year, so the stylesheet URL must change when its content changes.
+const cssV = createHash('sha1').update(readFileSync('public/assets/v2/home.css')).digest('hex').slice(0, 10);
 const title = 'AutoDeck | Complete car care. All under one roof.';
 const description = 'AutoDeck car care studio in Ahmedabad: washing, detailing, ceramic coating, paint protection film, garage and modifications. Book in the app.';
 const ogImage = 'https://www.autodeck.in/assets/og.png';
@@ -37,7 +41,7 @@ const localBusiness = {
   <link rel="icon" type="image/png" href="/assets/favicon.png" />
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
   <link rel="preload" href="/assets/v2/inter.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="/assets/v2/home.css" />
+  <link rel="stylesheet" href={`/assets/v2/home.css?v=${cssV}`} />
 </head>
 <body>
   <div class="adsite" id="adsite-root"><div id="sc" class="adsc" set:html={body} /></div>
