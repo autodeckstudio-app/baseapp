@@ -119,3 +119,15 @@ Made with a free image generator using Meet's six category photos as style refer
 | generated/coating.jpg | Coating category |
 | generated/garage-ac.jpg, garage-battery.jpg, garage-inspection.jpg, garage-alignment.jpg, garage-repairs.jpg | Garage services |
 | generated/mods-tint.jpg, mods-wrap.jpg, mods-accessories.jpg | Modification services |
+
+## AI service images, 22 Oct 2026 (LOCAL, not pushed, not yet reviewed by the owner)
+Same AI theme as the site: black car, dark studio, vertical strip lights, one technician in black. Illustrative AI imagery, not an AutoDeck car or work. Some cars resemble real models by shape or grille, they are not identified. Mapped in src/lib/imagery.ts to the services that need them.
+| File | Used for |
+| --- | --- |
+| generated/ai-wash-foam.jpg, ai-wash-hand.jpg, ai-wash-rinse.jpg | Wash services |
+| generated/ai-polish.jpg, ai-polish-wing.jpg | Polish and paint correction |
+| generated/ai-coat-apply.jpg | Coating application |
+| generated/ai-ppf-film.jpg | Paint protection film |
+| generated/ai-headlight.jpg, ai-roof.jpg, ai-wheel.jpg, ai-engine.jpg, ai-underbody.jpg | Headlight, roof, wheel, engine and underbody services |
+| generated/ai-interior.jpg, ai-interior-wheel.jpg, ai-interior-rear.jpg | Interior services |
+| generated/ai-tint-apply.jpg, ai-tint-done.jpg | Tint |

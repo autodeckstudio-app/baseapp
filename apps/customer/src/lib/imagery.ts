@@ -15,13 +15,13 @@ import heroHome from "../../assets/imagery/stock/x-polish-red.jpg";
 import loginHero from "../../assets/imagery/studio-login.jpg";
 import heroAlt from "../../assets/imagery/stock/x-polish-red.jpg";
 import membership from "../../assets/imagery/stock/g-styling.jpg";
-import serviceWashing from "../../assets/imagery/stock/x-white-garage.jpg";
-import serviceCeramic from "../../assets/imagery/curated/coating.jpg";
-import serviceCoating from "../../assets/imagery/curated/coating.jpg";
-import servicePpf from "../../assets/imagery/stock/ppf-install.jpg";
-import serviceTinting from "../../assets/imagery/stock/tint-install.jpg";
-import serviceInspection from "../../assets/imagery/stock/x-underbody-b.jpg";
-import serviceOther from "../../assets/imagery/curated/care.jpg";
+import serviceWashing from "../../assets/imagery/generated/ai-wash-foam.jpg";
+import serviceCeramic from "../../assets/imagery/generated/coating.jpg";
+import serviceCoating from "../../assets/imagery/generated/coating.jpg";
+import servicePpf from "../../assets/imagery/category/paint-protection.jpg";
+import serviceTinting from "../../assets/imagery/generated/mods-tint.jpg";
+import serviceInspection from "../../assets/imagery/generated/ai-underbody.jpg";
+import serviceOther from "../../assets/imagery/category/detailing.jpg";
 import catPpf from "../../assets/imagery/category/paint-protection.jpg";
 import catCeramic from "../../assets/imagery/category/ceramic-coating.jpg";
 import catDetailing from "../../assets/imagery/category/detailing.jpg";
@@ -90,26 +90,26 @@ const BOTTLES: Record<string, { src: ImageSourcePropType; tint: string }> = {
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const TOPICS: Record<string, ImageSourcePropType> = {
-  washExt: require("../../assets/imagery/stock/x-white-garage.jpg"), roof: require("../../assets/imagery/curated/roof.jpg"),
-  interior: require("../../assets/imagery/stock/x-white-seats.jpg"), polish: require("../../assets/imagery/stock/x-polish-red.jpg"),
-  headlight: require("../../assets/imagery/curated/headlight.jpg"), coating: require("../../assets/imagery/curated/coating.jpg"),
-  ppf: require("../../assets/imagery/stock/ppf-install.jpg"), tint: require("../../assets/imagery/generated/mods-tint.jpg"),
-  wheel: require("../../assets/imagery/stock/x-rim-clean.jpg"), engine: require("../../assets/imagery/stock/x-engine-bay.jpg"),
-  inspection: require("../../assets/imagery/stock/x-underbody-b.jpg"), gInspect: require("../../assets/imagery/generated/garage-inspection.jpg"), align: require("../../assets/imagery/generated/garage-alignment.jpg"),
+  washExt: require("../../assets/imagery/generated/ai-wash-foam.jpg"), roof: require("../../assets/imagery/generated/ai-roof.jpg"),
+  interior: require("../../assets/imagery/generated/ai-interior.jpg"), polish: require("../../assets/imagery/generated/ai-polish.jpg"),
+  headlight: require("../../assets/imagery/generated/ai-headlight.jpg"), coating: require("../../assets/imagery/generated/coating.jpg"),
+  ppf: require("../../assets/imagery/category/paint-protection.jpg"), tint: require("../../assets/imagery/generated/mods-tint.jpg"),
+  wheel: require("../../assets/imagery/generated/ai-wheel.jpg"), engine: require("../../assets/imagery/generated/ai-engine.jpg"),
+  inspection: require("../../assets/imagery/generated/ai-underbody.jpg"), gInspect: require("../../assets/imagery/generated/garage-inspection.jpg"), align: require("../../assets/imagery/generated/garage-alignment.jpg"),
   ac: require("../../assets/imagery/generated/garage-ac.jpg"), battery: require("../../assets/imagery/generated/garage-battery.jpg"), repair: require("../../assets/imagery/generated/garage-repairs.jpg"),
-  wrap: require("../../assets/imagery/generated/mods-wrap.jpg"), styling: require("../../assets/imagery/generated/mods-accessories.jpg"), pickup: require("../../assets/imagery/generated/pickup.jpg"), care: require("../../assets/imagery/curated/care.jpg"),
+  wrap: require("../../assets/imagery/generated/mods-wrap.jpg"), styling: require("../../assets/imagery/generated/mods-accessories.jpg"), pickup: require("../../assets/imagery/generated/pickup.jpg"), care: require("../../assets/imagery/category/detailing.jpg"),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { topicOf, GARAGE_PHOTO_TOPICS, type Svc } from "./imagery-topic";
 /** Extra real photos per topic so neighbouring cards in one list never show the same picture. */
 /* eslint-disable @typescript-eslint/no-require-imports */
 const POOLS: Record<string, ImageSourcePropType[]> = {
-  coating: [require("../../assets/imagery/curated/coating.jpg"), require("../../assets/imagery/stock/coating-water-beading.jpg"), require("../../assets/imagery/stock/x-glossy-black.jpg"), require("../../assets/imagery/stock/x-black-reflect.jpg")],
-  washExt: [require("../../assets/imagery/stock/x-white-garage.jpg"), require("../../assets/imagery/stock/wash-foam.jpg"), require("../../assets/imagery/stock/wash-suds.jpg"), require("../../assets/imagery/stock/x-foam-street.jpg")],
-  ppf: [require("../../assets/imagery/stock/ppf-install.jpg"), require("../../assets/imagery/stock/ppf-hood-wrap.jpg"), require("../../assets/imagery/stock/x-foil-garage.jpg")],
-  tint: [require("../../assets/imagery/generated/mods-tint.jpg"), require("../../assets/imagery/stock/x-film-window.jpg"), require("../../assets/imagery/stock/x-car-window.jpg")],
-  polish: [require("../../assets/imagery/stock/x-polish-red.jpg"), require("../../assets/imagery/stock/paint-polish.jpg"), require("../../assets/imagery/stock/x-buff-rear.jpg"), require("../../assets/imagery/stock/x-buff-roof.jpg")],
-  interior: [require("../../assets/imagery/stock/x-white-seats.jpg"), require("../../assets/imagery/stock/interior-detail.jpg"), require("../../assets/imagery/stock/x-seat-clean.jpg")],
+  coating: [require("../../assets/imagery/generated/coating.jpg"), require("../../assets/imagery/category/ceramic-coating.jpg"), require("../../assets/imagery/generated/ai-coat-apply.jpg")],
+  washExt: [require("../../assets/imagery/generated/ai-wash-foam.jpg"), require("../../assets/imagery/generated/ai-wash-hand.jpg"), require("../../assets/imagery/generated/ai-wash-rinse.jpg"), require("../../assets/imagery/category/wash-and-care.jpg")],
+  ppf: [require("../../assets/imagery/category/paint-protection.jpg"), require("../../assets/imagery/generated/ai-ppf-film.jpg"), require("../../assets/imagery/category/modifications.jpg")],
+  tint: [require("../../assets/imagery/generated/mods-tint.jpg"), require("../../assets/imagery/generated/ai-tint-apply.jpg"), require("../../assets/imagery/generated/ai-tint-done.jpg")],
+  polish: [require("../../assets/imagery/generated/ai-polish.jpg"), require("../../assets/imagery/generated/ai-polish-wing.jpg"), require("../../assets/imagery/category/detailing.jpg")],
+  interior: [require("../../assets/imagery/generated/ai-interior.jpg"), require("../../assets/imagery/generated/ai-interior-wheel.jpg"), require("../../assets/imagery/generated/ai-interior-rear.jpg")],
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 /** Pick the Nth photo of a topic (position in the list), wrapping around. */
