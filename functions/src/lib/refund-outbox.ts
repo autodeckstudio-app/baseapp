@@ -192,28 +192,24 @@ export async function runRefundOutbox(
         // the response was lost. Reconcile against the provider using our
         // durable reference id — NEVER resubmit just because local state is
         // missing. A provider that cannot look up fails closed as "failed".
-        let reconciled: string | null = null;
+        let lookup: Awaited<ReturnType<NonNullable<PaymentProvider["findRefundByReference"]>>> = { outcome: "unknown" };
         if (provider.findRefundByReference) {
-          try {
-            const found = await provider.findRefundByReference(request.id);
-            if (found) reconciled = found.providerRefundId;
-          } catch { reconciled = null; }
+          try { lookup = await provider.findRefundByReference(request.id); } catch { lookup = { outcome: "unknown" }; }
         }
-        if (reconciled) {
-          await request.ref.update({ status: "submitted", providerRefundId: reconciled, projectionNeeded: true, lastError: null, updatedAt: now });
+        if (lookup.outcome === "found") {
+          await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
           submitted++;
           request.status = "submitted";
-          request.providerRefundId = reconciled;
+          request.providerRefundId = lookup.providerRefundId;
           request.projectionNeeded = true;
-        } else if (provider.findRefundByReference) {
-          // The provider CAN look up and has no refund for our reference:
-          // confirmed never accepted — a real failure, balance may be released.
+        } else if (lookup.outcome === "absent_confirmed") {
+          // Authoritative negative under the provider's reconciliation
+          // contract: the submit never landed. A real failure; balance releases.
           await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
           failed++;
           continue;
         } else {
-          // Outcome UNKNOWN: hold as ambiguous, keep the reservation active.
-          // Never resubmit, never release the refundable balance.
+          // Inconclusive: hold as ambiguous. Never resubmit, never release.
           await request.ref.update({ status: "ambiguous", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
           failed++;
           continue;
@@ -224,17 +220,19 @@ export async function runRefundOutbox(
       // Reconcile an unresolved hold ONLY from provider evidence.
       if (!provider.findRefundByReference) continue;
       try {
-        const found = await provider.findRefundByReference(request.id);
-        if (found) {
-          await request.ref.update({ status: "submitted", providerRefundId: found.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
+        const lookup = await provider.findRefundByReference(request.id);
+        if (lookup.outcome === "found") {
+          await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
           request.status = "submitted";
-          request.providerRefundId = found.providerRefundId;
+          request.providerRefundId = lookup.providerRefundId;
           request.projectionNeeded = true;
           submitted++;
-        } else {
+        } else if (lookup.outcome === "absent_confirmed") {
           await request.ref.update({ status: "failed", updatedAt: now });
           failed++;
           continue;
+        } else {
+          continue; // inconclusive: keep holding
         }
       } catch { continue; } // still unknown: keep holding
     }

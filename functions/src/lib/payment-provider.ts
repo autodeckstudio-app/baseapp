@@ -28,6 +28,11 @@ export interface RefundResult {
   providerRefundId: string;
 }
 
+export type RefundLookupResult =
+  | { outcome: "found"; providerRefundId: string }
+  | { outcome: "absent_confirmed" }
+  | { outcome: "unknown" };
+
 export interface VerifyWebhookParams {
   rawBody: string;
   signature: string;
@@ -59,11 +64,16 @@ export interface PaymentProvider {
   parseWebhookEvent(rawBody: string): ProviderWebhookEvent;
   initiateRefund(params: InitiateRefundParams): Promise<RefundResult>;
   /**
-   * Looks up a refund WE submitted, by our durable reference id. Used to
-   * reconcile an ambiguous submit (crash/timeout after the provider may have
-   * accepted) WITHOUT ever blindly resubmitting. Returns null when no refund
-   * exists for the reference. Optional: a provider that cannot look up must
-   * leave this undefined, and the runner then fails closed (no resubmission).
+   * Looks up a refund WE submitted, by our durable reference id, to reconcile
+   * an ambiguous submit WITHOUT ever blindly resubmitting. Tri-state:
+   *  - found: the provider has the refund — project it.
+   *  - absent_confirmed: the provider's reconciliation contract AUTHORITATIVELY
+   *    establishes no committed refund exists for the reference — only then
+   *    may the reservation fail and the balance release.
+   *  - unknown: not found, index delay, timeout, partial search — INCONCLUSIVE.
+   *    The reservation stays held; absence of evidence is not evidence of
+   *    absence. Optional: a provider without a lookup contract leaves this
+   *    undefined and every ambiguous hold awaits manual reconciliation.
    */
-  findRefundByReference?(referenceId: string): Promise<RefundResult | null>;
+  findRefundByReference?(referenceId: string): Promise<RefundLookupResult>;
 }

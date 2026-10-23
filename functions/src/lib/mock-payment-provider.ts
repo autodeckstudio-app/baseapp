@@ -3,6 +3,7 @@
 // NOT for production use.
 import type {
   PaymentProvider,
+  RefundLookupResult,
   CreatePaymentLinkParams,
   PaymentLinkResult,
   InitiateRefundParams,
@@ -77,8 +78,15 @@ export class MockPaymentProvider implements PaymentProvider {
     return result;
   }
 
-  async findRefundByReference(referenceId: string): Promise<RefundResult | null> {
-    return this.submitted.get(referenceId) ?? null;
+  // When false (default), a miss reports "unknown" (inconclusive) — matching
+  // providers with no authoritative negative lookup. Set true in tests to
+  // model a provider whose reconciliation contract confirms absence.
+  authoritativeNegatives = false;
+
+  async findRefundByReference(referenceId: string): Promise<RefundLookupResult> {
+    const hit = this.submitted.get(referenceId);
+    if (hit) return { outcome: "found", providerRefundId: hit.providerRefundId };
+    return this.authoritativeNegatives ? { outcome: "absent_confirmed" } : { outcome: "unknown" };
   }
 }
 

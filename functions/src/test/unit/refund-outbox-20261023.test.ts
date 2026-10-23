@@ -115,6 +115,7 @@ describe("refund outbox", () => {
     await reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "admin1" });
     const failing = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
     failing.initiateRefund = async () => { throw new Error("provider down"); };
+    failing.authoritativeNegatives = true; // provider confirms the submit never landed
     const r = await runRefundOutbox(db, failing as never);
     expect(r).toEqual({ submitted: 0, projected: 0, failed: 1 });
     expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({ status: "failed", lastError: "provider down" });
@@ -181,15 +182,35 @@ describe("ambiguous submit reconciliation", () => {
     const r = await runRefundOutbox(db, provider);
     expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
     expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000 });
-    // And the absent case: provider confirms nothing was accepted -> failed.
+    // Confirmed-absent case: provider authoritatively confirms nothing was
+    // accepted -> failed, balance released.
     const p2 = payment({ id: "pay2", bookingId: "b2" });
     const f2 = fakeFirestore({ payments: { pay2: p2 as never }, bookings: { b2: { id: "b2" } } });
     await reserveRefund(f2.db, { payment: p2, amountPaise: 50000, reason: "x", createdBy: "admin1" });
     f2.data["refundRequests"]!["rr_pay2_1"]!["status"] = "ambiguous";
     const provider2 = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider2.authoritativeNegatives = true;
     const r2b = await runRefundOutbox(f2.db, provider2);
     expect(r2b.failed).toBe(1);
     expect(f2.data["refundRequests"]!["rr_pay2_1"]!["status"]).toBe("failed");
     expect(f2.data["payments"]!["pay2"]!["status"]).toBe("completed");
+  });
+
+  it("an inconclusive lookup (unknown) keeps the hold and keeps blocking new reservations", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    data["refundRequests"]!["rr_pay1_1"]!["status"] = "ambiguous";
+    // Default mock: a miss reports "unknown" (no authoritative negative).
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    for (let i = 0; i < 3; i++) {
+      const r = await runRefundOutbox(db, provider);
+      expect(r).toEqual({ submitted: 0, projected: 0, failed: 0 });
+      expect(data["refundRequests"]!["rr_pay1_1"]!["status"]).toBe("ambiguous");
+      await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "again", createdBy: "admin1" }))
+        .rejects.toThrow(/already has an active refund request/);
+    }
+    expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
+    expect(data["payments"]!["pay1"]!["refundAmount"]).toBeNull();
   });
 });
