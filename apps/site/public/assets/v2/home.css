@@ -19,7 +19,7 @@
 .big{position:absolute;z-index:4;font:900 clamp(34px,4.3vw,76px)/.92 Montserrat,Inter;text-transform:uppercase;letter-spacing:-.035em;margin:0;pointer-events:none;transition:opacity .35s,transform .45s;text-shadow:0 4px 40px rgba(0,0,0,.45)}
 .big.l{left:var(--pad);bottom:calc(var(--pad) + 8px)}.big.r{right:var(--pad);bottom:calc(var(--pad) + 8px);text-align:right}
 .big.off{opacity:0;transform:translateY(24px)}
-.tag{position:absolute;z-index:4;left:var(--pad);bottom:calc(var(--pad) + clamp(44px,5.4vw,90px));font:500 clamp(12px,1.3vw,16px) Inter;color:var(--dim);transition:opacity .35s}
+.tag{position:absolute;z-index:4;left:var(--pad);bottom:calc(var(--pad) + clamp(44px,5.4vw,90px));font:500 clamp(12px,1.3vw,16px) Inter;color:var(--dim);transition:opacity .35s;text-shadow:0 2px 14px rgba(0,0,0,.7)}
 .rail{position:absolute;right:var(--pad);top:50%;transform:translateY(-50%);z-index:4;font:600 11px Inter;letter-spacing:.06em;display:flex;flex-direction:column;gap:10px;text-align:right;color:rgba(255,255,255,.4);transition:opacity .4s}
 .rail b{font-weight:600}.rail .on{color:#fff}
 .note{position:absolute;right:var(--pad);bottom:10px;z-index:4;font:500 10px Inter;color:rgba(255,255,255,.4);letter-spacing:.03em}
@@ -158,7 +158,7 @@ html{scroll-behavior:auto}#journey,#appst,#services{position:relative}.snp{posit
  .cap{position:absolute;left:var(--pad);right:var(--pad);bottom:calc(env(safe-area-inset-bottom,0px) + 44px);z-index:4;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
  .cap .big,.cap .tag,.cap .sub{position:static;max-width:100%;text-align:left;margin:0}
  .cap .big{font-size:clamp(40px,13.2vw,62px);line-height:.94}.cap .big.r{font-size:clamp(24px,7.4vw,36px);margin-top:-2px}
- .cap .tag{font-size:14px;color:#e9e6df}.cap .sub{font-size:15px;line-height:1.4;color:rgba(255,255,255,.85)}
+ .cap .tag{font-size:14px;color:#e9e6df;text-shadow:0 2px 14px rgba(0,0,0,.7)}.cap .sub{font-size:15px;line-height:1.4;color:rgba(255,255,255,.85)}
  .cap .off{position:absolute;left:0;bottom:0;visibility:hidden;margin:0}
  .note{left:var(--pad);right:var(--pad);bottom:max(10px,env(safe-area-inset-bottom));font-size:10px;line-height:1.35}
  .ch{padding-left:var(--pad);padding-right:var(--pad)}
