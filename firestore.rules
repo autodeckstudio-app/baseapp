@@ -444,6 +444,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Server-only abuse-limiter windows for guest shop endpoints. No client
+    // reads or writes — the functions hold the only access.
+    match /shopRateLimits/{key} {
+      allow read, write: if false;
+    }
+
+
     // âââ Deny everything else ââââââââââââââââââââââââââââââââââââââââââââââââ
     match /{document=**} {
       allow read, write: if false;

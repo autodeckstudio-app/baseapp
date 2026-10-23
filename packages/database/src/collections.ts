@@ -59,6 +59,8 @@ export const COLLECTIONS = {
   paymentEvents: () => "paymentEvents",
   // refundRequests/{requestId} — booking refund outbox: reservation -> provider -> projection
   refundRequests: () => "refundRequests",
+  // shopRateLimits/{hashedKey} — shared abuse-limiter windows (server only)
+  shopRateLimits: () => "shopRateLimits",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
   rateLimits: () => "rateLimits",
   // bayLocks/{tenantId__studioId__bayId} — server-only deterministic-document

@@ -110,6 +110,8 @@ const EXCLUDED_NON_CALLABLE = [
 // Enforcing App Check on any of these today would reject 100% of genuine
 // mobile traffic, since no client here can produce a valid token.
 const DEFERRED = [
+  // Not exported from index.ts — cannot deploy; local review only.
+  "shop/placeGuestOrder.ts",
   "approval/cancelApproval.ts",
   "approval/createApproval.ts",
   "approval/respondToApproval.ts",
