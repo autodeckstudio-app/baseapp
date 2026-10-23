@@ -66,7 +66,7 @@ export default function AddVehicleScreen() {
   const currentPlate = useRef("");
 
   function pickPhoto(file: { blob: Blob; type: string } | null) {
-    if (!file) return;
+    if (!file) { setPhoto(null); setError(null); return; } // the uploader's Remove badge sends no file
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setError("Photos work as JPEG, PNG or WebP.");
       return;
