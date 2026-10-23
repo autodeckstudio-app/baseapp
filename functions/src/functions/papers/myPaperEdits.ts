@@ -8,7 +8,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateMyPaperSchema, deleteMyPaperSchema, normalizeRcReference } from "../../schemas/paper.js";
-import { assertNumberUnused } from "../../lib/paper-numbers.js";
+import { assertNumberUnused, readClaims, numberLockId, rcLockId, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const RC_PATTERN = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
@@ -65,6 +65,16 @@ export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) =
     ...(path ? { evidencePath: path, evidenceUrl: null } : {}),
   };
   await db.runTransaction(async (tx) => {
+    // Re-read inside the transaction so a concurrent edit or replacement cannot slip past the checks above.
+    const fresh = (await tx.get(ref)).data() as StoredPaper | undefined;
+    if (!fresh || fresh.supersededAt) throw new HttpsError("failed-precondition", "This document was replaced.");
+    const claims = await readClaims(tx, db, { tenantId: paper.tenantId, customerId: user.uid, vehicleId: paper.vehicleId, paperId: paper.id, reference, kind: paper.kind, claimRc: paper.kind === "RC" });
+    if (numberLockId(paper.tenantId, user.uid, fresh.reference) !== numberLockId(paper.tenantId, user.uid, reference)) {
+      const oldRef = db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, user.uid, fresh.reference));
+      const old = await tx.get(oldRef);
+      if (old.exists && (old.data() as { paperId: string }).paperId === paper.id) tx.delete(oldRef);
+    }
+    for (const c of claims) tx.set(c.ref, c.data);
     tx.update(ref, update);
     writeAuditLog(tx, { action: "paper.updated", entityType: "paper", entityId: paper.id, user, studioId: paper.studioId,
       before: { reference: paper.reference, expiresOn: paper.expiresOn ?? null, status: paper.status },
@@ -90,11 +100,15 @@ export const deleteMyPaper = onCall({ region: "asia-south1" }, async (request) =
   const { db, ref, paper } = await loadOwnedPaper(user, data.paperId);
   const prefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
   if (paper.evidencePath && paper.evidencePath.startsWith(prefix) && !paper.evidencePath.includes("..")) {
+    // Photo first. If Storage fails the record stays, so the customer can retry and nothing is orphaned. A missing object is fine (idempotent).
     try { await getStorage().bucket().file(paper.evidencePath).delete({ ignoreNotFound: true }); }
-    catch { /* the record is still removed; a leftover object is not reachable from any document */ }
+    catch { throw new HttpsError("unavailable", "Could not remove the photo. Nothing was deleted. Try again."); }
   }
   await db.runTransaction(async (tx) => {
+    const locks = [db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, user.uid, paper.reference)), ...(paper.kind === "RC" ? [db.collection(PAPER_LOCKS).doc(rcLockId(paper.vehicleId))] : [])];
+    const snaps = await Promise.all(locks.map((l) => tx.get(l)));
     tx.delete(ref);
+    snaps.forEach((sn, i) => { if (sn.exists && (sn.data() as { paperId: string }).paperId === paper.id) tx.delete(locks[i]!); });
     writeAuditLog(tx, { action: "paper.deleted", entityType: "paper", entityId: paper.id, user, studioId: paper.studioId,
       before: { kind: paper.kind, reference: paper.reference, vehicleId: paper.vehicleId, status: paper.status }, after: null,
       metadata: { by: "customer" } });

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const h = vi.hoisted(() => ({ rows: new Map<string, any>(), writes: [] as any[], deleted: [] as string[], audit: [] as any[], storageDeleted: [] as string[] }));
+const h = vi.hoisted(() => ({ rows: new Map<string, any>(), writes: [] as any[], deleted: [] as string[], audit: [] as any[], storageDeleted: [] as string[], storageFail: false }));
 vi.mock("../../middleware/rateLimit.js", () => ({ enforceRateLimit: vi.fn(), subjectFrom: () => "me" }));
 vi.mock("../../middleware/audit.js", () => ({ writeAuditLog: (_tx: any, p: any) => h.audit.push(p) }));
-vi.mock("firebase-admin/storage", () => ({ getStorage: () => ({ bucket: () => ({ file: (p: string) => ({ delete: async () => { h.storageDeleted.push(p); }, getSignedUrl: async () => ["https://signed.example/put"] }) }) }) }));
+vi.mock("firebase-admin/storage", () => ({ getStorage: () => ({ bucket: () => ({ file: (p: string) => ({ delete: async () => { if (h.storageFail) throw new Error("storage down"); h.storageDeleted.push(p); }, getSignedUrl: async () => ["https://signed.example/put"] }) }) }) }));
 vi.mock("firebase-admin/firestore", () => {
   const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => ({ exists: h.rows.has(path), data: () => h.rows.get(path) }) });
   const query = (col: string, filters: Array<[string, unknown]>) => ({
@@ -12,7 +12,7 @@ vi.mock("firebase-admin/firestore", () => {
   });
   return { getFirestore: () => ({
     collection: (c: string) => ({ doc: (id: string) => docRef(`${c}/${id}`), where: (f: string, o: string, v: unknown) => query(c, []).where(f, o, v) }),
-    runTransaction: async (fn: any) => fn({ update: (r: any, d: any) => { h.writes.push({ path: r.path, d }); h.rows.set(r.path, { ...h.rows.get(r.path), ...d }); }, delete: (r: any) => { h.deleted.push(r.path); h.rows.delete(r.path); } }),
+    runTransaction: async (fn: any) => fn({ get: async (r: any) => r.get(), set: (r: any, d: any) => { h.rows.set(r.path, d); }, update: (r: any, d: any) => { h.writes.push({ path: r.path, d }); h.rows.set(r.path, { ...h.rows.get(r.path), ...d }); }, delete: (r: any) => { h.deleted.push(r.path); h.rows.delete(r.path); } }),
   }) };
 });
 vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", auditLog: () => "audit" } }));
@@ -22,7 +22,7 @@ import { paperNumberKey, assertNumberUnused } from "../../lib/paper-numbers.js";
 const req = (uid: string, data: any): any => ({ data, auth: { uid, token: { role: "customer", tenantId: "t" } } });
 const paper = (id: string, o: any = {}) => ({ id, tenantId: "t", studioId: "s", vehicleId: "v1", customerId: "me", kind: "INSURANCE", reference: `REF-${id}`, status: "VERIFIED", evidencePath: `t/vehicles/v1/paper-${id}.jpg`, ...o });
 beforeEach(() => {
-  h.rows.clear(); h.writes.length = 0; h.deleted.length = 0; h.audit.length = 0; h.storageDeleted.length = 0;
+  h.rows.clear(); h.writes.length = 0; h.deleted.length = 0; h.audit.length = 0; h.storageDeleted.length = 0; h.storageFail = false;
   h.rows.set("vehicles/v1", { ownerId: "me", tenantId: "t" });
   h.rows.set("vehicles/v2", { ownerId: "other", tenantId: "t" });
   h.rows.set("papers/a", paper("a"));
@@ -91,6 +91,23 @@ describe("deleteMyPaper (point 12)", () => {
     expect(h.storageDeleted).toEqual(["t/vehicles/v1/paper-a.jpg"]);
     expect(h.rows.has("vehicles/v1")).toBe(true);
     expect(h.audit[0]).toMatchObject({ action: "paper.deleted", entityId: "a" });
+  });
+  it("a Storage failure aborts before any record is removed, and a retry then succeeds (nothing orphaned, no other photo touched)", async () => {
+    h.storageFail = true;
+    await expect(deleteMyPaper.run(req("me", { paperId: "a" }))).rejects.toMatchObject({ code: "unavailable" });
+    expect(h.rows.has("papers/a")).toBe(true);
+    expect(h.deleted).toHaveLength(0);
+    h.storageFail = false;
+    await deleteMyPaper.run(req("me", { paperId: "a" }));
+    expect(h.deleted).toEqual(["papers/a"]);
+    expect(h.storageDeleted).toEqual(["t/vehicles/v1/paper-a.jpg"]);
+    expect(h.rows.has("papers/b")).toBe(true);
+  });
+  it("never deletes an object outside this paper's own path", async () => {
+    h.rows.set("papers/evil", paper("evil", { evidencePath: "t/vehicles/v2/paper-x.jpg" }));
+    await deleteMyPaper.run(req("me", { paperId: "evil" }));
+    expect(h.storageDeleted).toHaveLength(0);
+    expect(h.deleted).toEqual(["papers/evil"]);
   });
   it("refuses another customer's paper and leaves everything in place", async () => {
     await expect(deleteMyPaper.run(req("me", { paperId: "x" }))).rejects.toMatchObject({ code: "permission-denied" });

@@ -13,7 +13,7 @@ import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { submitMyPaperSchema } from "../../schemas/paper.js";
-import { assertNumberUnused, isActivePaper } from "../../lib/paper-numbers.js";
+import { assertNumberUnused, isActivePaper, readClaims } from "../../lib/paper-numbers.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
@@ -74,7 +74,12 @@ export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) =
     createdAt: now,
     updatedAt: now,
   };
-  await ref.set(paper);
+  // Both writes in one transaction with lock documents: two concurrent submits for the same number, or two RCs on one car, cannot both succeed.
+  await db.runTransaction(async (tx) => {
+    const claims = await readClaims(tx, db, { tenantId: vehicle.tenantId, customerId: user.uid, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
+    tx.set(ref, paper);
+    for (const c of claims) tx.set(c.ref, c.data);
+  });
 
   let uploadUrl: string | null = null;
   let requiredHeaders: Record<string, string> | null = null;
