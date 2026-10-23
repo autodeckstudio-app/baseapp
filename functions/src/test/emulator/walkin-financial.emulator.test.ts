@@ -194,7 +194,7 @@ describe("Walk-in financial flow", () => {
     expect(result.job.status).toBe("VEHICLE_RECEIVED");
   });
 
-  it("2. walk-in price snapshot is server-computed via the shared pricing engine (basePrice + 18% GST)", async () => {
+  it("2. walk-in price snapshot is server-computed via the shared pricing engine (basePrice, GST off)", async () => {
     const result = await createWalkinJob.run({
       data: {
         serviceId: service.id,
@@ -208,12 +208,12 @@ describe("Walk-in financial flow", () => {
     } as never);
 
     // basePrice=40000, no vehicleCategoryPricing rule for hatchback => scopeAdjustment=0
-    // tax = round(40000 * 18 / 100) = 7200; total = 47200
+    // GST is off (owner 15 Oct 22:15 phonemsg-01M50795MQDWC2S63ZWXFXNHHJ; 18 Oct 21:41 "1 - gst off"): tax = 0, total = base.
     expect(result.job.priceBreakdown.basePrice).toBe(40000);
     expect(result.job.priceBreakdown.scopeAdjustment).toBe(0);
-    expect(result.job.priceBreakdown.tax).toBe(7200);
-    expect(result.job.priceBreakdown.total).toBe(47200);
-    expect(result.job.totalAmount).toBe(47200);
+    expect(result.job.priceBreakdown.tax).toBe(0);
+    expect(result.job.priceBreakdown.total).toBe(40000);
+    expect(result.job.totalAmount).toBe(40000);
   });
 
   it("3. walk-in payment: customer-initiated → studio-confirmed → invoice issued, referencing the job not a fabricated booking", async () => {
