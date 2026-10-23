@@ -16,7 +16,7 @@ import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, LinkAction, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
-import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
+import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc, removeVehicleImage } from "../../../lib/vehicle-service";
 import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
 import { historyReportHtml, historyRows } from "../../../lib/history-report";
@@ -81,6 +81,8 @@ export default function VehicleDetailScreen() {
   const [allPapers, setAllPapers] = useState<MyPaper[]>([]);
   const [docEditing, setDocEditing] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState<"cover" | "rc" | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
   const [numberError, setNumberError] = useState<string | null>(null);
   const [docPhoto, setDocPhoto] = useState<{ blob: Blob; contentType: string } | null>(null);
   const [docOpen, setDocOpen] = useState(false);
@@ -368,6 +370,7 @@ export default function VehicleDetailScreen() {
                   <Kicker>Car photo</Kicker>
                   <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} files={newPhoto?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
 
+                  {vehicle.photoUrl && !newPhoto ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove car photo" onPress={() => setRemoveImage("cover")} /><T role="caption" tone="tertiary">Remove the saved car photo</T></View> : null}
                   <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
                 </View>
               ) : null}
@@ -375,6 +378,7 @@ export default function VehicleDetailScreen() {
                 <View style={{ gap: space.hair }}>
                   <Kicker>RC photo</Kicker>
                   <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} files={newRc ? [{ blob: newRc.blob, type: newRc.contentType }] : []} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
+                  {vehicle.rcPhotoUrl && !newRc ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove RC photo" onPress={() => setRemoveImage("rc")} /><T role="caption" tone="tertiary">Remove the saved RC photo</T></View> : null}
                   <T role="caption" tone="tertiary">{newRc ? "RC photo ready. It uploads when you save." : vehicle.rcPhotoUrl ? "An RC photo is on file. Choose a JPEG, PNG or WebP to replace it." : "Add a clear photo of the registration certificate (JPEG, PNG or WebP)."}</T>
                 </View>
               ) : null}
@@ -390,6 +394,9 @@ export default function VehicleDetailScreen() {
             </View>
           ) : null}
 
+          {removeImage ? (
+            <Notice title="Remove this image?" body="Only the image is removed. Your car, its documents and bookings are not affected." action={<View style={{ gap: space.breath }}><Button label="Remove" busy={removeBusy} onPress={() => { setRemoveBusy(true); removeVehicleImage(vehicle.id, removeImage).then(() => setRemoveImage(null)).catch(() => setActionError("Could not remove the image. Nothing was changed. Try again.")).finally(() => setRemoveBusy(false)); }} /><Button label="Keep it" kind="quiet" onPress={() => setRemoveImage(null)} /></View>} />
+          ) : null}
           {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 
         </>
