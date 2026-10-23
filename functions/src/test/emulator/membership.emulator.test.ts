@@ -163,10 +163,15 @@ async function purchaseAndActivate(
     auth: adminAuth(adminUid, tenantId),
   } as never);
 
-  await activateMembership.run({
-    data: { membershipId: purchaseResult.membershipId },
-    auth: adminAuth(adminUid, tenantId),
-  } as never);
+  // Confirming the payment already activates the membership (confirmMembershipPayment, via_payment_confirmed). Only call the
+  // separate admin activation if the membership is still pending.
+  const afterPay = await db.collection("memberships").doc(purchaseResult.membershipId).get();
+  if ((afterPay.data() as Membership).status === "pending") {
+    await activateMembership.run({
+      data: { membershipId: purchaseResult.membershipId },
+      auth: adminAuth(adminUid, tenantId),
+    } as never);
+  }
 
   const snap = await db.collection("memberships").doc(purchaseResult.membershipId).get();
   return snap.data() as Membership;
@@ -297,7 +302,8 @@ describe("Membership system", () => {
     expect(membership.status).toBe("active");
     expect(membership.startDate).not.toBeNull();
     expect(membership.endDate).not.toBeNull();
-    expect(membership.activatedBy).toBe(adminUid);
+    // Activation happens inside the payment confirmation, recorded as "system" (not the admin who confirmed).
+    expect(membership.activatedBy).toBe("system");
   });
 
   it("4. expiry — expireStaleMemberships flips a past-endDate active membership", async () => {
