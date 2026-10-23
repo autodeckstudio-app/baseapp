@@ -89,10 +89,22 @@ export async function reserveRefund(
   const guardRef = requestsCol(db).doc(`active_${i.payment.id}`);
   const now = new Date().toISOString();
   return db.runTransaction(async (tx) => {
-    const active = await activeReservation(db, i.payment.id);
+    // Transactional reads: a losing racer's snapshot conflicts with the
+    // winner's guard create, retries, and then sees the guard here.
+    const guardSnap = await tx.get(guardRef);
+    if (guardSnap.exists) {
+      const g = guardSnap.data() as { requestId?: string };
+      throw new Error(`payment ${i.payment.id} already has an active refund request (${g.requestId ?? "unknown"})`);
+    }
+    const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", i.payment.id));
+    const active = allSnap.docs
+      .map((d) => d.data() as RefundRequest)
+      .find((r) => r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous");
     if (active) throw new Error(`payment ${i.payment.id} already has an active refund request (${active.id})`);
-    const all = await requestsCol(db).where("paymentId", "==", i.payment.id).get();
-    const requestId = `rr_${i.payment.id}_${all.size + 1}`;
+    // Count only real rr_* requests (never the transient guard) so ids stay
+    // unique even after a guard is released on a terminal request.
+    const priorCount = allSnap.docs.filter((d) => d.id.startsWith("rr_")).length;
+    const requestId = `rr_${i.payment.id}_${priorCount + 1}`;
     const request: RefundRequest = {
       id: requestId,
       tenantId: i.payment.tenantId,
@@ -145,7 +157,7 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       refundAmount: newRefunded,
       razorpayRefundId: fresh.providerRefundId ?? payment.razorpayRefundId,
       refundedAt: now,
-      invoiceReviewNeeded: payment.invoiceId ? true : undefined,
+      ...(payment.invoiceId ? { invoiceReviewNeeded: true } : {}),
       updatedAt: now,
     });
     if (fresh.jobId) {
