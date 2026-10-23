@@ -110,7 +110,7 @@ export const previewNoShowResolution = onCall({ region: "asia-south1", enforceAp
       { key: "pct_20", chargePaise: Math.round(captured * NO_SHOW_PCT), refundPaise: captured - Math.round(captured * NO_SHOW_PCT) },
       { key: "waive", chargePaise: 0, refundPaise: captured },
     ],
-    policyNote: "Studio no-show policy: charge Rs 100 or 20% and refund the rest. Pick which one applies to this booking.",
+    policyNote: "Pick the no-show charge for this booking: Rs 100 or 20% of the captured payment, or waive it. The rest is refunded.",
   };
 });
 

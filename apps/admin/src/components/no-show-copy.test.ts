@@ -9,8 +9,8 @@ const server = readFileSync(new URL("../../../../functions/src/functions/booking
 
 describe("no-show copy", () => {
   it("keeps the explicit choice without narrating the approval process", () => {
-    expect(panel).not.toMatch(/Owner-delegated|not settled/);
-    expect(server).not.toMatch(/Owner-delegated|not settled/);
+    expect(panel).not.toMatch(/Owner-delegated|not settled|Studio no-show policy/);
+    expect(server).not.toMatch(/Owner-delegated|not settled|Studio no-show policy/);
     // The choice itself must stay: both charge options and the waiver.
     expect(panel).toMatch(/Charge Rs 100/);
     expect(panel).toMatch(/Charge 20%/);
