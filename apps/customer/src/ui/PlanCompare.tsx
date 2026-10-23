@@ -12,9 +12,9 @@ export function PlanCompare({ cols, onOpen }: { cols: CompareCol[]; onOpen: (pla
     <Pane pad="none">
       <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
         {cols.map((c, i) => (
-          <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${c.name}, ${rupees(c.price)}`} onPress={() => onOpen(c.id)} style={({ pressed }) => ({ width: `${100 / per}%`, padding: 12, gap: space.line, opacity: pressed ? 0.85 : 1, borderLeftWidth: i % per === 0 ? 0 : 1, borderTopWidth: i >= per ? 1 : 0, borderColor: glassInner.backgroundColor })}>
+          <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${c.name}, ${rupees(c.price)} per month`} onPress={() => onOpen(c.id)} style={({ pressed }) => ({ width: `${100 / per}%`, padding: 12, gap: space.line, opacity: pressed ? 0.85 : 1, borderLeftWidth: i % per === 0 ? 0 : 1, borderTopWidth: i >= per ? 1 : 0, borderColor: glassInner.backgroundColor })}>
             <T role="bodyStrong">{c.name}</T>
-            <T role="heading">{rupees(c.price)}</T>
+            <T role="heading">{rupees(c.price)}<T role="caption" tone="tertiary">/month</T></T>
             <T tone="secondary">{c.washes} washes</T>
             {pickupsLine(c.pickups) ? <T tone="secondary">{pickupsLine(c.pickups)}</T> : null}
             {c.priority ? <T tone="secondary">Priority slot</T> : null}
