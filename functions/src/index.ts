@@ -32,6 +32,7 @@ export { getStudioInfo } from "./functions/studio/getStudioInfo.js";
 export { createBooking } from "./functions/booking/createBooking.js";
 export { cancelBooking } from "./functions/booking/cancelBooking.js";
 export { adminCancelBooking, settleCancellationFee } from "./functions/booking/adminCancelBooking.js";
+export { recordNoShowContact, previewNoShowResolution, resolveNoShow } from "./functions/booking/noShowReview.js";
 export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
 
 // âââ Studio Jobs ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ

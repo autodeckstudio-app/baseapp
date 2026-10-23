@@ -67,6 +67,7 @@ const ENFORCED = [
   "membership/expireStaleMemberships.ts",
   "membership/setMembershipPlanActive.ts",
   "membership/updateMembershipPlan.ts",
+  "booking/noShowReview.ts",
   "payment/initiateRefund.ts",
   "payment/processRefundOutbox.ts",
   "payment/requestBookingRefund.ts",

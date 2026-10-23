@@ -14,6 +14,7 @@ export type AuditAction =
   | "booking.confirmed"
   | "booking.expired"
   | "booking.cancelled"
+  | "booking.noshow_resolved"
   | "booking.quoted"
   | "booking.quote_approved"
   | "job.status_advanced"
