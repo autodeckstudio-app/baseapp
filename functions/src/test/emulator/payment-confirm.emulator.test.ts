@@ -483,6 +483,39 @@ describe("confirmManualPayment — production cash payment completion", () => {
     expect(paySnap.data()?.["status"]).toBe("cancelled");
   });
 
+  // Local seeded fixture only: a cash payment (no provider call), so the refund is a manual refund record. No real refund or provider call is made.
+  // Unresolved contract review (not decided here): the original "cancel rejected once payment initiated" rule vs the current shared runCancel behaviour.
+  it("S2: a customer cancelling a booking with a completed cash payment gets a manual refund record, the payment is marked refunded and the invoice is voided", async () => {
+    const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
+    const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
+    const init = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { paymentId: string };
+    const conf = (await confirmManualPayment.run({
+      data: { paymentId: init.paymentId },
+      auth: studioAuth(uid("studio-user"), STUDIO_A),
+    } as never)) as { invoiceId: string };
+
+    const res = (await cancelBooking.run({
+      data: { bookingId: booking.id, reason: "fixture paid cancel" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { success: boolean; manualRefund: boolean; providerRefundId: string | null; refundPaise: number };
+
+    expect(res.success).toBe(true);
+    expect(res.providerRefundId).toBeNull();
+    expect(res.manualRefund).toBe(true);
+    expect(res.refundPaise).toBeGreaterThan(0);
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(init.paymentId).get()).data() as Payment;
+    expect(pay.status).toBe("refunded");
+    const ev = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${init.paymentId}`).get();
+    expect(ev.exists).toBe(true);
+    const b = (await db.collection(COLLECTIONS.bookings()).doc(booking.id).get()).data() as Booking;
+    expect(b.status).toBe("CANCELLED");
+    const inv = await db.collection(COLLECTIONS.invoices()).doc(conf.invoiceId).get();
+    expect(inv.data()?.["status"]).toBe("void");
+  });
+
   it("T: confirmManualPayment cannot complete payment for an already-cancelled job", async () => {
     const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
     const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
