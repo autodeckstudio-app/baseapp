@@ -136,7 +136,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("Next: bring your car at {displayTime}");
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("nextStepLine({ giftCovered");
 });
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
@@ -731,7 +731,7 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
   });
 });
 
-it("gift-covered zero-total bookings do not tell the customer to pay at the studio; other bookings keep the pay line",()=>{
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Your gift covers this wash.");expect(b).toContain("canPay && !payment && !giftCovered");expect(b).toContain("You pay at the studio, and the team marks it paid once you do.");
+it("gift-covered zero-total bookings use the shared next-step helper (behaviour tested in booking-next-step.test.ts)",()=>{
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("nextStepLine({ giftCovered, jobStatus: job?.status ?? null");
   const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Your slot is confirmed. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
 });

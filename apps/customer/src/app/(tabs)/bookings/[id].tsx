@@ -25,7 +25,7 @@ import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday, bookingC
 const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof import("../../../lib/booking-dev-sample")) : null;
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady, nextStepLine } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -467,8 +467,7 @@ export default function BookingDetailScreen() {
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
             </View>
           ) : null}
-          {canPay && !payment && giftCovered ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. Your gift covers this wash.</T> : null}
-          {canPay && !payment && !giftCovered ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>{nextStepLine({ giftCovered, jobStatus: job?.status ?? null, time: displayTime })}</T> : null}
         </Pane>
         )}
       </View>

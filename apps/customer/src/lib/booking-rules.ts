@@ -69,3 +69,12 @@ export function expectedReady(b: Pick<Booking, "scheduledAt" | "estimatedEndAt" 
   const ist = new Date(end + IST_MS).toISOString();
   return { date: ist.slice(0, 10), time: ist.slice(11, 16) };
 }
+
+const AT_STUDIO_JOB = ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"];
+
+/** The caption under the price block for an unpaid booking. Copy only: it never changes payment state. The bring-your-car line is shown only before the vehicle is at the studio. */
+export function nextStepLine(o: { giftCovered: boolean; jobStatus?: string | null; time: string }): string {
+  const atStudio = !!o.jobStatus && AT_STUDIO_JOB.includes(o.jobStatus);
+  if (o.giftCovered) return atStudio ? "Your gift covers this wash." : `Next: bring your car at ${o.time}. Your gift covers this wash.`;
+  return atStudio ? "You pay at the studio, and the team marks it paid once you do." : `Next: bring your car at ${o.time}. You pay at the studio, and the team marks it paid once you do.`;
+}
