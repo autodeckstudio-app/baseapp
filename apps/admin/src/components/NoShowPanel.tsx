@@ -62,10 +62,14 @@ export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (
   }
 
   if (resolved) {
+    const chargePaise = (booking as { noShowChargePaise?: number | null }).noShowChargePaise ?? 0;
+    const refundQueued = Boolean((booking as { noShowRefundRequestId?: string }).noShowRefundRequestId);
     return (
       <section className="ax-panel">
         <span className="ax-label">No-show</span>
         <div className="kv"><span>Resolution</span><span>{resolved}</span></div>
+        {resolved === "charge" ? <div className="kv"><span>Charge kept</span><span className="ax-data">{formatPaise(chargePaise)}</span></div> : null}
+        {refundQueued ? <div className="kv"><span>Refund</span><span>Queued, not yet sent to the payment provider</span></div> : null}
       </section>
     );
   }
