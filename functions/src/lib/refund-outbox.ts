@@ -184,9 +184,28 @@ export async function runRefundOutbox(
         request.providerRefundId = result.providerRefundId;
         request.projectionNeeded = true;
       } catch (err) {
-        await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
-        failed++;
-        continue;
+        // The submit outcome is ambiguous: the provider may have accepted and
+        // the response was lost. Reconcile against the provider using our
+        // durable reference id — NEVER resubmit just because local state is
+        // missing. A provider that cannot look up fails closed as "failed".
+        let reconciled: string | null = null;
+        if (provider.findRefundByReference) {
+          try {
+            const found = await provider.findRefundByReference(request.id);
+            if (found) reconciled = found.providerRefundId;
+          } catch { reconciled = null; }
+        }
+        if (reconciled) {
+          await request.ref.update({ status: "submitted", providerRefundId: reconciled, projectionNeeded: true, lastError: null, updatedAt: now });
+          submitted++;
+          request.status = "submitted";
+          request.providerRefundId = reconciled;
+          request.projectionNeeded = true;
+        } else {
+          await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
+          failed++;
+          continue;
+        }
       }
     }
     if (request.projectionNeeded) {

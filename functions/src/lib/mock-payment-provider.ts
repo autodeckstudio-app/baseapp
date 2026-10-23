@@ -62,8 +62,23 @@ export class MockPaymentProvider implements PaymentProvider {
     };
   }
 
+  // Test hook: when set, initiateRefund "succeeds" server-side but the
+  // response is lost (the ambiguous-submit case). The lookup still finds it.
+  loseNextRefundResponse = false;
+  private submitted = new Map<string, RefundResult>();
+
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
-    return { providerRefundId: this.mockRefundId(params.referenceId) };
+    const result = { providerRefundId: this.mockRefundId(params.referenceId) };
+    this.submitted.set(params.referenceId, result);
+    if (this.loseNextRefundResponse) {
+      this.loseNextRefundResponse = false;
+      throw new Error("network: response lost after provider accepted");
+    }
+    return result;
+  }
+
+  async findRefundByReference(referenceId: string): Promise<RefundResult | null> {
+    return this.submitted.get(referenceId) ?? null;
   }
 }
 

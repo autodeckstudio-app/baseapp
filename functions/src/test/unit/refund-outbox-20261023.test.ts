@@ -120,3 +120,41 @@ describe("refund outbox", () => {
     expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
   });
 });
+
+describe("ambiguous submit reconciliation", () => {
+  it("a lost provider response is reconciled by reference id and projected — never resubmitted", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider.loseNextRefundResponse = true; // provider accepted, response lost
+    let submits = 0;
+    const counting = { ...provider, findRefundByReference: provider.findRefundByReference.bind(provider),
+      initiateRefund: async (params: { providerPaymentId: string; amount: number; reason: string; referenceId: string }) => { submits++; return provider.initiateRefund(params); } };
+    const r = await runRefundOutbox(db, counting as never);
+    expect(submits).toBe(1);
+    expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
+    expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({ status: "projected", providerRefundId: "mock_rfnd_rr_pay1_1" });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000 });
+    // A second pass submits nothing more.
+    const r2 = await runRefundOutbox(db, counting as never);
+    expect(submits).toBe(1);
+    expect(r2).toEqual({ submitted: 0, projected: 0, failed: 0 });
+  });
+
+  it("a provider that cannot look up fails closed — no blind resubmission", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    let submits = 0;
+    const noLookup = { name: "mock", initiateRefund: async () => { submits++; throw new Error("maybe accepted"); } };
+    const r = await runRefundOutbox(db, noLookup as never);
+    expect(r.failed).toBe(1);
+    expect(submits).toBe(1);
+    // Failed requests are not retried by the runner: a re-run touches nothing.
+    const r2 = await runRefundOutbox(db, noLookup as never);
+    expect(submits).toBe(1);
+    expect(r2).toEqual({ submitted: 0, projected: 0, failed: 0 });
+    expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
+  });
+});

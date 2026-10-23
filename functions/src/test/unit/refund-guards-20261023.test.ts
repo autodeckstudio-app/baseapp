@@ -31,3 +31,22 @@ describe("duplicate-refund closures", () => {
     expect(legacy).toBeGreaterThan(accepted);
   });
 });
+
+describe("no-show review cannot enact held semantics", () => {
+  const noShow = readFileSync(`${__dirname}/../../functions/booking/noShowReview.ts`, "utf8");
+  it("money moves only through reserveRefund — no direct provider or payment writes", () => {
+    expect(noShow).toContain("reserveRefund");
+    expect(noShow).not.toContain("initiateRefund(");
+    expect(noShow).not.toContain("getPaymentProvider");
+  });
+  it("no waiver auto-grant, shortfall, benefit or post-arrival logic", () => {
+    expect(noShow).not.toMatch(/shortfall/i);
+    expect(noShow).not.toContain("VEHICLE_RECEIVED");
+    expect(noShow).not.toContain("pickupBenefit");
+    // waiver exists only as an explicit admin resolution value, never defaulted
+    expect(noShow).not.toContain('resolution = "waive"');
+  });
+  it("reopen stays held", () => {
+    expect(noShow).toContain("Reopen is held");
+  });
+});

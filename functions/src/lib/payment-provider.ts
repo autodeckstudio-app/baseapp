@@ -58,4 +58,12 @@ export interface PaymentProvider {
   verifyWebhookSignature(params: VerifyWebhookParams): boolean;
   parseWebhookEvent(rawBody: string): ProviderWebhookEvent;
   initiateRefund(params: InitiateRefundParams): Promise<RefundResult>;
+  /**
+   * Looks up a refund WE submitted, by our durable reference id. Used to
+   * reconcile an ambiguous submit (crash/timeout after the provider may have
+   * accepted) WITHOUT ever blindly resubmitting. Returns null when no refund
+   * exists for the reference. Optional: a provider that cannot look up must
+   * leave this undefined, and the runner then fails closed (no resubmission).
+   */
+  findRefundByReference?(referenceId: string): Promise<RefundResult | null>;
 }
