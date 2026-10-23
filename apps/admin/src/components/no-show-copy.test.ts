@@ -16,6 +16,12 @@ describe("no-show copy", () => {
     expect(panel).toMatch(/Charge 20%/);
     expect(panel).toMatch(/Waive the charge/);
   });
+  it("never implies provider completion for a queued refund", () => {
+    expect(panel).not.toMatch(/rest is refunded|refund is on its way|has been refunded/i);
+    // The success message must say the refund is only queued.
+    expect(panel).toMatch(/queued, not yet sent to the payment provider/);
+    expect(server).not.toMatch(/rest is refunded/i);
+  });
   it("uses no em dashes in user-visible copy", () => {
     expect(panel).not.toMatch(/—/);
     const policyNote = server.match(/policyNote: "([^"]+)"/);

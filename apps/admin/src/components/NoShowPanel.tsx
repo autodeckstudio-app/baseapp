@@ -55,7 +55,7 @@ export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (
         chargePaise: candidate.chargePaise,
         reason: reason.trim(),
       });
-      setDone("No-show resolved. The refund is queued with the payment provider.");
+      setDone("No-show resolved. The refund is queued, not yet sent to the payment provider.");
       onError(null);
     } catch (e) { onError(e instanceof Error ? e.message : "Could not resolve the no-show."); }
     finally { setBusy(false); }
