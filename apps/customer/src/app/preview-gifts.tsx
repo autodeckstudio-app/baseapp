@@ -12,11 +12,11 @@ export default function PreviewGifts() {
   return (
     <Screen header={<PageHeader kicker="Gifts" title="Gift a wash" sub={null} />}>
       <View style={{ gap: 16 }}>
+        <Notice title="Preview fixture" body="Sample data only. No real purchase, code or payment." />
         <GiftBuy amountPaise={90000} canPay busy={false} onPay={() => undefined} />
         <GiftCard code="GWABCD2345" expiresAt={fresh} buyerName="Asha Rao" />
         <Notice title="Your gift is ready" body={`${GIFT_TERMS.oneWash} ${giftValidityLine(soon, Date.now())}`} action={<Button label="Book your wash" onPress={() => undefined} />} />
         <Pane pad="gap"><Row title="Gift ending 2345" detail="Not used yet - until 19 Dec 2026 (60 days left)" last /></Pane>
-        <T role="caption">Sample data only.</T>
       </View>
     </Screen>
   );

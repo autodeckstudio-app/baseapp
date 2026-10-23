@@ -5,8 +5,9 @@ interface Props {
   title: string;
   description: string;
   page?: string;
+  noindex?: boolean;
 }
-const { title, description, page = '' } = Astro.props;
+const { title, description, page = '', noindex = false } = Astro.props;
 const ogImage = 'https://www.autodeck.in/assets/og.png';
 const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', 'https://www.autodeck.in').href;
 ---
@@ -17,6 +18,7 @@ const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', 'https:/
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   <meta name="description" content={description} />
+  {noindex ? <meta name="robots" content="noindex,follow" /> : null}
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />

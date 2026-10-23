@@ -7,6 +7,11 @@ const home = read('index.html');
 const faq = read('faq/index.html');
 const privacy = read('privacy/index.html');
 const sitemap = read('sitemap.xml');
+const cart = read('shop/cart/index.html');
+const shop = read('shop/index.html');
+if (!cart.includes('content="noindex,follow"')) fail('cart page must be noindex,follow');
+if (cart.includes('sitemap.xml') && sitemap.includes('/shop/cart')) fail('sitemap must not list the cart');
+if (shop.includes('noindex')) fail('storefront must stay indexable');
 
 if (!sitemap.includes('https://www.autodeck.in/faq')) fail('sitemap missing /faq');
 if (!faq.includes('"@type":"FAQPage"')) fail('faq page missing FAQPage schema');
