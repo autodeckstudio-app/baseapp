@@ -103,6 +103,17 @@ describe("deleteMyPaper (point 12)", () => {
     expect(h.storageDeleted).toEqual(["t/vehicles/v1/paper-a.jpg"]);
     expect(h.rows.has("papers/b")).toBe(true);
   });
+  it("replacing the photo with another file type removes the old own object; the same type overwrites in place; a cleanup failure cannot break the edit", async () => {
+    await updateMyPaper.run(req("me", { paperId: "a", contentType: "image/png" }));
+    expect(h.storageDeleted).toEqual(["t/vehicles/v1/paper-a.jpg"]);
+    expect(h.rows.get("papers/a").evidencePath).toBe("t/vehicles/v1/paper-a.png");
+    h.storageDeleted.length = 0;
+    await updateMyPaper.run(req("me", { paperId: "b", contentType: "image/jpeg" }));
+    expect(h.storageDeleted).toHaveLength(0);
+    h.storageFail = true;
+    await expect(updateMyPaper.run(req("me", { paperId: "a", contentType: "image/webp" }))).resolves.toBeDefined();
+    expect(h.rows.get("papers/a").evidencePath).toBe("t/vehicles/v1/paper-a.webp");
+  });
   it("never deletes an object outside this paper's own path", async () => {
     h.rows.set("papers/evil", paper("evil", { evidencePath: "t/vehicles/v2/paper-x.jpg" }));
     await deleteMyPaper.run(req("me", { paperId: "evil" }));

@@ -82,6 +82,12 @@ export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) =
       metadata: { by: "customer", kind: paper.kind, vehicleId: paper.vehicleId } });
   });
 
+  // Replacing the photo with another file type leaves the old object under a different name. Remove it, only if it is this paper's own file.
+  // Best effort: the record already points at the new path, so a failure here cannot break the edit (the dedupe/cleanup script can sweep leftovers).
+  const ownPrefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
+  if (path && paper.evidencePath && paper.evidencePath !== path && paper.evidencePath.startsWith(ownPrefix) && !paper.evidencePath.includes("..")) {
+    try { await getStorage().bucket().file(paper.evidencePath).delete({ ignoreNotFound: true }); } catch { /* leftover object only */ }
+  }
   let uploadUrl: string | null = null;
   let requiredHeaders: Record<string, string> | null = null;
   if (path && data.contentType) {
