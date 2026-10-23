@@ -286,8 +286,8 @@ describe("Walk-in registration + Bay Board (Phase 3B)", () => {
       },
       auth: studioAuth(studioUid),
     } as never)) as { job: ServiceJob };
-    // 50000 base + 18% GST = 59000
-    expect(result.job.totalAmount).toBe(59000);
+    // GST is off: owner 15 Oct 22:15 phonemsg-01M50795MQDWC2S63ZWXFXNHHJ "we should not add gst", 18 Oct 21:41 "1 - gst off". Total = base.
+    expect(result.job.totalAmount).toBe(50000);
   });
 
   it("3. customer sees the walk-in job through the same query the customer app's Passport uses — no separate mechanism needed", async () => {
