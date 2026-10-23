@@ -954,6 +954,7 @@ describe("Cross-studio authorization (Phase 5B P1-14)", () => {
     ).rejects.toThrow(/different studio/);
   });
 
+  // Owner 18 Oct 10:58 phonemsg-01M56QPP5JT965BN99KWS7KN9X: cancel/refund is admin only for now, staff later. A studio-role caller is refused by the role gate.
   it("cancelBooking: a Studio B employee cannot cancel a Studio A booking", async () => {
     const { booking } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
 
@@ -962,7 +963,7 @@ describe("Cross-studio authorization (Phase 5B P1-14)", () => {
         data: { bookingId: booking.id, reason: "cross-studio attempt" },
         auth: studioAuth(uid("studio-b-user-4"), STUDIO_B),
       } as never),
-    ).rejects.toThrow(/different studio/);
+    ).rejects.toThrow(/Unauthorized/);
 
     const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
     expect((bookingSnap.data() as Booking).status).not.toBe("CANCELLED");
