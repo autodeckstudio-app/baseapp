@@ -181,6 +181,19 @@ async function seedVehicle(vehicleId: string, ownerId: string, tenantId: string)
   return vehicle;
 }
 
+/** These tests book the studio's first slot of a day, which is held for priority members until 18:00 the evening before. They are about
+ *  multi-day scheduling, not the hold, so the customer gets an active priority membership (the hold itself is tested elsewhere). */
+async function ensurePriorityMember(customerUid: string, tenantId: string) {
+  await db.collection("memberships").doc(`prio-${customerUid}`).set({
+    id: `prio-${customerUid}`,
+    tenantId,
+    customerId: customerUid,
+    status: "active",
+    prioritySlot: true,
+    endDate: null,
+  });
+}
+
 async function makeBooking(
   customerUid: string,
   service: Service,
@@ -190,6 +203,7 @@ async function makeBooking(
   scheduledTime = "09:00",
   tenantId = TENANT_A,
 ) {
+  await ensurePriorityMember(customerUid, tenantId);
   return createBooking.run({
     data: {
       serviceId: service.id,
