@@ -71,6 +71,12 @@ export async function activeReservation(db: Firestore, paymentId: string): Promi
  * Reserves a refund for a payment. One active reservation per payment; the
  * amount must fit inside what is still refundable. Returns the new request id.
  */
+/**
+ * Concurrency-safe: the active-reservation guard doc is claimed with
+ * tx.create inside one transaction, so two simultaneous reservations for the
+ * same payment cannot both win — exactly one survives. The guard is released
+ * when the request reaches a terminal state (projected or failed).
+ */
 export async function reserveRefund(
   db: Firestore,
   i: { payment: Payment; amountPaise: number; reason: string; createdBy: string },
@@ -80,30 +86,39 @@ export async function reserveRefund(
   if (amount > refundablePaise(i.payment)) {
     throw new Error(`refund of ${amount} exceeds the refundable ${refundablePaise(i.payment)} on payment ${i.payment.id}`);
   }
-  const active = await activeReservation(db, i.payment.id);
-  if (active) throw new Error(`payment ${i.payment.id} already has an active refund request (${active.id})`);
-  const all = await requestsCol(db).where("paymentId", "==", i.payment.id).get();
+  const guardRef = requestsCol(db).doc(`active_${i.payment.id}`);
   const now = new Date().toISOString();
-  const requestId = `rr_${i.payment.id}_${all.size + 1}`;
-  const request: RefundRequest = {
-    id: requestId,
-    tenantId: i.payment.tenantId,
-    studioId: i.payment.studioId,
-    paymentId: i.payment.id,
-    jobId: i.payment.jobId,
-    bookingId: i.payment.bookingId,
-    amountPaise: amount,
-    reason: i.reason,
-    status: "reserved",
-    providerRefundId: null,
-    projectionNeeded: false,
-    lastError: null,
-    createdBy: i.createdBy,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await requestsCol(db).doc(requestId).set(request);
-  return { requestId };
+  return db.runTransaction(async (tx) => {
+    const active = await activeReservation(db, i.payment.id);
+    if (active) throw new Error(`payment ${i.payment.id} already has an active refund request (${active.id})`);
+    const all = await requestsCol(db).where("paymentId", "==", i.payment.id).get();
+    const requestId = `rr_${i.payment.id}_${all.size + 1}`;
+    const request: RefundRequest = {
+      id: requestId,
+      tenantId: i.payment.tenantId,
+      studioId: i.payment.studioId,
+      paymentId: i.payment.id,
+      jobId: i.payment.jobId,
+      bookingId: i.payment.bookingId,
+      amountPaise: amount,
+      reason: i.reason,
+      status: "reserved",
+      providerRefundId: null,
+      projectionNeeded: false,
+      lastError: null,
+      createdBy: i.createdBy,
+      createdAt: now,
+      updatedAt: now,
+    };
+    tx.create(guardRef, { paymentId: i.payment.id, requestId, createdAt: now });
+    tx.create(requestsCol(db).doc(requestId), request);
+    return { requestId };
+  });
+}
+
+/** Terminal release of the active-reservation guard (projected / failed). */
+async function releaseGuard(db: Firestore, paymentId: string): Promise<void> {
+  await requestsCol(db).doc(`active_${paymentId}`).delete().catch(() => undefined);
 }
 
 /**
@@ -147,6 +162,7 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       });
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });
+    tx.delete(db.collection(COLLECTIONS.refundRequests()).doc(`active_${fresh.paymentId}`));
   });
 }
 
@@ -206,6 +222,7 @@ export async function runRefundOutbox(
           // Authoritative negative under the provider's reconciliation
           // contract: the submit never landed. A real failure; balance releases.
           await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
+          await releaseGuard(db, request.paymentId);
           failed++;
           continue;
         } else {
@@ -229,6 +246,7 @@ export async function runRefundOutbox(
           submitted++;
         } else if (lookup.outcome === "absent_confirmed") {
           await request.ref.update({ status: "failed", updatedAt: now });
+          await releaseGuard(db, request.paymentId);
           failed++;
           continue;
         } else {

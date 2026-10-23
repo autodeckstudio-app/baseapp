@@ -162,7 +162,7 @@ describe("ambiguous submit reconciliation", () => {
     // same payment, so the possibly-submitted amount can never double-refund.
     await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "second", createdBy: "admin1" }))
       .rejects.toThrow(/already has an active refund request/);
-    expect(Object.keys(data["refundRequests"] ?? {})).toHaveLength(1);
+    expect(Object.keys(data["refundRequests"] ?? {}).filter((k) => k.startsWith("rr_"))).toHaveLength(1);
   });
 
   it("an ambiguous hold reconciles only from provider evidence: found -> projected, absent -> failed", async () => {

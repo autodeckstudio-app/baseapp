@@ -76,7 +76,7 @@ describe("no-show review", () => {
   it("a resolved no-show cannot be resolved twice", async () => {
     await resolveNoShow.run(req({ bookingId: "b1", resolution: "waive", reason: "first" }));
     await expect(resolveNoShow.run(req({ bookingId: "b1", resolution: "waive", reason: "second" }))).rejects.toMatchObject({ code: "already-exists" });
-    expect(Object.keys(h.data["refundRequests"] ?? {})).toHaveLength(1);
+    expect(Object.keys(h.data["refundRequests"] ?? {}).filter((k) => k.startsWith("rr_"))).toHaveLength(1);
   });
 
   it("reopen stays held rather than bypassing capacity checks", async () => {
