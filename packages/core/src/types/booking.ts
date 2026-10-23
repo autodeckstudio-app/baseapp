@@ -68,7 +68,9 @@ export interface Booking {
   /** PENDING online bookings hold their slot until this time (ISO). */
   holdExpiresAt?: string | null;
   /** Refund tracking on a cancelled, paid booking. */
-  refundStatus?: "initiated" | "failed";
+  // reserved = approved and queued in the outbox, NOT yet sent to the provider;
+  // initiated = accepted by the provider; failed = the provider refused it.
+  refundStatus?: "reserved" | "initiated" | "failed";
   refundId?: string | null;
   notes: string | null;
   idempotencyKey: string;

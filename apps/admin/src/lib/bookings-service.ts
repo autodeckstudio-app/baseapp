@@ -138,3 +138,26 @@ export async function settleCancellationFee(bookingId: string, action: "collecte
   const { functions } = await import("./firebase");
   await httpsCallable(functions, "settleCancellationFee")({ bookingId, action, ...(note?.trim() ? { note: note.trim() } : {}) });
 }
+
+export interface NoShowCandidate { key: string; chargePaise: number; refundPaise: number }
+export interface NoShowPreview { bookingId: string; capturedPaise: number; candidates: NoShowCandidate[]; policyNote: string }
+
+export async function recordNoShowContact(bookingId: string, channel: "phone" | "whatsapp" | "in_person", note: string): Promise<void> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  await httpsCallable(functions, "recordNoShowContact")({ bookingId, channel, note });
+}
+
+export async function previewNoShowResolution(bookingId: string): Promise<NoShowPreview> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<{ bookingId: string }, NoShowPreview>(functions, "previewNoShowResolution")({ bookingId });
+  return res.data;
+}
+
+export async function resolveNoShow(input: { bookingId: string; resolution: "charge" | "waive" | "reopen"; chargePaise?: number; reason: string }): Promise<{ refundRequestId: string | null }> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<typeof input, { refundRequestId: string | null }>(functions, "resolveNoShow")(input);
+  return res.data;
+}

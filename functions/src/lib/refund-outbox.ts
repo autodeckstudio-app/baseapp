@@ -138,6 +138,7 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     if (fresh.bookingId) {
       tx.update(db.collection(COLLECTIONS.bookings()).doc(fresh.bookingId), {
         paymentStatus: check.label === "refunded" ? "refunded" : "partial",
+        refundStatus: "initiated",
         updatedAt: now,
       });
     }

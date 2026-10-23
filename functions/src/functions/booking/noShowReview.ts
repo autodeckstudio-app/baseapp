@@ -165,7 +165,7 @@ export const resolveNoShow = onCall({ region: "asia-south1", enforceAppCheck: sh
     noShowResolvedAt: now,
     noShowResolvedBy: user.uid,
     noShowReason: data.reason,
-    ...(refundRequestId ? { noShowRefundRequestId: refundRequestId } : {}),
+    ...(refundRequestId ? { noShowRefundRequestId: refundRequestId, refundStatus: "reserved" } : {}),
     cancellationFeeStatus: data.resolution === "waive" ? "waived" : "withheld",
     updatedAt: now,
   });

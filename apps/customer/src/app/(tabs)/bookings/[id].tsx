@@ -57,6 +57,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   failed: "Payment failed - please try again",
   cancelled: "Payment cancelled",
   refunded: "Refunded",
+  partial: "Partially refunded",
 };
 
 const BOOKING_STATUS_LABELS: Record<string, string> = {
@@ -478,7 +479,8 @@ export default function BookingDetailScreen() {
         />
       ) : null}
       {booking.status === "EXPIRED" ? <Notice title="Slot released" body="The payment was not completed in time, so this booking expired. You can book again any time." /> : null}
-      {booking.refundStatus === "initiated" ? <Notice title="Refund initiated" body="Your refund has been sent to Razorpay. It reaches your original payment method in 5-7 working days." /> : null}
+      {booking.refundStatus === "reserved" ? <Notice title="Refund approved" body="Your refund is approved and queued with the payment provider. We will update here as soon as it is on its way." /> : null}
+      {booking.refundStatus === "initiated" ? <Notice title="Refund on its way" body="Your refund is with the payment provider. It usually reaches your original payment method in 5-10 working days." /> : null}
       {actionError ? <Notice title="We could not finish that" body={actionError} /> : null}
 
       {showRescheduleSection ? (
