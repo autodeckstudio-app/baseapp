@@ -72,6 +72,45 @@ function assertAdmin(user: ReturnType<typeof extractUser>) {
   }
 }
 
+// Read-back of the stored no-show outcome for the resolved panel. The refund
+// amount and state come from the authoritative refund request, never
+// recomputed from booking fields; a missing request yields nulls and the
+// client labels status conservatively.
+export const getNoShowResolution = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+  const user = extractUser(request);
+  assertAdmin(user);
+  const data = validate(previewSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "booking.noshow");
+  const db = getFirestore();
+  const { booking } = await loadNoShowAny(db, data.bookingId);
+  assertTenant(user, booking.tenantId);
+  assertStudio(user, booking.studioId, "Booking");
+  const resolution = (booking as { noShowResolution?: string }).noShowResolution ?? null;
+  const chargePaise = (booking as { noShowChargePaise?: number }).noShowChargePaise ?? 0;
+  const refundRequestId = (booking as { noShowRefundRequestId?: string }).noShowRefundRequestId ?? null;
+  let refundAmountPaise: number | null = null;
+  let refundStatus: string | null = null;
+  if (refundRequestId) {
+    const rr = await db.collection(COLLECTIONS.refundRequests()).doc(refundRequestId).get();
+    if (rr.exists) {
+      const d = rr.data() as { amountPaise?: number; status?: string };
+      refundAmountPaise = d.amountPaise ?? null;
+      refundStatus = d.status ?? null;
+    }
+  }
+  return { bookingId: data.bookingId, resolution, chargePaise, refundRequestId, refundAmountPaise, refundStatus };
+});
+
+async function loadNoShowAny(db: FirebaseFirestore.Firestore, bookingId: string): Promise<NoShowContext> {
+  const snap = await db.collection(COLLECTIONS.bookings()).doc(bookingId).get();
+  if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
+  const booking = { ...(snap.data() as Booking), id: snap.id };
+  let payment: Payment | null = null;
+  const pq = await db.collection(COLLECTIONS.payments()).where("bookingId", "==", bookingId).limit(1).get();
+  if (!pq.empty) payment = pq.docs[0]!.data() as Payment;
+  return { booking, payment };
+}
+
 export const recordNoShowContact = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertAdmin(user);

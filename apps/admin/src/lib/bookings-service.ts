@@ -155,6 +155,21 @@ export async function previewNoShowResolution(bookingId: string): Promise<NoShow
   return res.data;
 }
 
+export interface NoShowResolutionState {
+  resolution: string | null;
+  chargePaise: number;
+  refundRequestId: string | null;
+  refundAmountPaise: number | null;
+  refundStatus: string | null;
+}
+
+export async function getNoShowResolution(bookingId: string): Promise<NoShowResolutionState> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<{ bookingId: string }, NoShowResolutionState & { bookingId: string }>(functions, "getNoShowResolution")({ bookingId });
+  return res.data;
+}
+
 export async function resolveNoShow(input: { bookingId: string; resolution: "charge" | "waive" | "reopen"; chargePaise?: number; reason: string }): Promise<{ refundRequestId: string | null }> {
   const { httpsCallable } = await import("firebase/functions");
   const { functions } = await import("./firebase");

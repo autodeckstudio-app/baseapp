@@ -7,7 +7,7 @@
 // only through the refund outbox reservation, never inline here.
 import { useEffect, useState } from "react";
 import type { Booking } from "@autodeck/core";
-import { recordNoShowContact, previewNoShowResolution, resolveNoShow, type NoShowPreview } from "../lib/bookings-service";
+import { getNoShowResolution, recordNoShowContact, previewNoShowResolution, resolveNoShow, type NoShowResolutionState, type NoShowPreview } from "../lib/bookings-service";
 import { formatPaise } from "../lib/format";
 
 const CHANNELS = [
@@ -15,6 +15,47 @@ const CHANNELS = [
   { key: "whatsapp", label: "WhatsApp" },
   { key: "in_person", label: "In person" },
 ] as const;
+
+// Truthful staff-facing text for each refund-request state. Money states stay
+// distinct: only "projected" is complete; "ambiguous" never looks like either
+// success or failure, matching the outbox's unresolved-hold semantics.
+const REFUND_STATE_LABEL: Record<string, string> = {
+  reserved: "Queued, not yet sent to the payment provider",
+  submitted: "Sent to the payment provider, waiting for confirmation",
+  accepted: "Accepted by the payment provider, completing",
+  ambiguous: "Unclear at the payment provider - needs a manual check",
+  projected: "Completed by the payment provider",
+  failed: "Failed - needs attention",
+};
+
+function ResolvedNoShow({ bookingId, fallbackResolution }: { bookingId: string; fallbackResolution: string }) {
+  const [state, setState] = useState<NoShowResolutionState | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    getNoShowResolution(bookingId).then((v) => { if (live) setState(v); }).catch(() => { if (live) setLoadFailed(true); });
+    return () => { live = false; };
+  }, [bookingId]);
+  const resolution = state?.resolution ?? fallbackResolution;
+  const chargePaise = state?.chargePaise ?? 0;
+  const hasRefundRequest = Boolean(state?.refundRequestId);
+  const refundText = !state
+    ? "Checking the refund status..."
+    : loadFailed || (hasRefundRequest && state.refundStatus === null)
+      ? "Refund recorded; status unavailable right now."
+      : null;
+  return (
+    <section className="ax-panel">
+      <span className="ax-label">No-show</span>
+      <div className="kv"><span>Resolution</span><span>{resolution}</span></div>
+      {resolution === "charge" ? <div className="kv"><span>Charge kept</span><span className="ax-data">{formatPaise(chargePaise)}</span></div> : null}
+      {state && hasRefundRequest && state.refundStatus !== null ? (
+        <div className="kv"><span>Refund</span><span>{state.refundAmountPaise !== null ? `${formatPaise(state.refundAmountPaise)} - ` : ""}{REFUND_STATE_LABEL[state.refundStatus] ?? "Status unavailable right now."}</span></div>
+      ) : null}
+      {refundText && (hasRefundRequest || !state) ? <div className="kv"><span>Refund</span><span>{refundText}</span></div> : null}
+    </section>
+  );
+}
 
 export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (m: string | null) => void }) {
   const [preview, setPreview] = useState<NoShowPreview | null>(null);
@@ -61,18 +102,7 @@ export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (
     finally { setBusy(false); }
   }
 
-  if (resolved) {
-    const chargePaise = (booking as { noShowChargePaise?: number | null }).noShowChargePaise ?? 0;
-    const refundQueued = Boolean((booking as { noShowRefundRequestId?: string }).noShowRefundRequestId);
-    return (
-      <section className="ax-panel">
-        <span className="ax-label">No-show</span>
-        <div className="kv"><span>Resolution</span><span>{resolved}</span></div>
-        {resolved === "charge" ? <div className="kv"><span>Charge kept</span><span className="ax-data">{formatPaise(chargePaise)}</span></div> : null}
-        {refundQueued ? <div className="kv"><span>Refund</span><span>Queued, not yet sent to the payment provider</span></div> : null}
-      </section>
-    );
-  }
+  if (resolved) return <ResolvedNoShow bookingId={booking.id} fallbackResolution={resolved} />;
 
   return (
     <section className="ax-panel">
