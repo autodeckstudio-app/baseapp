@@ -109,7 +109,7 @@ html[data-theme="night"] .ax-notch .ax-chip-link[aria-current="page"] { backgrou
   .ax-shell .ax-tab { height: 40px !important; gap: 0 !important; }
   .ax-shell .ax-tab span { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; font-size: 0 !important; }
   .ax-shell .ax-tab svg { width: 22px; height: 22px; }
-  .ax-shell-frame > .ax-main { padding-bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+  .ax-shell-frame > .ax-main { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
 }
 
 /* One spacing system: 16px between cards, everywhere. */
