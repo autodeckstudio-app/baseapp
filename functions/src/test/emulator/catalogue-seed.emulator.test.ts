@@ -112,9 +112,9 @@ describe("Catalogue seed — idempotent AutoModz import", () => {
       auth: { uid: "test-cust", token: { role: "customer", tenantId: TEST_TENANT, studioId: null }, rawToken: "test" },
     } as never)) as { breakdown: { subtotal: number; total: number } };
 
-    // 22,000,000 paise subtotal + 18% GST
+    // 22,000,000 paise subtotal; GST is off (owner 15 Oct 22:15 phonemsg-01M50795MQDWC2S63ZWXFXNHHJ; 18 Oct 21:41 "gst off"), so total = subtotal
     expect(result.breakdown.subtotal).toBe(220_000_00);
-    expect(result.breakdown.total).toBe(Math.round(220_000_00 * 1.18));
+    expect(result.breakdown.total).toBe(220_000_00);
   });
 
   it("calculateServicePrice works correctly against a seeded short wash service", async () => {

@@ -190,7 +190,8 @@ async function makeBooking(
   vehicle: Vehicle,
   studioId: string,
   scheduledDate: string,
-  scheduledTime = "09:00",
+  // 12:00 is not a held (priority) start time, so a normal customer can book it.
+  scheduledTime = "12:00",
   tenantId = TENANT_A,
 ) {
   return createBooking.run({
