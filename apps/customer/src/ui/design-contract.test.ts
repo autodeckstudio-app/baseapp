@@ -359,7 +359,7 @@ describe("membership wash", () => {
   it("sends the plan id the server expects, never a price", () => {
     expect(read("src/lib/membership-wash.ts")).toContain("export const MEMBERSHIP_WASH_LIVE = true");
     const c = read("src/app/(tabs)/book/confirm.tsx");
-    expect(c).toContain("MEMBERSHIP_WASH_LIVE && wash && wash.ok");
+    expect(c).toContain("MEMBERSHIP_WASH_LIVE && !giftCode && wash && wash.ok");
     expect(c).toContain("...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {})");
     expect(c).not.toContain("useMembershipWash");
   });

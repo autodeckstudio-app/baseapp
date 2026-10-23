@@ -1,6 +1,6 @@
 // Gifts: buy a foam wash for someone (pay, then get the code to share), enter a code you were given, and see the gifts you bought.
 // Empty until GIFT_LIVE. A gift is valid 60 days from payment and cannot be refunded; both are said before the pay button.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
@@ -28,11 +28,18 @@ export default function GiftsScreen() {
   const [gifts, setGifts] = useState<GiftView[]>([]);
   const [offer, setOffer] = useState<GiftOffer | null>(null);
   const [card, setCard] = useState<{ code: string; expiresAt: string } | null>(null);
-  const load = useCallback(() => { void listMyGifts().then((r) => { setGifts(r.gifts); setOffer(r.offer); }).catch(() => undefined); }, []);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const buyBusy = useRef(false);
+  const load = useCallback(() => {
+    setLoadFailed(false);
+    void listMyGifts().then((r) => { setGifts(r.gifts); setOffer(r.offer); }).catch(() => setLoadFailed(true));
+  }, []);
   useEffect(() => { if (GIFT_LIVE) load(); }, [load]);
   if (!GIFT_LIVE) return <Screen header={<T role="title">Gifts</T>}><Notice title="Coming soon" body="Gifting a wash will be here soon." /></Screen>;
 
   async function buy() {
+    if (buyBusy.current) return; // double-tap: one in-flight purchase; the server slot is the second line
+    buyBusy.current = true;
     setBusy(true); setError(null); setInfo(null); setCard(null);
     try {
       const g = await startGiftPurchase();
@@ -43,7 +50,7 @@ export default function GiftsScreen() {
       catch { setInfo("Payment received. Your gift is under Gifts you bought. Tap it to see the code."); }
       load();
     } catch (e) { setError(msg(e, "Could not start the payment. Please try again.")); }
-    finally { setBusy(false); }
+    finally { buyBusy.current = false; setBusy(false); }
   }
   async function open(g: GiftView) {
     setBusy(true); setError(null); setInfo(null);
@@ -63,6 +70,7 @@ export default function GiftsScreen() {
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Gifts</Kicker><T role="title">Gift a wash</T></View>}>
       {card ? <GiftCard code={card.code} expiresAt={card.expiresAt} buyerName={buyerName} /> : null}
+      {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button label="Retry" onPress={load} />} /> : null}
       {offer ? <GiftBuy amountPaise={offer.amountPaise} canPay={checkoutSupported} busy={busy} onPay={() => void buy()} /> : null}
       <Pane pad="gap">
         <T role="heading">Got a gift code?</T>

@@ -122,15 +122,15 @@ export default function BookingConfirmScreen() {
     void getMembershipPlans().then((p) => { if (alive) setPlans(p); }).catch(() => { if (alive) setPlans(null); });
     return () => { alive = false; };
   }, []);
-  const washOffer = MEMBERSHIP_WASH_LIVE && wash && wash.ok && extraIds.length === 0 ? wash : null;
+  const washOffer = MEMBERSHIP_WASH_LIVE && !giftCode && wash && wash.ok && extraIds.length === 0 ? wash : null;
   const saving = !giftCode && wash && !wash.ok && wash.reason === "no_membership" ? memberSaving({ service, total: breakdown?.total, plans }) : null;
   const washOn = useWash && washOffer !== null;
 
-  const sendCode = auth.status === "ready" ? referralCodeToSend(friendCode, auth.user.uid) : null;
+  const sendCode = !giftCode && auth.status === "ready" ? referralCodeToSend(friendCode, auth.user.uid) : null;
 
   const payHow = service && breakdown ? bookingPayment(service, breakdown.total) : { online: false, studioChoice: false };
 
-  const payNow = payHow.online && !payAtStudio && !washOn;
+  const payNow = !giftCode && payHow.online && !payAtStudio && !washOn;
   const holdLeft = held ? Math.max(0, Math.ceil((held.expiresAt - now) / 1000)) : 0;
 
   /** Opens checkout for the held booking. Success goes to the booking; a failure or close stays here with the slot held. */
@@ -221,7 +221,7 @@ export default function BookingConfirmScreen() {
         </View>
       ) : null}
       <Sheet>
-        {washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
+        {giftCode ? <SheetTotal label="Covered by your gift" value="Included" /> : washOn ? <SheetTotal label="Wash from your plan" value="Included" /> : service?.priceOnRequest !== true && breakdown ? <SheetTotal label="Total" value={rupees(visitTotal ?? breakdown.total)} /> : <SheetTotal label="Price" value="Quote" />}
         <SheetDivider />
         <SheetLine label="Service" value={service?.name ?? "-"} />
         {extraRows.map((r) => <SheetLine key={r.id} label="Also" value={r.name} />)}
@@ -242,7 +242,7 @@ export default function BookingConfirmScreen() {
       {REFERRAL_LIVE ? (
         <Pane pad="gap">
           {giftCode ? <Notice title="Covered by your gift" body="You will not pay for this wash. The studio confirms the price is covered." /> : null}
-          <Field label="Have a friend's code? (optional)" value={friendCode} onChangeText={setFriendCode} autoCapitalize="characters" placeholder="AD2K7QX" maxLength={12} error={friendCode.trim() !== "" && !normaliseReferralCode(friendCode) ? "That does not look like a code" : undefined} />
+          {!giftCode ? <Field label="Have a friend's code? (optional)" value={friendCode} onChangeText={setFriendCode} autoCapitalize="characters" placeholder="AD2K7QX" maxLength={12} error={friendCode.trim() !== "" && !normaliseReferralCode(friendCode) ? "That does not look like a code" : undefined} /> : null}
         </Pane>
       ) : null}
 
@@ -278,7 +278,7 @@ export default function BookingConfirmScreen() {
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
         {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
       </T>
-      {washOn ? null : <View style={{ gap: space.line }}>
+      {washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
           {payHow.online ? (
