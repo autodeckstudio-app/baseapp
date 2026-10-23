@@ -113,7 +113,8 @@ describe("refund outbox", () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     await reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "admin1" });
-    const failing = { ...mockProvider, initiateRefund: async () => { throw new Error("provider down"); } };
+    const failing = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    failing.initiateRefund = async () => { throw new Error("provider down"); };
     const r = await runRefundOutbox(db, failing as never);
     expect(r).toEqual({ submitted: 0, projected: 0, failed: 1 });
     expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({ status: "failed", lastError: "provider down" });
@@ -142,19 +143,53 @@ describe("ambiguous submit reconciliation", () => {
     expect(r2).toEqual({ submitted: 0, projected: 0, failed: 0 });
   });
 
-  it("a provider that cannot look up fails closed — no blind resubmission", async () => {
+  it("an unknown submit outcome holds as ambiguous — no resubmit, no balance release, no second reservation", async () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
     let submits = 0;
     const noLookup = { name: "mock", initiateRefund: async () => { submits++; throw new Error("maybe accepted"); } };
     const r = await runRefundOutbox(db, noLookup as never);
-    expect(r.failed).toBe(1);
     expect(submits).toBe(1);
-    // Failed requests are not retried by the runner: a re-run touches nothing.
+    expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({ status: "ambiguous" });
+    // The runner never retries or resolves it without provider evidence.
     const r2 = await runRefundOutbox(db, noLookup as never);
     expect(submits).toBe(1);
     expect(r2).toEqual({ submitted: 0, projected: 0, failed: 0 });
     expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
+    // Cross-request: the ambiguous hold blocks a SECOND reservation for the
+    // same payment, so the possibly-submitted amount can never double-refund.
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "second", createdBy: "admin1" }))
+      .rejects.toThrow(/already has an active refund request/);
+    expect(Object.keys(data["refundRequests"] ?? {})).toHaveLength(1);
+  });
+
+  it("an ambiguous hold reconciles only from provider evidence: found -> projected, absent -> failed", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider.loseNextRefundResponse = true; // accepted, response lost -> ambiguous
+    await runRefundOutbox(db, provider);
+    expect(data["refundRequests"]!["rr_pay1_1"]!["status"]).toBe("projected"); // reconciled via lookup, then projected in the same pass
+    // Force the leftover ambiguous state (accepted at provider, nothing
+    // recorded locally), then reconcile from provider evidence.
+    data["refundRequests"]!["rr_pay1_1"]!["status"] = "ambiguous";
+    data["refundRequests"]!["rr_pay1_1"]!["projectionNeeded"] = false;
+    data["payments"]!["pay1"]!["refundAmount"] = null;
+    data["payments"]!["pay1"]!["status"] = "completed";
+    const r = await runRefundOutbox(db, provider);
+    expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000 });
+    // And the absent case: provider confirms nothing was accepted -> failed.
+    const p2 = payment({ id: "pay2", bookingId: "b2" });
+    const f2 = fakeFirestore({ payments: { pay2: p2 as never }, bookings: { b2: { id: "b2" } } });
+    await reserveRefund(f2.db, { payment: p2, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    f2.data["refundRequests"]!["rr_pay2_1"]!["status"] = "ambiguous";
+    const provider2 = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    const r2b = await runRefundOutbox(f2.db, provider2);
+    expect(r2b.failed).toBe(1);
+    expect(f2.data["refundRequests"]!["rr_pay2_1"]!["status"]).toBe("failed");
+    expect(f2.data["payments"]!["pay2"]!["status"]).toBe("completed");
   });
 });

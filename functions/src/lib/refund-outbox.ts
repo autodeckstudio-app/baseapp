@@ -22,7 +22,11 @@ import { COLLECTIONS } from "@autodeck/database";
 import type { PaymentProvider } from "./payment-provider.js";
 import { verifyRefundAccounting } from "./refund-accounting.js";
 
-export type RefundRequestStatus = "reserved" | "submitted" | "accepted" | "projected" | "failed";
+// ambiguous = the submit outcome is UNKNOWN (response lost / provider cannot
+  // confirm). It is an unresolved hold, NOT a failure: the reservation stays
+  // active so the refundable balance is never released for a duplicate
+  // request, and the runner only reconciles it via provider evidence.
+export type RefundRequestStatus = "reserved" | "submitted" | "accepted" | "ambiguous" | "projected" | "failed";
 
 export interface RefundRequest {
   id: string;
@@ -56,7 +60,7 @@ export async function activeReservation(db: Firestore, paymentId: string): Promi
   const snap = await requestsCol(db).where("paymentId", "==", paymentId).get();
   for (const doc of snap.docs) {
     const r = doc.data() as RefundRequest;
-    if (r.status === "reserved" || r.status === "submitted" || r.status === "accepted") {
+    if (r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous") {
       return { ...r, ref: doc.ref };
     }
   }
@@ -159,7 +163,7 @@ export async function runRefundOutbox(
 ): Promise<{ submitted: number; projected: number; failed: number }> {
   const limit = opts.limit ?? 10;
   const open: Array<RefundRequest & { ref: FirebaseFirestore.DocumentReference }> = [];
-  for (const status of ["reserved", "submitted", "accepted"] as const) {
+  for (const status of ["reserved", "submitted", "accepted", "ambiguous"] as const) {
     const snap = await requestsCol(db).where("status", "==", status).get();
     for (const doc of snap.docs) open.push({ ...(doc.data() as RefundRequest), ref: doc.ref });
     if (open.length >= limit) break;
@@ -201,12 +205,38 @@ export async function runRefundOutbox(
           request.status = "submitted";
           request.providerRefundId = reconciled;
           request.projectionNeeded = true;
-        } else {
+        } else if (provider.findRefundByReference) {
+          // The provider CAN look up and has no refund for our reference:
+          // confirmed never accepted — a real failure, balance may be released.
           await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
+          failed++;
+          continue;
+        } else {
+          // Outcome UNKNOWN: hold as ambiguous, keep the reservation active.
+          // Never resubmit, never release the refundable balance.
+          await request.ref.update({ status: "ambiguous", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
           failed++;
           continue;
         }
       }
+    }
+    if (request.status === "ambiguous") {
+      // Reconcile an unresolved hold ONLY from provider evidence.
+      if (!provider.findRefundByReference) continue;
+      try {
+        const found = await provider.findRefundByReference(request.id);
+        if (found) {
+          await request.ref.update({ status: "submitted", providerRefundId: found.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
+          request.status = "submitted";
+          request.providerRefundId = found.providerRefundId;
+          request.projectionNeeded = true;
+          submitted++;
+        } else {
+          await request.ref.update({ status: "failed", updatedAt: now });
+          failed++;
+          continue;
+        }
+      } catch { continue; } // still unknown: keep holding
     }
     if (request.projectionNeeded) {
       await projectRefund(db, request);
