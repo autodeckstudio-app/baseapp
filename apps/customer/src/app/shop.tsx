@@ -52,7 +52,7 @@ export default function Shop() {
     <Screen>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
         <Text style={{ color: ink.textPrimary, fontSize: 22, fontWeight: "700" }}>Shop</Text>
-        <Text style={{ color: ink.textSecondary }}>The AutoDeck store is taking shape. Everything here is a concept — ordering is not open yet.</Text>
+        <Text style={{ color: ink.textSecondary }}>The AutoDeck store is taking shape. Everything here is a concept. Ordering is not open yet.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {DEPARTMENTS.map((d) => (
             <Pressable key={d} accessibilityRole="button" accessibilityState={{ selected: dept === d }} onPress={() => setDept(d)} style={chip(dept === d)}>
