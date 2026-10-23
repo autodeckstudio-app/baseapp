@@ -57,6 +57,8 @@ export const COLLECTIONS = {
   invoiceCounters: () => "invoiceCounters",
   // paymentEvents/{providerEventId} — idempotency guard for webhook/event deduplication
   paymentEvents: () => "paymentEvents",
+  // refundRequests/{requestId} — booking refund outbox: reservation -> provider -> projection
+  refundRequests: () => "refundRequests",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
   rateLimits: () => "rateLimits",
   // bayLocks/{tenantId__studioId__bayId} — server-only deterministic-document

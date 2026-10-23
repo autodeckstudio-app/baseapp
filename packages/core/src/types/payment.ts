@@ -9,6 +9,8 @@ export type PaymentStatus =
   | "completed"
   | "failed"
   | "cancelled"
+  // Some captured money returned, the rest retained (e.g. no-show charge).
+  | "partially_refunded"
   | "refunded";
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";

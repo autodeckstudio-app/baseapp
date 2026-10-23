@@ -1,0 +1,122 @@
+// Track A2 (fresh, local/fake-provider only): refund accounting + outbox runner.
+import { describe, it, expect } from "vitest";
+import { labelForRefund, verifyRefundAccounting } from "../../lib/refund-accounting.js";
+import { reserveRefund, runRefundOutbox, refundablePaise, activeReservation } from "../../lib/refund-outbox.js";
+import { fakeFirestore } from "./fake-firestore.js";
+import { mockProvider } from "../../lib/mock-payment-provider.js";
+import type { Payment } from "@autodeck/core";
+
+const payment = (o: Record<string, unknown> = {}): Payment => ({
+  id: "pay1", tenantId: "t1", studioId: "s1", targetType: "job", jobId: "job1", bookingId: "b1",
+  membershipId: null, giftId: null, customerId: "c1", amount: 100000, currency: "INR",
+  method: "razorpay_payment_link", status: "completed", razorpayPaymentLinkId: "pl1",
+  razorpayPaymentId: "rzp_pay_1", razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
+  manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null,
+  completedAt: "2026-10-20T10:00:00.000Z", failedAt: null, cancelledAt: null, refundedAt: null,
+  createdAt: "2026-10-20T09:00:00.000Z", updatedAt: "2026-10-20T10:00:00.000Z", ...o,
+});
+
+const seed = (p: Payment) => ({
+  payments: { [p.id]: p as unknown as Record<string, unknown> },
+  jobs: { job1: { id: "job1", paymentStatus: "paid" } },
+  bookings: { b1: { id: "b1", paymentStatus: "paid" } },
+});
+
+describe("refund accounting", () => {
+  it("labels truthfully across the range", () => {
+    expect(labelForRefund(100000, 0)).toBe("completed");
+    expect(labelForRefund(100000, 20000)).toBe("partially_refunded");
+    expect(labelForRefund(100000, 100000)).toBe("refunded");
+  });
+  it("retained + refunded always equals captured", () => {
+    const c = verifyRefundAccounting({ capturedPaise: 100000, refundedPaise: 20000 });
+    expect(c).toMatchObject({ ok: true, label: "partially_refunded", retainedPaise: 80000 });
+  });
+  it("rejects over-refunds, negatives, non-integers and inconsistent labels", () => {
+    expect(verifyRefundAccounting({ capturedPaise: 100, refundedPaise: 101 }).ok).toBe(false);
+    expect(verifyRefundAccounting({ capturedPaise: -1, refundedPaise: 0 }).ok).toBe(false);
+    expect(verifyRefundAccounting({ capturedPaise: 100.5, refundedPaise: 0 }).ok).toBe(false);
+    expect(verifyRefundAccounting({ capturedPaise: 100, refundedPaise: 50, label: "refunded" }).ok).toBe(false);
+    expect(verifyRefundAccounting({ capturedPaise: 100, refundedPaise: 100, label: "partially_refunded" }).ok).toBe(false);
+    expect(verifyRefundAccounting({ capturedPaise: 100, refundedPaise: 100, label: "refunded" }).ok).toBe(true);
+  });
+});
+
+describe("refund outbox", () => {
+  it("refundable balance is captured minus already refunded", () => {
+    expect(refundablePaise(payment())).toBe(100000);
+    expect(refundablePaise(payment({ status: "partially_refunded", refundAmount: 20000 }))).toBe(80000);
+    expect(refundablePaise(payment({ status: "pending" }))).toBe(0);
+  });
+
+  it("reserves once per payment and rejects over-refunds", async () => {
+    const { db } = fakeFirestore(seed(payment()));
+    const p = payment();
+    await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show charge kept", createdBy: "admin1" });
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "second", createdBy: "admin1" }))
+      .rejects.toThrow(/already has an active refund request/);
+    await expect(reserveRefund(db, { payment: p, amountPaise: 100001, reason: "too much", createdBy: "admin1" }))
+      .rejects.toThrow(/exceeds the refundable/);
+    expect((await activeReservation(db, p.id))?.amountPaise).toBe(80000);
+  });
+
+  it("runs reserve -> provider -> truthful projection (partial keeps retained money)", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show: Rs200 retained", createdBy: "admin1" });
+    const r = await runRefundOutbox(db, mockProvider);
+    expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 80000, razorpayRefundId: "mock_rfnd_rr_pay1_1" });
+    expect(data["jobs"]!["job1"]!["paymentStatus"]).toBe("partial");
+    expect(data["bookings"]!["b1"]!["paymentStatus"]).toBe("partial");
+    expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({ status: "projected", projectionNeeded: false });
+  });
+
+  it("a full refund labels refunded and marks the invoice hold instead of voiding", async () => {
+    const p = payment({ invoiceId: "inv1" });
+    const { db, data } = fakeFirestore({ ...seed(p), invoices: { inv1: { id: "inv1", status: "issued" } } });
+    await reserveRefund(db, { payment: p, amountPaise: 100000, reason: "waived", createdBy: "admin1" });
+    await runRefundOutbox(db, mockProvider);
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "refunded", refundAmount: 100000, invoiceReviewNeeded: true });
+    expect(data["invoices"]!["inv1"]!["status"]).toBe("issued"); // hold: never voided by the runner
+    expect(data["jobs"]!["job1"]!["paymentStatus"]).toBe("refunded");
+  });
+
+  it("recovers a crash after provider submission without resubmitting", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    // Simulate the crash: provider was called, submission recorded, projection never happened.
+    let providerCalls = 0;
+    const crashing = {
+      ...mockProvider,
+      initiateRefund: async (params: { referenceId: string }) => { providerCalls++; return { providerRefundId: `mock_rfnd_${params.referenceId}` }; },
+    };
+    // First run: submit only (projection hook throws before the projection transaction).
+    const { db: db2 } = { db };
+    void db2;
+    await runRefundOutbox(db, crashing as never);
+    expect(providerCalls).toBe(1);
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "projected" });
+    // Force the leftover state a crash would leave, then re-run: no new provider call.
+    data["refundRequests"]![requestId]!["status"] = "submitted";
+    data["refundRequests"]![requestId]!["projectionNeeded"] = true;
+    data["payments"]!["pay1"]!["refundAmount"] = null;
+    data["payments"]!["pay1"]!["status"] = "completed";
+    const r2 = await runRefundOutbox(db, crashing as never);
+    expect(providerCalls).toBe(1); // NOT resubmitted
+    expect(r2).toEqual({ submitted: 0, projected: 1, failed: 0 });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000 });
+  });
+
+  it("a provider failure marks the request failed and refunds nothing", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "admin1" });
+    const failing = { ...mockProvider, initiateRefund: async () => { throw new Error("provider down"); } };
+    const r = await runRefundOutbox(db, failing as never);
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 1 });
+    expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({ status: "failed", lastError: "provider down" });
+    expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
+  });
+});

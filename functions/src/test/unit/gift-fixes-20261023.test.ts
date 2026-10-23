@@ -92,7 +92,7 @@ describe("obtainCheckoutOrder", () => {
     return {
       calls,
       createOrder: async () => { calls.create++; return { id: `order_${calls.create}`, amount: 90000, currency: "INR" }; },
-      findOrderByReceipt: async () => { calls.find++; return null; },
+      findOrderByReceipt: async (): Promise<{ id: string; amount: number; currency: string } | null> => { calls.find++; return null; },
       saveOrder: async (id: string) => { calls.saved.push(id); },
       markAmbiguous: async (b: boolean) => { calls.ambiguous.push(b); },
     };
