@@ -32,6 +32,10 @@ describe("gift guardrails (source)", () => {
     expect(src).not.toMatch(/z\.object\(\{[^}]*(amount|price)/i);
     expect(src).toContain("giftPricePaise");
   });
+  it("gift price takes tax from taxFor, so the GST-off switch applies (owner: no GST anywhere)", () => {
+    expect(src).toContain("...taxFor(config)");
+    expect(src).not.toMatch(/taxRatePercent:\s*config\.taxRatePercent/);
+  });
   it("redemption needs a phone sign-in, rate limits and a lockout", () => {
     expect(src).toContain("user.phone");
     expect(src).toContain('"gift.redeem"');

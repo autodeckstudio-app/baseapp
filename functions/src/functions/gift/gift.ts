@@ -15,7 +15,7 @@ import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { calculatePrice } from "../../lib/pricing.js";
+import { calculatePrice, taxFor } from "../../lib/pricing.js";
 import { planGiftActivation } from "../../lib/gift-activate.js";
 import { createGiftPurchase } from "../../lib/gift-purchase.js";
 import { hashGiftCode } from "../../lib/gift-code.js";
@@ -39,7 +39,8 @@ export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: 
     serviceCategory: service.category,
     vehicleCategory: GIFT_PRICE_CATEGORY,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
-    ...(config ? { taxRatePercent: config.taxRatePercent, taxDescription: config.taxDescription, currency: config.currency } : {}),
+    ...taxFor(config),
+    ...(config ? { currency: config.currency } : {}),
   }).total;
 }
 

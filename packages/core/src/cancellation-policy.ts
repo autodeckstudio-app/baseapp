@@ -9,8 +9,6 @@ import type { ServiceCategory } from "./types/service.js";
  *  Work already started: the customer cannot cancel online and the advance is not refunded. A cancel by the studio has no fee. */
 export const CANCEL_SHORT = { freeUntilHours: 4, feePaise: 10_000 } as const;
 export const CANCEL_BIGGER = { freeUntilHours: 24, feePercent: 20 } as const;
-/** Refunds go to the original payment method. Shown as text only. */
-export const REFUND_TIMELINE_TEXT = "5 to 7 working days";
 
 export type CancellationTerms = { bigger: boolean; freeUntilHours: number; free: boolean; feePaise: number };
 

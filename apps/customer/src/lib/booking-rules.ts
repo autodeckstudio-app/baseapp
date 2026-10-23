@@ -1,6 +1,6 @@
 // Reschedule and cancel rules for a customer booking, shared by the booking page and the Bookings list.
 import type { Booking } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, cancellationTerms, cancellationLine, REFUND_TIMELINE_TEXT } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, cancellationTerms, cancellationLine } from "@autodeck/core";
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
@@ -46,7 +46,7 @@ export function cancelState(booking: Booking, now = Date.now(), category?: strin
 /** Text for the cancel confirmation: the rule, and the fee if one applies now. */
 export function cancelConfirmBody(c: { feePaise: number; line: string }, paid: boolean): string {
   const fee = c.feePaise > 0 ? ` Cancelling now costs Rs ${c.feePaise / 100}, which is taken from your refund.` : "";
-  const money = paid ? ` Your payment will be refunded to your original payment method in ${REFUND_TIMELINE_TEXT}.` : " The slot is released straight away and nothing is charged.";
+  const money = paid ? ` Your payment will be refunded to your original payment method.` : " The slot is released straight away and nothing is charged.";
   return `${c.line}${fee}${money} This can't be undone.`;
 }
 

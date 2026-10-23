@@ -22,7 +22,7 @@ export const MAX_ADVANCE_BOOKING_DAYS = 30;
 // so they stay index-friendly rather than scanning unbounded history/future
 // (Phase 5 â multi-day booking).
 export const MAX_SERVICE_SPAN_DAYS = 14;
-export const MAX_CUSTOMER_RESCHEDULES = 3;
+export const MAX_CUSTOMER_RESCHEDULES = 2;
 export const CANCELLATION_FREE_WINDOW_HOURS = 24;
 /** Unarrived bookings remain valid until the daily closing time IST on their scheduled day.
  * Unarrived bookings auto-cancel at close; late arrivals stay valid during the day.

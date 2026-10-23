@@ -135,17 +135,17 @@ describe("Cancellation rules (doc07 §7.9)", () => {
 // ─── Reschedule rules ─────────────────────────────────────────────────────────
 
 describe("Reschedule rules (doc07 §7.8)", () => {
-  it("max customer reschedules is 3", () => {
-    expect(MAX_CUSTOMER_RESCHEDULES).toBe(3);
+  it("max customer reschedules is 2 (owner-agreed rule, 22 Oct)", () => {
+    expect(MAX_CUSTOMER_RESCHEDULES).toBe(2);
   });
 
-  it("customer with rescheduleCount=3 exceeds the limit", () => {
-    const rescheduleCount = 3;
+  it("customer with rescheduleCount=2 exceeds the limit", () => {
+    const rescheduleCount = 2;
     expect(rescheduleCount >= MAX_CUSTOMER_RESCHEDULES).toBe(true);
   });
 
-  it("customer with rescheduleCount=2 is within the limit", () => {
-    const rescheduleCount = 2;
+  it("customer with rescheduleCount=1 is within the limit", () => {
+    const rescheduleCount = 1;
     expect(rescheduleCount < MAX_CUSTOMER_RESCHEDULES).toBe(true);
   });
 });
