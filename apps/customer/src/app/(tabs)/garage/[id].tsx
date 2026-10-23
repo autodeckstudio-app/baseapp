@@ -25,14 +25,16 @@ import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { listenToVehicleProtections } from "../../../lib/protection-service";
 import { listenToVehicleWarranties } from "../../../lib/warranty-service";
-import { listenToVehiclePapers, submitMyPaper, daysUntil, type MyPaper } from "../../../lib/paper-service";
+import { listenToVehiclePapers, listenToCustomerPapers, submitMyPaper, updateMyPaper, deleteMyPaper, daysUntil, type MyPaper } from "../../../lib/paper-service";
+import { paperName, numberClash, buildDocumentList } from "../../../lib/documents";
+import { limitRegistrationInput } from "../../../lib/registration-input";
+import { IconAction } from "../../../ui/IconAction";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { listenToInvoicesForVehicle } from "../../../lib/invoice-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { getMyBookings } from "../../../lib/booking-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview } from "../../../ui/CarOverview";
-import { nextDue, dueLine } from "../../../lib/car-next-due";
 import { CareTimeline } from "../../../ui/CareTimeline";
 import { buildUpcoming, buildHistory, countLabel, latestVisits, HISTORY_PREVIEW } from "../../../lib/car-timeline";
 
@@ -75,7 +77,11 @@ export default function VehicleDetailScreen() {
   const [protections, setProtections] = useState<Protection[]>([]);
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
-  const [docForm, setDocForm] = useState({ kind: "INSURANCE" as MyPaper["kind"], reference: "", expiresOn: "" });
+  const [docForm, setDocForm] = useState({ kind: "INSURANCE" as MyPaper["kind"], reference: "", title: "", expiresOn: "" });
+  const [allPapers, setAllPapers] = useState<MyPaper[]>([]);
+  const [docEditing, setDocEditing] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [numberError, setNumberError] = useState<string | null>(null);
   const [docPhoto, setDocPhoto] = useState<{ blob: Blob; contentType: string } | null>(null);
   const [docOpen, setDocOpen] = useState(false);
   const [docBusy, setDocBusy] = useState(false);
@@ -126,29 +132,73 @@ export default function VehicleDetailScreen() {
     return listenToVehiclePapers(id, auth.claims.tenantId, auth.user.uid, setPapers, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [id, auth.status,retryTick]);
 
-  async function handleAddDoc() {
+  useEffect(() => {
+    if (auth.status !== "ready") return undefined;
+    return listenToCustomerPapers(auth.claims.tenantId, auth.user.uid, setAllPapers, () => undefined);
+  }, [auth.status, retryTick]);
+
+  function resetDocForm() {
+    setDocForm({ kind: "INSURANCE", reference: "", title: "", expiresOn: "" });
+    setDocPhoto(null); setDocOpen(false); setDocEditing(null); setDocError(null); setNumberError(null);
+  }
+  function openDocEdit(p: MyPaper) {
+    setDocForm({ kind: p.kind, reference: p.reference, title: p.title ?? "", expiresOn: p.expiresOn ?? "" });
+    setDocPhoto(null); setDocEditing(p.id); setDocError(null); setNumberError(null); setDocOpen(true); setDeleteId(null);
+  }
+  function pickDocKind(k: MyPaper["kind"]) {
+    // One active RC per car: choosing RC when the car already has one edits that RC.
+    const existingRc = k === "RC" ? papers.find((p) => p.kind === "RC") : undefined;
+    if (existingRc) { openDocEdit(existingRc); return; }
+    setDocEditing(null); setNumberError(null);
+    setDocForm((f) => ({ ...f, kind: k }));
+  }
+  function changeDocReference(v: string) {
+    const value = docForm.kind === "RC" ? limitRegistrationInput(v) : v;
+    setDocForm((f) => ({ ...f, reference: value }));
+    setNumberError(numberClash(allPapers, documentReference(docForm.kind, value), docEditing));
+  }
+  async function handleSaveDoc() {
     if (!id) return;
     setDocError(null);
     const validationError=validateDocument(docForm.kind,docForm.reference,docForm.expiresOn);
     if(validationError){setDocError(validationError);return;}
+    if (docForm.kind === "OTHER" && !docForm.title.trim()) { setDocError("Give this document a name."); return; }
+    const clash = numberClash(allPapers, documentReference(docForm.kind, docForm.reference), docEditing);
+    if (clash) { setNumberError(clash); return; }
     setDocBusy(true);
     try {
-      await submitMyPaper({
-        studioId: FIRST_STUDIO_ID,
-        vehicleId: id,
-        kind: docForm.kind,
-        reference: documentReference(docForm.kind,docForm.reference),
-        ...(docForm.expiresOn ? { expiresOn: docForm.expiresOn } : {}),
-        photo: docPhoto,
-      });
-      setDocForm({ kind: "INSURANCE", reference: "", expiresOn: "" });
-      setDocPhoto(null);
-      setDocOpen(false);
+      if (docEditing) {
+        await updateMyPaper({
+          paperId: docEditing,
+          reference: documentReference(docForm.kind, docForm.reference),
+          ...(docForm.kind === "OTHER" ? { title: docForm.title.trim() } : {}),
+          expiresOn: docForm.expiresOn ? docForm.expiresOn : null,
+          photo: docPhoto,
+        });
+      } else {
+        await submitMyPaper({
+          studioId: FIRST_STUDIO_ID,
+          vehicleId: id,
+          kind: docForm.kind,
+          reference: documentReference(docForm.kind,docForm.reference),
+          ...(docForm.kind === "OTHER" ? { title: docForm.title.trim() } : {}),
+          ...(docForm.expiresOn ? { expiresOn: docForm.expiresOn } : {}),
+          photo: docPhoto,
+        });
+      }
+      resetDocForm();
     } catch (e) {
-      setDocError(e instanceof Error ? e.message : "Could not add the document.");
+      const msg = e instanceof Error ? e.message : "";
+      setDocError(/already saved/i.test(msg) ? "This number is already saved on one of your documents." : msg || "Could not save the document.");
     } finally {
       setDocBusy(false);
     }
+  }
+  async function handleDeleteDoc(paperId: string) {
+    setDocBusy(true); setDocError(null);
+    try { await deleteMyPaper(paperId); setDeleteId(null); }
+    catch { setDocError("Could not delete that document. Try again."); }
+    finally { setDocBusy(false); }
   }
 
   useEffect(() => {
@@ -251,23 +301,14 @@ export default function VehicleDetailScreen() {
   const verifiedProtections = protections.filter((p) => p.status === "verified");
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
   const mostRecentJob = lastFinishedJob(jobs);
+  // Document and warranty expiry now live in the single Documents list; only the service nudge stays here.
   const reminders: string[] = [];
-  for (const p of papers) {
-    const left = daysUntil(p.expiresOn);
-    const name = PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind;
-    if (left !== null && left < 0) reminders.push(`${name} expired. Upload the renewed copy in Documents.`);
-    else if (left !== null && left <= 30) reminders.push(`${name} expires in ${left} day${left === 1 ? "" : "s"}.`);
-  }
-  for (const w of activeWarranties) {
-    const left = daysUntil(w.endDate);
-    if (left !== null && left >= 0 && left <= 60) reminders.push(`${w.warrantyLabel} ends in ${left} day${left === 1 ? "" : "s"}.`);
-  }
   if (mostRecentJob && upcomingBooking === null) {
     const since = Math.floor((Date.now() - new Date(mostRecentJob.sealedAt ?? mostRecentJob.createdAt).getTime()) / 86400000);
     if (since >= 45) reminders.push(`Last service was ${since} days ago. Time for a wash or check-up.`);
   }
 
-  const due = nextDue([...papers.map((p) => ({ label: PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind, date: p.expiresOn })), ...activeWarranties.map((w) => ({ label: w.warrantyLabel, date: w.endDate }))], new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date()));
+  const due = null;
 
   return (
     <Screen
@@ -305,7 +346,7 @@ export default function VehicleDetailScreen() {
       {true ? (
         <>
           <CarOverview
-            due={due ? { label: due.label, date: due.date, line: dueLine(due) } : null}
+            due={due}
             last={mostRecentJob ? { title: visitTitle(visitServices(mostRecentJob, invoices.find((x) => x.jobId === mostRecentJob.id), serviceNames)), detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
             reminders={reminders}
           />
@@ -358,8 +399,9 @@ export default function VehicleDetailScreen() {
         const svc: Record<string, { id: string; name: string; category: string }> = {};
         for (const j of jobs) if (serviceNames[j.serviceId]) svc[j.serviceId] = { id: j.serviceId, name: serviceNames[j.serviceId]!, category: serviceCats[j.serviceId] ?? "" };
         const plan = buildCarePlan({ jobs, services: svc, warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate })) });
-        const upcoming = buildUpcoming({ plan, papers: papers.map((p) => ({ id: p.id, label: PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind, expiresOn: p.expiresOn, days: daysUntil(p.expiresOn) })) });
-        return <CareTimeline title="Coming up" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
+        const upcoming = buildUpcoming({ plan: { ...plan, warranties: [] }, papers: [] });
+        if (upcoming.length === 0) return null;
+        return <CareTimeline title="Service due" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
       })()}
 
       {(() => {
@@ -392,6 +434,12 @@ export default function VehicleDetailScreen() {
         );
       })()}
 
+      {(() => {
+        const items = buildDocumentList({ papers: papers.map((p) => ({ ...p, days: daysUntil(p.expiresOn) })), warranties: activeWarranties.map((w) => ({ label: w.warrantyLabel, endDate: w.endDate, days: daysUntil(w.endDate) })) });
+        if (items.length === 0) return null;
+        return <CareTimeline title="Documents" count={countLabel(items.length, "item", "items")} items={items} empty="" />;
+      })()}
+
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
         <Kicker>Papers</Kicker>
         <T role="caption" tone="tertiary">{countLabel(papers.length + protections.length, "document", "documents")}</T>
@@ -408,9 +456,9 @@ export default function VehicleDetailScreen() {
                 return (
                   <Row
                     key={p.id}
-                    title={PROTECTION_KIND_LABELS[p.kind.toLowerCase()] ?? p.kind}
+                    title={paperName(p)}
                     detail={[p.reference, expiry, p.verificationReason || p.rejectionReason].filter(Boolean).join(" · ")}
-                    trailing={<Chip label={p.status === "VERIFIED" ? (p.verificationMode === "automatic" ? "Auto-approved" : "Verified") : p.status === "REJECTED" ? "Rejected" : "Under studio review"} tone={p.status === "VERIFIED" ? "premium" : "neutral"} />}
+                    trailing={<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Chip label={p.status === "VERIFIED" ? (p.verificationMode === "automatic" ? "Auto-approved" : "Verified") : p.status === "REJECTED" ? "Rejected" : "Under studio review"} tone={p.status === "VERIFIED" ? "premium" : "neutral"} /><IconAction kind="edit" label={`Edit ${paperName(p)}`} onPress={() => openDocEdit(p)} /><IconAction kind="delete" label={`Delete ${paperName(p)}`} onPress={() => setDeleteId(p.id)} /></View>}
                     last={i === papers.length - 1 && protections.length === 0}
                   />
                 );
@@ -426,16 +474,20 @@ export default function VehicleDetailScreen() {
               ))}
             </Pane>
           )}
+          {deleteId ? (
+            <Notice title="Delete this document?" body="This removes the document and its photo. Your car and bookings are not affected." action={<View style={{ gap: space.breath }}><Button label="Delete" busy={docBusy} onPress={() => void handleDeleteDoc(deleteId)} /><Button label="Cancel" kind="quiet" onPress={() => setDeleteId(null)} /></View>} />
+          ) : null}
           {docOpen ? (
             <View style={{ gap: space.breath }}>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.hair }}>
                 {(["RC", "INSURANCE", "PUC", "OTHER"] as const).map((k) => (
-                  <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: docForm.kind === k }} onPress={() => setDocForm((f) => ({ ...f, kind: k }))}>
+                  <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: docForm.kind === k }} onPress={() => pickDocKind(k)}>
                     <Chip label={k === "OTHER" ? "Other" : k === "RC" ? "RC" : k === "PUC" ? "PUC" : "Insurance"} tone={docForm.kind === k ? "premium" : "neutral"} />
                   </Pressable>
                 ))}
               </View>
-              <Field placeholder={docForm.kind==="RC"?"e.g. MH02AB1234":"Enter number"} label={docForm.kind==="RC"?"Registration number":"Document or policy number"} value={docForm.reference} onChangeText={(v: string) => setDocForm((f) => ({ ...f, reference: v }))} />
+              {docForm.kind === "OTHER" ? <Field label="Document name" placeholder="e.g. Warranty card" value={docForm.title} maxLength={80} onChangeText={(v: string) => setDocForm((f) => ({ ...f, title: v }))} /> : null}
+              <Field placeholder={docForm.kind==="RC"?"e.g. MH02AB1234":"Enter number"} label={docForm.kind==="RC"?"Registration number":"Document or policy number"} value={docForm.reference} maxLength={docForm.kind==="RC"?10:120} autoCapitalize={docForm.kind==="RC"?"characters":"none"} error={numberError ?? undefined} onChangeText={changeDocReference} />
               <DateField label="Expiry date (optional)" value={docForm.expiresOn} onChange={(v: string) => setDocForm((f) => ({ ...f, expiresOn: v }))} />
               {Platform.OS === "web" ? (
                 <View style={{ gap: space.hair }}>
@@ -445,9 +497,9 @@ export default function VehicleDetailScreen() {
                   {docPhoto ? <T role="caption" tone="tertiary">Photo ready.</T> : null}
                 </View>
               ) : null}
-              {docError ? <Notice title="Can't add this document" body={docError} /> : null}
-              <Button label="Submit for verification" busy={docBusy} onPress={() => void handleAddDoc()} />
-              <Button label="Cancel" kind="quiet" onPress={() => { setDocOpen(false); setDocError(null); }} />
+              {docError ? <Notice title={docEditing ? "Can't save this document" : "Can't add this document"} body={docError} /> : null}
+              <Button label={docEditing ? "Save changes" : "Submit for verification"} busy={docBusy} onPress={() => void handleSaveDoc()} />
+              <Button label="Cancel" kind="quiet" onPress={resetDocForm} />
             </View>
           ) : (
             <Button label="Add a document" onPress={() => setDocOpen(true)} />

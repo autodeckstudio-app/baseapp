@@ -590,7 +590,7 @@ describe("car detail and add car (batch 1)", () => {
     const d = read("src/app/(tabs)/garage/[id].tsx");
     expect(d).not.toContain("TabPills");
     expect(d).not.toContain('label="Book maintenance"');
-    expect(d).toContain('title="Coming up"');
+    expect(d).toContain('title="Documents"'); // round7 point 9: the expiry list is titled Documents (was Coming up)
     expect(d).toContain("<Kicker>Papers</Kicker>");
     const a = read("src/app/(tabs)/garage/add.tsx");
     expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only
