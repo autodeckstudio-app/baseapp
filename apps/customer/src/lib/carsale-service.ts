@@ -43,3 +43,8 @@ export async function sendCarLead(listingId: string, kind: "interest" | "report"
 
 export const inr = (paise: number) => `₹${(paise / 100).toLocaleString("en-IN")}`;
 export const kmLabel = (km: number) => `${km.toLocaleString("en-IN")} km`;
+
+/** Seller removes one photo from their own listing (by position). The server checks ownership and keeps at least one photo. */
+export async function removeListingPhoto(listingId: string, index: number, expectedCount: number): Promise<void> {
+  await httpsCallable(functions, "removeMyListingPhoto")({ listingId, index, expectedCount });
+}
