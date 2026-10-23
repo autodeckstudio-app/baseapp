@@ -85,6 +85,7 @@ export type AuditAction =
   | "paper.submitted"
   | "paper.reviewed"
   | "paper.updated"
+  | "paper.deleted"
   | "dailyClose.performed"
   | "dailyClose.reclosed"
   | "gallery.imageAdded"

@@ -187,6 +187,7 @@ const DEFERRED = [
   "papers/listPapers.ts",
   "papers/reviewPaper.ts",
   "papers/submitMyPaper.ts",
+  "papers/myPaperEdits.ts",
   "papers/submitPaper.ts",
   "papers/updatePaper.ts",
   "push/registerPushToken.ts",

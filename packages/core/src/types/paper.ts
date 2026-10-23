@@ -15,6 +15,9 @@ export interface PaperVerification {
   customerId: string; // owner auth uid, denormalized for rules and customer reads
   kind: PaperKind;
   reference: string; // document / policy / certificate number
+  title?: string | null; // customer-given name, used for OTHER documents
+  supersededAt?: string | null; // set when a newer RC replaced this one; customer UI hides it
+  supersededBy?: string | null;
   issuedOn: string | null; // YYYY-MM-DD
   expiresOn: string | null; // YYYY-MM-DD
   evidenceUrl: string | null; // photo of the document, if captured

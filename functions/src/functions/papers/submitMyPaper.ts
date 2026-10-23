@@ -13,6 +13,7 @@ import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { submitMyPaperSchema } from "../../schemas/paper.js";
+import { assertNumberUnused, isActivePaper } from "../../lib/paper-numbers.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
@@ -33,6 +34,15 @@ export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) =
   assertTenant(user, vehicle.tenantId);
   if (vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
 
+  // Round 7 point 5: one active RC per car. A second RC is an edit, not a new record.
+  if (data.kind === "RC") {
+    const existing = await db.collection(COLLECTIONS.papers()).where("vehicleId", "==", data.vehicleId).where("customerId", "==", user.uid).get();
+    if (existing.docs.some((d) => { const p = d.data() as PaperVerification; return p.kind === "RC" && isActivePaper(p); })) {
+      throw new HttpsError("already-exists", "This car already has an RC. Edit it to replace it.");
+    }
+  }
+  await assertNumberUnused(db, { tenantId: vehicle.tenantId, customerId: user.uid, reference: data.reference });
+
   const ref = db.collection(COLLECTIONS.papers()).doc();
   const now = new Date().toISOString();
   const path = data.contentType
@@ -47,6 +57,7 @@ export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) =
     customerId: vehicle.ownerId,
     kind: data.kind,
     reference: data.reference,
+    ...(data.title ? { title: data.title } : {}),
     issuedOn: data.issuedOn ?? null,
     expiresOn: data.expiresOn ?? null,
     evidenceUrl: null,

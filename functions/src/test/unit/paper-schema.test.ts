@@ -32,7 +32,7 @@ describe("RC reference", () => {
   });
   it("insurance, PUC and other stay free text", () => {
     for (const kind of ["INSURANCE", "PUC", "OTHER"]) {
-      const r = parse({ kind, reference: "any thing / 12 - x" });
+      const r = parse({ kind, reference: "any thing / 12 - x", ...(kind === "OTHER" ? { title: "Warranty card" } : {}) }); // round7 point 8: OTHER now needs a name
       expect(r.success && r.data.reference).toBe("any thing / 12 - x");
     }
   });
