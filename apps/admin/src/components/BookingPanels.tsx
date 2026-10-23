@@ -6,6 +6,7 @@
 // cancel/settle callables inside CancelBookingPanel.
 import { useState } from "react";
 import type { Booking, ServiceJob, Service } from "@autodeck/core";
+import { formatDuration } from "@autodeck/core";
 import { setBookingQuote } from "../lib/bookings-service";
 import { CancelBookingPanel } from "./CancelBookingPanel";
 import { NoShowPanel } from "./NoShowPanel";
@@ -36,7 +37,7 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         <span className="ax-label">Slot</span>
         <div className="kv"><span>Date</span><span>{formatDayLong(booking.scheduledDate)}</span></div>
         <div className="kv"><span>Time</span><span>{formatTime(booking.scheduledAt)} to {formatTime(booking.estimatedEndAt)}</span></div>
-        <div className="kv"><span>Length</span><span>{booking.durationMinutes} min</span></div>
+        <div className="kv"><span>Length</span><span>{formatDuration(booking.durationMinutes)}</span></div>
         <div className="kv"><span>Bay</span><span>{bayName || "Assigned bay"}</span></div>
         {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
       </section>

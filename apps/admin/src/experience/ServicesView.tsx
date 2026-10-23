@@ -6,6 +6,7 @@ import type { IconName } from "@autodeck/ui/theme";
 // row shows starting price, time and warranty; the editor opens in a drawer.
 import { useState } from "react";
 import type { BayType, Service, ServiceCategory, VehicleCategory, WarrantyDurationUnit } from "@autodeck/core";
+import { formatDuration } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
 import { formatPaise } from "../lib/format";
 import { uploadServiceImage } from "../lib/service-image";
@@ -22,10 +23,7 @@ const BAY_NAME: Record<BayType, string> = { wash: "Wash bay", protection: "Prote
 const UNIT_NAME: Record<WarrantyDurationUnit, string> = { days: "Days", months: "Months", years: "Years", lifetime: "Lifetime" };
 
 export function duration(mins: number): string {
-  if (mins < 60) return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h} h ${m} min` : `${h} h`;
+  return formatDuration(mins);
 }
 
 function warranty(s: Service): string | null {

@@ -18,5 +18,6 @@ export * from "./expiry-reminder.js";
 export * from "./car-segments.js";
 export * from "./shop-order";
 export * from "./shop-concepts.js";
+export * from "./duration.js";
 
 // shop-fixture is a labelled test fixture. Import it from "@autodeck/core/shop-fixture" in dev and tests only, never through this barrel (production bundles must not carry it).

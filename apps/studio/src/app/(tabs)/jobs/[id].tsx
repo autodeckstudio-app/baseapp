@@ -18,7 +18,7 @@ import { approvalSendButton, pendingApprovalNote } from "../../../lib/approval-s
 import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
 import { listenToInspection, startInspection } from "../../../lib/inspection-service";
 import type { Vehicle, Customer, ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
-import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
+import { JOB_STATUS_TRANSITIONS, formatDuration } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import {
   colors,
@@ -376,7 +376,7 @@ export default function JobDetailScreen() {
   });
   const durationLabel =
     job.estimatedDurationMinutes < 24 * 60
-      ? `~${job.estimatedDurationMinutes} min`
+      ? `~${formatDuration(job.estimatedDurationMinutes)}`
       : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`;
 
   const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];

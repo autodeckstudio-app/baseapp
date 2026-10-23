@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
 import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
+import { formatDuration } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
@@ -290,7 +291,7 @@ export default function JobDetailPage() {
               <span>Work time</span>
               <span>
                 {job.estimatedDurationMinutes < 24 * 60
-                  ? `About ${job.estimatedDurationMinutes} min`
+                  ? `About ${formatDuration(job.estimatedDurationMinutes)}`
                   : `About ${Math.round(job.estimatedDurationMinutes / 60)} hrs`}
               </span>
             </div>
