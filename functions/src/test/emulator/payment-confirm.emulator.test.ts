@@ -65,7 +65,8 @@ async function seedStudio(studioId: string, tenantId: string) {
     currency: "INR",
     taxRatePercent: 18,
     taxDescription: "GST 18%",
-    operatingHours: [],
+    // Open every day: reschedule only offers slots on days that have hours.
+    operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d as 0 | 1 | 2 | 3 | 4 | 5 | 6, open: "09:00", close: "19:00", closed: false })),
     holidays: [],
     vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
     slotIntervalMinutes: 30,
@@ -460,24 +461,26 @@ describe("confirmManualPayment — production cash payment completion", () => {
     ).rejects.toThrow(/already been marked as paid/);
   });
 
-  it("S: cancelBooking is rejected once a payment has been initiated for its job", async () => {
+  // Owner 18 Oct (21:41 wamid ...M0FEQzlBRjRERDY1NzBBODkxMjkA, "2 - yes"; peer-confirmed): a customer may cancel their own booking.
+  // cancelBooking now refuses only when money is taken or being taken; a payment that was only started holds no money.
+  it("S: a customer can cancel when the payment was only started (no money taken); the started payment is cancelled (customer cancel now runs the shared runCancel path, which also handles paid bookings with a refund; not exercised here)", async () => {
     const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
     const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
 
-    await initiatePayment.run({
+    const initResult = (await initiatePayment.run({
       data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { paymentId: string };
+
+    await cancelBooking.run({
+      data: { bookingId: booking.id, reason: "test cancellation attempt" },
       auth: customerAuth(freshCustomerId),
     } as never);
 
-    await expect(
-      cancelBooking.run({
-        data: { bookingId: booking.id, reason: "test cancellation attempt" },
-        auth: customerAuth(freshCustomerId),
-      } as never),
-    ).rejects.toThrow(/Cannot cancel a booking once payment/);
-
     const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
-    expect((bookingSnap.data() as Booking).status).toBe("CONFIRMED");
+    expect((bookingSnap.data() as Booking).status).toBe("CANCELLED");
+    const paySnap = await db.collection(COLLECTIONS.payments()).doc(initResult.paymentId).get();
+    expect(paySnap.data()?.["status"]).toBe("cancelled");
   });
 
   it("T: confirmManualPayment cannot complete payment for an already-cancelled job", async () => {

@@ -19,6 +19,7 @@ process.env["USE_PAYMENT_MOCK"] = "true";
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { createApproval } from "../../functions/approval/createApproval.js";
 import { respondToApproval } from "../../functions/approval/respondToApproval.js";
@@ -168,6 +169,11 @@ async function jobForBooking(bookingId: string) {
   return doc;
 }
 
+// Delivery now needs the visit paid in full with a live invoice (advanceJobStatus), so the studio records the payment before the last step.
+async function payInFull(jobId: string, studioUid: string, tenantId = TENANT_A) {
+  await recordManualPayment.run({ data: { jobId, method: "cash" }, auth: studioAuth(studioUid, tenantId) } as never);
+}
+
 async function advanceOnce(jobId: string, studioUid: string, tenantId = TENANT_A) {
   await advanceJobStatus.run({ data: { jobId }, auth: studioAuth(studioUid, tenantId) } as never);
 }
@@ -249,7 +255,9 @@ describe("Approval / additional-work workflow", () => {
       const vehicle = await seedVehicle(uid("veh"), TENANT_A, cust);
       const booking = await bookOnce(cust, vehicle.id, originalService);
       const jobDoc = await jobForBooking(booking.id);
-      for (let i = 0; i < 5; i++) await advanceOnce(jobDoc.id, studioUid);
+      for (let i = 0; i < 4; i++) await advanceOnce(jobDoc.id, studioUid);
+      await payInFull(jobDoc.id, studioUid);
+      await advanceOnce(jobDoc.id, studioUid);
 
       const addSvc = await seedAdditionalService(uid("svc-add"), TENANT_A, "Extra", 50000);
       await expect(
@@ -588,6 +596,7 @@ describe("Approval / additional-work workflow", () => {
         auth: customerAuth(cust),
       } as never);
 
+      await payInFull(jobId, studioUid);
       await advanceOnce(jobId, studioUid); // -> DELIVERED, should now succeed
       const job = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
       expect(job.status).toBe("DELIVERED");
