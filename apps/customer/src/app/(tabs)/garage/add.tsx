@@ -300,7 +300,7 @@ export default function AddVehicleScreen() {
 
         <View style={{ gap: space.breath }}>
           <Kicker>Size</Kicker>
-          <T role="caption" tone="secondary">Saved with your car. Prices will use this size automatically.</T>
+          <T role="caption" tone="secondary">Saved with your car. Only PPF prices change with car size.</T>
           <SelectField label="Car size" value={size ?? ""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>{setSize(v as VehicleCategory);setSizeError(false);}}/>
           {sizeError?<T role="caption" tone="danger">Choose your car's size.</T>:null}
         </View>
