@@ -1,3 +1,4 @@
+import { formatServiceTime } from "../../../lib/duration";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { extrasFromParam } from "../../../lib/visit-extras";
 import { Pressable, View } from "react-native";
@@ -29,11 +30,6 @@ import { useAuth } from "../../../hooks/useAuth";
 // authoritative calendar span, which depends on operating hours/holidays, is
 // already shown via "Expected ready" below), so express it in hours once it
 // crosses a day rather than implying a calendar-day count.
-function formatDuration(minutes: number): string {
-  if (minutes < 24 * 60) return `~${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  return `~${hours} hrs of service time`;
-}
 
 export default function BookingConfirmScreen() {
   const params = useLocalSearchParams<{
@@ -206,7 +202,7 @@ export default function BookingConfirmScreen() {
     params.estimatedEndDate &&
     new Date(`${params.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
-  const durationLabel = service ? formatDuration(service.estimatedDurationMinutes + extraRows.reduce((m, r) => m + r.minutes, 0)) : "-";
+  const durationLabel = service ? formatServiceTime(service.estimatedDurationMinutes + extraRows.reduce((m, r) => m + r.minutes, 0)) : "-";
   const visitTotal = breakdown ? breakdown.total + extraRows.reduce((t, r) => t + r.total, 0) : null;
 
   return (

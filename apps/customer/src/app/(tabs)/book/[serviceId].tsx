@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { pickDay } from "../../../lib/booking-ideas";
+import { formatDuration } from "../../../lib/duration";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
 import { getAvailability, peekAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
@@ -25,7 +26,7 @@ import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skelet
 
 const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 
-const durationText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+const durationText = formatDuration;
 
 export default function BookServiceScreen() {
   const { serviceId, extras: extrasParam, day } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string }>();

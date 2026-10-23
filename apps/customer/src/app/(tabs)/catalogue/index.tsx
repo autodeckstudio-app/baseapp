@@ -1,3 +1,4 @@
+import { formatDurationWithDays } from "../../../lib/duration";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import type { ReactElement } from "react";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../../lib/vehicle-size";
@@ -29,11 +30,7 @@ function fromPrice(xs: Service[]): string | null {
   return a.length ? `From ${rupees(Math.min(...a))}` : xs.length ? "Consult" : null;
 }
 
-function duration(min: number): string {
-  if (min < 60) return `${min} min`;
-  const h = min / 60;
-  return h >= 8 ? `${Math.round(h / 8)} day${h >= 16 ? "s" : ""}` : `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
-}
+const duration = formatDurationWithDays;
 
 const groupPhoto = (key: string): ImageSourcePropType | null => { const c = GROUP_PHOTO_CATEGORY[key]; return c ? serviceImagery[c] : null; };
 const groupLabel = (g: MenuGroup): string => (g.key === "mods" ? "Modifications" : g.label);

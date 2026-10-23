@@ -1,3 +1,4 @@
+import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
 import { CarThumb } from "../../../ui/CarThumb";
@@ -81,10 +82,6 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
 // Multi-day PPF services run into thousands of minutes - express as hours
 // once past a day (this is service-time, not calendar time; the
 // authoritative calendar span is shown separately via "Expected ready").
-function formatDuration(minutes: number): string {
-  if (minutes < 24 * 60) return `~${minutes} min`;
-  return `~${Math.round(minutes / 60)} hrs of service time`;
-}
 
 export default function BookingDetailScreen() {
   const { id, placed, mock } = useLocalSearchParams<{ id: string; placed?: string; mock?: string }>();
@@ -381,7 +378,7 @@ export default function BookingDetailScreen() {
 
       <Pane pad="gap">
         <Row detailTone="secondary" title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
-        <Row detailTone="secondary" title="Duration" detail={formatDuration(booking.durationMinutes)} />
+        <Row detailTone="secondary" title="Duration" detail={formatServiceTime(booking.durationMinutes)} />
         {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
         {booking.notes !== null && booking.notes.trim() !== "" ? <Row detailTone="secondary" title="Notes" detail={booking.notes} last /> : null}
       </Pane>
