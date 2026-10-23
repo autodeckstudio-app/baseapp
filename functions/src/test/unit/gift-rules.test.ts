@@ -26,6 +26,7 @@ describe("gift block reasons", () => {
 });
 describe("gift guardrails (source)", () => {
   const src = readFileSync(`${__dirname}/../../functions/gift/gift.ts`, "utf8");
+  const purchaseSrc = readFileSync(`${__dirname}/../../lib/gift-purchase.ts`, "utf8");
   const booking = readFileSync(`${__dirname}/../../functions/booking/createBooking.ts`, "utf8");
   it("no client price: no amount in any input schema", () => {
     expect(src).not.toMatch(/z\.object\(\{[^}]*(amount|price)/i);
@@ -39,7 +40,8 @@ describe("gift guardrails (source)", () => {
   });
   it("the gift record holds only the hash of the code (the plain code is in the server-only giftSecrets, see gift-purchase.test.ts)", () => {
     expect(src).toContain("codeHash");
-    expect(src).toMatch(/giftId: ref\.id, buyerId: user\.uid, tenantId: user\.claims\.tenantId, code, createdAt/);
+    // The plain code is written only to server-only giftSecrets (creation lives in lib/gift-purchase.ts).
+    expect(purchaseSrc).toMatch(/giftId: ref\.id, buyerId: user\.uid, tenantId: user\.claims\.tenantId, code, createdAt/);
   });
   it("booking marks the gift used in the same transaction, with no stacking", () => {
     expect(booking).toContain('status: "REDEEMED"');

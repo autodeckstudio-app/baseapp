@@ -5,7 +5,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Payment, Invoice } from "@autodeck/core";
+import type { Payment, Invoice, Gift } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -103,6 +103,12 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
       ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId))
       : null;
 
+    // A refunded gift payment must never come back as usable credit.
+    const giftRefundRef = payment.targetType === "gift" && payment.giftId
+      ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId)
+      : null;
+    const giftRefundSnap = giftRefundRef ? await tx.get(giftRefundRef) : null;
+
     // Mark original payment as refunded
     tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
       status: "refunded",
@@ -132,6 +138,22 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
             after: { status: "void", reason: data.reason },
           });
         }
+      }
+    }
+
+    // Void the gift this payment activated (mirrors the refund.created webhook path).
+    if (giftRefundRef && giftRefundSnap?.exists) {
+      const g = giftRefundSnap.data() as Gift;
+      if (g.status !== "REDEEMED" && g.status !== "REFUNDED" && g.status !== "VOID") {
+        tx.update(giftRefundRef, { status: "REFUNDED", voidedAt: now, voidReason: "Payment refunded" });
+        writeAuditLog(tx, {
+          action: "gift.voided",
+          entityType: "Gift",
+          entityId: giftRefundRef.id,
+          user,
+          studioId: payment.studioId,
+          after: { reason: "payment_refunded", tail: g.codeTail },
+        });
       }
     }
 

@@ -43,6 +43,8 @@ export const COLLECTIONS = {
   giftAttempts: () => "giftAttempts",
   /** Server only (default-deny rules): the plain gift code, so a buyer who closed the app after paying can get it again. */
   giftSecrets: () => "giftSecrets",
+  /** Server only (default-deny rules): one in-flight gift purchase per buyer, serializes concurrent createGift calls. */
+  giftPurchaseSlots: () => "giftPurchaseSlots",
   carListings: () => "carListings",
   carLeads: () => "carLeads",
   studioConfig: () => "studioConfig",

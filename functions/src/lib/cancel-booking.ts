@@ -30,6 +30,7 @@ export function planRefund(i: { paidPaise: number; feePaise: number; waive: bool
 export interface CancelReads {
   membership: { ref: DocumentReference; snap: DocumentSnapshot } | null;
   gift: { ref: DocumentReference; snap: DocumentSnapshot } | null;
+  giftPayment: { ref: DocumentReference; snap: DocumentSnapshot } | null;
   pickup: { ref: DocumentReference; snap: DocumentSnapshot };
   pickupMembership: { ref: DocumentReference; snap: DocumentSnapshot } | null;
 }
@@ -39,13 +40,20 @@ export async function readCancelReads(tx: Transaction, db: Firestore, booking: B
   const membership = booking.membershipId ? await read(db.collection(COLLECTIONS.memberships()).doc(booking.membershipId)) : null;
   const giftId = (booking as { giftId?: string }).giftId;
   const gift = giftId ? await read(db.collection(COLLECTIONS.gifts()).doc(giftId)) : null;
+  // The original gift payment decides whether a cancelled booking may hand the gift back:
+  // a refunded (or refund-marked) payment means the credit must stay dead.
+  let giftPayment: CancelReads["giftPayment"] = null;
+  if (gift?.snap.exists) {
+    const pq = await tx.get(db.collection(COLLECTIONS.payments()).where("giftId", "==", giftId).limit(1));
+    if (!pq.empty) giftPayment = { ref: pq.docs[0]!.ref, snap: pq.docs[0]! };
+  }
   const pRef = db.collection(COLLECTIONS.pickupRequests()).doc(bookingId);
   const pSnap = await tx.get(pRef);
   const heldId = pSnap.exists ? (pSnap.data() as { memberMembershipId?: string | null }).memberMembershipId ?? null : null;
   const pickupMembership = heldId && heldId !== booking.membershipId
     ? await read(db.collection(COLLECTIONS.memberships()).doc(heldId))
     : null;
-  return { membership, gift, pickup: { ref: pRef, snap: pSnap }, pickupMembership };
+  return { membership, gift, giftPayment, pickup: { ref: pRef, snap: pSnap }, pickupMembership };
 }
 
 /**
@@ -90,9 +98,19 @@ export function writeCancelRestores(tx: Transaction, reads: CancelReads, booking
   const g = reads.gift;
   if (g?.snap.exists) {
     const gift = g.snap.data() as { status?: string; bookingId?: string | null };
+    const pay = reads.giftPayment?.snap.exists
+      ? (reads.giftPayment.snap.data() as { status?: string; refundedAt?: string | null; razorpayRefundId?: string | null })
+      : null;
+    const paymentRefunded = !!pay && (pay.status === "refunded" || !!pay.refundedAt || !!pay.razorpayRefundId);
     if (gift.status === "REDEEMED" && gift.bookingId === bookingId) {
-      tx.update(g.ref, { status: "ACTIVE", redeemedBy: null, redeemedAt: null, bookingId: null });
-      if (audit) writeAuditLog(tx, { action: "gift.restored", entityType: "Gift", entityId: g.ref.id, user, studioId: booking.studioId, after: { bookingId, reason: note } });
+      if (paymentRefunded) {
+        // The money went back: the gift stays REFUNDED and is never revived by a cancel.
+        tx.update(g.ref, { status: "REFUNDED", voidedAt: now, voidReason: "Payment refunded" });
+        if (audit) writeAuditLog(tx, { action: "gift.restore_skipped", entityType: "Gift", entityId: g.ref.id, user, studioId: booking.studioId, after: { bookingId, reason: "payment_refunded" } });
+      } else {
+        tx.update(g.ref, { status: "ACTIVE", redeemedBy: null, redeemedAt: null, bookingId: null });
+        if (audit) writeAuditLog(tx, { action: "gift.restored", entityType: "Gift", entityId: g.ref.id, user, studioId: booking.studioId, after: { bookingId, reason: note } });
+      }
     }
   }
 }
