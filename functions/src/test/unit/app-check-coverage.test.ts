@@ -204,6 +204,7 @@ const DEFERRED = [
   "customer/licensePhoto.ts",
   "vehicle/issueVehiclePhotoUploadUrl.ts",
   "vehicle/publishVehiclePhoto.ts",
+  "vehicle/removeMyVehicleImage.ts",
   "vehicle/restoreVehicle.ts",
   "auth/cancelAccountDeletion.ts",
 ].sort();

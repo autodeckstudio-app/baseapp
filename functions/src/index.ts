@@ -16,6 +16,7 @@ export { createWalkinCustomer } from "./functions/auth/createWalkinCustomer.js";
 export { updateCustomerContact } from "./functions/auth/updateCustomerContact.js";
 export { submitReview } from "./functions/booking/submitReview.js";
 export { publishVehiclePhoto } from "./functions/vehicle/publishVehiclePhoto.js";
+export { removeMyVehicleImage } from "./functions/vehicle/removeMyVehicleImage.js";
 export { issueLicensePhotoUploadUrl, publishLicensePhoto } from "./functions/customer/licensePhoto.js";
 export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhotoUploadUrl.js";
 

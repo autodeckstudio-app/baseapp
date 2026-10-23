@@ -80,3 +80,5 @@ export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
 export type ArchiveVehicleInput = z.infer<typeof archiveVehicleSchema>;
 export type IssueVehiclePhotoUploadUrlInput = z.infer<typeof issueVehiclePhotoUploadUrlSchema>;
+
+export const removeMyVehicleImageSchema = z.object({ vehicleId: z.string().min(1).max(120), kind: z.enum(["cover", "rc"]) }).strict();
