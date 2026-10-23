@@ -593,7 +593,7 @@ describe("car detail and add car (batch 1)", () => {
     expect(d).toContain('title="Coming up"');
     expect(d).toContain("<Kicker>Papers</Kicker>");
     const a = read("src/app/(tabs)/garage/add.tsx");
-    expect(a).toContain("uploadVehicleRc");
+    expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only
     expect(a).toContain("uploadVehiclePhoto");
   });
 });
