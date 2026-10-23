@@ -23,7 +23,9 @@ import {
 import { useRouter, useSegments, useFocusEffect } from "expo-router";
 import { glassSurface, glassQuiet } from "../lib/glass";
 import { raised } from "../lib/raised";
-const inkButton = (mode: string) => raised(mode as never).dark;
+// Owner design choice: customer main actions are white (orange stays on active
+// nav and small highlights). Day: white fill; night keeps the off-white fill.
+const inkButton = (mode: string): ViewStyle => ({ ...raised(mode as never).dark, backgroundColor: mode === "light" ? "#FFFFFF" : "#F3F1ED" });
 import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
@@ -269,8 +271,8 @@ export function Button({
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? (name === "light" ? "#FFFFFF" : "#16181C") : colors.textPrimary} /> : null}
-      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: name === "light" ? "#FFFFFF" : "#16181C", fontWeight: "700" } : undefined}>
+      {busy ? <ActivityIndicator color={primary ? "#16181C" : colors.textPrimary} /> : null}
+      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: "#16181C", fontWeight: "700" } : undefined}>
         {label}
       </T>
     </Pressable>

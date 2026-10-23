@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
+import { resolveUseEmulator } from "./emulator-flag";
 
 // metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
 // the "react-native" package-exports condition so Metro picks @firebase/auth's RN build
@@ -52,7 +53,7 @@ export const db = initializeFirestore(app, Platform.OS === "web" ? { experimenta
 export const functions = getFunctions(app, "asia-south1");
 export const storage = getStorage(app);
 
-export const useEmulator = process.env["USE_FIREBASE_EMULATOR"] === "true";
+export const useEmulator = resolveUseEmulator(process.env);
 
 if (useEmulator) {
   const host = process.env["FIREBASE_EMULATOR_HOST"] ?? "localhost";

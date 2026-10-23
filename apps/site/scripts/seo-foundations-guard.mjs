@@ -16,6 +16,8 @@ if (shop.includes('noindex')) fail('storefront must stay indexable');
 if (!sitemap.includes('https://www.autodeck.in/faq')) fail('sitemap missing /faq');
 if (!faq.includes('"@type":"FAQPage"')) fail('faq page missing FAQPage schema');
 if ((faq.match(/"@type":"Question"/g) ?? []).length !== 11) fail('FAQPage must list all 11 questions');
+if (privacy.includes('Car care, connected')) fail('subpage footer must use the approved tagline, not "Car care, connected"');
+if (!privacy.includes('Complete car care. All under one roof.')) fail('subpage footer missing approved tagline');
 const first = home.match(/<h[12][ >]/);
 if (!first || first[0] !== '<h1 ') fail('homepage first heading is not the h1');
 if (home.includes('<h2 class="rmh"')) fail('pre-h1 story headings must be paragraphs');
