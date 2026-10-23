@@ -29,7 +29,7 @@ beforeAll(async () => {
     firestore: {
       rules: readFileSync(RULES_PATH, "utf8"),
       host: "localhost",
-      port: 8080,
+      port: Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? (process.env["FIRESTORE_EMULATOR_HOST"]?.split(":")[1] ?? "8080")),
     },
   });
 });
