@@ -13,4 +13,6 @@ it("uploader tiles have remove and replace badges; saved car/RC photos ask befor
   expect(u).toContain("onClick:()=>setConfirmIdx(i)");
   expect(readFileSync("src/app/(tabs)/cars/[id].tsx", "utf8")).toContain('title="Remove this image?"');
   expect(readFileSync("src/lib/carsale-service.ts", "utf8")).toContain('"removeMyListingPhoto"');
+  expect(readFileSync("src/lib/carsale-service.ts", "utf8")).toContain('"replaceMyListingPhoto"');
+  expect(readFileSync("src/app/(tabs)/cars/[id].tsx", "utf8")).toContain('title="Replace this image?"');
 });

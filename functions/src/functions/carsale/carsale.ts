@@ -19,6 +19,7 @@ import {
   listCarListingsSchema,
   markMyListingSoldSchema,
   removeMyListingPhotoSchema,
+  replaceMyListingPhotoSchema,
   noContactInText,
   reviewListingSchema,
   setLeadStatusSchema,
@@ -172,6 +173,39 @@ export const removeMyListingPhoto = onCall({ region: "asia-south1" }, async (req
     writeAuditLog(tx, { action: "carListing.photoRemoved", entityType: "carListing", entityId: ref.id, user, studioId: fresh.studioId, before: { photos: fresh.photoPaths.length }, after: { photos: next.length } });
   });
   return { id: ref.id };
+});
+
+// Seller replaces one photo on their own listing. The new file is uploaded first through issueListingPhotoUploadUrl; this call swaps it in
+// at that position inside a transaction (owner, expectedCount and the old path are re-checked, so a concurrent edit cannot be overwritten), then
+// removes the old object. Old-object removal is best effort: if Storage fails the listing already shows the new photo and a leftover file may remain.
+export const replaceMyListingPhoto = onCall({ region: "asia-south1" }, async (request) => {
+  const user = extractCustomerUser(request);
+  assertRole(user, "customer");
+  const d = validate(replaceMyListingPhotoSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "paper.submit");
+  const ref = col().doc(d.listingId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Listing not found.");
+  const cur = snap.data() as CarListing;
+  if (cur.sellerId !== user.uid || cur.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "This is not your listing.");
+  if (cur.status === "sold") throw new HttpsError("failed-precondition", "This listing is closed.");
+  if (cur.photoPaths.length !== d.expectedCount || d.index >= cur.photoPaths.length) throw new HttpsError("aborted", "Your photos changed. Refresh and try again.");
+  checkPhotos([d.newPath], cur.tenantId);
+  if (cur.photoPaths.includes(d.newPath)) throw new HttpsError("invalid-argument", "That photo is already on this listing.");
+  const [uploaded] = await getStorage().bucket().file(d.newPath).exists();
+  if (!uploaded) throw new HttpsError("failed-precondition", "The new photo did not upload. Try again.");
+  const oldPath = cur.photoPaths[d.index]!;
+  await getFirestore().runTransaction(async (tx) => {
+    const fresh = (await tx.get(ref)).data() as CarListing;
+    if (fresh.sellerId !== user.uid) throw new HttpsError("permission-denied", "This is not your listing.");
+    if (fresh.photoPaths[d.index] !== oldPath || fresh.photoPaths.length !== d.expectedCount) throw new HttpsError("aborted", "Your photos changed. Refresh and try again.");
+    const next = fresh.photoPaths.map((p, i) => (i === d.index ? d.newPath : p));
+    tx.update(ref, { photoPaths: next, updatedAt: new Date().toISOString() });
+    writeAuditLog(tx, { action: "carListing.photoReplaced", entityType: "carListing", entityId: ref.id, user, studioId: fresh.studioId, before: { photos: fresh.photoPaths.length }, after: { photos: next.length } });
+  });
+  let oldRemoved = true;
+  try { checkPhotos([oldPath], cur.tenantId); await getStorage().bucket().file(oldPath).delete({ ignoreNotFound: true }); } catch { oldRemoved = false; }
+  return { id: ref.id, oldRemoved };
 });
 
 export const reviewListing = onCall({ region: "asia-south1" }, async (request) => {

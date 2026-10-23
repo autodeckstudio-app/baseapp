@@ -6,8 +6,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Pane, Screen, Skeleton, T } from "../../../ui/kit";
-import { getCarListings, inr, kmLabel, markListingSold, removeListingPhoto, sendCarLead } from "../../../lib/carsale-service";
+import { getCarListings, inr, kmLabel, markListingSold, removeListingPhoto, replaceListingPhoto, sendCarLead } from "../../../lib/carsale-service";
 import { hasCarPrice } from "../../../lib/cars-home";
+import { FileUploader } from "../../../ui/inputs";
 import { IconAction } from "../../../ui/IconAction";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -24,6 +25,8 @@ export default function CarDetail() {
   const [confirmSold,setConfirmSold] = useState(false);
   const [confirmPhoto,setConfirmPhoto] = useState(false);
   const [photoBusy,setPhotoBusy] = useState(false);
+  const [replacing,setReplacing] = useState(false);
+  const [replacement,setReplacement] = useState<{ blob: Blob; type: string } | null>(null);
   const [photoError,setPhotoError] = useState<string | null>(null);
   const [car, setCar] = useState<CarListingView | null | undefined>(undefined);
   const [phone, setPhone] = useState("");
@@ -87,8 +90,18 @@ export default function CarDetail() {
       {car.mine && car.status !== "sold" && car.photoUrls.length > 1 ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <IconAction kind="delete" label="Remove this photo" onPress={() => { setPhotoError(null); setConfirmPhoto(true); }} />
-          <T role="caption" tone="tertiary">Remove photo {photoIndex + 1}</T>
+          <IconAction kind="edit" label="Replace this photo" onPress={() => { setPhotoError(null); setReplacement(null); setReplacing(true); }} />
+          <T role="caption" tone="tertiary">Photo {photoIndex + 1}: remove or replace</T>
         </View>
+      ) : null}
+      {replacing && !replacement ? (
+        <View style={{ gap: space.hair }}>
+          <FileUploader label="Choose a replacement photo" files={[]} onChange={(fs) => { const f = fs[0]; if (f) setReplacement({ blob: f.blob, type: f.type }); }} />
+          <Button label="Cancel" kind="quiet" onPress={() => setReplacing(false)} />
+        </View>
+      ) : null}
+      {replacing && replacement ? (
+        <Notice title="Replace this image?" body="The new photo takes this spot. The old one is removed. Your listing and its other photos stay." action={<View style={{ gap: space.breath }}><Button label="Replace" busy={photoBusy} onPress={() => { setPhotoBusy(true); replaceListingPhoto(car.id, photoIndex, car.photoUrls.length, replacement.blob, replacement.type).then(() => { setReplacing(false); setReplacement(null); setAttempt((n) => n + 1); }).catch(() => setPhotoError("Could not replace the photo. Nothing was changed. Try again.")).finally(() => setPhotoBusy(false)); }} /><Button label="Keep the old one" kind="quiet" onPress={() => { setReplacing(false); setReplacement(null); }} /></View>} />
       ) : null}
       {confirmPhoto ? (
         <Notice title="Remove this image?" body="Only this photo is removed. Your listing and its other photos stay." action={<View style={{ gap: space.breath }}><Button label="Remove" busy={photoBusy} onPress={() => { setPhotoBusy(true); removeListingPhoto(car.id, photoIndex, car.photoUrls.length).then(() => { setConfirmPhoto(false); setPhotoIndex(0); setAttempt((n) => n + 1); }).catch(() => setPhotoError("Could not remove the photo. Nothing was changed. Try again.")).finally(() => setPhotoBusy(false)); }} /><Button label="Keep it" kind="quiet" onPress={() => setConfirmPhoto(false)} /></View>} />
