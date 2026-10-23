@@ -88,7 +88,7 @@ function useBar(appBar?: string, onBackOverride?: () => void) {
   const router = useRouter();
   const segs = useSegments() as string[];
   const root = segs[1] ?? "";
-  if (segs[0] !== "(tabs)") return appBar ? { title: appBar } : null;
+  if (segs[0] !== "(tabs)") return appBar ? { title: appBar, back: onBackOverride } : null;
   const deep = segs.length >= 3 && !(segs[2] === "index");
   const fallback = SUB_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
   const title = appBar ?? BAR_TITLES[root];
