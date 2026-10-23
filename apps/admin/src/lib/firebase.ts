@@ -54,7 +54,8 @@ if (useEmulator) {
   const host = process.env["NEXT_PUBLIC_FIREBASE_EMULATOR_HOST"] ?? "localhost";
   try {
     connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
-    connectFirestoreEmulator(db, host, 8080);
+    const fsPort = Number(process.env["NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT"] ?? "8080");
+    connectFirestoreEmulator(db, host, fsPort);
     connectFunctionsEmulator(functions, host, 5001);
   } catch {
     // Already connected (Next.js fast refresh)
