@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
-import { pickDay } from "../../../lib/booking-ideas";
+import { pickDay, comboFor } from "../../../lib/booking-ideas";
 import { formatDuration } from "../../../lib/duration";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
@@ -57,7 +57,10 @@ export default function BookServiceScreen() {
   const [catalogue, setCatalogue] = useState<Service[]>([]);
   // A claimed gift covers its wash alone (server blocks gift + extras), so extras stay hidden while a code is pending.
   const [giftPending] = useState(() => (GIFT_LIVE ? takePendingGiftCode() !== null : false));
-  const [extraIds, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
+  const [extraIdsState, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
+  // A combo is one fixed bundle: no options, no default selections, nothing added to price or time, and no extras are sent when booking.
+  const combo = comboFor(catalogue, serviceId);
+  const extraIds = combo ? [] : extraIdsState;
   const [upgradeNote, setUpgradeNote] = useState<string | null>(null);
   useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]);
   const pickExtra = (id: string) => {
@@ -214,7 +217,14 @@ export default function BookServiceScreen() {
         <Button label="Add car type" kind="quiet" onPress={() => router.push(`/(tabs)/garage/${selectedVehicle.id}`)} />
       </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{segmentLabel(selectedVehicle.category)} · Saved with your car</T>:null}
 
-      {service.priceOnRequest !== true && !giftPending && eligibleExtras(service, catalogue).length > 0 ? (
+      {combo ? (
+        <View style={{ gap: space.hair }}>
+          <Kicker>Included</Kicker>
+          <T role="body" tone="secondary">{combo.parts.join(" + ")}</T>
+        </View>
+      ) : null}
+
+      {!combo && service.priceOnRequest !== true && !giftPending && eligibleExtras(service, catalogue).length > 0 ? (
         <View style={{ gap: space.hair }}>
           <Kicker>Add to this visit</Kicker>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
