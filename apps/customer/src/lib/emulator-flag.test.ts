@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveUseEmulator } from "./emulator-flag";
+import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
 
 // The emulator flag decides whether the app talks to local emulators or the
 // real backend. A production build sets neither variable, so the default
@@ -19,5 +19,18 @@ describe("resolveUseEmulator", () => {
     expect(resolveUseEmulator({ USE_FIREBASE_EMULATOR: "1" })).toBe(false);
     expect(resolveUseEmulator({ EXPO_PUBLIC_USE_FIREBASE_EMULATOR: "yes" })).toBe(false);
     expect(resolveUseEmulator({ EXPO_PUBLIC_USE_FIREBASE_EMULATOR: "True" })).toBe(false);
+  });
+});
+
+describe("emulatorTargets", () => {
+  it("defaults to the Firebase CLI ports on localhost", () => {
+    expect(emulatorTargets({})).toEqual({ host: "localhost", firestorePort: 8080, functionsPort: 5001, authUrl: "http://localhost:9099" });
+  });
+  it("lets the web export reach the money-test Firestore port", () => {
+    const t = emulatorTargets({ EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: "8081" });
+    expect(t.firestorePort).toBe(8081);
+  });
+  it("honours an explicit host override", () => {
+    expect(emulatorTargets({ EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: "127.0.0.1" }).authUrl).toBe("http://127.0.0.1:9099");
   });
 });
