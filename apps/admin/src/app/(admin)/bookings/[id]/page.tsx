@@ -75,7 +75,7 @@ export default function BookingDetailPage() {
 
   // One detail page per visit: once the car is checked in, the Job page shows the booking too.
   useEffect(() => {
-    if (job) router.replace(`/jobs/${job.id}`);
+    if (job && job.status !== "CANCELLED") router.replace(`/jobs/${job.id}`);
   }, [job, router]);
 
   if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
