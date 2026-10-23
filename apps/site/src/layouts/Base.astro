@@ -1,5 +1,6 @@
 ---
 import '../styles/studio.css';
+import { localBusiness } from '../data/local-business.mjs';
 interface Props {
   title: string;
   description: string;
@@ -8,26 +9,6 @@ interface Props {
 const { title, description, page = '' } = Astro.props;
 const ogImage = 'https://www.autodeck.in/assets/og.png';
 const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', 'https://www.autodeck.in').href;
-const localBusiness = {
-  '@context': 'https://schema.org',
-  '@type': 'AutoRepair',
-  name: 'AutoDeck',
-  url: 'https://www.autodeck.in',
-  image: ogImage,
-  telephone: '+91 98986 79711',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: 'Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge',
-    addressLocality: 'Ahmedabad',
-    postalCode: '380006',
-    addressCountry: 'IN',
-  },
-  openingHoursSpecification: [
-    { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '10:00', closes: '21:00' },
-    { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '10:00', closes: '19:00' },
-  ],
-  sameAs: ['https://instagram.com/autodeck.studio'],
-};
 ---
 <!doctype html>
 <html lang="en">
@@ -41,6 +22,10 @@ const localBusiness = {
   <meta property="og:type" content="website" />
   <meta property="og:image" content={ogImage} />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta property="og:site_name" content="AutoDeck" />
+  <meta property="og:locale" content="en_IN" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
   <link rel="canonical" href={canonical} />
   <meta property="og:url" content={canonical} />
   <script type="application/ld+json" set:html={JSON.stringify(localBusiness)} />
@@ -53,6 +38,6 @@ const localBusiness = {
 <body class={page}>
   <header class="header"><div class="wrap header-row"><a href="/" class="logo" aria-label="AutoDeck home"><img src="/assets/logo-horizontal.svg" alt="AutoDeck" width="156" height="34" /></a><nav aria-label="Main"><a href="/#app">App</a><a href="/cars" aria-current={page === 'cars' ? 'page' : undefined}>Cars</a><a href="/shop" aria-current={page === 'shop' ? 'page' : undefined}>Store</a></nav></div></header>
   <main><slot /></main>
-  <footer class="footer"><div class="wrap footer-row"><a class="logo" href="/" aria-label="AutoDeck home"><img src="/assets/logo-horizontal.svg" alt="AutoDeck" width="130" height="28" /></a><p>Car care, connected. Ahmedabad.</p><div><a href="tel:+919898679711">+91 98986 79711</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/faq">FAQ</a></div></div></footer>
+  <footer class="footer"><div class="wrap footer-row"><a class="logo" href="/" aria-label="AutoDeck home"><img src="/assets/logo-horizontal.svg" alt="AutoDeck" width="130" height="28" /></a><p>Car care, connected. Ahmedabad.</p><p>Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad 380006. Mon to Sat 10 am to 9 pm, Sun 10 am to 7 pm.</p><div><a href="tel:+919898679711">+91 98986 79711</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/faq">FAQ</a></div></div></footer>
   <script>import '../scripts/studio.js';</script>
 </body></html>

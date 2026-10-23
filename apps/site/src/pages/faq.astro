@@ -14,8 +14,18 @@ const faqs = [
   { q: 'Do you buy and sell cars?', a: 'Yes. Cars are listed in the app and the studio reviews every listing before other customers see it. Number plates, owner details and prices stay hidden until you sign in.', link: { href: '/cars', text: 'See the showcase' } },
   { q: 'How do I reach the studio?', a: 'Call or WhatsApp +91 98986 79711, or write to autodeckstudio@gmail.com.', phone: true },
 ];
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
 ---
 <Base title="Questions · AutoDeck" description="Answers about booking, hours, pickup and drop, Club plans and car care at AutoDeck, Ahmedabad." page="faq">
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
   <section class="phero"><div class="wrap">
     <p class="eyebrow">Good to know</p>
     <h1>Questions.</h1>
