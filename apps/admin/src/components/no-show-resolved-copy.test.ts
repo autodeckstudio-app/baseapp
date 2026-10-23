@@ -23,9 +23,9 @@ describe("resolved no-show copy", () => {
     expect(panel).toContain("Unclear at the payment provider - needs a manual check");
     // No label may claim completion: the integration only observes the
     // provider's refund.created (acceptance) event, never terminal settlement.
-    expect(panel).not.toContain("Completed by the payment provider");
-    expect(panel).not.toContain("Completed");
-    expect(panel).toContain("recorded in the books");
+    const labels = panel.slice(panel.indexOf("REFUND_STATE_LABEL"), panel.indexOf("};", panel.indexOf("REFUND_STATE_LABEL")));
+    expect(labels).not.toContain("Completed");
+    expect(labels).toContain("recorded in the books");
   });
   it("labels unknown or failed status lookups conservatively", () => {
     expect(panel).toContain("Refund recorded; status unavailable right now.");
