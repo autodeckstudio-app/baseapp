@@ -730,3 +730,8 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
     expect(read("../../packages/ui/src/theme/float.ts")).toContain("export const LAMP_GLOW");
   });
 });
+
+it("gift-covered zero-total bookings do not tell the customer to pay at the studio; other bookings keep the pay line",()=>{
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("Your gift covers this wash.");expect(b).toContain("canPay && !payment && !giftCovered");expect(b).toContain("You pay at the studio, and the team marks it paid once you do.");
+  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Your slot is confirmed. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
+});

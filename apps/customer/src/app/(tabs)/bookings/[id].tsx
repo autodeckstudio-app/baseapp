@@ -266,6 +266,7 @@ export default function BookingDetailScreen() {
   const cancel = cancelState(booking, Date.now(), svc?.category);
   const { canCancel, lateToCancel } = cancel;
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
+  const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
   const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   const showRescheduleSection = !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
@@ -466,7 +467,8 @@ export default function BookingDetailScreen() {
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
             </View>
           ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
+          {canPay && !payment && giftCovered ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. Your gift covers this wash.</T> : null}
+          {canPay && !payment && !giftCovered ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
         </Pane>
         )}
       </View>

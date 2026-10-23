@@ -276,7 +276,7 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
+        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : giftCode ? "Your slot is confirmed. Your gift covers this wash." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
       </T>
       {washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
