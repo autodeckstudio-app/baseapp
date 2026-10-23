@@ -75,7 +75,11 @@ export default function BookingDetailPage() {
 
   // One detail page per visit: once the car is checked in, the Job page shows the booking too.
   useEffect(() => {
-    if (job && job.status !== "CANCELLED") router.replace(`/jobs/${job.id}`);
+    // Redirect only once the car is at the studio (checked in or later):
+    // pre-arrival bookings and cancelled no-shows keep this page, where
+    // contact, quotes, reschedules and the no-show review live.
+    const LIVE_STATUSES = ["STANDBY", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"];
+    if (job && LIVE_STATUSES.includes(job.status)) router.replace(`/jobs/${job.id}`);
   }, [job, router]);
 
   if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;

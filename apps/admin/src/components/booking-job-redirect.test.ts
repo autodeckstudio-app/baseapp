@@ -8,7 +8,10 @@ import { describe, expect, it } from "vitest";
 const page = readFileSync(new URL("../app/(admin)/bookings/[id]/page.tsx", import.meta.url), "utf8");
 
 describe("booking to job redirect", () => {
-  it("does not redirect for cancelled jobs", () => {
-    expect(page).toMatch(/if \(job && job\.status !== "CANCELLED"\) router\.replace/);
+  it("redirects only once the car is at the studio", () => {
+    expect(page).toMatch(/LIVE_STATUSES = \["STANDBY", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"\]/);
+    expect(page).toMatch(/if \(job && LIVE_STATUSES\.includes\(job\.status\)\) router\.replace/);
+    // Pre-arrival and cancelled jobs must stay on the booking page.
+    expect(page).not.toMatch(/if \(job\) router\.replace/);
   });
 });
