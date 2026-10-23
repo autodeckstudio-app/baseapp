@@ -464,8 +464,8 @@ export default function VehicleDetailScreen() {
                   <Row
                     key={p.id}
                     title={paperName(p)}
-                    detail={[p.reference, expiry, p.verificationReason || p.rejectionReason].filter(Boolean).join(" · ")}
-                    trailing={<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Chip label={p.status === "VERIFIED" ? (p.verificationMode === "automatic" ? "Auto-approved" : "Verified") : p.status === "REJECTED" ? "Rejected" : "Under studio review"} tone={p.status === "VERIFIED" ? "premium" : "neutral"} /><IconAction kind="edit" label={`Edit ${paperName(p)}`} onPress={() => openDocEdit(p)} /><IconAction kind="delete" label={`Delete ${paperName(p)}`} onPress={() => setDeleteId(p.id)} /></View>}
+                    detail={[p.status === "VERIFIED" ? (p.verificationMode === "automatic" ? "Auto-approved" : "Verified") : p.status === "REJECTED" ? "Rejected" : "Under studio review", p.reference, expiry, p.verificationReason || p.rejectionReason].filter(Boolean).join(" · ")}
+                    trailing={<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><IconAction kind="edit" label={`Edit ${paperName(p)}`} onPress={() => openDocEdit(p)} /><IconAction kind="delete" label={`Delete ${paperName(p)}`} onPress={() => setDeleteId(p.id)} /></View>}
                     last={i === papers.length - 1 && protections.length === 0}
                   />
                 );
