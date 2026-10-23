@@ -2,7 +2,7 @@
 
 // No-show review for a booking the close-time sweep auto-cancelled: contact
 // log, then an explicit resolution. The server surfaces the delegated-policy
-// candidates (flat Rs 100 / 20% / waiver) and preselects none — the admin
+// candidates (flat Rs 100 / 20% / waiver) and preselects none - the admin
 // picks one, sees the exact refund, types a reason, and confirms. Money moves
 // only through the refund outbox reservation, never inline here.
 import { useEffect, useState } from "react";
@@ -94,7 +94,7 @@ export function NoShowPanel({ booking, onError }: { booking: Booking; onError: (
           {preview.capturedPaise === 0 ? <p className="ax-note">No online payment was captured, so there is nothing to refund.</p> : null}
           {preview.candidates.map((c) => (
             <button key={c.key} type="button" className={picked === c.key ? "ax-button ax-button--primary" : "ax-button"} aria-pressed={picked === c.key} disabled={busy} onClick={() => setPicked(c.key)}>
-              {c.key === "flat_rs100" ? "Charge Rs 100" : c.key === "pct_20" ? "Charge 20%" : "Waive the charge"} — keep {formatPaise(c.chargePaise)}, refund {formatPaise(c.refundPaise)}
+              {c.key === "flat_rs100" ? "Charge Rs 100" : c.key === "pct_20" ? "Charge 20%" : "Waive the charge"}: keep {formatPaise(c.chargePaise)}, refund {formatPaise(c.refundPaise)}
             </button>
           ))}
           {picked ? (
