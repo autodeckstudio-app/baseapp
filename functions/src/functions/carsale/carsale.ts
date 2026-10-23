@@ -18,6 +18,7 @@ import {
   listCarLeadsSchema,
   listCarListingsSchema,
   markMyListingSoldSchema,
+  removeMyListingPhotoSchema,
   noContactInText,
   reviewListingSchema,
   setLeadStatusSchema,
@@ -142,6 +143,37 @@ export const markMyListingSold = onCall({ region: "asia-south1" }, async (reques
 });
 
 // Admin: approve (goes live for 60 days) or reject with a reason the seller can read.
+// Seller removes one photo from their own listing. Owner only, one photo and its own object, never the listing or other photos.
+// Photos are addressed by position (the seller sees signed URLs, not paths); expectedCount guards against a stale view.
+export const removeMyListingPhoto = onCall({ region: "asia-south1" }, async (request) => {
+  const user = extractCustomerUser(request);
+  assertRole(user, "customer");
+  const d = validate(removeMyListingPhotoSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "paper.submit");
+  const ref = col().doc(d.listingId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Listing not found.");
+  const cur = snap.data() as CarListing;
+  if (cur.sellerId !== user.uid || cur.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "This is not your listing.");
+  if (cur.status === "sold") throw new HttpsError("failed-precondition", "This listing is closed.");
+  if (cur.photoPaths.length !== d.expectedCount || d.index >= cur.photoPaths.length) throw new HttpsError("aborted", "Your photos changed. Refresh and try again.");
+  if (cur.photoPaths.length <= 1) throw new HttpsError("failed-precondition", "A listing needs at least one photo. Add another before removing this one.");
+  const path = cur.photoPaths[d.index]!;
+  checkPhotos([path], cur.tenantId);
+  // Object first. A Storage failure leaves the listing untouched so a retry is safe. A missing object is fine.
+  try { await getStorage().bucket().file(path).delete({ ignoreNotFound: true }); }
+  catch { throw new HttpsError("unavailable", "Could not remove the photo. Nothing was changed. Try again."); }
+  await getFirestore().runTransaction(async (tx) => {
+    const fresh = (await tx.get(ref)).data() as CarListing;
+    if (fresh.sellerId !== user.uid) throw new HttpsError("permission-denied", "This is not your listing.");
+    const next = fresh.photoPaths.filter((p) => p !== path);
+    if (next.length === 0) throw new HttpsError("failed-precondition", "A listing needs at least one photo.");
+    tx.update(ref, { photoPaths: next, updatedAt: new Date().toISOString() });
+    writeAuditLog(tx, { action: "carListing.photoRemoved", entityType: "carListing", entityId: ref.id, user, studioId: fresh.studioId, before: { photos: fresh.photoPaths.length }, after: { photos: next.length } });
+  });
+  return { id: ref.id };
+});
+
 export const reviewListing = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
