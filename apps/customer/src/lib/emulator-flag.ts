@@ -31,3 +31,14 @@ export function emulatorTargets(env: Record<string, string | undefined>): Emulat
   const authPort = Number(env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"] ?? "9099");
   return { host, firestorePort, functionsPort, authUrl: `http://${host}:${authPort}` };
 }
+
+/**
+ * Review-facing provenance strip for emulator builds, so sample screens can
+ * never be mistaken for the live store. Callers must pass the resolved
+ * boolean from direct process.env reads (see firebase.web.ts) so the
+ * production export folds the branch away; the notice is never returned
+ * when the emulator flag is off.
+ */
+export function localTestNotice(useEmulator: boolean): string | null {
+  return useEmulator ? "Local test build. Emulator data; sample content and prices." : null;
+}

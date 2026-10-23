@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
+import { emulatorTargets, localTestNotice, resolveUseEmulator } from "./emulator-flag";
 
 // The emulator flag decides whether the app talks to local emulators or the
 // real backend. A production build sets neither variable, so the default
@@ -32,5 +32,16 @@ describe("emulatorTargets", () => {
   });
   it("honours an explicit host override", () => {
     expect(emulatorTargets({ EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: "127.0.0.1" }).authUrl).toBe("http://127.0.0.1:9099");
+  });
+});
+
+describe("localTestNotice", () => {
+  it("returns the provenance strip for emulator builds", () => {
+    expect(localTestNotice(true)).toBe("Local test build. Emulator data; sample content and prices.");
+  });
+  it("returns nothing for production builds", () => {
+    expect(localTestNotice(false)).toBeNull();
+    expect(localTestNotice(resolveUseEmulator({}))).toBeNull();
+    expect(localTestNotice(resolveUseEmulator({ EXPO_PUBLIC_USE_FIREBASE_EMULATOR: "true" }))).not.toBeNull();
   });
 });
