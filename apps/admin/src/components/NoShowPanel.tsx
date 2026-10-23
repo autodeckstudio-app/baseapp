@@ -17,14 +17,15 @@ const CHANNELS = [
 ] as const;
 
 // Truthful staff-facing text for each refund-request state. Money states stay
-// distinct: only "projected" is complete; "ambiguous" never looks like either
-// success or failure, matching the outbox's unresolved-hold semantics.
+// distinct and never outrun the evidence: the integration subscribes only to
+// the provider's refund.created (acceptance) event, so no code path observes
+// terminal provider settlement - nothing here may say "Completed".
 const REFUND_STATE_LABEL: Record<string, string> = {
   reserved: "Queued, not yet sent to the payment provider",
   submitted: "Sent to the payment provider, waiting for confirmation",
-  accepted: "Accepted by the payment provider, completing",
+  accepted: "Accepted by the payment provider, settlement not confirmed",
   ambiguous: "Unclear at the payment provider - needs a manual check",
-  projected: "Completed by the payment provider",
+  projected: "Accepted by the payment provider, recorded in the books",
   failed: "Failed - needs attention",
 };
 

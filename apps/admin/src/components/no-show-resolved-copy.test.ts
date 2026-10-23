@@ -21,10 +21,11 @@ describe("resolved no-show copy", () => {
     }
     expect(panel).toContain("Queued, not yet sent to the payment provider");
     expect(panel).toContain("Unclear at the payment provider - needs a manual check");
-    // Only the projected (completed) state may say Completed.
-    const completedLines = panel.split("\n").filter((l) => /Completed by the payment provider/.test(l));
-    expect(completedLines).toHaveLength(1);
-    expect(completedLines[0]).toContain("projected");
+    // No label may claim completion: the integration only observes the
+    // provider's refund.created (acceptance) event, never terminal settlement.
+    expect(panel).not.toContain("Completed by the payment provider");
+    expect(panel).not.toContain("Completed");
+    expect(panel).toContain("recorded in the books");
   });
   it("labels unknown or failed status lookups conservatively", () => {
     expect(panel).toContain("Refund recorded; status unavailable right now.");
