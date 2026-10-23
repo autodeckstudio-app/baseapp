@@ -10,7 +10,6 @@ import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from
 import { useAuth } from "../hooks/useAuth";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
-import { localTestNotice } from "../lib/emulator-flag";
 import { ConnectionBanner } from "../ui/ConnectionBanner";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 
@@ -18,9 +17,10 @@ installWebFonts();
 
 // Direct process.env reads only: Expo's web export inlines each access, so a
 // production export folds this to null and the strip can never render there.
-const LOCAL_TEST_NOTICE = localTestNotice(
-  process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"] === "true" || process.env["USE_FIREBASE_EMULATOR"] === "true",
-);
+const LOCAL_TEST_NOTICE: string | null =
+  process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"] === "true" || process.env["USE_FIREBASE_EMULATOR"] === "true"
+    ? "Local test build. Emulator data; sample content and prices."
+    : null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;
 

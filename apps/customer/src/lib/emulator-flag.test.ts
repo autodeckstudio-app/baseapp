@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emulatorTargets, localTestNotice, resolveUseEmulator } from "./emulator-flag";
+import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
 
 // The emulator flag decides whether the app talks to local emulators or the
 // real backend. A production build sets neither variable, so the default
@@ -35,13 +35,14 @@ describe("emulatorTargets", () => {
   });
 });
 
-describe("localTestNotice", () => {
-  it("returns the provenance strip for emulator builds", () => {
-    expect(localTestNotice(true)).toBe("Local test build. Emulator data; sample content and prices.");
+describe("local-test notice wiring", () => {
+  const layout = require("node:fs").readFileSync(`${__dirname}/../app/_layout.tsx`, "utf8");
+  it("renders only from a foldable direct-env ternary", () => {
+    expect(layout).toContain('process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"] === "true"');
+    expect(layout).toContain("Local test build. Emulator data; sample content and prices.");
+    expect(layout).not.toContain("localTestNotice(");
   });
-  it("returns nothing for production builds", () => {
-    expect(localTestNotice(false)).toBeNull();
-    expect(localTestNotice(resolveUseEmulator({}))).toBeNull();
-    expect(localTestNotice(resolveUseEmulator({ EXPO_PUBLIC_USE_FIREBASE_EMULATOR: "true" }))).not.toBeNull();
+  it("is a forbidden marker in the production bundle guard", () => {
+    expect(require("node:fs").readFileSync(`${__dirname}/../../scripts/prod-bundle-guard.mjs`, "utf8")).toContain("Local test build");
   });
 });
