@@ -26,6 +26,7 @@ export type WebhookOutcome =
   | "already_final"
   | "unknown_payment"
   | "amount_mismatch"
+  | "refund_accepted"
   | "ignored";
 
 function systemUser(tenantId: string): AuthorizedUser {
@@ -89,7 +90,9 @@ export async function processProviderEvent(
       tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome: o, processedAt: now });
 
     if (isPaid) {
-      if (payment.status === "completed" || payment.status === "refunded") { record("already_final"); return "already_final"; }
+      // completed/refunded are final; partially_refunded is final for capture too —
+      // a late capture event must never reactivate money that was partly returned.
+      if (payment.status === "completed" || payment.status === "refunded" || payment.status === "partially_refunded") { record("already_final"); return "already_final"; }
       if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
 
       if (payment.targetType === "membership") {
@@ -192,7 +195,34 @@ export async function processProviderEvent(
 
     // refund.created (e.g. refunded from the Razorpay dashboard rather than the admin app)
     if (payment.status === "refunded") { record("already_final"); return "already_final"; }
-    if (payment.status !== "completed") { record("ignored"); return "ignored"; }
+    if (payment.status !== "completed" && payment.status !== "partially_refunded") { record("ignored"); return "ignored"; }
+
+    // Reserved refunds (our outbox): the event is the provider's acceptance of
+    // a submission we made. Validate it against the reservation — payment,
+    // tenant, amount and refund id — and record acceptance ONLY. Truthful
+    // projection onto payment/job/booking belongs to the runner's reconcile
+    // step, never to this webhook.
+    {
+      const { activeReservation } = await import("./refund-outbox.js");
+      const reservation = await activeReservation(db, payment.id);
+      if (reservation) {
+        if (reservation.tenantId !== payment.tenantId) { record("ignored"); return "ignored"; }
+        if (ev.amount && ev.amount !== reservation.amountPaise) { record("amount_mismatch"); return "amount_mismatch"; }
+        if (reservation.providerRefundId && ev.providerRefundId && ev.providerRefundId !== reservation.providerRefundId) {
+          record("amount_mismatch"); return "amount_mismatch";
+        }
+        record("refund_accepted");
+        tx.update(reservation.ref, {
+          status: "accepted",
+          providerRefundId: reservation.providerRefundId ?? ev.providerRefundId,
+          projectionNeeded: true,
+          updatedAt: now,
+        });
+        return "refund_accepted";
+      }
+    }
+    // Unreserved external refund (provider dashboard): baseline handling below.
+    // Truthful-state review of this path is still an explicit hold.
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
     const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
     const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;

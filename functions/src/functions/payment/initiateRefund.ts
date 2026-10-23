@@ -40,6 +40,24 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     );
   }
 
+  // Duplicate-refund closure: booking-linked payments must go through the
+  // refund outbox (requestBookingRefund), where fee retention and truthful
+  // projection live — never through this generic full-refund path. A payment
+  // with an active outbox reservation is refused too, so the two paths can
+  // never race the provider for the same money.
+  if (payment.bookingId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Booking payments are refunded through the booking refund review flow, not the generic refund.",
+    );
+  }
+  {
+    const { activeReservation } = await import("../../lib/refund-outbox.js");
+    if (await activeReservation(db, payment.id)) {
+      throw new HttpsError("already-exists", "A refund request is already active for this payment.");
+    }
+  }
+
   const now = new Date().toISOString();
 
   // Refunds are single-shot per payment (this codebase has no partial-refund
