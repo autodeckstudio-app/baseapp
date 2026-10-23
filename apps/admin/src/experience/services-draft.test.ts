@@ -23,3 +23,19 @@ describe("toServicePayload", () => {
     expect(r.ok && r.payload.vehicleCategoryPricing[0]).toEqual({ vehicleCategory: "suv", additionalPricePaise: 150000, additionalMinutes: 45 });
   });
 });
+
+describe("saved size rules survive on non-PPF services (rules hidden in the editor, not deleted)", () => {
+  const rules = [{ vehicleCategory: "suv" as const, extraRupees: "500", extraMinutes: "30" }];
+  it("a washing draft with saved rules still builds them into the payload unchanged", () => {
+    const r = toServicePayload({ ...base, category: "washing", sizes: rules });
+    expect(r.ok && r.payload.vehicleCategoryPricing).toEqual([{ vehicleCategory: "suv", additionalPricePaise: 50000, additionalMinutes: 30 }]);
+  });
+  it("switching category ppf -> washing -> ppf keeps the same rules (draft spread only changes category)", () => {
+    const d0 = { ...base, category: "ppf" as const, sizes: rules };
+    const d1 = { ...d0, ...{ category: "washing" as const } };
+    const d2 = { ...d1, ...{ category: "ppf" as const } };
+    expect(d2.sizes).toEqual(rules);
+    const r = toServicePayload(d1);
+    expect(r.ok && r.payload.vehicleCategoryPricing.length).toBe(1);
+  });
+});
