@@ -31,13 +31,13 @@ function customerAuth(authUid: string, tenantId = TENANT_A) {
   return { uid: authUid, token: { role: "customer", tenantId, studioId: null }, rawToken: "test" };
 }
 
-async function seedService(serviceId: string, tenantId: string, opts: { active: boolean }) {
+async function seedService(serviceId: string, tenantId: string, opts: { active: boolean; category?: Service["category"] }) {
   const now = new Date().toISOString();
   const service: Service = {
     id: serviceId,
     tenantId,
     name: "Price Preview Test Wash",
-    category: "washing",
+    category: opts.category ?? "washing",
     brand: null,
     description: "Test service",
     basePrice: 50000,
@@ -70,18 +70,23 @@ describe("calculateServicePrice — server-authoritative price preview", () => {
     expect(result.snapshot.serviceId).toBe(service.id);
   });
 
-  it("applies vehicle-category pricing adjustments", async () => {
-    const service = await seedService(uid("svc"), TENANT_A, { active: true });
-    const base = (await calculateServicePrice.run({
-      data: { serviceId: service.id, vehicleCategory: "hatchback" },
+  async function subtotalFor(serviceId: string, vehicleCategory: string): Promise<number> {
+    const r = (await calculateServicePrice.run({
+      data: { serviceId, vehicleCategory },
       auth: customerAuth(uid("cust")),
     } as never)) as { breakdown: { subtotal: number } };
-    const suv = (await calculateServicePrice.run({
-      data: { serviceId: service.id, vehicleCategory: "suv" },
-      auth: customerAuth(uid("cust")),
-    } as never)) as { breakdown: { subtotal: number } };
+    return r.breakdown.subtotal;
+  }
 
-    expect(suv.breakdown.subtotal).toBeGreaterThan(base.breakdown.subtotal);
+  // Owner, 17 Oct 06:27 (phonemsg-01M53NTVKFNY07ZNWB1SB33RPY): only PPF is priced by car size; all other services have a fixed price.
+  it("a washing service has one flat price whatever the car size", async () => {
+    const service = await seedService(uid("svc"), TENANT_A, { active: true });
+    expect(await subtotalFor(service.id, "suv")).toBe(await subtotalFor(service.id, "hatchback"));
+  });
+
+  it("applies vehicle-category pricing adjustments to PPF only", async () => {
+    const service = await seedService(uid("svc"), TENANT_A, { active: true, category: "ppf" });
+    expect(await subtotalFor(service.id, "suv")).toBeGreaterThan(await subtotalFor(service.id, "hatchback"));
   });
 
   it("rejects a request for an inactive service", async () => {
