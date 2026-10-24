@@ -15,6 +15,7 @@ beforeAll(async () => {
   env = await initializeTestEnvironment({ projectId: "autodeck-dev", firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: FS_PORT } });
   await env.withSecurityRulesDisabled(async (c) => {
     const seedDb = c.firestore();
+    await seedDb.doc(`jobs/${ID}`).set({id:ID,tenantId:T,studioId:"s1",customerId:"cust1",membershipWashUsed:true});
     await seedDb.doc(`bookings/${ID}`).set({ id: ID, tenantId: T, studioId: "s1", customerId: "cust1", status: "CANCELLED", manualRefundDuePaise: 10000, cancelIntent: { state: "waiting", requestedAt: "2026-10-24T00:00:00Z" } });
     await seedDb.doc(`bookingCancelIntents/${ID}`).set({ tenantId: T, customerId: "cust1", paymentId: "p", reason: "private fixture", requestedBy: "cust1", reviewAt: "2026-10-24T00:15:00Z", state: "waiting" });
   });
@@ -73,4 +74,8 @@ describe("waiting cancellation privacy (real rules)", () => {
     await assertFails(fs.doc(`bookings/${ID}`).update({ cancelIntent: { state: "resolved", requestedAt: "fake" } }));
     if (name === "other customer" || name === "other tenant") await assertFails(fs.doc(`bookings/${ID}`).get());
   });
+});
+
+describe("membership snapshot client write denial",()=>{
+ for(const [role,{uid,claims}] of Object.entries(roles))it(`${role}: cannot forge or remove job consumed-wash snapshot`,async()=>{const fs=env.authenticatedContext(uid,claims).firestore();await assertFails(fs.doc(`jobs/${ID}`).update({membershipWashUsed:false}));await assertFails(fs.doc(`jobs/${ID}`).set({membershipWashUsed:true}));});
 });

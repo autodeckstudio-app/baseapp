@@ -19,6 +19,10 @@ export interface JobStatusHistoryEntry {
 }
 
 export interface ServiceJob {
+  /** Display snapshot only; settlement validates linked consumption server-side. */
+  membershipWashUsed?: boolean;
+  settlementKind?: "membership_covered";
+  invoiceId?: string;
   id: string;
   tenantId: string;
   studioId: string;

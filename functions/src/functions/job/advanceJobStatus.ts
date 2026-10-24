@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { ServiceJob, Service } from "@autodeck/core";
+import type { Invoice, ServiceJob, Service } from "@autodeck/core";
 import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -8,6 +8,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { advanceJobStatusSchema } from "../../schemas/job.js";
+import { readCoveredLink, exactCoveredInvoice } from "../../lib/membership-covered.js";
 import { buildWarranty } from "../../lib/warranty-builder.js";
 
 export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request) => {
@@ -110,6 +111,23 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
       if (freshJob.paymentStatus !== "paid") throw new HttpsError("failed-precondition", "Collect and confirm full payment before delivering this vehicle.");
       // Every delivered visit has a live (not void) invoice. Payment status alone is not enough: a void leaves the job marked paid.
       const invs = await tx.get(db.collection(COLLECTIONS.invoices()).where("jobId", "==", data.jobId).where("tenantId", "==", freshJob.tenantId));
+      if (
+        freshJob.settlementKind === "membership_covered" ||
+        (freshJob.membershipWashUsed && freshJob.totalAmount === 0)
+      ) {
+        const { booking, membershipId } = await readCoveredLink(db, tx, freshJob);
+        if (
+          !invs.docs.some((d) =>
+            exactCoveredInvoice(
+              d.data() as Invoice,
+              freshJob,
+              booking,
+              membershipId,
+            ),
+          )
+        )
+          throw new HttpsError("failed-precondition", "Membership-covered invoice linkage is invalid.");
+      }
       if (!invs.docs.some((d) => (d.data() as { status: string }).status !== "void")) throw new HttpsError("failed-precondition", "This visit has no invoice. Record the payment to issue one before delivering.");
       // A job cannot be delivered while additional work is still awaiting
       // the customer's decision — Phase 3 requirement: prevent the studio

@@ -1,4 +1,5 @@
 "use client";
+import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
@@ -110,7 +111,7 @@ export default function BookingDetailPage() {
         <div className="ax-hero-side">
           <StatusBadge label={isBookingMissed(booking) ? "MISSED" : booking.status} />
           <span className="ax-hero-total">{formatPaise(booking.totalAmount)}</span>
-          <StatusBadge label={booking.paymentStatus} />
+          <StatusBadge label={membershipCoveredLabel(booking) ?? booking.paymentStatus} />
         </div>
       </header>
 
@@ -171,7 +172,7 @@ export default function BookingDetailPage() {
             ) : payment ? (
               <div className="kv"><span>{statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
             ) : (
-              <p className="ax-note" style={{ marginTop: 0 }}>No payment started yet.</p>
+              <p className="ax-note" style={{ marginTop: 0 }}>{membershipCoveredLabel(booking) ?? "No payment started yet."}</p>
             )}
             {invoice && (
               <>

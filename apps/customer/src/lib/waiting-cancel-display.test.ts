@@ -1,3 +1,4 @@
+import { membershipCoveredLabel } from "@autodeck/core";
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -9,7 +10,7 @@ describe("waiting cancellation UI source and policy guards",()=>{
   expect(cancelState(b).canCancel).toBe(false);
   const s=source("../app/(tabs)/bookings/[id].tsx");
   expect(s).toContain('if (!result.cancellationPending) setBooking');
-  expect(s).toContain('const canPay = !waitingCancel');
+  expect(s).toContain('const canPay = !membershipCoveredLabel(booking) && !waitingCancel');
   expect(s).toContain('{!waitingCancel && booking.status === "PENDING"');
   expect(s).toContain('const showRescheduleSection = !waitingCancel');
   expect(s).toContain('Your booked time is still held while the online payment is checked.');
@@ -17,4 +18,5 @@ describe("waiting cancellation UI source and policy guards",()=>{
   const service=source('./booking-service.ts');
   expect(service.indexOf('return booking;')).toBeLessThan(service.indexOf('return isBookingMissed(booking)'));
  });
+ it("noncovered zero-total retains baseline pay offer; covered hides it",()=>{const s=source("../app/(tabs)/bookings/[id].tsx");const condition=s.match(/const canPay = (.*);/)![1]!;const visible=new Function('booking','waitingCancel','membershipCoveredLabel',`return ${condition}`);const b={totalAmount:0,paymentStatus:'unpaid',status:'CONFIRMED'};expect(visible(b,false,membershipCoveredLabel)).toBe(true);expect(visible({...b,membershipWashUsed:true},false,membershipCoveredLabel)).toBe(false);});
 });

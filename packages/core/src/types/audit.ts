@@ -18,6 +18,7 @@ export type AuditAction =
   | "booking.quoted"
   | "booking.quote_approved"
   | "job.status_advanced"
+  | "job.membership_covered"
   | "job.sealed"
   | "payment.recorded"
   | "payment.refunded"

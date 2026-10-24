@@ -31,6 +31,8 @@ export interface PriceBreakdown {
 export type QuoteStatus = "requested" | "quoted" | "approved";
 
 export interface Booking {
+  settlementKind?: "membership_covered";
+  invoiceId?: string;
   /** Public projection only. Operational cancellation details are server-only. */
   cancelIntent?: { state: "waiting" | "needs_review" | "resolved"; requestedAt: string };
   id: string;

@@ -18,6 +18,7 @@ export const ACCOUNTANT_CAP = 2000;
 
 export function projectInvoice(i: Invoice) {
   return {
+    ...(i.settlementKind === "membership_covered" ? {settlementKind:"membership_covered" as const} : {}),
     id: i.id, invoiceNumber: i.invoiceNumber, status: i.status, issuedAt: i.issuedAt, voidedAt: i.voidedAt,
     customerName: i.customerSnapshot?.name ?? null,
     lineItems: (i.lineItems ?? []).map((l) => ({ quantity: l.quantity, unitPrice: l.unitPrice, total: l.total })),

@@ -105,7 +105,7 @@ export default function InvoiceScreen() {
   }
 
   const { split: gstSplitOn, cgst, sgst } = gstSplit(invoice);
-  const statusLabel = invoice.status === "void" ? "Void" : invoice.status === "paid" ? "Paid" : "Issued";
+  const statusLabel = invoice.settlementKind === "membership_covered" ? "Membership-covered" : invoice.status === "void" ? "Void" : invoice.status === "paid" ? "Paid" : "Issued";
 
   const docInput = { invoice, catalogue, studio: { name: STUDIO_INFO.name, address: STUDIO_INFO.address, phone: STUDIO_INFO.phone }, customer, vehicle };
   if (Platform.OS === "web") return (

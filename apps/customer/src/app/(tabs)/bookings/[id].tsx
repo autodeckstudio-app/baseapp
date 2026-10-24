@@ -1,3 +1,4 @@
+import { membershipCoveredLabel } from "@autodeck/core";
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
 import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
@@ -264,10 +265,10 @@ export default function BookingDetailScreen() {
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
   const cancel = cancelState(booking, Date.now(), svc?.category);
   const { canCancel, lateToCancel } = cancel;
-  const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
+  const paidAlready = !membershipCoveredLabel(booking) && (booking.paymentStatus === "paid" || booking.paymentStatus === "partial");
   const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
   const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
-  const canPay = !waitingCancel && booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
+  const canPay = !membershipCoveredLabel(booking) && !waitingCancel && booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
   const showRescheduleSection = !waitingCancel && !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
@@ -461,10 +462,10 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated"} last />
-          {payment?.invoiceId && job ? (
+          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated")} last />
+          {(payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
             <View style={{ marginTop: space.line }}>
-              <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
+              <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref((payment?.invoiceId || job.invoiceId || booking.invoiceId) as string))} />
             </View>
           ) : null}
           {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>{nextStepLine({ giftCovered, jobStatus: job?.status ?? null, time: displayTime })}</T> : null}

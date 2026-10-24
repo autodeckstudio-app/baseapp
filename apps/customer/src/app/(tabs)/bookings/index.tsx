@@ -214,7 +214,7 @@ export default function BookingsScreen() {
           {confirmCancel ? (
             <Notice
               title="Cancel this booking?"
-              body={nextCancel ? cancelConfirmBody(nextCancel, next.paymentStatus === "paid" || next.paymentStatus === "partial") : ""}
+              body={nextCancel ? cancelConfirmBody(nextCancel, !next.membershipWashUsed && next.settlementKind !== "membership_covered" && (next.paymentStatus === "paid" || next.paymentStatus === "partial")) : ""}
               action={
                 <View style={{ gap: space.breath }}>
                   <Button label="Yes, cancel booking" kind="danger" busy={cancelBusy} onPress={() => void doCancel()} />

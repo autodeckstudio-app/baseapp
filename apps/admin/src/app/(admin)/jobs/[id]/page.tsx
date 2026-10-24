@@ -1,4 +1,6 @@
 "use client";
+import { MembershipSettlement } from "../../../../components/MembershipSettlement";
+import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
@@ -184,12 +186,13 @@ export default function JobDetailPage() {
         <div className="ax-hero-side">
           <StatusBadge label={job.status} />
           <span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
-          <StatusBadge label={job.paymentStatus} />
+          <StatusBadge label={membershipCoveredLabel(job) ?? job.paymentStatus} />
         </div>
       </header>
 
       <StageTrack current={job.status} />
       <JobControls job={job} />
+      <MembershipSettlement job={job} booking={booking ?? null} />
 
       <div className="ax-detail">
         <div className="ax-detail-main">
@@ -338,7 +341,7 @@ export default function JobDetailPage() {
                   ))}
               </>
             ) : (
-              <p className="ax-note" style={{ marginTop: 0 }}>No payment started yet.</p>
+              <p className="ax-note" style={{ marginTop: 0 }}>{membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? "No payment started yet."}</p>
             )}
             {invoice && (
               <>
@@ -348,14 +351,14 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
-            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && canOfferPayment(payment, job.paymentStatus).link && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).link && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
                   {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
                 </button>
               </div>
             )}
-            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && canOfferPayment(payment, job.paymentStatus).counter && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).counter && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
                 <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
                 <label className="ax-form-row">

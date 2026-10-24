@@ -392,6 +392,7 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
     };
 
     const job: ServiceJob = {
+      ...(membershipWashUsed ? {membershipWashUsed:true} : {}),
       id: jobRef.id,
       tenantId: user.claims.tenantId,
       studioId: data.studioId,

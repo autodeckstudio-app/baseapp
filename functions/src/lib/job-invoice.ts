@@ -38,6 +38,7 @@ export async function prepareJobInvoice(
   tx: Transaction,
   job: ServiceJob,
   paymentId: string | null,
+  coveredMembershipId?: string,
 ): Promise<PreparedJobInvoice> {
   const invoices = db.collection(COLLECTIONS.invoices());
 
@@ -88,6 +89,7 @@ export async function prepareJobInvoice(
     serviceName,
     serviceId: job.serviceId,
     additionalWork,
+    ...(coveredMembershipId ? { coveredMembershipId } : {}),
     ...(vehicleSnapshot ? { vehicleSnapshot } : {}),
     ...(customerSnapshot ? { customerSnapshot } : {}),
   });

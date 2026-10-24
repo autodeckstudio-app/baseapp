@@ -107,6 +107,8 @@ export function bookingFromJob(job: ServiceJob): Booking {
     membershipDiscountApplied: false,
     membershipWashUsed: false,
     paymentStatus: job.paymentStatus,
+    ...(job.settlementKind ? {settlementKind:job.settlementKind} : {}),
+    ...(job.invoiceId ? {invoiceId:job.invoiceId} : {}),
     notes: job.studioNotes,
     idempotencyKey: "",
     rescheduleCount: 0,
