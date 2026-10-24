@@ -18,7 +18,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import type { Booking, Payment } from "@autodeck/core";
+import { isBiggerVisit, CANCEL_SHORT, CANCEL_BIGGER, type Booking, type Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
@@ -47,6 +47,23 @@ const resolveSchema = z.object({
   chargePaise: z.number().int().min(0).nullish(),
   reason: z.string().trim().min(3).max(500),
 }).strict();
+
+// Mapped default (settled mapping, same bands as the customer cancel fee): small jobs Rs 100, bigger jobs 20% of the
+// booking total, never more than what was captured. When the service class cannot be determined there is NO default
+// (null): the admin must pass an explicit charge. Deviations are allowed only as a labelled, reasoned exception.
+async function mappedNoShowDefault(db: FirebaseFirestore.Firestore, booking: Booking & { id: string }, captured: number) {
+  let categories = (booking as { cancelCategories?: string[] }).cancelCategories ?? [];
+  if (!categories.length && booking.serviceId) {
+    const svc = await db.collection(COLLECTIONS.services()).doc(booking.serviceId).get();
+    const c = svc.exists ? (svc.data() as { category?: string }).category : undefined;
+    if (c) categories = [String(c)];
+  }
+  if (!categories.length) return null;
+  const bigger = isBiggerVisit(categories);
+  const raw = bigger ? Math.round((Math.max(0, booking.totalAmount) * CANCEL_BIGGER.feePercent) / 100) : CANCEL_SHORT.feePaise;
+  const chargePaise = Math.min(raw, captured);
+  return { serviceClass: bigger ? "bigger" : "small", key: bigger ? "pct_20" : "flat_rs100", chargePaise, refundPaise: captured - chargePaise };
+}
 
 interface NoShowContext {
   booking: Booking & { id: string };
@@ -149,6 +166,8 @@ export const previewNoShowResolution = onCall({ region: "asia-south1", enforceAp
       { key: "pct_20", chargePaise: Math.round(captured * NO_SHOW_PCT), refundPaise: captured - Math.round(captured * NO_SHOW_PCT) },
       { key: "waive", chargePaise: 0, refundPaise: captured },
     ],
+    // Settled mapping: small = Rs 100, bigger = 20% of the booking total. null when the class is unknown (no silent charge).
+    mappedDefault: await mappedNoShowDefault(db, booking, captured),
     policyNote: "Pick the no-show charge for this booking: Rs 100 or 20% of the captured payment, or waive it. The rest goes back to the customer.",
   };
 });
@@ -175,7 +194,11 @@ export const resolveNoShow = onCall({ region: "asia-south1", enforceAppCheck: sh
     throw new HttpsError("already-exists", "This no-show is already resolved.");
   }
 
-  const charge = data.resolution === "waive" ? 0 : (data.chargePaise ?? null);
+  const capturedNow = payment && payment.status === "completed" ? payment.amount : 0;
+  const mapped = await mappedNoShowDefault(db, booking, capturedNow);
+  // charge with no amount takes the mapped default; with no mapped default it is refused (no silent arbitrary charge).
+  const charge = data.resolution === "waive" ? 0 : (data.chargePaise ?? mapped?.chargePaise ?? null);
+  const deviation = data.resolution === "charge" && mapped !== null && charge !== mapped.chargePaise;
   if (charge === null) throw new HttpsError("invalid-argument", "chargePaise is required for a charge resolution.");
 
   let refundRequestId: string | null = null;
@@ -204,6 +227,8 @@ export const resolveNoShow = onCall({ region: "asia-south1", enforceAppCheck: sh
     noShowResolvedAt: now,
     noShowResolvedBy: user.uid,
     noShowReason: data.reason,
+    ...(mapped ? { noShowMappedDefaultPaise: mapped.chargePaise } : {}),
+    ...(deviation ? { noShowChargeException: true } : {}),
     ...(refundRequestId ? { noShowRefundRequestId: refundRequestId, refundStatus: "reserved" } : {}),
     cancellationFeeStatus: data.resolution === "waive" ? "waived" : "withheld",
     updatedAt: now,
@@ -216,7 +241,7 @@ export const resolveNoShow = onCall({ region: "asia-south1", enforceAppCheck: sh
       entityId: data.bookingId,
       user,
       studioId: booking.studioId,
-      after: { resolution: data.resolution, chargePaise: charge, refundRequestId, reason: data.reason },
+      after: { resolution: data.resolution, chargePaise: charge, refundRequestId, reason: data.reason, mappedDefaultPaise: mapped?.chargePaise ?? null, exception: deviation || data.resolution === "waive" },
     });
     return true;
   });
