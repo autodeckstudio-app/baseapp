@@ -40,3 +40,35 @@ describe("functions index exports (no orphaned handlers)", () => {
     expect(orphans, `handlers missing from index.ts: ${orphans.join(", ")}`).toEqual([]);
   });
 });
+
+describe("built-entry export assertion (esbuild, no deploy needed)", () => {
+  it("the actual built bundle registers every trigger const, including settleMembershipCoveredJob", async () => {
+    const { build } = await import("esbuild");
+    const result = await build({
+      entryPoints: [join(SRC, "index.ts")],
+      bundle: true,
+      write: false,
+      platform: "node",
+      target: "node20",
+      format: "cjs",
+      logLevel: "silent",
+      external: ["firebase-admin", "firebase-functions", "zod", "tesseract.js", "@tesseract.js-data/eng"],
+    });
+    const text = result.outputFiles[0].text;
+    // Same source scan as the source-level parity test: every trigger const must
+    // appear in the BUILT entry (catches orphans even if index.ts is bypassed or
+    // the export is tree-shaken/mis-wired).
+    const missing: string[] = [];
+    for (const file of walk(join(SRC, "functions"))) {
+      const src = readFileSync(file, "utf8");
+      for (const m of src.matchAll(TRIGGER)) {
+        if (!text.includes(m[1])) missing.push(m[1]);
+      }
+    }
+    expect(missing).toEqual([]);
+    // The settle handler specifically: present in the bundle AND wired into the
+    // CommonJS export block (the exact orphan shape that slipped through before).
+    expect(text).toContain("settleMembershipCoveredJob");
+    expect(text).toMatch(/settleMembershipCoveredJob:\s*\(\)\s*=>\s*\w*settleMembershipCoveredJob/);
+  }, 60000);
+});
