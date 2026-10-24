@@ -7,6 +7,7 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getAccountantMoneySchema } from "../../schemas/office.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { refundsOwed } from "../../lib/refunds-owed.js";
 
 // READ-ONLY monthly Money projection for the dedicated "accountant" role. The role has NO Firestore rule access
 // to any collection; everything it can see is built here from an explicit, finite field allowlist. Unknown
@@ -58,6 +59,7 @@ export const getAccountantMoney = onCall({ region: "asia-south1" }, async (reque
     throw new HttpsError("permission-denied", "Studio not found for this account.");
   }
 
+  const owed = await refundsOwed(db, tenantId, data.studioId);
   const monthStart = `${data.month}-01`;
   const [paySnap, expSnap, issuedSnap, voidSnap, closeSnaps] = await Promise.all([
     db.collection(COLLECTIONS.payments()).where("tenantId", "==", tenantId).where("studioId", "==", data.studioId)
@@ -111,6 +113,7 @@ export const getAccountantMoney = onCall({ region: "asia-south1" }, async (reque
     invoices: invoices.slice(0, ACCOUNTANT_CAP).map(projectInvoice),
     expenses: expDocs.slice(0, ACCOUNTANT_CAP).map(projectExpense),
     dayCloses,
-    notes: ["Receipts are completed payments (cash held), not net revenue. Refunds owed or returned are not netted here.", "No GSTIN or HSN is stored; this is not a tax-ready export."],
+    refundsOwed: { paise: owed.owedPaise, count: owed.count, truncated: owed.truncated },
+    notes: ["Receipts are completed payments (cash held), not net revenue. Refunds owed to customers are shown separately (open total, not for this month) and are not netted into receipts.", "No GSTIN or HSN is stored; this is not a tax-ready export."],
   };
 });

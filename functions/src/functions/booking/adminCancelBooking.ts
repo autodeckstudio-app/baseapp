@@ -145,7 +145,11 @@ export async function runCancel(
       }
       writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by ${actor}: ${data.bookingId}`);
 
-      if (needsRefund && paymentRef && payment) {
+      // MANUAL refund = money is OWED, not returned: nothing here may claim a refund happened. Payment stays "completed", the invoice is untouched,
+      // job/booking paymentStatus unchanged, no refundStatus/refundId/refundedPaise. The obligation is booking.manualRefundDuePaise (one per booking:
+      // the refund_<paymentId> claim doc + the CANCELLED check). Provider refunds (providerRefundId present) behave as before.
+      const manualDue = needsRefund && !providerRefundId;
+      if (needsRefund && !manualDue && paymentRef && payment) {
         tx.update(paymentRef, { status: "refunded", razorpayRefundId: providerRefundId, refundAmount: plan.refundPaise, refundedAt: now, updatedAt: now });
         if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && payment.invoiceId) {
           tx.update(invoiceSnap.ref, { status: "void", voidedAt: now, voidedReason: `Booking cancelled: ${data.reason}`, updatedAt: now });
@@ -154,7 +158,7 @@ export async function runCancel(
       if (jobDoc && j) {
         tx.update(jobDoc.ref, {
           status: "CANCELLED",
-          ...(needsRefund ? { paymentStatus: "refunded" } : {}),
+          ...(needsRefund && !manualDue ? { paymentStatus: "refunded" } : {}),
           statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled by admin: ${data.reason}` }],
           updatedAt: now,
         });
@@ -167,10 +171,10 @@ export async function runCancel(
         cancellationFeePaise: plan.feePaise,
         ...(plan.feeStatus !== "none" ? { cancellationFeeStatus: plan.feeStatus } : {}),
         ...(plan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
-        refundedPaise: plan.refundPaise,
+        ...(manualDue ? { manualRefundDuePaise: plan.refundPaise } : { refundedPaise: plan.refundPaise }),
         ...(studioCancel ? { cancelledByStudio: true } : {}),
         ...(compensationPaise > 0 ? { studioCompensationPaise: compensationPaise, studioCompensationStatus: "due" } : {}),
-        ...(needsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: providerRefundId } : {}),
+        ...(needsRefund && !manualDue ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: providerRefundId } : {}),
         updatedAt: now,
       });
       writeAuditLog(tx, {
@@ -180,7 +184,7 @@ export async function runCancel(
         user,
         studioId: booking.studioId,
         before: { status: fresh.status },
-        after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: plan.refundPaise, feeStatus: plan.feeStatus, ...(studioCancel ? { studioCompensationPaise: compensationPaise } : {}) },
+        after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: manualDue ? 0 : plan.refundPaise, ...(manualDue ? { manualRefundDuePaise: plan.refundPaise } : {}), feeStatus: plan.feeStatus, ...(studioCancel ? { studioCompensationPaise: compensationPaise } : {}) },
         metadata: { cancelledBy: actor, providerRefundId },
       });
     });

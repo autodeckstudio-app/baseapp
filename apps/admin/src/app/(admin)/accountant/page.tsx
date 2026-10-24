@@ -1,5 +1,6 @@
 "use client";
 
+import { refundsOwedTotalText } from "../../../lib/refund-owed-copy";
 import { useCallback, useEffect, useState } from "react";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getAccountantMoney, type AccountantMoney } from "../../../lib/accountant-service";
@@ -46,6 +47,7 @@ export default function AccountantPage() {
             {data.notes.map((n) => <p key={n} className="ax-note">{n}</p>)}
             {trunc.length > 0 && <p className="ax-status-msg ax-status-msg--warn" role="alert">More than {data.cap} rows for: {trunc.join(", ")}. Totals are not shown because they would be incomplete.</p>}
           </section>
+          {refundsOwedTotalText(data.refundsOwed.paise, data.refundsOwed.count, data.refundsOwed.truncated) ? <section className="ax-panel" aria-label="Refunds owed"><p className="ax-note" data-testid="refunds-owed-total">{refundsOwedTotalText(data.refundsOwed.paise, data.refundsOwed.count, data.refundsOwed.truncated)}</p></section> : null}
           <section className="ax-panel" aria-label="Receipts and expenses">
             <span className="ax-label">Month summary</span>
             {data.report ? (

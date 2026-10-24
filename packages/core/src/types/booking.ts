@@ -100,6 +100,8 @@ export interface Booking {
   cancellationFeeNote?: string;
   /** Paise sent back to the customer when an admin cancelled a paid booking. */
   refundedPaise?: number;
+  /** Manual/counter cancel: paise OWED to the customer and NOT yet returned. Not a refund claim; payment stays completed. */
+  manualRefundDuePaise?: number | null;
   /** Service categories of the visit (primary first), saved at booking time so the cancel band cannot change later. */
   cancelCategories?: string[];
   createdAt: string;

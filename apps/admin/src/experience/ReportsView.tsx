@@ -3,6 +3,7 @@
 // Reports: the monthly Office view - revenue by method and day, expenses by
 // category, job throughput. Same server-side sources as Daily Close, so the
 // numbers always agree.
+import { refundsOwedTotalText } from "../lib/refund-owed-copy";
 import type { OfficeReport } from "../lib/office-service";
 import { PageHead } from "./Office";
 import { formatDate, formatPaise } from "../lib/format";
@@ -59,6 +60,7 @@ export function ReportsView(p: {
           { value: formatPaise(r.netPaise), label: "Net", tone: r.netPaise >= 0 ? "premium" : "accent" },
         ] : []}
       />
+      {r && refundsOwedTotalText(r.refundsOwedPaise, r.refundsOwedCount, r.refundsOwedTruncated) ? <p className="ax-status-msg" data-testid="refunds-owed-total">{refundsOwedTotalText(r.refundsOwedPaise, r.refundsOwedCount, r.refundsOwedTruncated)}</p> : null}
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
 
       <div className="rp-month-wrap">

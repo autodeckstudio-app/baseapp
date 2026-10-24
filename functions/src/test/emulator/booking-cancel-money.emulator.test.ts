@@ -55,16 +55,19 @@ describe("cancel and refund money (cash only, no provider)", () => {
     const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
     expect(await cancel(s.bookingId, "charge", true)).toMatchObject({ preview: true, policyFeePaise: 0, feePaise: 0, refundPaise: 100000, paidPaise: 100000 });
     expect(await cancel(s.bookingId, "charge")).toMatchObject({ success: true, refundPaise: 100000, manualRefund: true });
-    // Cash: this is a RECORD that a manual refund is owed/initiated. No money has been returned by the system.
-    expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ refundAmount: 100000 });
-    expect(await booking(s.bookingId)).toMatchObject({ refundStatus: "initiated" });
-    expect(await booking(s.bookingId)).toMatchObject({ status: "CANCELLED", refundedPaise: 100000, cancellationFeePaise: 0 });
+    // Cash: money is OWED, not returned. Nothing may say "refunded" or "initiated"; payment stays completed.
+    const pay = (await db.collection("payments").doc(s.paymentId!).get()).data()!;
+    expect(pay["status"]).toBe("completed"); expect(pay["refundAmount"]).toBeUndefined(); expect(pay["refundedAt"]).toBeUndefined();
+    const b = await booking(s.bookingId);
+    expect(b).toMatchObject({ status: "CANCELLED", manualRefundDuePaise: 100000, cancellationFeePaise: 0 });
+    expect(b["refundStatus"]).toBeUndefined(); expect(b["refundedPaise"]).toBeUndefined(); expect(b["refundId"]).toBeUndefined();
+    expect(b["paymentStatus"]).not.toBe("refunded");
   });
 
   it("wash cancelled 2h before the slot: Rs 100 is withheld, the rest is refunded", async () => {
     const s = await seed({ category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 });
     expect(await cancel(s.bookingId, "charge")).toMatchObject({ policyFeePaise: 10000, feePaise: 10000, refundPaise: 90000, feeStatus: "withheld" });
-    expect(await booking(s.bookingId)).toMatchObject({ cancellationFeePaise: 10000, cancellationFeeStatus: "withheld", refundedPaise: 90000 });
+    expect(await booking(s.bookingId)).toMatchObject({ cancellationFeePaise: 10000, cancellationFeeStatus: "withheld", manualRefundDuePaise: 90000 });
   });
 
   it("bigger service (PPF) 30h before: free, full refund; 20h before: 20% withheld and 80% refunded", async () => {
@@ -78,7 +81,8 @@ describe("cancel and refund money (cash only, no provider)", () => {
     const s = await seed({ category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 });
     await cancel(s.bookingId, "charge");
     expect(await cancel(s.bookingId, "charge")).toMatchObject({ success: true, alreadyCancelled: true });
-    expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ status: "refunded", refundAmount: 90000 });
+    expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ status: "completed" });
+    expect((await booking(s.bookingId))["manualRefundDuePaise"]).toBe(90000); // one obligation, unchanged by the re-cancel
   });
 
   it("studio cancel inside the customer's fee window: full refund and Rs 100 compensation recorded as due, cash not credit", async () => {
@@ -86,7 +90,7 @@ describe("cancel and refund money (cash only, no provider)", () => {
     expect(await cancel(s.bookingId, "studio", true)).toMatchObject({ preview: true, refundPaise: 100000, feePaise: 0, studioCompensationPaise: 10000 });
     expect(await cancel(s.bookingId, "studio")).toMatchObject({ refundPaise: 100000, studioCompensationPaise: 10000 });
     expect(await booking(s.bookingId)).toMatchObject({
-      status: "CANCELLED", cancelledByStudio: true, refundedPaise: 100000, studioCompensationPaise: 10000, studioCompensationStatus: "due",
+      status: "CANCELLED", cancelledByStudio: true, manualRefundDuePaise: 100000, studioCompensationPaise: 10000, studioCompensationStatus: "due",
     });
   });
 
@@ -100,7 +104,7 @@ describe("cancel and refund money (cash only, no provider)", () => {
     const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
     await cancel(s.bookingId, "studio");
     const b = await booking(s.bookingId);
-    expect(b).toMatchObject({ cancelledByStudio: true, refundedPaise: 100000 });
+    expect(b).toMatchObject({ cancelledByStudio: true, manualRefundDuePaise: 100000 });
     expect(b["studioCompensationPaise"]).toBeUndefined();
     expect(b["studioCompensationStatus"]).toBeUndefined();
   });
@@ -123,5 +127,35 @@ describe("cancel and refund money (cash only, no provider)", () => {
     expect(after["cancelledByStudio"]).toBeUndefined();
     expect(after["studioCompensationStatus"]).toBeUndefined();
     expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ status: "completed" });
+  });
+});
+
+describe("manual refund DUE guards (real emulator)", () => {
+  it("a provider refund can never be reserved on a payment that carries a manual obligation; the cancelled job is never deliverable", async () => {
+    const { reserveRefund } = await import("../../lib/refund-outbox.js");
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
+    await cancel(s.bookingId, "charge");
+    const p = (await db.collection("payments").doc(s.paymentId!).get()).data() as never;
+    await expect(reserveRefund(db, { payment: p, amountPaise: 100000, reason: "x", createdBy: "a1" })).rejects.toThrow(/manual refund obligation/);
+    expect((await db.collection("refundRequests").where("paymentId", "==", s.paymentId!).get()).size).toBe(0);
+    const jobs = await db.collection("jobs").where("bookingId", "==", s.bookingId).get();
+    expect(jobs.docs[0]!.data()["status"]).toBe("CANCELLED");
+    const { advanceJobStatus } = await import("../../functions/job/advanceJobStatus.js");
+    const studioAuth = { uid: uid("st"), token: { role: "studio", tenantId: TENANT, studioId: STUDIO }, rawToken: "t" };
+    await expect(advanceJobStatus.run({ data: { jobId: jobs.docs[0]!.id }, auth: studioAuth } as never)).rejects.toMatchObject({ code: "failed-precondition" });
+    expect((await db.collection("jobs").doc(jobs.docs[0]!.id).get()).data()!["status"]).toBe("CANCELLED");
+  });
+  it("audit carries the obligation, not a refund: refundedPaise 0, manualRefundDuePaise set", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
+    await cancel(s.bookingId, "charge");
+    const logs = (await db.collection("auditLog").where("entityId", "==", s.bookingId).get()).docs.map((d) => d.data()).filter((l) => l["action"] === "booking.cancelled");
+    expect(logs).toHaveLength(1);
+    expect((logs[0]!["after"] as Record<string, unknown>)).toMatchObject({ refundedPaise: 0, manualRefundDuePaise: 100000 });
+  });
+  it("two concurrent admin cancels leave exactly one obligation", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
+    await Promise.allSettled([cancel(s.bookingId, "charge"), cancel(s.bookingId, "charge")]);
+    expect((await booking(s.bookingId))["manualRefundDuePaise"]).toBe(100000);
+    expect((await db.collection("paymentEvents").doc(`refund_${s.paymentId}`).get()).exists).toBe(true);
   });
 });

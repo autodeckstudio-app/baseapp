@@ -1,5 +1,6 @@
 "use client";
 
+import { refundOwedText } from "../lib/refund-owed-copy";
 import { useState } from "react";
 import type { Booking, ServiceJob } from "@autodeck/core";
 import { adminCancelBooking, settleCancellationFee, type CancelSummary } from "../lib/bookings-service";
@@ -26,13 +27,22 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
   }
 
   if (cancelled) {
-    if (!(booking.cancellationFeePaise && booking.cancellationFeePaise > 0)) return null;
+    const owed = typeof booking.manualRefundDuePaise === "number" && booking.manualRefundDuePaise > 0 ? booking.manualRefundDuePaise : 0;
+    if (!(booking.cancellationFeePaise && booking.cancellationFeePaise > 0)) {
+      return owed > 0 ? (
+        <section className="ax-panel" data-testid="refund-owed">
+          <span className="ax-label">Refund owed</span>
+          <p className="ax-note">{refundOwedText(owed)}</p>
+        </section>
+      ) : null;
+    }
     const st = booking.cancellationFeeStatus;
     return (
       <section className="ax-panel">
         <span className="ax-label">Cancellation fee</span>
         <div className="kv"><span>Fee</span><span>{formatPaise(booking.cancellationFeePaise)}</span></div>
         <div className="kv"><span>Status</span><span>{st === "due" ? "Due" : st === "collected" ? "Collected" : st === "withheld" ? "Kept from the refund" : st === "waived" ? "Waived" : "Due"}</span></div>
+        {owed > 0 ? <p className="ax-note" data-testid="refund-owed">{refundOwedText(owed)}</p> : null}
         {typeof booking.refundedPaise === "number" && booking.refundedPaise > 0 ? <div className="kv"><span>Refunded</span><span>{formatPaise(booking.refundedPaise)}</span></div> : null}
         {(!st || st === "due") ? (
           <div className="ax-row">

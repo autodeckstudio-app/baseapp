@@ -13,6 +13,7 @@ export interface AccountantMoney {
   invoices: Array<{ id: string; invoiceNumber: string; status: string; issuedAt: string | null; voidedAt: string | null; customerName: string | null; lineItems: Array<{ quantity: number; unitPrice: number; total: number }>; subtotal: number; discount: number; taxRatePercent: number; tax: number; total: number; currency: string }>;
   expenses: Array<{ id: string; amount: number; category: string; paidVia: string; date: string; month: string }>;
   dayCloses: Array<Record<string, unknown>>;
+  refundsOwed: { paise: number; count: number; truncated: boolean };
   notes: string[];
 }
 

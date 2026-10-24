@@ -3,6 +3,7 @@
 // Daily Close: end-of-day cash reconciliation. Expected figures come from the
 // server (completed payments minus cash expenses); the Office counts the
 // drawer and closes the day. Re-closing recomputes and is audited.
+import { refundsOwedTotalText } from "../lib/refund-owed-copy";
 import { useState } from "react";
 import type { DailyClose } from "@autodeck/core";
 import type { DayAggregates } from "../lib/office-service";
@@ -39,6 +40,7 @@ export function DailyCloseView(p: {
           { value: formatPaise(p.live.expectedCashPaise), label: "Expected cash", tone: "premium" },
         ] : []}
       />
+      {p.live && refundsOwedTotalText(p.live.refundsOwedPaise, p.live.refundsOwedCount, p.live.refundsOwedTruncated) ? <p className="ax-status-msg" data-testid="refunds-owed-total">{refundsOwedTotalText(p.live.refundsOwedPaise, p.live.refundsOwedCount, p.live.refundsOwedTruncated)}</p> : null}
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
 

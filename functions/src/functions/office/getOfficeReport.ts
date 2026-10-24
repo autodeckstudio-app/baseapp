@@ -7,6 +7,7 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getOfficeReportSchema } from "../../schemas/office.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { refundsOwed } from "../../lib/refunds-owed.js";
 
 // Studio-and-above read: monthly Office report. Revenue by method and by day,
 // expenses by category, job throughput — one call per month, computed from
@@ -42,6 +43,7 @@ export const getOfficeReport = onCall({ region: "asia-south1" }, async (request)
       .get(),
   ]);
 
+  const owed = await refundsOwed(db, tenantId, data.studioId);
   let totalRevenuePaise = 0;
   let cashPaise = 0;
   let upiPaise = 0;
@@ -100,6 +102,10 @@ export const getOfficeReport = onCall({ region: "asia-south1" }, async (request)
     expensesPaise,
     expensesByCategory,
     netPaise: totalRevenuePaise - expensesPaise,
+    // Open manual refunds owed (running total). Shown beside, never netted into, revenue/net.
+    refundsOwedPaise: owed.owedPaise,
+    refundsOwedCount: owed.count,
+    refundsOwedTruncated: owed.truncated,
     jobsCreated,
     jobsCompleted,
     jobsCancelled,

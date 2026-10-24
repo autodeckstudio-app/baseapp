@@ -101,6 +101,9 @@ export async function planReserveInTx(
   const now = new Date().toISOString();
   // Transactional reads: a losing racer's snapshot conflicts with the
   // winner's guard create, retries, and then sees the guard here.
+  // A manual-refund obligation (admin cancel with no provider id) claims refund_<paymentId>: never open a provider refund on top of it.
+  const manualClaim = await tx.get(db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${i.payment.id}`));
+  if (manualClaim.exists) return { ok: false, code: "conflict", reason: `payment ${i.payment.id} already has a manual refund obligation` };
   const guardSnap = await tx.get(guardRef);
   const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", i.payment.id));
   const active = allSnap.docs
