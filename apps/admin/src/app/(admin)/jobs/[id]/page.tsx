@@ -9,6 +9,7 @@ import { formatDuration } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
+import { canOfferPayment, paymentPanelMode } from "../../../../lib/payment-panel-state";
 import { listenToBooking, listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
@@ -311,7 +312,7 @@ export default function JobDetailPage() {
           <section className="ax-panel">
             <span className="ax-label">Payment</span>
             {status && <p className="ax-status-msg" role="status">{status}</p>}
-            {payment === undefined ? (
+            {paymentPanelMode(payment) === "loading" ? (
               <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
             ) : payment ? (
               <>
@@ -347,14 +348,14 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
-            {payment !== undefined && job.paymentStatus === "unpaid" && (!payment || payment.status === "failed" || payment.status === "cancelled") && (
+            {canOfferPayment(payment, job.paymentStatus).link && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
                   {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
                 </button>
               </div>
             )}
-            {payment !== undefined && job.paymentStatus === "unpaid" && (
+            {canOfferPayment(payment, job.paymentStatus).counter && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
                 <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
                 <label className="ax-form-row">

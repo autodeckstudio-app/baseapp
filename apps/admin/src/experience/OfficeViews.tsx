@@ -152,7 +152,7 @@ export function PaymentsView(p: {
   const cols: Column<Payment>[] = [
     { key: "when", head: "When", kind: "muted", width: "150px", cell: (x) => formatDateTime(x.createdAt) },
     { key: "who", head: "Customer", kind: "strong", width: "minmax(0, 1.6fr)", cell: (x) => p.names[x.customerId] ?? "Customer" },
-    { key: "inv", head: "Invoice", kind: "data", width: "minmax(0, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Draft") : "-") },
+    { key: "inv", head: "Invoice", kind: "data", width: "minmax(0, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Invoice") : "-") },
     { key: "how", head: "Method", width: "110px", cell: (x) => methodLabel(x.method) },
     { key: "status", head: "Status", width: "120px", cell: (x) => <StatusBadge label={x.status} /> },
     { key: "amt", head: "Amount", kind: "data", align: "end", width: "110px", cell: (x) => formatPaise(x.amount) },

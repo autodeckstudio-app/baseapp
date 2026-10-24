@@ -8,12 +8,13 @@ describe("payment panel loading state", () => {
   for (const [name, src] of pages) {
     it(`${name} page: payment starts undefined and shows Loading before any "No payment" text`, () => {
       expect(src).toContain("useState<Payment | null | undefined>(undefined)");
-      expect(src.indexOf("payment === undefined")).toBeGreaterThan(-1);
+      expect(src.includes("payment === undefined") || src.includes("paymentPanelMode(payment)")).toBe(true);
       expect(src.indexOf("Loading payment")).toBeLessThan(src.indexOf("No payment started yet"));
     });
   }
   it("the job page never offers a payment link or counter payment while the payment is still loading", () => {
     const src = pages[0]![1];
-    expect(src.match(/payment !== undefined && job\.paymentStatus === "unpaid"/g)?.length).toBe(2);
+    expect(src).toContain("canOfferPayment(payment, job.paymentStatus).link");
+    expect(src).toContain("canOfferPayment(payment, job.paymentStatus).counter");
   });
 });
