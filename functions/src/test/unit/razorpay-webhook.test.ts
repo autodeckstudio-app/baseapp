@@ -283,7 +283,7 @@ describe("late membership: reservation failure and crash boundary", () => {
   };
   it("a reservation that already exists for the payment makes reserve fail: visible failure alert, payment completed, no second request", async () => {
     const f = mk2();
-    f.data["refundRequests"] = { active_pay1: { requestId: "rr_pay1_1" }, rr_pay1_1: { id: "rr_pay1_1", paymentId: "pay1", status: "reserved", amountPaise: 1 } };
+    f.data["refundRequests"] = { active_pay1: { requestId: "rr_pay1_1" }, rr_pay1_1: { id: "rr_pay1_1", paymentId: "pay1", status: "reserved", amountPaise: 1, reason: "other" } };
     const r = await processProviderEvent(f.db, ev(linkPaid("F1"), "F1"));
     expect(r.outcome).toBe("completed");
     expect(f.data["staffAlerts"]!["late_membership_payment_pay1"]).toMatchObject({ kind: "late_membership_refund_not_reserved", paymentId: "pay1" });

@@ -70,13 +70,45 @@ describe("late membership capture: atomic reservation (emulator)", () => {
     expect((await processProviderEvent(db, ev(s.pid, s.plink, id))).outcome).toBe("duplicate");
     expect((await reqs(s.pid))).toHaveLength(1);
   });
-  it("an existing active reservation is flagged in the same transaction, completion commits, no second request, no abort", async () => {
+  it("existing reservation = SAME payment, FULL amount, same reason: satisfied, no new request, 'already reserved' alert", async () => {
     const s = await seed("expired");
-    await db.collection("refundRequests").doc(`active_${s.pid}`).set({ paymentId: s.pid, requestId: "rr_x_1" });
-    await db.collection("refundRequests").doc("rr_x_1").set({ id: "rr_x_1", paymentId: s.pid, status: "reserved", amountPaise: 1 });
+    await db.collection("refundRequests").doc(`active_${s.pid}`).set({ paymentId: s.pid, requestId: "rr_s_1" });
+    await db.collection("refundRequests").doc("rr_s_1").set({ id: "rr_s_1", paymentId: s.pid, status: "reserved", amountPaise: 29900, reason: "late_membership_payment" });
     expect((await processProviderEvent(db, ev(s.pid, s.plink, "E3" + s.pid))).outcome).toBe("completed");
-    expect((await reqs(s.pid))).toHaveLength(1);
-    expect((await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!["kind"]).toBe("late_membership_refund_not_reserved");
+    expect(await reqs(s.pid)).toHaveLength(1);
+    expect((await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!["kind"]).toBe("late_membership_already_reserved");
+  });
+  it("conflicting reservations (wrong amount, wrong reason, orphan guard): receipt completes, refund UNSATISFIED, distinct owed-not-reserved alert, no new request", async () => {
+    const cases: Array<[string, Record<string, unknown> | null]> = [
+      ["wrong amount", { status: "reserved", amountPaise: 100, reason: "late_membership_payment" }],
+      ["wrong reason", { status: "reserved", amountPaise: 29900, reason: "no_show" }],
+      ["orphan guard only", null],
+    ];
+    for (const [label, rr] of cases) {
+      const s = await seed("cancelled");
+      await db.collection("refundRequests").doc(`active_${s.pid}`).set({ paymentId: s.pid, requestId: "rr_c_1" });
+      if (rr) await db.collection("refundRequests").doc(`rr_c_${s.pid}`).set({ id: `rr_c_${s.pid}`, paymentId: s.pid, ...rr });
+      expect((await processProviderEvent(db, ev(s.pid, s.plink, "E6" + s.pid))).outcome, label).toBe("completed");
+      expect((await db.collection("payments").doc(s.pid).get()).data()!["status"], label).toBe("completed");
+      expect(await reqs(s.pid), label).toHaveLength(rr ? 1 : 0);
+      const al = (await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!;
+      expect(al["kind"], label).toBe("late_membership_refund_not_reserved");
+      expect(al["reservationOutcome"], label).toBe("conflict");
+    }
+  });
+  it("invalid amount (stored amount 0, event carries no amount: the existing shared amount check is skipped): receipt completes, owed-not-reserved alert outcome invalid, no request", async () => {
+    const s = await seed("cancelled");
+    await db.collection("payments").doc(s.pid).update({ amount: 0 });
+    const raw = JSON.stringify({ entity: "event", event: "payment.link.paid", payload: {
+      payment: { entity: { id: "pay_x" + s.pid, order_id: "o1", currency: "INR" } },
+      payment_link: { entity: { id: s.plink, reference_id: s.pid } } }, _id: "E7" + s.pid });
+    const e = provider.parseWebhookEvent(raw); e.providerEventId = "E7" + s.pid;
+    expect((await processProviderEvent(db, e)).outcome).toBe("completed");
+    expect((await db.collection("payments").doc(s.pid).get()).data()!["status"]).toBe("completed");
+    const al = (await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!;
+    expect(al["kind"]).toBe("late_membership_refund_not_reserved");
+    expect(al["reservationOutcome"]).toBe("invalid");
+    expect(await reqs(s.pid)).toHaveLength(0);
   });
   it("pending membership: activates, reserves nothing; ACTIVE membership second capture untouched", async () => {
     const s = await seed("pending");

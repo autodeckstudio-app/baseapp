@@ -79,7 +79,7 @@ export async function activeReservation(db: Firestore, paymentId: string): Promi
  */
 export type ReservePlan =
   | { ok: true; guardRef: FirebaseFirestore.DocumentReference; requestRef: FirebaseFirestore.DocumentReference; guard: Record<string, unknown>; request: RefundRequest }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; code: "same_reservation" | "conflict" | "invalid" };
 
 /**
  * READ phase of a reservation, to run inside a caller's transaction BEFORE any write. Deterministic
@@ -93,24 +93,25 @@ export async function planReserveInTx(
   i: { payment: Payment; amountPaise: number; reason: string; createdBy: string },
 ): Promise<ReservePlan> {
   const amount = Math.round(i.amountPaise);
-  if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)" };
+  if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)", code: "invalid" };
   if (amount > refundablePaise(i.payment)) {
-    return { ok: false, reason: `refund of ${amount} exceeds the refundable ${refundablePaise(i.payment)} on payment ${i.payment.id}` };
+    return { ok: false, code: "invalid", reason: `refund of ${amount} exceeds the refundable ${refundablePaise(i.payment)} on payment ${i.payment.id}` };
   }
   const guardRef = requestsCol(db).doc(`active_${i.payment.id}`);
   const now = new Date().toISOString();
   // Transactional reads: a losing racer's snapshot conflicts with the
   // winner's guard create, retries, and then sees the guard here.
   const guardSnap = await tx.get(guardRef);
-  if (guardSnap.exists) {
-    const g = guardSnap.data() as { requestId?: string };
-    return { ok: false, reason: `payment ${i.payment.id} already has an active refund request (${g.requestId ?? "unknown"})` };
-  }
   const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", i.payment.id));
   const active = allSnap.docs
     .map((d) => d.data() as RefundRequest)
     .find((r) => r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous");
-  if (active) return { ok: false, reason: `payment ${i.payment.id} already has an active refund request (${active.id})` };
+  if (guardSnap.exists || active) {
+    // The SAME payment, FULL amount and reason already reserved is satisfied (idempotent). Anything else is a conflict.
+    const same = !!active && active.paymentId === i.payment.id && active.amountPaise === amount && active.reason === i.reason;
+    const id = active?.id ?? (guardSnap.data() as { requestId?: string } | undefined)?.requestId ?? "unknown";
+    return { ok: false, code: same ? "same_reservation" : "conflict", reason: `payment ${i.payment.id} already has an active refund request (${id})` };
+  }
   // Count only real rr_* requests (never the transient guard) so ids stay
   // unique even after a guard is released on a terminal request.
   const priorCount = allSnap.docs.filter((d) => d.id.startsWith("rr_")).length;

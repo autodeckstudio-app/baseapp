@@ -147,7 +147,9 @@ export async function processProviderEvent(
           if (reservePlan.ok) applyReserveInTx(tx, reservePlan);
           // A deterministic refusal (e.g. an active reservation already exists) is flagged, never retried by redelivery.
           tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
-            kind: reservePlan.ok ? "late_membership_payment" : "late_membership_refund_not_reserved", paymentId: payment.id, createdAt: now });
+            kind: reservePlan.ok ? "late_membership_payment" : reservePlan.code === "same_reservation" ? "late_membership_already_reserved" : "late_membership_refund_not_reserved",
+            paymentId: payment.id, createdAt: now,
+            ...(reservePlan.ok ? {} : { reservationOutcome: reservePlan.code }) });
         }
         if (mRef && mSnap?.exists && (mSnap.data() as Membership).status === "pending") {
           const startDate = now.slice(0, 10);
