@@ -1,7 +1,7 @@
 "use client";
 import type { Booking, Customer, Invoice, Payment, PaymentMethod, ServiceJob } from "@autodeck/core";
 import { membershipCoveredLabel } from "@autodeck/core";
-import { canOfferPayment, coveredVisitSettlementNote, paymentPanelMode } from "../lib/payment-panel-state";
+import { canOfferPayment, coveredSettlePanelVisible, coveredVisitSettlementNote, paymentPanelMode } from "../lib/payment-panel-state";
 import { StatusBadge } from "./StatusBadge";
 import { formatPaise } from "../lib/format";
 import { statusLabel } from "../lib/status-label";
@@ -62,6 +62,10 @@ export function JobPaymentPanel({
     const text = `Hi ${first}, here is your AutoDeck bill of ${formatPaise(job.totalAmount)}. Pay securely: ${url}`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
+
+  // Gate ON + covered + unsettled: the MembershipSettlement panel on this page is the
+  // single tile for this state (status + one settle action); this panel stays out of the way.
+  if (coveredSettlePanelVisible(job, booking)) return null;
 
   return (
           <section className="ax-panel">

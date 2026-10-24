@@ -80,3 +80,28 @@ describe("coveredVisitSettlementNote", () => {
     ).toBeNull();
   });
 });
+
+describe("coveredSettlePanelVisible (single-tile consolidation)", () => {
+  const coveredJob = { membershipWashUsed: true, totalAmount: 0, status: "READY_FOR_DELIVERY" };
+  const coveredBooking = { membershipWashUsed: true, totalAmount: 0, status: "CONFIRMED" };
+  it("default today (gate OFF): never visible, so the Payment panel keeps today's note tile", async () => {
+    const { coveredSettlePanelVisible } = await import("./payment-panel-state");
+    expect(coveredSettlePanelVisible(coveredJob, coveredBooking)).toBe(false);
+  });
+  it("gate semantics: flag check first, then the same covered/open conditions as MembershipSettlement", () => {
+    const src = readFileSync(join(__dirname, "payment-panel-state.ts"), "utf8");
+    const fn = src.slice(src.indexOf("export function coveredSettlePanelVisible"));
+    expect(fn.indexOf("if (!MEMBERSHIP_SETTLEMENT_ENABLED) return false;")).toBeLessThan(fn.indexOf("membershipWashUsed"));
+    for (const guard of [
+      'job.settlementKind === "membership_covered"',
+      "booking.membershipWashUsed !== true",
+      "booking.totalAmount !== 0 || job.totalAmount !== 0",
+      'job.status === "CANCELLED"',
+      'booking.status === "CANCELLED"',
+      'booking.status === "EXPIRED"',
+    ]) expect(fn).toContain(guard);
+    const panel = readFileSync(join(__dirname, "../components/JobPaymentPanel.tsx"), "utf8");
+    // The Payment panel yields before rendering anything when the settle panel owns the state.
+    expect(panel.indexOf("if (coveredSettlePanelVisible(job, booking)) return null;")).toBeLessThan(panel.indexOf("return ("));
+  });
+});

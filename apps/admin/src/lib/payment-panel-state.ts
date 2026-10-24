@@ -41,3 +41,22 @@ export function coveredVisitSettlementNote(
   // Gate OFF (pre-release): the studio zero route is still the working path.
   return "Membership-covered visit - the customer's plan covers it, so there is nothing to collect here. To close it out, settle the visit in the studio app: open the job and use Record cash payment for Rs 0.";
 }
+
+/**
+ * True exactly when the gated MembershipSettlement panel renders for this pair
+ * (flag ON, covered, unsettled, still open). The Payment panel then yields the
+ * covered-unsettled state to that single panel so the status and its one action
+ * live in one tile. Keep in sync with components/MembershipSettlement.tsx.
+ */
+export function coveredSettlePanelVisible(
+  job: (CoveredVisitSubject & { status?: string }) | null | undefined,
+  booking: (CoveredVisitSubject & { status?: string }) | null | undefined,
+): boolean {
+  if (!MEMBERSHIP_SETTLEMENT_ENABLED) return false;
+  if (!job || !booking) return false;
+  if (job.settlementKind === "membership_covered") return false;
+  if (booking.membershipWashUsed !== true) return false;
+  if (booking.totalAmount !== 0 || job.totalAmount !== 0) return false;
+  if (job.status === "CANCELLED" || booking.status === "CANCELLED" || booking.status === "EXPIRED") return false;
+  return true;
+}
