@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { adminCancelBooking } from "../../functions/booking/adminCancelBooking.js";
+import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 
 const db = getFirestore();
 const TENANT = "cm-tenant";
@@ -172,5 +173,47 @@ describe("manual refund DUE guards (real emulator)", () => {
     expect((await db.collection("gifts").doc(giftId).get()).data()).toMatchObject({ status: "ACTIVE", bookingId: null });
     const gp = (await db.collection("payments").doc(giftPayId).get()).data()!;
     expect(gp["status"]).toBe("completed"); expect(gp["refundedAt"]).toBeUndefined();
+  });
+});
+
+// TEST. Customer SELF-cancel of a completed CASH payment goes through the same runCancel (actor customer, feeAction forced to "charge").
+// Money is recorded as OWED (booking.manualRefundDuePaise), payment stays completed, invoice untouched. No fee choice for the customer.
+describe("customer self-cancel of a completed cash payment (cancelBooking, customer entry)", () => {
+  const selfCancel = (bookingId: string, uidOf: string, tenant = TENANT) =>
+    cancelBooking.run({ data: { bookingId, reason: "customer cancel", customerContext: true }, auth: { uid: uidOf, token: { role: "customer", tenantId: tenant, studioId: null }, rawToken: "test" } } as never) as Promise<Record<string, unknown>>;
+  const ownerOf = async (id: string) => String((await booking(id))["customerId"]);
+
+  it("OUTSIDE the fee window (10h): owed equals what was paid, no fee, payment completed, no refund claim of 'refunded'", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
+    const res = await selfCancel(s.bookingId, await ownerOf(s.bookingId));
+    expect(res).toMatchObject({ success: true, manualRefund: true, refundPaise: 100000, providerRefundId: null });
+    expect(await booking(s.bookingId)).toMatchObject({ status: "CANCELLED", manualRefundDuePaise: 100000, cancellationFeePaise: 0 });
+    const pay = (await db.collection("payments").doc(s.paymentId!).get()).data()!;
+    expect(pay["status"]).toBe("completed");
+    expect((await db.collection("paymentEvents").doc(`refund_${s.paymentId}`).get()).exists).toBe(true);
+  });
+
+  it("INSIDE the fee window (2h): the policy fee is charged with no customer choice, owed = paid minus the Rs 100 fee", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 });
+    const res = await selfCancel(s.bookingId, await ownerOf(s.bookingId));
+    expect(res).toMatchObject({ success: true, manualRefund: true, refundPaise: 90000 });
+    expect(await booking(s.bookingId)).toMatchObject({ status: "CANCELLED", manualRefundDuePaise: 90000, cancellationFeePaise: 10000, cancellationFeeStatus: "withheld" });
+  });
+
+  it("another customer cannot cancel it, and another tenant cannot either; nothing changes", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
+    await expect(selfCancel(s.bookingId, uid("other-customer"))).rejects.toMatchObject({ code: "permission-denied" });
+    await expect(selfCancel(s.bookingId, await ownerOf(s.bookingId), "other-tenant")).rejects.toMatchObject({ code: "permission-denied" });
+    const b = await booking(s.bookingId);
+    expect(b["status"]).toBe("CONFIRMED"); expect(b["manualRefundDuePaise"]).toBeUndefined();
+    expect(((await db.collection("payments").doc(s.paymentId!).get()).data()!)["status"]).toBe("completed");
+  });
+
+  it("a second self-cancel changes nothing (one obligation)", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
+    const owner = await ownerOf(s.bookingId);
+    await selfCancel(s.bookingId, owner);
+    expect(await selfCancel(s.bookingId, owner)).toMatchObject({ success: true, alreadyCancelled: true });
+    expect(await booking(s.bookingId)).toMatchObject({ manualRefundDuePaise: 100000 });
   });
 });
