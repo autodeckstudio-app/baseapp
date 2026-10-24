@@ -13,7 +13,7 @@ import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 const db = getFirestore();
 let n = 0;
 const auth = (role = "admin", tenantId = "covered", studioId: string | null = null) => ({
-  uid: "staff",
+  uid: `staff-${Date.now()}-${++n}`, // unique per call: rate limits are per-subject
   token: { role, tenantId, studioId },
 });
 const studioAuth = () => auth("studio", "covered", "s");
