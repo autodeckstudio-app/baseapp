@@ -478,7 +478,7 @@ export default function BookingDetailScreen() {
       ) : null}
       {booking.status === "EXPIRED" ? <Notice title="Slot released" body="The payment was not completed in time, so this booking expired. You can book again any time." /> : null}
       {booking.refundStatus === "reserved" ? <Notice title="Refund approved" body="Your refund is approved and queued with the payment provider. We will update here as soon as it is on its way." /> : null}
-      {booking.refundStatus === "initiated" ? <Notice title="Refund with the payment provider" body="Razorpay has accepted your refund. Razorpay says a refund reaches your original payment method within 5-10 working days. We will update here when it is complete." /> : null}
+      {booking.refundStatus === "initiated" ? <Notice title="Refund with the payment provider" body="Razorpay has accepted your refund. Refund timing depends on your bank or payment provider. We will update here when it is complete." /> : null}
       {actionError ? <Notice title="We could not finish that" body={actionError} /> : null}
 
       {showRescheduleSection ? (

@@ -1,11 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { heldStartTimes, holdEndsAt, isPriorityHeld, hasPriorityMembership, PRIORITY_HELD_PER_DAY } from "../../lib/priority-hold.js";
+import { heldStartTimes, holdEndsAt, isPriorityHeld, hasPriorityMembership, PRIORITY_HELD_PER_DAY, PRIORITY_RELEASE_TIME } from "../../lib/priority-hold.js";
 
 const hours = Array.from({ length: 7 }, (_, d) => ({ dayOfWeek: d, open: "09:00", close: "18:00", closed: false })) as never;
 const base = { serviceDurationMinutes: 45, operatingHours: hours, holidays: [] as string[], timezone: "Asia/Kolkata" };
 
 describe("priority slot hold", () => {
+  it("keeps the owner-approved rule: 2 earliest slots a day, held until 18:00 the evening before", () => {
+    expect(PRIORITY_HELD_PER_DAY).toBe(2);
+    expect(PRIORITY_RELEASE_TIME).toBe("18:00");
+  });
   it("holds the two earliest start times of an open day", () => {
     const h = heldStartTimes({ ...base, date: "2026-10-21" });
     expect(h).toHaveLength(PRIORITY_HELD_PER_DAY);
