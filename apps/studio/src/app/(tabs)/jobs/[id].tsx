@@ -1,4 +1,5 @@
 import { httpsCallable } from "firebase/functions";
+import { MEMBERSHIP_SETTLEMENT_ENABLED } from "../../../lib/backend-features";
 import { membershipCoveredLabel } from "@autodeck/core";
 import { waitingCancellation } from "../../../lib/waiting-cancel";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
@@ -177,14 +178,14 @@ export default function JobDetailScreen() {
     void (async () => {
       const bookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
       if (!bookingSnap.exists()) return;
-      const booking = bookingSnap.data() as Booking;
-      if (!booking.membershipId) return;
-      const membership = await getCustomerMembership(job.customerId, booking.membershipId);
+      const bookingData = bookingSnap.data() as Booking;
+      if (!bookingData.membershipId) return;
+      const membership = await getCustomerMembership(job.customerId, bookingData.membershipId);
       if (membership) {
         setBookingMembership({
           membership,
-          washUsed: booking.membershipWashUsed,
-          discountApplied: booking.membershipDiscountApplied,
+          washUsed: bookingData.membershipWashUsed,
+          discountApplied: bookingData.membershipDiscountApplied,
         });
       }
     })();
@@ -471,7 +472,7 @@ export default function JobDetailScreen() {
         )}
       </Section>
 
-      {booking?.membershipWashUsed && booking.totalAmount === 0 && job.totalAmount === 0 && !job.settlementKind && job.status !== "CANCELLED" && !["CANCELLED","EXPIRED"].includes(booking.status) ? <Section>
+      {MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && booking.totalAmount === 0 && job.totalAmount === 0 && !job.settlementKind && job.status !== "CANCELLED" && !["CANCELLED","EXPIRED"].includes(booking.status) ? <Section>
         <Text style={{color:colors.textPrimary}}>Membership-covered, not yet settled</Text>
         <Button label="Settle membership-covered visit" loading={paymentActionLoading} onPress={()=>{setPaymentActionLoading(true);setActionError(null);void httpsCallable(functions,"settleMembershipCoveredJob")({jobId:job.id}).catch(e=>setActionError(e instanceof Error?e.message:"Could not settle this visit.")).finally(()=>setPaymentActionLoading(false));}} />
       </Section> : null}

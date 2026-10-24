@@ -3,6 +3,7 @@ import { useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import type { Booking, ServiceJob } from "@autodeck/core";
 import { functions } from "../lib/firebase";
+import { MEMBERSHIP_SETTLEMENT_ENABLED } from "../lib/backend-features";
 export function MembershipSettlement({
   job,
   booking,
@@ -12,6 +13,7 @@ export function MembershipSettlement({
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
+  if (!MEMBERSHIP_SETTLEMENT_ENABLED) return null;
   if (
     job.settlementKind === "membership_covered" ||
     !booking?.membershipWashUsed ||

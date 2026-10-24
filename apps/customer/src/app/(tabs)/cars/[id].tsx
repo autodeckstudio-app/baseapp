@@ -7,6 +7,7 @@ import type { CarListingView } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Button, Field, Kicker, Notice, Pane, Screen, Skeleton, T } from "../../../ui/kit";
 import { getCarListings, inr, kmLabel, markListingSold, removeListingPhoto, replaceListingPhoto, sendCarLead } from "../../../lib/carsale-service";
+import { LISTING_PHOTO_EDIT_ENABLED } from "../../../lib/backend-features";
 import { hasCarPrice } from "../../../lib/cars-home";
 import { FileUploader } from "../../../ui/inputs";
 import { IconAction } from "../../../ui/IconAction";
@@ -87,7 +88,7 @@ export default function CarDetail() {
         ))}
       </ScrollView>
       <View style={{flexDirection:"row",justifyContent:"space-between"}}><T role="caption" tone="tertiary">{car.photoUrls.length ? `${photoIndex+1} / ${car.photoUrls.length} photos · swipe to explore` : "No photos available"}</T><T role="caption" tone="tertiary">{car.area ?? ""}</T></View>
-      {car.mine && car.status !== "sold" && car.photoUrls.length > 1 ? (
+      {LISTING_PHOTO_EDIT_ENABLED && car.mine && car.status !== "sold" && car.photoUrls.length > 1 ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <IconAction kind="delete" label="Remove this photo" onPress={() => { setPhotoError(null); setConfirmPhoto(true); }} />
           <IconAction kind="edit" label="Replace this photo" onPress={() => { setPhotoError(null); setReplacement(null); setReplacing(true); }} />

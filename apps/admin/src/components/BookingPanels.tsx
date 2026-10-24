@@ -10,6 +10,7 @@ import { formatDuration } from "@autodeck/core";
 import { setBookingQuote } from "../lib/bookings-service";
 import { CancelBookingPanel } from "./CancelBookingPanel";
 import { NoShowPanel } from "./NoShowPanel";
+import { NO_SHOW_REVIEW_ENABLED } from "../lib/backend-features";
 import { formatPaise, formatDayLong, formatTime } from "../lib/format";
 
 export function BookingPanels({ booking, job, service, bayName, onError }: { booking: Booking; job: ServiceJob | null; service: Service | null; bayName: string; onError: (m: string | null) => void }) {
@@ -44,7 +45,7 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
 
       <CancelBookingPanel booking={booking} job={job} />
 
-      {booking.status === "CANCELLED" && (booking as { missedAt?: string }).missedAt ? <NoShowPanel booking={booking} onError={onError} /> : null}
+      {NO_SHOW_REVIEW_ENABLED && booking.status === "CANCELLED" && (booking as { missedAt?: string }).missedAt ? <NoShowPanel booking={booking} onError={onError} /> : null}
 
       {booking.priceOnRequest === true && (
         <section className="ax-panel">

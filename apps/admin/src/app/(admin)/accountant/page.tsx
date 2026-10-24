@@ -4,6 +4,7 @@ import { refundsOwedTotalText } from "../../../lib/refund-owed-copy";
 import { useCallback, useEffect, useState } from "react";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { getAccountantMoney, type AccountantMoney } from "../../../lib/accountant-service";
+import { ACCOUNTANT_MONEY_ENABLED } from "../../../lib/backend-features";
 import { formatDate, formatPaise } from "../../../lib/format";
 
 function kolkataMonth(): string {
@@ -24,7 +25,7 @@ export default function AccountantPage() {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
-    try { setData(await getAccountantMoney(FIRST_STUDIO_ID, month)); }
+    try { setData(ACCOUNTANT_MONEY_ENABLED ? await getAccountantMoney(FIRST_STUDIO_ID, month) : null); }
     catch (e) { setData(null); setError(e instanceof Error && e.message ? e.message : "Couldn't load Money."); }
     finally { setLoading(false); }
   }, [month]);
@@ -41,6 +42,7 @@ export default function AccountantPage() {
         <span className="rp-month-label" aria-live="polite">{month}</span>
         <button type="button" className="ax-button" aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}>›</button>
       </div>
+      {!ACCOUNTANT_MONEY_ENABLED ? <p className="ax-note">This view turns on when its backend is enabled.</p> : null}
       {loading ? <div className="ax-skel ax-skel--row" /> : !data ? null : (
         <>
           <section className="ax-panel" aria-label="Notes">
