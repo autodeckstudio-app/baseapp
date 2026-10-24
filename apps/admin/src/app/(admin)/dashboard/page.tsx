@@ -101,6 +101,7 @@ export default function DashboardPage() {
       floor={stats.floor}
       counts={{
         failedPayments: stats.failedPayments.length,
+        paymentsToReview: payments.filter((p) => p.status === "pending" && !!p.reviewReason).length,
         unpaidDelivered: stats.unpaidCompletedJobs.length,
         pendingApprovals: pendingApprovals.length,
         staleJobs: stats.staleJobs.length,

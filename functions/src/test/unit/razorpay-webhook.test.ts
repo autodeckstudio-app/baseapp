@@ -223,6 +223,8 @@ describe("documented payment_link.* events (local, fail-closed)", () => {
     expect((await processProviderEvent(f.db, ev(body("payment_link.expired"), "d3"))).outcome).toBe("ambiguous_link");
     expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
     expect(f.data["payments"]!["pay2"]!["status"]).toBe("pending");
+    expect(f.data["payments"]!["pay1"]!["reviewReason"]).toBe("ambiguous_payment_link");
+    expect(f.data["payments"]!["pay2"]!["reviewReason"]).toBe("ambiguous_payment_link");
   });
   it("a stored payment with no currency is not completed by payment_link.paid", async () => {
     const f = mk();

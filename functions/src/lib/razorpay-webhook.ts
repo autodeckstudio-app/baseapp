@@ -83,6 +83,9 @@ export async function processProviderEvent(
     // Fail closed if more than one payment stores this link id: limit(1) lookups must never pick arbitrarily.
     const dup = await db.collection(COLLECTIONS.payments()).where("razorpayPaymentLinkId", "==", ev.providerPaymentLinkId).limit(2).get();
     if (dup.size > 1) {
+      // Make it staff-visible: flag every candidate payment (each tenant sees its own) with a reason code only.
+      const stamp = new Date().toISOString();
+      await Promise.all(dup.docs.map((d) => d.ref.update({ reviewReason: "ambiguous_payment_link", updatedAt: stamp })));
       await eventRef.set({ eventType: ev.eventType, outcome: "ambiguous_link", providerPaymentLinkId: ev.providerPaymentLinkId, processedAt: new Date().toISOString() });
       return { outcome: "ambiguous_link", paymentId: null };
     }

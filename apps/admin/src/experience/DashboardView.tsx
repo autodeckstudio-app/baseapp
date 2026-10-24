@@ -28,13 +28,14 @@ export interface DashboardViewProps {
   revenueToday: number;
   tiles: { bookings: number; active: number; delivered: number; walkins: number; staffPresent: number };
   floor: { arriving: number; working: number; ready: number; delivered: number };
-  counts: { failedPayments: number; unpaidDelivered: number; pendingApprovals: number; staleJobs: number; pendingPayments: number; expiringMemberships: number; lowStock: number; pendingPapers: number };
+  counts: { failedPayments: number; unpaidDelivered: number; pendingApprovals: number; staleJobs: number; pendingPayments: number; expiringMemberships: number; lowStock: number; pendingPapers: number; paymentsToReview?: number };
   onOpen: (href: string) => void;
 }
 
 export function DashboardView({ today, now, revenueToday, tiles, floor, counts, onOpen }: DashboardViewProps) {
   const alerts: { tone: "danger" | "warning"; text: string; href: string; action: string }[] = [];
   const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+  if (counts.paymentsToReview) alerts.push({ tone: "danger", text: `${n(counts.paymentsToReview, "payment needs", "payments need")} a manual check`, href: "/payments", action: "Review" });
   if (counts.failedPayments) alerts.push({ tone: "danger", text: `${n(counts.failedPayments, "payment", "payments")} failed`, href: "/payments", action: "Review" });
   if (counts.unpaidDelivered) alerts.push({ tone: "danger", text: `${n(counts.unpaidDelivered, "delivered car", "delivered cars")} not paid for yet`, href: "/jobs", action: "Collect" });
   if (counts.pendingApprovals) alerts.push({ tone: "warning", text: `${n(counts.pendingApprovals, "extra-work request is", "extra-work requests are")} waiting on the customer`, href: "/jobs", action: "View" });
