@@ -83,8 +83,9 @@ describe("booking page text stays readable in Night", () => {
 });
 
 import { readFileSync as _rf } from "node:fs";
+import { join as _join } from "node:path";
 describe("refund notices (source guard, not rendered proof)", () => {
-  const src = _rf(new URL("../app/(tabs)/bookings/[id].tsx", import.meta.url), "utf8");
+  const src = _rf(_join(__dirname, "../app/(tabs)/bookings/[id].tsx"), "utf8");
   it("drops the unfulfillable promise and states provider status only", () => {
     expect(src).not.toContain("We will update here when it is complete");
     expect(src).toContain("Razorpay reports your refund as processed");
