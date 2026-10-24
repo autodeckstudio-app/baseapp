@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="ax-label">AutoDeck, accountant</span>
             <button type="button" className="ax-button" onClick={() => void signOut()}>Sign out</button>
           </header>
-          <main>{children}</main>
+          <main style={{ padding: "0 var(--ad-space-section) var(--ad-space-section)" }}>{children}</main>
         </Ambient>
       </div>
     );
