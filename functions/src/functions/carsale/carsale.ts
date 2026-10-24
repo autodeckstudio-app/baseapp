@@ -158,7 +158,7 @@ export const removeMyListingPhoto = onCall({ region: "asia-south1" }, async (req
   if (cur.sellerId !== user.uid || cur.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "This is not your listing.");
   if (cur.status === "sold") throw new HttpsError("failed-precondition", "This listing is closed.");
   if (cur.photoPaths.length !== d.expectedCount || d.index >= cur.photoPaths.length) throw new HttpsError("aborted", "Your photos changed. Refresh and try again.");
-  if (cur.photoPaths.length <= 1) throw new HttpsError("failed-precondition", "A listing needs at least one photo. Add another before removing this one.");
+  if (cur.photoPaths.length <= 1) throw new HttpsError("failed-precondition", "A listing needs at least one photo. Use Replace to swap this photo for a different one.");
   const path = cur.photoPaths[d.index]!;
   checkPhotos([path], cur.tenantId);
   // Object first. A Storage failure leaves the listing untouched so a retry is safe. A missing object is fine.

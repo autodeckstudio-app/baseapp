@@ -37,6 +37,14 @@ describe("removeMyListingPhoto (round7 p7, sell-car images)", () => {
     await removeMyListingPhoto.run(req("me", { listingId: "L1", index: 0, expectedCount: 3 }));
     expect(h.rows.get("carListings/L1").photoPaths).toEqual(["t/listings/b.jpg", "t/listings/c.jpg"]);
   });
+  it("the only-photo refusal points to Replace, not to a non-existent Add action", async () => {
+    h.rows.set("carListings/L1", { ...h.rows.get("carListings/L1"), photoPaths: ["t/listings/a.jpg"] });
+    const err: any = await removeMyListingPhoto.run(req("me", { listingId: "L1", index: 0, expectedCount: 1 })).catch((e: unknown) => e);
+    expect(err.code).toBe("failed-precondition");
+    expect(err.message).toMatch(/Replace/);
+    expect(err.message).not.toMatch(/Add another/i);
+    expect(h.gone).toHaveLength(0);
+  });
   it("a stale view (count changed) is refused; the last photo cannot be removed; sold listings are closed", async () => {
     await expect(removeMyListingPhoto.run(req("me", { listingId: "L1", index: 0, expectedCount: 2 }))).rejects.toMatchObject({ code: "aborted" });
     h.rows.set("carListings/L1", { ...h.rows.get("carListings/L1"), photoPaths: ["t/listings/a.jpg"] });
