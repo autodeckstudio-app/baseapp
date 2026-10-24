@@ -1,4 +1,4 @@
-/** /staffAlerts rules: staff-only read (studio own studio, admin tenant-wide), never customers, other tenants, other studios; no client writes. */
+/** Intended scope: studio role reads its own studio only, admin its tenant, superadmin all. /staffAlerts rules: staff-only read (studio own studio, admin tenant-wide), never customers, other tenants, other studios; no client writes. */
 import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
 import { initializeTestEnvironment, assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
@@ -24,6 +24,7 @@ const get = (c: ReturnType<typeof ctx>) => c.firestore().collection("staffAlerts
 
 describe("/staffAlerts", () => {
   it("own-studio staff can read", async () => { await assertSucceeds(get(ctx("studio"))); });
+  it("superadmin can read", async () => { await assertSucceeds(get(ctx("superadmin"))); });
   it("admin of the tenant can read", async () => { await assertSucceeds(get(ctx("admin"))); });
   it("studio staff of another studio cannot read", async () => { await assertFails(get(ctx("studio", { studioId: "studio-other" }))); });
   it("staff of another tenant cannot read", async () => {

@@ -21,7 +21,7 @@ export function StaffAlertsNotice() {
   return (
     <div className="ax-panel" role="status" data-testid="staff-alerts-notice">
       <span className="ax-label">Needs a manual check</span>
-      <p style={{ margin: "4px 0 0" }}>{alerts.length === 1 ? "1 online payment could not be matched safely and was not completed." : `${alerts.length} online payments could not be matched safely and were not completed.`}</p>
+      <p style={{ margin: "4px 0 0" }}>{alerts.length === 1 ? "1 online payment notice matched more than one payment, so it was not applied automatically." : `${alerts.length} online payment notices matched more than one payment, so they were not applied automatically.`} A manual check is needed.</p>
     </div>
   );
 }
