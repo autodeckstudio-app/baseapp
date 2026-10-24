@@ -37,6 +37,7 @@ export type ProviderEventType =
   | "payment.captured"
   | "payment.failed"
   | "payment.link.paid"
+  | "payment_link.paid" // documented Razorpay name
   | "refund.created"
   | "refund.failed";
 
