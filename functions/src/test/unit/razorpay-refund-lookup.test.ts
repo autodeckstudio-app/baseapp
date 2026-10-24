@@ -34,6 +34,23 @@ describe("RazorpayProvider.findRefundByReference", () => {
     stubFetch(() => ({ ok: false, body: {} }));
     await expect(provider.findRefundByReference("req-123")).resolves.toEqual({ outcome: "unknown" });
   });
+  it("transport rejection is unknown, never a thrown error", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+    await expect(provider.findRefundByReference("req-123")).resolves.toEqual({ outcome: "unknown" });
+  });
+  it("malformed JSON body is unknown, never a thrown parse error", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("not-json{", { status: 200 }));
+    await expect(provider.findRefundByReference("req-123")).resolves.toEqual({ outcome: "unknown" });
+  });
+  it("duplicate receipt matches are ambiguous unknown - NEVER an arbitrary first pick", async () => {
+    stubFetch(() => ({
+      ok: true,
+      body: { items: [{ id: "rfnd_1", receipt: "req-123" }, { id: "rfnd_2", receipt: "req-123" }] },
+    }));
+    const r = await provider.findRefundByReference("req-123");
+    expect(r).toEqual({ outcome: "unknown" });
+    expect(JSON.stringify(r)).not.toContain("rfnd_");
+  });
   it("receipt-bearing refunds are what initiateRefund submits (receipt = referenceId)", async () => {
     const spy = stubFetch(() => ({ ok: true, body: { id: "rfnd_9" } }));
     await provider.initiateRefund({ providerPaymentId: "pay_1", amount: 100, reason: "cancel", referenceId: "req-123" });

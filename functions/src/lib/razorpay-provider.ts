@@ -170,18 +170,27 @@ export class RazorpayProvider implements PaymentProvider {
    * held for manual reconciliation rather than releasing the balance.
    */
   async findRefundByReference(referenceId: string): Promise<RefundLookupResult> {
-    const response = await fetch(`${this.baseUrl}/refunds?count=100`, {
-      headers: { Authorization: this.authHeader },
-    });
-    if (!response.ok) {
+    // EVERY failure mode is inconclusive, never a thrown error and never
+    // authoritative absence: transport rejection, non-OK status, malformed
+    // JSON. The runner also catches, this is belt and braces at the boundary.
+    let data: { items?: Array<{ id?: string; receipt?: string | null }> };
+    try {
+      const response = await fetch(`${this.baseUrl}/refunds?count=100`, {
+        headers: { Authorization: this.authHeader },
+      });
+      if (!response.ok) return { outcome: "unknown" };
+      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null }> };
+    } catch {
       return { outcome: "unknown" };
     }
-    const data = (await response.json()) as {
-      items?: Array<{ id?: string; receipt?: string | null }>;
-    };
-    const hit = (data.items ?? []).find((refund) => refund?.receipt === referenceId);
-    return hit?.id
-      ? { outcome: "found", providerRefundId: hit.id }
+    // receipt is a free-form merchant field with NO provider uniqueness
+    // contract. Zero matches is inconclusive (page/index lag); 2+ matches
+    // cannot identify WHICH refund is ours - arbitrarily picking the first
+    // could attach someone else's refund id. Only exactly one match founds.
+    const matches = (data.items ?? []).filter((refund) => refund?.receipt === referenceId);
+    const only = matches.length === 1 ? matches[0] : null;
+    return only?.id
+      ? { outcome: "found", providerRefundId: only.id }
       : { outcome: "unknown" };
   }
 }

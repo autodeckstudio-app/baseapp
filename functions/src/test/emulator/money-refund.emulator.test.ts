@@ -119,6 +119,45 @@ describe("ambiguous hold on real Firestore", () => {
   });
 });
 
+describe("consumer fail-closed at the provider boundary", () => {
+  // Regression for the adapter contract: even if findRefundByReference THROWS
+  // (transport rejection / malformed JSON escaping the adapter), the runner
+  // catches it as "unknown": the request holds as ambiguous, the reservation
+  // is NOT released, and a re-run NEVER resubmits a second refund.
+  class ThrowingProvider extends MockPaymentProvider {
+    submitCalls = 0;
+    override async initiateRefund(params: Parameters<MockPaymentProvider["initiateRefund"]>[0]): Promise<never> {
+      this.submitCalls++;
+      throw new Error(`submit response lost (ref may exist provider-side) for ${params.referenceId}`);
+    }
+    override async findRefundByReference(): Promise<never> {
+      throw new Error("network down"); // transport/parse failure escaping the adapter
+    }
+  }
+
+  it("throwing lookup holds ambiguous, keeps the reservation, never resubmits", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "a1" });
+    const provider = new ThrowingProvider();
+    await runRefundOutbox(db, provider);
+    let snap = await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get();
+    expect(snap.data()).toMatchObject({ status: "ambiguous" });
+    // Money untouched: payment not refunded, reservation still held.
+    expect((await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()).toMatchObject({ status: "completed" });
+    expect(await activeReservation(db, p.id)).not.toBeNull();
+    // Re-run: reconcile path only - no second submit, state unchanged.
+    await runRefundOutbox(db, provider);
+    expect(provider.submitCalls).toBe(1);
+    snap = await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get();
+    expect(snap.data()).toMatchObject({ status: "ambiguous" });
+    expect(await activeReservation(db, p.id)).not.toBeNull();
+    // And a new reservation is still blocked while the hold is unresolved.
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "second", createdBy: "a2" }))
+      .rejects.toThrow(/already has an active refund request/);
+  });
+});
+
 describe("webhook interactions", () => {
   const ev = (o: Record<string, unknown>) => ({
     eventType: "refund.created", providerEventId: uid("evt"), providerPaymentId: "rzp_pay_1",
