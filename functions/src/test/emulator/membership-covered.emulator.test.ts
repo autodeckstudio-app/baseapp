@@ -286,4 +286,33 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       "COVERED paid+synthetic void denial: Membership-covered invoice linkage is invalid.",
     );
   });
+  it("covered limiter increments and normal retry stays idempotent; exhaustion denies", async () => {
+    const id = await seed(),
+      a = { uid: id, token: { role: "admin", tenantId: "covered", studioId: null } },
+      ref = db.collection("rateLimits").doc(`covered__${id}__job.settleMembershipCovered`);
+    const first = await run(id, a);
+    expect((await ref.get()).data()?.count).toBe(1);
+    expect(await run(id, a)).toMatchObject({ ...first, alreadySettled: true });
+    expect((await ref.get()).data()?.count).toBe(2);
+    await ref.update({ count: 60 });
+    await expect(run(id, a)).rejects.toMatchObject({ code: "resource-exhausted" });
+    console.log(
+      "COVERED limiter counts1->2, normal idempotent retry same invoice, count60 resource-exhausted",
+    );
+  });
+  it("assertStudio allows own-studio/admin/superadmin and denies mismatch", async () => {
+    for (const a of [
+      auth("studio", "covered", "s"),
+      auth("admin", "covered", "other"),
+      auth("superadmin", "covered", "other"),
+    ]) {
+      const id = await seed();
+      await expect(run(id, a)).resolves.toMatchObject({ alreadySettled: false });
+    }
+    const id = await seed();
+    await expect(run(id, auth("studio", "covered", "other"))).rejects.toMatchObject({
+      code: "permission-denied",
+      message: "Job belongs to a different studio.",
+    });
+  });
 });

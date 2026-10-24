@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Invoice, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js";
+import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { readCoveredLink, exactCoveredInvoice } from "../../lib/membership-covered.js";
@@ -15,6 +16,7 @@ export const settleMembershipCoveredJob = onCall({ region: "asia-south1" }, asyn
     z.object({ jobId: z.string().min(1).max(128) }).strict(),
     request.data,
   );
+  await enforceRateLimit(subjectFrom(user), "job.settleMembershipCovered");
   const db = getFirestore();
   return db.runTransaction(async (tx) => {
     const ref = db.collection(COLLECTIONS.jobs()).doc(jobId),
