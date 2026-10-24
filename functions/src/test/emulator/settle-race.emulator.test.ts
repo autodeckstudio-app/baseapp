@@ -83,7 +83,7 @@ describe("settle vs GUARDED grafted handlers (race matrix v2)", () => {
     expect((await paymentsFor(id)).length).toBe(0);
     const live = (await invoicesFor(id)).filter((i) => i.status !== "void");
     expect(live.length).toBe(1);
-    expect(live[0].total).toBe(0);
+    expect(live[0]!.total).toBe(0);
     // idempotent second settle
     const r2 = (await runSettle(id)) as { alreadySettled: boolean };
     expect(r2.alreadySettled).toBe(true);
@@ -144,7 +144,7 @@ describe("settle vs GUARDED grafted handlers (race matrix v2)", () => {
     expect(job.settlementKind ?? null).toBeNull();
     const invs = (await invoicesFor(id)).filter((i) => i.status !== "void");
     expect(invs.length).toBe(1);
-    expect(invs[0].settlementKind ?? null).toBeNull(); // normal, not covered invoice
+    expect(invs[0]!.settlementKind ?? null).toBeNull(); // normal, not covered invoice
   });
 
   it("R7: concurrent settle + settle -> exactly one invoice, both calls coherent", async () => {

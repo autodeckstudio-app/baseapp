@@ -14,6 +14,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, ServiceJob, Payment, Invoice, Customer } from "@autodeck/core";
+import { GST_ENABLED } from "@autodeck/core";
 
 // confirmPaymentMock is gated to dev/emulator environments — this flag is
 // normally set by the real Functions emulator runtime; set it directly since
@@ -208,12 +209,15 @@ describe("Walk-in financial flow", () => {
     } as never);
 
     // basePrice=40000, no vehicleCategoryPricing rule for hatchback => scopeAdjustment=0
-    // tax = round(40000 * 18 / 100) = 7200; total = 47200
+    // GST_ENABLED=false at this base (owner-directed GST-off switch, commit 0e06d1a1):
+    // every price path must apply zero tax. If the switch flips on,
+    // tax = round(40000 * 18 / 100) = 7200; total = 47200.
+    const expectedTax = GST_ENABLED ? 7200 : 0;
     expect(result.job.priceBreakdown.basePrice).toBe(40000);
     expect(result.job.priceBreakdown.scopeAdjustment).toBe(0);
-    expect(result.job.priceBreakdown.tax).toBe(7200);
-    expect(result.job.priceBreakdown.total).toBe(47200);
-    expect(result.job.totalAmount).toBe(47200);
+    expect(result.job.priceBreakdown.tax).toBe(expectedTax);
+    expect(result.job.priceBreakdown.total).toBe(40000 + expectedTax);
+    expect(result.job.totalAmount).toBe(40000 + expectedTax);
   });
 
   it("3. walk-in payment: customer-initiated → studio-confirmed → invoice issued, referencing the job not a fabricated booking", async () => {
