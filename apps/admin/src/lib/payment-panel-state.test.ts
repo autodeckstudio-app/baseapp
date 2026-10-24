@@ -1,4 +1,6 @@
 // TEST. Transitions loading -> none / present, and that no payment control is offered before the listener answers.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { canOfferPayment, paymentPanelMode } from "./payment-panel-state";
 describe("paymentPanelMode", () => {
@@ -52,6 +54,18 @@ describe("coveredVisitSettlementNote", () => {
         null,
       ),
     ).toBeNull();
+  });
+  it("gate semantics: note suppressed exactly when the settle action ships (no duplicate actions gate-ON, old route preserved gate-OFF)", () => {
+    const src = readFileSync(join(__dirname, "payment-panel-state.ts"), "utf8");
+    // The flag check sits between the unsettled match and the old-route instruction.
+    expect(src).toContain("MEMBERSHIP_SETTLEMENT_ENABLED");
+    expect(src.indexOf("if (!unsettled(job) && !unsettled(booking)) return null;")).toBeLessThan(
+      src.indexOf("if (MEMBERSHIP_SETTLEMENT_ENABLED) return null;"),
+    );
+    expect(src.indexOf("if (MEMBERSHIP_SETTLEMENT_ENABLED) return null;")).toBeLessThan(
+      src.indexOf("Record cash payment for Rs 0"),
+    );
+    // Default today: gate OFF, so the old-route note still renders (see tests above).
   });
   it("ordinary unpaid job: no note and payment actions remain offerable (no dead end)", async () => {
     const { coveredVisitSettlementNote } = await import("./payment-panel-state");

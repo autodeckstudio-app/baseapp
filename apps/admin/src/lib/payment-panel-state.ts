@@ -12,6 +12,8 @@ export function canOfferPayment(payment: { status: string } | null | undefined, 
   return { link: payment === null || payment.status === "failed" || payment.status === "cancelled", counter: true };
 }
 
+import { MEMBERSHIP_SETTLEMENT_ENABLED } from "./backend-features";
+
 export type CoveredVisitSubject = {
   settlementKind?: string;
   membershipWashUsed?: boolean;
@@ -32,5 +34,10 @@ export function coveredVisitSettlementNote(
   const unsettled = (v: CoveredVisitSubject | null | undefined) =>
     !!v && v.settlementKind !== "membership_covered" && v.membershipWashUsed === true && v.totalAmount === 0;
   if (!unsettled(job) && !unsettled(booking)) return null;
+  // Gate ON: the MembershipSettlement panel on this page carries the settle action.
+  // Showing the old Rs-0 instruction next to it would offer two competing paths, and
+  // once the recordManualPayment guard deploys the old route rejects covered jobs.
+  if (MEMBERSHIP_SETTLEMENT_ENABLED) return null;
+  // Gate OFF (pre-release): the studio zero route is still the working path.
   return "Membership-covered visit - the customer's plan covers it, so there is nothing to collect here. To close it out, settle the visit in the studio app: open the job and use Record cash payment for Rs 0.";
 }
