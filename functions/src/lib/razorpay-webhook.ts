@@ -98,7 +98,8 @@ export async function processProviderEvent(
       if (ev.eventType === "payment_link.paid") {
         // NEW documented-name path fails closed: the stored link id must match, and amount and currency must be present and equal.
         if (!ev.providerPaymentLinkId || payment.razorpayPaymentLinkId !== ev.providerPaymentLinkId || (ev.referenceId && ev.referenceId !== payment.id)) { record("unknown_payment"); return "unknown_payment"; }
-        if (!ev.amount || ev.amount !== payment.amount || ev.currency !== "INR") { record("amount_mismatch"); return "amount_mismatch"; }
+        if (payment.razorpayPaymentId && ev.providerPaymentId && payment.razorpayPaymentId !== ev.providerPaymentId) { record("unknown_payment"); return "unknown_payment"; }
+        if (!ev.amount || ev.amount !== payment.amount || ev.currency !== (payment.currency ?? "INR")) { record("amount_mismatch"); return "amount_mismatch"; }
       }
       if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
 

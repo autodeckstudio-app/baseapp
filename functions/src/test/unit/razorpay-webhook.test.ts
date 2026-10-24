@@ -193,4 +193,24 @@ describe("documented payment_link.* events (local, fail-closed)", () => {
     expect((await processProviderEvent(db, ev(body("payment_link.expired"), "p2"))).outcome).toBe("already_final");
     expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
   });
+  it("two tenants: conflicting identifiers cannot complete either payment", async () => {
+    const f = mk();
+    const p1 = f.data["payments"]!["pay1"] as Record<string, unknown>;
+    f.data["payments"]!["pay2"] = { ...p1, id: "pay2", tenantId: "u", razorpayPaymentLinkId: "plink_2", status: "pending" };
+    // reference says tenant t's payment, link says tenant u's payment
+    const r = await processProviderEvent(f.db, ev(body("payment_link.paid", { amount: AMOUNT, linkId: "plink_2" }), "k1"));
+    expect(r.outcome).toBe("unknown_payment");
+    expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
+    expect(f.data["payments"]!["pay2"]!["status"]).toBe("pending");
+    // link only (no reference id) selects exactly the payment that stores that link
+    const noRef = JSON.stringify({ entity: "event", event: "payment_link.paid", payload: { payment: { entity: { id: "pay_zzz", amount: AMOUNT, currency: "INR" } }, payment_link: { entity: { id: "plink_2", amount: AMOUNT } } } });
+    expect((await processProviderEvent(f.db, ev(noRef, "k2"))).outcome).toBe("completed");
+    expect(f.data["payments"]!["pay2"]!["status"]).toBe("completed");
+    expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
+  });
+  it("a different provider payment id than the one already stored is rejected; stored currency is used", async () => {
+    const f = mk();
+    (f.data["payments"]!["pay1"] as Record<string, unknown>)["razorpayPaymentId"] = "pay_stored";
+    expect((await processProviderEvent(f.db, ev(body("payment_link.paid", { amount: AMOUNT }), "m1"))).outcome).toBe("unknown_payment");
+  });
 });
