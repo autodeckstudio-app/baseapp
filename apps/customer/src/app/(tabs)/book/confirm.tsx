@@ -23,7 +23,18 @@ import { memberSaving } from "../../../lib/member-save";
 import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
+import { getDeviceLocation, requestPickupDrop } from "../../../lib/pickup-service";
+import { pickupSlotsFor } from "../../../lib/pickup-slots";
+import { PICKUP_POLICY, pickupFeeText } from "../../../lib/pickup-policy";
+import { pickupZone } from "@autodeck/core";
+import { SelectField } from "../../../ui/inputs";
 import { useAuth } from "../../../hooks/useAuth";
+
+const PICKUP_KINDS: { value: "pickup" | "drop" | "both"; label: string }[] = [
+  { value: "pickup", label: "Pickup" },
+  { value: "drop", label: "Drop-off" },
+  { value: "both", label: "Pickup and drop" },
+];
 
 // Multi-day PPF services run into thousands of minutes - "~4320 min" is
 // meaningless to a customer. This is service-time (not calendar time - the
@@ -60,6 +71,14 @@ export default function BookingConfirmScreen() {
   const [wash, setWash] = useState<WashDecision | null>(null);
   const [useWash, setUseWash] = useState(false);
   const [payAtStudio, setPayAtStudio] = useState(false);
+  // Optional pickup/drop chosen here and sent with "Confirm booking" (round 8):
+  // nothing is selected by default, and tapping the chosen chip again clears
+  // the whole selection so nothing pickup-related is sent.
+  const [pickupKind, setPickupKind] = useState<"pickup" | "drop" | "both" | null>(null);
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupSlot, setPickupSlot] = useState("");
+  const [pickupWhere, setPickupWhere] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
   // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
   const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -129,6 +148,49 @@ export default function BookingConfirmScreen() {
   const payNow = !giftCode && payHow.online && !payAtStudio && !washOn;
   const holdLeft = held ? Math.max(0, Math.ceil((held.expiresAt - now) / 1000)) : 0;
 
+  const pickupSlots = params.scheduledTime ? pickupSlotsFor(params.scheduledTime) : [];
+  const pickupZoneInfo = pickupWhere ? pickupZone(pickupWhere) : null;
+
+  function choosePickupKind(k: "pickup" | "drop" | "both") {
+    if (pickupKind === k) {
+      setPickupKind(null);
+      setPickupAddress("");
+      setPickupSlot("");
+      setPickupWhere(null);
+    } else {
+      setPickupKind(k);
+    }
+  }
+
+  async function locatePickup() {
+    setLocating(true);
+    const p = await getDeviceLocation();
+    setPickupWhere(p);
+    setLocating(false);
+  }
+
+  // Sends the pickup/drop request for a booking that now stands. True when
+  // there is nothing to send or the request went through; false only when the
+  // request itself failed - the booking always stands either way. Drop-off
+  // timing is agreed after the service, so a requested drop time is never sent.
+  async function sendPickupRequest(bookingId: string): Promise<boolean> {
+    if (!pickupKind) return true;
+    const address = pickupAddress.trim();
+    if (address.length < 8) return true;
+    try {
+      await requestPickupDrop({
+        bookingId,
+        kind: pickupKind,
+        address,
+        ...(pickupWhere ? { lat: pickupWhere.lat, lng: pickupWhere.lng } : {}),
+        ...(pickupKind !== "drop" && pickupSlot ? { requestedPickupTime: pickupSlot } : {}),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Opens checkout for the held booking. Success goes to the booking; a failure or close stays here with the slot held. */
   async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number }) {
     if (payBusy.current || !service) return;
@@ -139,7 +201,11 @@ export default function BookingConfirmScreen() {
       if (!h.paymentJobId || !checkoutSupported) throw new Error("no checkout");
       const pay = await initiatePayment(h.paymentJobId, "razorpay_payment_link");
       const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: service.name }) : "failed";
-      if (out === "paid") { router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid" } }); return; }
+      if (out === "paid") {
+        const pickupSent = await sendPickupRequest(h.bookingId);
+        router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(pickupSent ? {} : { pickup: "failed" }) } });
+        return;
+      }
       setBookError(out === "failed" ? "Payment failed, please retry." : "Payment not completed. Your slot is held for a few more minutes.");
     } catch {
       setBookError("We could not open the payment. Please retry.");
@@ -181,7 +247,8 @@ export default function BookingConfirmScreen() {
         await payHeld(h);
         return;
       }
-      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1" } });
+      const pickupSent = await sendPickupRequest(result.id);
+      router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(pickupSent ? {} : { pickup: "failed" }) } });
     } catch (err) {
       console.warn("create booking failed", err);
       setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings before trying again. If the request reached the studio, it will appear there.");
@@ -268,6 +335,41 @@ export default function BookingConfirmScreen() {
           <Row title={`Members save ${rupees(saving)} on this wash`} detail={<T role="caption" tone="secondary">Club plans include washes at a lower rate each.</T>} trailing={<Button kind="quiet" label="Join Club" onPress={() => router.push("/(tabs)/membership")} />} last />
         </Pane>
       ) : null}
+
+      <View style={{ gap: space.line }}>
+        <Kicker>Pickup and drop (optional)</Kicker>
+        <Pane pad="gap">
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
+            {PICKUP_KINDS.map((k) => <Button key={k.value} label={k.label} kind={pickupKind === k.value ? "primary" : "quiet"} onPress={() => choosePickupKind(k.value)} style={{ flexGrow: 1 }} />)}
+          </View>
+          {pickupKind ? (
+            <View style={{ gap: space.line, marginTop: space.line }}>
+              <T role="caption" tone="secondary">{PICKUP_POLICY}</T>
+              <Field
+                label="Address"
+                value={pickupAddress}
+                onChangeText={setPickupAddress}
+                placeholder="e.g. 12, Sunrise Apartments, CG Road"
+                multiline
+                error={pickupAddress.trim().length > 0 && pickupAddress.trim().length < 8 ? "Enter the full address" : undefined}
+              />
+              <Button label={pickupWhere ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
+              {pickupZoneInfo ? <T role="caption" tone="secondary">{`About ${pickupZoneInfo.km} km from the studio. ${pickupFeeText(pickupZoneInfo.km, pickupKind)} for ${pickupKind === "both" ? "pickup and drop-off" : pickupKind === "pickup" ? "pickup" : "drop-off"}.`}</T> : null}
+              {pickupKind !== "drop" && pickupSlots.length > 0 ? (
+                <SelectField
+                  label={pickupKind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"}
+                  value={pickupSlot}
+                  onChange={setPickupSlot}
+                  options={[{ value: "", label: "No preference" }, ...pickupSlots.map((s) => ({ value: s, label: s }))]}
+                />
+              ) : null}
+              {pickupKind !== "drop" ? <T role="caption" tone="secondary">This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.</T> : null}
+            </View>
+          ) : (
+            <T role="caption" tone="secondary">Want us to collect or return your car? Choose one above and it goes with your booking.</T>
+          )}
+        </Pane>
+      </View>
 
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
