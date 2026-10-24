@@ -62,6 +62,12 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
 
       <section className="ax-panel">
         <span className="ax-label">Price</span>
+        {!pb ? (
+          <>
+            <div className="kv"><span>Price breakdown</span><span className="ax-data">Not available</span></div>
+            <div className="kv"><span>Total</span><span className="ax-data">{typeof booking.totalAmount === "number" && Number.isFinite(booking.totalAmount) ? formatPaise(booking.totalAmount) : "Not available"}</span></div>
+          </>
+        ) : (<>
         <div className="kv"><span>{service?.name ?? "Service"}</span><span className="ax-data">{formatPaise(pb.basePrice)}</span></div>
         {pb.scopeAdjustment !== 0 && <div className="kv"><span>Size and scope</span><span className="ax-data">{formatPaise(pb.scopeAdjustment)}</span></div>}
         {pb.membershipDiscount !== null && (
@@ -70,6 +76,7 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         <div className="kv"><span>Subtotal</span><span className="ax-data">{formatPaise(pb.subtotal)}</span></div>
         {pb.tax > 0 ? <div className="kv"><span>{pb.taxDescription}</span><span className="ax-data">{formatPaise(pb.tax)}</span></div> : null}
         <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(pb.total)}</span></div>
+        </>)}
         {booking.membershipDiscountApplied && (
           <p className="ax-note">{booking.membershipWashUsed ? "Paid with a membership wash credit." : "Membership discount applied."}</p>
         )}
