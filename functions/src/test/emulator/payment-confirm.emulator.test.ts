@@ -39,10 +39,21 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${seq}`;
 }
 
-let dayOffset = 0;
+// Each call returns a NEW calendar day (IST), so no two bookings in this file compete for the same studio/bay slot.
+// createBooking rejects a start later than now + 30 x 24h (start time evaluated in Asia/Kolkata). Today (IST) + 29 days
+// at 15:00 IST is always inside that window whatever the time of day, so the usable range is +2..+29 days (28 dates).
+// Past that the helper throws instead of silently reusing a date (which would risk capacity collisions).
+const FIRST_OFFSET_DAYS = 2;
+const LAST_OFFSET_DAYS = 29;
+let dateCalls = 0;
 function nextDate(): string {
-  dayOffset += 1;
-  return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
+  const offset = FIRST_OFFSET_DAYS + dateCalls;
+  dateCalls += 1;
+  if (offset > LAST_OFFSET_DAYS) {
+    throw new Error(`nextDate(): fixture needs more distinct days than the ${LAST_OFFSET_DAYS}-day booking horizon allows`);
+  }
+  const IST_MS = 5.5 * 3600 * 1000;
+  return new Date(Date.now() + IST_MS + offset * 86400000).toISOString().slice(0, 10);
 }
 
 function customerAuth(authUid: string, tenantId = TENANT_A) {
