@@ -204,6 +204,9 @@ export async function changeRole(
 
 export async function deactivate(auth: Auth, db: Firestore, user: AuthorizedUser, employeeId: string) {
   const { ref, existing } = await loadInTenant(db, user, employeeId);
+  if (existing.role === "accountant" && user.claims.role !== "superadmin" && (user.email ?? "").trim().toLowerCase() !== ownerEmail()) {
+    throw new StaffError(403, "permission-denied", "Only the owner or a platform operator can change an accountant entry.");
+  }
   if (existing.terminatedAt) return { employeeId, alreadyTerminated: true };
   if (existing.authUid) {
     await auth.setCustomUserClaims(existing.authUid, {

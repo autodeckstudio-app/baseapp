@@ -21,11 +21,20 @@ export function canSeeOffice(role: UserRole | undefined | null): boolean {
   return role === "admin" || role === "superadmin";
 }
 
+export const ACCOUNTANT_HOME = "/accountant";
+
+// The accountant role is read-only Money and sees exactly one route. It never sees Office or Studio screens.
+export function isAccountantPath(pathname: string): boolean {
+  return pathname === ACCOUNTANT_HOME || pathname.startsWith(`${ACCOUNTANT_HOME}/`);
+}
+
 export function canVisit(role: UserRole | undefined | null, pathname: string): boolean {
+  if (role === "accountant") return isAccountantPath(pathname);
   if (canSeeOffice(role)) return true;
   return role === "studio" && isStudioPath(pathname);
 }
 
 export function homeFor(role: UserRole | undefined | null): string {
+  if (role === "accountant") return ACCOUNTANT_HOME;
   return canSeeOffice(role) ? OFFICE_HOME : STUDIO_HOME;
 }

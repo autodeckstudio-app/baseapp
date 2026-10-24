@@ -23,3 +23,18 @@ describe("staff access", () => {
     expect(isStudioPath("/bookings/1")).toBe(true);
   });
 });
+
+describe("accountant", () => {
+  it("sees only /accountant", () => {
+    expect(canVisit("accountant", "/accountant")).toBe(true);
+    expect(canVisit("accountant", "/payments")).toBe(false);
+    expect(canVisit("accountant", "/jobs")).toBe(false);
+    expect(canVisit("accountant", "/dashboard")).toBe(false);
+    expect(canVisit("accountant", "/accountantx")).toBe(false);
+    expect(homeFor("accountant")).toBe("/accountant");
+  });
+  it("other roles cannot use it as a way in", () => {
+    expect(canVisit("studio", "/accountant")).toBe(false);
+    expect(canVisit("customer", "/accountant")).toBe(false);
+  });
+});

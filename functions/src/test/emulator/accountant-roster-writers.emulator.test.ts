@@ -33,3 +33,20 @@ describe("accountant roster writers", () => {
     await expect(run(updateStaffRole, tok("studio"), { employeeId: "acc1", role: "admin", studioId: null })).rejects.toBeTruthy();
   });
 });
+
+import { deactivateStaffMember } from "../../functions/employee/deactivateStaffMember.js";
+describe("accountant entry deactivate boundary", () => {
+  it("an ordinary admin cannot deactivate it; doc unchanged", async () => {
+    await expect(run(deactivateStaffMember, tok("admin"), { employeeId: "acc1" })).rejects.toThrow(/owner or a platform operator/);
+    const d = (await db.collection("employees").doc("acc1").get()).data()!;
+    expect(d["active"]).toBe(true);
+    expect(d["terminatedAt"]).toBeNull();
+  });
+  it("an ordinary admin whose email merely resembles the owner is denied", async () => {
+    await expect(run(deactivateStaffMember, tok("admin", "autodeckstudio@gmail.com.evil.test"), { employeeId: "acc1" })).rejects.toBeTruthy();
+  });
+  it("superadmin can (the revocation path)", async () => {
+    await run(deactivateStaffMember, tok("superadmin"), { employeeId: "acc1" });
+    expect((await db.collection("employees").doc("acc1").get()).data()!["active"]).toBe(false);
+  });
+});

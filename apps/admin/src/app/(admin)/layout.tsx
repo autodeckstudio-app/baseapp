@@ -44,6 +44,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
   if (!user || !claims || !canVisit(claims.role, pathname)) return null;
+  if (claims.role === "accountant") {
+    // Minimal read-only frame: no Office/Studio navigation, no push alerts, only Money and sign out.
+    return (
+      <div className="ax-shell">
+        <Ambient>
+          <header style={{ display: "flex", justifyContent: "space-between", padding: "16px var(--ad-space-section)" }}>
+            <span className="ax-label">AutoDeck, accountant</span>
+            <button type="button" className="ax-button" onClick={() => void signOut()}>Sign out</button>
+          </header>
+          <main>{children}</main>
+        </Ambient>
+      </div>
+    );
+  }
   const office = canSeeOffice(claims.role);
   const who = user.displayName || user.email || "Signed in";
 
