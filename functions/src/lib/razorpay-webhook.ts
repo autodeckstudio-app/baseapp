@@ -1,3 +1,4 @@
+import { resolveWaitingCancel } from "./waiting-cancel.js";
 // Applies a verified payment-provider event to Firestore. Pure of HTTP: the
 // onRequest wrapper verifies the signature and calls processProviderEvent().
 //
@@ -132,6 +133,9 @@ export async function processProviderEvent(
     const payment = paySnap.data() as Payment;
     const record = (o: WebhookOutcome) =>
       tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome: o, processedAt: now });
+
+    const waiting = await resolveWaitingCancel(tx, db, payment, ev, now);
+    if (waiting) { record(waiting); return waiting; }
 
     if (ev.eventType === "refund.processed") {
       // Three outcomes. MATCH: booking.refundStatus "processed" (provider status only; no money/payment/invoice/job write).

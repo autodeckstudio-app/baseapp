@@ -245,8 +245,8 @@ export default function BookingDetailScreen() {
     setCancelling(true);
     setActionError(null);
     try {
-      await cancelBooking(id, "Cancelled by customer");
-      setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
+      const result = await cancelBooking(id, "Cancelled by customer");
+      if (!result.cancellationPending) setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
       setConfirmingCancel(false);
     } catch (err) {
       setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
@@ -266,8 +266,9 @@ export default function BookingDetailScreen() {
   const { canCancel, lateToCancel } = cancel;
   const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
   const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
-  const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
-  const showRescheduleSection = !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
+  const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
+  const canPay = !waitingCancel && booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
+  const showRescheduleSection = !waitingCancel && !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
@@ -471,9 +472,10 @@ export default function BookingDetailScreen() {
         )}
       </View>
 
+      {waitingCancel ? <Notice title="Cancellation requested" body="Your booked time is still held while the online payment is checked. The booking is not cancelled yet. Contact the studio if you need help." /> : null}
       {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
 
-      {booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
+      {!waitingCancel && booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
         <Notice
           title="Payment pending"
           body={`${booking.holdExpiresAt ? `Held until ${new Date(booking.holdExpiresAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}. ` : ""}Your slot is held until the payment goes through.`}

@@ -348,14 +348,14 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
-            {canOfferPayment(payment, job.paymentStatus).link && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && canOfferPayment(payment, job.paymentStatus).link && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
                   {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
                 </button>
               </div>
             )}
-            {canOfferPayment(payment, job.paymentStatus).counter && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && canOfferPayment(payment, job.paymentStatus).counter && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
                 <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
                 <label className="ax-form-row">

@@ -16,6 +16,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { isBookingMissed, bookingMissedAt, type Booking } from "@autodeck/core";
 
 export function customerBookingState(booking: Booking): Booking {
+  if (booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review") return booking;
   return isBookingMissed(booking) ? { ...booking, status: "CANCELLED", cancelledAt: new Date(bookingMissedAt(booking.scheduledAt)).toISOString(), cancellationReason: "Auto-cancelled: vehicle did not arrive by studio close." } : booking;
 }
 
@@ -107,12 +108,12 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
 export async function cancelBooking(
   bookingId: string,
   reason: string,
-): Promise<void> {
+): Promise<CancelBookingOutput & { cancellationPending?: boolean }> {
   const fn = httpsCallable<CancelBookingInput & { customerContext: boolean }, CancelBookingOutput>(
     functions,
     "cancelBooking",
   );
-  await fn({ bookingId, reason, customerContext: true });
+  return (await fn({ bookingId, reason, customerContext: true })).data;
 }
 
 export async function rescheduleBooking(

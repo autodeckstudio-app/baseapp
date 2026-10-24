@@ -1,3 +1,4 @@
+import { unresolvedCancel, reviewWaitingCancels } from "./waiting-cancel.js";
 // Pay-online bookings hold their slot for HOLD_MINUTES. Pure rules here, the sweep below.
 import type { Firestore } from "firebase-admin/firestore";
 import type { Booking, ServiceJob, Payment } from "@autodeck/core";
@@ -28,13 +29,14 @@ function systemUser(tenantId: string): AuthorizedUser {
 
 /** Releases bookings whose 15 minutes ended without payment. The payment is re-read inside the transaction, so money that lands as the hold ends wins. */
 export async function sweepExpiredBookingHolds(db: Firestore, nowMs = Date.now()): Promise<{ expired: number; skipped: number }> {
+  await reviewWaitingCancels(db, nowMs);
   const snap = await db.collection(COLLECTIONS.bookings()).where("status", "==", "PENDING").limit(300).get();
   let expired = 0, skipped = 0;
   for (const d of snap.docs) {
     const ok = await db.runTransaction(async (tx) => {
       const bRef = d.ref;
       const b = (await tx.get(bRef)).data() as (Booking & { holdExpiresAt?: string | null }) | undefined;
-      if (!b || !isHoldExpired(b, nowMs)) return false;
+      if (!b || unresolvedCancel(b) || !isHoldExpired(b, nowMs)) return false;
       const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", b.id).limit(1));
       const jobDoc = jobs.docs[0];
       const pays = jobDoc ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", jobDoc.id).where("status", "in", ["processing", "completed"]).limit(1)) : null;

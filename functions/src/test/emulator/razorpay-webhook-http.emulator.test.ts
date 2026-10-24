@@ -68,3 +68,16 @@ describe("razorpayWebhook HTTP entry (real emulator, signature on)", () => {
     expect(r.status).toBe(200); expect(r.body.outcome).toBe("ignored");
   });
 });
+
+// TEST signed HTTP fixture for the NEW waiting branch, using real HMAC verification and emulator state.
+it("waiting cancellation: signed documented link capture cancels ONLY with full reservation", async () => {
+ const id=`httpwait-${Date.now()}`, now=new Date().toISOString();
+ await db.collection("bookings").doc(id).set({id,tenantId:"h-w",studioId:"s",customerId:"c",status:"PENDING",cancelIntent:{state:"waiting",requestedAt:now}});
+ await db.collection("jobs").doc(id).set({id,tenantId:"h-w",studioId:"s",customerId:"c",bookingId:id,status:"PENDING_VEHICLE",statusHistory:[]});
+ await db.collection("payments").doc(id).set({id,tenantId:"h-w",studioId:"s",customerId:"c",bookingId:id,jobId:id,status:"pending",method:"razorpay_payment_link",razorpayPaymentLinkId:`plink_${id}`,razorpayPaymentId:null,amount:50000,currency:"INR"});
+ await db.collection("bookingCancelIntents").doc(id).set({bookingId:id,tenantId:"h-w",studioId:"s",customerId:"c",jobId:id,paymentId:id,state:"waiting",requestedAt:now,requestedBy:"c",reason:"fixture",reviewAt:now});
+ const raw=JSON.stringify({event:"payment_link.paid",payload:{payment_link:{entity:{id:`plink_${id}`,reference_id:id,amount:50000,amount_paid:50000,currency:"INR",status:"paid"}},payment:{entity:{id:`pay_${id}`,amount:50000,currency:"INR",status:"captured"}}}});
+ expect((await call(raw,{eid:`ev_${id}`})).status).toBe(200);
+ expect((await db.collection("bookings").doc(id).get()).data()).toMatchObject({status:"CANCELLED",refundStatus:"reserved"});
+ const rr=await db.collection("refundRequests").where("paymentId","==",id).get();expect(rr.docs.filter(d=>d.id.startsWith("rr_")).map(d=>d.data().amountPaise)).toEqual([50000]);
+});

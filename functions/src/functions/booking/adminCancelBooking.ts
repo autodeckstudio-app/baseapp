@@ -1,3 +1,4 @@
+import { requestWaitingCancel, unresolvedCancel } from "../../lib/waiting-cancel.js";
 // Admin-only cancel for a booking, with the fee and any refund decided here on the server.
 // Cancel and refund are admin-only for now (owner decision); studio staff have no cancel.
 //  - adminCancelBooking: preview=true returns the numbers and writes nothing. Otherwise it cancels in one go:
@@ -67,6 +68,12 @@ export async function runCancel(
       ? await db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).where("status", "in", ["pending", "processing", "completed"]).limit(10).get()
       : null;
     const payDocs = paySnap?.docs ?? [];
+    const onlineOpen = payDocs.filter(d => d.data()["method"] === "razorpay_payment_link" && ["pending", "processing"].includes(String(d.data()["status"])));
+    if (unresolvedCancel(booking) || (onlineOpen.length && !payDocs.some(d => d.data()["status"] === "completed"))) {
+      if (onlineOpen.length !== 1) throw new HttpsError("failed-precondition", "A manual payment check is needed before cancellation.");
+      if (data.preview) return { preview: true, cancellationPending: true };
+      return requestWaitingCancel(db, booking, onlineOpen[0]!.data() as Payment, user, data.reason);
+    }
     if (payDocs.some((d) => d.data()["status"] === "processing")) {
       throw new HttpsError("failed-precondition", "A payment is still processing on this booking. Wait for it to settle, then cancel.");
     }

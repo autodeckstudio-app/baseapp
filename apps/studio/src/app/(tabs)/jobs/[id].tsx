@@ -1,3 +1,4 @@
+import { waitingCancellation } from "../../../lib/waiting-cancel";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
@@ -83,6 +84,8 @@ export default function JobDetailScreen() {
   const [reslotPick, setReslotPick] = useState<ReslotOption | null>(null);
   const [reslotDone, setReslotDone] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const waitingCancel = waitingCancellation(booking);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
   const [vehicle,setVehicle] = useState<Vehicle|null>(null);
@@ -156,6 +159,11 @@ export default function JobDetailScreen() {
       unsubInvoice();
     };
   }, [job?.id]);
+
+  useEffect(() => {
+    if (!job?.bookingId) { setBooking(null); return; }
+    return onSnapshot(doc(db, COLLECTIONS.bookings(), job.bookingId), snap => setBooking(snap.exists() ? snap.data() as Booking : null));
+  }, [job?.bookingId]);
 
   // Read-only membership status for this job's booking (if any) — studio can
   // see it but has no authority to alter it (doc08 §8.2).
@@ -395,7 +403,7 @@ export default function JobDetailScreen() {
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label="Expected ready" value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label="Payment" value={job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus} />
+        <Row label="Payment" value={waitingCancel ? "Cancellation requested" : job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus} />
       </Section>
 
       {actionError?<ErrorState title="Action not completed" message={actionError} fill={false}/>:null}
@@ -463,11 +471,11 @@ export default function JobDetailScreen() {
 
       <Text style={sectionTitle}>Payment</Text>
       <Section>
-        <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
+        <Row label="Status" value={waitingCancel ? "Cancellation requested" : payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
         <Row label="Amount" value={formatPaise(job.totalAmount)} />
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
-        {!payment && job.status !== "CANCELLED" && (
+        {!waitingCancel && !payment && job.status !== "CANCELLED" && (
           <Button
             label="Record cash payment"
             onPress={() => void handleRecordCashPayment()}
@@ -476,7 +484,7 @@ export default function JobDetailScreen() {
             style={{ marginTop: spacing.xs }}
           />
         )}
-        {payment &&
+        {!waitingCancel && payment &&
           (payment.status === "pending" || payment.status === "processing") &&
           payment.method !== "razorpay_payment_link" && (
             <Button

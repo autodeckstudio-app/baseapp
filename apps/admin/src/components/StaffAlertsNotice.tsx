@@ -16,6 +16,8 @@ export function useStaffAlerts(): StaffAlert[] {
 
 /** Count only: no customer details. Persistent, read-only. */
 const TEXT: Record<string, (n: number) => string> = {
+  waiting_cancel_review: (n) => `${n} cancellation request(s) still await the online payment. Booked times remain held; a manual check is needed.`,
+  waiting_cancel_refund_not_reserved: (n) => `${n} payment(s) arrived for a waiting cancellation but the full refund was NOT reserved. Booked times remain held; manual action is required.`,
   ambiguous_payment_link: (n) => `${n === 1 ? "1 online payment notice matched" : `${n} online payment notices matched`} more than one payment, so ${n === 1 ? "it was" : "they were"} not applied automatically. A manual check is needed.`,
   late_membership_payment: (n) => `${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired. A full refund request was recorded.`,
   late_membership_already_reserved: (n) => `${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired. A matching full refund request already existed.`,

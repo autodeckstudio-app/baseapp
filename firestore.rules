@@ -137,6 +137,8 @@ service cloud.firestore {
     }
 
     // âââ /bookings/{bookingId} ââââââââââââââââââââââââââââââââââââââââââââââ
+    match /bookingCancelIntents/{id} { allow read, write: if false; }
+
     match /bookings/{bookingId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))

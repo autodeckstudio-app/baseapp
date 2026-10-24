@@ -26,6 +26,8 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
     try { done(await fn()); } catch (e) { setWarn(e instanceof Error ? e.message : "That did not work."); } finally { setBusy(false); }
   }
 
+  if (booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review") return <section className="ax-panel"><span className="ax-label">Cancellation requested</span><p className="ax-note">Your booked time is still held while the online payment resolves. The booking is not cancelled yet.{booking.cancelIntent.state === "needs_review" ? " A manual check is needed." : ""}</p></section>;
+
   if (cancelled) {
     const owed = typeof booking.manualRefundDuePaise === "number" && booking.manualRefundDuePaise > 0 ? booking.manualRefundDuePaise : 0;
     if (!(booking.cancellationFeePaise && booking.cancellationFeePaise > 0)) {

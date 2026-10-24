@@ -18,6 +18,6 @@ describe("manual refund notice", () => {
     expect(manualRefundNotice({ status: "CANCELLED" })).toBeNull();
     const src = readFileSync(join(__dirname, "../app/(tabs)/bookings/[id].tsx"), "utf8");
     for (const text of ["Refund requested", "Your refund request is recorded. This page shows its status as it changes.", "Razorpay has accepted your refund. Refund timing depends on your bank or payment provider.", "Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider.", 'title="Payment"']) expect(src).toContain(text);
-    expect(src.indexOf("{owedNotice ?")).toBeLessThan(src.indexOf('{booking.status === "PENDING" && booking.payMode'));
+    expect(src.indexOf("{owedNotice ?")).toBeLessThan(src.indexOf('{!waitingCancel && booking.status === "PENDING" && booking.payMode'));
   });
 });

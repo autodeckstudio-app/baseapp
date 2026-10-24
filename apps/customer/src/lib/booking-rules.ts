@@ -38,7 +38,7 @@ export function getRescheduleEligibility(booking: Booking): { eligible: boolean;
 
 export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; feePaise: number; line: string } {
   const missed = isBookingMissed(booking, now);
-  const open = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
+  const open = booking.cancelIntent?.state !== "waiting" && booking.cancelIntent?.state !== "needs_review" && !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
   const terms = cancellationTerms({ category, totalPaise: booking.totalAmount ?? 0, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: now });
   return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", feePaise: terms.feePaise, line: cancellationLine(category) };
 }

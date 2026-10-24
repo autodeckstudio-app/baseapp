@@ -14,7 +14,9 @@ const FS_PORT = Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? 8085);
 beforeAll(async () => {
   env = await initializeTestEnvironment({ projectId: "autodeck-dev", firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: FS_PORT } });
   await env.withSecurityRulesDisabled(async (c) => {
-    await c.firestore().doc(`bookings/${ID}`).set({ id: ID, tenantId: T, studioId: "s1", customerId: "cust1", status: "CANCELLED", manualRefundDuePaise: 10000 });
+    const seedDb = c.firestore();
+    await seedDb.doc(`bookings/${ID}`).set({ id: ID, tenantId: T, studioId: "s1", customerId: "cust1", status: "CANCELLED", manualRefundDuePaise: 10000, cancelIntent: { state: "waiting", requestedAt: "2026-10-24T00:00:00Z" } });
+    await seedDb.doc(`bookingCancelIntents/${ID}`).set({ tenantId: T, customerId: "cust1", paymentId: "p", reason: "private fixture", requestedBy: "cust1", reviewAt: "2026-10-24T00:15:00Z", state: "waiting" });
   });
 });
 afterAll(async () => { await env.cleanup(); });
@@ -52,5 +54,23 @@ describe("manualRefundDuePaise is server only", () => {
     await assertFails(rd(env.authenticatedContext("x", { role: "admin", tenantId: "other", studioId: null })));
     await assertFails(rd(env.authenticatedContext("ca1", roles["accountant"]!.claims)));
     await assertFails(rd(env.unauthenticatedContext()));
+  });
+});
+
+describe("waiting cancellation privacy (real rules)", () => {
+  for (const [name, uid, claims] of [
+    ["own customer", "cust1", { role: "customer", tenantId: T, studioId: null }],
+    ["other customer", "cust2", { role: "customer", tenantId: T, studioId: null }],
+    ["other tenant", "ad2", { role: "admin", tenantId: "other", studioId: null }],
+    ["studio", "st1", { role: "studio", tenantId: T, studioId: "s1" }],
+    ["admin", "ad1", { role: "admin", tenantId: T, studioId: null }],
+  ] as const) it(`${name}: private intent read/write denied; public intent write denied`, async () => {
+    const fs = env.authenticatedContext(uid, claims).firestore();
+    await assertFails(fs.doc(`bookingCancelIntents/${ID}`).get());
+    await assertFails(fs.doc(`bookingCancelIntents/${ID}`).set({ state: "resolved" }));
+    await assertFails(fs.doc(`bookingCancelIntents/${ID}`).update({ state: "resolved" }));
+    await assertFails(fs.doc(`bookingCancelIntents/${ID}`).delete());
+    await assertFails(fs.doc(`bookings/${ID}`).update({ cancelIntent: { state: "resolved", requestedAt: "fake" } }));
+    if (name === "other customer" || name === "other tenant") await assertFails(fs.doc(`bookings/${ID}`).get());
   });
 });

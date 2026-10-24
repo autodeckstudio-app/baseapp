@@ -108,7 +108,7 @@ export default function BookingsPage() {
     service: serviceNames[b.serviceId] ?? "Service",
     bay: bayLabel(b.bayId, bays),
     status: b.status,
-    payment: b.paymentStatus,
+    payment: b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review" ? "Cancellation requested" : b.paymentStatus,
     amount: formatPaise(b.totalAmount),
     owed: owedBadge(b),
   });
@@ -136,7 +136,7 @@ export default function BookingsPage() {
                 <td>{customerNames[b.customerId] ?? "-"}</td>
                 <td>{serviceNames[b.serviceId] ?? "-"}</td>
                 <td>{b.bayId}</td>
-                <td><StatusBadge label={b.paymentStatus} />{owedBadge(b) ? <div className="ax-label" style={{ color: "var(--ad-danger)" }}>{owedBadge(b)}</div> : null}</td>
+                <td><StatusBadge label={b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review" ? "Cancellation requested" : b.paymentStatus} />{owedBadge(b) ? <div className="ax-label" style={{ color: "var(--ad-danger)" }}>{owedBadge(b)}</div> : null}</td>
                 <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
               </tr>
             ))}

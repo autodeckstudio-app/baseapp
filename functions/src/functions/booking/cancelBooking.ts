@@ -43,6 +43,13 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
   // Customers use the shared cancel path: later-day bookings only, policy fee, real refund through Razorpay, credits back.
   if (isCustomer) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "charge" }, "customer");
 
+  // Only the new unresolved LINK path enters shared waiting logic for legacy admin cancellation.
+  if (isStudioOrAbove) {
+    const js = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1).get();
+    const ps = js.empty ? null : await db.collection(COLLECTIONS.payments()).where("jobId", "==", js.docs[0]!.id).where("status", "in", ["pending", "processing"]).get();
+    if (booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review" || ps?.docs.some(d => d.data()["method"] === "razorpay_payment_link")) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "charge" }, "admin");
+  }
+
   if (booking.status === "CANCELLED") {
     return { success: true, alreadyCancelled: true };
   }
