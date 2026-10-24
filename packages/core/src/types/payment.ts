@@ -54,6 +54,8 @@ export interface Payment {
 }
 
 export interface Invoice {
+  settlementKind?: "membership_covered";
+  membershipId?: string;
   id: string;
   tenantId: string;
   studioId: string;
