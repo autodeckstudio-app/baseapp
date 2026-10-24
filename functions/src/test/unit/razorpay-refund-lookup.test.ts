@@ -37,7 +37,7 @@ describe("RazorpayProvider.findRefundByReference", () => {
   it("receipt-bearing refunds are what initiateRefund submits (receipt = referenceId)", async () => {
     const spy = stubFetch(() => ({ ok: true, body: { id: "rfnd_9" } }));
     await provider.initiateRefund({ providerPaymentId: "pay_1", amount: 100, reason: "cancel", referenceId: "req-123" });
-    const body = JSON.parse(String(spy.mock.calls[0][1]?.body));
+    const body = JSON.parse(String(spy.mock.calls[0]?.[1]?.body));
     expect(body.receipt).toBe("req-123");
   });
 });
