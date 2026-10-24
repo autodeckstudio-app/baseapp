@@ -163,3 +163,44 @@ describe("settle vs DEPLOYED unguarded handlers (race matrix)", () => {
     expect(job.settlementKind).toBe("membership_covered");
   });
 });
+
+// ---------------------------------------------------------------------------
+// TRANSITION matrix: the coordinated rollout has a window where the NEW settle
+// endpoint is live while the DEPLOYED (unguarded) rMP/aJS still are. These pin
+// that window: no zero-payment after settle, no duplicate invoices, no wash
+// counter drift, old route remains truthful when it wins.
+// ---------------------------------------------------------------------------
+it("T1 transition: old zero route closes a covered job; settle then fails closed, one invoice, no counter drift", async () => {
+  const id = await seed();
+  const cash = (await runCash(id)) as { paymentId: string };
+  expect(cash.paymentId).toBeTruthy();
+  expect((await get("jobs", id)).paymentStatus).toBe("paid");
+  const live1 = (await invoicesFor(id)).filter((i) => i.status !== "void");
+  expect(live1.length).toBe(1);
+  expect(Number(live1[0]!.total)).toBe(0);
+  // settle fails closed on the old-route residue (payment pre-check fires before the invoice check)
+  await expect(runSettle(id)).rejects.toThrow(/already settled|settlement linkage|payment or additional work exists/i);
+  expect((await invoicesFor(id)).filter((i) => i.status !== "void").length).toBe(1);
+  expect(Number((await get("memberships", id)).washesUsed)).toBe(1);
+});
+
+it("T2 transition: settle first; deployed rMP rejects already-paid; non-void invoice satisfies the deployed aJS delivery precondition", async () => {
+  const id = await seed();
+  const r = (await runSettle(id)) as { invoiceId: string; alreadySettled: boolean };
+  expect(r.alreadySettled).toBe(false);
+  await expect(runCash(id)).rejects.toThrow(/already been marked as paid/);
+  const live = (await invoicesFor(id)).filter((i) => i.status !== "void");
+  expect(live.length).toBe(1); // what the DEPLOYED advanceJobStatus requires before delivery
+  expect((await get("jobs", id)).paymentStatus).toBe("paid");
+  expect((await get("bookings", id)).paymentStatus).toBe("paid");
+  expect(Number((await get("memberships", id)).washesUsed)).toBe(1);
+});
+
+it("T3 transition: deployed rMP racing settle collapses to exactly one live invoice and exactly one winner", async () => {
+  const id = await seed();
+  const pair = await Promise.allSettled([runCash(id), runSettle(id)]);
+  expect(pair.filter((x) => x.status === "fulfilled").length).toBe(1);
+  const live = (await invoicesFor(id)).filter((i) => i.status !== "void");
+  expect(live.length).toBe(1);
+  expect(Number((await get("memberships", id)).washesUsed)).toBe(1);
+});
