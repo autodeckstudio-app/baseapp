@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { pickupSlotsFor, PICKUP_SLOT_OPEN } from "./pickup-slots";
 
 describe("pickupSlotsFor", () => {
-  it("offers hourly slots from studio open up to and including the booking time", () => {
-    expect(pickupSlotsFor("12:00")).toEqual(["10:00", "11:00", "12:00"]);
+  it("offers hourly slots from the booking day's open up to and including the booking time", () => {
+    expect(pickupSlotsFor("12:00", "10:00")).toEqual(["10:00", "11:00", "12:00"]);
   });
   it("a 10 AM booking cannot have an 11 AM pickup", () => {
-    const slots = pickupSlotsFor("10:00");
+    const slots = pickupSlotsFor("10:00", "10:00");
     expect(slots).toEqual(["10:00"]);
     expect(slots).not.toContain("11:00");
   });
@@ -18,11 +18,15 @@ describe("pickupSlotsFor", () => {
     }
   });
   it("keeps a non-hourly booking time choosable as the last slot", () => {
-    expect(pickupSlotsFor("10:30")).toEqual(["10:00", "10:30"]);
+    expect(pickupSlotsFor("10:30", "10:00")).toEqual(["10:00", "10:30"]);
   });
-  it("starts at the studio opening time by default and honours a different open", () => {
-    expect(pickupSlotsFor("11:00")[0]).toBe(PICKUP_SLOT_OPEN);
+  it("honours the booking day's actual open, including earlier non-hour opens", () => {
     expect(pickupSlotsFor("11:00", "09:00")).toEqual(["09:00", "10:00", "11:00"]);
+    expect(pickupSlotsFor("11:00", "09:30")).toEqual(["09:30", "10:30", "11:00"]);
+  });
+  it("falls back to the booking engine's seeded default open so valid earlier choices are not dropped", () => {
+    expect(PICKUP_SLOT_OPEN).toBe("09:00");
+    expect(pickupSlotsFor("11:00")[0]).toBe("09:00");
   });
   it("returns no slots when the booking time is missing or unreadable", () => {
     expect(pickupSlotsFor("")).toEqual([]);

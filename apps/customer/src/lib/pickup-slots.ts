@@ -3,10 +3,12 @@
 // scheduled time are offered: a 10:00 booking cannot have an 11:00 pickup.
 // Times are "HH:mm" in the studio timezone, the same format the booking
 // flow already carries (AvailableSlot.startTime / confirm screen params), so
-// no Date or timezone conversion happens here. The studio opens at 10:00
-// every day (see STUDIO_INFO.hours); if opening hours ever move, pass the
-// new open time in rather than editing call sites.
-export const PICKUP_SLOT_OPEN = "10:00";
+// no Date or timezone conversion happens here. The caller passes the booking
+// day's actual opening time from the live studio record (the same hours the
+// booking engine uses); 09:00 is only the fallback and matches the engine's
+// own seeded default, so a failed hours fetch never silently drops valid
+// earlier choices.
+export const PICKUP_SLOT_OPEN = "09:00";
 
 const toMinutes = (t: string): number | null => {
   const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());

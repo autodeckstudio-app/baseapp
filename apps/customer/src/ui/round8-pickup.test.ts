@@ -21,15 +21,24 @@ describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with C
   const card = read("src/ui/PickupCard.tsx");
   it("the confirm screen carries the optional section: kind chips, address, location and slot dropdown", () => {
     expect(confirm).toContain("Pickup and drop (optional)");
-    expect(confirm).toContain("pickupSlotsFor(params.scheduledTime)");
+    expect(confirm).toContain("pickupSlotsFor(params.scheduledTime, bookingDayOpen)");
     expect(confirm).toContain("SelectField");
     expect(confirm).toContain("getDeviceLocation");
     expect(confirm).toContain("This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.");
   });
-  it("pickup is submitted with the booking in both the studio-pay and the paid paths, never by a separate Send button", () => {
-    expect(confirm).toContain("sendPickupRequest(result.id)");
-    expect(confirm).toContain("sendPickupRequest(h.bookingId)");
+  it("the pickup request goes with the new booking id right after create, before the payment step, never by a separate Send button", () => {
+    expect(confirm).toContain("const pickupSent = await sendPickupRequest(result.id);");
+    const create = confirm.indexOf("await createBooking(");
+    const request = confirm.indexOf("sendPickupRequest(result.id)");
+    const pay = confirm.indexOf("await payHeld(h)");
+    expect(create).toBeGreaterThan(0);
+    expect(request).toBeGreaterThan(create);
+    expect(pay).toBeGreaterThan(request);
     expect(confirm).not.toContain("Send request");
+  });
+  it("the slot dropdown opens at the booking day's live studio opening time, not a hardcoded guess", () => {
+    expect(confirm).toContain("getStudioInfo(FIRST_STUDIO_ID)");
+    expect(confirm).toContain("pickupSlotsFor(params.scheduledTime, bookingDayOpen)");
   });
   it("a failed pickup request never fails the booking; the booking page shows the note", () => {
     expect(confirm).toContain('pickup: "failed"');

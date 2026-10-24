@@ -6,7 +6,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
-import { createBooking, generateIdempotencyKey } from "../../../lib/booking-service";
+import type { LiveStudioInfo } from "../../../lib/studio-info";
+import { createBooking, generateIdempotencyKey, getStudioInfo } from "../../../lib/booking-service";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -24,7 +25,7 @@ import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
 import { getDeviceLocation, requestPickupDrop } from "../../../lib/pickup-service";
-import { pickupSlotsFor } from "../../../lib/pickup-slots";
+import { pickupSlotsFor, PICKUP_SLOT_OPEN } from "../../../lib/pickup-slots";
 import { PICKUP_POLICY, pickupFeeText } from "../../../lib/pickup-policy";
 import { pickupZone } from "@autodeck/core";
 import { SelectField } from "../../../ui/inputs";
@@ -80,7 +81,7 @@ export default function BookingConfirmScreen() {
   const [pickupWhere, setPickupWhere] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
-  const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number } | null>(null);
+  const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const heldOver = held !== null && now >= held.expiresAt;
   const payBusy = useRef(false);
@@ -148,7 +149,23 @@ export default function BookingConfirmScreen() {
   const payNow = !giftCode && payHow.online && !payAtStudio && !washOn;
   const holdLeft = held ? Math.max(0, Math.ceil((held.expiresAt - now) / 1000)) : 0;
 
-  const pickupSlots = params.scheduledTime ? pickupSlotsFor(params.scheduledTime) : [];
+  // Opening time for the booking day from the live studio record - the same
+  // hours the booking engine used to offer this slot. Falls back to the
+  // engine's seeded default when the fetch fails. The day-of-week comes from
+  // the calendar date itself, so no timezone conversion is involved.
+  const [studioInfo, setStudioInfo] = useState<LiveStudioInfo | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getStudioInfo(FIRST_STUDIO_ID).then((info) => { if (alive) setStudioInfo(info); }).catch(() => { if (alive) setStudioInfo(null); });
+    return () => { alive = false; };
+  }, []);
+  const bookingDayOpen = useMemo(() => {
+    if (!params.scheduledDate) return PICKUP_SLOT_OPEN;
+    const dow = new Date(`${params.scheduledDate}T00:00:00Z`).getUTCDay();
+    const hours = studioInfo?.operatingHours.find((h) => h.dayOfWeek === dow);
+    return hours && !hours.closed ? hours.open : PICKUP_SLOT_OPEN;
+  }, [params.scheduledDate, studioInfo]);
+  const pickupSlots = params.scheduledTime ? pickupSlotsFor(params.scheduledTime, bookingDayOpen) : [];
   const pickupZoneInfo = pickupWhere ? pickupZone(pickupWhere) : null;
 
   function choosePickupKind(k: "pickup" | "drop" | "both") {
@@ -169,10 +186,13 @@ export default function BookingConfirmScreen() {
     setLocating(false);
   }
 
-  // Sends the pickup/drop request for a booking that now stands. True when
-  // there is nothing to send or the request went through; false only when the
-  // request itself failed - the booking always stands either way. Drop-off
-  // timing is agreed after the service, so a requested drop time is never sent.
+  // Sends the pickup/drop request right after the booking is created, as
+  // specified. The server accepts requests on any open booking (PENDING
+  // included) and its existing expiry sweep closes the request if an unpaid
+  // hold lapses, so no orphan request can linger. True when there is nothing
+  // to send or the request went through; false only when the request itself
+  // failed - the booking always stands either way. Drop-off timing is agreed
+  // after the service, so a requested drop time is never sent.
   async function sendPickupRequest(bookingId: string): Promise<boolean> {
     if (!pickupKind) return true;
     const address = pickupAddress.trim();
@@ -192,7 +212,7 @@ export default function BookingConfirmScreen() {
   }
 
   /** Opens checkout for the held booking. Success goes to the booking; a failure or close stays here with the slot held. */
-  async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number }) {
+  async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean }) {
     if (payBusy.current || !service) return;
     payBusy.current = true;
     setBooking(true);
@@ -202,8 +222,7 @@ export default function BookingConfirmScreen() {
       const pay = await initiatePayment(h.paymentJobId, "razorpay_payment_link");
       const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: service.name }) : "failed";
       if (out === "paid") {
-        const pickupSent = await sendPickupRequest(h.bookingId);
-        router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(pickupSent ? {} : { pickup: "failed" }) } });
+        router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
         return;
       }
       setBookError(out === "failed" ? "Payment failed, please retry." : "Payment not completed. Your slot is held for a few more minutes.");
@@ -238,16 +257,19 @@ export default function BookingConfirmScreen() {
         ...(giftCode ? { giftCode } : {}),
       });
       created = true;
+      // Create the booking exactly as before, then request pickup/drop with
+      // the new booking id (round 8). The request's failure never fails the
+      // booking - the booking page shows a call-the-studio note instead.
+      const pickupSent = await sendPickupRequest(result.id);
       if (result.status === "PENDING" && auth.status === "ready") {
         // Held for 15 minutes until paid. Pay now; if it fails the customer retries on this page.
         const jobId = await getJobIdForBooking(result.id, auth.claims.tenantId, auth.user.uid).catch(() => null);
-        const h = { bookingId: result.id, paymentJobId: jobId, expiresAt: Date.parse(result.holdExpiresAt ?? "") || Date.now() + 15 * 60_000 };
+        const h = { bookingId: result.id, paymentJobId: jobId, expiresAt: Date.parse(result.holdExpiresAt ?? "") || Date.now() + 15 * 60_000, pickupSent };
         setHeld(h);
         setBooking(false);
         await payHeld(h);
         return;
       }
-      const pickupSent = await sendPickupRequest(result.id);
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(pickupSent ? {} : { pickup: "failed" }) } });
     } catch (err) {
       console.warn("create booking failed", err);
