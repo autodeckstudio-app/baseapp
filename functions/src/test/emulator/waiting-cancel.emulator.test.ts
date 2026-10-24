@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { adminCancelBooking } from "../../functions/booking/adminCancelBooking.js";
@@ -6,7 +6,7 @@ import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 import { sweepExpiredBookingHolds } from "../../lib/booking-hold.js";
 import { flagMissedBookings } from "../../lib/missed-bookings.js";
 import type { ProviderWebhookEvent } from "../../lib/payment-provider.js";
-import { resolveWaitingCancel } from "../../lib/waiting-cancel.js";
+import { resolveWaitingCancel, WAITING_CANCEL_GATE } from "../../lib/waiting-cancel.js";
 const db = getFirestore(); let n=0;
 const auth = (uid:string, role="customer",tenant="wc") => ({uid,token:{role,tenantId:tenant,studioId:null},rawToken:"test"});
 async function seed(status="pending") {
@@ -20,6 +20,7 @@ const req=(s:{id:string;customerId:string},admin=false)=> admin ? adminCancelBoo
 const doc=async(c:string,id:string)=>(await db.collection(c).doc(id).get()).data()!;
 const event=(id:string,type="payment_link.paid")=>({eventType:type,providerEventId:`ev-${id}-${++n}`,providerPaymentLinkId:`link-${id}`,providerPaymentId:`pay-${id}`,providerOrderId:null,referenceId:id,amount:100000,currency:"INR"}) as ProviderWebhookEvent;
 describe("waiting cancel retained-slot workflow (emulator fixtures)",()=>{
+ beforeEach(()=>{WAITING_CANCEL_GATE.enabled=true}); afterEach(()=>{WAITING_CANCEL_GATE.enabled=false});
  for(const status of ["pending","processing"])it(`${status}: customer and admin retain slot; repeat request is idempotent; public projection only`,async()=>{
   for(const admin of [false,true]) {const s=await seed(status);expect(await req(s,admin)).toMatchObject({cancellationPending:true});expect(await req(s,admin)).toMatchObject({cancellationPending:true});
    const b=await doc("bookings",s.id);expect(b.status).toBe("PENDING");expect(Object.keys(b.cancelIntent).sort()).toEqual(["requestedAt","state"]);expect((await doc("jobs",s.id)).status).toBe("PENDING_VEHICLE");expect((await doc("payments",s.id)).status).toBe(status);

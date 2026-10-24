@@ -8,6 +8,13 @@ import { readCancelReads, writeCancelRestores } from "./cancel-booking.js";
 import type { ProviderWebhookEvent } from "./payment-provider.js";
 
 export const WAITING_CANCEL_COLLECTION = "bookingCancelIntents";
+
+// DEPLOY-TIME GATE, ships OFF and stays OFF until the coordinated rollout flips it.
+// Without it, deploying this source lets cancellation create bookingCancelIntents
+// that the not-yet-shipped surfaces never show: stranded intents. The gate blocks
+// CREATION only - an already-existing intent still resolves (webhook resolve and
+// review sweep stay ungated) and a repeat request stays idempotent. Tests toggle it.
+export const WAITING_CANCEL_GATE = { enabled: false };
 export type CancelIntent = { bookingId: string; tenantId: string; studioId: string; customerId: string; jobId: string; paymentId: string; state: "waiting" | "needs_review" | "resolved"; requestedAt: string; requestedBy: string; reason: string; reviewAt: string; resolution?: string; refundRequestId?: string };
 export const unresolvedCancel = (b: { cancelIntent?: { state: string } }) => b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review";
 const publicIntent = (i: CancelIntent) => ({ state: i.state, requestedAt: i.requestedAt });
@@ -26,8 +33,9 @@ export async function requestWaitingCancel(db: Firestore, b: Booking, p: Payment
     if (old.exists) {
       const prior = old.data() as CancelIntent;
       if (prior.paymentId !== pay.id || prior.tenantId !== fresh.tenantId || prior.state === "resolved") throw new HttpsError("failed-precondition", "A different cancellation request exists.");
-      return { success: true, cancellationPending: true };
+      return { success: true, cancellationPending: true }; // idempotent repeat; never gated
     }
+    if (!WAITING_CANCEL_GATE.enabled) throw new HttpsError("failed-precondition", "Waiting cancellation is turned off in this deployment. Cancel or expire the open payment link first, then cancel the booking.");
     if (pay.method !== "razorpay_payment_link" || !pay.razorpayPaymentLinkId || !["pending", "processing"].includes(pay.status)) throw new HttpsError("failed-precondition", "Payment changed. Reload and try again.");
     const requestedAt = new Date().toISOString();
     const reviewAt = fresh.holdExpiresAt && Number.isFinite(Date.parse(fresh.holdExpiresAt)) ? fresh.holdExpiresAt : new Date(Date.parse(requestedAt) + 15 * 60000).toISOString();

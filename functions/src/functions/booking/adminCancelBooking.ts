@@ -1,4 +1,4 @@
-import { requestWaitingCancel, unresolvedCancel } from "../../lib/waiting-cancel.js";
+import { requestWaitingCancel, unresolvedCancel, WAITING_CANCEL_GATE } from "../../lib/waiting-cancel.js";
 // Admin-only cancel for a booking, with the fee and any refund decided here on the server.
 // Cancel and refund are admin-only for now (owner decision); studio staff have no cancel.
 //  - adminCancelBooking: preview=true returns the numbers and writes nothing. Otherwise it cancels in one go:
@@ -70,6 +70,10 @@ export async function runCancel(
     const onlineOpen = payDocs.filter(d => d.data()["method"] === "razorpay_payment_link" && ["pending", "processing"].includes(String(d.data()["status"])));
     if (unresolvedCancel(booking) || (onlineOpen.length && !payDocs.some(d => d.data()["status"] === "completed"))) {
       if (onlineOpen.length !== 1) throw new HttpsError("failed-precondition", "A manual payment check is needed before cancellation.");
+      // Gate OFF + no existing intent: refuse BEFORE preview so the UI never claims
+      // a pending cancellation this deployment cannot create. An existing intent
+      // (unresolvedCancel) still routes through and stays idempotent.
+      if (!unresolvedCancel(booking) && !WAITING_CANCEL_GATE.enabled) throw new HttpsError("failed-precondition", "Waiting cancellation is turned off in this deployment. Cancel or expire the open payment link first, then cancel the booking.");
       if (data.preview) return { preview: true, cancellationPending: true };
       return requestWaitingCancel(db, booking, onlineOpen[0]!.data() as Payment, user, data.reason);
     }
