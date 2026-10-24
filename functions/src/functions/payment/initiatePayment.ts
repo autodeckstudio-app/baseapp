@@ -42,14 +42,6 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
     throw new HttpsError("failed-precondition", "Cannot pay for a cancelled job.");
   }
 
-  if (
-    job.settlementKind === "membership_covered" ||
-    (job.membershipWashUsed && job.totalAmount === 0)
-  )
-    throw new HttpsError(
-      "failed-precondition",
-      "Use membership-covered settlement for a covered wash. A membership-covered payment cannot be recorded.",
-    );
   // Fast-fail pre-check (cheap, avoids the provider call and a transaction
   // for an obviously-duplicate request) — NOT the authoritative check, since
   // it's mutable/racy across concurrent calls. See the re-check inside the

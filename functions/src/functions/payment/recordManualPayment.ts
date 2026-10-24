@@ -60,14 +60,6 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
     assertStudio(user, job.studioId, "Job");
-    if (
-      job.settlementKind === "membership_covered" ||
-      (job.membershipWashUsed && job.totalAmount === 0)
-    )
-      throw new HttpsError(
-        "failed-precondition",
-        "Use membership-covered settlement for a covered wash. A membership-covered payment cannot be recorded.",
-      );
     if (job.paymentStatus === "paid") {
       throw new HttpsError("already-exists", "This job has already been marked as paid.");
     }
