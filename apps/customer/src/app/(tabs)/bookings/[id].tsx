@@ -1,3 +1,4 @@
+import { manualRefundNotice } from "../../../lib/manual-refund-notice";
 import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
@@ -259,6 +260,7 @@ export default function BookingDetailScreen() {
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
   const missed = isBookingMissed(booking);
+  const owedNotice = manualRefundNotice(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
   const cancel = cancelState(booking, Date.now(), svc?.category);
   const { canCancel, lateToCancel } = cancel;
@@ -468,6 +470,8 @@ export default function BookingDetailScreen() {
         </Pane>
         )}
       </View>
+
+      {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
 
       {booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
         <Notice
