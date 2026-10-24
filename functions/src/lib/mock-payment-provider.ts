@@ -42,7 +42,7 @@ export class MockPaymentProvider implements PaymentProvider {
       event?: string;
       payload?: {
         payment?: { entity?: { id?: string; amount?: number; currency?: string } };
-        refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string } };
+        refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string; status?: string } };
         payment_link?: { entity?: { id?: string } };
       };
       id?: string;
@@ -60,6 +60,10 @@ export class MockPaymentProvider implements PaymentProvider {
       providerRefundId: refund?.id ?? null,
       providerRefundAmount: refund?.amount ?? null,
       providerRefundCurrency: refund?.currency ?? null,
+      providerRefundPaymentId: refund?.payment_id ?? null,
+      providerPaymentEntityId: payment?.id ?? null,
+      providerPaymentEntityCurrency: payment?.currency ?? null,
+      providerRefundStatus: refund?.status ?? null,
       amount: payment?.amount ?? refund?.amount ?? 0,
       currency: payment?.currency ?? "INR",
     };

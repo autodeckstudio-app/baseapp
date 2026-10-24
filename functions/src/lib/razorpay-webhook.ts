@@ -128,7 +128,13 @@ export async function processProviderEvent(
       const storedOk = stored
         ? stored.tenantId === payment.tenantId && stored.bookingId === payment.bookingId && stored.amountPaise === amt && (!b?.refundId || b.refundId === rid)
         : !!(b && b.refundId === rid && b.refundedPaise === amt);
-      const matches = !!(rid && bookingRef && b && b.id === payment.bookingId && b.tenantId === payment.tenantId
+      // Fail closed on identity: refund.payment_id is required; if a payment entity is also present its id and currency must agree;
+      // the refund entity's own amount and currency are required (never the payment entity's); status, when sent, must be "processed".
+      const identityOk = !!ev.providerRefundPaymentId && ev.providerRefundPaymentId === payment.razorpayPaymentId
+        && (!ev.providerPaymentEntityId || ev.providerPaymentEntityId === ev.providerRefundPaymentId)
+        && (!ev.providerPaymentEntityCurrency || ev.providerPaymentEntityCurrency === ev.providerRefundCurrency)
+        && (!ev.providerRefundStatus || ev.providerRefundStatus === "processed");
+      const matches = identityOk && !!(rid && bookingRef && b && b.id === payment.bookingId && b.tenantId === payment.tenantId
         && payment.razorpayRefundId === rid && (payment.status === "refunded" || payment.status === "partially_refunded")
         && typeof amt === "number" && amt > 0 && storedOk && !!payment.currency && ev.providerRefundCurrency === payment.currency);
       if (matches && b!.refundStatus === "processed") { record("already_final"); return "already_final"; }
@@ -297,10 +303,14 @@ export async function processProviderEvent(
       const reservation = await activeReservation(db, payment.id);
       if (reservation) {
         if (reservation.tenantId !== payment.tenantId) { record("ignored"); return "ignored"; }
-        if (ev.amount && ev.amount !== reservation.amountPaise) { record("amount_mismatch"); return "amount_mismatch"; }
-        if (reservation.providerRefundId && ev.providerRefundId && ev.providerRefundId !== reservation.providerRefundId) {
+        // Bind the REFUND entity's own id, amount and currency (the payment entity's amount is the whole payment, so a partial refund differs).
+        // Fail closed on missing or conflicting values. No payment/booking status is written here.
+        if (typeof ev.providerRefundAmount !== "number" || ev.providerRefundAmount !== reservation.amountPaise) { record("amount_mismatch"); return "amount_mismatch"; }
+        if (!payment.currency || ev.providerRefundCurrency !== payment.currency) { record("amount_mismatch"); return "amount_mismatch"; }
+        if (!ev.providerRefundId || (reservation.providerRefundId && ev.providerRefundId !== reservation.providerRefundId)) {
           record("amount_mismatch"); return "amount_mismatch";
         }
+        if (ev.providerRefundPaymentId && payment.razorpayPaymentId && ev.providerRefundPaymentId !== payment.razorpayPaymentId) { record("amount_mismatch"); return "amount_mismatch"; }
         record("refund_accepted");
         tx.update(reservation.ref, {
           status: "accepted",

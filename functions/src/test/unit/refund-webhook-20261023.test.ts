@@ -30,7 +30,8 @@ const seed = (p: Payment) => ({
 const event = (o: Partial<ProviderWebhookEvent>): ProviderWebhookEvent => ({
   eventType: "refund.created", providerEventId: `evt_${Math.random().toString(36).slice(2)}`,
   providerPaymentId: "rzp_pay_1", providerPaymentLinkId: "pl1", providerRefundId: "rfnd_x",
-  referenceId: "pay1", amount: 80000, currency: "INR", ...o,
+  referenceId: "pay1", amount: 100000 /* PAYMENT entity amount */, currency: "INR",
+  providerRefundAmount: 80000, providerRefundCurrency: "INR", providerRefundPaymentId: "rzp_pay_1", ...o,
 });
 
 describe("reserved refund.created", () => {
@@ -53,7 +54,7 @@ describe("reserved refund.created", () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
-    const r = await processProviderEvent(db, event({ amount: 80001 }));
+    const r = await processProviderEvent(db, event({ providerRefundAmount: 80001 }));
     expect(r.outcome).toBe("amount_mismatch");
     expect(data["refundRequests"]![requestId]!["status"]).toBe("reserved");
   });
@@ -67,6 +68,38 @@ describe("reserved refund.created", () => {
     const r = await processProviderEvent(db, event({ providerRefundId: "rfnd_someone_else" }));
     expect(r.outcome).toBe("amount_mismatch");
     expect(data["refundRequests"]![requestId]!["status"]).toBe("submitted");
+  });
+});
+
+
+describe("reserved refund.created fail-closed binding (refund entity, not payment entity)", () => {
+  const cases: Array<[string, Partial<ProviderWebhookEvent>]> = [
+    ["refund amount missing", { providerRefundAmount: null }],
+    ["refund currency differs", { providerRefundCurrency: "USD" }],
+    ["refund currency missing", { providerRefundCurrency: null }],
+    ["refund id missing", { providerRefundId: null }],
+    ["refund.payment_id conflicts with the stored payment", { providerRefundPaymentId: "rzp_pay_other" }],
+    ["payment-entity amount equal to the reservation but refund amount differs", { amount: 80000, providerRefundAmount: 70000 }],
+  ];
+  for (const [name, o] of cases) {
+    it(`rejects: ${name}`, async () => {
+      const p = payment();
+      const { db, data } = fakeFirestore(seed(p));
+      const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
+      const r = await processProviderEvent(db, event(o));
+      expect(r.outcome).toBe("amount_mismatch");
+      expect(data["refundRequests"]![requestId]!["status"]).toBe("reserved");
+      expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
+    });
+  }
+  it("accepts a PARTIAL refund (80000 of 100000) and redelivery of the same event is a duplicate", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
+    const e = event({});
+    expect((await processProviderEvent(db, e)).outcome).toBe("refund_accepted");
+    expect((await processProviderEvent(db, e)).outcome).toBe("duplicate");
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "accepted" });
   });
 });
 

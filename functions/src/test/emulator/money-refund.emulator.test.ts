@@ -123,7 +123,8 @@ describe("webhook interactions", () => {
   const ev = (o: Record<string, unknown>) => ({
     eventType: "refund.created", providerEventId: uid("evt"), providerPaymentId: "rzp_pay_1",
     providerPaymentLinkId: "pl1", providerRefundId: "rfnd_x", referenceId: null,
-    amount: 50000, currency: "INR", ...o,
+    amount: 50000, currency: "INR",
+    providerRefundAmount: 50000, providerRefundCurrency: "INR", providerRefundPaymentId: "rzp_pay_1", ...o,
   }) as never;
 
   it("reserved refund.created records acceptance only", async () => {

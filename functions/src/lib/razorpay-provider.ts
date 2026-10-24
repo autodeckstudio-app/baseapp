@@ -32,7 +32,7 @@ interface RazorpayWebhookPayload {
   event: string;
   payload?: {
     payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } };
-    refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string } };
+    refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string; status?: string } };
     payment_link?: { entity?: { id?: string; reference_id?: string; order_id?: string; amount?: number } };
   };
 }
@@ -122,6 +122,10 @@ export class RazorpayProvider implements PaymentProvider {
       providerRefundId: refund?.id ?? null,
       providerRefundAmount: refund?.amount ?? null,
       providerRefundCurrency: refund?.currency ?? null,
+      providerRefundPaymentId: refund?.payment_id ?? null,
+      providerPaymentEntityId: payment?.id ?? null,
+      providerPaymentEntityCurrency: payment?.currency ?? null,
+      providerRefundStatus: refund?.status ?? null,
       providerOrderId: payment?.order_id ?? plink?.order_id ?? null,
       referenceId: plink?.reference_id ?? null,
       amount: payment?.amount ?? plink?.amount ?? refund?.amount ?? 0,

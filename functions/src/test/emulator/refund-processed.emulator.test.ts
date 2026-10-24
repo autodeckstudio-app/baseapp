@@ -79,4 +79,81 @@ describe("refund.processed projection (emulator)", () => {
     expect(r.outcome).toBe("already_final");
     expect((await booking(s.bid))["refundStatus"]).toBe("processed");
   });
+
+  // Fail-closed identity/shape guards: raw payloads built by hand so fields can be conflicting or absent.
+  const raw = (eid: string, pay: string, rid: string, o: { payEntityId?: string | null; payEntityCur?: string | null; refund?: Record<string, unknown> }) => {
+    const refund: Record<string, unknown> = { id: rid, payment_id: pay, amount: 50000, currency: "INR", status: "processed", ...(o.refund ?? {}) };
+    for (const k of Object.keys(refund)) if (refund[k] === undefined) delete refund[k];
+    const payload: Record<string, unknown> = { refund: { entity: refund } };
+    if (o.payEntityId !== null) payload["payment"] = { entity: { id: o.payEntityId ?? pay, amount: 90000, ...(o.payEntityCur === null ? {} : { currency: o.payEntityCur ?? "INR" }) } };
+    const e = provider.parseWebhookEvent(JSON.stringify({ event: "refund.processed", payload })); e.providerEventId = eid; return e;
+  };
+  const guards: Array<[string, (pay: string) => { payEntityId?: string | null; payEntityCur?: string | null; refund?: Record<string, unknown> }]> = [
+    ["payment entity id conflicts with refund.payment_id", () => ({ payEntityId: "pay_other" })],
+    ["payment entity currency conflicts with refund currency", () => ({ payEntityCur: "USD" })],
+    ["refund currency missing", () => ({ refund: { currency: undefined } })],
+    ["refund amount missing", () => ({ refund: { amount: undefined } })],
+    ["refund.payment_id missing", () => ({ refund: { payment_id: undefined } })],
+    ["refund status not processed", () => ({ refund: { status: "failed" } })],
+    ["refund id missing", () => ({ refund: { id: undefined } })],
+  ];
+  for (const [name, mk] of guards) {
+    it(`fail closed: ${name}`, async () => {
+      const s = await seed(); const bb = await booking(s.bid); const pb = await payment(s.pid);
+      const r = await processProviderEvent(db, raw("EG" + s.pid, s.pay, s.rid, mk(s.pay)));
+      expect(["refund_unmatched", "unknown_payment"]).toContain(r.outcome);
+      expect(await booking(s.bid)).toEqual(bb); expect(await payment(s.pid)).toEqual(pb);
+    });
+  }
+  it("refund-entity-only payload (no payment entity) with every field present still matches", async () => {
+    const s = await seed();
+    expect((await processProviderEvent(db, raw("EN" + s.pid, s.pay, s.rid, { payEntityId: null }))).outcome).toBe("refund_processed");
+  });
+});
+
+describe("RESERVED refund.created binding (real emulator)", () => {
+  async function reserved(amt: number) {
+    const { reserveRefund: rr } = await import("../../lib/refund-outbox.js");
+    n += 1; const id = `${Date.now()}${n}`; const pid = `rcpay${id}`, pay = `pay_rc${id}`;
+    const p = { id: pid, tenantId: T, studioId: null, targetType: "job", jobId: null, bookingId: null, customerId: "c", amount: 100000, currency: "INR",
+      status: "completed", razorpayPaymentId: pay, razorpayRefundId: null, refundAmount: null } as never;
+    await db.collection("payments").doc(pid).set(p as object);
+    const { requestId } = await rr(db, { payment: p, amountPaise: amt, reason: "x", createdBy: "a1" });
+    return { pid, pay, requestId };
+  }
+  const created = (eid: string, pay: string, rid: string, amt: number | undefined, cur: string | undefined, payAmt = 100000) => {
+    const refund: Record<string, unknown> = { id: rid, payment_id: pay, ...(amt === undefined ? {} : { amount: amt }), ...(cur === undefined ? {} : { currency: cur }) };
+    const e = provider.parseWebhookEvent(JSON.stringify({ event: "refund.created", payload: { refund: { entity: refund }, payment: { entity: { id: pay, amount: payAmt, currency: "INR" } } } }));
+    e.providerEventId = eid; return e;
+  };
+  const reqStatus = async (id: string) => (await db.collection("refundRequests").doc(id).get()).data()!["status"];
+  it("partial (30000 < captured 100000) is accepted; redelivery duplicate; payment untouched", async () => {
+    const s = await reserved(30000); const before = await payment(s.pid);
+    const e = created("RC" + s.pid, s.pay, "rfnd_a" + s.pid, 30000, "INR");
+    expect((await processProviderEvent(db, e)).outcome).toBe("refund_accepted");
+    expect(await reqStatus(s.requestId)).toBe("accepted");
+    expect((await processProviderEvent(db, e)).outcome).toBe("duplicate");
+    expect(await payment(s.pid)).toEqual(before);
+  });
+  it("currency mismatch, missing amount, missing refund id, amount = payment amount (wrong binding): rejected, request stays reserved", async () => {
+    const s = await reserved(30000);
+    for (const [i, e] of [
+      created("RX1" + s.pid, s.pay, "rfnd_b", 30000, "USD"),
+      created("RX2" + s.pid, s.pay, "rfnd_b", undefined, "INR"),
+      created("RX3" + s.pid, s.pay, "", 30000, "INR"),
+      created("RX4" + s.pid, s.pay, "rfnd_b", 100000, "INR"),
+    ].entries()) {
+      expect((await processProviderEvent(db, e)).outcome, `case ${i}`).toBe("amount_mismatch");
+    }
+    expect(await reqStatus(s.requestId)).toBe("reserved");
+  });
+  it("order: created accepted, then a processed event before projection does not write the booking or payment (unmatched, private alert)", async () => {
+    const s = await reserved(30000); const before = await payment(s.pid);
+    await processProviderEvent(db, created("RO1" + s.pid, s.pay, "rfnd_c" + s.pid, 30000, "INR"));
+    const pe = provider.parseWebhookEvent(JSON.stringify({ event: "refund.processed", payload: { refund: { entity: { id: "rfnd_c" + s.pid, payment_id: s.pay, amount: 30000, currency: "INR", status: "processed" } } } }));
+    pe.providerEventId = "RO2" + s.pid;
+    expect((await processProviderEvent(db, pe)).outcome).toBe("refund_unmatched");
+    expect(await payment(s.pid)).toEqual(before);
+    expect(await alerts(s.pid)).toHaveLength(1);
+  });
 });
