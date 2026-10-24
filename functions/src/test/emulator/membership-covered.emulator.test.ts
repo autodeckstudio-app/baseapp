@@ -286,6 +286,53 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       "COVERED paid+synthetic void denial: Membership-covered invoice linkage is invalid.",
     );
   });
+  it("transition: old zero-route residue still delivers under the final guard; malformed variants reject", async () => {
+    // End-to-end rollout case: old recordManualPayment wins during the rollout window
+    // (paid job+booking, ordinary zero invoice, no settlementKind anywhere), THEN the
+    // final guarded advanceJobStatus deploys. Delivery must remain possible.
+    const legacySeed = async () => {
+      const id = await seed();
+      await db.collection("jobs").doc(id).update({ paymentStatus: "paid" });
+      await db.collection("bookings").doc(id).update({ paymentStatus: "paid" });
+      await db.collection("invoices").doc(`inv_${id}`).set({
+        id: `inv_${id}`, tenantId: "covered", studioId: "s", jobId: id, bookingId: id,
+        customerId: "c", status: "issued", total: 0, currency: "INR",
+        createdAt: new Date().toISOString(),
+      });
+      return id;
+    };
+    const ok = await legacySeed();
+    await expect(
+      advanceJobStatus.run({ data: { jobId: ok }, auth: auth() } as never),
+    ).resolves.toBeTruthy();
+    expect((await get("jobs", ok)).status).toBe("DELIVERED");
+
+    // Stale-link-shaped residue (paid covered job with a NON-ZERO invoice) is NOT a
+    // legacy completion: stays blocked for staff review, never silently delivered.
+    const stale = await legacySeed();
+    await db.collection("invoices").doc(`inv_${stale}`).update({ total: 50000 });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: stale }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // Two live zero invoices = ambiguous residue: rejected, not guessed between.
+    const dup = await legacySeed();
+    await db.collection("invoices").doc(`inv_${dup}_b`).set({
+      id: `inv_${dup}_b`, tenantId: "covered", studioId: "s", jobId: dup, bookingId: dup,
+      customerId: "c", status: "issued", total: 0, currency: "INR",
+      createdAt: new Date().toISOString(),
+    });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: dup }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+  });
+
   it("covered limiter increments and normal retry stays idempotent; exhaustion denies", async () => {
     const id = await seed(),
       a = { uid: id, token: { role: "admin", tenantId: "covered", studioId: null } },

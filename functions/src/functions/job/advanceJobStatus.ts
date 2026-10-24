@@ -8,7 +8,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { advanceJobStatusSchema } from "../../schemas/job.js";
-import { readCoveredLink, exactCoveredInvoice } from "../../lib/membership-covered.js";
+import { readCoveredLink, exactCoveredInvoice, isLegacyCoveredCompletion } from "../../lib/membership-covered.js";
 import { buildWarranty } from "../../lib/warranty-builder.js";
 
 export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request) => {
@@ -116,6 +116,9 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
         (freshJob.membershipWashUsed && freshJob.totalAmount === 0)
       ) {
         const { booking, membershipId } = await readCoveredLink(db, tx, freshJob);
+        const liveInvoices = invs.docs
+          .map((d) => d.data() as Invoice)
+          .filter((i) => i.status !== "void");
         if (
           !invs.docs.some((d) =>
             exactCoveredInvoice(
@@ -124,7 +127,11 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
               booking,
               membershipId,
             ),
-          )
+          ) &&
+          // Transition compatibility: a covered visit closed by the OLD zero-payment
+          // route before settle existed stays deliverable (strict legacy check, see
+          // membership-covered.ts). Malformed covered records still reject.
+          !isLegacyCoveredCompletion(freshJob, booking, liveInvoices)
         )
           throw new HttpsError("failed-precondition", "Membership-covered invoice linkage is invalid.");
       }

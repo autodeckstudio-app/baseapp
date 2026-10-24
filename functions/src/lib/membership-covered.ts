@@ -115,3 +115,28 @@ export function exactCoveredInvoice(
     job.settlementKind === "membership_covered"
   );
 }
+
+/**
+ * LEGACY transition state: a covered visit that completed through the OLD zero-payment
+ * route before the settle endpoint existed (deployed recordManualPayment records a
+ * zero-amount completed payment + ordinary zero invoice and sets only paymentStatus).
+ * The final guarded advanceJobStatus must still be able to DELIVER such a visit -
+ * otherwise any covered booking closed mid-rollout becomes undeliverable. Acceptance is
+ * explicit and strict (NOT a silent pass for malformed covered records):
+ * paid on job AND booking, no settlementKind anywhere, exactly one live invoice, and
+ * that invoice is zero-total. readCoveredLink must still pass (historic wash + usage
+ * record, tenant/studio/customer/vehicle binding). A stale-link-paid covered job
+ * (invoice total > 0) is NOT accepted here - it stays blocked for staff review.
+ */
+export function isLegacyCoveredCompletion(
+  job: ServiceJob,
+  booking: Booking,
+  liveInvoices: Invoice[],
+): boolean {
+  if (job.paymentStatus !== "paid" || booking.paymentStatus !== "paid") return false;
+  if (job.settlementKind || booking.settlementKind) return false;
+  if (liveInvoices.length !== 1) return false;
+  const inv = liveInvoices[0]!;
+  if (inv.settlementKind) return false;
+  return inv.total === 0;
+}
