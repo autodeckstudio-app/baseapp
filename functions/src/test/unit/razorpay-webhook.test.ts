@@ -33,6 +33,13 @@ const linkPaid = (id: string, amount = AMOUNT) =>
     payment: { entity: { id: "pay_abc", order_id: "order_1", amount, currency: "INR" } },
     payment_link: { entity: { id: "plink_1", reference_id: "pay1", amount } } }, _id: id });
 
+// The name Razorpay actually documents and emits for payment links
+// (https://razorpay.com/docs/webhooks/payment-links); identical payload shape.
+const linkPaidDocumented = (id: string, amount = AMOUNT) =>
+  JSON.stringify({ entity: "event", event: "payment_link.paid", payload: {
+    payment: { entity: { id: "pay_abc", order_id: "order_1", amount, currency: "INR" } },
+    payment_link: { entity: { id: "plink_1", reference_id: "pay1", amount } } }, _id: id });
+
 function ev(raw: string, id: string) {
   const e = provider.parseWebhookEvent(raw);
   e.providerEventId = id;
@@ -87,6 +94,34 @@ describe("processProviderEvent", () => {
     const captured = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { id: "pay_abc", order_id: "order_1", amount: AMOUNT, currency: "INR" } } } });
     const r = await processProviderEvent(db, ev(captured, "evt_2"));
     expect(r.outcome).toBe("already_final");
+    expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
+  });
+
+  it("payment_link.paid (documented Razorpay name): completes the payment, issues the invoice, marks job and booking paid", async () => {
+    audits.length = 0;
+    const { db, data } = fakeFirestore(seed());
+    const r = await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    expect(r).toEqual({ outcome: "completed", paymentId: "pay1" });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "completed", razorpayPaymentId: "pay_abc" });
+    expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
+    expect(data["jobs"]!["job1"]!["paymentStatus"]).toBe("paid");
+    expect(data["bookings"]!["b1"]!["paymentStatus"]).toBe("paid");
+    expect(audits.map((a) => a.action)).toEqual(["payment.completed", "invoice.issued"]);
+  });
+
+  it("payment.link.paid after payment_link.paid (legacy name arrives later, different event id) does not issue a second invoice", async () => {
+    const { db, data } = fakeFirestore(seed());
+    await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    const r = await processProviderEvent(db, ev(linkPaid("1"), "evt_2"));
+    expect(r.outcome).toBe("already_final");
+    expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
+  });
+
+  it("the same documented-name event delivered twice changes nothing the second time", async () => {
+    const { db, data } = fakeFirestore(seed());
+    await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    const r2 = await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    expect(r2.outcome).toBe("duplicate");
     expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
   });
 

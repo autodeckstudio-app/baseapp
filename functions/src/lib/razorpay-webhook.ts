@@ -57,7 +57,10 @@ export async function processProviderEvent(
 ): Promise<{ outcome: WebhookOutcome; paymentId: string | null }> {
   const eventRef = db.collection(COLLECTIONS.paymentEvents()).doc(ev.providerEventId);
   const handled: ProviderWebhookEvent["eventType"][] = [
-    "payment.captured", "payment.link.paid", "payment.failed", "refund.created",
+    // "payment_link.paid" is the name Razorpay actually documents and emits for payment links
+    // (https://razorpay.com/docs/webhooks/payment-links); "payment.link.paid" is kept so any
+    // endpoint already subscribed to the legacy name keeps working.
+    "payment.captured", "payment.link.paid", "payment_link.paid", "payment.failed", "refund.created",
   ];
   if (!handled.includes(ev.eventType)) {
     await eventRef.set({ eventType: ev.eventType, outcome: "ignored", processedAt: new Date().toISOString() }).catch(() => undefined);
@@ -77,7 +80,8 @@ export async function processProviderEvent(
   const paymentRef = db.collection(COLLECTIONS.payments()).doc(found.id);
   const user = systemUser(found.tenantId);
   const now = new Date().toISOString();
-  const isPaid = ev.eventType === "payment.captured" || ev.eventType === "payment.link.paid";
+  const isPaid =
+    ev.eventType === "payment.captured" || ev.eventType === "payment.link.paid" || ev.eventType === "payment_link.paid";
 
   const outcome = await db.runTransaction(async (tx): Promise<WebhookOutcome> => {
     // ---- reads ----
