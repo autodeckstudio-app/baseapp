@@ -24,6 +24,7 @@ export type WebhookOutcome =
   | "refunded"
   | "duplicate"
   | "link_expired"
+  | "ambiguous_link"
   | "link_cancelled"
   | "already_final"
   | "unknown_payment"
@@ -77,6 +78,16 @@ export async function processProviderEvent(
     return { outcome: "unknown_payment", paymentId: null };
   }
 
+  const documentedLinkEvent = ev.eventType === "payment_link.paid" || ev.eventType === "payment_link.expired" || ev.eventType === "payment_link.cancelled";
+  if (documentedLinkEvent && ev.providerPaymentLinkId) {
+    // Fail closed if more than one payment stores this link id: limit(1) lookups must never pick arbitrarily.
+    const dup = await db.collection(COLLECTIONS.payments()).where("razorpayPaymentLinkId", "==", ev.providerPaymentLinkId).limit(2).get();
+    if (dup.size > 1) {
+      await eventRef.set({ eventType: ev.eventType, outcome: "ambiguous_link", providerPaymentLinkId: ev.providerPaymentLinkId, processedAt: new Date().toISOString() });
+      return { outcome: "ambiguous_link", paymentId: null };
+    }
+  }
+
   const paymentRef = db.collection(COLLECTIONS.payments()).doc(found.id);
   const user = systemUser(found.tenantId);
   const now = new Date().toISOString();
@@ -99,7 +110,7 @@ export async function processProviderEvent(
         // NEW documented-name path fails closed: the stored link id must match, and amount and currency must be present and equal.
         if (!ev.providerPaymentLinkId || payment.razorpayPaymentLinkId !== ev.providerPaymentLinkId || (ev.referenceId && ev.referenceId !== payment.id)) { record("unknown_payment"); return "unknown_payment"; }
         if (payment.razorpayPaymentId && ev.providerPaymentId && payment.razorpayPaymentId !== ev.providerPaymentId) { record("unknown_payment"); return "unknown_payment"; }
-        if (!ev.amount || ev.amount !== payment.amount || ev.currency !== (payment.currency ?? "INR")) { record("amount_mismatch"); return "amount_mismatch"; }
+        if (!ev.amount || ev.amount !== payment.amount || !payment.currency || ev.currency !== payment.currency) { record("amount_mismatch"); return "amount_mismatch"; }
       }
       if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
 

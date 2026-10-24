@@ -213,4 +213,21 @@ describe("documented payment_link.* events (local, fail-closed)", () => {
     (f.data["payments"]!["pay1"] as Record<string, unknown>)["razorpayPaymentId"] = "pay_stored";
     expect((await processProviderEvent(f.db, ev(body("payment_link.paid", { amount: AMOUNT }), "m1"))).outcome).toBe("unknown_payment");
   });
+  it("duplicate link id across two tenants is ambiguous and completes neither (link-only variant too)", async () => {
+    const f = mk();
+    const p1 = f.data["payments"]!["pay1"] as Record<string, unknown>;
+    f.data["payments"]!["pay2"] = { ...p1, id: "pay2", tenantId: "u", status: "pending" }; // synthetic: same link id
+    const noRef = JSON.stringify({ entity: "event", event: "payment_link.paid", payload: { payment: { entity: { id: "pay_q", amount: AMOUNT, currency: "INR" } }, payment_link: { entity: { id: "plink_1", amount: AMOUNT } } } });
+    expect((await processProviderEvent(f.db, ev(noRef, "d1"))).outcome).toBe("ambiguous_link");
+    expect((await processProviderEvent(f.db, ev(body("payment_link.paid", { amount: AMOUNT }), "d2"))).outcome).toBe("ambiguous_link");
+    expect((await processProviderEvent(f.db, ev(body("payment_link.expired"), "d3"))).outcome).toBe("ambiguous_link");
+    expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
+    expect(f.data["payments"]!["pay2"]!["status"]).toBe("pending");
+  });
+  it("a stored payment with no currency is not completed by payment_link.paid", async () => {
+    const f = mk();
+    delete (f.data["payments"]!["pay1"] as Record<string, unknown>)["currency"];
+    expect((await processProviderEvent(f.db, ev(body("payment_link.paid", { amount: AMOUNT }), "n1"))).outcome).toBe("amount_mismatch");
+    expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
+  });
 });
