@@ -289,15 +289,12 @@ describe("late membership: reservation failure and crash boundary", () => {
     expect(f.data["staffAlerts"]!["late_membership_payment_pay1"]).toMatchObject({ kind: "late_membership_refund_not_reserved", paymentId: "pay1" });
     expect(Object.values(f.data["refundRequests"]!).filter((d) => String((d as { id?: string }).id ?? "").startsWith("rr_"))).toHaveLength(1); // only the pre-existing one
   });
-  it("crash window: payment completed, process dies before reserving; replay is blocked as already_final and NOTHING reserves (documented gap)", async () => {
+  it("no post-transaction window: one event leaves completed payment, event doc, request and alert together (fake Firestore; atomic rollback is proven only by the emulator test late-membership-atomic)", async () => {
     const f = mk2();
-    // Simulate the crash by completing the payment through the transaction only: use a membership event, then wipe what the post-step wrote.
     await processProviderEvent(f.db, ev(linkPaid("C1"), "C1"));
-    for (const k of Object.keys(f.data["refundRequests"] ?? {})) delete f.data["refundRequests"]![k];
-    delete f.data["staffAlerts"]; // what a crash before the post-step would leave: no request, no alert
-    expect((await processProviderEvent(f.db, ev(linkPaid("C1"), "C1"))).outcome).toBe("duplicate");
-    expect((await processProviderEvent(f.db, ev(linkPaid("C2"), "C2"))).outcome).toBe("already_final");
-    expect(Object.keys(f.data["refundRequests"] ?? {})).toHaveLength(0); // unrecovered: needs a reconciler (design pending)
     expect(f.data["payments"]!["pay1"]!["status"]).toBe("completed");
+    expect(Object.keys(f.data["refundRequests"] ?? {}).filter((k) => k.startsWith("rr_"))).toHaveLength(1);
+    expect(f.data["staffAlerts"]!["late_membership_payment_pay1"]).toBeTruthy();
+    expect((await processProviderEvent(f.db, ev(linkPaid("C1"), "C1"))).outcome).toBe("duplicate");
   });
 });

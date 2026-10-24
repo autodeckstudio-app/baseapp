@@ -9,7 +9,7 @@
 //    nothing is marked paid and the event is recorded for review.
 import type { Firestore } from "firebase-admin/firestore";
 import type { Booking, Gift, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
-import { reserveRefund } from "./refund-outbox.js";
+import { planReserveInTx, applyReserveInTx } from "./refund-outbox.js";
 import { planGiftActivation } from "./gift-activate.js";
 import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
@@ -103,7 +103,6 @@ export async function processProviderEvent(
   const now = new Date().toISOString();
   const isPaid = ev.eventType === "payment.captured" || ev.eventType === "payment.link.paid" || ev.eventType === "payment_link.paid";
 
-  let lateMembership = false;
   const outcome = await db.runTransaction(async (tx): Promise<WebhookOutcome> => {
     // ---- reads ----
     const evSnap = await tx.get(eventRef);
@@ -129,7 +128,12 @@ export async function processProviderEvent(
         const mRef = payment.membershipId ? db.collection(COLLECTIONS.memberships()).doc(payment.membershipId) : null;
         const mSnap = mRef ? await tx.get(mRef) : null;
         // Capture arrived for a membership that is already cancelled or expired: never activate it, and mark it for a full refund reservation below.
-        if (mSnap?.exists && ["cancelled", "expired"].includes((mSnap.data() as Membership).status)) lateMembership = true;
+        const lateMembership = !!(mSnap?.exists && ["cancelled", "expired"].includes((mSnap.data() as Membership).status));
+        // Late capture: the full-refund RESERVATION is planned (reads) here and committed in THIS transaction with the
+        // payment completion and the event doc, so they land together or not at all. Reservation only: no provider call.
+        const reservePlan = lateMembership
+          ? await planReserveInTx(tx, db, { payment: { ...payment, status: "completed" }, amountPaise: payment.amount, reason: "late_membership_payment", createdBy: "system" })
+          : null;
         const upgradeSrc = mSnap?.exists && (mSnap.data() as Membership).status === "pending" ? await readUpgradeSource(tx, db, mSnap.data() as Membership) : null;
         record("completed");
         tx.update(paymentRef, {
@@ -138,6 +142,13 @@ export async function processProviderEvent(
         });
         writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: null,
           after: { status: "completed", targetType: "membership", membershipId: payment.membershipId, via: "razorpay_webhook" } });
+        if (reservePlan) {
+          const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`late_membership_payment_${payment.id}`);
+          if (reservePlan.ok) applyReserveInTx(tx, reservePlan);
+          // A deterministic refusal (e.g. an active reservation already exists) is flagged, never retried by redelivery.
+          tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+            kind: reservePlan.ok ? "late_membership_payment" : "late_membership_refund_not_reserved", paymentId: payment.id, createdAt: now });
+        }
         if (mRef && mSnap?.exists && (mSnap.data() as Membership).status === "pending") {
           const startDate = now.slice(0, 10);
           const endDate = new Date(Date.parse(now) + MEMBERSHIP_DURATION_DAYS * 86400000).toISOString().slice(0, 10);
@@ -289,19 +300,6 @@ export async function processProviderEvent(
       after: { status: "refunded", refundAmount: ev.amount || payment.amount, providerRefundId: ev.providerRefundId, via: "razorpay_webhook" } });
     return "refunded";
   });
-
-  if (outcome === "completed" && lateMembership) {
-    // Reservation only (status "reserved"): no provider call here, nothing is promised to the customer.
-    const stamp = new Date().toISOString();
-    const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`late_membership_payment_${found.id}`);
-    try {
-      const fresh = (await db.collection(COLLECTIONS.payments()).doc(found.id).get()).data() as Payment;
-      await reserveRefund(db, { payment: fresh, amountPaise: fresh.amount, reason: "late_membership_payment", createdBy: "system" });
-      await alertRef.set({ id: alertRef.id, tenantId: found.tenantId, studioId: found.studioId ?? null, kind: "late_membership_payment", paymentId: found.id, createdAt: stamp }, { merge: true });
-    } catch {
-      await alertRef.set({ id: alertRef.id, tenantId: found.tenantId, studioId: found.studioId ?? null, kind: "late_membership_refund_not_reserved", paymentId: found.id, createdAt: stamp }, { merge: true });
-    }
-  }
 
   return { outcome, paymentId: found.id };
 }

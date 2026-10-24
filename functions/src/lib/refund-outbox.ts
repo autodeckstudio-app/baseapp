@@ -77,54 +77,79 @@ export async function activeReservation(db: Firestore, paymentId: string): Promi
  * same payment cannot both win — exactly one survives. The guard is released
  * when the request reaches a terminal state (projected or failed).
  */
+export type ReservePlan =
+  | { ok: true; guardRef: FirebaseFirestore.DocumentReference; requestRef: FirebaseFirestore.DocumentReference; guard: Record<string, unknown>; request: RefundRequest }
+  | { ok: false; reason: string };
+
+/**
+ * READ phase of a reservation, to run inside a caller's transaction BEFORE any write. Deterministic
+ * refusals (bad amount, over-refundable, an active reservation already exists) are returned as
+ * {ok:false}, never thrown, so a caller that must still commit its own work can do so and flag it.
+ * Infrastructure errors (transaction conflicts, read failures) still throw.
+ */
+export async function planReserveInTx(
+  tx: FirebaseFirestore.Transaction,
+  db: Firestore,
+  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string },
+): Promise<ReservePlan> {
+  const amount = Math.round(i.amountPaise);
+  if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)" };
+  if (amount > refundablePaise(i.payment)) {
+    return { ok: false, reason: `refund of ${amount} exceeds the refundable ${refundablePaise(i.payment)} on payment ${i.payment.id}` };
+  }
+  const guardRef = requestsCol(db).doc(`active_${i.payment.id}`);
+  const now = new Date().toISOString();
+  // Transactional reads: a losing racer's snapshot conflicts with the
+  // winner's guard create, retries, and then sees the guard here.
+  const guardSnap = await tx.get(guardRef);
+  if (guardSnap.exists) {
+    const g = guardSnap.data() as { requestId?: string };
+    return { ok: false, reason: `payment ${i.payment.id} already has an active refund request (${g.requestId ?? "unknown"})` };
+  }
+  const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", i.payment.id));
+  const active = allSnap.docs
+    .map((d) => d.data() as RefundRequest)
+    .find((r) => r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous");
+  if (active) return { ok: false, reason: `payment ${i.payment.id} already has an active refund request (${active.id})` };
+  // Count only real rr_* requests (never the transient guard) so ids stay
+  // unique even after a guard is released on a terminal request.
+  const priorCount = allSnap.docs.filter((d) => d.id.startsWith("rr_")).length;
+  const requestId = `rr_${i.payment.id}_${priorCount + 1}`;
+  const request: RefundRequest = {
+    id: requestId,
+    tenantId: i.payment.tenantId,
+    studioId: i.payment.studioId,
+    paymentId: i.payment.id,
+    jobId: i.payment.jobId,
+    bookingId: i.payment.bookingId,
+    amountPaise: amount,
+    reason: i.reason,
+    status: "reserved",
+    providerRefundId: null,
+    projectionNeeded: false,
+    lastError: null,
+    createdBy: i.createdBy,
+    createdAt: now,
+    updatedAt: now,
+  };
+  return { ok: true, guardRef, requestRef: requestsCol(db).doc(requestId), guard: { paymentId: i.payment.id, requestId, createdAt: now }, request };
+}
+
+/** WRITE phase: only after every read of the transaction is done. */
+export function applyReserveInTx(tx: FirebaseFirestore.Transaction, plan: Extract<ReservePlan, { ok: true }>): { requestId: string } {
+  tx.create(plan.guardRef, plan.guard);
+  tx.create(plan.requestRef, plan.request);
+  return { requestId: plan.request.id };
+}
+
 export async function reserveRefund(
   db: Firestore,
   i: { payment: Payment; amountPaise: number; reason: string; createdBy: string },
 ): Promise<{ requestId: string }> {
-  const amount = Math.round(i.amountPaise);
-  if (!Number.isInteger(amount) || amount <= 0) throw new Error("refund amount must be a positive integer (paise)");
-  if (amount > refundablePaise(i.payment)) {
-    throw new Error(`refund of ${amount} exceeds the refundable ${refundablePaise(i.payment)} on payment ${i.payment.id}`);
-  }
-  const guardRef = requestsCol(db).doc(`active_${i.payment.id}`);
-  const now = new Date().toISOString();
   return db.runTransaction(async (tx) => {
-    // Transactional reads: a losing racer's snapshot conflicts with the
-    // winner's guard create, retries, and then sees the guard here.
-    const guardSnap = await tx.get(guardRef);
-    if (guardSnap.exists) {
-      const g = guardSnap.data() as { requestId?: string };
-      throw new Error(`payment ${i.payment.id} already has an active refund request (${g.requestId ?? "unknown"})`);
-    }
-    const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", i.payment.id));
-    const active = allSnap.docs
-      .map((d) => d.data() as RefundRequest)
-      .find((r) => r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous");
-    if (active) throw new Error(`payment ${i.payment.id} already has an active refund request (${active.id})`);
-    // Count only real rr_* requests (never the transient guard) so ids stay
-    // unique even after a guard is released on a terminal request.
-    const priorCount = allSnap.docs.filter((d) => d.id.startsWith("rr_")).length;
-    const requestId = `rr_${i.payment.id}_${priorCount + 1}`;
-    const request: RefundRequest = {
-      id: requestId,
-      tenantId: i.payment.tenantId,
-      studioId: i.payment.studioId,
-      paymentId: i.payment.id,
-      jobId: i.payment.jobId,
-      bookingId: i.payment.bookingId,
-      amountPaise: amount,
-      reason: i.reason,
-      status: "reserved",
-      providerRefundId: null,
-      projectionNeeded: false,
-      lastError: null,
-      createdBy: i.createdBy,
-      createdAt: now,
-      updatedAt: now,
-    };
-    tx.create(guardRef, { paymentId: i.payment.id, requestId, createdAt: now });
-    tx.create(requestsCol(db).doc(requestId), request);
-    return { requestId };
+    const plan = await planReserveInTx(tx, db, i);
+    if (!plan.ok) throw new Error(plan.reason);
+    return applyReserveInTx(tx, plan);
   });
 }
 
