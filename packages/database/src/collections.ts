@@ -17,6 +17,8 @@ export const COLLECTIONS = {
   jobs: () => "jobs",
   approvals: () => "approvals",
   payments: () => "payments",
+  // Staff-only attention items (reason code + references, no customer data). Cloud Function writes only.
+  staffAlerts: () => "staffAlerts",
   invoices: () => "invoices",
   warranties: () => "warranties",
   // inspections/{jobId} — one per job (id == jobId), same pattern as warranties

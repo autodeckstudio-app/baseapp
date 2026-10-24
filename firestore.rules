@@ -189,6 +189,14 @@ service cloud.firestore {
     }
 
     // âââ /payments/{paymentId} ââââââââââââââââââââââââââââââââââââââââââââââ
+    // Staff-only attention items: studio sees its own studio, admin/superadmin the whole tenant. Never customers.
+    match /staffAlerts/{alertId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isAdminOrAbove() || (isStudio() && ownStudio(resource.data)));
+      allow create, update, delete: if false; // Cloud Function / Admin SDK only
+    }
+
     match /payments/{paymentId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))

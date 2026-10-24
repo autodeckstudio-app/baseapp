@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useStaffAlerts } from "../../../components/StaffAlertsNotice";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToBookings } from "../../../lib/bookings-service";
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [loaded, setLoaded] = useState({bookings: false, jobs: false, payments: false, approvals: false});
+  const staffAlerts = useStaffAlerts();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
@@ -101,7 +103,7 @@ export default function DashboardPage() {
       floor={stats.floor}
       counts={{
         failedPayments: stats.failedPayments.length,
-        paymentsToReview: payments.filter((p) => p.status === "pending" && !!p.reviewReason).length,
+        paymentsToReview: staffAlerts.length,
         unpaidDelivered: stats.unpaidCompletedJobs.length,
         pendingApprovals: pendingApprovals.length,
         staleJobs: stats.staleJobs.length,

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { matchBookingCode, isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { StaffAlertsNotice } from "../../../components/StaffAlertsNotice";
 import { getStudioConfig } from "../../../lib/studio-service";
 import { bayLabel } from "../../../lib/bay-label";
 import { listenToBookings } from "../../../lib/bookings-service";
@@ -154,6 +155,7 @@ export default function BookingsPage() {
           <div><span className="ax-kpi-v ax-kpi-v--premium">{upcoming}</span><span className="ax-label">Coming up</span></div>
         </div>
       </header>
+      <StaffAlertsNotice />
 
       <div className="ax-toolbar">
         {dayMode ? (

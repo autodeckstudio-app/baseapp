@@ -223,8 +223,11 @@ describe("documented payment_link.* events (local, fail-closed)", () => {
     expect((await processProviderEvent(f.db, ev(body("payment_link.expired"), "d3"))).outcome).toBe("ambiguous_link");
     expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
     expect(f.data["payments"]!["pay2"]!["status"]).toBe("pending");
-    expect(f.data["payments"]!["pay1"]!["reviewReason"]).toBe("ambiguous_payment_link");
-    expect(f.data["payments"]!["pay2"]!["reviewReason"]).toBe("ambiguous_payment_link");
+    expect(f.data["payments"]!["pay1"]!["reviewReason"]).toBeUndefined();
+    expect(Object.keys(f.data["staffAlerts"] ?? {}).sort()).toEqual(["ambiguous_payment_link_pay1", "ambiguous_payment_link_pay2"]);
+    const a1 = f.data["staffAlerts"]!["ambiguous_payment_link_pay1"]!;
+    expect(a1).toMatchObject({ tenantId: "t", kind: "ambiguous_payment_link", paymentId: "pay1" });
+    expect(Object.keys(a1).sort()).toEqual(["createdAt", "id", "kind", "paymentId", "studioId", "tenantId"]); // reason + references only
   });
   it("a stored payment with no currency is not completed by payment_link.paid", async () => {
     const f = mk();
