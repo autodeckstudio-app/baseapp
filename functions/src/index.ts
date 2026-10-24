@@ -37,6 +37,7 @@ export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
 // âââ Studio Jobs ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { createWalkinJob } from "./functions/job/createWalkinJob.js";
 export { advanceJobStatus } from "./functions/job/advanceJobStatus.js";
+export { settleMembershipCoveredJob } from "./functions/job/settleMembershipCoveredJob.js";
 export { getStudioJobs } from "./functions/job/getStudioJobs.js";
 export { assignBay } from "./functions/job/assignBay.js";
 
