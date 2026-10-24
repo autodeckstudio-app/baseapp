@@ -36,6 +36,8 @@ export interface DashboardViewProps {
 export function DashboardView({ today, now, revenueToday, refundsOwedText, tiles, floor, counts, onOpen }: DashboardViewProps) {
   const alerts: { tone: "danger" | "warning"; text: string; href: string; action: string }[] = [];
   const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+  // Refunds owed is already computed upstream (loaded bookings). Shown here so "All clear" is never claimed while money is owed; this panel is the one that stays visible on wide screens.
+  if (refundsOwedText) alerts.push({ tone: "warning", text: refundsOwedText, href: "/bookings", action: "View" });
   if (counts.paymentsToReview) alerts.push({ tone: "danger", text: `${n(counts.paymentsToReview, "payment needs", "payments need")} a manual check`, href: "/payments", action: "Review" });
   if (counts.failedPayments) alerts.push({ tone: "danger", text: `${n(counts.failedPayments, "payment", "payments")} failed`, href: "/payments", action: "Review" });
   if (counts.unpaidDelivered) alerts.push({ tone: "danger", text: `${n(counts.unpaidDelivered, "delivered car", "delivered cars")} not paid for yet`, href: "/jobs", action: "Collect" });
