@@ -39,7 +39,7 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${seq}`;
 }
 
-let dayOffset = 3;
+let dayOffset = 0;
 function nextDate(): string {
   dayOffset += 1;
   return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
