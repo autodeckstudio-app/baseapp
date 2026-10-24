@@ -265,6 +265,7 @@ export function InvoicesView(p: {
         loading={p.loading}
         error={p.error}
         onOpen={(i) => p.onOpen(i.id)}
+        listClassName="ax-list--invoices"
         empty={p.invoices.length ? { title: "Nothing matches these filters", body: "Clear the search or pick a different status." } : { title: "No invoices yet", body: "An invoice is created when a job is billed." }}
       />
     </div>

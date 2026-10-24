@@ -75,6 +75,7 @@ export function ListPane<T extends { id: string }>({
   error,
   empty,
   onOpen,
+  listClassName,
 }: {
   rows: T[];
   columns: Column<T>[];
@@ -82,6 +83,8 @@ export function ListPane<T extends { id: string }>({
   error?: string | null;
   empty: { title: string; body: string };
   onOpen?: (row: T) => void;
+  /** Extra class on the list container for view-specific layout (e.g. the invoices narrow-screen fix). */
+  listClassName?: string;
 }) {
   if (error) {
     return (
@@ -108,7 +111,7 @@ export function ListPane<T extends { id: string }>({
   }
   const template = columns.map((c) => c.width ?? "minmax(0, 1fr)").join(" ");
   return (
-    <div className="ax-list" role="table">
+    <div className={listClassName ? `ax-list ${listClassName}` : "ax-list"} role="table">
       <div className="ax-list-head" role="row" style={{ gridTemplateColumns: template }}>
         {columns.map((c) => (
           <span key={c.key} role="columnheader" className={c.align === "end" ? "is-end" : c.align === "center" ? "is-center" : undefined}>{c.head}</span>
