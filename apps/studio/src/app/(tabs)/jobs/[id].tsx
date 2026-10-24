@@ -471,7 +471,7 @@ export default function JobDetailScreen() {
         )}
       </Section>
 
-      {MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && booking.totalAmount === 0 && job.totalAmount === 0 && !job.settlementKind && job.status !== "CANCELLED" && !["CANCELLED","EXPIRED"].includes(booking.status) ? <Section>
+      {MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && booking.totalAmount === 0 && job.totalAmount === 0 && !(job as { settlementKind?: string }).settlementKind && job.status !== "CANCELLED" && !["CANCELLED","EXPIRED"].includes(booking.status) ? <Section>
         <Text style={{color:colors.textPrimary}}>Membership-covered, not yet settled</Text>
         <Button label="Settle membership-covered visit" loading={paymentActionLoading} onPress={()=>{setPaymentActionLoading(true);setActionError(null);void httpsCallable(functions,"settleMembershipCoveredJob")({jobId:job.id}).catch(e=>setActionError(e instanceof Error?e.message:"Could not settle this visit.")).finally(()=>setPaymentActionLoading(false));}} />
       </Section> : null}
