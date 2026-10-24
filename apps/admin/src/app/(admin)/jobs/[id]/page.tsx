@@ -11,7 +11,7 @@ import { formatDuration } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
-import { canOfferPayment, paymentPanelMode } from "../../../../lib/payment-panel-state";
+import { canOfferPayment, coveredVisitSettlementNote, paymentPanelMode } from "../../../../lib/payment-panel-state";
 import { listenToBooking, listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
@@ -351,6 +351,9 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
+            {coveredVisitSettlementNote(job, booking) ? (
+              <p className="ax-note" style={{ marginTop: 8 }}>{coveredVisitSettlementNote(job, booking)}</p>
+            ) : null}
             {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).link && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
