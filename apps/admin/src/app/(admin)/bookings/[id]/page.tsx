@@ -31,7 +31,7 @@ export default function BookingDetailPage() {
   const [booking, setBooking] = useState<Booking | null | undefined>(undefined);
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<Payment | null | undefined>(undefined); // undefined = not loaded yet
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -166,7 +166,9 @@ export default function BookingDetailPage() {
 
           <section className="ax-panel">
             <span className="ax-label">Payment</span>
-            {payment ? (
+            {payment === undefined ? (
+              <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
+            ) : payment ? (
               <div className="kv"><span>{statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
             ) : (
               <p className="ax-note" style={{ marginTop: 0 }}>No payment started yet.</p>

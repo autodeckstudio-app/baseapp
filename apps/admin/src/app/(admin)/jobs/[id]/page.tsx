@@ -31,7 +31,7 @@ export default function JobDetailPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [job, setJob] = useState<ServiceJob | null | undefined>(undefined);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<Payment | null | undefined>(undefined); // undefined = not loaded yet (never show "no payment" before the listener answers)
   const [linking, setLinking] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [warranty, setWarranty] = useState<Warranty | null>(null);
@@ -311,7 +311,9 @@ export default function JobDetailPage() {
           <section className="ax-panel">
             <span className="ax-label">Payment</span>
             {status && <p className="ax-status-msg" role="status">{status}</p>}
-            {payment ? (
+            {payment === undefined ? (
+              <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
+            ) : payment ? (
               <>
                 <div className="kv"><span>{METHOD_LABEL[payment.method] ?? statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
                 <div className="kv"><span>Amount</span><span className="ax-data">{formatPaise(payment.amount)}</span></div>
@@ -345,14 +347,14 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
-            {job.paymentStatus === "unpaid" && (!payment || payment.status === "failed" || payment.status === "cancelled") && (
+            {payment !== undefined && job.paymentStatus === "unpaid" && (!payment || payment.status === "failed" || payment.status === "cancelled") && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
                   {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
                 </button>
               </div>
             )}
-            {job.paymentStatus === "unpaid" && (
+            {payment !== undefined && job.paymentStatus === "unpaid" && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
                 <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
                 <label className="ax-form-row">
