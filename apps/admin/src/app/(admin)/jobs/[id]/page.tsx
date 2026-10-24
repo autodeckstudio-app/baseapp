@@ -304,7 +304,7 @@ export default function JobDetailPage() {
 
           <section className="ax-panel">
             <span className="ax-label">Price</span>
-            <div className="kv"><span>Service</span><span className="ax-data">{formatPaise(job.priceBreakdown.total)}</span></div>
+            <div className="kv"><span>Service</span><span className="ax-data">{formatPaise(job.priceBreakdown?.total as number)}</span></div>
             <div className="kv"><span>Extra work</span><span className="ax-data">{formatPaise(job.additionalWorkDelta)}</span></div>
             <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
           </section>

@@ -4,6 +4,8 @@
 // duplicated rather than shared, per apps/customer|studio's format.ts.
 
 export function formatPaise(paise: number): string {
+  // Display guard: a missing or non-finite amount prints "-" instead of "₹NaN". Finite values are unchanged.
+  if (typeof paise !== "number" || !Number.isFinite(paise)) return "-";
   return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: paise % 100 === 0 ? 0 : 2 })}`;
 }
 

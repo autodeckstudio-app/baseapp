@@ -70,7 +70,7 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         ) : (<>
         <div className="kv"><span>{service?.name ?? "Service"}</span><span className="ax-data">{formatPaise(pb.basePrice)}</span></div>
         {pb.scopeAdjustment !== 0 && <div className="kv"><span>Size and scope</span><span className="ax-data">{formatPaise(pb.scopeAdjustment)}</span></div>}
-        {pb.membershipDiscount !== null && (
+        {typeof pb.membershipDiscount === "number" && Number.isFinite(pb.membershipDiscount) && (
           <div className="kv"><span>Membership</span><span className="ax-data" style={{ color: "var(--ad-premium)" }}>-{formatPaise(pb.membershipDiscount)}</span></div>
         )}
         <div className="kv"><span>Subtotal</span><span className="ax-data">{formatPaise(pb.subtotal)}</span></div>
