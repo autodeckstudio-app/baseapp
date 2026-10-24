@@ -101,4 +101,29 @@ describe("no-show resolution (fixture money, reservation only)", () => {
     await expect(resolve({ bookingId: a.bookingId, resolution: "reopen", reason: "try reopen" })).rejects.toMatchObject({ code: "failed-precondition" });
     expect((await bk(a.bookingId))["noShowResolution"]).toBeUndefined();
   });
+
+  it("a missing or too-short reason is refused for charge, waive and exception, with no state change", async () => {
+    const s = await seed({ category: "washing", total: 100000, paid: 100000 });
+    for (const reason of [undefined, "", "  ", "ab"]) {
+      const data: Record<string, unknown> = { bookingId: s.bookingId, resolution: "waive" };
+      if (reason !== undefined) data["reason"] = reason;
+      await expect(resolve(data)).rejects.toMatchObject({ code: "invalid-argument" });
+    }
+    await expect(resolve({ bookingId: s.bookingId, resolution: "charge", chargePaise: 25000, reason: "x" })).rejects.toMatchObject({ code: "invalid-argument" });
+    expect((await bk(s.bookingId))["noShowResolution"]).toBeUndefined();
+    expect((await db.collection("refundRequests").where("paymentId", "==", s.paymentId).get()).size).toBe(0);
+  });
+
+  it("the audit entry carries the admin actor, the reason, the mapped default and the exception flag", async () => {
+    const s = await seed({ category: "washing", total: 100000, paid: 100000 });
+    const auth = admin();
+    await resolve({ bookingId: s.bookingId, resolution: "charge", chargePaise: 25000, reason: "customer agreed by phone" }, auth);
+    const logs = await db.collection("auditLog").where("entityId", "==", s.bookingId).where("action", "==", "booking.noshow_resolved").get();
+    expect(logs.size).toBe(1);
+    expect(logs.docs[0]!.data()).toMatchObject({
+      performedBy: auth.uid, performedByRole: "admin",
+      after: { resolution: "charge", chargePaise: 25000, reason: "customer agreed by phone", mappedDefaultPaise: 10000, exception: true },
+    });
+    expect((await bk(s.bookingId))["noShowResolvedBy"]).toBe(auth.uid);
+  });
 });
