@@ -31,6 +31,8 @@ export type WebhookOutcome =
   | "unknown_payment"
   | "amount_mismatch"
   | "refund_accepted"
+  | "refund_processed"
+  | "refund_unmatched"
   | "ignored";
 
 function systemUser(tenantId: string): AuthorizedUser {
@@ -62,7 +64,7 @@ export async function processProviderEvent(
 ): Promise<{ outcome: WebhookOutcome; paymentId: string | null }> {
   const eventRef = db.collection(COLLECTIONS.paymentEvents()).doc(ev.providerEventId);
   const handled: ProviderWebhookEvent["eventType"][] = [
-    "payment.captured", "payment.link.paid", "payment_link.paid", "payment_link.expired", "payment_link.cancelled", "payment.failed", "refund.created",
+    "payment.captured", "payment.link.paid", "payment_link.paid", "payment_link.expired", "payment_link.cancelled", "payment.failed", "refund.created", "refund.processed",
   ];
   if (!handled.includes(ev.eventType)) {
     await eventRef.set({ eventType: ev.eventType, outcome: "ignored", processedAt: new Date().toISOString() }).catch(() => undefined);
@@ -111,6 +113,36 @@ export async function processProviderEvent(
     const payment = paySnap.data() as Payment;
     const record = (o: WebhookOutcome) =>
       tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome: o, processedAt: now });
+
+    if (ev.eventType === "refund.processed") {
+      // Provider status only: the booking says "processed" when THIS exact refund (id, amount, currency, tenant, payment, booking)
+      // matches what we stored. No money, payment, invoice or job field is touched. Anything else: no booking write, private alert.
+      const bookingRef = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
+      const bSnap = bookingRef ? await tx.get(bookingRef) : null;
+      const b = bSnap?.exists ? (bSnap.data() as Booking) : null;
+      const rid = ev.providerRefundId;
+      const reqSnap = rid ? await tx.get(db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", payment.id).where("providerRefundId", "==", rid).limit(2)) : null;
+      const stored = reqSnap && reqSnap.size === 1 ? (reqSnap.docs[0]!.data() as { tenantId: string; bookingId: string | null; amountPaise: number }) : null;
+      const amt = ev.providerRefundAmount;
+      // The stored refund id + amount come from either our refund request (customer/outbox path) or the booking itself (admin cancel path).
+      const storedOk = stored
+        ? stored.tenantId === payment.tenantId && stored.bookingId === payment.bookingId && stored.amountPaise === amt && (!b?.refundId || b.refundId === rid)
+        : !!(b && b.refundId === rid && b.refundedPaise === amt);
+      const matches = !!(rid && bookingRef && b && b.id === payment.bookingId && b.tenantId === payment.tenantId
+        && payment.razorpayRefundId === rid && (payment.status === "refunded" || payment.status === "partially_refunded")
+        && typeof amt === "number" && amt > 0 && storedOk && !!payment.currency && ev.currency === payment.currency);
+      if (matches && b!.refundStatus === "processed") { record("already_final"); return "already_final"; }
+      if (matches && b!.refundStatus === "initiated") {
+        tx.update(bookingRef!, { refundStatus: "processed", refundProcessedAt: now, updatedAt: now });
+        record("refund_processed");
+        return "refund_processed";
+      }
+      const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`refund_processed_unmatched_${ev.providerEventId}`);
+      tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+        kind: "refund_processed_unmatched", paymentId: payment.id, createdAt: now });
+      record("refund_unmatched");
+      return "refund_unmatched";
+    }
 
     if (isPaid) {
       // completed/refunded are final; partially_refunded is final for capture too —

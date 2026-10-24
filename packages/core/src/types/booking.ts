@@ -70,7 +70,9 @@ export interface Booking {
   /** Refund tracking on a cancelled, paid booking. */
   // reserved = approved and queued in the outbox, NOT yet sent to the provider;
   // initiated = accepted by the provider; failed = the provider refused it.
-  refundStatus?: "reserved" | "initiated" | "failed";
+  // processed = the provider reported this exact refund as processed (a provider status, NOT proof the money reached the bank).
+  refundStatus?: "reserved" | "initiated" | "processed" | "failed";
+  refundProcessedAt?: string | null;
   refundId?: string | null;
   notes: string | null;
   idempotencyKey: string;

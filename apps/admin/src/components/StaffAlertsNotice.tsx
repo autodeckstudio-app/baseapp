@@ -19,6 +19,7 @@ const TEXT: Record<string, (n: number) => string> = {
   ambiguous_payment_link: (n) => `${n === 1 ? "1 online payment notice matched" : `${n} online payment notices matched`} more than one payment, so ${n === 1 ? "it was" : "they were"} not applied automatically. A manual check is needed.`,
   late_membership_payment: (n) => `${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired. A full refund request was recorded.`,
   late_membership_already_reserved: (n) => `${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired. A matching full refund request already existed.`,
+  refund_processed_unmatched: (n) => `${n === 1 ? "1 refund" : `${n} refunds`} reported as processed by Razorpay did not match our stored refund record. Nothing was changed. A manual check is needed.`,
   late_membership_refund_not_reserved: (n) => `Refund owed, NOT reserved: ${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired, and a different refund request blocks the full refund. Manual action is required; nothing resolves this automatically.`,
 };
 

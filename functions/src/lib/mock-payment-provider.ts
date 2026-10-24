@@ -58,6 +58,7 @@ export class MockPaymentProvider implements PaymentProvider {
       providerPaymentId: payment?.id ?? refund?.payment_id ?? "mock_pay_id",
       providerPaymentLinkId: plink?.id ?? null,
       providerRefundId: refund?.id ?? null,
+      providerRefundAmount: refund?.amount ?? null,
       amount: payment?.amount ?? refund?.amount ?? 0,
       currency: payment?.currency ?? "INR",
     };

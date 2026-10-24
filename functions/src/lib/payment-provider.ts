@@ -46,6 +46,7 @@ export type ProviderEventType =
   | "payment_link.expired"
   | "payment_link.cancelled"
   | "refund.created"
+  | "refund.processed"
   | "refund.failed";
 
 export interface ProviderWebhookEvent {
@@ -54,6 +55,8 @@ export interface ProviderWebhookEvent {
   providerPaymentId: string;
   providerPaymentLinkId: string | null;
   providerRefundId: string | null;
+  /** Paise of the REFUND entity itself (refund events only); `amount` is the payment amount when a payment entity is present. */
+  providerRefundAmount?: number | null;
   providerOrderId?: string | null;
   referenceId?: string | null; // our payment doc id, set as reference_id on the payment link
   amount: number; // paise

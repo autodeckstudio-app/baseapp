@@ -81,3 +81,13 @@ describe("booking page text stays readable in Night", () => {
     expect(src).not.toMatch(/tone="tertiary">Payment status is/);
   });
 });
+
+import { readFileSync as _rf } from "node:fs";
+describe("refund notices (source guard, not rendered proof)", () => {
+  const src = _rf(new URL("../app/(tabs)/bookings/[id].tsx", import.meta.url), "utf8");
+  it("drops the unfulfillable promise and states provider status only", () => {
+    expect(src).not.toContain("We will update here when it is complete");
+    expect(src).toContain("Razorpay reports your refund as processed");
+    expect(src).not.toMatch(/\d+\s*(-\s*\d+\s*)?(working |business )?days/i.exec(src.slice(src.indexOf('refundStatus === "processed"'), src.indexOf('refundStatus === "processed"') + 300))?.[0] ?? "NOPE_XYZ");
+  });
+});
