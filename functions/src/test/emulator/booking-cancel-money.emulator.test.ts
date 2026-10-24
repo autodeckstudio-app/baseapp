@@ -2,7 +2,7 @@
  * Emulator tests for the cancel and refund arithmetic as it actually runs (adminCancelBooking.runCancel),
  * with documents seeded directly so the time to the slot is exact. Local only: cash payments, no provider call.
  * Covers: early cancel full refund with no processing deduction, the Rs 100 / 20% bands, studio cancel with
- * same-value compensation recorded as DUE (nothing is paid out), goodwill waive kept distinct from a studio cancel,
+ * full actual-paid refund and no new compensation obligation, goodwill waive kept distinct from a studio cancel,
  * idempotency and the admin-only guard.
  */
 import { describe, it, expect } from "vitest";
@@ -86,19 +86,51 @@ describe("cancel and refund money (cash only, no provider)", () => {
     expect((await booking(s.bookingId))["manualRefundDuePaise"]).toBe(90000); // one obligation, unchanged by the re-cancel
   });
 
-  it("studio cancel inside the customer's fee window: full refund and Rs 100 compensation recorded as due, cash not credit", async () => {
-    const s = await seed({ category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 });
-    expect(await cancel(s.bookingId, "studio", true)).toMatchObject({ preview: true, refundPaise: 100000, feePaise: 0, studioCompensationPaise: 10000 });
-    expect(await cancel(s.bookingId, "studio")).toMatchObject({ refundPaise: 100000, studioCompensationPaise: 10000 });
-    expect(await booking(s.bookingId)).toMatchObject({
-      status: "CANCELLED", cancelledByStudio: true, manualRefundDuePaise: 100000, studioCompensationPaise: 10000, studioCompensationStatus: "due",
-    });
+  it.each([
+    { category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 },
+    { category: "ppf", hoursBefore: 20, totalPaise: 500000, paidPaise: 500000 },
+    { category: "ppf", hoursBefore: 20, totalPaise: 500000, paidPaise: 0 },
+  ])("studio cancel refunds actual paid without NEW compensation: $category paid=$paidPaise", async (opts) => {
+    const s = await seed(opts);
+    const preview = await cancel(s.bookingId, "studio", true);
+    const result = await cancel(s.bookingId, "studio");
+    for (const value of [preview, result, await booking(s.bookingId)]) {
+      expect(value["studioCompensationPaise"]).toBeUndefined();
+      expect(value["studioCompensationStatus"]).toBeUndefined();
+    }
+    expect(preview).toMatchObject({ preview: true, refundPaise: opts.paidPaise, feePaise: 0 });
+    expect(result).toMatchObject({ success: true, refundPaise: opts.paidPaise });
+    const b = await booking(s.bookingId);
+    expect(b).toMatchObject({ status: "CANCELLED", cancelledByStudio: true });
+    expect(b["manualRefundDuePaise"]).toBe(opts.paidPaise || undefined);
+    const audit = await db.collection("auditLog").where("entityId", "==", s.bookingId).get();
+    expect(audit.size).toBe(1);
+    for (const row of audit.docs) {
+      expect(row.data()["after"]["studioCompensationPaise"]).toBeUndefined();
+      expect(row.data()["after"]["studioCompensationStatus"]).toBeUndefined();
+    }
   });
 
-  it("studio cancel of a bigger job inside 24h records 20% of the total as compensation, even when nothing was paid", async () => {
-    const s = await seed({ category: "ppf", hoursBefore: 20, totalPaise: 500000, paidPaise: 0 });
-    expect(await cancel(s.bookingId, "studio")).toMatchObject({ refundPaise: 0, studioCompensationPaise: 100000 });
-    expect(await booking(s.bookingId)).toMatchObject({ studioCompensationPaise: 100000, studioCompensationStatus: "due" });
+  it("historical compensation due and prior audit survive cancellation and retry untouched", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 });
+    const historical = { studioCompensationPaise: 12345, studioCompensationStatus: "due" };
+    await db.collection("bookings").doc(s.bookingId).update(historical);
+    const oldAudit = db.collection("auditLog").doc(uid("historical"));
+    const oldRecord = { entityId: s.bookingId, action: "historical.compensation", after: historical };
+    await oldAudit.set(oldRecord);
+    await cancel(s.bookingId, "studio");
+    expect(await booking(s.bookingId)).toMatchObject({ ...historical, manualRefundDuePaise: 100000 });
+    const beforeRetry = await booking(s.bookingId);
+    expect(await cancel(s.bookingId, "studio")).toMatchObject({ alreadyCancelled: true });
+    expect(await booking(s.bookingId)).toEqual(beforeRetry);
+    expect((await oldAudit.get()).data()).toEqual(oldRecord);
+    const audits = await db.collection("auditLog").where("entityId", "==", s.bookingId).get();
+    expect(audits.size).toBe(2);
+    const newAudit = audits.docs.find(d => d.id !== oldAudit.id);
+    expect(newAudit).toBeDefined();
+    if (!newAudit) throw new Error("New cancellation audit missing");
+    expect(newAudit.data()["after"]["studioCompensationPaise"]).toBeUndefined();
+    expect(newAudit.data()["after"]["studioCompensationStatus"]).toBeUndefined();
   });
 
   it("studio cancel while the customer's free window still holds records no compensation", async () => {

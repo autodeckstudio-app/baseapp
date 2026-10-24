@@ -95,9 +95,9 @@ export interface Booking {
   cancelledBy?: "customer" | "admin" | "system";
   /** Set when an admin cancelled as the studio (full refund, no customer fee). */
   cancelledByStudio?: boolean;
-  /** Cash compensation owed to the customer for a late studio cancel: the fee the customer would have owed cancelling at that moment. Recorded only; nothing is paid out by the app. */
+  /** Historical recorded cash compensation obligation. Preserved for older bookings; new studio cancellations do not create this obligation. */
   studioCompensationPaise?: number;
-  /** "due" when recorded. No settlement or payout flow exists yet. */
+  /** Historical obligation status, preserved without waiver or payout. No settlement or payout flow exists. */
   studioCompensationStatus?: "due";
   cancellationFeeSettledBy?: string;
   cancellationFeeSettledAt?: string;
