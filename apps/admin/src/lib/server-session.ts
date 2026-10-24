@@ -8,7 +8,7 @@ export const SESSION_COOKIE_NAME = "__session";
 // Roles that may hold an admin-app session at all. 'studio' is let in for
 // the Studio floor only; the (admin) layout and every office API route
 // still require admin/superadmin. See lib/staff-access.ts.
-export const ADMIN_APP_ROLES = new Set(["admin", "superadmin", "studio"]);
+export const ADMIN_APP_ROLES = new Set(["admin", "superadmin", "studio", "accountant"]);
 
 export function extractClaims(decoded: Record<string, unknown>): AutoDeckClaims | null {
   const role = typeof decoded["role"] === "string" ? decoded["role"] : null;

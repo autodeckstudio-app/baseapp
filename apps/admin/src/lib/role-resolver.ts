@@ -42,7 +42,7 @@ export function claimsFor(email: string | null, roster: RosterMatch | null): Aut
     return {
       role: roster.role,
       tenantId: roster.tenantId,
-      studioId: roster.role === "admin" ? null : roster.studioId,
+      studioId: roster.role === "studio" ? roster.studioId : null,
     };
   }
   return { role: "customer", tenantId: FIRST_TENANT_ID, studioId: null };
@@ -66,7 +66,7 @@ export async function findActiveRosterEntry(db: Firestore, email: string): Promi
   const doc = snap.docs[0];
   if (!doc) return null;
   const data = doc.data() as Partial<Employee>;
-  if (data.role !== "studio" && data.role !== "admin") return null;
+  if (data.role !== "studio" && data.role !== "admin" && data.role !== "accountant") return null;
   if (typeof data.tenantId !== "string") return null;
   return { id: doc.id, role: data.role, studioId: data.studioId ?? null, tenantId: data.tenantId };
 }

@@ -47,7 +47,9 @@ export interface Employee {
   email?: string;
   name: string;
   phone: string;
-  role: "studio" | "admin";
+  // "accountant" is read-only Money access. It is only ever created by a platform operator writing the roster doc directly:
+  // no callable, API route or UI accepts it as input.
+  role: "studio" | "admin" | "accountant";
   active: boolean;
   createdAt: string;
   updatedAt: string;
