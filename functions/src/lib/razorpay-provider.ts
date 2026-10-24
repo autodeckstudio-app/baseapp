@@ -187,6 +187,13 @@ export class RazorpayProvider implements PaymentProvider {
     // contract. Zero matches is inconclusive (page/index lag); 2+ matches
     // cannot identify WHICH refund is ours - arbitrarily picking the first
     // could attach someone else's refund id. Only exactly one match founds.
+    //
+    // KNOWN LIMITATION (activation blocker, recorded from safety review):
+    // even one match on this first-100 page is not globally unique proof and
+    // is NOT bound to the intended payment/amount/currency. Before any
+    // production activation, reconciliation must verify owner-grounded
+    // identity - the refund's payment id against our stored providerPaymentId
+    // plus amount/currency - instead of receipt alone.
     const matches = (data.items ?? []).filter((refund) => refund?.receipt === referenceId);
     const only = matches.length === 1 ? matches[0] : null;
     return only?.id
