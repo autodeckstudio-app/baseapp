@@ -236,3 +236,40 @@ describe("documented payment_link.* events (local, fail-closed)", () => {
     expect(f.data["payments"]!["pay1"]!["status"]).toBe("pending");
   });
 });
+
+describe("late membership capture (decision 5: cancelled or expired only)", () => {
+  const run = async (mStatus: string, eventId = "L1") => {
+    const s = seed() as Record<string, Record<string, Record<string, unknown>>>;
+    s.payments!.pay1 = { ...s.payments!.pay1!, targetType: "membership", jobId: null, membershipId: "m1", studioId: null };
+    s.memberships = { m1: { id: "m1", status: mStatus } };
+    const f = fakeFirestore(s as never);
+    const r = await processProviderEvent(f.db, ev(linkPaid(eventId), eventId));
+    return { f, r };
+  };
+  it.each(["cancelled", "expired"])("%s membership: stays inactive, full refund RESERVED (no provider call), staff alert recorded", async (st) => {
+    const { f, r } = await run(st);
+    expect(r.outcome).toBe("completed");
+    expect(f.data["memberships"]!["m1"]!["status"]).toBe(st);
+    const reqs = Object.values(f.data["refundRequests"] ?? {}).filter((d) => String((d as { id?: string }).id ?? "").startsWith("rr_"));
+    expect(reqs).toHaveLength(1);
+    expect(reqs[0]).toMatchObject({ paymentId: "pay1", amountPaise: AMOUNT, status: "reserved", providerRefundId: null, reason: "late_membership_payment" });
+    expect(f.data["staffAlerts"]!["late_membership_payment_pay1"]).toMatchObject({ kind: "late_membership_payment", paymentId: "pay1", tenantId: "t" });
+    expect(f.data["payments"]!["pay1"]!["status"]).toBe("completed");
+  });
+  it("replay of the same event and a second capture event reserve nothing more", async () => {
+    const { f } = await run("cancelled", "L2");
+    expect((await processProviderEvent(f.db, ev(linkPaid("L2"), "L2"))).outcome).toBe("duplicate");
+    expect((await processProviderEvent(f.db, ev(linkPaid("L3"), "L3"))).outcome).toBe("already_final");
+    expect(Object.values(f.data["refundRequests"] ?? {}).filter((d) => String((d as { id?: string }).id ?? "").startsWith("rr_"))).toHaveLength(1);
+  });
+  it("pending membership activates normally and reserves no refund", async () => {
+    const { f } = await run("pending", "L4");
+    expect(f.data["memberships"]!["m1"]!["status"]).toBe("active");
+    expect(Object.keys(f.data["refundRequests"] ?? {})).toHaveLength(0);
+  });
+  it("ACTIVE membership (distinct second capture) is untouched: no reservation, no alert (existing behaviour kept)", async () => {
+    const { f } = await run("active", "L5");
+    expect(Object.keys(f.data["refundRequests"] ?? {})).toHaveLength(0);
+    expect(Object.keys(f.data["staffAlerts"] ?? {})).toHaveLength(0);
+  });
+});
