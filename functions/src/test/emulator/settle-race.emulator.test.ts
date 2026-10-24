@@ -74,7 +74,7 @@ describe("settle vs GUARDED grafted handlers (race matrix v2)", () => {
     const id = await seed();
     const r = (await runSettle(id)) as { invoiceId: string; alreadySettled: boolean };
     expect(r.alreadySettled).toBe(false);
-    await expect(runCash(id)).rejects.toThrow(/already been marked as paid/i);
+    await expect(runCash(id)).rejects.toThrow(/membership-covered settlement/i); // covered guard fires before paid-check
     const job = await get("jobs", id), booking = await get("bookings", id);
     expect(job.paymentStatus).toBe("paid");
     expect(job.settlementKind).toBe("membership_covered");
@@ -132,7 +132,7 @@ describe("settle vs GUARDED grafted handlers (race matrix v2)", () => {
     });
     await expect(runSettle(id)).rejects.toThrow(/payment or additional work/i);
     await processProviderEvent(db, {
-      eventType: "payment_link.paid", providerEventId: pid, providerPaymentLinkId: pid,
+      eventType: "payment.link.paid", providerEventId: pid, providerPaymentLinkId: pid,
       providerPaymentId: pid, referenceId: pid, amount: 100000, currency: "INR",
     } as never);
     const payment = await get("payments", pid);

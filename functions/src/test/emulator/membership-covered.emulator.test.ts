@@ -212,7 +212,7 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       razorpayPaymentId: pid,
     });
     await processProviderEvent(db, {
-      eventType: "payment_link.paid",
+      eventType: "payment.link.paid",
       providerEventId: pid,
       providerPaymentLinkId: pid,
       providerPaymentId: pid,
