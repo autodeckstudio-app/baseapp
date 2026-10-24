@@ -10,6 +10,7 @@ import type {
   PaymentLinkResult,
   InitiateRefundParams,
   RefundResult,
+  RefundLookupResult,
   VerifyWebhookParams,
   ProviderWebhookEvent,
 } from "./payment-provider.js";
@@ -157,6 +158,31 @@ export class RazorpayProvider implements PaymentProvider {
 
     const data = (await response.json()) as RazorpayRefundResponse;
     return { providerRefundId: data.id };
+  }
+
+  /**
+   * Reconciles an ambiguous refund submit by our durable reference id, which
+   * initiateRefund sets as the Razorpay refund's receipt. Razorpay has no
+   * lookup-by-receipt; the account-wide list endpoint is paginated and its
+   * index freshness is not contractual, so a miss can NEVER be treated as
+   * authoritative absence (a committed refund could sit beyond the page or
+   * behind an index delay). Every miss is "unknown": the reservation stays
+   * held for manual reconciliation rather than releasing the balance.
+   */
+  async findRefundByReference(referenceId: string): Promise<RefundLookupResult> {
+    const response = await fetch(`${this.baseUrl}/refunds?count=100`, {
+      headers: { Authorization: this.authHeader },
+    });
+    if (!response.ok) {
+      return { outcome: "unknown" };
+    }
+    const data = (await response.json()) as {
+      items?: Array<{ id?: string; receipt?: string | null }>;
+    };
+    const hit = (data.items ?? []).find((refund) => refund?.receipt === referenceId);
+    return hit?.id
+      ? { outcome: "found", providerRefundId: hit.id }
+      : { outcome: "unknown" };
   }
 }
 
