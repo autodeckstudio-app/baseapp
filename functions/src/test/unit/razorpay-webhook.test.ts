@@ -273,3 +273,31 @@ describe("late membership capture (decision 5: cancelled or expired only)", () =
     expect(Object.keys(f.data["staffAlerts"] ?? {})).toHaveLength(0);
   });
 });
+
+describe("late membership: reservation failure and crash boundary", () => {
+  const mk2 = () => {
+    const s = seed() as Record<string, Record<string, Record<string, unknown>>>;
+    s.payments!.pay1 = { ...s.payments!.pay1!, targetType: "membership", jobId: null, membershipId: "m1", studioId: null };
+    s.memberships = { m1: { id: "m1", status: "cancelled" } };
+    return fakeFirestore(s as never);
+  };
+  it("a reservation that already exists for the payment makes reserve fail: visible failure alert, payment completed, no second request", async () => {
+    const f = mk2();
+    f.data["refundRequests"] = { active_pay1: { requestId: "rr_pay1_1" }, rr_pay1_1: { id: "rr_pay1_1", paymentId: "pay1", status: "reserved", amountPaise: 1 } };
+    const r = await processProviderEvent(f.db, ev(linkPaid("F1"), "F1"));
+    expect(r.outcome).toBe("completed");
+    expect(f.data["staffAlerts"]!["late_membership_payment_pay1"]).toMatchObject({ kind: "late_membership_refund_not_reserved", paymentId: "pay1" });
+    expect(Object.values(f.data["refundRequests"]!).filter((d) => String((d as { id?: string }).id ?? "").startsWith("rr_"))).toHaveLength(1); // only the pre-existing one
+  });
+  it("crash window: payment completed, process dies before reserving; replay is blocked as already_final and NOTHING reserves (documented gap)", async () => {
+    const f = mk2();
+    // Simulate the crash by completing the payment through the transaction only: use a membership event, then wipe what the post-step wrote.
+    await processProviderEvent(f.db, ev(linkPaid("C1"), "C1"));
+    for (const k of Object.keys(f.data["refundRequests"] ?? {})) delete f.data["refundRequests"]![k];
+    delete f.data["staffAlerts"]; // what a crash before the post-step would leave: no request, no alert
+    expect((await processProviderEvent(f.db, ev(linkPaid("C1"), "C1"))).outcome).toBe("duplicate");
+    expect((await processProviderEvent(f.db, ev(linkPaid("C2"), "C2"))).outcome).toBe("already_final");
+    expect(Object.keys(f.data["refundRequests"] ?? {})).toHaveLength(0); // unrecovered: needs a reconciler (design pending)
+    expect(f.data["payments"]!["pay1"]!["status"]).toBe("completed");
+  });
+});
