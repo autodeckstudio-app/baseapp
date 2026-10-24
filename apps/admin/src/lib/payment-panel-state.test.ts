@@ -25,26 +25,21 @@ describe("canOfferPayment", () => {
 });
 
 describe("coveredVisitSettlementNote", () => {
-  it("covered and not yet settled: note explains the studio zero-settlement path and never asks for money", async () => {
+  it("covered and not yet settled (gate ON): note suppressed, the settle tile is the single action", async () => {
     const { coveredVisitSettlementNote } = await import("./payment-panel-state");
-    const note = coveredVisitSettlementNote(
-      { membershipWashUsed: true, totalAmount: 0 },
-      null,
-    );
-    expect(note).toContain("nothing to collect");
-    expect(note).toContain("studio app");
-    expect(note).toContain("Record cash payment");
-    expect(note).toContain("Rs 0");
-    expect(note).not.toMatch(/payment link|charge the customer|collect (cash|payment) from/i);
+    expect(
+      coveredVisitSettlementNote({ membershipWashUsed: true, totalAmount: 0 }, null),
+    ).toBeNull();
+    // The pre-release studio Rs-0 instruction stays in source behind the flag (see gate semantics below).
   });
-  it("booking-level coverage alone (job has no membershipWashUsed) still yields the note", async () => {
+  it("booking-level coverage alone (job has no membershipWashUsed): gate ON suppresses the note too", async () => {
     const { coveredVisitSettlementNote } = await import("./payment-panel-state");
     expect(
       coveredVisitSettlementNote(null, { membershipWashUsed: true, totalAmount: 0 }),
-    ).not.toBeNull();
+    ).toBeNull();
     expect(
       coveredVisitSettlementNote({ totalAmount: 50000 }, { membershipWashUsed: true, totalAmount: 0 }),
-    ).not.toBeNull();
+    ).toBeNull();
   });
   it("already settled (settlementKind membership_covered): no note, nothing left to do", async () => {
     const { coveredVisitSettlementNote } = await import("./payment-panel-state");
@@ -65,7 +60,7 @@ describe("coveredVisitSettlementNote", () => {
     expect(src.indexOf("if (MEMBERSHIP_SETTLEMENT_ENABLED) return null;")).toBeLessThan(
       src.indexOf("Record cash payment for Rs 0"),
     );
-    // Default today: gate OFF, so the old-route note still renders (see tests above).
+    // Gate ON now: the note is suppressed (tests above); the old-route copy stays in source as the pre-release fallback.
   });
   it("ordinary unpaid job: no note and payment actions remain offerable (no dead end)", async () => {
     const { coveredVisitSettlementNote } = await import("./payment-panel-state");
@@ -84,9 +79,16 @@ describe("coveredVisitSettlementNote", () => {
 describe("coveredSettlePanelVisible (single-tile consolidation)", () => {
   const coveredJob = { membershipWashUsed: true, totalAmount: 0, status: "READY_FOR_DELIVERY" };
   const coveredBooking = { membershipWashUsed: true, totalAmount: 0, status: "CONFIRMED" };
-  it("default today (gate OFF): never visible, so the Payment panel keeps today's note tile", async () => {
+  it("gate ON: visible for a covered, unsettled, open visit (Payment panel yields to the single settle tile)", async () => {
     const { coveredSettlePanelVisible } = await import("./payment-panel-state");
-    expect(coveredSettlePanelVisible(coveredJob, coveredBooking)).toBe(false);
+    expect(coveredSettlePanelVisible(coveredJob, coveredBooking)).toBe(true);
+  });
+  it("gate ON negatives: settled, cancelled, or non-zero visits stay hidden", async () => {
+    const { coveredSettlePanelVisible } = await import("./payment-panel-state");
+    expect(coveredSettlePanelVisible({ ...coveredJob, settlementKind: "membership_covered" }, coveredBooking)).toBe(false);
+    expect(coveredSettlePanelVisible({ ...coveredJob, status: "CANCELLED" }, coveredBooking)).toBe(false);
+    expect(coveredSettlePanelVisible({ ...coveredJob, totalAmount: 100 }, coveredBooking)).toBe(false);
+    expect(coveredSettlePanelVisible(coveredJob, null)).toBe(false);
   });
   it("gate semantics: flag check first, then the same covered/open conditions as MembershipSettlement", () => {
     const src = readFileSync(join(__dirname, "payment-panel-state.ts"), "utf8");

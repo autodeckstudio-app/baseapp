@@ -4,6 +4,6 @@
 // resolveNoShow / previewNoShowResolution / getNoShowResolution / recordNoShowContact
 export const NO_SHOW_REVIEW_ENABLED = false;
 // settleMembershipCoveredJob
-export const MEMBERSHIP_SETTLEMENT_ENABLED = false;
+export const MEMBERSHIP_SETTLEMENT_ENABLED = true;
 // getAccountantMoney
 export const ACCOUNTANT_MONEY_ENABLED = false;

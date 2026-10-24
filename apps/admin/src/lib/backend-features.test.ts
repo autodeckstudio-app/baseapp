@@ -4,9 +4,9 @@ import { describe, it, expect } from "vitest";
 import { NO_SHOW_REVIEW_ENABLED, MEMBERSHIP_SETTLEMENT_ENABLED, ACCOUNTANT_MONEY_ENABLED } from "./backend-features";
 const src = (f: string) => readFileSync(join(__dirname, f), "utf8");
 describe("backend availability gates (admin)", () => {
-  it("flags stay false until their callables deploy", () => {
+  it("only the membership flag is enabled; other gates stay false until their callables deploy", () => {
     expect(NO_SHOW_REVIEW_ENABLED).toBe(false);
-    expect(MEMBERSHIP_SETTLEMENT_ENABLED).toBe(false);
+    expect(MEMBERSHIP_SETTLEMENT_ENABLED).toBe(true);
     expect(ACCOUNTANT_MONEY_ENABLED).toBe(false);
   });
   it("the no-show review panel cannot render while its callables are absent", () => {
