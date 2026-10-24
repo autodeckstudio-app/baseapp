@@ -166,6 +166,7 @@ export { listOffers } from "./functions/offer/listOffers.js";
 // âââ Office dashboard & reports (M6 Automodz Office) âââââââââââââââââââââââ
 export { getOfficeDashboard } from "./functions/office/getOfficeDashboard.js";
 export { getOfficeReport } from "./functions/office/getOfficeReport.js";
+export { getAccountantMoney } from "./functions/office/getAccountantMoney.js";
 
 // âââ Notifications ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
