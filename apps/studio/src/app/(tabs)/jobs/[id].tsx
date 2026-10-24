@@ -1,3 +1,6 @@
+import { httpsCallable } from "firebase/functions";
+import { MEMBERSHIP_SETTLEMENT_ENABLED } from "../../../lib/backend-features";
+import { membershipCoveredLabel } from "../../../lib/membership-covered-label";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
@@ -5,7 +8,7 @@ import { useState, useEffect } from "react";
 import { Platform, View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
+import { db, functions } from "../../../lib/firebase";
 import { updateStandby, advanceJobStatus, cancelWalkinJob, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
 import {
   recordManualPayment,
@@ -83,6 +86,7 @@ export default function JobDetailScreen() {
   const [reslotPick, setReslotPick] = useState<ReslotOption | null>(null);
   const [reslotDone, setReslotDone] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
   const [vehicle,setVehicle] = useState<Vehicle|null>(null);
@@ -156,6 +160,12 @@ export default function JobDetailScreen() {
       unsubInvoice();
     };
   }, [job?.id]);
+
+  // Live booking for this job: drives the covered-settlement gate and label.
+  useEffect(() => {
+    if (!job?.bookingId) { setBooking(null); return; }
+    return onSnapshot(doc(db, COLLECTIONS.bookings(), job.bookingId), snap => setBooking(snap.exists() ? snap.data() as Booking : null));
+  }, [job?.bookingId]);
 
   // Read-only membership status for this job's booking (if any) — studio can
   // see it but has no authority to alter it (doc08 §8.2).
@@ -395,7 +405,7 @@ export default function JobDetailScreen() {
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label="Expected ready" value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label="Payment" value={job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus} />
+        <Row label="Payment" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus)} />
       </Section>
 
       {actionError?<ErrorState title="Action not completed" message={actionError} fill={false}/>:null}
@@ -461,13 +471,17 @@ export default function JobDetailScreen() {
         )}
       </Section>
 
+      {MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && booking.totalAmount === 0 && job.totalAmount === 0 && !job.settlementKind && job.status !== "CANCELLED" && !["CANCELLED","EXPIRED"].includes(booking.status) ? <Section>
+        <Text style={{color:colors.textPrimary}}>Membership-covered, not yet settled</Text>
+        <Button label="Settle membership-covered visit" loading={paymentActionLoading} onPress={()=>{setPaymentActionLoading(true);setActionError(null);void httpsCallable(functions,"settleMembershipCoveredJob")({jobId:job.id}).catch(e=>setActionError(e instanceof Error?e.message:"Could not settle this visit.")).finally(()=>setPaymentActionLoading(false));}} />
+      </Section> : null}
       <Text style={sectionTitle}>Payment</Text>
       <Section>
-        <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
+        <Row label="Status" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated")} />
         <Row label="Amount" value={formatPaise(job.totalAmount)} />
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
-        {!payment && job.status !== "CANCELLED" && (
+        {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !payment && job.status !== "CANCELLED" && (
           <Button
             label="Record cash payment"
             onPress={() => void handleRecordCashPayment()}
@@ -614,7 +628,7 @@ export default function JobDetailScreen() {
         <Button label="Cancel" variant="secondary" disabled={paymentActionLoading} onPress={() => { setCashConfirm(null); setCashError(null); }} />
       </Section> : null}
       {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
-      {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
+      {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>{MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</Text> : null}
       {canAdvance && (
         <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => (job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm(true) : void handleAdvance())} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}
