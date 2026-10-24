@@ -1,5 +1,7 @@
 "use client";
 
+import { owedFromBookings, refundsOwedTotalText } from "../../../lib/refund-owed-copy";
+import { BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
 import { useEffect, useMemo, useState } from "react";
 import { useStaffAlerts } from "../../../components/StaffAlertsNotice";
 import { useRouter } from "next/navigation";
@@ -67,6 +69,7 @@ export default function DashboardPage() {
       if (j.scheduledDate !== j.estimatedEndDate) return j.estimatedEndDate < today;
       return true;
     });
+    const owed = owedFromBookings(bookings, bookings.length >= BOOKINGS_LIST_LIMIT);
     const soonExpiring = expiringMemberships.filter((m) => m.endDate && m.endDate <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
     const floor = {
@@ -83,6 +86,7 @@ export default function DashboardPage() {
       completedTodayCount: completedToday.length,
       walkinsTodayCount: walkinsToday.length,
       revenueToday,
+      owed,
       pendingPayments,
       failedPayments,
       unpaidCompletedJobs,
@@ -99,6 +103,7 @@ export default function DashboardPage() {
       today={today}
       now={new Date()}
       revenueToday={stats.revenueToday}
+      refundsOwedText={refundsOwedTotalText(stats.owed.paise, stats.owed.count, stats.owed.truncated)}
       tiles={{ bookings: stats.todaysBookingsCount, active: stats.activeJobsCount, delivered: stats.completedTodayCount, walkins: stats.walkinsTodayCount, staffPresent }}
       floor={stats.floor}
       counts={{

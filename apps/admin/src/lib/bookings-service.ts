@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Customer, Vehicle, Service } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
+export const BOOKINGS_LIST_LIMIT = LIST_LIMIT;
 
 /** Live, tenant-wide booking feed - newest scheduled slot first. Filters beyond
  * tenantId (status/service/studio/customer/vehicle search) are applied client-side

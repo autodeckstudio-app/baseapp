@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { refundOwedText, refundsOwedTotalText } from "./refund-owed-copy";
+import { refundOwedText, refundsOwedTotalText, owedFromBookings } from "./refund-owed-copy";
 
 describe("refund owed copy", () => {
   it("never says refunded, sent or initiated as done; says not yet returned", () => {
@@ -12,5 +12,15 @@ describe("refund owed copy", () => {
     expect(refundsOwedTotalText(25000, 2, false)).toMatch(/2 bookings.*not taken out of the figures above/);
     expect(refundsOwedTotalText(0, 0, true)).toMatch(/may be incomplete/);
     expect(refundsOwedTotalText(100, 1, false)).toMatch(/1 booking,/);
+  });
+  it("list/dashboard total: cancelled only, honest on a full list or an unusable amount", () => {
+    const l = [
+      { status: "CANCELLED", manualRefundDuePaise: 10000 }, { status: "CANCELLED", manualRefundDuePaise: 5000 },
+      { status: "CONFIRMED", manualRefundDuePaise: 99999 }, { status: "CANCELLED" }, { status: "CANCELLED", manualRefundDuePaise: 0 },
+    ];
+    expect(owedFromBookings(l, false)).toEqual({ paise: 15000, count: 2, truncated: false });
+    expect(owedFromBookings(l, true).truncated).toBe(true);
+    expect(owedFromBookings([...l, { status: "CANCELLED", manualRefundDuePaise: -1 }, { status: "CANCELLED", manualRefundDuePaise: Number.NaN }], false)).toEqual({ paise: 15000, count: 2, truncated: true });
+    expect(refundsOwedTotalText(15000, 2, true)).toMatch(/may be incomplete/);
   });
 });

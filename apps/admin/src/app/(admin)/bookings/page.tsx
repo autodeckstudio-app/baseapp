@@ -97,6 +97,7 @@ export default function BookingsPage() {
   const dayCount = bookings.filter((b) => b.scheduledDate === date && b.status !== "CANCELLED" && b.status !== "EXPIRED").length;
   const pending = bookings.filter((b) => b.status === "PENDING").length;
   const upcoming = bookings.filter((b) => b.scheduledDate > today && (b.status === "CONFIRMED" || b.status === "PENDING")).length;
+  const owedBadge = (b: Booking) => (b.status === "CANCELLED" && typeof b.manualRefundDuePaise === "number" && b.manualRefundDuePaise > 0 ? `Refund owed ${formatPaise(b.manualRefundDuePaise)}` : undefined);
   const open = (id: string) => router.push(`/bookings/${id}`);
   const toItem = (b: Booking): AgendaItem => ({
     id: b.id,
@@ -109,6 +110,7 @@ export default function BookingsPage() {
     status: b.status,
     payment: b.paymentStatus,
     amount: formatPaise(b.totalAmount),
+    owed: owedBadge(b),
   });
 
   const bookingTable = (rows: Booking[]) => (
@@ -134,7 +136,7 @@ export default function BookingsPage() {
                 <td>{customerNames[b.customerId] ?? "-"}</td>
                 <td>{serviceNames[b.serviceId] ?? "-"}</td>
                 <td>{b.bayId}</td>
-                <td><StatusBadge label={b.paymentStatus} /></td>
+                <td><StatusBadge label={b.paymentStatus} />{owedBadge(b) ? <div className="ax-label" style={{ color: "var(--ad-danger)" }}>{owedBadge(b)}</div> : null}</td>
                 <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
               </tr>
             ))}

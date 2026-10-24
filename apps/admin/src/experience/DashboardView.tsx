@@ -26,13 +26,14 @@ export interface DashboardViewProps {
   today: string;
   now: Date;
   revenueToday: number;
+  refundsOwedText?: string | null;
   tiles: { bookings: number; active: number; delivered: number; walkins: number; staffPresent: number };
   floor: { arriving: number; working: number; ready: number; delivered: number };
   counts: { failedPayments: number; unpaidDelivered: number; pendingApprovals: number; staleJobs: number; pendingPayments: number; expiringMemberships: number; lowStock: number; pendingPapers: number; paymentsToReview?: number };
   onOpen: (href: string) => void;
 }
 
-export function DashboardView({ today, now, revenueToday, tiles, floor, counts, onOpen }: DashboardViewProps) {
+export function DashboardView({ today, now, revenueToday, refundsOwedText, tiles, floor, counts, onOpen }: DashboardViewProps) {
   const alerts: { tone: "danger" | "warning"; text: string; href: string; action: string }[] = [];
   const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
   if (counts.paymentsToReview) alerts.push({ tone: "danger", text: `${n(counts.paymentsToReview, "payment needs", "payments need")} a manual check`, href: "/payments", action: "Review" });
@@ -108,6 +109,7 @@ export function DashboardView({ today, now, revenueToday, tiles, floor, counts, 
           <section className="ax-panel">
             <span className="ax-label">Money</span>
             <div className="kv"><span>Taken today</span><span className="ax-data">{formatPaise(revenueToday)}</span></div>
+            {refundsOwedText ? <p className="ax-label" role="note" style={{ color: "var(--ad-danger)" }}>{refundsOwedText}</p> : null}
             <div className="kv"><span>Awaiting confirmation</span><span className="ax-data">{counts.pendingPayments}</span></div>
             <div className="kv"><span>Failed</span><span className="ax-data" style={counts.failedPayments ? { color: "var(--ad-danger)" } : undefined}>{counts.failedPayments}</span></div>
             <div className="ax-panel-actions">

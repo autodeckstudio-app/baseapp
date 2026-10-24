@@ -158,4 +158,19 @@ describe("manual refund DUE guards (real emulator)", () => {
     expect((await booking(s.bookingId))["manualRefundDuePaise"]).toBe(100000);
     expect((await db.collection("paymentEvents").doc(`refund_${s.paymentId}`).get()).exists).toBe(true);
   });
+
+  it("TEST (current behaviour, not a policy): gifted booking with cash extras - owed is the extras only, the gift purchase payment is untouched, the gift goes back to ACTIVE", async () => {
+    const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 20000, paidPaise: 20000 });
+    const giftId = uid("gift");
+    const giftPayId = uid("gpay");
+    const now = new Date().toISOString();
+    await db.collection("bookings").doc(s.bookingId).update({ giftId });
+    await db.collection("gifts").doc(giftId).set({ id: giftId, tenantId: TENANT, status: "REDEEMED", redeemedBy: "u", redeemedAt: now, bookingId: s.bookingId });
+    await db.collection("payments").doc(giftPayId).set({ id: giftPayId, tenantId: TENANT, studioId: null, targetType: "gift", giftId, jobId: null, bookingId: null, amount: 150000, currency: "INR", method: "razorpay", status: "completed", createdAt: now, updatedAt: now });
+    expect(await cancel(s.bookingId, "charge")).toMatchObject({ success: true, refundPaise: 20000, manualRefund: true });
+    expect(await booking(s.bookingId)).toMatchObject({ status: "CANCELLED", manualRefundDuePaise: 20000 });
+    expect((await db.collection("gifts").doc(giftId).get()).data()).toMatchObject({ status: "ACTIVE", bookingId: null });
+    const gp = (await db.collection("payments").doc(giftPayId).get()).data()!;
+    expect(gp["status"]).toBe("completed"); expect(gp["refundedAt"]).toBeUndefined();
+  });
 });

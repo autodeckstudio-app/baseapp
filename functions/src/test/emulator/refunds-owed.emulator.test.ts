@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
+import { refundsOwed, REFUNDS_OWED_CAP } from "../../lib/refunds-owed.js";
 import { dayAggregates } from "../../lib/dayAggregates.js";
 import { getOfficeReport } from "../../functions/office/getOfficeReport.js";
 import { getAccountantMoney } from "../../functions/office/getAccountantMoney.js";
@@ -46,4 +47,24 @@ describe("refunds owed aggregate", () => {
     expect(JSON.stringify(r["notes"])).toContain("Refunds owed to customers are shown separately");
     expect(JSON.stringify(r)).not.toContain("rob1"); // no booking ids or customer data leave through this block
   });
+  it("invalid owed amounts never silently understate: valid ones still counted, result flagged incomplete", async () => {
+    for (const [i, bad] of [[1, Number.NaN], [2, -500], [3, 12.5], [4, "15000"]] as const) {
+      await db.collection("bookings").doc(`bad${i}`).set({ id: `bad${i}`, tenantId: "ro-t3", studioId: S, status: "CANCELLED", manualRefundDuePaise: bad });
+    }
+    await db.collection("bookings").doc("good1").set({ id: "good1", tenantId: "ro-t3", studioId: S, status: "CANCELLED", manualRefundDuePaise: 3000 });
+    expect(await refundsOwed(db, "ro-t3", S)).toEqual({ owedPaise: 3000, count: 1, truncated: true });
+  });
+  it("past the cap the result says truncated (total is a floor); at the cap it does not", async () => {
+    const mk = async (tenant: string, n: number) => {
+      for (let off = 0; off < n; off += 400) {
+        const bt = db.batch();
+        for (let i = off; i < Math.min(n, off + 400); i++) bt.set(db.collection("bookings").doc(`${tenant}-${i}`), { id: `${tenant}-${i}`, tenantId: tenant, studioId: S, status: "CANCELLED", manualRefundDuePaise: 100 });
+        await bt.commit();
+      }
+    };
+    await mk("ro-cap-eq", REFUNDS_OWED_CAP);
+    expect(await refundsOwed(db, "ro-cap-eq", S)).toEqual({ owedPaise: 100 * REFUNDS_OWED_CAP, count: REFUNDS_OWED_CAP, truncated: false });
+    await mk("ro-cap-over", REFUNDS_OWED_CAP + 1);
+    expect(await refundsOwed(db, "ro-cap-over", S)).toEqual({ owedPaise: 100 * REFUNDS_OWED_CAP, count: REFUNDS_OWED_CAP, truncated: true });
+  }, 60000);
 });
