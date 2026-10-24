@@ -184,6 +184,7 @@ const DEFERRED = [
   "inventory/updateInventoryItem.ts",
   "office/getOfficeDashboard.ts",
   "office/getOfficeReport.ts",
+  "office/getAccountantMoney.ts",
   "papers/listPapers.ts",
   "papers/reviewPaper.ts",
   "papers/submitMyPaper.ts",
