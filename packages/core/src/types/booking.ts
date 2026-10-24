@@ -87,6 +87,12 @@ export interface Booking {
   /** Who settles the fee and how it ended: "due" until the studio marks it, then "collected", "withheld" (kept from a refund) or "waived". */
   cancellationFeeStatus?: "due" | "collected" | "withheld" | "waived";
   cancelledBy?: "customer" | "admin" | "system";
+  /** Set when an admin cancelled as the studio (full refund, no customer fee). */
+  cancelledByStudio?: boolean;
+  /** Cash compensation owed to the customer for a late studio cancel: the fee the customer would have owed cancelling at that moment. Recorded only; nothing is paid out by the app. */
+  studioCompensationPaise?: number;
+  /** "due" when recorded. No settlement or payout flow exists yet. */
+  studioCompensationStatus?: "due";
   cancellationFeeSettledBy?: string;
   cancellationFeeSettledAt?: string;
   cancellationFeeNote?: string;

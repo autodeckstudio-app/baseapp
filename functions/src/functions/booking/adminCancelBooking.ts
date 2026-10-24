@@ -22,8 +22,9 @@ import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/canc
 const adminCancelSchema = z.object({
   bookingId: z.string().min(1),
   reason: z.string().trim().min(3).max(500),
-  /** charge = the customer asked late, the policy fee applies. waive = studio cancelled or goodwill. */
-  feeAction: z.enum(["charge", "waive"]),
+  /** charge = the customer asked late, the policy fee applies. waive = goodwill, no fee. studio = the studio cancelled: full refund, and
+   *  if the customer's own free window would already be closed, compensation of the same value (cash, not credit) is recorded as due. */
+  feeAction: z.enum(["charge", "waive", "studio"]),
   preview: z.boolean().optional(),
 }).strict();
 
@@ -39,7 +40,7 @@ const CANCELLABLE_JOB = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
 /** The one cancel path: fee, refund through the payment provider, credits back, slot released. Admin and customer share it. */
 export async function runCancel(
   user: ReturnType<typeof extractUser>,
-  data: { bookingId: string; reason: string; feeAction: "charge" | "waive"; preview?: boolean | undefined },
+  data: { bookingId: string; reason: string; feeAction: "charge" | "waive" | "studio"; preview?: boolean | undefined },
   actor: "admin" | "customer",
 ) {
     const db = getFirestore();
@@ -81,8 +82,13 @@ export async function runCancel(
       categories = svc.exists ? [String((svc.data() as { category?: string }).category ?? "")] : [];
     }
     const terms = cancellationTerms({ categories, totalPaise: booking.totalAmount, scheduledAtMs: Date.parse(booking.scheduledAt), nowMs: Date.now() });
-    const plan = planRefund({ paidPaise: payment?.amount ?? 0, feePaise: terms.feePaise, waive: data.feeAction === "waive" });
-    const summary = { paidPaise: plan.paidPaise, policyFeePaise: terms.feePaise, feePaise: plan.feePaise, feeStatus: plan.feeStatus, refundPaise: plan.refundPaise, method: payment?.method ?? null };
+    const studioCancel = data.feeAction === "studio";
+    if (studioCancel && actor !== "admin") throw new HttpsError("permission-denied", "Only an admin can cancel as the studio.");
+    const plan = planRefund({ paidPaise: payment?.amount ?? 0, feePaise: terms.feePaise, waive: data.feeAction !== "charge" });
+    // A studio cancel owes the customer what the customer would have owed cancelling now (same band and window). Money, not credit.
+    // Recorded as due only: the app does not pay it out.
+    const compensationPaise = studioCancel ? terms.feePaise : 0;
+    const summary = { paidPaise: plan.paidPaise, policyFeePaise: terms.feePaise, feePaise: plan.feePaise, feeStatus: plan.feeStatus, refundPaise: plan.refundPaise, method: payment?.method ?? null, ...(studioCancel ? { studioCompensationPaise: compensationPaise } : {}) };
     if (data.preview) return { preview: true, ...summary };
 
     const now = new Date().toISOString();
@@ -162,6 +168,8 @@ export async function runCancel(
         ...(plan.feeStatus !== "none" ? { cancellationFeeStatus: plan.feeStatus } : {}),
         ...(plan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
         refundedPaise: plan.refundPaise,
+        ...(studioCancel ? { cancelledByStudio: true } : {}),
+        ...(compensationPaise > 0 ? { studioCompensationPaise: compensationPaise, studioCompensationStatus: "due" } : {}),
         ...(needsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: providerRefundId } : {}),
         updatedAt: now,
       });
@@ -172,7 +180,7 @@ export async function runCancel(
         user,
         studioId: booking.studioId,
         before: { status: fresh.status },
-        after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: plan.refundPaise, feeStatus: plan.feeStatus },
+        after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: plan.refundPaise, feeStatus: plan.feeStatus, ...(studioCancel ? { studioCompensationPaise: compensationPaise } : {}) },
         metadata: { cancelledBy: actor, providerRefundId },
       });
     });
