@@ -207,3 +207,73 @@ describe("refund.processed BEFORE the outbox projection (real emulator, real run
     expect(await booking(s.bid)).toEqual(bb);
   });
 });
+
+describe("pending re-drive by a later event for the SAME refund (real emulator, real runner)", () => {
+  async function pendingSetup(boundRid?: string) {
+    const { reserveRefund, runRefundOutbox } = await import("../../lib/refund-outbox.js");
+    n += 1; const id = `${Date.now()}${n}`; const pid = `rdpay${id}`, bid = `rdb${id}`, pay = `pay_rd${id}`, rid = `rfnd_rd${id}`;
+    const p = { id: pid, tenantId: T, studioId: null, targetType: "booking", jobId: null, bookingId: bid, customerId: "c", amount: 50000, currency: "INR",
+      status: "completed", razorpayPaymentId: pay, razorpayRefundId: null, refundAmount: null } as never;
+    await db.collection("payments").doc(pid).set(p as object);
+    await db.collection("bookings").doc(bid).set({ id: bid, tenantId: T, paymentStatus: "paid" });
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "a1" });
+    const mk = (event: string, eid: string, r = rid) => {
+      const e = provider.parseWebhookEvent(JSON.stringify({ event, payload: { refund: { entity: { id: r, payment_id: pay, amount: 50000, currency: "INR", status: "processed", receipt: requestId } } } }));
+      e.providerEventId = eid; return e;
+    };
+    const pe = mk("refund.processed", "RDP" + pid);
+    expect((await processProviderEvent(db, pe)).outcome).toBe("pending_correlation");
+    return { pid, bid, rid, pe, mk, run: () => runRefundOutbox(db, { initiateRefund: async () => ({ providerRefundId: boundRid ?? rid }) } as never) };
+  }
+  const pendingCount = async (pid: string) => (await alerts(pid)).filter((a) => a["kind"] === "refund_event_pending").length;
+  it("later event, same refund, after projection: pending event applies exactly once; alert cleared", async () => {
+    const s = await pendingSetup(); await s.run();
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect((await processProviderEvent(db, s.mk("refund.created", "RDC" + s.pid))).outcome).toBe("already_final");
+    expect((await booking(s.bid))["refundStatus"]).toBe("processed");
+    expect((await db.collection("paymentEvents").doc(s.pe.providerEventId).get()).data()!["outcome"]).toBe("refund_processed");
+    expect(await pendingCount(s.pid)).toBe(0);
+    const at = (await booking(s.bid))["refundProcessedAt"];
+    await processProviderEvent(db, s.mk("refund.created", "RDC2" + s.pid)); // another later event: nothing to re-drive
+    expect((await booking(s.bid))["refundProcessedAt"]).toBe(at);
+  });
+  it("later event BEFORE projection leaves it pending; a later event for a DIFFERENT refund id never re-drives it", async () => {
+    const s = await pendingSetup();
+    await processProviderEvent(db, s.mk("refund.created", "RDe" + s.pid));
+    expect(await pendingCount(s.pid)).toBe(1);
+    await s.run();
+    await processProviderEvent(db, s.mk("refund.created", "RDx" + s.pid, "rfnd_other_refund"));
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect(await pendingCount(s.pid)).toBe(1);
+  });
+  it("concurrent later events: applied exactly once, no error", async () => {
+    const s = await pendingSetup(); await s.run();
+    const res = await Promise.all([1, 2, 3].map((i) => processProviderEvent(db, s.mk("refund.created", `RDk${i}` + s.pid))));
+    expect(res.every((r) => r.outcome === "already_final")).toBe(true);
+    expect((await booking(s.bid))["refundStatus"]).toBe("processed");
+    expect((await db.collection("paymentEvents").doc(s.pe.providerEventId).get()).data()!["outcome"]).toBe("refund_processed");
+    expect(await pendingCount(s.pid)).toBe(0);
+  });
+  it("re-drive that now conflicts (refund bound to a different id): terminal, alert, no booking/payment write", async () => {
+    const s = await pendingSetup("rfnd_bound_elsewhere"); await s.run();
+    const pb = await payment(s.pid);
+    await processProviderEvent(db, s.mk("refund.created", "RDz" + s.pid));
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect(await payment(s.pid)).toEqual(pb);
+    expect((await db.collection("paymentEvents").doc(s.pe.providerEventId).get()).data()!["outcome"]).toBe("refund_unmatched");
+    expect(await pendingCount(s.pid)).toBe(0);
+    expect((await alerts(s.pid)).filter((a) => a["kind"] === "refund_processed_unmatched")).toHaveLength(1);
+  });
+  it("scope: a later event on ANOTHER payment (even the same refund id) never touches this pending", async () => {
+    const s = await pendingSetup(); await s.run();
+    const other = await seed();
+    await processProviderEvent(db, evt("refund.created", "RDo" + other.pid, { pay: other.pay, rid: s.rid, amt: 50000 }));
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect(await pendingCount(s.pid)).toBe(1);
+  });
+  it("no later traffic: stays pending with its alert (no recovery)", async () => {
+    const s = await pendingSetup(); await s.run();
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect(await pendingCount(s.pid)).toBe(1);
+  });
+});

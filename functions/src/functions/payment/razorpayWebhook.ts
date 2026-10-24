@@ -24,9 +24,6 @@ export const razorpayWebhook = onRequest({ region: "asia-south1", maxInstances: 
     const headerId = String(req.header("x-razorpay-event-id") ?? "");
     if (headerId) ev.providerEventId = headerId;
     const result = await processProviderEvent(getFirestore(), ev);
-    // Not yet verifiable (refund id not yet bound by our submission/projection): nothing was recorded, so a non-2xx makes Razorpay
-    // redeliver the same event (24h backoff). Other outcomes, including conflicts, are final and get 2xx.
-    if (result.outcome === "pending_correlation") { res.status(503).json(result); return; }
     res.status(200).json(result);
   } catch (err) {
     console.error("razorpayWebhook failed", err instanceof Error ? err.message : err);

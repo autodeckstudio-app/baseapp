@@ -79,6 +79,8 @@ describe("reserved refund.created fail-closed binding (refund entity, not paymen
     ["refund currency missing", { providerRefundCurrency: null }],
     ["refund id missing", { providerRefundId: null }],
     ["refund.payment_id conflicts with the stored payment", { providerRefundPaymentId: "rzp_pay_other" }],
+    ["refund.payment_id MISSING (receipt present)", { providerRefundPaymentId: null }],
+    ["payment entity id conflicts with refund.payment_id", { providerPaymentEntityId: "rzp_pay_other" }],
     ["payment-entity amount equal to the reservation but refund amount differs", { amount: 80000, providerRefundAmount: 70000 }],
   ];
   for (const [name, o] of cases) {
@@ -110,6 +112,13 @@ describe("reserved refund.created correlation (three outcomes)", () => {
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
     expect((await processProviderEvent(db, event({ providerRefundReceipt: "rr_someone_else" }))).outcome).toBe("amount_mismatch");
     expect(data["refundRequests"]![requestId]!["status"]).toBe("reserved");
+  });
+  it("refund.payment_id MISSING with a stored matching refund id is still rejected", async () => {
+    const p = payment(); const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
+    data["refundRequests"]![requestId]!["providerRefundId"] = "rfnd_real"; data["refundRequests"]![requestId]!["status"] = "submitted";
+    expect((await processProviderEvent(db, event({ providerRefundId: "rfnd_real", providerRefundPaymentId: null }))).outcome).toBe("amount_mismatch");
+    expect(data["refundRequests"]![requestId]!["status"]).toBe("submitted");
   });
   it("no receipt and no stored provider id: NOT YET VERIFIABLE, no accept, no event record; same event accepted once bound", async () => {
     const p = payment(); const { db, data } = fakeFirestore(seed(p));

@@ -36,6 +36,12 @@ export type WebhookOutcome =
   | "pending_correlation"
   | "ignored";
 
+/** Private staff-only pending record. It is NOT an event receipt: the event stays unprocessed and can be re-driven by a later event for the same refund. */
+function pendingDoc(id: string, payment: Payment, ev: ProviderWebhookEvent, now: string): Record<string, unknown> {
+  return { id, tenantId: payment.tenantId, studioId: payment.studioId ?? null, kind: "refund_event_pending", paymentId: payment.id,
+    providerRefundId: ev.providerRefundId ?? null, pendingEvent: JSON.parse(JSON.stringify(ev)) as Record<string, unknown>, createdAt: now };
+}
+
 function systemUser(tenantId: string): AuthorizedUser {
   return { uid: "system", displayName: "AutoDeck", email: null, claims: { role: "system", tenantId, studioId: null } } as unknown as AuthorizedUser;
 }
@@ -62,6 +68,7 @@ async function findPayment(db: Firestore, ev: ProviderWebhookEvent): Promise<Pay
 export async function processProviderEvent(
   db: Firestore,
   ev: ProviderWebhookEvent,
+  opts: { redrive?: boolean } = {},
 ): Promise<{ outcome: WebhookOutcome; paymentId: string | null }> {
   const eventRef = db.collection(COLLECTIONS.paymentEvents()).doc(ev.providerEventId);
   const handled: ProviderWebhookEvent["eventType"][] = [
@@ -138,8 +145,7 @@ export async function processProviderEvent(
         return "refund_unmatched";
       };
       const pending = (): WebhookOutcome => {
-        tx.set(pendingRef, { id: pendingRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
-          kind: "refund_event_pending", paymentId: payment.id, createdAt: now }, { merge: true });
+        tx.set(pendingRef, pendingDoc(pendingRef.id, payment, ev, now), { merge: true });
         return "pending_correlation";
       };
       // Identity and shape: refund.payment_id required and equal to the stored provider payment id; a payment entity, if present,
@@ -339,12 +345,13 @@ export async function processProviderEvent(
         if (!ev.providerRefundReceipt && !reservation.providerRefundId) {
           // Not yet verifiable: no stored provider id and no receipt to bind this event to our request. No accept, no event record
           // (so the same event is processed again on redelivery), private pending alert only.
-          tx.set(pendingRef, { id: pendingRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
-            kind: "refund_event_pending", paymentId: payment.id, createdAt: now }, { merge: true });
+          tx.set(pendingRef, pendingDoc(pendingRef.id, payment, ev, now), { merge: true });
           return "pending_correlation";
         }
         tx.delete(pendingRef);
-        if (ev.providerRefundPaymentId && payment.razorpayPaymentId && ev.providerRefundPaymentId !== payment.razorpayPaymentId) { record("amount_mismatch"); return "amount_mismatch"; }
+        // refund.payment_id is REQUIRED and must equal the stored provider payment id (also when a receipt or stored refund id matches).
+        if (!ev.providerRefundPaymentId || ev.providerRefundPaymentId !== payment.razorpayPaymentId) { record("amount_mismatch"); return "amount_mismatch"; }
+        if (ev.providerPaymentEntityId && ev.providerPaymentEntityId !== ev.providerRefundPaymentId) { record("amount_mismatch"); return "amount_mismatch"; }
         record("refund_accepted");
         tx.update(reservation.ref, {
           status: "accepted",
@@ -381,5 +388,20 @@ export async function processProviderEvent(
     return "refunded";
   });
 
+  // Re-drive: a later event for the SAME payment and SAME refund gives a stored pending event another full evaluation. The pending event
+  // runs through this same function (full guards, its own event-id idempotency inside one transaction), so it is applied at most once.
+  // Only refund events, same payment, same refund id; no cross-refund replay. No later event means the pending alert simply stays.
+  if (!opts.redrive && ev.eventType.startsWith("refund.") && ev.providerRefundId) {
+    try {
+      const pend = await db.collection(COLLECTIONS.staffAlerts()).where("paymentId", "==", found.id).where("kind", "==", "refund_event_pending").limit(10).get();
+      for (const d of pend.docs) {
+        const pe = d.data()["pendingEvent"] as ProviderWebhookEvent | undefined;
+        if (!pe || pe.providerEventId === ev.providerEventId || pe.providerRefundId !== ev.providerRefundId) continue;
+        await processProviderEvent(db, pe, { redrive: true });
+      }
+    } catch (err) {
+      console.error("refund pending re-drive failed", err instanceof Error ? err.message : err); // the later event itself already succeeded
+    }
+  }
   return { outcome, paymentId: found.id };
 }
