@@ -55,6 +55,9 @@ describe("cancel and refund money (cash only, no provider)", () => {
     const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
     expect(await cancel(s.bookingId, "charge", true)).toMatchObject({ preview: true, policyFeePaise: 0, feePaise: 0, refundPaise: 100000, paidPaise: 100000 });
     expect(await cancel(s.bookingId, "charge")).toMatchObject({ success: true, refundPaise: 100000, manualRefund: true });
+    // Cash: this is a RECORD that a manual refund is owed/initiated. No money has been returned by the system.
+    expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ refundAmount: 100000 });
+    expect(await booking(s.bookingId)).toMatchObject({ refundStatus: "initiated" });
     expect(await booking(s.bookingId)).toMatchObject({ status: "CANCELLED", refundedPaise: 100000, cancellationFeePaise: 0 });
   });
 
@@ -114,7 +117,11 @@ describe("cancel and refund money (cash only, no provider)", () => {
     const s = await seed({ category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 });
     await expect(
       adminCancelBooking.run({ data: { bookingId: s.bookingId, reason: "test cancel", feeAction: "studio" }, auth: customerAuth(uid("c")) } as never),
-    ).rejects.toThrow();
-    expect((await booking(s.bookingId))["status"]).toBe("CONFIRMED");
+    ).rejects.toMatchObject({ code: "permission-denied" });
+    const after = await booking(s.bookingId);
+    expect(after["status"]).toBe("CONFIRMED");
+    expect(after["cancelledByStudio"]).toBeUndefined();
+    expect(after["studioCompensationStatus"]).toBeUndefined();
+    expect((await db.collection("payments").doc(s.paymentId!).get()).data()).toMatchObject({ status: "completed" });
   });
 });
