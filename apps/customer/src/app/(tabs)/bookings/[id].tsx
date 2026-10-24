@@ -86,7 +86,7 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
 // authoritative calendar span is shown separately via "Expected ready").
 
 export default function BookingDetailScreen() {
-  const { id, placed, mock } = useLocalSearchParams<{ id: string; placed?: string; mock?: string }>();
+  const { id, placed, mock, pickup } = useLocalSearchParams<{ id: string; placed?: string; mock?: string; pickup?: string }>();
   const router = useRouter();
   useLang();
   const [, tick] = useState(0);
@@ -269,7 +269,10 @@ export default function BookingDetailScreen() {
   const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
   const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
   const canPay = !membershipCoveredLabel(booking) && !waitingCancel && booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
-  const showRescheduleSection = !waitingCancel && !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
+  // Just booked (placed=1 landing view): offering to reschedule seconds after
+  // booking is noise, so the section stays hidden. Opened later from the
+  // bookings list (no placed param) every rule below applies exactly as before.
+  const showRescheduleSection = placed !== "1" && !waitingCancel && !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
@@ -488,6 +491,7 @@ export default function BookingDetailScreen() {
       {booking.refundStatus === "initiated" ? <Notice title="Refund with the payment provider" body="Razorpay has accepted your refund. Refund timing depends on your bank or payment provider." /> : null}
       {booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
       {actionError ? <Notice title="We could not finish that" body={actionError} /> : null}
+      {pickup === "failed" ? <Notice title="Pickup request not sent" body="Your booking stands. The pickup or drop-off request could not be sent - please call the studio to arrange it." /> : null}
 
       {showRescheduleSection ? (
         rescheduleEligibility.eligible ? (
