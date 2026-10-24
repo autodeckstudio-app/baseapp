@@ -151,6 +151,10 @@ describe("Customer booking reschedule", () => {
 
   beforeAll(async () => {
     await seedStudio();
+    // Vintage seed data gap: empty operatingHours yields zero reschedule slots.
+    await db.collection("studioConfig").doc(STUDIO_ID).update({
+      operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d, open: "08:00", close: "20:00", closed: false })),
+    });
     service = await seedService(uid("svc-wash"));
     customerId = uid("cust");
     vehicle = await seedVehicle(uid("veh"), customerId);
@@ -347,4 +351,88 @@ describe("Customer booking reschedule", () => {
       }
     }
   }, 60_000);
+});
+
+describe("MAX_CUSTOMER_RESCHEDULES=2 boundary (cap release evidence)", () => {
+  let service: Service;
+  let vehicle: Vehicle;
+  let customerId: string;
+
+  beforeAll(async () => {
+    await seedStudio();
+    // Vintage seedStudio leaves operatingHours empty, which yields zero offered
+    // slots in rescheduleBooking (pre-existing vintage test-data gap). The cap
+    // boundary tests need a working allowed path, so seed a full week here.
+    await db.collection("studioConfig").doc(STUDIO_ID).update({
+      operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d, open: "08:00", close: "20:00", closed: false })),
+    });
+    service = await seedService(uid("svc-cap2"));
+    customerId = uid("cust-cap2");
+    vehicle = await seedVehicle(uid("veh-cap2"), customerId);
+  });
+
+  it("count 1: second reschedule allowed, rescheduleCount becomes 2", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    const date1 = nextDate();
+    const first = (await rescheduleBooking.run({
+      data: { bookingId: booking.id, newDate: date1, newTime: "12:00", idempotencyKey: uid("idem") },
+      auth: customerAuth(customerId),
+    } as never)) as { booking: Booking };
+    expect(first.booking.rescheduleCount).toBe(1);
+
+    const date2 = nextDate();
+    const second = (await rescheduleBooking.run({
+      data: { bookingId: booking.id, newDate: date2, newTime: "12:30", idempotencyKey: uid("idem") },
+      auth: customerAuth(customerId),
+    } as never)) as { booking: Booking };
+    expect(second.booking.rescheduleCount).toBe(2);
+    expect(second.booking.scheduledDate).toBe(date2);
+
+    const stored = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+    expect(stored.rescheduleCount).toBe(2);
+    expect(stored.scheduledDate).toBe(date2);
+    expect(stored.scheduledTime).toBe("12:30");
+  });
+
+  it("count 2: third reschedule refused with cap=2 message and NO mutation", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    await db.collection("bookings").doc(booking.id).update({ rescheduleCount: 2 });
+    const before = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "14:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(customerId),
+      } as never),
+    ).rejects.toThrow(/Maximum reschedules \(2\) reached/);
+
+    const after = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+    expect(after.rescheduleCount).toBe(2);
+    expect(after.scheduledDate).toBe(before.scheduledDate);
+    expect(after.scheduledTime).toBe(before.scheduledTime);
+    expect(after.status).toBe(before.status);
+    expect(after.bayId).toBe(before.bayId);
+  });
+
+  it("cap=2 context: ownership and tenant constraints intact", async () => {
+    const booking = await makeBooking(customerId, service, vehicle);
+    await db.collection("bookings").doc(booking.id).update({ rescheduleCount: 1 });
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "15:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(uid("cust-other-cap2")),
+      } as never),
+    ).rejects.toThrow(/Cannot reschedule another customer's booking/);
+
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "15:00", idempotencyKey: uid("idem") },
+        auth: { uid: customerId, token: { role: "customer", tenantId: "reschedule-tenant-b", studioId: null }, rawToken: "test" },
+      } as never),
+    ).rejects.toThrow(/Cross-tenant access denied/);
+
+    const stored = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
+    expect(stored.rescheduleCount).toBe(1);
+  });
 });
