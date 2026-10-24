@@ -5,6 +5,7 @@ import { voidInvoice } from "../../functions/invoice/voidInvoice.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import { recordManualPayment as deployedRecordManualPayment } from "./fixtures/recordManualPayment.deployed.js";
 import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 const db = getFirestore();
 let n = 0;
@@ -305,7 +306,7 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       await db.collection("invoices").doc(`inv_${id}`).set({
         id: `inv_${id}`, tenantId: "covered", studioId: "s", jobId: id, bookingId: id,
         customerId: "c", vehicleId: id, paymentId: `pay_${id}`,
-        status: "issued", total: 0, currency: "INR",
+        status: "issued", total: 0, currency: "INR", issuedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       });
       return id;
@@ -367,6 +368,58 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       message: "Membership-covered invoice linkage is invalid.",
     });
 
+    // Draft / wrong-currency / never-issued zero invoices are not old-route output.
+    for (const mutate of [
+      { status: "draft" },
+      { currency: "USD" },
+      { issuedAt: null },
+    ] as const) {
+      const bad = await legacySeed();
+      await db.collection("invoices").doc(`inv_${bad}`).update({ ...mutate });
+      await expect(
+        advanceJobStatus.run({ data: { jobId: bad }, auth: auth() } as never),
+      ).rejects.toMatchObject({
+        code: "failed-precondition",
+        message: "Membership-covered invoice linkage is invalid.",
+      });
+    }
+
+    // Payment bound to a different booking breaks the booking linkage proof.
+    const wrongBk = await legacySeed();
+    await db.collection("payments").doc(`pay_${wrongBk}`).update({ bookingId: "bk_elsewhere" });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: wrongBk }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // An in-flight (pending) payment alongside the completion is financially ambiguous.
+    const pend = await legacySeed();
+    await db.collection("payments").doc(`pay_${pend}_x`).set({
+      id: `pay_${pend}_x`, tenantId: "covered", studioId: "s", jobId: pend, bookingId: pend,
+      customerId: "c", method: "razorpay_payment_link", status: "pending", amount: 0,
+      currency: "INR", invoiceId: null, createdAt: new Date().toISOString(),
+    });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: pend }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // A failed historical attempt is terminal and legitimate (deployed rMP only blocks
+    // on pending/processing/completed): delivery still succeeds.
+    const failedHist = await legacySeed();
+    await db.collection("payments").doc(`pay_${failedHist}_f`).set({
+      id: `pay_${failedHist}_f`, tenantId: "covered", studioId: "s", jobId: failedHist, bookingId: failedHist,
+      customerId: "c", method: "razorpay_payment_link", status: "failed", amount: 0,
+      currency: "INR", invoiceId: null, createdAt: new Date().toISOString(),
+    });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: failedHist }, auth: auth() } as never),
+    ).resolves.toBeTruthy();
+
     // Two live zero invoices = ambiguous residue: rejected, not guessed between.
     const dup = await legacySeed();
     await db.collection("invoices").doc(`inv_${dup}_b`).set({
@@ -380,6 +433,44 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       code: "failed-precondition",
       message: "Membership-covered invoice linkage is invalid.",
     });
+  });
+
+  it("transition proof: ACTUAL deployed rMP output on a covered fixture delivers under the final aJS, with no data rewriting or counter mutation", async () => {
+    const id = await seed();
+    const mBefore = await get("memberships", id);
+    // Byte-identical deployed (17 Oct) recordManualPayment handler, imported as a fixture.
+    const cash = (await deployedRecordManualPayment.run({
+      data: { jobId: id, method: "cash" },
+      auth: auth("studio", "covered", "s"),
+    } as never)) as { paymentId: string };
+    expect(cash.paymentId).toBeTruthy();
+    // Deployed handler wrote exactly the old-route shape: completed zero payment,
+    // issued zero invoice, mutual linkage, paid statuses, no settlementKind anywhere.
+    const job = await get("jobs", id);
+    const bk = await get("bookings", id);
+    expect(job.paymentStatus).toBe("paid");
+    expect(bk.paymentStatus).toBe("paid");
+    const pays = (await db.collection("payments").where("jobId", "==", id).get()).docs.map((d) => d.data());
+    const invs = (await db.collection("invoices").where("jobId", "==", id).get()).docs.map((d) => d.data());
+    expect(pays.length).toBe(1);
+    expect(pays[0]).toMatchObject({ status: "completed", amount: 0, bookingId: id, customerId: "c", studioId: "s" });
+    expect(invs.length).toBe(1);
+    expect(invs[0]).toMatchObject({ status: "issued", total: 0, jobId: id, bookingId: id, vehicleId: id, paymentId: pays[0]!.id });
+    expect(pays[0]!.invoiceId).toBe(invs[0]!.id);
+    expect(invs[0]!.issuedAt).toBeTruthy();
+    // Final guarded aJS: the genuine old-route completion delivers.
+    await expect(
+      advanceJobStatus.run({ data: { jobId: id }, auth: auth() } as never),
+    ).resolves.toBeTruthy();
+    const after = await get("jobs", id);
+    expect(after.status).toBe("DELIVERED");
+    // No money data rewritten, no counters mutated, no covered markers fabricated.
+    expect(after.settlementKind ?? null).toBeNull();
+    expect((await get("bookings", id)).settlementKind ?? null).toBeNull();
+    const mAfter = await get("memberships", id);
+    expect(mAfter.washesUsed).toBe(mBefore.washesUsed);
+    expect(mAfter.washesTotal).toBe(mBefore.washesTotal);
+    expect((await db.collection("invoices").where("jobId", "==", id).get()).size).toBe(1);
   });
 
   it("covered limiter increments and normal retry stays idempotent; exhaustion denies", async () => {

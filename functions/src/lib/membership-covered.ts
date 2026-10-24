@@ -149,6 +149,9 @@ export async function isLegacyCoveredCompletion(
   if (liveInvoices.length !== 1) return false;
   const inv = liveInvoices[0]!;
   if (inv.settlementKind || inv.total !== 0) return false;
+  // Deployed rMP issues the invoice WITH the payment: status "issued", issuedAt set,
+  // snapshot currency. A draft/paid invoice or missing issue data is not old-route output.
+  if (inv.status !== "issued" || !inv.issuedAt || inv.currency !== job.priceBreakdown?.currency) return false;
   if (
     inv.tenantId !== job.tenantId ||
     inv.studioId !== job.studioId ||
@@ -162,7 +165,11 @@ export async function isLegacyCoveredCompletion(
     db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).where("tenantId", "==", job.tenantId),
   );
   const payments = paySnap.docs.map((d) => d.data() as Payment);
-  if (payments.some((pmt) => pmt.status === "refunded")) return false;
+  // Financially ambiguous states reject. Failed/cancelled historical attempts are
+  // terminal and legitimate: deployed rMP itself only blocks on pending/processing/
+  // completed, so a genuine old-route completion can carry such attempts.
+  if (payments.some((pmt) => pmt.status === "refunded" || pmt.status === "pending" || pmt.status === "processing"))
+    return false;
   const completed = payments.filter((pmt) => pmt.status === "completed");
   if (completed.length !== 1) return false;
   const pmt = completed[0]!;
@@ -172,6 +179,7 @@ export async function isLegacyCoveredCompletion(
     inv.paymentId === pmt.id &&
     pmt.tenantId === job.tenantId &&
     pmt.studioId === job.studioId &&
-    pmt.customerId === job.customerId
+    pmt.customerId === job.customerId &&
+    pmt.bookingId === booking.id
   );
 }
