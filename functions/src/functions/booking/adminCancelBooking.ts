@@ -170,7 +170,7 @@ export async function runCancel(
         refundedPaise: plan.refundPaise,
         ...(studioCancel ? { cancelledByStudio: true } : {}),
         ...(compensationPaise > 0 ? { studioCompensationPaise: compensationPaise, studioCompensationStatus: "due" } : {}),
-        ...(needsRefund ? { paymentStatus: "refunded", ...(providerRefundId ? { refundStatus: "initiated" as const, refundId: providerRefundId } : {}) } : {}),
+        ...(needsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: providerRefundId } : {}),
         updatedAt: now,
       });
       writeAuditLog(tx, {
