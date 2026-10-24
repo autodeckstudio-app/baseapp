@@ -10,3 +10,8 @@ export const getOfficeReportSchema = z.object({
   studioId: z.string().min(1),
   month: monthString,
 }).strict();
+
+export const getAccountantMoneySchema = z.object({
+  studioId: z.string().min(1),
+  month: monthString,
+}).strict();

@@ -108,7 +108,7 @@ export async function planReserveInTx(
     .find((r) => r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous");
   if (guardSnap.exists || active) {
     // The SAME payment, FULL amount and reason already reserved is satisfied (idempotent). Anything else is a conflict.
-    const same = !!active && active.paymentId === i.payment.id && active.amountPaise === amount && active.reason === i.reason;
+    const same = !!active && active.paymentId === i.payment.id && active.amountPaise === amount && active.reason === i.reason && (active.status === "reserved" || active.status === "submitted" || active.status === "accepted");
     const id = active?.id ?? (guardSnap.data() as { requestId?: string } | undefined)?.requestId ?? "unknown";
     return { ok: false, code: same ? "same_reservation" : "conflict", reason: `payment ${i.payment.id} already has an active refund request (${id})` };
   }

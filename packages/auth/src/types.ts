@@ -1,4 +1,4 @@
-export type UserRole = "customer" | "studio" | "admin" | "superadmin";
+export type UserRole = "customer" | "studio" | "admin" | "superadmin" | "accountant";
 
 /**
  * Firebase custom claims — embedded in the ID token.

@@ -149,7 +149,9 @@ export async function processProviderEvent(
           tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
             kind: reservePlan.ok ? "late_membership_payment" : reservePlan.code === "same_reservation" ? "late_membership_already_reserved" : "late_membership_refund_not_reserved",
             paymentId: payment.id, createdAt: now,
-            ...(reservePlan.ok ? {} : { reservationOutcome: reservePlan.code }) });
+            // Private obligation evidence. The amount is the STORED payment amount only when it is positive; never invented.
+            ...(reservePlan.ok ? {} : { reservationOutcome: reservePlan.code, reason: "late_membership_payment",
+              owedAmountPaise: payment.amount > 0 ? payment.amount : null, currency: payment.currency ?? null }) });
         }
         if (mRef && mSnap?.exists && (mSnap.data() as Membership).status === "pending") {
           const startDate = now.slice(0, 10);

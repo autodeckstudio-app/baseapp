@@ -82,6 +82,7 @@ describe("late membership capture: atomic reservation (emulator)", () => {
     const cases: Array<[string, Record<string, unknown> | null]> = [
       ["wrong amount", { status: "reserved", amountPaise: 100, reason: "late_membership_payment" }],
       ["wrong reason", { status: "reserved", amountPaise: 29900, reason: "no_show" }],
+      ["same amount+reason but status ambiguous (provider outcome unknown)", { status: "ambiguous", amountPaise: 29900, reason: "late_membership_payment" }],
       ["orphan guard only", null],
     ];
     for (const [label, rr] of cases) {
@@ -94,6 +95,7 @@ describe("late membership capture: atomic reservation (emulator)", () => {
       const al = (await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!;
       expect(al["kind"], label).toBe("late_membership_refund_not_reserved");
       expect(al["reservationOutcome"], label).toBe("conflict");
+      expect(al).toMatchObject({ reason: "late_membership_payment", owedAmountPaise: 29900, currency: "INR", paymentId: s.pid });
     }
   });
   it("invalid amount (stored amount 0, event carries no amount: the existing shared amount check is skipped): receipt completes, owed-not-reserved alert outcome invalid, no request", async () => {
@@ -108,6 +110,7 @@ describe("late membership capture: atomic reservation (emulator)", () => {
     const al = (await db.collection("staffAlerts").doc(`late_membership_payment_${s.pid}`).get()).data()!;
     expect(al["kind"]).toBe("late_membership_refund_not_reserved");
     expect(al["reservationOutcome"]).toBe("invalid");
+    expect(al["owedAmountPaise"]).toBeNull(); // stored 0: no amount is invented
     expect(await reqs(s.pid)).toHaveLength(0);
   });
   it("pending membership: activates, reserves nothing; ACTIVE membership second capture untouched", async () => {
