@@ -131,7 +131,7 @@ export const advanceJobStatus = onCall({ region: "asia-south1" }, async (request
           // Transition compatibility: a covered visit closed by the OLD zero-payment
           // route before settle existed stays deliverable (strict legacy check, see
           // membership-covered.ts). Malformed covered records still reject.
-          !isLegacyCoveredCompletion(freshJob, booking, liveInvoices)
+          !(await isLegacyCoveredCompletion(db, tx, freshJob, booking, liveInvoices))
         )
           throw new HttpsError("failed-precondition", "Membership-covered invoice linkage is invalid.");
       }

@@ -290,13 +290,22 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
     // End-to-end rollout case: old recordManualPayment wins during the rollout window
     // (paid job+booking, ordinary zero invoice, no settlementKind anywhere), THEN the
     // final guarded advanceJobStatus deploys. Delivery must remain possible.
+    // Exactly what deployed recordManualPayment writes on a covered (total=0) job:
+    // completed zero Payment with invoiceId, ordinary zero Invoice with paymentId,
+    // paymentStatus=paid on job+booking. Nothing else.
     const legacySeed = async () => {
       const id = await seed();
       await db.collection("jobs").doc(id).update({ paymentStatus: "paid" });
       await db.collection("bookings").doc(id).update({ paymentStatus: "paid" });
+      await db.collection("payments").doc(`pay_${id}`).set({
+        id: `pay_${id}`, tenantId: "covered", studioId: "s", jobId: id, bookingId: id,
+        customerId: "c", method: "cash", status: "completed", amount: 0, currency: "INR",
+        invoiceId: `inv_${id}`, createdAt: new Date().toISOString(),
+      });
       await db.collection("invoices").doc(`inv_${id}`).set({
         id: `inv_${id}`, tenantId: "covered", studioId: "s", jobId: id, bookingId: id,
-        customerId: "c", status: "issued", total: 0, currency: "INR",
+        customerId: "c", vehicleId: id, paymentId: `pay_${id}`,
+        status: "issued", total: 0, currency: "INR",
         createdAt: new Date().toISOString(),
       });
       return id;
@@ -313,6 +322,46 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
     await db.collection("invoices").doc(`inv_${stale}`).update({ total: 50000 });
     await expect(
       advanceJobStatus.run({ data: { jobId: stale }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // No completed zero payment (arbitrary paid + zero invoice) is NOT old-route output.
+    const noPay = await legacySeed();
+    await db.collection("payments").doc(`pay_${noPay}`).delete();
+    await expect(
+      advanceJobStatus.run({ data: { jobId: noPay }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // Refund ambiguity rejects even when the completed zero payment exists.
+    const refunded = await legacySeed();
+    await db.collection("payments").doc(`pay_${refunded}`).update({ status: "refunded" });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: refunded }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // Invoice bound to a different vehicle is not this visit's old-route invoice.
+    const unbound = await legacySeed();
+    await db.collection("invoices").doc(`inv_${unbound}`).update({ vehicleId: "other-vehicle" });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: unbound }, auth: auth() } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "Membership-covered invoice linkage is invalid.",
+    });
+
+    // Payment linked to a DIFFERENT invoice breaks the mutual linkage proof.
+    const mislinked = await legacySeed();
+    await db.collection("payments").doc(`pay_${mislinked}`).update({ invoiceId: "inv_elsewhere" });
+    await expect(
+      advanceJobStatus.run({ data: { jobId: mislinked }, auth: auth() } as never),
     ).rejects.toMatchObject({
       code: "failed-precondition",
       message: "Membership-covered invoice linkage is invalid.",
