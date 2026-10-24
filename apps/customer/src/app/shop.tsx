@@ -2,10 +2,11 @@ import { useState } from "react";
 import { View, Pressable } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { SHOP_CONCEPTS, type ShopConcept } from "@autodeck/core";
+import type PreviewShopComponent from "./preview-shop";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, PageHeader, Pane, Screen, T } from "../ui/kit";
 // Dev-only fixture shop: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
-const PreviewShop = __DEV__ ? (require("./preview-shop") as typeof import("./preview-shop")).default : null;
+const PreviewShop = __DEV__ ? (require("./preview-shop") as { default: typeof PreviewShopComponent }).default : null;
 
 // Guest Shop route. The store is not open: concepts are browse-only, carry no
 // prices, and nothing can be ordered. The owner supplies final names, prints,

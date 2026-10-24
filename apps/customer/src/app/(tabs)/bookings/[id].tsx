@@ -24,8 +24,9 @@ import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday, bookingCode } from "@autodeck/core";
+import type * as BookingDevSample from "../../../lib/booking-dev-sample";
 // Dev-only sample data: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
-const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof import("../../../lib/booking-dev-sample")) : null;
+const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof BookingDevSample) : null;
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady, nextStepLine } from "../../../lib/booking-rules";
