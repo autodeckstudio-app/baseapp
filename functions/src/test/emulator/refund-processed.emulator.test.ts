@@ -11,10 +11,10 @@ const db = getFirestore();
 const provider = new RazorpayProvider("rzp_test_x", "secret", "whsec_test");
 let n = 0;
 const T = "rp-tenant";
-const evt = (type: string, eid: string, o: { pay: string; rid: string; amt: number; cur?: string }) => {
+const evt = (type: string, eid: string, o: { pay: string; rid: string; amt: number; cur?: string | undefined }) => {
   const e = provider.parseWebhookEvent(JSON.stringify({ event: type, payload: {
-    payment: { entity: { id: o.pay, amount: 50000, currency: o.cur ?? "INR" } },
-    refund: { entity: { id: o.rid, payment_id: o.pay, amount: o.amt } } } }));
+    payment: { entity: { id: o.pay, amount: 90000, currency: "INR" } }, // official shape: payment.amount is the PAYMENT amount, not the refund amount
+    refund: { entity: { id: o.rid, payment_id: o.pay, amount: o.amt, currency: o.cur ?? "INR", status: "processed" } } } }));
   e.providerEventId = eid; return e;
 };
 async function seed(over: { bookingRefundStatus?: string; reqRid?: string | null; payRid?: string; reqAmt?: number; bookingTenant?: string; payStatus?: string } = {}) {

@@ -130,7 +130,7 @@ export async function processProviderEvent(
         : !!(b && b.refundId === rid && b.refundedPaise === amt);
       const matches = !!(rid && bookingRef && b && b.id === payment.bookingId && b.tenantId === payment.tenantId
         && payment.razorpayRefundId === rid && (payment.status === "refunded" || payment.status === "partially_refunded")
-        && typeof amt === "number" && amt > 0 && storedOk && !!payment.currency && ev.currency === payment.currency);
+        && typeof amt === "number" && amt > 0 && storedOk && !!payment.currency && ev.providerRefundCurrency === payment.currency);
       if (matches && b!.refundStatus === "processed") { record("already_final"); return "already_final"; }
       if (matches && b!.refundStatus === "initiated") {
         tx.update(bookingRef!, { refundStatus: "processed", refundProcessedAt: now, updatedAt: now });

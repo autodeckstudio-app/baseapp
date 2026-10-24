@@ -57,6 +57,8 @@ export interface ProviderWebhookEvent {
   providerRefundId: string | null;
   /** Paise of the REFUND entity itself (refund events only); `amount` is the payment amount when a payment entity is present. */
   providerRefundAmount?: number | null;
+  /** Currency of the REFUND entity itself (refund events only). */
+  providerRefundCurrency?: string | null;
   providerOrderId?: string | null;
   referenceId?: string | null; // our payment doc id, set as reference_id on the payment link
   amount: number; // paise
