@@ -21,7 +21,7 @@ describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with C
   const card = read("src/ui/PickupCard.tsx");
   it("the confirm screen carries the optional section: kind chips, address, location and slot dropdown", () => {
     expect(confirm).toContain("Pickup and drop (optional)");
-    expect(confirm).toContain("pickupSlotsFor(params.scheduledTime, bookingDayOpen)");
+    expect(confirm).toContain("pickupSlotOptions(params.scheduledTime, studioHours)");
     expect(confirm).toContain("SelectField");
     expect(confirm).toContain("getDeviceLocation");
     expect(confirm).toContain("This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.");
@@ -38,7 +38,22 @@ describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with C
   });
   it("the slot dropdown opens at the booking day's live studio opening time, not a hardcoded guess", () => {
     expect(confirm).toContain("getStudioInfo(FIRST_STUDIO_ID)");
-    expect(confirm).toContain("pickupSlotsFor(params.scheduledTime, bookingDayOpen)");
+    expect(confirm).toContain("pickupSlotOptions(params.scheduledTime, studioHours)");
+    expect(confirm).toContain("pickupDayHoursFor(info, params.scheduledDate)");
+  });
+  it("no invented fallback open exists anywhere on the confirm screen", () => {
+    expect(confirm).not.toContain("PICKUP_SLOT_OPEN");
+    expect(confirm).not.toContain("bookingDayOpen");
+  });
+  it("loading, failed and closed hours show no slot list; loading says hours are being checked", () => {
+    expect(confirm).toContain('useState<PickupDayHours>({ status: "loading" })');
+    expect(confirm).toContain('setStudioHours({ status: "unavailable" });');
+    expect(confirm).toContain("Checking the studio's hours for pickup times...");
+  });
+  it("a stale choice is dropped and never sent: the sent preference is always a current option", () => {
+    expect(confirm).toContain("const chosenSlot = validPickupSlot(pickupSlot, pickupSlots);");
+    expect(confirm).toContain("requestedPickupTime: chosenSlot");
+    expect(confirm).not.toContain("requestedPickupTime: pickupSlot");
   });
   it("a failed pickup request never fails the booking; the booking page shows the note", () => {
     expect(confirm).toContain('pickup: "failed"');

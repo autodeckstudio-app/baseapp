@@ -6,7 +6,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
-import type { LiveStudioInfo } from "../../../lib/studio-info";
 import { createBooking, generateIdempotencyKey, getStudioInfo } from "../../../lib/booking-service";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
@@ -25,7 +24,7 @@ import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
 import { getDeviceLocation, requestPickupDrop } from "../../../lib/pickup-service";
-import { pickupSlotsFor, PICKUP_SLOT_OPEN } from "../../../lib/pickup-slots";
+import { pickupDayHoursFor, pickupSlotOptions, validPickupSlot, type PickupDayHours } from "../../../lib/pickup-slots";
 import { PICKUP_POLICY, pickupFeeText } from "../../../lib/pickup-policy";
 import { pickupZone } from "@autodeck/core";
 import { SelectField } from "../../../ui/inputs";
@@ -149,23 +148,24 @@ export default function BookingConfirmScreen() {
   const payNow = !giftCode && payHow.online && !payAtStudio && !washOn;
   const holdLeft = held ? Math.max(0, Math.ceil((held.expiresAt - now) / 1000)) : 0;
 
-  // Opening time for the booking day from the live studio record - the same
-  // hours the booking engine used to offer this slot. Falls back to the
-  // engine's seeded default when the fetch fails. The day-of-week comes from
-  // the calendar date itself, so no timezone conversion is involved.
-  const [studioInfo, setStudioInfo] = useState<LiveStudioInfo | null>(null);
+  // Pickup-time options come only from grounded hours: the booking day's
+  // opening time is read from the live studio record - the same hours the
+  // booking engine used to offer this slot. While that record loads, after a
+  // failed fetch, or on a closed day there is no list and no invented
+  // default; the booking and the pickup request stand either way.
+  const [studioHours, setStudioHours] = useState<PickupDayHours>({ status: "loading" });
   useEffect(() => {
     let alive = true;
-    void getStudioInfo(FIRST_STUDIO_ID).then((info) => { if (alive) setStudioInfo(info); }).catch(() => { if (alive) setStudioInfo(null); });
+    setStudioHours({ status: "loading" });
+    void getStudioInfo(FIRST_STUDIO_ID)
+      .then((info) => { if (alive) setStudioHours(pickupDayHoursFor(info, params.scheduledDate)); })
+      .catch(() => { if (alive) setStudioHours({ status: "unavailable" }); });
     return () => { alive = false; };
-  }, []);
-  const bookingDayOpen = useMemo(() => {
-    if (!params.scheduledDate) return PICKUP_SLOT_OPEN;
-    const dow = new Date(`${params.scheduledDate}T00:00:00Z`).getUTCDay();
-    const hours = studioInfo?.operatingHours.find((h) => h.dayOfWeek === dow);
-    return hours && !hours.closed ? hours.open : PICKUP_SLOT_OPEN;
-  }, [params.scheduledDate, studioInfo]);
-  const pickupSlots = params.scheduledTime ? pickupSlotsFor(params.scheduledTime, bookingDayOpen) : [];
+  }, [params.scheduledDate]);
+  const pickupSlots = pickupSlotOptions(params.scheduledTime, studioHours);
+  // A stale choice can never survive: the shown and sent preference is always
+  // one of the current options, or nothing.
+  const chosenSlot = validPickupSlot(pickupSlot, pickupSlots);
   const pickupZoneInfo = pickupWhere ? pickupZone(pickupWhere) : null;
 
   function choosePickupKind(k: "pickup" | "drop" | "both") {
@@ -203,7 +203,7 @@ export default function BookingConfirmScreen() {
         kind: pickupKind,
         address,
         ...(pickupWhere ? { lat: pickupWhere.lat, lng: pickupWhere.lng } : {}),
-        ...(pickupKind !== "drop" && pickupSlot ? { requestedPickupTime: pickupSlot } : {}),
+        ...(pickupKind !== "drop" && chosenSlot ? { requestedPickupTime: chosenSlot } : {}),
       });
       return true;
     } catch {
@@ -377,15 +377,20 @@ export default function BookingConfirmScreen() {
               />
               <Button label={pickupWhere ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
               {pickupZoneInfo ? <T role="caption" tone="secondary">{`About ${pickupZoneInfo.km} km from the studio. ${pickupFeeText(pickupZoneInfo.km, pickupKind)} for ${pickupKind === "both" ? "pickup and drop-off" : pickupKind === "pickup" ? "pickup" : "drop-off"}.`}</T> : null}
-              {pickupKind !== "drop" && pickupSlots.length > 0 ? (
-                <SelectField
-                  label={pickupKind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"}
-                  value={pickupSlot}
-                  onChange={setPickupSlot}
-                  options={[{ value: "", label: "No preference" }, ...pickupSlots.map((s) => ({ value: s, label: s }))]}
-                />
+              {pickupKind !== "drop" && studioHours.status === "loading" ? (
+                <T role="caption" tone="secondary">Checking the studio's hours for pickup times...</T>
               ) : null}
-              {pickupKind !== "drop" ? <T role="caption" tone="secondary">This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.</T> : null}
+              {pickupKind !== "drop" && pickupSlots.length > 0 ? (
+                <>
+                  <SelectField
+                    label={pickupKind === "both" ? "Preferred pickup time (optional)" : "Preferred time (optional)"}
+                    value={chosenSlot}
+                    onChange={setPickupSlot}
+                    options={[{ value: "", label: "No preference" }, ...pickupSlots.map((s) => ({ value: s, label: s }))]}
+                  />
+                  <T role="caption" tone="secondary">This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.</T>
+                </>
+              ) : null}
             </View>
           ) : (
             <T role="caption" tone="secondary">Want us to collect or return your car? Choose one above and it goes with your booking.</T>
