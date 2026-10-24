@@ -9,7 +9,7 @@
 //    nothing is marked paid and the event is recorded for review.
 import type { Firestore } from "firebase-admin/firestore";
 import type { Booking, Gift, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
-import { planReserveInTx, applyReserveInTx } from "./refund-outbox.js";
+import { planReserveInTx, applyReserveInTx, activeReservation } from "./refund-outbox.js";
 import { planGiftActivation } from "./gift-activate.js";
 import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
@@ -33,6 +33,7 @@ export type WebhookOutcome =
   | "refund_accepted"
   | "refund_processed"
   | "refund_unmatched"
+  | "pending_correlation"
   | "ignored";
 
 function systemUser(tenantId: string): AuthorizedUser {
@@ -115,8 +116,11 @@ export async function processProviderEvent(
       tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome: o, processedAt: now });
 
     if (ev.eventType === "refund.processed") {
-      // Provider status only: the booking says "processed" when THIS exact refund (id, amount, currency, tenant, payment, booking)
-      // matches what we stored. No money, payment, invoice or job field is touched. Anything else: no booking write, private alert.
+      // Three outcomes. MATCH: booking.refundStatus "processed" (provider status only; no money/payment/invoice/job write).
+      // CONFLICT (explicit id/amount/currency/tenant/payment disagreement, malformed event, or nothing of ours): no booking or payment
+      // write, private alert, terminal event record. NOT YET VERIFIABLE (our submission or projection has not bound the refund id yet):
+      // no accept, no write except a private pending alert, and NO event record, so the same event is processed again when redelivered.
+      const reservation = await activeReservation(db, payment.id);
       const bookingRef = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
       const bSnap = bookingRef ? await tx.get(bookingRef) : null;
       const b = bSnap?.exists ? (bSnap.data() as Booking) : null;
@@ -124,30 +128,47 @@ export async function processProviderEvent(
       const reqSnap = rid ? await tx.get(db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", payment.id).where("providerRefundId", "==", rid).limit(2)) : null;
       const stored = reqSnap && reqSnap.size === 1 ? (reqSnap.docs[0]!.data() as { tenantId: string; bookingId: string | null; amountPaise: number }) : null;
       const amt = ev.providerRefundAmount;
-      // The stored refund id + amount come from either our refund request (customer/outbox path) or the booking itself (admin cancel path).
-      const storedOk = stored
-        ? stored.tenantId === payment.tenantId && stored.bookingId === payment.bookingId && stored.amountPaise === amt && (!b?.refundId || b.refundId === rid)
-        : !!(b && b.refundId === rid && b.refundedPaise === amt);
-      // Fail closed on identity: refund.payment_id is required; if a payment entity is also present its id and currency must agree;
-      // the refund entity's own amount and currency are required (never the payment entity's); status, when sent, must be "processed".
-      const identityOk = !!ev.providerRefundPaymentId && ev.providerRefundPaymentId === payment.razorpayPaymentId
+      const pendingRef = db.collection(COLLECTIONS.staffAlerts()).doc(`refund_event_pending_${ev.providerEventId}`);
+      const conflict = (): WebhookOutcome => {
+        const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`refund_processed_unmatched_${ev.providerEventId}`);
+        tx.delete(pendingRef);
+        tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+          kind: "refund_processed_unmatched", paymentId: payment.id, createdAt: now });
+        record("refund_unmatched");
+        return "refund_unmatched";
+      };
+      const pending = (): WebhookOutcome => {
+        tx.set(pendingRef, { id: pendingRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+          kind: "refund_event_pending", paymentId: payment.id, createdAt: now }, { merge: true });
+        return "pending_correlation";
+      };
+      // Identity and shape: refund.payment_id required and equal to the stored provider payment id; a payment entity, if present,
+      // must agree (id, currency); the refund's own id, amount and currency are required; status, if sent, must be "processed".
+      const identityOk = !!rid && typeof amt === "number" && amt > 0 && !!ev.providerRefundCurrency && !!payment.currency && ev.providerRefundCurrency === payment.currency
+        && !!ev.providerRefundPaymentId && ev.providerRefundPaymentId === payment.razorpayPaymentId
         && (!ev.providerPaymentEntityId || ev.providerPaymentEntityId === ev.providerRefundPaymentId)
         && (!ev.providerPaymentEntityCurrency || ev.providerPaymentEntityCurrency === ev.providerRefundCurrency)
-        && (!ev.providerRefundStatus || ev.providerRefundStatus === "processed");
-      const matches = identityOk && !!(rid && bookingRef && b && b.id === payment.bookingId && b.tenantId === payment.tenantId
-        && payment.razorpayRefundId === rid && (payment.status === "refunded" || payment.status === "partially_refunded")
-        && typeof amt === "number" && amt > 0 && storedOk && !!payment.currency && ev.providerRefundCurrency === payment.currency);
-      if (matches && b!.refundStatus === "processed") { record("already_final"); return "already_final"; }
-      if (matches && b!.refundStatus === "initiated") {
+        && (!ev.providerRefundStatus || ev.providerRefundStatus === "processed")
+        && !!bookingRef && !!b && b.id === payment.bookingId && b.tenantId === payment.tenantId;
+      if (!identityOk) return conflict();
+      const projected = (payment.status === "refunded" || payment.status === "partially_refunded") && !!payment.razorpayRefundId;
+      if (projected) {
+        const storedOk = stored
+          ? stored.tenantId === payment.tenantId && stored.bookingId === payment.bookingId && stored.amountPaise === amt && (!b!.refundId || b!.refundId === rid)
+          : b!.refundId === rid && b!.refundedPaise === amt;
+        if (payment.razorpayRefundId !== rid || !storedOk) return conflict();
+        if (b!.refundStatus === "processed") { tx.delete(pendingRef); record("already_final"); return "already_final"; }
+        if (b!.refundStatus !== "initiated") return conflict();
         tx.update(bookingRef!, { refundStatus: "processed", refundProcessedAt: now, updatedAt: now });
+        tx.delete(pendingRef);
         record("refund_processed");
         return "refund_processed";
       }
-      const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`refund_processed_unmatched_${ev.providerEventId}`);
-      tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
-        kind: "refund_processed_unmatched", paymentId: payment.id, createdAt: now });
-      record("refund_unmatched");
-      return "refund_unmatched";
+      // Not projected yet: only our own active, not-contradicted submission can make this "pending". Anything else is a conflict.
+      if (reservation && reservation.tenantId === payment.tenantId && reservation.amountPaise === amt
+        && !(reservation.providerRefundId && reservation.providerRefundId !== rid)
+        && !(ev.providerRefundReceipt && ev.providerRefundReceipt !== reservation.id)) return pending();
+      return conflict();
     }
 
     if (isPaid) {
@@ -310,6 +331,19 @@ export async function processProviderEvent(
         if (!ev.providerRefundId || (reservation.providerRefundId && ev.providerRefundId !== reservation.providerRefundId)) {
           record("amount_mismatch"); return "amount_mismatch";
         }
+        // Identity before the provider id is stored: our submission carries the request id as the refund receipt. A receipt that is
+        // present must equal it, and while no provider refund id is stored it is REQUIRED (a foreign or dashboard refund of the same
+        // amount carries no matching receipt and is never adopted).
+        if (ev.providerRefundReceipt && ev.providerRefundReceipt !== reservation.id) { record("amount_mismatch"); return "amount_mismatch"; }
+        const pendingRef = db.collection(COLLECTIONS.staffAlerts()).doc(`refund_event_pending_${ev.providerEventId}`);
+        if (!ev.providerRefundReceipt && !reservation.providerRefundId) {
+          // Not yet verifiable: no stored provider id and no receipt to bind this event to our request. No accept, no event record
+          // (so the same event is processed again on redelivery), private pending alert only.
+          tx.set(pendingRef, { id: pendingRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+            kind: "refund_event_pending", paymentId: payment.id, createdAt: now }, { merge: true });
+          return "pending_correlation";
+        }
+        tx.delete(pendingRef);
         if (ev.providerRefundPaymentId && payment.razorpayPaymentId && ev.providerRefundPaymentId !== payment.razorpayPaymentId) { record("amount_mismatch"); return "amount_mismatch"; }
         record("refund_accepted");
         tx.update(reservation.ref, {

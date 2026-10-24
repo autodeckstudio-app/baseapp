@@ -121,15 +121,15 @@ describe("RESERVED refund.created binding (real emulator)", () => {
     const { requestId } = await rr(db, { payment: p, amountPaise: amt, reason: "x", createdBy: "a1" });
     return { pid, pay, requestId };
   }
-  const created = (eid: string, pay: string, rid: string, amt: number | undefined, cur: string | undefined, payAmt = 100000) => {
-    const refund: Record<string, unknown> = { id: rid, payment_id: pay, ...(amt === undefined ? {} : { amount: amt }), ...(cur === undefined ? {} : { currency: cur }) };
+  const created = (eid: string, pay: string, rid: string, amt: number | undefined, cur: string | undefined, payAmt = 100000, receipt?: string) => {
+    const refund: Record<string, unknown> = { id: rid, payment_id: pay, ...(receipt ? { receipt } : {}), ...(amt === undefined ? {} : { amount: amt }), ...(cur === undefined ? {} : { currency: cur }) };
     const e = provider.parseWebhookEvent(JSON.stringify({ event: "refund.created", payload: { refund: { entity: refund }, payment: { entity: { id: pay, amount: payAmt, currency: "INR" } } } }));
     e.providerEventId = eid; return e;
   };
   const reqStatus = async (id: string) => (await db.collection("refundRequests").doc(id).get()).data()!["status"];
   it("partial (30000 < captured 100000) is accepted; redelivery duplicate; payment untouched", async () => {
     const s = await reserved(30000); const before = await payment(s.pid);
-    const e = created("RC" + s.pid, s.pay, "rfnd_a" + s.pid, 30000, "INR");
+    const e = created("RC" + s.pid, s.pay, "rfnd_a" + s.pid, 30000, "INR", 100000, s.requestId);
     expect((await processProviderEvent(db, e)).outcome).toBe("refund_accepted");
     expect(await reqStatus(s.requestId)).toBe("accepted");
     expect((await processProviderEvent(db, e)).outcome).toBe("duplicate");
@@ -138,10 +138,10 @@ describe("RESERVED refund.created binding (real emulator)", () => {
   it("currency mismatch, missing amount, missing refund id, amount = payment amount (wrong binding): rejected, request stays reserved", async () => {
     const s = await reserved(30000);
     for (const [i, e] of [
-      created("RX1" + s.pid, s.pay, "rfnd_b", 30000, "USD"),
-      created("RX2" + s.pid, s.pay, "rfnd_b", undefined, "INR"),
-      created("RX3" + s.pid, s.pay, "", 30000, "INR"),
-      created("RX4" + s.pid, s.pay, "rfnd_b", 100000, "INR"),
+      created("RX1" + s.pid, s.pay, "rfnd_b", 30000, "USD", 100000, s.requestId),
+      created("RX2" + s.pid, s.pay, "rfnd_b", undefined, "INR", 100000, s.requestId),
+      created("RX3" + s.pid, s.pay, "", 30000, "INR", 100000, s.requestId),
+      created("RX4" + s.pid, s.pay, "rfnd_b", 100000, "INR", 100000, s.requestId),
     ].entries()) {
       expect((await processProviderEvent(db, e)).outcome, `case ${i}`).toBe("amount_mismatch");
     }
@@ -149,11 +149,61 @@ describe("RESERVED refund.created binding (real emulator)", () => {
   });
   it("order: created accepted, then a processed event before projection does not write the booking or payment (unmatched, private alert)", async () => {
     const s = await reserved(30000); const before = await payment(s.pid);
-    await processProviderEvent(db, created("RO1" + s.pid, s.pay, "rfnd_c" + s.pid, 30000, "INR"));
+    await processProviderEvent(db, created("RO1" + s.pid, s.pay, "rfnd_c" + s.pid, 30000, "INR", 100000, s.requestId));
     const pe = provider.parseWebhookEvent(JSON.stringify({ event: "refund.processed", payload: { refund: { entity: { id: "rfnd_c" + s.pid, payment_id: s.pay, amount: 30000, currency: "INR", status: "processed" } } } }));
     pe.providerEventId = "RO2" + s.pid;
     expect((await processProviderEvent(db, pe)).outcome).toBe("refund_unmatched");
     expect(await payment(s.pid)).toEqual(before);
     expect(await alerts(s.pid)).toHaveLength(1);
+  });
+});
+
+describe("refund.processed BEFORE the outbox projection (real emulator, real runner)", () => {
+  const fixed = (rid: string) => ({ initiateRefund: async () => ({ providerRefundId: rid }) }) as never;
+  async function setup() {
+    const { reserveRefund, runRefundOutbox } = await import("../../lib/refund-outbox.js");
+    n += 1; const id = `${Date.now()}${n}`; const pid = `rbpay${id}`, bid = `rbb${id}`, pay = `pay_rb${id}`, rid = `rfnd_rb${id}`;
+    const p = { id: pid, tenantId: T, studioId: null, targetType: "booking", jobId: null, bookingId: bid, customerId: "c", amount: 50000, currency: "INR",
+      status: "completed", razorpayPaymentId: pay, razorpayRefundId: null, refundAmount: null } as never;
+    await db.collection("payments").doc(pid).set(p as object);
+    await db.collection("bookings").doc(bid).set({ id: bid, tenantId: T, paymentStatus: "paid" });
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "a1" });
+    const ev = (eid: string, r = rid, receipt: string | null = requestId) => {
+      const e = provider.parseWebhookEvent(JSON.stringify({ event: "refund.processed", payload: { refund: { entity: { id: r, payment_id: pay, amount: 50000, currency: "INR", status: "processed", receipt } } } }));
+      e.providerEventId = eid; return e;
+    };
+    return { pid, bid, rid, requestId, ev, run: () => runRefundOutbox(db, fixed(rid)) };
+  }
+  const pendingAlerts = async (pid: string) => (await alerts(pid)).filter((a) => a["kind"] === "refund_event_pending");
+  it("pending (nonterminal, no event record, no write) -> same event applies exactly once after projection -> redelivery duplicate", async () => {
+    const s = await setup(); const e = s.ev("EB" + s.pid);
+    expect((await processProviderEvent(db, e)).outcome).toBe("pending_correlation");
+    expect((await db.collection("paymentEvents").doc(e.providerEventId).get()).exists).toBe(false);
+    expect((await booking(s.bid))["refundStatus"]).toBeUndefined(); expect((await payment(s.pid))["status"]).toBe("completed");
+    expect(await pendingAlerts(s.pid)).toHaveLength(1);
+    expect((await processProviderEvent(db, e)).outcome).toBe("pending_correlation"); // retry before projection: still pending, still one alert
+    expect(await pendingAlerts(s.pid)).toHaveLength(1);
+    await s.run();
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect((await processProviderEvent(db, e)).outcome).toBe("refund_processed");
+    expect((await booking(s.bid))["refundStatus"]).toBe("processed");
+    expect(await pendingAlerts(s.pid)).toHaveLength(0);
+    expect((await db.collection("paymentEvents").doc(e.providerEventId).get()).data()!["outcome"]).toBe("refund_processed");
+    expect((await processProviderEvent(db, e)).outcome).toBe("duplicate");
+  });
+  it("explicit conflicts before projection are terminal with an alert: other refund id after binding, receipt of another request, wrong amount", async () => {
+    const s = await setup();
+    expect((await processProviderEvent(db, s.ev("EBc1" + s.pid, s.rid, "rr_other"))).outcome).toBe("refund_unmatched");
+    expect((await booking(s.bid))["refundStatus"]).toBeUndefined();
+    await s.run();
+    expect((await processProviderEvent(db, s.ev("EBc2" + s.pid, "rfnd_foreign"))).outcome).toBe("refund_unmatched");
+    expect((await booking(s.bid))["refundStatus"]).toBe("initiated");
+    expect((await payment(s.pid))["razorpayRefundId"]).toBe(s.rid);
+  });
+  it("foreign refund with no receipt for a payment with no active reservation and nothing projected: conflict, no write", async () => {
+    const s = await seed({ reqRid: null, payStatus: "completed", payRid: "" });
+    const bb = await booking(s.bid);
+    expect((await processProviderEvent(db, evt("refund.processed", "EBf" + s.pid, { pay: s.pay, rid: "rfnd_foreign", amt: 50000 }))).outcome).toBe("refund_unmatched");
+    expect(await booking(s.bid)).toEqual(bb);
   });
 });

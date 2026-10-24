@@ -131,7 +131,7 @@ describe("webhook interactions", () => {
     const p = payment();
     await seedPayment(p);
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "a1" });
-    const r = await processProviderEvent(db, ev({ referenceId: p.id, providerRefundId: `mock_rfnd_${requestId}` }));
+    const r = await processProviderEvent(db, ev({ referenceId: p.id, providerRefundId: `mock_rfnd_${requestId}`, providerRefundReceipt: requestId }));
     expect(r.outcome).toBe("refund_accepted");
     const snap = await db.collection(COLLECTIONS.payments()).doc(p.id).get();
     expect(snap.data()!["status"]).toBe("completed");

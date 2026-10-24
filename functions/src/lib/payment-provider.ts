@@ -64,6 +64,8 @@ export interface ProviderWebhookEvent {
   providerPaymentEntityId?: string | null;
   providerPaymentEntityCurrency?: string | null;
   providerRefundStatus?: string | null;
+  /** refund.entity.receipt: we send our refund request id as the receipt when submitting, so it binds an event to our request. */
+  providerRefundReceipt?: string | null;
   providerOrderId?: string | null;
   referenceId?: string | null; // our payment doc id, set as reference_id on the payment link
   amount: number; // paise

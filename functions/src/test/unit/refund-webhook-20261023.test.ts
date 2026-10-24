@@ -40,7 +40,7 @@ describe("reserved refund.created", () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
-    const r = await processProviderEvent(db, event({ providerRefundId: "mock_rfnd_" + requestId }));
+    const r = await processProviderEvent(db, event({ providerRefundId: "mock_rfnd_" + requestId, providerRefundReceipt: requestId }));
     expect(r.outcome).toBe("refund_accepted");
     expect(data["refundRequests"]![requestId]).toMatchObject({ status: "accepted", projectionNeeded: true });
     expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
@@ -86,7 +86,7 @@ describe("reserved refund.created fail-closed binding (refund entity, not paymen
       const p = payment();
       const { db, data } = fakeFirestore(seed(p));
       const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
-      const r = await processProviderEvent(db, event(o));
+      const r = await processProviderEvent(db, event({ providerRefundReceipt: requestId, ...o }));
       expect(r.outcome).toBe("amount_mismatch");
       expect(data["refundRequests"]![requestId]!["status"]).toBe("reserved");
       expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
@@ -96,10 +96,31 @@ describe("reserved refund.created fail-closed binding (refund entity, not paymen
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
-    const e = event({});
+    const e = event({ providerRefundReceipt: requestId });
     expect((await processProviderEvent(db, e)).outcome).toBe("refund_accepted");
     expect((await processProviderEvent(db, e)).outcome).toBe("duplicate");
     expect(data["refundRequests"]![requestId]).toMatchObject({ status: "accepted" });
+  });
+});
+
+
+describe("reserved refund.created correlation (three outcomes)", () => {
+  it("receipt names a different request: conflict, terminal, nothing accepted", async () => {
+    const p = payment(); const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
+    expect((await processProviderEvent(db, event({ providerRefundReceipt: "rr_someone_else" }))).outcome).toBe("amount_mismatch");
+    expect(data["refundRequests"]![requestId]!["status"]).toBe("reserved");
+  });
+  it("no receipt and no stored provider id: NOT YET VERIFIABLE, no accept, no event record; same event accepted once bound", async () => {
+    const p = payment(); const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 80000, reason: "no-show", createdBy: "admin1" });
+    const e = event({ providerRefundId: "rfnd_real" });
+    expect((await processProviderEvent(db, e)).outcome).toBe("pending_correlation");
+    expect(data["refundRequests"]![requestId]!["status"]).toBe("reserved");
+    expect(data["paymentEvents"]?.[e.providerEventId]).toBeUndefined();
+    data["refundRequests"]![requestId]!["providerRefundId"] = "rfnd_real"; data["refundRequests"]![requestId]!["status"] = "submitted";
+    expect((await processProviderEvent(db, e)).outcome).toBe("refund_accepted");
+    expect((await processProviderEvent(db, e)).outcome).toBe("duplicate");
   });
 });
 
