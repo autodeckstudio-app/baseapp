@@ -150,3 +150,47 @@ describe("processProviderEvent", () => {
     expect(again.outcome).toBe("already_final");
   });
 });
+
+// FIXTURES shaped after Razorpay's documented payment_link.* payloads (not live captures).
+describe("documented payment_link.* events (local, fail-closed)", () => {
+  const body = (event: string, o: { amount?: number; currency?: string; linkId?: string; refId?: string } = {}) => JSON.stringify({ entity: "event", event, payload: {
+    payment: { entity: { id: "pay_abc", order_id: "order_1", ...(o.amount === undefined ? {} : { amount: o.amount }), currency: o.currency ?? "INR" } },
+    payment_link: { entity: { id: o.linkId ?? "plink_1", reference_id: o.refId ?? "pay1", ...(o.amount === undefined ? {} : { amount: o.amount }) } } } });
+  const mk = () => { const f = fakeFirestore(seed()); (f.data["payments"]!["pay1"] as Record<string, unknown>)["razorpayPaymentLinkId"] = "plink_1"; return f; };
+
+  it("payment_link.paid completes with matching link id, amount and INR", async () => {
+    const { db, data } = mk();
+    const r = await processProviderEvent(db, ev(body("payment_link.paid", { amount: AMOUNT }), "e1"));
+    expect(r.outcome).toBe("completed");
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "completed" });
+  });
+  it("payment_link.paid with missing amount, wrong amount, wrong currency or another link id completes nothing", async () => {
+    for (const [i, o] of [[1, {}], [2, { amount: AMOUNT + 1 }], [3, { amount: AMOUNT, currency: "USD" }], [4, { amount: AMOUNT, linkId: "plink_other" }], [5, { amount: AMOUNT, refId: "someone_else" }]] as const) {
+      const { db, data } = mk();
+      const r = await processProviderEvent(db, ev(body("payment_link.paid", o), `e${i}`));
+      expect(["amount_mismatch", "unknown_payment"]).toContain(r.outcome);
+      expect(data["payments"]!["pay1"]!["status"]).not.toBe("completed");
+    }
+  });
+  it("payment_link.expired on a pending payment records link_expired but does not finalise it; a later capture still completes", async () => {
+    const { db, data } = mk();
+    expect((await processProviderEvent(db, ev(body("payment_link.expired"), "x1"))).outcome).toBe("link_expired");
+    expect(data["payments"]!["pay1"]!["status"]).toBe("pending");
+    expect(data["bookings"]!["b1"]!["paymentStatus"]).toBe("unpaid");
+    const r = await processProviderEvent(db, ev(body("payment.captured", { amount: AMOUNT }), "x2"));
+    expect(r.outcome).toBe("completed");
+  });
+  it("payment_link.cancelled with a non-matching link id is not applied; replay is a duplicate", async () => {
+    const { db, data } = mk();
+    expect((await processProviderEvent(db, ev(body("payment_link.cancelled", { linkId: "plink_other" }), "c1"))).outcome).toBe("unknown_payment");
+    expect(data["payments"]!["pay1"]!["linkTerminal"]).toBeUndefined();
+    expect((await processProviderEvent(db, ev(body("payment_link.cancelled"), "c2"))).outcome).toBe("link_cancelled");
+    expect((await processProviderEvent(db, ev(body("payment_link.cancelled"), "c2"))).outcome).toBe("duplicate");
+  });
+  it("payment_link.expired after completion is already_final and changes nothing", async () => {
+    const { db, data } = mk();
+    await processProviderEvent(db, ev(body("payment_link.paid", { amount: AMOUNT }), "p1"));
+    expect((await processProviderEvent(db, ev(body("payment_link.expired"), "p2"))).outcome).toBe("already_final");
+    expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
+  });
+});

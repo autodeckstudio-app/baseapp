@@ -23,6 +23,8 @@ export type WebhookOutcome =
   | "failed"
   | "refunded"
   | "duplicate"
+  | "link_expired"
+  | "link_cancelled"
   | "already_final"
   | "unknown_payment"
   | "amount_mismatch"
@@ -58,7 +60,7 @@ export async function processProviderEvent(
 ): Promise<{ outcome: WebhookOutcome; paymentId: string | null }> {
   const eventRef = db.collection(COLLECTIONS.paymentEvents()).doc(ev.providerEventId);
   const handled: ProviderWebhookEvent["eventType"][] = [
-    "payment.captured", "payment.link.paid", "payment.failed", "refund.created",
+    "payment.captured", "payment.link.paid", "payment_link.paid", "payment_link.expired", "payment_link.cancelled", "payment.failed", "refund.created",
   ];
   if (!handled.includes(ev.eventType)) {
     await eventRef.set({ eventType: ev.eventType, outcome: "ignored", processedAt: new Date().toISOString() }).catch(() => undefined);
@@ -78,7 +80,7 @@ export async function processProviderEvent(
   const paymentRef = db.collection(COLLECTIONS.payments()).doc(found.id);
   const user = systemUser(found.tenantId);
   const now = new Date().toISOString();
-  const isPaid = ev.eventType === "payment.captured" || ev.eventType === "payment.link.paid";
+  const isPaid = ev.eventType === "payment.captured" || ev.eventType === "payment.link.paid" || ev.eventType === "payment_link.paid";
 
   const outcome = await db.runTransaction(async (tx): Promise<WebhookOutcome> => {
     // ---- reads ----
@@ -93,6 +95,11 @@ export async function processProviderEvent(
       // completed/refunded are final; partially_refunded is final for capture too —
       // a late capture event must never reactivate money that was partly returned.
       if (payment.status === "completed" || payment.status === "refunded" || payment.status === "partially_refunded") { record("already_final"); return "already_final"; }
+      if (ev.eventType === "payment_link.paid") {
+        // NEW documented-name path fails closed: the stored link id must match, and amount and currency must be present and equal.
+        if (!ev.providerPaymentLinkId || payment.razorpayPaymentLinkId !== ev.providerPaymentLinkId || (ev.referenceId && ev.referenceId !== payment.id)) { record("unknown_payment"); return "unknown_payment"; }
+        if (!ev.amount || ev.amount !== payment.amount || ev.currency !== "INR") { record("amount_mismatch"); return "amount_mismatch"; }
+      }
       if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
 
       if (payment.targetType === "membership") {
@@ -170,6 +177,17 @@ export async function processProviderEvent(
       writeAuditLog(tx, { action: "invoice.issued", entityType: "Invoice", entityId: invoiceRef.id, user, studioId: payment.studioId,
         after: { invoiceNumber: invoice.invoiceNumber, total: invoice.total, status: "issued" } });
       return "completed";
+    }
+
+    if (ev.eventType === "payment_link.expired" || ev.eventType === "payment_link.cancelled") {
+      // Terminal for the LINK only. Recorded for reconciliation; no slot release, cancel or refund here
+      // (no waiting-cancel state exists yet). Correlation must be by the stored link id.
+      const o: WebhookOutcome = ev.eventType === "payment_link.expired" ? "link_expired" : "link_cancelled";
+      if (!ev.providerPaymentLinkId || payment.razorpayPaymentLinkId !== ev.providerPaymentLinkId) { record("unknown_payment"); return "unknown_payment"; }
+      if (payment.status !== "pending") { record("already_final"); return "already_final"; }
+      record(o);
+      tx.update(paymentRef, { providerEventId: ev.providerEventId, linkTerminal: o, linkTerminalAt: now, updatedAt: now });
+      return o;
     }
 
     if (ev.eventType === "payment.failed") {
