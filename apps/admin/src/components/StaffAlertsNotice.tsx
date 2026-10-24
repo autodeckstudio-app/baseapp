@@ -15,13 +15,23 @@ export function useStaffAlerts(): StaffAlert[] {
 }
 
 /** Count only: no customer details. Persistent, read-only. */
+const TEXT: Record<string, (n: number) => string> = {
+  ambiguous_payment_link: (n) => `${n === 1 ? "1 online payment notice matched" : `${n} online payment notices matched`} more than one payment, so ${n === 1 ? "it was" : "they were"} not applied automatically. A manual check is needed.`,
+  late_membership_payment: (n) => `${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired. A full refund request was recorded.`,
+  late_membership_refund_not_reserved: (n) => `${n === 1 ? "1 payment arrived" : `${n} payments arrived`} for a membership that was already cancelled or expired, and a refund request could not be recorded. A manual check is needed.`,
+};
+
+/** Count per kind only: no customer details. Persistent, read-only. */
 export function StaffAlertsNotice() {
   const alerts = useStaffAlerts();
   if (alerts.length === 0) return null;
+  const kinds = Array.from(new Set(alerts.map((a) => a.kind)));
   return (
     <div className="ax-panel" role="status" data-testid="staff-alerts-notice">
       <span className="ax-label">Needs a manual check</span>
-      <p style={{ margin: "4px 0 0" }}>{alerts.length === 1 ? "1 online payment notice matched more than one payment, so it was not applied automatically." : `${alerts.length} online payment notices matched more than one payment, so they were not applied automatically.`} A manual check is needed.</p>
+      {kinds.map((k) => (
+        <p key={k} style={{ margin: "4px 0 0" }}>{(TEXT[k] ?? (() => "An automatic step needs a manual check."))(alerts.filter((a) => a.kind === k).length)}</p>
+      ))}
     </div>
   );
 }
