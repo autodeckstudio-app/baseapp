@@ -109,7 +109,10 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     fastComplete = false;
     const events = db.collection(COLLECTIONS.paymentEvents());
     const claimsRange = () => events.where("__name__", ">=", "refund_").where("__name__", "<", "refund`").orderBy("__name__");
-    const pushClaim = async (docId: string, d: { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string }) => {
+    const pushClaim = async (docId: string, d: { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string; outboxRequestId?: string }) => {
+      // Outbox-owned tombstones are managed by the refund-outbox lifecycle,
+      // not legacy claims: never list them as refund work.
+      if (typeof d.outboxRequestId === "string") return;
       if (d.reconcileState === "resolved") return;
       const paymentId = docId.slice("refund_".length);
       if (!paymentId || seenClaimPayments.has(paymentId)) return;
@@ -185,7 +188,8 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       lastSeen = page.docs[page.size - 1]!.id;
       afterId = lastSeen;
       for (const doc of page.docs) {
-        const d = doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string };
+        const d = doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string; outboxRequestId?: string };
+        if (typeof d.outboxRequestId === "string") continue; // outbox-owned tombstone, not a legacy claim
         if (typeof d.tenantId === "string") continue; // already indexed
         const paymentId = doc.id.slice("refund_".length);
         if (!paymentId) continue;

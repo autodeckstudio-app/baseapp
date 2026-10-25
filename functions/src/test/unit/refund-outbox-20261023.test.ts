@@ -447,3 +447,27 @@ describe("terminal cleanup ownership", () => {
     expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ outboxRequestId: "rr_pay1_2" });
   });
 });
+
+describe("mixed-vintage consumer compatibility", () => {
+  it("a marked tombstone left behind by an OLD-vintage projector (8e14e774 write-set: ledger + projected request + guard deleted, tombstone kept) is swept by the next reservation - never a wedge", async () => {
+    const p = payment({ status: "partially_refunded", refundAmount: 50000 });
+    const seeded: Record<string, Record<string, Record<string, unknown>>> = { ...seed(p) };
+    // Exact write-set of the deployed 8e14e774 projectRefund: payment +
+    // ledger + projected request; guard deleted; NO tombstone handling.
+    seeded["paymentRefunds"] = { pr_pay1_rfnd_old: { source: "outbox", requestId: "rr_pay1_1", paymentId: "pay1", providerRefundId: "rfnd_old", amountPaise: 50000, currency: "INR", createdAt: "2026-10-25T10:00:00.000Z" } };
+    seeded["refundRequests"] = { rr_pay1_1: { id: "rr_pay1_1", tenantId: "t1", studioId: "s1", paymentId: "pay1", jobId: "job1", bookingId: "b1", amountPaise: 50000, reason: "old", status: "projected", providerRefundId: "rfnd_old", projectionNeeded: false, leaseBy: null, leaseAt: null, lastError: null, createdBy: "admin1", createdAt: "2026-10-25T09:00:00.000Z", updatedAt: "2026-10-25T10:00:00.000Z" } };
+    seeded["paymentEvents"] = { refund_pay1: { paymentId: "pay1", outboxRequestId: "rr_pay1_1", claimedBy: "refund-outbox", claimedAt: "2026-10-25T09:00:00.000Z" } };
+    const { db, data } = fakeFirestore(seeded);
+    // The remaining balance is still refundable: the leftover tombstone must
+    // not wedge it. The reservation sweeps the marker atomically.
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "second partial", createdBy: "admin1", expectedBookingId: "b1", expectedJobId: "job1" });
+    expect(requestId).toBe("rr_pay1_2");
+    expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ outboxRequestId: "rr_pay1_2" });
+    // And a true legacy claim (unmarked) still blocks.
+    const seeded2: Record<string, Record<string, Record<string, unknown>>> = { ...seed(payment({ id: "pay9", jobId: "job1", bookingId: "b1" })) };
+    seeded2["paymentEvents"] = { refund_pay9: { paymentId: "pay9", claimedAt: "2026-10-24T10:00:00.000Z", claimedBy: "legacy" } };
+    const { db: db2 } = fakeFirestore(seeded2);
+    await expect(reserveRefund(db2, { payment: payment({ id: "pay9" }), amountPaise: 1000, reason: "x", createdBy: "a" }))
+      .rejects.toThrow(/manual refund obligation/);
+  });
+});

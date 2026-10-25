@@ -127,7 +127,10 @@ export async function runCancel(
       if (fresh.tenantId !== booking.tenantId || fresh.studioId !== booking.studioId) {
         throw new HttpsError("failed-precondition", "The booking's studio changed. Reload and try again.");
       }
-      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1));
+      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(2));
+      // Ambiguity fails closed: a second job for the same booking is a
+      // data-integrity stop, never a silent pick.
+      if (jobs.size > 1) throw new HttpsError("failed-precondition", "This booking has more than one job. Cancel it by hand.");
       const jobDoc = jobs.docs[0];
       const j = jobDoc?.data() as ServiceJob | undefined;
       if (j && !CANCELLABLE_JOB.includes(j.status)) throw new HttpsError("failed-precondition", "Work has already started on this job.");
@@ -135,7 +138,11 @@ export async function runCancel(
       // same rules as the pre-transaction preview: a payment that appears,
       // starts processing, or completes between the preview read and this
       // commit must change the outcome, never slip past a stale choice.
-      const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "processing", "completed"]).limit(10)) : null;
+      const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "processing", "completed"]).limit(11)) : null;
+      // Bounded overflow behavior: more records than the inspected page must
+      // stop the cancellation, never let an unseen processing/completed
+      // payment slip past the eligibility checks below.
+      if ((pays?.size ?? 0) > 10) throw new HttpsError("failed-precondition", "This booking has too many payment records to cancel safely here. Cancel it by hand and refund each payment from Payments.");
       const txPayDocs = pays?.docs ?? [];
       if (txPayDocs.some((d) => d.data()["status"] === "processing")) {
         throw new HttpsError("failed-precondition", "A payment is still processing on this booking. Wait for it to settle, then cancel.");
@@ -169,6 +176,29 @@ export async function runCancel(
       }
       planBox.committed = { feePaise: txPlan.feePaise, feeStatus: txPlan.feeStatus, refundPaise: txPlan.refundPaise, paidPaise: txPlan.paidPaise, policyFeePaise: txTerms.feePaise, manualRefund: txManualRefund };
       const invoiceSnap = txNeedsRefund && freshPayment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(freshPayment.invoiceId)) : null;
+      // Shared ownership validation for BOTH refund methods (the provider
+      // path's planner/runner checks never cover the manual path): the fresh
+      // payment must belong to THIS booking, job, studio and tenant; the job
+      // must agree on tenant/studio; a voided invoice must be the payment's
+      // own same-tenant invoice. A same-tenant-but-wrong-link payment is a
+      // stop, not a refund target.
+      if (txNeedsRefund && freshPayment) {
+        if (freshPayment.tenantId !== fresh.tenantId || freshPayment.studioId !== fresh.studioId) {
+          throw new HttpsError("failed-precondition", "The payment does not belong to this booking's studio. The booking is NOT cancelled.");
+        }
+        if (freshPayment.bookingId !== data.bookingId) {
+          throw new HttpsError("failed-precondition", "The payment is no longer linked to this booking. The booking is NOT cancelled.");
+        }
+        if ((freshPayment.jobId ?? null) !== (jobDoc?.id ?? null)) {
+          throw new HttpsError("failed-precondition", "The payment is no longer linked to this booking's job. The booking is NOT cancelled.");
+        }
+        if (j && (j.tenantId !== fresh.tenantId || j.studioId !== fresh.studioId)) {
+          throw new HttpsError("failed-precondition", "The job does not belong to this booking's studio. The booking is NOT cancelled.");
+        }
+        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).tenantId !== fresh.tenantId) {
+          throw new HttpsError("failed-precondition", "The invoice does not belong to this booking's tenant. The booking is NOT cancelled.");
+        }
+      }
       const reads = await readCancelReads(tx, db, fresh, data.bookingId);
 
       // Atomic refund reservation (provider payments only): planned and

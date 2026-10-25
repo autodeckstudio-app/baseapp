@@ -162,15 +162,16 @@ export async function planReserveInTx(
     return { ok: false, code: same ? "same_reservation" : "conflict", reason: `payment ${payment.id} already has an active refund request (${id})` };
   }
   // Evaluated AFTER the active-reservation check so the more specific live
-  // conflict wins: an outbox tombstone with a live reservation reports the
-  // reservation; a tombstone surviving a completed projection is a permanent
-  // dedup marker (legacy claim semantics); an unmarked doc is a true legacy
-  // manual-refund claim.
-  if (manualClaim.exists) {
-    const marker = (manualClaim.data() as { outboxRequestId?: string } | undefined)?.outboxRequestId;
-    return marker
-      ? { ok: false, code: "conflict", reason: `payment ${payment.id} already has a completed outbox refund (${marker})` }
-      : { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
+  // conflict wins. A MARKED tombstone with no active reservation belongs to a
+  // TERMINAL request: projectors of ANY vintage can leave one behind (the
+  // 8e14e774 webhook/runner copies project and delete the guard but do not
+  // know about tombstones), so it must never wedge a later legitimate refund
+  // - it is swept below by overwriting it with this reservation's own marker
+  // in the same transaction. With no active reservation the payment's own
+  // refunded/partially_refunded status is what excludes the legacy producer.
+  // An UNMARKED doc is a true legacy manual-refund claim: conflict.
+  if (manualClaim.exists && typeof (manualClaim.data() as { outboxRequestId?: string } | undefined)?.outboxRequestId !== "string") {
+    return { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
   }
   // Count only real rr_* requests (never the transient guard) so ids stay
   // unique even after a guard is released on a terminal request.
@@ -211,7 +212,11 @@ export async function planReserveInTx(
 export function applyReserveInTx(tx: FirebaseFirestore.Transaction, plan: Extract<ReservePlan, { ok: true }>): { requestId: string } {
   tx.create(plan.guardRef, plan.guard);
   tx.create(plan.requestRef, plan.request);
-  tx.create(plan.legacyClaimRef, plan.legacyClaim);
+  // set (not create): also sweeps a terminal leftover tombstone from a prior
+  // request. Cross-vintage exclusion does not depend on create semantics -
+  // the legacy producer's claim transaction READ this doc, so this write
+  // alone forces its retry onto the marker.
+  tx.set(plan.legacyClaimRef, plan.legacyClaim);
   return { requestId: plan.request.id };
 }
 

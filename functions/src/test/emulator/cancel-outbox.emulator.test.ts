@@ -360,3 +360,54 @@ describe("payment mutations between preview read and commit", () => {
     expect(mockProvider.initiateRefundCallCount).toBe(0);
   });
 });
+
+describe("refund ownership validation (both methods)", () => {
+  it("manual path: a same-tenant payment linked to a DIFFERENT booking refuses the cancel - no payment/invoice writes", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    await db.collection(COLLECTIONS.payments()).doc(payId).update({ bookingId: "bOTHER" });
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/no longer linked to this booking/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+    expect(((await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment).status).toBe("completed");
+  });
+
+  it("manual path: a foreign-studio payment refuses the cancel", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    await db.collection(COLLECTIONS.payments()).doc(payId).update({ studioId: "sFOREIGN" });
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/does not belong to this booking's studio/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+  });
+});
+
+describe("bounded overflow behavior", () => {
+  it("more than 10 payment records on the job fails closed", { timeout: 30000 }, async () => {
+    const { bookingId, jobId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    for (let n = 0; n < 11; n++) {
+      await db.collection(COLLECTIONS.payments()).doc(`pay_extra_${n}`).set({
+        id: `pay_extra_${n}`, tenantId: "t1", studioId: "s1", targetType: "job", jobId, bookingId,
+        membershipId: null, giftId: null, customerId: "c1", amount: 100, currency: "INR",
+        method: "cash", status: "pending", razorpayPaymentLinkId: null, razorpayPaymentId: null,
+        razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
+        manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null,
+        completedAt: null, failedAt: null, cancelledAt: null, refundedAt: null,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      });
+    }
+    await expect(runCancel(adminUser(), { bookingId, reason: "x reason", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/too many payment records/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+  });
+
+  it("a second job on the booking fails closed instead of silently picking one", { timeout: 30000 }, async () => {
+    const { bookingId, jobId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    await db.collection(COLLECTIONS.jobs()).doc("job_second").set({
+      id: "job_second", tenantId: "t1", studioId: "s1", bookingId, status: "PENDING_VEHICLE",
+      paymentStatus: "unpaid", statusHistory: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    await expect(runCancel(adminUser(), { bookingId, reason: "x reason", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/more than one job/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+    void jobId;
+  });
+});
