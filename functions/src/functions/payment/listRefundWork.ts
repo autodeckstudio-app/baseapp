@@ -23,7 +23,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   const db = getFirestore();
   const tenantId = user.claims.tenantId;
 
-  const [reqSnap, paySnap] = await Promise.all([
+  const [reqSnap, paySnap, claimSnap] = await Promise.all([
     db.collection(COLLECTIONS.refundRequests())
       .where("tenantId", "==", tenantId)
       .where("status", "in", [...ACTIVE_STATUSES])
@@ -32,6 +32,13 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     db.collection(COLLECTIONS.payments())
       .where("tenantId", "==", tenantId)
       .where("invoiceReviewNeeded", "==", true)
+      .limit(100)
+      .get(),
+    // Retained legacy refund claims (paymentEvents/refund_<paymentId>): the
+    // deterministic ids make an exact prefix range possible.
+    db.collection(COLLECTIONS.paymentEvents())
+      .where("__name__", ">=", "refund_")
+      .where("__name__", "<", "refund`")
       .limit(100)
       .get(),
   ]);
@@ -69,5 +76,32 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     };
   });
   reviewPayments.sort(sortDesc);
-  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50) };
+
+  // Legacy claims for THIS tenant that still need attention: the payment is
+  // not refunded yet and the claim is not marked resolved.
+  const legacyClaims: {
+    paymentId: string; claimedAt: string | null; reconcileState: string | null; reconcileNote: string | null;
+    paymentStatus: string | null; amount: number | null; currency: string | null;
+  }[] = [];
+  for (const doc of claimSnap.docs) {
+    const d = doc.data() as { paymentId?: string; claimedAt?: string; reconcileState?: string; reconcileNote?: string };
+    if (d.reconcileState === "resolved") continue;
+    const paymentId = doc.id.slice("refund_".length);
+    if (!paymentId) continue;
+    const payDoc = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+    if (!payDoc.exists) continue;
+    const pd = payDoc.data()!;
+    if (pd.tenantId !== tenantId) continue;
+    if (pd.status === "refunded" && d.reconcileState === "resolved") continue;
+    legacyClaims.push({
+      paymentId,
+      claimedAt: typeof d.claimedAt === "string" ? d.claimedAt : null,
+      reconcileState: typeof d.reconcileState === "string" ? d.reconcileState : null,
+      reconcileNote: typeof d.reconcileNote === "string" ? d.reconcileNote : null,
+      paymentStatus: typeof pd.status === "string" ? pd.status : null,
+      amount: typeof pd.amount === "number" ? pd.amount : null,
+      currency: typeof pd.currency === "string" ? pd.currency : null,
+    });
+  }
+  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50) };
 });

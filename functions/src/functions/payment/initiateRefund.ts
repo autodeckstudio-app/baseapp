@@ -5,15 +5,15 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Payment, Invoice } from "@autodeck/core";
+import type { Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiateRefundSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { activeReservation } from "../../lib/refund-outbox.js";
+import { projectLegacyRefund } from "../../lib/refund-claims.js";
 
 export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -159,148 +159,8 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     }
   }
 
-  // Converged = this exact provider refund was already accounted while this
-  // handler was in flight (webhook event, or a replayed own projection):
-  // the money is truthfully returned exactly once, so project nothing again.
-  let converged = false;
-  await db.runTransaction(async (tx) => {
-    // All reads must happen before any writes within a Firestore transaction.
-    // The payment is re-read INSIDE this transaction: the exclusivity claim
-    // was won BEFORE the provider call, and another path (webhook event,
-    // outbox projection) may have accounted money since. Never overwrite
-    // another path's accounting from the stale pre-transaction snapshot.
-    const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(data.paymentId));
-    if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
-    const fresh = freshSnap.data() as Payment;
-    // The provider was called with the PRE-transaction snapshot. If the
-    // payment's identity moved in flight (amount, currency, provider payment
-    // id, invoice/job/booking linkage), the refund that was actually
-    // submitted no longer matches the current record: HOLD with the claim
-    // retained, zero writes - never project a different amount than was
-    // submitted, never void a different invoice, never touch a re-linked
-    // job or booking.
-    const identityDrift =
-      fresh.tenantId !== payment.tenantId ||
-      fresh.amount !== payment.amount ||
-      fresh.currency !== payment.currency ||
-      fresh.razorpayPaymentId !== payment.razorpayPaymentId ||
-      fresh.invoiceId !== payment.invoiceId ||
-      fresh.jobId !== payment.jobId ||
-      fresh.bookingId !== payment.bookingId;
-    if (identityDrift) {
-      throw new HttpsError(
-        "unavailable",
-        "Payment identity changed while the refund was in flight; held for reconciliation. The refund claim is retained.",
-      );
-    }
-    if (providerRefundId) {
-      const ledgerSnap = await tx.get(
-        db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${data.paymentId}_${providerRefundId}`),
-      );
-      if (ledgerSnap.exists) {
-        // Same provider refund id already accounted. Converge only when the
-        // entry's identity AGREES (same payment, same amount, same
-        // currency); a conflicting entry is a hold, not a no-op.
-        const prior = ledgerSnap.data() as { paymentId?: string; amountPaise?: number; currency?: string | null };
-        if (prior.paymentId !== data.paymentId || prior.amountPaise !== payment.amount ||
-            (prior.currency ?? null) !== (payment.currency ?? null)) {
-          throw new HttpsError(
-            "unavailable",
-            `Existing accounting for provider refund ${providerRefundId} conflicts with this payment; held for reconciliation. The refund claim is retained.`,
-          );
-        }
-        // By THIS path's own earlier commit or the webhook's strict-bound
-        // projection: the same money counted once. Converge, zero writes.
-        converged = true;
-        return;
-      }
-    }
-    // Any other accounting on this payment (a partial webhook projection, an
-    // outbox projection) means this single-shot FULL-refund projection no
-    // longer describes reality: overwriting refundAmount/status would erase
-    // the other path's truthful partial state. HOLD with the claim retained.
-    if (fresh.status !== "completed" || (fresh.refundAmount ?? 0) !== 0) {
-      throw new HttpsError(
-        "unavailable",
-        `Payment state changed while the refund was in flight (status '${fresh.status}', refunded ${fresh.refundAmount ?? 0}); held for reconciliation. The refund claim is retained.`,
-      );
-    }
-    const invoiceSnap = payment.invoiceId
-      ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId))
-      : null;
-
-    // Mark original payment as refunded
-    tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
-      status: "refunded",
-      razorpayRefundId: providerRefundId,
-      refundAmount: fresh.amount,
-      refundedAt: now,
-      updatedAt: now,
-    });
-    // Cross-path per-refund identity: record this provider refund so a later
-    // webhook event or outbox projection for the SAME refund cannot count it
-    // again. The in-transaction READ above is what makes a racing webhook
-    // projection conflict and retry into "duplicate" instead of double-counting.
-    if (providerRefundId) {
-      tx.set(db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${data.paymentId}_${providerRefundId}`), {
-        paymentId: data.paymentId, providerRefundId,
-        amountPaise: fresh.amount, currency: fresh.currency ?? null,
-        source: "legacy", createdAt: now,
-      });
-    }
-
-    // Void the linked invoice (if any)
-    if (payment.invoiceId && invoiceSnap) {
-      if (invoiceSnap.exists) {
-        const invoice = invoiceSnap.data() as Invoice;
-        if (invoice.status !== "void") {
-          tx.update(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId), {
-            status: "void",
-            voidedAt: now,
-            voidedReason: `Refund initiated: ${data.reason}`,
-            updatedAt: now,
-          });
-          writeAuditLog(tx, {
-            action: "invoice.voided",
-            entityType: "Invoice",
-            entityId: payment.invoiceId,
-            user,
-            studioId: payment.studioId,
-            after: { status: "void", reason: data.reason },
-          });
-        }
-      }
-    }
-
-    // Update job paymentStatus — the job is always present, booking-sourced or walk-in
-    if (payment.jobId) {
-      tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), {
-        paymentStatus: "refunded",
-        updatedAt: now,
-      });
-    }
-
-    // Sync linked booking, if any
-    if (payment.bookingId) {
-      tx.update(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId), {
-        paymentStatus: "refunded",
-        updatedAt: now,
-      });
-    }
-
-    writeAuditLog(tx, {
-      action: "payment.refunded",
-      entityType: "Payment",
-      entityId: data.paymentId,
-      user,
-      studioId: payment.studioId,
-      after: {
-        status: "refunded",
-        reason: data.reason,
-        refundAmount: payment.amount,
-        providerRefundId,
-      },
-    });
+  const { converged } = await projectLegacyRefund(db, {
+    paymentId: data.paymentId, payment, providerRefundId, reason: data.reason, user, now,
   });
 
   return { paymentId: data.paymentId, refunded: true, providerRefundId, ...(converged ? { converged: true } : {}) };

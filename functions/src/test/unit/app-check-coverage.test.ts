@@ -70,6 +70,7 @@ const ENFORCED = [
   "payment/initiateRefund.ts",
   "payment/listRefundWork.ts",
   "payment/processRefundOutbox.ts",
+  "payment/reconcileRefundClaims.ts",
   "payment/requestBookingRefund.ts",
   "protection/createProtection.ts",
   "protection/updateProtection.ts",
