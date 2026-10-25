@@ -523,3 +523,59 @@ describe("reconciliation adversarial invariants (review round 3)", () => {
     expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(false);
   });
 });
+
+describe("reconciliation adversarial invariants (review round 4)", () => {
+  it("list converges across calls past 600 resolved backfilled claims (persisted fast-path cursor)", async () => {
+    for (let i = 0; i < 600; i++) {
+      const rid = `rs-${String(i).padStart(4, "0")}`;
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${rid}`).set({
+        paymentId: rid, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "x",
+        reconcileState: "resolved", reconcileNote: "done",
+      });
+    }
+    const p = payment({ id: "zz-fasttarget" });
+    await seed(p);
+    await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).set({
+      paymentId: p.id, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "a1", reconcileState: "held", reconcileNote: "pending",
+    });
+    const auth = adminAuth();
+    const first = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean };
+    expect(first.legacyClaims.some((c) => c.paymentId === p.id)).toBe(false);
+    expect(first.legacyScanComplete).toBe(false);
+    const second = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean };
+    expect(second.legacyClaims.some((c) => c.paymentId === p.id)).toBe(true);
+  });
+
+  it("concurrent release/recreate during discovery: new generation never indexed from stale data, never resurrected", async () => {
+    for (let i = 0; i < 300; i++) {
+      const fid = `fd${String(i).padStart(4, "0")}`;
+      await db.collection(COLLECTIONS.payments()).doc(fid).set(payment({ id: fid, tenantId: "t2" }));
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${fid}`).set({ paymentId: fid, claimedAt: new Date().toISOString(), claimedBy: "x" });
+    }
+    const p = payment({ id: "zz-racetarget" });
+    await seed(p);
+    await plantClaim(p.id);
+    // release + recreate (new generation) while the list call scans the 300
+    // foreign claims - whichever interleaving wins, the new generation must
+    // end without a stale tenantId index write.
+    const swap = (async () => {
+      await new Promise((r) => setTimeout(r, 80));
+      const c = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const prev = (await c.get()).data()!.claimedAt;
+      await c.delete();
+      await c.set({ paymentId: p.id, claimedAt: prev, claimedBy: "a2" });
+      // the payment itself is concurrently removed (data repair): no fresh
+      // binding exists from which a tenantId could truthfully be indexed
+      await db.collection(COLLECTIONS.payments()).doc(p.id).delete();
+    })();
+    await listRefundWork.run({ data: {}, auth: adminAuth() } as never);
+    await swap;
+    const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
+    // In EVERY interleaving: the new generation survives, is never deleted by
+    // the listing, and never carries a tenantId indexed from a stale read
+    // (fresh payment binding is gone; stale generation was wiped).
+    expect(claim.exists).toBe(true);
+    expect(claim.data()!.claimedBy).toBe("a2");
+    expect(claim.data()!.tenantId).toBeUndefined();
+  });
+});
