@@ -77,31 +77,53 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   });
   reviewPayments.sort(sortDesc);
 
-  // Legacy claims for THIS tenant that still need attention: the payment is
-  // not refunded yet and the claim is not marked resolved.
+  // Legacy claims for THIS tenant that still need attention: the claim is
+  // not marked resolved and the payment is not already refunded. Paginated
+  // with a cursor (bounded scan) so other tenants' or resolved claims ahead
+  // in id order cannot starve this tenant's unresolved rows behind the
+  // first page; a backfilled tenantId skips foreign claims without a read.
   const legacyClaims: {
     paymentId: string; claimedAt: string | null; reconcileState: string | null; reconcileNote: string | null;
     paymentStatus: string | null; amount: number | null; currency: string | null;
   }[] = [];
-  for (const doc of claimSnap.docs) {
-    const d = doc.data() as { paymentId?: string; claimedAt?: string; reconcileState?: string; reconcileNote?: string };
-    if (d.reconcileState === "resolved") continue;
-    const paymentId = doc.id.slice("refund_".length);
-    if (!paymentId) continue;
-    const payDoc = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
-    if (!payDoc.exists) continue;
-    const pd = payDoc.data()!;
-    if (pd.tenantId !== tenantId) continue;
-    if (pd.status === "refunded" && d.reconcileState === "resolved") continue;
-    legacyClaims.push({
-      paymentId,
-      claimedAt: typeof d.claimedAt === "string" ? d.claimedAt : null,
-      reconcileState: typeof d.reconcileState === "string" ? d.reconcileState : null,
-      reconcileNote: typeof d.reconcileNote === "string" ? d.reconcileNote : null,
-      paymentStatus: typeof pd.status === "string" ? pd.status : null,
-      amount: typeof pd.amount === "number" ? pd.amount : null,
-      currency: typeof pd.currency === "string" ? pd.currency : null,
-    });
+  {
+    let cursor: import("firebase-admin/firestore").QueryDocumentSnapshot | null = null;
+    let scanned = 0;
+    const maxScan = 500;
+    while (legacyClaims.length < 50 && scanned < maxScan) {
+      let q = db.collection(COLLECTIONS.paymentEvents())
+        .where("__name__", ">=", "refund_")
+        .where("__name__", "<", "refund`")
+        .orderBy("__name__")
+        .limit(100);
+      if (cursor) q = q.startAfter(cursor);
+      const page = await q.get();
+      if (page.empty) break;
+      scanned += page.size;
+      cursor = page.docs[page.size - 1]!;
+      for (const doc of page.docs) {
+        if (legacyClaims.length >= 50) break;
+        const d = doc.data() as { paymentId?: string; claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string };
+        if (d.reconcileState === "resolved") continue;
+        const paymentId = doc.id.slice("refund_".length);
+        if (!paymentId) continue;
+        if (typeof d.tenantId === "string" && d.tenantId !== tenantId) continue;
+        const payDoc = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+        if (!payDoc.exists) continue;
+        const pd = payDoc.data()!;
+        if (pd.tenantId !== tenantId) continue;
+        legacyClaims.push({
+          paymentId,
+          claimedAt: typeof d.claimedAt === "string" ? d.claimedAt : null,
+          reconcileState: typeof d.reconcileState === "string" ? d.reconcileState : null,
+          reconcileNote: typeof d.reconcileNote === "string" ? d.reconcileNote : null,
+          paymentStatus: typeof pd.status === "string" ? pd.status : null,
+          amount: typeof pd.amount === "number" ? pd.amount : null,
+          currency: typeof pd.currency === "string" ? pd.currency : null,
+        });
+      }
+      if (page.size < 100) break;
+    }
   }
   return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50) };
 });
