@@ -175,7 +175,7 @@ describe("processProviderEvent", () => {
   it("refund.created on a completed, invoiced payment refunds it, voids the invoice and marks the job refunded", async () => {
     const { db, data } = fakeFirestore(seed());
     await processProviderEvent(db, ev(linkPaid("1"), "evt_1"));
-    const refund = JSON.stringify({ event: "refund.created", payload: { refund: { entity: { id: "rfnd_1", payment_id: "pay_abc", amount: AMOUNT } } } });
+    const refund = JSON.stringify({ event: "refund.created", payload: { refund: { entity: { id: "rfnd_1", payment_id: "pay_abc", amount: AMOUNT, currency: "INR", status: "processed" } } } });
     const r = await processProviderEvent(db, ev(refund, "evt_r"));
     expect(r.outcome).toBe("refunded");
     expect(data["payments"]!["pay1"]).toMatchObject({ status: "refunded", razorpayRefundId: "rfnd_1" });

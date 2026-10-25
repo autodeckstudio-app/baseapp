@@ -54,6 +54,11 @@ export interface ProviderWebhookEvent {
   providerRefundAmount?: number | null;
   providerRefundCurrency?: string | null;
   providerRefundReceipt?: string | null;
+  // The refund entity's OWN payment id and lifecycle status - distinct from
+  // the payment entity's id. Binding evidence must come from the refund
+  // entity itself; a missing or conflicting value never "agrees".
+  providerRefundPaymentId?: string | null;
+  providerRefundStatus?: string | null;
   providerOrderId?: string | null;
   referenceId?: string | null; // our payment doc id, set as reference_id on the payment link
   amount: number; // paise

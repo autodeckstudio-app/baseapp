@@ -27,6 +27,8 @@ export type WebhookOutcome =
   | "unknown_payment"
   | "amount_mismatch"
   | "outbox_owned"
+  | "ownership_mismatch"
+  | "refund_pending"
   | "ignored";
 
 function systemUser(tenantId: string): AuthorizedUser {
@@ -53,30 +55,53 @@ async function findPayment(db: Firestore, ev: ProviderWebhookEvent): Promise<Pay
 }
 
 /**
- * Durable outbox ownership of an incoming refund event: true only when a
- * persisted refund request agrees on payment id AND amount AND (when both
- * carry it) currency. Receipt binding first (our request id is the provider
- * refund's receipt), then the provider refund id recorded at submit time.
+ * Durable outbox ownership of an incoming refund event.
+ *
+ * Three verdicts:
+ *  - "owned": a persisted refund request binds this event on every axis -
+ *    the refund entity's OWN payment id equals the stored payment's
+ *    razorpayPaymentId, the request's paymentId equals the stored payment id,
+ *    the refund amount equals the requested amount, and the refund currency
+ *    equals the stored payment currency. Missing evidence never agrees.
+ *  - "mismatch": recognized ownership evidence (a persisted request matched
+ *    by receipt or provider refund id, or a receipt in our rr_ namespace)
+ *    whose binding is missing or conflicting. Fail-closed: recorded, held,
+ *    zero financial writes.
+ *  - "unrelated": no ownership evidence at all; the legacy generic path
+ *    applies (subject to the refund lifecycle gate).
  */
-async function isOutboxOwnedRefund(
+async function evaluateOutboxOwnership(
   tx: FirebaseFirestore.Transaction,
   db: Firestore,
   ev: ProviderWebhookEvent,
   payment: Payment,
-): Promise<boolean> {
-  const refundAmount = ev.providerRefundAmount ?? ev.amount;
-  const binds = (r: { paymentId?: string; amountPaise?: number }): boolean =>
-    r.paymentId === payment.id && r.amountPaise === refundAmount &&
-    (!ev.providerRefundCurrency || !payment.currency || ev.providerRefundCurrency === payment.currency);
+): Promise<"owned" | "mismatch" | "unrelated"> {
+  const col = db.collection(COLLECTIONS.refundRequests());
+  const candidates: FirebaseFirestore.DocumentData[] = [];
   if (ev.providerRefundReceipt) {
-    const snap = await tx.get(db.collection(COLLECTIONS.refundRequests()).doc(ev.providerRefundReceipt));
-    if (snap.exists && binds(snap.data() as { paymentId?: string; amountPaise?: number })) return true;
+    const snap = await tx.get(col.doc(ev.providerRefundReceipt));
+    if (snap.exists) candidates.push(snap.data()!);
   }
-  if (ev.providerRefundId) {
-    const q = await tx.get(db.collection(COLLECTIONS.refundRequests()).where("providerRefundId", "==", ev.providerRefundId));
-    if (q.docs.some((d) => binds(d.data() as { paymentId?: string; amountPaise?: number }))) return true;
+  if (candidates.length === 0 && ev.providerRefundId) {
+    const q = await tx.get(col.where("providerRefundId", "==", ev.providerRefundId).limit(3));
+    for (const d of q.docs) candidates.push(d.data());
   }
-  return false;
+  if (candidates.length === 0) {
+    // Our receipt namespace with no persisted request is malformed
+    // known-ownership evidence, not an unrelated refund.
+    if (ev.providerRefundReceipt && ev.providerRefundReceipt.startsWith("rr_")) return "mismatch";
+    return "unrelated";
+  }
+  const strictBind = (r: { paymentId?: string; amountPaise?: number }): boolean =>
+    !!ev.providerRefundPaymentId &&
+    ev.providerRefundPaymentId === payment.razorpayPaymentId &&
+    r.paymentId === payment.id &&
+    typeof ev.providerRefundAmount === "number" &&
+    ev.providerRefundAmount === r.amountPaise &&
+    !!ev.providerRefundCurrency &&
+    !!payment.currency &&
+    ev.providerRefundCurrency === payment.currency;
+  return candidates.some(strictBind) ? "owned" : "mismatch";
 }
 
 export async function processProviderEvent(
@@ -234,7 +259,14 @@ export async function processProviderEvent(
     // recorded but never generically projected here (no premature
     // full-amount write, no invoice void, no gift void). Refunds with no
     // outbox owner (dashboard / legacy admin path) keep the generic path.
-    if (await isOutboxOwnedRefund(tx, db, ev, payment)) { record("outbox_owned"); return "outbox_owned"; }
+    const ownership = await evaluateOutboxOwnership(tx, db, ev, payment);
+    if (ownership === "owned") { record("outbox_owned"); return "outbox_owned"; }
+    if (ownership === "mismatch") { record("ownership_mismatch"); return "ownership_mismatch"; }
+    // Lifecycle gate for unrelated (dashboard / legacy) refunds: only
+    // affirmative "processed" evidence may project money as returned. A
+    // pending, failed or statusless refund.created is recorded and held for
+    // reconciliation with zero financial writes.
+    if (ev.providerRefundStatus !== "processed") { record("refund_pending"); return "refund_pending"; }
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
     const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
     const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;

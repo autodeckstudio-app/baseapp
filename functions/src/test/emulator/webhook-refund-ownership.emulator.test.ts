@@ -53,6 +53,7 @@ function refundEvent(p: Payment, o: Partial<ProviderWebhookEvent>): ProviderWebh
     providerPaymentLinkId: "pl1", providerRefundId: "rfnd_x", referenceId: p.id,
     amount: p.amount, currency: "INR",
     providerRefundAmount: 50000, providerRefundCurrency: "INR", providerRefundReceipt: null,
+    providerRefundPaymentId: p.razorpayPaymentId ?? null, providerRefundStatus: "processed",
     ...o,
   } as ProviderWebhookEvent;
 }
@@ -98,23 +99,67 @@ describe("webhook refund.created outbox ownership", () => {
     expect(pay.refundAmount).toBe(50000);
   });
 
-  it("binding rejects look-alikes: wrong payment, wrong amount, or wrong currency fall through to generic projection", async () => {
+  it("recognized ownership with conflicting binding FAILS CLOSED: ownership_mismatch, zero financial writes", async () => {
     const p = payment();
     await seedPayment(p);
     const other = payment();
     await seedPayment(other);
     const reqId = await seedRequest(other, { amountPaise: 50000, status: "submitted", providerRefundId: "rfnd_x" });
-    // Same receipt exists but belongs to ANOTHER payment -> NOT owned -> generic projection.
+    // Receipt exists but belongs to ANOTHER payment -> recognized evidence, conflicting binding -> hold, never generic projection.
     const r = await processProviderEvent(db, refundEvent(p, { providerRefundReceipt: reqId }));
-    expect(r.outcome).toBe("refunded");
+    expect(r.outcome).toBe("ownership_mismatch");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
-    expect(pay.status).toBe("refunded");
-    // Amount mismatch: a request on THIS payment but for a different amount is not the owner.
-    const p2 = payment();
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+    // Amount mismatch on THIS payment's own request: still fail-closed.
+    const p2 = payment({ invoiceId: "inv-m" });
     await seedPayment(p2);
+    await db.collection(COLLECTIONS.invoices()).doc("inv-m").set({ id: "inv-m", status: "issued" });
     const req2 = await seedRequest(p2, { amountPaise: 30000, status: "submitted" });
     const r2 = await processProviderEvent(db, refundEvent(p2, { providerRefundReceipt: req2, providerRefundAmount: 50000 }));
-    expect(r2.outcome).toBe("refunded");
+    expect(r2.outcome).toBe("ownership_mismatch");
+    const pay2 = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
+    expect(pay2.status).toBe("completed");
+    const inv2 = (await db.collection(COLLECTIONS.invoices()).doc("inv-m").get()).data() as { status: string };
+    expect(inv2.status).toBe("issued");
+    // Missing currency evidence never "agrees".
+    const p3 = payment();
+    await seedPayment(p3);
+    const req3 = await seedRequest(p3, { amountPaise: 50000, status: "submitted" });
+    const r3 = await processProviderEvent(db, refundEvent(p3, { providerRefundReceipt: req3, providerRefundCurrency: null }));
+    expect(r3.outcome).toBe("ownership_mismatch");
+    // Our receipt namespace with NO persisted request: malformed known-ownership evidence -> hold.
+    const p4 = payment();
+    await seedPayment(p4);
+    const r4 = await processProviderEvent(db, refundEvent(p4, { providerRefundReceipt: "rr_nonexistent_1" }));
+    expect(r4.outcome).toBe("ownership_mismatch");
+    const pay4 = (await db.collection(COLLECTIONS.payments()).doc(p4.id).get()).data() as Payment;
+    expect(pay4.status).toBe("completed");
+  });
+
+  it("unrelated refund without affirmative processed status is held, never projected", async () => {
+    // pending lifecycle
+    const p = payment({ invoiceId: "inv-p" });
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.invoices()).doc("inv-p").set({ id: "inv-p", status: "issued" });
+    const r = await processProviderEvent(db, refundEvent(p, { providerRefundStatus: "pending" }));
+    expect(r.outcome).toBe("refund_pending");
+    let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+    expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-p").get()).data() as { status: string }).status).toBe("issued");
+    // missing lifecycle status
+    const p2 = payment();
+    await seedPayment(p2);
+    const r2 = await processProviderEvent(db, refundEvent(p2, { providerRefundStatus: null }));
+    expect(r2.outcome).toBe("refund_pending");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    // sequence: the SAME refund later arrives processed -> now it projects (new event id).
+    const r3 = await processProviderEvent(db, refundEvent(p2, { providerRefundStatus: "processed", providerRefundId: "rfnd_x" }));
+    expect(r3.outcome).toBe("refunded");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
+    expect(pay.status).toBe("refunded");
   });
 
   it("legacy refunds (receipt refund_<paymentId>, no outbox request) keep the generic projection incl. invoice void", async () => {

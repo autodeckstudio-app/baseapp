@@ -68,7 +68,7 @@ describe("verified gift payment", () => {
     expect(data["gifts"]!["g1"]!["status"]).toBe("PENDING_PAYMENT");
   });
   it("a refund in the Razorpay dashboard stops an unused gift, but not one already used", async () => {
-    const ev = { eventType: "refund.created" as const, providerEventId: "evt_r", providerPaymentId: "pay_x", providerPaymentLinkId: null, providerRefundId: "rf1", providerOrderId: "order_1", referenceId: "pay1", amount: 90000, currency: "INR" };
+    const ev = { eventType: "refund.created" as const, providerEventId: "evt_r", providerPaymentId: "pay_x", providerPaymentLinkId: null, providerRefundId: "rf1", providerOrderId: "order_1", referenceId: "pay1", amount: 90000, currency: "INR", providerRefundStatus: "processed" };
     const a = fakeFirestore(seed({ status: "ACTIVE" }, { status: "completed" }));
     expect((await processProviderEvent(a.db as never, ev)).outcome).toBe("refunded");
     expect(a.data["gifts"]!["g1"]!["status"]).toBe("REFUNDED");
