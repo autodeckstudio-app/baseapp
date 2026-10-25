@@ -22,7 +22,7 @@ function seed(over: Record<string, unknown> = {}) {
     vehicles: { v1: { tenantId: "t", ownerId: "c1", registrationNumber: "GJ01AB1234", make: "Tata", model: "Nexon", year: 2022, color: "Blue", photoUrl: null } },
     customers: { c1: { tenantId: "t", name: "Asha" } },
     jobs: { job1: { id: "job1", tenantId: "t", studioId: "s", bookingId: "b1", customerId: "c1", vehicleId: "v1", serviceId: "svcA", status: "COMPLETED", paymentStatus: "unpaid", priceBreakdown: pb, totalAmount: AMOUNT, additionalWorkDelta: 0 } },
-    bookings: { b1: { id: "b1", paymentStatus: "unpaid" } },
+    bookings: { b1: { id: "b1", tenantId: "t", paymentStatus: "unpaid" } },
     payments: { pay1: { id: "pay1", tenantId: "t", studioId: "s", targetType: "job", jobId: "job1", bookingId: "b1", membershipId: null, customerId: "c1", amount: AMOUNT, currency: "INR", method: "razorpay_payment_link", status: "pending", razorpayPaymentLinkId: "plink_1", razorpayPaymentId: null, razorpayOrderId: null, invoiceId: null } },
     ...over,
   } as never;

@@ -31,6 +31,7 @@ export type WebhookOutcome =
   | "outbox_owned"
   | "ownership_mismatch"
   | "refund_pending"
+  | "related_mismatch"
   | "ignored";
 
 function systemUser(tenantId: string): AuthorizedUser {
@@ -295,7 +296,29 @@ export async function processProviderEvent(
     // and retries into "duplicate".
     const ledgerRef = db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${payment.id}_${ev.providerRefundId}`);
     const ledgerSnap = await tx.get(ledgerRef);
-    if (ledgerSnap.exists) { record("duplicate"); return "duplicate"; }
+    if (ledgerSnap.exists) {
+      // Convergence must agree on identity, not just existence: an existing
+      // ledger entry under this refund id binding a DIFFERENT amount or
+      // currency is conflicting evidence - hold with zero writes, never
+      // silently treat it as a duplicate of this event.
+      const prior = ledgerSnap.data() as { amountPaise?: unknown; currency?: unknown };
+      if (prior.amountPaise !== eventRefundAmount || prior.currency !== ev.providerRefundCurrency) {
+        record("ownership_mismatch");
+        return "ownership_mismatch";
+      }
+      record("duplicate"); return "duplicate";
+    }
+    // Prior accounting must be well-formed before it is trusted in a money
+    // total: the stored amount must be positive integer paise and any stored
+    // refundAmount a non-negative integer within it. Malformed prior state
+    // is held with zero writes for reconciliation, never silently extended.
+    if (typeof payment.amount !== "number" || !Number.isInteger(payment.amount) || payment.amount <= 0 ||
+        (payment.refundAmount !== undefined && payment.refundAmount !== null &&
+          (typeof payment.refundAmount !== "number" || !Number.isInteger(payment.refundAmount) ||
+           payment.refundAmount < 0 || payment.refundAmount > payment.amount))) {
+      record("amount_mismatch");
+      return "amount_mismatch";
+    }
     const totalRefunded = (payment.refundAmount ?? 0) + eventRefundAmount;
     // An over-refund is never valid: hold with zero writes for
     // reconciliation rather than capping or marking full.
@@ -307,6 +330,21 @@ export async function processProviderEvent(
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
     const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
     const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;
+    const jobRefRefund = payment.jobId ? db.collection(COLLECTIONS.jobs()).doc(payment.jobId) : null;
+    const jobSnapRefund = jobRefRefund ? await tx.get(jobRefRefund) : null;
+    const bookingRefRefund = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
+    const bookingSnapRefund = bookingRefRefund ? await tx.get(bookingRefRefund) : null;
+    // Related documents must still belong to this payment's tenant before any
+    // of them is written: a stale or tampered linkage must never propagate a
+    // refund write into another tenant's invoice, gift, job or booking.
+    // Missing related docs are tolerated (they simply get no update); a
+    // present doc in a DIFFERENT tenant fails closed with zero writes.
+    const relatedMismatch =
+      (invSnap?.exists && (invSnap.data() as Invoice).tenantId !== payment.tenantId) ||
+      (giftSnapRefund?.exists && (giftSnapRefund.data() as Gift).tenantId !== payment.tenantId) ||
+      (jobSnapRefund?.exists && (jobSnapRefund.data() as ServiceJob).tenantId !== payment.tenantId) ||
+      (bookingSnapRefund?.exists && (bookingSnapRefund.data() as Booking).tenantId !== payment.tenantId);
+    if (relatedMismatch) { record("related_mismatch"); return "related_mismatch"; }
     // Reads are all done; the ledger entry lands atomically with the writes.
     // Race safety comes from the in-transaction READ above: a concurrent
     // delivery of the same refund conflicts on that read and retries into
@@ -333,8 +371,8 @@ export async function processProviderEvent(
         after: { status: "void", reason: "refund" } });
     }
     const settledStatus = fullyRefunded ? "refunded" : "partially_refunded";
-    if (payment.jobId) tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), { paymentStatus: settledStatus, updatedAt: now });
-    if (payment.bookingId) tx.update(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId), { paymentStatus: settledStatus, updatedAt: now });
+    if (jobRefRefund) tx.update(jobRefRefund, { paymentStatus: settledStatus, updatedAt: now });
+    if (bookingRefRefund) tx.update(bookingRefRefund, { paymentStatus: settledStatus, updatedAt: now });
     writeAuditLog(tx, { action: "payment.refunded", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
       after: { status: settledStatus, refundAmount: totalRefunded, providerRefundId: ev.providerRefundId, via: "razorpay_webhook" } });
     return "refunded";
