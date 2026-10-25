@@ -72,15 +72,18 @@ export interface Booking {
   /** PENDING online bookings hold their slot until this time (ISO). */
   holdExpiresAt?: string | null;
   /** Refund tracking on a cancelled, paid booking. */
-  // requested = the current backend's recorded-request state: the refund claim
-  //   was written durably at cancel time and has NOT been sent to the provider
-  //   yet (no promise about provider acceptance or money movement).
+  // requested = a durable recorded refund request. The field alone does not
+  //   establish whether the refund was submitted to or accepted by the
+  //   provider (it can persist after submission until the processed
+  //   projection), so UI copy must not promise submission, acceptance, or
+  //   money movement.
   // reserved = legacy vocabulary for the same recorded-request state, kept so
   //   older written docs still render; no current backend writer.
   // initiated = the refund is recorded as in motion. Current backend: written
   //   by the MANUAL cash/UPI path when the studio records the return. Older
-  //   writes used it for provider-accepted refunds - the value alone does not
-  //   say which, so UI copy must stay mechanism-neutral.
+  //   writes used it for refunds submitted to the provider through the legacy
+  //   path (submission recorded, provider acceptance never verified) - the
+  //   value alone does not say which, so UI copy must stay mechanism-neutral.
   // processed = the provider reported this exact refund as processed (a provider status, NOT proof the money reached the bank).
   // failed = the provider refused it (legacy writer; no current backend writer).
   refundStatus?: "reserved" | "requested" | "initiated" | "processed" | "failed";
