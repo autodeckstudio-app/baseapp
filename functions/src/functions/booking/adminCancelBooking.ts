@@ -96,10 +96,10 @@ export async function runCancel(
     // applyReserveInTx), so a refund can never survive for a booking that was
     // not cancelled and a cancellation can never lose its refund reservation.
     // A Razorpay payment missing its provider payment id is malformed: HOLD,
-    // never pretend an offline (manual) refund. While the runner's production
-    // refusal holds, a cancellation that needs a provider refund refuses in
-    // production too - a reservation with no runner to drain it would strand
-    // the balance. Cash/UPI/bank refunds settle outside the provider; the
+    // never pretend an offline (manual) refund. The reservation is drained
+    // inline post-transaction (and re-drained by the admin outbox runner and
+    // projected by the webhook), so it cannot strand the balance.
+    // Cash/UPI/bank refunds settle outside the provider; the
     // studio returns the money by hand and this records that obligation
     // (deployed behavior, preserved explicitly by payment method).
     const providerRefund = needsRefund && payment?.method === "razorpay_payment_link";
