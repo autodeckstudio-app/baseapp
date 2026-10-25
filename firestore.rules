@@ -137,6 +137,8 @@ service cloud.firestore {
     }
 
     // âââ /bookings/{bookingId} ââââââââââââââââââââââââââââââââââââââââââââââ
+    match /bookingCancelIntents/{id} { allow read, write: if false; }
+
     match /bookings/{bookingId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
@@ -188,7 +190,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ─── /adminApprovalRequests/{requestId} ──────────────────────────────
+    // Staff-only attention items: studio sees its own studio, admin/superadmin the whole tenant. Never customers.
+    match /staffAlerts/{alertId} {
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isAdminOrAbove() || (isStudio() && ownStudio(resource.data)));
+      allow create, update, delete: if false; // Cloud Function / Admin SDK only
+    }
+
+    // === /adminApprovalRequests/{requestId} ===
     // Staff-to-admin approval requests. Tenant staff (studio and admin) read
     // their own tenant's requests - studio staff follow the answer to their
     // request, admins work the pending queue. Customers never see these.
@@ -461,6 +471,14 @@ service cloud.firestore {
                   || (isStudioOrAbove() && ownTenant(resource.data));
       allow write: if false;
     }
+
+
+    // Server-only abuse-limiter windows for guest shop endpoints. No client
+    // reads or writes — the functions hold the only access.
+    match /shopRateLimits/{key} {
+      allow read, write: if false;
+    }
+
 
     // âââ Deny everything else ââââââââââââââââââââââââââââââââââââââââââââââââ
     match /{document=**} {

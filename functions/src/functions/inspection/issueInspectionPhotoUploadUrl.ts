@@ -63,6 +63,15 @@ export const issueInspectionPhotoUploadUrl = onCall({ region: "asia-south1" }, a
   }
 
   const path = `${job.tenantId}/jobs/${job.id}/photos/${randomUUID()}.${EXT[data.contentType]}`;
+  // x-goog-if-generation-match: 0 makes the URL create-only: GCS answers 412
+  // if the object already exists, so the URL cannot overwrite bytes after
+  // they were attached (and verified) or the inspection was finalized,
+  // closing the same-path overwrite/reuse hole inside the 10-minute window.
+  const requiredHeaders = {
+    "Content-Type": data.contentType,
+    "x-goog-meta-customerId": job.customerId,
+    "x-goog-if-generation-match": "0",
+  };
   const [uploadUrl] = await getStorage()
     .bucket()
     .file(path)
@@ -71,16 +80,9 @@ export const issueInspectionPhotoUploadUrl = onCall({ region: "asia-south1" }, a
       action: "write",
       expires: Date.now() + UPLOAD_WINDOW_MS,
       contentType: data.contentType,
-      extensionHeaders: { "x-goog-meta-customerId": job.customerId },
+      extensionHeaders: requiredHeaders,
     });
 
   // The client must send these exact headers on the PUT or the signature fails.
-  return {
-    uploadUrl,
-    path,
-    requiredHeaders: {
-      "Content-Type": data.contentType,
-      "x-goog-meta-customerId": job.customerId,
-    },
-  };
+  return { uploadUrl, path, requiredHeaders };
 });

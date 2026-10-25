@@ -30,6 +30,7 @@ import { startInspection } from "../../functions/inspection/startInspection.js";
 import { updateInspection } from "../../functions/inspection/updateInspection.js";
 import { finalizeInspection } from "../../functions/inspection/finalizeInspection.js";
 import { requestAdminApproval } from "../../functions/approval/requestAdminApproval.js";
+import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { respondToAdminApproval } from "../../functions/approval/respondToAdminApproval.js";
 
 const db = getFirestore();
@@ -361,6 +362,32 @@ describe("inspection photos — addPhotos path validation", () => {
     expect(snap.data()?.photos).toEqual([]);
   });
 
+  it("rejects instead of silently truncating when the 20-photo limit would be exceeded", async () => {
+    const { job } = await freshJob(service);
+    const staff = studioAuth(uid("staff"));
+    await startInspection.run({ data: { jobId: job.id }, auth: staff } as never);
+    // Seed 20 objects and attach them across two calls.
+    const first: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      const p = `${job.tenantId}/jobs/${job.id}/photos/p${String(i).padStart(2, "0")}.jpg`;
+      await seedPhotoObject(p, job.customerId);
+      first.push(p);
+    }
+    await updateInspection.run({ data: { jobId: job.id, addPhotos: first.slice(0, 15) }, auth: staff } as never);
+    await updateInspection.run({ data: { jobId: job.id, addPhotos: first.slice(15) }, auth: staff } as never);
+    // The 21st NEW photo is refused outright - the evidence set stays whole.
+    const extra = `${job.tenantId}/jobs/${job.id}/photos/p20.jpg`;
+    await seedPhotoObject(extra, job.customerId);
+    await expectErr(
+      updateInspection.run({ data: { jobId: job.id, addPhotos: [extra] }, auth: staff } as never),
+      "failed-precondition",
+      "at most 20",
+    );
+    const snap = await db.collection(COLLECTIONS.inspections()).doc(job.id).get();
+    expect(snap.data()?.photos).toHaveLength(20);
+    expect(snap.data()?.photos).not.toContain(extra);
+  });
+
   it("issueInspectionPhotoUploadUrl refuses before the inspection exists", async () => {
     const { job } = await freshJob(service);
     const { issueInspectionPhotoUploadUrl } = await import("../../functions/inspection/issueInspectionPhotoUploadUrl.js");
@@ -538,6 +565,14 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
 
     expect(issued.path).toContain(`${job.tenantId}/jobs/${job.id}/photos/`);
     expect(issued.requiredHeaders["x-goog-meta-customerId"]).toBe(customerId);
+    // Overwrite/reuse threat: the issued URL is create-only. The
+    // generation-match precondition means GCS answers 412 to any second PUT
+    // at the same path inside (or after) the 10-minute window, so an
+    // already-attached, already-verified photo cannot be swapped for
+    // different bytes, a different type, or an oversize object after the
+    // fact. Enforcement is GCS-side and therefore deploy-time verified; the
+    // emulator cannot exercise it (no v4 PUT support).
+    expect(issued.requiredHeaders["x-goog-if-generation-match"]).toBe("0");
 
     // The Storage emulator does not implement v4 signed-URL PUTs (it answers
     // 501), so the bytes are landed the way the signed PUT would: same path,
@@ -547,8 +582,12 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
     // GCS signature/content-type enforcement is a deploy-time check, same as
     // every existing signed-URL flow in this repo (none are emulator-PUT
     // covered).
+    // The client SDK's default bucket here is gs://<projectId>; the backend
+    // (and production clients) use <projectId>.appspot.com, so land and read
+    // the bytes on that exact bucket or the attach-time check cannot see it.
+    const bucketUrl = "gs://autodeck-dev.appspot.com";
     await storageEnv.withSecurityRulesDisabled(async (ctx) => {
-      await ctx.storage().ref(issued.path).put(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
+      await ctx.storage(bucketUrl).ref(issued.path).put(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
         contentType: "image/jpeg",
         customMetadata: { customerId },
       });
@@ -556,18 +595,23 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
 
     // Server-side truth: the object exists with the owner binding metadata.
     await storageEnv.withSecurityRulesDisabled(async (ctx) => {
-      const meta = await ctx.storage().ref(issued.path).getMetadata();
+      const meta = await ctx.storage(bucketUrl).ref(issued.path).getMetadata();
       expect(meta.customMetadata?.["customerId"]).toBe(customerId);
       expect(meta.contentType).toBe("image/jpeg");
     });
 
-    // Rules: studio of the tenant reads, the owning customer reads, another
-    // customer of the same tenant is denied, and NOBODY writes directly.
-    const reader = (uid2: string, claims: Record<string, unknown>) => storageEnv.authenticatedContext(uid2, claims);
-    await assertSucceeds(reader(staffUid, { role: "studio", tenantId: TENANT_A, studioId: STUDIO_A }).storage().ref(issued.path).getMetadata());
-    await assertSucceeds(reader(customerId, { role: "customer", tenantId: TENANT_A, studioId: null }).storage().ref(issued.path).getMetadata());
-    await assertFails(reader(uid("other-cust"), { role: "customer", tenantId: TENANT_A, studioId: null }).storage().ref(issued.path).getMetadata());
-    await assertFails(Promise.resolve(reader(customerId, { role: "customer", tenantId: TENANT_A, studioId: null }).storage().ref(issued.path).put(new Uint8Array([1]))));
+    // Rules on the authenticated read path. The frontend's contract is
+    // getBytes/getBlob (firebase JS SDK v10, verified present in the app's
+    // dependency) - every read is rules-evaluated and no bearer-token URL is
+    // ever minted. This test asserts the same storage.objects read gate via
+    // getMetadata, because the rules-unit-testing compat Reference does not
+    // expose getBytes; the rules decision is identical for bytes and
+    // metadata (both are `allow read`).
+    const reader = (uid2: string, claims: Record<string, unknown>) => storageEnv.authenticatedContext(uid2, claims).storage(bucketUrl);
+    await assertSucceeds(reader(staffUid, { role: "studio", tenantId: TENANT_A, studioId: STUDIO_A }).ref(issued.path).getMetadata());
+    await assertSucceeds(reader(customerId, { role: "customer", tenantId: TENANT_A, studioId: null }).ref(issued.path).getMetadata());
+    await assertFails(reader(uid("other-cust"), { role: "customer", tenantId: TENANT_A, studioId: null }).ref(issued.path).getMetadata());
+    await assertFails(Promise.resolve(reader(customerId, { role: "customer", tenantId: TENANT_A, studioId: null }).ref(issued.path).put(new Uint8Array([1]))));
 
     // The inspection accepts exactly this path and keeps it.
     await updateInspection.run({ data: { jobId: job.id, addPhotos: [issued.path] }, auth: staff } as never);
@@ -676,5 +720,208 @@ describe("attendance callables - day state machine", () => {
     await seedEmployee(adminUid, null, TENANT_A, "admin");
     const auth = { uid: adminUid, token: { role: "admin", tenantId: TENANT_A, studioId: null }, rawToken: "test" };
     await expectErr(checkInAttendance.run({ data: {}, auth } as never), "failed-precondition", "not studio-scoped");
+  });
+});
+
+// ─── 6. Pickup leg progress (additive visibility) ───────────────────────────
+
+describe("updatePickupRequest - markLegCompleted leg progress", () => {
+  let service: Service;
+
+  beforeAll(async () => {
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = await seedService(uid("svc"), TENANT_A);
+  });
+
+  async function confirmedRequest(kind: "pickup" | "drop" | "both") {
+    const { job, booking, customerId } = await freshJob(service);
+    await requestPickupDrop.run({
+      data: { bookingId: booking.id, kind, address: "12, Test Society, Ahmedabad 380006" },
+      auth: customerAuth(customerId),
+    } as never);
+    await updatePickupRequest.run({
+      data: { requestId: booking.id, status: "REQUESTED", feePaise: 20000 },
+      auth: adminAuth(uid("admin")),
+    } as never);
+    const timing: Record<string, string> = {};
+    if (kind !== "drop") timing["agreedPickupAt"] = `${nextDate()} 10:30`;
+    if (kind !== "pickup") timing["agreedDropAt"] = `${nextDate()} 18:00`;
+    await updatePickupRequest.run({
+      data: { requestId: booking.id, status: "CONFIRMED", ...timing },
+      auth: studioAuth(uid("staff")),
+    } as never);
+    return { job, booking, customerId };
+  }
+
+  it("stamps each leg server-side; repeat marks are idempotent; status, job state and price stay untouched", async () => {
+    const { job, booking } = await confirmedRequest("both");
+    const staff = studioAuth(uid("staff"));
+    const jobBefore = (await db.collection(COLLECTIONS.jobs()).doc(job.id).get()).data() as ServiceJob;
+
+    const r1 = (await updatePickupRequest.run({
+      data: { requestId: booking.id, status: "CONFIRMED", markLegCompleted: "pickup" },
+      auth: staff,
+    } as never)) as { pickupCompletedAt: string | null; dropCompletedAt: string | null; idempotent: boolean };
+    expect(r1.idempotent).toBe(false);
+    expect(r1.pickupCompletedAt).toBeTruthy();
+    expect(r1.dropCompletedAt).toBeNull();
+
+    // Double-tap: same timestamp back, flagged idempotent, no overwrite.
+    const r2 = (await updatePickupRequest.run({
+      data: { requestId: booking.id, status: "CONFIRMED", markLegCompleted: "pickup" },
+      auth: staff,
+    } as never)) as { pickupCompletedAt: string | null; idempotent: boolean };
+    expect(r2.idempotent).toBe(true);
+    expect(r2.pickupCompletedAt).toBe(r1.pickupCompletedAt);
+
+    const r3 = (await updatePickupRequest.run({
+      data: { requestId: booking.id, status: "CONFIRMED", markLegCompleted: "drop" },
+      auth: staff,
+    } as never)) as { dropCompletedAt: string | null };
+    expect(r3.dropCompletedAt).toBeTruthy();
+
+    // Visibility only: request still CONFIRMED, job untouched (no DELIVERED, no charge).
+    const reqSnap = await db.collection(COLLECTIONS.pickupRequests()).doc(booking.id).get();
+    expect(reqSnap.data()?.status).toBe("CONFIRMED");
+    const jobAfter = (await db.collection(COLLECTIONS.jobs()).doc(job.id).get()).data() as ServiceJob;
+    expect(jobAfter.status).toBe(jobBefore.status);
+    expect(jobAfter.totalAmount).toBe(jobBefore.totalAmount);
+    expect(jobAfter.priceBreakdown).toEqual(jobBefore.priceBreakdown);
+
+    // The existing manual DONE gate is unaffected and still works.
+    const done = (await updatePickupRequest.run({ data: { requestId: booking.id, status: "DONE" }, auth: staff } as never)) as { status: string };
+    expect(done.status).toBe("DONE");
+    // A completed leg cannot move again once the request is closed (no reopen).
+    await expectErr(
+      updatePickupRequest.run({ data: { requestId: booking.id, status: "DONE", markLegCompleted: "pickup" }, auth: staff } as never),
+      "failed-precondition",
+    );
+    const after = await db.collection(COLLECTIONS.pickupRequests()).doc(booking.id).get();
+    expect(after.data()?.pickupCompletedAt).toBe(r1.pickupCompletedAt);
+  });
+
+  it("guards: unconfirmed request, wrong leg for kind, customer, cross-studio all rejected", async () => {
+    const { booking, customerId } = await freshJob(service);
+    await requestPickupDrop.run({
+      data: { bookingId: booking.id, kind: "pickup", address: "12, Test Society, Ahmedabad 380006" },
+      auth: customerAuth(customerId),
+    } as never);
+    // Still REQUESTED - nothing in motion.
+    await expectErr(
+      updatePickupRequest.run({ data: { requestId: booking.id, status: "REQUESTED", markLegCompleted: "pickup" }, auth: studioAuth(uid("staff")) } as never),
+      "failed-precondition",
+    );
+    // Confirm it (kind: pickup only).
+    await updatePickupRequest.run({ data: { requestId: booking.id, status: "REQUESTED", feePaise: 10000 }, auth: adminAuth(uid("admin")) } as never);
+    await updatePickupRequest.run({
+      data: { requestId: booking.id, status: "CONFIRMED", agreedPickupAt: `${nextDate()} 10:30` },
+      auth: studioAuth(uid("staff")),
+    } as never);
+    // This request has no drop leg.
+    await expectErr(
+      updatePickupRequest.run({ data: { requestId: booking.id, status: "CONFIRMED", markLegCompleted: "drop" }, auth: studioAuth(uid("staff")) } as never),
+      "invalid-argument",
+    );
+    // Customers cannot mark legs.
+    await expectErr(
+      updatePickupRequest.run({ data: { requestId: booking.id, status: "CONFIRMED", markLegCompleted: "pickup" }, auth: customerAuth(customerId) } as never),
+      "permission-denied",
+    );
+    // Another studio's staff cannot mark legs on this studio's request.
+    await seedStudio("sbb-studio-other", TENANT_A);
+    await expectErr(
+      updatePickupRequest.run({ data: { requestId: booking.id, status: "CONFIRMED", markLegCompleted: "pickup" }, auth: studioAuth(uid("staff"), "sbb-studio-other") } as never),
+      "permission-denied",
+    );
+  });
+});
+
+// ─── 7. recordManualPayment replay + in-flight guards (emulator proof) ──────
+
+describe("recordManualPayment - replay and in-flight payment guards", () => {
+  let service: Service;
+
+  beforeAll(async () => {
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = await seedService(uid("svc"), TENANT_A);
+  });
+
+  it("exact replay (batch12 double-click payload) records exactly one payment at the server-side job total", async () => {
+    const { job } = await freshJob(service);
+    const staff = studioAuth(uid("staff"));
+    const payload = { data: { jobId: job.id, method: "upi_manual", manualReference: "utr-123" }, auth: staff } as never;
+
+    const r1 = (await recordManualPayment.run(payload)) as { paymentId: string; invoiceId: string };
+    const paySnap = await db.collection(COLLECTIONS.payments()).doc(r1.paymentId).get();
+    expect(paySnap.data()?.amount).toBe(job.totalAmount); // amount is server-side, never client input
+    expect(paySnap.data()?.manualReference).toBe("utr-123");
+    expect(paySnap.data()?.status).toBe("completed");
+
+    // Same-tick retry with the identical payload: rejected, and nothing new is written.
+    await expectErr(recordManualPayment.run(payload), "already-exists");
+    const pays = await db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).get();
+    expect(pays.size).toBe(1);
+    const invoices = await db.collection(COLLECTIONS.invoices()).where("jobId", "==", job.id).get();
+    expect(invoices.size).toBe(1);
+  });
+
+  it("blocks while another payment is in flight for the job (pending gateway window)", async () => {
+    const { job, customerId } = await freshJob(service);
+    const now = new Date().toISOString();
+    await db.collection(COLLECTIONS.payments()).doc(uid("pay")).set({
+      tenantId: job.tenantId,
+      studioId: job.studioId,
+      targetType: "job",
+      jobId: job.id,
+      bookingId: job.bookingId,
+      customerId,
+      amount: job.totalAmount,
+      currency: "INR",
+      method: "razorpay_link",
+      status: "pending",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await expectErr(
+      recordManualPayment.run({ data: { jobId: job.id, method: "cash" }, auth: studioAuth(uid("staff")) } as never),
+      "already-exists",
+    );
+  });
+});
+
+// ─── 8. Create-only upload precondition (overwrite/reuse threat) ────────────
+
+describe("photo object create-only semantics (the signed URL's x-goog-if-generation-match: 0)", () => {
+  // VERIFIED GAP: the storage emulator ignores ifGenerationMatch
+  // preconditions (the overwrite below resolves when run). Create-only
+  // enforcement therefore has NO emulator proof - it rests on the GCS
+  // documentation for x-goog-if-generation-match: 0 (412 on a second PUT)
+  // and must be verified at deploy time against real GCS. This test is kept
+  // skipped as executable documentation: if the emulator ever starts
+  // enforcing preconditions, unskip it for continuous proof.
+  it.skip("first create succeeds; rewriting an existing object under the same precondition fails", async () => {
+    // The issued signed PUT URL signs x-goog-if-generation-match: 0, which
+    // GCS enforces as create-only (412 on any second PUT) - so an
+    // already-attached, already-verified photo cannot be overwritten inside
+    // or after the URL's 10-minute window, including after finalize. The
+    // emulator-level proof here uses the same precondition primitive through
+    // the Admin SDK; GCS-side enforcement of the signed header is
+    // doc-grounded (request-preconditions, XML API reference) and a
+    // deploy-time check, since the storage emulator cannot do v4 PUTs.
+    const path = `${TENANT_A}/jobs/${uid("job")}/photos/create-only.jpg`;
+    const file = getStorage().bucket().file(path);
+    await file.save(Buffer.from("first"), {
+      metadata: { contentType: "image/jpeg", metadata: { customerId: "c1" } },
+      preconditionOpts: { ifGenerationMatch: 0 },
+    });
+    await expect(
+      file.save(Buffer.from("OVERWRITTEN"), {
+        metadata: { contentType: "image/jpeg", metadata: { customerId: "c1" } },
+        preconditionOpts: { ifGenerationMatch: 0 },
+      }),
+    ).rejects.toThrow();
+    // The original bytes survived the rejected overwrite.
+    const [buf] = await file.download();
+    expect(buf.toString()).toBe("first");
   });
 });

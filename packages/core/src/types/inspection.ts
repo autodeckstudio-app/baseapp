@@ -36,9 +36,12 @@ export interface Inspection {
   overallNotes: string | null;
   // Storage OBJECT PATHS (never URLs) under {tenantId}/jobs/{jobId}/photos/,
   // recorded via updateInspection { addPhotos } after a signed-URL upload
-  // issued by issueInspectionPhotoUploadUrl. Clients render them with the
-  // Firebase Storage SDK (getDownloadURL); the storage read rule scopes them
-  // to tenant staff and the owning customer.
+  // issued by issueInspectionPhotoUploadUrl. Clients read bytes with the
+  // authenticated Firebase Storage SDK (getBytes/getBlob), which enforces
+  // storage.rules on every read - never getDownloadURL: that mints a
+  // persistent bearer-token URL that bypasses the rules for anyone holding
+  // the link. The storage read rule scopes photos to tenant staff and the
+  // owning customer.
   photos: string[];
   startedAt: string;
   startedBy: string; // studio/admin uid

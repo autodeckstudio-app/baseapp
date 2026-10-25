@@ -108,7 +108,13 @@ export const updateInspection = onCall({ region: "asia-south1" }, async (request
           }
         }),
       );
-      photos = [...new Set([...inspection.photos, ...data.addPhotos])].slice(0, 20);
+      const merged = [...new Set([...inspection.photos, ...data.addPhotos])];
+      // Reject rather than silently drop: a truncated evidence set must never
+      // look like a complete one.
+      if (merged.length > 20) {
+        throw new HttpsError("failed-precondition", "An inspection can hold at most 20 photos.");
+      }
+      photos = merged;
     }
 
     tx.update(ref, { checklist, overallNotes, photos, updatedAt: now });
