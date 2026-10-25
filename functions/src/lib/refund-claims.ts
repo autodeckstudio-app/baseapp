@@ -470,8 +470,9 @@ export async function reconcileLegacyRefundClaims(
     scanned += snap.size;
     lastSeen = snap.docs[snap.size - 1]!.id;
     afterId = lastSeen;
+    let brokeOnLimit = false;
     for (const doc of snap.docs) {
-      if (done >= limit) break;
+      if (done >= limit) { brokeOnLimit = true; break; }
       visited = doc.id;
       const paymentId = doc.id.slice("refund_".length);
       if (!paymentId) continue;
@@ -490,7 +491,7 @@ export async function reconcileLegacyRefundClaims(
       else if (outcome === "already_accounted") counts.alreadyAccounted++;
       else if (outcome === "held") counts.held++;
     }
-    if (snap.size < 100) hitEnd = true;
+    if (!brokeOnLimit && snap.size < 100) hitEnd = true;
   }
   counts.scanned = scanned;
   counts.exhausted = hitEnd && done < limit;

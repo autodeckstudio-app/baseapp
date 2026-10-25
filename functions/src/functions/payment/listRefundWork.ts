@@ -89,17 +89,19 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   }[] = [];
   let discoveryComplete = false;
   let fastComplete = false;
+  const seenClaimPayments = new Set<string>();
   {
     const events = db.collection(COLLECTIONS.paymentEvents());
     const claimsRange = () => events.where("__name__", ">=", "refund_").where("__name__", "<", "refund`").orderBy("__name__");
     const pushClaim = async (docId: string, d: { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string }) => {
       if (d.reconcileState === "resolved") return;
       const paymentId = docId.slice("refund_".length);
-      if (!paymentId) return;
+      if (!paymentId || seenClaimPayments.has(paymentId)) return;
       const payDoc = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
       if (!payDoc.exists) return;
       const pd = payDoc.data()!;
       if (pd.tenantId !== tenantId) return;
+      seenClaimPayments.add(paymentId);
       legacyClaims.push({
         paymentId,
         claimedAt: typeof d.claimedAt === "string" ? d.claimedAt : null,
@@ -129,12 +131,16 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       if (page.empty) { fastHitEnd = true; break; }
       fastScanned += page.size;
       fastAfter = page.docs[page.size - 1]!.id;
+      let brokeOnCap = false;
       for (const doc of page.docs) {
-        if (legacyClaims.length >= 50) break;
+        if (legacyClaims.length >= 50) { brokeOnCap = true; break; }
         fastVisited = doc.id;
         await pushClaim(doc.id, doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string });
       }
-      if (page.size < 100) fastHitEnd = true;
+      // A cap break mid-page is NOT exhaustion: the rest of the page (and any
+      // later claims) are reached from the persisted cursor on later calls.
+      // Only a fully consumed short page means the range is exhausted.
+      if (!brokeOnCap && page.size < 100) fastHitEnd = true;
     }
     fastComplete = fastHitEnd;
     if (fastHitEnd) {
@@ -207,5 +213,10 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       await stateRef.set({ lastId: lastSeen, updatedAt: new Date().toISOString() }).catch(() => undefined);
     }
   }
-  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50), legacyScanComplete: discoveryComplete && fastComplete && legacyClaims.length < 50 };
+  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50), legacyScanComplete: discoveryComplete && fastComplete };
+
+  // Note: fastComplete is only true when the fast range was fully consumed
+  // WITHOUT a mid-page cap break, so a full 50-row page that exactly ends
+  // the range is still "complete" (nothing exists beyond it), while a
+  // cap-broken page is not.
 });

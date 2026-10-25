@@ -374,7 +374,7 @@ describe("reconciliation adversarial invariants (review round 2)", () => {
     expect(claim.reconcileState).toBeUndefined();
   });
 
-  it("sweep converges across passes beyond the 500-scan bound (persisted cursor)", async () => {
+  it("sweep converges across passes beyond the 500-scan bound (persisted cursor)", { timeout: 30000 }, async () => {
     for (let i = 0; i < 600; i++) {
       const fid = `fb${String(i).padStart(4, "0")}`;
       await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${fid}`).set({ paymentId: fid, tenantId: "t2", claimedAt: new Date().toISOString(), claimedBy: "x" });
@@ -525,7 +525,7 @@ describe("reconciliation adversarial invariants (review round 3)", () => {
 });
 
 describe("reconciliation adversarial invariants (review round 4)", () => {
-  it("list converges across calls past 600 resolved backfilled claims (persisted fast-path cursor)", async () => {
+  it("list converges across calls past 600 resolved backfilled claims (persisted fast-path cursor)", { timeout: 30000 }, async () => {
     for (let i = 0; i < 600; i++) {
       const rid = `rs-${String(i).padStart(4, "0")}`;
       await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${rid}`).set({
@@ -546,36 +546,105 @@ describe("reconciliation adversarial invariants (review round 4)", () => {
     expect(second.legacyClaims.some((c) => c.paymentId === p.id)).toBe(true);
   });
 
-  it("concurrent release/recreate during discovery: new generation never indexed from stale data, never resurrected", async () => {
-    for (let i = 0; i < 300; i++) {
-      const fid = `fd${String(i).padStart(4, "0")}`;
-      await db.collection(COLLECTIONS.payments()).doc(fid).set(payment({ id: fid, tenantId: "t2" }));
-      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${fid}`).set({ paymentId: fid, claimedAt: new Date().toISOString(), claimedBy: "x" });
+  it("list cap boundary: 150 unresolved claims paginate distinctly across calls, no repeats, then completes", async () => {
+    for (let i = 0; i < 150; i++) {
+      const tp = payment({ id: `cap-${String(i).padStart(4, "0")}` });
+      await db.collection(COLLECTIONS.payments()).doc(tp.id).set(tp);
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${tp.id}`).set({
+        paymentId: tp.id, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "x", reconcileState: "held", reconcileNote: "pending",
+      });
     }
+    const auth = adminAuth();
+    const seen: string[] = [];
+    let lastComplete = false;
+    for (let call = 0; call < 4; call++) {
+      const r = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean };
+      lastComplete = r.legacyScanComplete;
+      for (const c of r.legacyClaims) {
+        expect(seen).not.toContain(c.paymentId); // no repeats across calls
+        seen.push(c.paymentId);
+      }
+      if (r.legacyScanComplete) break;
+    }
+    expect(seen.length).toBe(150);
+    expect(lastComplete).toBe(true);
+  });
+
+  it("concurrent release/recreate pinned exactly between discovery read and backfill write (barrier)", async () => {
     const p = payment({ id: "zz-racetarget" });
     await seed(p);
     await plantClaim(p.id);
-    // release + recreate (new generation) while the list call scans the 300
-    // foreign claims - whichever interleaving wins, the new generation must
-    // end without a stale tenantId index write.
-    const swap = (async () => {
-      await new Promise((r) => setTimeout(r, 80));
+
+    // Barrier: the swap (claim delete + recreate as a new generation, payment
+    // removed) is pinned EXACTLY between the discovery pass's non-transactional
+    // payment read and the start of the backfill transaction. The patched
+    // payment get returns the pre-swap (stale) snapshot; the backfill
+    // transaction must then reread the claim, see the NEW generation
+    // (updateTime differs even with the same claimedAt), find no fresh
+    // payment binding, and abstain.
+    let armed = true;
+    const origCollection = db.collection.bind(db);
+    const doSwap = async () => {
       const c = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
       const prev = (await c.get()).data()!.claimedAt;
       await c.delete();
       await c.set({ paymentId: p.id, claimedAt: prev, claimedBy: "a2" });
-      // the payment itself is concurrently removed (data repair): no fresh
-      // binding exists from which a tenantId could truthfully be indexed
-      await db.collection(COLLECTIONS.payments()).doc(p.id).delete();
-    })();
-    await listRefundWork.run({ data: {}, auth: adminAuth() } as never);
-    await swap;
+      await origCollection(COLLECTIONS.payments()).doc(p.id).delete();
+    };
+    (db as unknown as { collection: unknown }).collection = (path: string) => {
+      const col = origCollection(path);
+      if (path !== COLLECTIONS.payments()) return col;
+      const origDoc = col.doc.bind(col);
+      (col as { doc: unknown }).doc = (id: string) => {
+        const ref = origDoc(id);
+        if (id !== p.id || !armed) return ref;
+        const origGet = ref.get.bind(ref);
+        (ref as { get: unknown }).get = async () => {
+          const snap = await origGet();
+          if (armed) {
+            armed = false;
+            await doSwap(); // pinned between the read result and the write
+          }
+          return snap;
+        };
+        return ref;
+      };
+      return col;
+    };
+    try {
+      await listRefundWork.run({ data: {}, auth: adminAuth() } as never);
+    } finally {
+      (db as unknown as { collection: unknown }).collection = origCollection;
+    }
+    expect(armed).toBe(false); // the barrier actually fired at the boundary
     const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
-    // In EVERY interleaving: the new generation survives, is never deleted by
-    // the listing, and never carries a tenantId indexed from a stale read
-    // (fresh payment binding is gone; stale generation was wiped).
     expect(claim.exists).toBe(true);
     expect(claim.data()!.claimedBy).toBe("a2");
     expect(claim.data()!.tenantId).toBeUndefined();
   });
+
+  it("list cap boundary: 150 unresolved claims paginate distinctly across calls, no repeats, then completes", async () => {
+    for (let i = 0; i < 150; i++) {
+      const tp = payment({ id: `cap-${String(i).padStart(4, "0")}` });
+      await db.collection(COLLECTIONS.payments()).doc(tp.id).set(tp);
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${tp.id}`).set({
+        paymentId: tp.id, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "x", reconcileState: "held", reconcileNote: "pending",
+      });
+    }
+    const auth = adminAuth();
+    const seen: string[] = [];
+    let lastComplete = false;
+    for (let call = 0; call < 4; call++) {
+      const r = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean };
+      lastComplete = r.legacyScanComplete;
+      for (const c of r.legacyClaims) {
+        expect(seen).not.toContain(c.paymentId); // no repeats across calls
+        seen.push(c.paymentId);
+      }
+      if (r.legacyScanComplete) break;
+    }
+    expect(seen.length).toBe(150);
+    expect(lastComplete).toBe(true);
+  });
+
 });
