@@ -8,7 +8,8 @@ import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToPayments, refundPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
-import { PaymentsView } from "../../../experience/OfficeViews";
+import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
+import { listRefundWork, runRefundOutbox, type RefundWork } from "../../../lib/refund-work-service";
 
 export default function PaymentsPage() {
   const { claims } = useAdminAuth();
@@ -20,6 +21,42 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState("");
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [refundWork, setRefundWork] = useState<RefundWork | null>(null);
+  const [refundWorkLoading, setRefundWorkLoading] = useState(true);
+  const [refundWorkError, setRefundWorkError] = useState<string | null>(null);
+  const [runningOutbox, setRunningOutbox] = useState(false);
+
+  async function refreshRefundWork() {
+    setRefundWorkLoading(true);
+    try {
+      setRefundWork(await listRefundWork());
+      setRefundWorkError(null);
+    } catch (err) {
+      setRefundWorkError(err instanceof Error ? err.message : "Refund work unavailable.");
+    } finally {
+      setRefundWorkLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!claims) return;
+    void refreshRefundWork();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claims]);
+
+  async function handleRunOutbox() {
+    setRunningOutbox(true);
+    setMessage(null);
+    try {
+      const r = await runRefundOutbox();
+      setMessage(`Outbox run: ${r.submitted} submitted, ${r.projected} completed, ${r.failed} failed.`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Outbox run failed.");
+    } finally {
+      setRunningOutbox(false);
+      void refreshRefundWork();
+    }
+  }
 
   useEffect(() => {
     if (!claims) return undefined;
@@ -57,6 +94,16 @@ export default function PaymentsPage() {
   }
 
   return (
+    <>
+    <RefundWorkPanel
+      work={refundWork}
+      loading={refundWorkLoading}
+      error={refundWorkError}
+      running={runningOutbox}
+      names={names}
+      onRun={() => void handleRunOutbox()}
+      onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
+    />
     <PaymentsView
       payments={payments}
       names={names}
@@ -73,5 +120,6 @@ export default function PaymentsPage() {
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
       today={studioToday()}
     />
+    </>
   );
 }

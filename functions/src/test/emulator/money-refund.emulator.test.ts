@@ -21,6 +21,7 @@ import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 import { requestBookingRefund } from "../../functions/payment/requestBookingRefund.js";
 import { processRefundOutbox } from "../../functions/payment/processRefundOutbox.js";
 import { initiateRefund } from "../../functions/payment/initiateRefund.js";
+import { listRefundWork } from "../../functions/payment/listRefundWork.js";
 
 const db = getFirestore();
 let seq = 0;
@@ -804,5 +805,55 @@ describe("legacy initiateRefund ambiguity interlock", () => {
     const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
     expect(claim.exists).toBe(false);
     mockProvider.authoritativeNegatives = false;
+  });
+});
+
+describe("admin recovery surface (listRefundWork)", () => {
+  const adminAuthW = () => ({ uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" });
+
+  it("lists active + held requests and invoiceReviewNeeded payments for the caller's tenant only", async () => {
+    const mine = payment();
+    await seedPayment(mine);
+    // Active request (reserved) and a held (failed) one, both mine.
+    await db.collection(COLLECTIONS.refundRequests()).doc("rr_active_t1").set({
+      tenantId: "t1", studioId: "s1", paymentId: mine.id, jobId: mine.jobId, bookingId: mine.bookingId,
+      amountPaise: 50000, reason: "r", status: "reserved", providerRefundId: null, projectionNeeded: false,
+      leaseBy: null, leaseAt: null, lastError: null, createdBy: "a", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    await db.collection(COLLECTIONS.refundRequests()).doc("rr_held_t1").set({
+      tenantId: "t1", studioId: "s1", paymentId: mine.id, jobId: mine.jobId, bookingId: mine.bookingId,
+      amountPaise: 30000, reason: "r", status: "failed", providerRefundId: null, projectionNeeded: false,
+      leaseBy: null, leaseAt: null, lastError: "provider timeout", createdBy: "a", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    // Another tenant's held request must never surface.
+    await db.collection(COLLECTIONS.refundRequests()).doc("rr_other_t2").set({
+      tenantId: "t2", studioId: "s9", paymentId: "pay-x", jobId: null, bookingId: null,
+      amountPaise: 999, reason: "r", status: "failed", providerRefundId: null, projectionNeeded: false,
+      leaseBy: null, leaseAt: null, lastError: "nope", createdBy: "a", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    // invoiceReviewNeeded payment of mine + another tenant's.
+    await db.collection(COLLECTIONS.payments()).doc(mine.id).update({ invoiceReviewNeeded: true });
+    const other = payment({ tenantId: "t2", studioId: "s9", jobId: null, bookingId: null });
+    await db.collection(COLLECTIONS.payments()).doc(other.id).set({ ...other, invoiceReviewNeeded: true });
+    // A projected (terminal, healthy) request is NOT work: it must not list.
+    await db.collection(COLLECTIONS.refundRequests()).doc("rr_done_t1").set({
+      tenantId: "t1", studioId: "s1", paymentId: mine.id, jobId: mine.jobId, bookingId: mine.bookingId,
+      amountPaise: 1000, reason: "r", status: "projected", providerRefundId: "rfnd_done", projectionNeeded: false,
+      leaseBy: null, leaseAt: null, lastError: null, createdBy: "a", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+
+    const r = (await listRefundWork.run({ data: {}, auth: adminAuthW() } as never)) as {
+      requests: { id: string; status: string; lastError: string | null }[];
+      reviewPayments: { id: string }[];
+    };
+    const ids = r.requests.map((x) => x.id).sort();
+    expect(ids).toEqual(["rr_active_t1", "rr_held_t1"]);
+    expect(r.requests.find((x) => x.id === "rr_held_t1")?.lastError).toBe("provider timeout");
+    expect(r.reviewPayments.map((x) => x.id)).toEqual([mine.id]);
+  });
+
+  it("rejects non-admin roles", async () => {
+    await expect(listRefundWork.run({ data: {}, auth: { uid: "cust1", token: { role: "customer", tenantId: "t1" }, rawToken: "t" } } as never))
+      .rejects.toThrow(/Admin role/);
   });
 });

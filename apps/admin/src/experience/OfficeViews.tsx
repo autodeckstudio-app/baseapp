@@ -11,6 +11,7 @@ import { PageHead, Toolbar, Segmented, ListPane, Drawer, type Column } from "./O
 import { StatusBadge } from "../components/StatusBadge";
 import { formatPaise, formatDate, formatDateTime, studioToday } from "../lib/format";
 import { methodLabel, statusLabel } from "../lib/status-label";
+import type { RefundWork } from "../lib/refund-work-service";
 
 type Names = Record<string, string>;
 
@@ -347,5 +348,79 @@ export function AuditView(p: {
         </Drawer>
       )}
     </div>
+  );
+}
+
+/* ---------------- Refund recovery work ---------------- */
+
+const REFUND_STATUS_LABEL: Record<string, string> = {
+  reserved: "reserved",
+  submitting: "submitting",
+  submitted: "sent to provider",
+  accepted: "accepted",
+  ambiguous: "needs review",
+  failed: "held",
+};
+
+export function RefundWorkPanel(p: {
+  work: RefundWork | null;
+  loading: boolean;
+  error: string | null;
+  running: boolean;
+  names?: Names;
+  onRun: () => void;
+  onOpenInvoice: (id: string) => void;
+}) {
+  if (p.error) {
+    return (
+      <div className="ax-panel ax-empty" role="alert">
+        <p className="ax-title">Refund work unavailable</p>
+        <p>{p.error}</p>
+      </div>
+    );
+  }
+  if (p.loading || !p.work) {
+    return <div className="ax-panel" role="status">Checking refund work...</div>;
+  }
+  const { requests, reviewPayments } = p.work;
+  if (requests.length === 0 && reviewPayments.length === 0) return null;
+  return (
+    <section className="ax-panel" aria-label="Refund work">
+      <div className="ax-row-actions" style={{ justifyContent: "space-between", marginBottom: "12px" }}>
+        <p className="ax-title" style={{ margin: 0 }}>Refund work</p>
+        <button type="button" className="ax-button" disabled={p.running} onClick={p.onRun}>
+          {p.running ? "Running" : "Run outbox now"}
+        </button>
+      </div>
+      {requests.length > 0 && (
+        <div>
+          {requests.map((r) => (
+            <div key={r.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+              <span>
+                <StatusBadge label={REFUND_STATUS_LABEL[r.status] ?? r.status} />{" "}
+                <strong>{r.amountPaise != null ? formatPaise(r.amountPaise) : "-"}</strong>{" "}
+                <span className="ax-muted">{r.updatedAt ? formatDateTime(r.updatedAt) : ""}</span>
+                {r.lastError && <span className="ax-muted"> - {r.lastError}</span>}
+              </span>
+              <span className="ax-muted">{r.providerRefundId ?? r.id}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {reviewPayments.length > 0 && (
+        <div style={{ marginTop: requests.length ? "16px" : 0 }}>
+          <p className="ax-title">Invoices to review</p>
+          {reviewPayments.map((x) => (
+            <div key={x.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+              <span>
+                <strong>{x.amount != null ? formatPaise(x.amount) : "-"}</strong>{" "}
+                <span className="ax-muted">{x.customerId ? (p.names?.[x.customerId] ?? "Customer") : ""} refunded; the linked invoice needs review</span>
+              </span>
+              {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
