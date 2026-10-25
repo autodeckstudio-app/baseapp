@@ -243,3 +243,97 @@ describe("legacy initiateRefund <-> outbox mutual interlock (both race orders)",
     expect(claim.exists).toBe(false);
   });
 });
+
+describe("failed_confirmed races: delayed events, hold, recovery", () => {
+  it("lost submit + provider reports failed: request HELD ambiguous with evidence, guard kept, balance blocked, no projection", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    provider.failNextRefund = true;
+    const r = await runRefundOutbox(db, provider, { limit: 10 });
+    expect(r).toMatchObject({ submitted: 0, projected: 0, failed: 1 });
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", p.id).get();
+    const req = reqs.docs.filter((d) => d.id.startsWith("rr_"))[0]?.data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toContain("reported failed");
+    expect(req.lastError).toContain("manual reconciliation");
+    // Guard KEPT: active reservation still blocks anything new; balance stays blocked.
+    expect(await activeReservation(db, p.id)).not.toBeNull();
+    expect(refundablePaise({ ...p } as Payment)).toBe(p.amount); // no refund projected yet
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+  });
+
+  it("while a failed notification holds, NO new reservation can open (double-refund impossible)", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "first", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    provider.failNextRefund = true;
+    await runRefundOutbox(db, provider, { limit: 10 });
+    await expect(reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "retry", createdBy: "admin" }))
+      .rejects.toThrow(/already has an active refund request/);
+  });
+
+  it("failed notification that later processed: next reconcile projects exactly once (why holds must not release)", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    provider.failNextRefund = true;
+    await runRefundOutbox(db, provider, { limit: 10 });
+    // Provider-side truth turns out to be processed; the SAME reference reconciles.
+    const reqId = (await db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", p.id).get()).docs.filter((d) => d.id.startsWith("rr_"))[0]!.id;
+    provider.setStoredRefundStatus(reqId, "processed");
+    const r = await runRefundOutbox(db, provider, { limit: 10 });
+    expect(r).toMatchObject({ submitted: 1, projected: 1, failed: 0 });
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(p.amount);
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", p.id).get();
+    const rrdocs = reqs.docs.filter((d) => d.id.startsWith("rr_"));
+    expect(rrdocs.length).toBe(1);
+    expect((rrdocs[0]!.data() as { status: string }).status).toBe("projected");
+  });
+
+  it("delayed refund.processed for the failed refund is ignored: no projection, refundAmount unchanged", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    provider.failNextRefund = true;
+    await runRefundOutbox(db, provider, { limit: 10 });
+    const failedRefundId = `mock_rfnd_${(await db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", p.id).get()).docs.filter((d) => d.id.startsWith("rr_"))[0]?.id}`;
+    const r = await processProviderEvent(db, {
+      provider: "razorpay",
+      providerEventId: `evt_late_${Date.now()}`,
+      eventType: "refund.processed",
+      providerPaymentId: p.razorpayPaymentId,
+      providerRefundId: failedRefundId,
+      amount: p.amount,
+      currency: "INR",
+      receipt: null,
+      raw: {},
+    } as never);
+    expect((r as { outcome: string }).outcome).not.toBe("projected");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+  });
+
+  it("repeat reconcile on a failed-hold: no resubmit, no error, hold stays held", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    provider.failNextRefund = true;
+    await runRefundOutbox(db, provider, { limit: 10 });
+    const r2 = await runRefundOutbox(db, provider, { limit: 10 });
+    expect(r2).toMatchObject({ submitted: 0, projected: 0, failed: 0 });
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", p.id).get();
+    const rrdocs2 = reqs.docs.filter((d) => d.id.startsWith("rr_"));
+    expect(rrdocs2.length).toBe(1);
+    expect((rrdocs2[0]!.data() as { status: string }).status).toBe("ambiguous");
+  });
+});

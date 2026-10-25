@@ -262,15 +262,17 @@ export async function runRefundOutbox(
           request.status = "submitted";
           request.providerRefundId = lookup.providerRefundId;
           request.projectionNeeded = true;
-        } else if (lookup.outcome === "absent_confirmed" || lookup.outcome === "failed_confirmed") {
-          // Authoritative negative: the submit never landed, or it landed and
-          // the provider TERMINALLY failed it - no money moved either way. The
-          // request fails truthfully and the balance releases; any retry is a
-          // NEW reservation with a NEW reference id, never a resubmit.
-          const why = lookup.outcome === "failed_confirmed"
-            ? `provider refund ${lookup.providerRefundId} failed terminally`
-            : (err instanceof Error ? err.message : String(err));
-          await request.ref.update({ status: "failed", lastError: why, updatedAt: now });
+        } else if (lookup.outcome === "failed_confirmed") {
+          // Provider reports our refund failed - a NOTIFICATION, not settled
+          // finality. Hold as ambiguous with the evidence recorded: no release,
+          // no resubmit, no projection. Manual reconciliation decides.
+          await request.ref.update({ status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
+          failed++;
+          continue;
+        } else if (lookup.outcome === "absent_confirmed") {
+          // Authoritative negative under the provider's reconciliation
+          // contract: the submit never landed. A real failure; balance releases.
+          await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
           await releaseGuard(db, request.paymentId);
           failed++;
           continue;
@@ -298,9 +300,12 @@ export async function runRefundOutbox(
           request.providerRefundId = lookup.providerRefundId;
           request.projectionNeeded = true;
           submitted++;
-        } else if (lookup.outcome === "absent_confirmed" || lookup.outcome === "failed_confirmed") {
-          const why = lookup.outcome === "failed_confirmed" ? `provider refund ${lookup.providerRefundId} failed terminally` : "provider confirms no such refund";
-          await request.ref.update({ status: "failed", lastError: why, updatedAt: now });
+        } else if (lookup.outcome === "failed_confirmed") {
+          // Failure notification, not finality: keep the hold, refresh the evidence.
+          await request.ref.update({ status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
+          continue;
+        } else if (lookup.outcome === "absent_confirmed") {
+          await request.ref.update({ status: "failed", lastError: "provider confirms no such refund", updatedAt: now });
           await releaseGuard(db, request.paymentId);
           failed++;
           continue;

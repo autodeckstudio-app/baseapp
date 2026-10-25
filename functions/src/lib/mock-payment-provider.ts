@@ -75,8 +75,26 @@ export class MockPaymentProvider implements PaymentProvider {
   loseNextRefundResponse = false;
   private submitted = new Map<string, RefundResult & InitiateRefundParams>();
 
+  // Test hook: like loseNextRefundResponse, but the provider-side refund
+  // lands in "failed" status (Razorpay refund.failed: "not able to process a
+  // refund" - a notification; docs settle no finality). The bound lookup then
+  // reports failed_confirmed.
+  failNextRefund = false;
+
+  // Test hook: flip a stored refund's status (e.g. a failed notification that
+  // later turns out to have processed - exactly why holds must not release).
+  setStoredRefundStatus(referenceId: string, status: string): void {
+    const hit = this.submitted.get(referenceId);
+    if (hit) this.submitted.set(referenceId, { ...hit, ...( { status } as object) });
+  }
+
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
     const result = { providerRefundId: this.mockRefundId(params.referenceId), ...params };
+    if (this.failNextRefund) {
+      this.failNextRefund = false;
+      this.submitted.set(params.referenceId, { ...result, ...( { status: "failed" } as object) });
+      throw new Error("network: response lost; provider-side refund failed terminally");
+    }
     this.submitted.set(params.referenceId, result);
     if (this.loseNextRefundResponse) {
       this.loseNextRefundResponse = false;

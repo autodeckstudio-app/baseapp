@@ -30,9 +30,12 @@ export interface RefundResult {
 
 export type RefundLookupResult =
   | { outcome: "found"; providerRefundId: string }
-  // The provider confirms a refund with our reference exists and is TERMINALLY
-  // failed: no money moved. The request fails truthfully and the guard can
-  // release; any retry is a NEW reservation with a NEW reference id.
+  // The provider reports a refund with our reference in status "failed".
+  // Razorpay documents refund.failed only as "not able to process a refund" -
+  // a failure NOTIFICATION, not settled finality: the provider contract does
+  // not prove the same refund can never later process. The runner therefore
+  // HOLDS the reservation for manual reconciliation on this evidence: never
+  // releases the balance, never resubmits, never starts a new refund.
   | { outcome: "failed_confirmed"; providerRefundId: string }
   | { outcome: "absent_confirmed" }
   | { outcome: "unknown" };
