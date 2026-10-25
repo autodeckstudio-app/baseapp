@@ -2,6 +2,11 @@ import { describe, it, expect } from "vitest";
 import { refundOwedText, refundsOwedTotalText, owedFromBookings } from "./refund-owed-copy";
 
 describe("refund owed copy", () => {
+  it("a missing server total never prints undefined or a dash as an amount", () => {
+    const t = refundsOwedTotalText(undefined as unknown as number, undefined as unknown as number, undefined as unknown as boolean);
+    expect(t).toMatch(/could not be totalled/);
+    expect(t).not.toMatch(/undefined|NaN| - /);
+  });
   it("never says refunded, sent or initiated as done; says not yet returned", () => {
     const t = refundOwedText(10000);
     expect(t).toMatch(/not yet returned/); expect(t).toMatch(/not sent anything/);

@@ -151,17 +151,17 @@ export function PaymentsView(p: {
   const failed = p.payments.filter((x) => x.status === "failed").length;
 
   const cols: Column<Payment>[] = [
-    { key: "when", head: "When", kind: "muted", width: "150px", cell: (x) => formatDateTime(x.createdAt) },
-    { key: "who", head: "Customer", kind: "strong", width: "minmax(0, 1.6fr)", cell: (x) => p.names[x.customerId] ?? "Customer" },
-    { key: "inv", head: "Invoice", kind: "data", width: "minmax(0, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Invoice") : "-") },
-    { key: "how", head: "Method", width: "110px", cell: (x) => methodLabel(x.method) },
-    { key: "status", head: "Status", width: "120px", cell: (x) => <StatusBadge label={x.status} /> },
-    { key: "amt", head: "Amount", kind: "data", align: "end", width: "110px", cell: (x) => formatPaise(x.amount) },
+    { key: "when", head: "When", kind: "muted", width: "142px", cell: (x) => formatDateTime(x.createdAt) },
+    { key: "who", head: "Customer", kind: "strong", width: "minmax(96px, 1.6fr)", cell: (x) => p.names[x.customerId] ?? "Customer" },
+    { key: "inv", head: "Invoice", kind: "data", width: "minmax(84px, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Invoice") : "-") },
+    { key: "how", head: "Method", width: "66px", cell: (x) => methodLabel(x.method) },
+    { key: "status", head: "Status", width: "88px", cell: (x) => <StatusBadge label={x.status} /> },
+    { key: "amt", head: "Amount", kind: "data", align: "end", width: "72px", cell: (x) => formatPaise(x.amount) },
     {
       key: "act",
       head: "",
       align: "end",
-      width: "minmax(180px, 1.2fr)",
+      width: "160px",
       cell: (x) => (
         <span className="ax-row-actions">
           {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
@@ -396,10 +396,14 @@ export function RefundWorkPanel(p: {
   const { requests, reviewPayments, legacyClaims, legacyScanComplete } = p.work;
   if (requests.length === 0 && reviewPayments.length === 0 && legacyClaims.length === 0 && legacyScanComplete) return null;
   return (
-    <section className="ax-panel" aria-label="Refund work">
-      <div className="ax-row-actions" style={{ justifyContent: "space-between", marginBottom: "12px" }}>
-        <p className="ax-title" style={{ margin: 0 }}>Refund work</p>
-        <span className="ax-row-actions">
+    <details className="ax-panel ax-rw" aria-label="Refund work" open={requests.length > 0 || reviewPayments.length > 0}>
+      <summary className="ax-rw-sum">
+        <span className="ax-title">Refund work</span>
+        <span className="ax-muted">{requests.length} {requests.length === 1 ? "request" : "requests"} - {legacyClaims.length} retained {legacyClaims.length === 1 ? "claim" : "claims"}{legacyScanComplete ? "" : " so far"}</span>
+        {reviewPayments.length > 0 && <span className="ax-muted"> - {reviewPayments.length} {reviewPayments.length === 1 ? "payment needs" : "payments need"} review, not settled</span>}
+      </summary>
+      <div className="ax-rw-head">
+        <span className="ax-rw-act">
           <span className="ax-muted">
             {p.actionsEnabled
               ? "Sends reserved refunds to the provider"
@@ -413,7 +417,7 @@ export function RefundWorkPanel(p: {
       {requests.length > 0 && (
         <div>
           {requests.map((r) => (
-            <div key={r.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+            <div key={r.id} className="ax-rw-row">
               <span>
                 <StatusBadge label={REFUND_STATUS_LABEL[r.status] ?? r.status} />{" "}
                 <strong>{r.amountPaise != null ? formatPaise(r.amountPaise) : "-"}</strong>{" "}
@@ -430,11 +434,11 @@ export function RefundWorkPanel(p: {
         </div>
       )}
       {(legacyClaims.length > 0 || !legacyScanComplete) && (
-        <div style={{ marginTop: requests.length ? "16px" : 0 }}>
-          <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
+        <div className="ax-rw-sec">
+          <div className="ax-rw-head">
             <p className="ax-title">Retained refund claims</p>
             {p.onReconcile && (
-              <span className="ax-row-actions">
+              <span className="ax-rw-act">
                 <span className="ax-muted">
                 {p.actionsEnabled
                   ? "Reconciliation-only: checks the provider read-only; never submits a new refund"
@@ -447,7 +451,7 @@ export function RefundWorkPanel(p: {
             )}
           </div>
           {!legacyScanComplete && p.onContinueScan && (
-            <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
+            <div className="ax-rw-row">
               <span className="ax-muted">Scanning older records - {legacyClaims.length} shown so far, more may exist.</span>
               <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onContinueScan}>
                 Continue scan
@@ -455,7 +459,7 @@ export function RefundWorkPanel(p: {
             </div>
           )}
           {legacyClaims.map((c) => (
-            <div key={c.paymentId} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+            <div key={c.paymentId} className="ax-rw-row">
               <span>
                 <StatusBadge label={c.reconcileState === "held" ? "held" : "retained"} />{" "}
                 <strong>{c.amount != null ? formatPaise(c.amount) : "-"}</strong>{" "}
@@ -470,10 +474,10 @@ export function RefundWorkPanel(p: {
         </div>
       )}
       {reviewPayments.length > 0 && (
-        <div style={{ marginTop: requests.length ? "16px" : 0 }}>
+        <div className="ax-rw-sec">
           <p className="ax-title">Invoices to review</p>
           {reviewPayments.map((x) => (
-            <div key={x.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+            <div key={x.id} className="ax-rw-row">
               <span>
                 <strong>{x.refundAmount != null ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
                 <span className="ax-muted">
@@ -486,6 +490,6 @@ export function RefundWorkPanel(p: {
           ))}
         </div>
       )}
-    </section>
+    </details>
   );
 }
