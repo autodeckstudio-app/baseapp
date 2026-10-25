@@ -17,11 +17,11 @@ describe("backend availability gates (studio)", () => {
   });
 });
 
-describe("provisional backend features stay hidden until the backend release", () => {
-  it("photos and admin requests are off", async () => {
+describe("backend features enabled with their backend release; UPI stays held", () => {
+  it("photos and admin requests are on, UPI remains off pending the user's verification decision", async () => {
     const f = await import("./backend-features");
-    expect(f.INSPECTION_PHOTOS_ENABLED).toBe(false);
-    expect(f.ADMIN_APPROVAL_ENABLED).toBe(false);
+    expect(f.INSPECTION_PHOTOS_ENABLED).toBe(true);
+    expect(f.ADMIN_APPROVAL_ENABLED).toBe(true);
     expect(f.UPI_RECORD_ENABLED).toBe(false);
   });
   it("the screens are gated on those flags", () => {

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { legsFor, canMarkLeg, legPayload, outstandingNote } from "./pickup-legs";
 import { PICKUP_LEG_PROGRESS_ENABLED } from "./backend-features";
 describe("pickup leg progress", () => {
-  it("is gated off", () => expect(PICKUP_LEG_PROGRESS_ENABLED).toBe(false));
+  it("is enabled with the pickup-leg backend", () => expect(PICKUP_LEG_PROGRESS_ENABLED).toBe(true));
   it("lists the legs a kind has", () => {
     expect(legsFor({ kind: "both", status: "CONFIRMED" }).map((l) => l.leg)).toEqual(["pickup", "drop"]);
     expect(legsFor({ kind: "drop", status: "CONFIRMED" }).map((l) => l.leg)).toEqual(["drop"]);
