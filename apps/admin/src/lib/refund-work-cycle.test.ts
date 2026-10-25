@@ -104,7 +104,7 @@ describe("serialized scan queue", () => {
     ];
     let cursor = 0;
     const calls: string[][] = [];
-    const pending: ((w: RefundWork) => void)[] = [];
+    const pending: (() => void)[] = [];
     const list = (ids: string[]) => new Promise<RefundWork>((res) => {
       calls.push(ids);
       const page = pages[cursor++] ?? work();
