@@ -111,10 +111,13 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
       // already reports as processed may be projected below. Anything else
       // keeps the claim and stays a hold for reconciliation - the app does
       // not fabricate a completed refund.
-      if (result.status && result.status !== "processed") {
+      // Only AFFIRMATIVE processed evidence may project. A missing, null or
+      // empty lifecycle status is not a completed refund: hold exactly like
+      // any other non-processed outcome.
+      if (result.status !== "processed") {
         throw new HttpsError(
           "unavailable",
-          `Refund ${result.providerRefundId} accepted by the provider with status '${result.status}'; the refund claim is retained. Reconcile before any retry.`,
+          `Refund ${result.providerRefundId} accepted by the provider with status '${result.status ?? "unknown"}'; the refund claim is retained. Reconcile before any retry.`,
         );
       }
       providerRefundId = result.providerRefundId;

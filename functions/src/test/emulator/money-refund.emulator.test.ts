@@ -738,6 +738,45 @@ describe("legacy initiateRefund ambiguity interlock", () => {
       .rejects.toMatchObject({ code: "already-exists" });
   });
 
+  it("legacy success response with missing lifecycle status: claim retained, NOTHING projected", async () => {
+    const p = payment({ bookingId: null, jobId: null });
+    await seedPayment(p);
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    mockProvider.loseNextRefundResponse = false;
+    // Provider returns a 2xx creation response whose refund entity carries NO
+    // status. Missing lifecycle evidence is not a completed refund: hold.
+    mockProvider.nextRefundStatus = "";
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "statusless" }, auth: adminAuth4() } as never))
+      .rejects.toMatchObject({ code: "unavailable" });
+    mockProvider.nextRefundStatus = null;
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+    const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
+    expect(claim.exists).toBe(true);
+    await expect(reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "second", createdBy: "admin" }))
+      .rejects.toThrow(/manual refund obligation/);
+  });
+
+  it("legacy success response with pending status: claim retained, NOTHING projected (combined webhook/handler hold)", async () => {
+    const p = payment({ bookingId: null, jobId: null });
+    await seedPayment(p);
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    mockProvider.loseNextRefundResponse = false;
+    mockProvider.nextRefundStatus = "pending";
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "pending" }, auth: adminAuth4() } as never))
+      .rejects.toMatchObject({ code: "unavailable" });
+    mockProvider.nextRefundStatus = null;
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+    // Retry refuses while the claim stands; outbox stays blocked.
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "retry" }, auth: adminAuth4() } as never))
+      .rejects.toMatchObject({ code: "already-exists" });
+    await expect(reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "second", createdBy: "admin" }))
+      .rejects.toThrow(/manual refund obligation/);
+  });
+
   it("authoritative provider absence: claim released, retry possible", async () => {
     const p = payment({ bookingId: null, jobId: null });
     await seedPayment(p);
