@@ -22,7 +22,7 @@ function seed(over: Record<string, unknown> = {}) {
     vehicles: { v1: { tenantId: "t", ownerId: "c1", registrationNumber: "GJ01AB1234", make: "Tata", model: "Nexon", year: 2022, color: "Blue", photoUrl: null } },
     customers: { c1: { tenantId: "t", name: "Asha" } },
     jobs: { job1: { id: "job1", tenantId: "t", studioId: "s", bookingId: "b1", customerId: "c1", vehicleId: "v1", serviceId: "svcA", status: "COMPLETED", paymentStatus: "unpaid", priceBreakdown: pb, totalAmount: AMOUNT, additionalWorkDelta: 0 } },
-    bookings: { b1: { id: "b1", paymentStatus: "unpaid" } },
+    bookings: { b1: { id: "b1", tenantId: "t", paymentStatus: "unpaid" } },
     payments: { pay1: { id: "pay1", tenantId: "t", studioId: "s", targetType: "job", jobId: "job1", bookingId: "b1", membershipId: null, customerId: "c1", amount: AMOUNT, currency: "INR", method: "razorpay_payment_link", status: "pending", razorpayPaymentLinkId: "plink_1", razorpayPaymentId: null, razorpayOrderId: null, invoiceId: null } },
     ...over,
   } as never;
@@ -30,6 +30,13 @@ function seed(over: Record<string, unknown> = {}) {
 
 const linkPaid = (id: string, amount = AMOUNT) =>
   JSON.stringify({ entity: "event", event: "payment.link.paid", payload: {
+    payment: { entity: { id: "pay_abc", order_id: "order_1", amount, currency: "INR" } },
+    payment_link: { entity: { id: "plink_1", reference_id: "pay1", amount } } }, _id: id });
+
+// The name Razorpay actually documents and emits for payment links
+// (https://razorpay.com/docs/webhooks/payment-links); identical payload shape.
+const linkPaidDocumented = (id: string, amount = AMOUNT) =>
+  JSON.stringify({ entity: "event", event: "payment_link.paid", payload: {
     payment: { entity: { id: "pay_abc", order_id: "order_1", amount, currency: "INR" } },
     payment_link: { entity: { id: "plink_1", reference_id: "pay1", amount } } }, _id: id });
 
@@ -90,6 +97,34 @@ describe("processProviderEvent", () => {
     expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
   });
 
+  it("payment_link.paid (documented Razorpay name): completes the payment, issues the invoice, marks job and booking paid", async () => {
+    audits.length = 0;
+    const { db, data } = fakeFirestore(seed());
+    const r = await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    expect(r).toEqual({ outcome: "completed", paymentId: "pay1" });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "completed", razorpayPaymentId: "pay_abc" });
+    expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
+    expect(data["jobs"]!["job1"]!["paymentStatus"]).toBe("paid");
+    expect(data["bookings"]!["b1"]!["paymentStatus"]).toBe("paid");
+    expect(audits.map((a) => a.action)).toEqual(["payment.completed", "invoice.issued"]);
+  });
+
+  it("payment.link.paid after payment_link.paid (legacy name arrives later, different event id) does not issue a second invoice", async () => {
+    const { db, data } = fakeFirestore(seed());
+    await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    const r = await processProviderEvent(db, ev(linkPaid("1"), "evt_2"));
+    expect(r.outcome).toBe("already_final");
+    expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
+  });
+
+  it("the same documented-name event delivered twice changes nothing the second time", async () => {
+    const { db, data } = fakeFirestore(seed());
+    await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    const r2 = await processProviderEvent(db, ev(linkPaidDocumented("1"), "evt_1"));
+    expect(r2.outcome).toBe("duplicate");
+    expect(Object.keys(data["invoices"] ?? {})).toHaveLength(1);
+  });
+
   it("an amount that does not match the stored payment is never marked paid", async () => {
     const { db, data } = fakeFirestore(seed());
     const r = await processProviderEvent(db, ev(linkPaid("1", AMOUNT - 100), "evt_1"));
@@ -140,7 +175,7 @@ describe("processProviderEvent", () => {
   it("refund.created on a completed, invoiced payment refunds it, voids the invoice and marks the job refunded", async () => {
     const { db, data } = fakeFirestore(seed());
     await processProviderEvent(db, ev(linkPaid("1"), "evt_1"));
-    const refund = JSON.stringify({ event: "refund.created", payload: { refund: { entity: { id: "rfnd_1", payment_id: "pay_abc", amount: AMOUNT } } } });
+    const refund = JSON.stringify({ event: "refund.created", payload: { refund: { entity: { id: "rfnd_1", payment_id: "pay_abc", amount: AMOUNT, currency: "INR", status: "processed" } } } });
     const r = await processProviderEvent(db, ev(refund, "evt_r"));
     expect(r.outcome).toBe("refunded");
     expect(data["payments"]!["pay1"]).toMatchObject({ status: "refunded", razorpayRefundId: "rfnd_1" });
