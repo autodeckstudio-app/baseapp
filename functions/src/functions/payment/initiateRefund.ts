@@ -98,23 +98,62 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   // Deterministic referenceId (no Date.now()) so a network-level retry of
   // this exact call is idempotent at the provider too.
   let providerRefundId: string | null = null;
-  try {
-    if (payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
-      const provider = getPaymentProvider();
+  if (payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
+    const provider = getPaymentProvider();
+    try {
       const result = await provider.initiateRefund({
         providerPaymentId: payment.razorpayPaymentId,
         amount: payment.amount,
         reason: data.reason,
         referenceId: `refund_${data.paymentId}`,
       });
+      // A 2xx response alone is not money moved: only a refund the provider
+      // already reports as processed may be projected below. Anything else
+      // keeps the claim and stays a hold for reconciliation - the app does
+      // not fabricate a completed refund.
+      if (result.status && result.status !== "processed") {
+        throw new HttpsError(
+          "unavailable",
+          `Refund ${result.providerRefundId} accepted by the provider with status '${result.status}'; the refund claim is retained. Reconcile before any retry.`,
+        );
+      }
       providerRefundId = result.providerRefundId;
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      // The provider outcome is UNKNOWN (e.g. the response was lost after
+      // acceptance). NEVER release the claim on an unknown outcome: a
+      // released claim would let a retry - or the outbox - submit a second
+      // refund for the same money. Reconcile by the durable reference id:
+      // only an authoritative provider negative releases the claim.
+      let outcome: string = "unknown";
+      let foundId: string | null = null;
+      if (provider.findRefundByReference && payment.currency) {
+        try {
+          const lookup = await provider.findRefundByReference(`refund_${data.paymentId}`, {
+            providerPaymentId: payment.razorpayPaymentId, amountPaise: payment.amount, currency: payment.currency,
+          });
+          outcome = lookup.outcome;
+          if (lookup.outcome === "found") foundId = lookup.providerRefundId;
+        } catch { outcome = "unknown"; }
+      }
+      if (outcome === "absent_confirmed") {
+        // Authoritative: the provider never accepted this refund. Safe to
+        // release the claim for a genuine retry.
+        await refundEventRef.delete().catch(() => undefined);
+        throw err;
+      }
+      if (outcome === "found" && foundId) {
+        // The provider DID accept (and reports it processed): project it
+        // truthfully below instead of losing the obligation.
+        providerRefundId = foundId;
+      } else {
+        // failed notification or unknown: hold. Claim retained.
+        throw new HttpsError(
+          "unavailable",
+          "Refund outcome could not be confirmed with the provider; the refund claim is retained so no second refund can be submitted. Reconcile before any retry.",
+        );
+      }
     }
-  } catch (err) {
-    // Provider call failed — release the claim so a genuine retry is
-    // possible instead of permanently blocking this payment on
-    // "already-exists" for a refund that never actually happened.
-    await refundEventRef.delete().catch(() => undefined);
-    throw err;
   }
 
   await db.runTransaction(async (tx) => {

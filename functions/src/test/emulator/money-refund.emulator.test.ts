@@ -691,3 +691,65 @@ describe("D-review round 4: pre-effect financial and strict-linkage gates", () =
     expect(req.lastError).toContain("currency");
   });
 });
+
+describe("legacy initiateRefund ambiguity interlock", () => {
+  const adminAuth4 = () => ({ uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" });
+
+  it("lost provider response with provider-side acceptance: claim retained, refund still projected truthfully", async () => {
+    const p = payment({ bookingId: null, jobId: null, targetType: "job" });
+    await seedPayment(p);
+    // Mock: accepted provider-side, response lost. loseNextRefundResponse is
+    // consumed via getPaymentProvider inside the callable - use the shared mock.
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    mockProvider.loseNextRefundResponse = true;
+    const r = await initiateRefund.run({ data: { paymentId: p.id, reason: "lost response" }, auth: adminAuth4() } as never);
+    expect(r).toMatchObject({ refunded: true });
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("refunded");
+    expect(pay.refundAmount).toBe(p.amount);
+    // The claim exists and blocks any outbox reservation for the same money
+    // (either via the legacy-claim check or the now-zero refundable balance).
+    await expect(reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "second", createdBy: "admin" }))
+      .rejects.toThrow(/manual refund obligation|exceeds the refundable/);
+  });
+
+  it("unknown provider outcome: claim RETAINED (no silent release), no payment writes, outbox still blocked", async () => {
+    const p = payment({ bookingId: null, jobId: null });
+    await seedPayment(p);
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    // Provider call throws and the lookup cannot see anything (default:
+    // unknown) - the genuinely ambiguous case.
+    mockProvider.loseNextRefundResponse = false;
+    const realInit = mockProvider.initiateRefund.bind(mockProvider);
+    mockProvider.initiateRefund = (async () => { throw new Error("network: connection reset before any provider state"); }) as never;
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "ambiguous" }, auth: adminAuth4() } as never))
+      .rejects.toMatchObject({ code: "unavailable" });
+    mockProvider.initiateRefund = realInit;
+    // Claim retained: payment untouched, no second submission possible.
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+    const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
+    expect(claim.exists).toBe(true);
+    await expect(reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "second", createdBy: "admin" }))
+      .rejects.toThrow(/manual refund obligation/);
+    // A retry of the legacy path also refuses while the claim stands.
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "retry" }, auth: adminAuth4() } as never))
+      .rejects.toMatchObject({ code: "already-exists" });
+  });
+
+  it("authoritative provider absence: claim released, retry possible", async () => {
+    const p = payment({ bookingId: null, jobId: null });
+    await seedPayment(p);
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    mockProvider.authoritativeNegatives = true;
+    const realInit = mockProvider.initiateRefund.bind(mockProvider);
+    mockProvider.initiateRefund = (async () => { throw new Error("network: connection reset before any provider state"); }) as never;
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "ambiguous" }, auth: adminAuth4() } as never))
+      .rejects.not.toMatchObject({ code: "unavailable" });
+    mockProvider.initiateRefund = realInit;
+    const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
+    expect(claim.exists).toBe(false);
+    mockProvider.authoritativeNegatives = false;
+  });
+});
