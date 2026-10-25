@@ -27,7 +27,21 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   // could not tell "still held" from "reconciled away". Bounded per call.
   const rawKnown = (request.data as { knownClaimPaymentIds?: unknown } | undefined)?.knownClaimPaymentIds;
   const knownIds = Array.isArray(rawKnown) ? rawKnown.filter((x): x is string => typeof x === "string").slice(0, 200) : [];
+  // truthOnly: return ONLY claimTruth for the given ids - no scan queries, no
+  // cursor reads/writes, no backfill. Batched clients call the first chunk
+  // with the scan and later chunks truth-only, so a >200-id refresh never
+  // advances the paged cursors past records nobody received.
+  const truthOnly = (request.data as { truthOnly?: unknown } | undefined)?.truthOnly === true;
 
+  let requests: { id: string; status: string; paymentId: string | null; bookingId: string | null; jobId: string | null; amountPaise: number | null; providerRefundId: string | null; lastError: string | null; updatedAt: string | null; }[] = [];
+  let reviewPayments: { id: string; status: string; refundState: string | null; amount: number | null; refundAmount: number | null; currency: string | null; invoiceId: string | null; bookingId: string | null; jobId: string | null; customerId: string | null; updatedAt: string | null; }[] = [];
+  let discoveryComplete = true;
+  let fastComplete = true;
+  const legacyClaims: {
+    paymentId: string; claimedAt: string | null; reconcileState: string | null; reconcileNote: string | null;
+    paymentStatus: string | null; amount: number | null; currency: string | null;
+  }[] = [];
+  if (!truthOnly) {
   const [reqSnap, paySnap, claimSnap] = await Promise.all([
     db.collection(COLLECTIONS.refundRequests())
       .where("tenantId", "==", tenantId)
@@ -49,7 +63,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   ]);
 
   const sortDesc = <T extends { updatedAt: string | null }>(a: T, b: T) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
-  const requests = reqSnap.docs.map((doc) => {
+  requests = reqSnap.docs.map((doc) => {
     const d = doc.data();
     return {
       id: doc.id,
@@ -64,7 +78,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     };
   });
   requests.sort(sortDesc);
-  const reviewPayments = paySnap.docs.map((doc) => {
+  reviewPayments = paySnap.docs.map((doc) => {
     const d = doc.data();
     return {
       id: doc.id,
@@ -88,14 +102,11 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   // and backfills tenantId from the verified payment doc, so unresolved rows
   // beyond one call's scan bound are reached by later calls instead of
   // starving forever. A completed discovery cycle clears the cursor.
-  const legacyClaims: {
-    paymentId: string; claimedAt: string | null; reconcileState: string | null; reconcileNote: string | null;
-    paymentStatus: string | null; amount: number | null; currency: string | null;
-  }[] = [];
-  let discoveryComplete = false;
-  let fastComplete = false;
   const seenClaimPayments = new Set<string>();
   {
+    void claimSnap;
+    discoveryComplete = false;
+    fastComplete = false;
     const events = db.collection(COLLECTIONS.paymentEvents());
     const claimsRange = () => events.where("__name__", ">=", "refund_").where("__name__", "<", "refund`").orderBy("__name__");
     const pushClaim = async (docId: string, d: { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string }) => {
@@ -217,6 +228,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     } else if (lastSeen) {
       await stateRef.set({ lastId: lastSeen, updatedAt: new Date().toISOString() }).catch(() => undefined);
     }
+  }
   }
   const claimTruth: { paymentId: string; state: string; note: string | null }[] = [];
   for (const pid of knownIds) {

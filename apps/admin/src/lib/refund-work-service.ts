@@ -58,17 +58,20 @@ export type RefundWork = {
  * rules, so this callable is the only way staff can see held or in-flight
  * refund work for their own tenant. */
 export async function listRefundWork(knownClaimPaymentIds: string[] = []): Promise<RefundWork> {
-  const fn = httpsCallable<{ knownClaimPaymentIds: string[] }, RefundWork>(functions, "listRefundWork");
+  const fn = httpsCallable<{ knownClaimPaymentIds: string[]; truthOnly?: boolean }, RefundWork>(functions, "listRefundWork");
   // The backend bounds known ids per call; batch so an accumulated review
-  // cycle larger than the bound still refreshes EVERY shown row. Paged scan
-  // fields come from the first call; claimTruth merges across all batches.
+  // cycle larger than the bound still refreshes EVERY shown row. Only the
+  // FIRST call may run the paged legacy scan: every listRefundWork call with
+  // the scan enabled advances its persisted cursors, so extra batch calls
+  // would silently consume (and discard) pages of legacy claims nobody sees.
+  // Later chunks are truth-only: no scan, no cursor movement, just claimTruth.
   const chunks: string[][] = [];
   for (let i = 0; i < knownClaimPaymentIds.length; i += 200) chunks.push(knownClaimPaymentIds.slice(i, i + 200));
   if (chunks.length === 0) chunks.push([]);
   const first = (await fn({ knownClaimPaymentIds: chunks[0]! })).data;
   const claimTruth = [...first.claimTruth];
   for (const chunk of chunks.slice(1)) {
-    const more = (await fn({ knownClaimPaymentIds: chunk })).data;
+    const more = (await fn({ knownClaimPaymentIds: chunk, truthOnly: true })).data;
     claimTruth.push(...more.claimTruth);
   }
   return { ...first, claimTruth };

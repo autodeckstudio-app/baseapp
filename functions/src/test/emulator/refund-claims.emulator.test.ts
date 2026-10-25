@@ -706,3 +706,24 @@ describe("claimTruth tenant verification (review round 8)", () => {
     expect(truth).toHaveLength(0);
   });
 });
+
+describe("truthOnly non-advancing surface (review round 9)", () => {
+  it("a truth-only call returns claimTruth without running the scan or moving its cursors", async () => {
+    const ps = [payment(), payment(), payment()];
+    for (const p of ps) { await seed(p); await plantClaim(p.id); }
+    const run = (data: object) => listRefundWork.run({ data, auth: adminAuth() } as never) as Promise<{
+      legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean;
+      claimTruth: { paymentId: string; state: string }[];
+    }>;
+    const t = await run({ knownClaimPaymentIds: [ps[0]!.id], truthOnly: true });
+    expect(t.claimTruth.map((x) => x.paymentId)).toEqual([ps[0]!.id]);
+    expect(t.claimTruth[0]?.state).toBe("retained");
+    expect(t.legacyClaims).toEqual([]);
+    expect(t.legacyScanComplete).toBe(true);
+    const events = db.collection(COLLECTIONS.paymentEvents());
+    expect((await events.doc("reconcileDiscover_t1").get()).exists).toBe(false);
+    expect((await events.doc("reconcileFast_t1").get()).exists).toBe(false);
+    const scan = await run({ knownClaimPaymentIds: [] });
+    expect(new Set(scan.legacyClaims.map((c) => c.paymentId))).toEqual(new Set(ps.map((p) => p.id)));
+  });
+});
