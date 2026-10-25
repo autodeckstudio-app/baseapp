@@ -87,6 +87,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     paymentId: string; claimedAt: string | null; reconcileState: string | null; reconcileNote: string | null;
     paymentStatus: string | null; amount: number | null; currency: string | null;
   }[] = [];
+  let discoveryComplete = false;
   {
     const events = db.collection(COLLECTIONS.paymentEvents());
     const claimsRange = () => events.where("__name__", ">=", "refund_").where("__name__", "<", "refund`").orderBy("__name__");
@@ -108,11 +109,23 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
         currency: typeof pd.currency === "string" ? pd.currency : null,
       });
     };
-    // Fast path: tenant-backfilled unresolved claims.
-    const mine = await claimsRange().where("tenantId", "==", tenantId).limit(50).get();
-    for (const doc of mine.docs) {
-      if (legacyClaims.length >= 50) break;
-      await pushClaim(doc.id, doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string });
+    // Fast path: tenant-backfilled claims, paginated with the resolved ones
+    // filtered in memory AFTER the page (never limit-before-filter: a page of
+    // resolved claims must not hide later unresolved ones).
+    let fastAfter: string | null = null;
+    let fastScanned = 0;
+    while (legacyClaims.length < 50 && fastScanned < 500) {
+      let q = claimsRange().where("tenantId", "==", tenantId);
+      if (fastAfter) q = q.where("__name__", ">", fastAfter);
+      const page = await q.limit(100).get();
+      if (page.empty) break;
+      fastScanned += page.size;
+      fastAfter = page.docs[page.size - 1]!.id;
+      for (const doc of page.docs) {
+        if (legacyClaims.length >= 50) break;
+        await pushClaim(doc.id, doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string });
+      }
+      if (page.size < 100) break;
     }
     // Discovery path: advance through unbackfilled claims, backfilling as we
     // go, persisting progress so no tenant starves behind the first pages.
@@ -139,9 +152,15 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
         const payDoc = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
         if (!payDoc.exists) continue;
         const pd = payDoc.data()!;
-        // Backfill only from the verified payment doc - never guessed.
+        // Backfill only from the verified payment doc - never guessed, and
+        // transactionally update-only-if-exists: a claim deleted concurrently
+        // (released) is never resurrected by an index write.
         if (typeof pd.tenantId === "string") {
-          await doc.ref.set({ tenantId: pd.tenantId }, { merge: true }).catch(() => undefined);
+          await db.runTransaction(async (tx) => {
+            const cur = await tx.get(doc.ref);
+            if (!cur.exists || typeof (cur.data() as { tenantId?: string }).tenantId === "string") return;
+            tx.update(doc.ref, { tenantId: pd.tenantId });
+          }).catch(() => undefined);
         }
         if (pd.tenantId === tenantId && legacyClaims.length < 50) {
           await pushClaim(doc.id, { ...d, tenantId: pd.tenantId });
@@ -149,11 +168,12 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       }
       if (page.size < 100) hitEnd = true;
     }
+    discoveryComplete = hitEnd;
     if (hitEnd) {
       await stateRef.delete().catch(() => undefined);
     } else if (lastSeen) {
       await stateRef.set({ lastId: lastSeen, updatedAt: new Date().toISOString() }).catch(() => undefined);
     }
   }
-  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50) };
+  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50), legacyScanComplete: discoveryComplete };
 });

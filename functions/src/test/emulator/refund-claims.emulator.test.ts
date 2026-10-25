@@ -155,7 +155,12 @@ describe("legacy retained-claim reconciliation", () => {
       reconcileLegacyRefundClaim(db, mockProvider, p.id, actor),
       reconcileLegacyRefundClaim(db, mockProvider, p.id, actor),
     ]);
-    expect([o1, o2].sort()).toEqual(["converged", "projected"]);
+    // Both interleavings are safe: the loser either converges on the winner's
+    // ledger entry, or its projection sees the claim already resolved by the
+    // winner and holds with zero writes. The invariant is exactly one
+    // projection, one ledger entry, and the claim ends resolved.
+    expect([o1, o2].sort()[1]).toBe("projected");
+    expect(["converged", "held"]).toContain([o1, o2].sort()[0]);
     expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(1);
     const after = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
     expect(after.status).toBe("refunded");
@@ -443,5 +448,78 @@ describe("reconciliation adversarial invariants (review round 2)", () => {
     expect(outcome).toBe("held");
     const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
     expect(claim.reconcileState).toBe("held");
+  });
+});
+
+describe("reconciliation adversarial invariants (review round 3)", () => {
+  it("two-pass pending->held->processed on the SAME claim generation projects", async () => {
+    const p = payment();
+    await seed(p);
+    await plantClaim(p.id);
+    // pass 1: provider has nothing -> unknown -> held
+    const first = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+    expect(first).toBe("held");
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!.reconcileState).toBe("held");
+    // provider later confirms processed
+    await plantProviderRefund(p, "processed");
+    const second = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+    expect(second).toBe("projected");
+    expect((await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!.status).toBe("refunded");
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!.reconcileState).toBe("resolved");
+  });
+
+  it("sweep persists last-VISITED doc: 25 eligible claims, limit 20, two passes visit all", async () => {
+    for (let i = 0; i < 25; i++) {
+      const tp = payment({ id: `t25-${String(i).padStart(3, "0")}` });
+      await seed(tp);
+      await plantClaim(tp.id);
+      await plantProviderRefund(tp, "processed");
+    }
+    const first = await reconcileLegacyRefundClaims(db, mockProvider, { tenantId: "t1", limit: 20, maxScan: 500, actor });
+    expect(first.projected).toBe(20);
+    const second = await reconcileLegacyRefundClaims(db, mockProvider, { tenantId: "t1", limit: 20, maxScan: 500, actor });
+    expect(second.projected).toBe(5);
+    for (let i = 0; i < 25; i++) {
+      expect((await db.collection(COLLECTIONS.payments()).doc(`t25-${String(i).padStart(3, "0")}`).get()).data()!.status).toBe("refunded");
+    }
+  });
+
+  it("list fast path: 60 resolved backfilled claims cannot hide a later unresolved backfilled claim", async () => {
+    for (let i = 0; i < 60; i++) {
+      const rid = `res-${String(i).padStart(3, "0")}`;
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${rid}`).set({
+        paymentId: rid, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "x",
+        reconcileState: "resolved", reconcileNote: "done",
+      });
+    }
+    const p = payment({ id: "zz-unresolved" });
+    await seed(p);
+    await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).set({
+      paymentId: p.id, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "a1", reconcileState: "held", reconcileNote: "pending",
+    });
+    const r = (await listRefundWork.run({ data: {}, auth: adminAuth() } as never)) as { legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean };
+    expect(r.legacyClaims.some((c) => c.paymentId === p.id)).toBe(true);
+  });
+
+  it("payment's own refundId with OUTBOX-source ledger and no provider evidence for this reference: held, not resolved", async () => {
+    const p = payment({ status: "refunded", refundAmount: 100000, refundedAt: new Date().toISOString(), razorpayRefundId: "rfnd_outbox1" });
+    await seed(p);
+    await plantClaim(p.id);
+    await db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${p.id}_rfnd_outbox1`).set({
+      paymentId: p.id, providerRefundId: "rfnd_outbox1", amountPaise: 100000, currency: "INR", source: "outbox", createdAt: new Date().toISOString(),
+    });
+    const outcome = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+    expect(outcome).toBe("held");
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!.reconcileState).toBe("held");
+  });
+
+  it("backfill never resurrects a claim released concurrently with listing", async () => {
+    const p = payment();
+    await seed(p);
+    await plantClaim(p.id);
+    // release the claim before listing: discovery must not recreate it
+    await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).delete();
+    await listRefundWork.run({ data: {}, auth: adminAuth() } as never);
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(false);
   });
 });

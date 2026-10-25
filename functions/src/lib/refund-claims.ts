@@ -66,6 +66,30 @@ export async function projectLegacyRefund(
         "Payment identity changed while the refund was in flight; held for reconciliation. The refund claim is retained.",
       );
     }
+    // The claim (when the reconciler drives this projection) is reread inside
+    // the SAME transaction BEFORE any resolution path and must still be the
+    // exact generation that was reconciled: a released/recreated claim or one
+    // resolved by a concurrent pass means this pass is stale - hold with zero
+    // financial writes. A same-generation "held" note from an earlier pass is
+    // still eligible (that is the pending->held->processed retry path).
+    const claimRef = i.claim
+      ? db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${i.claim.paymentId}`)
+      : null;
+    const claimSnap = claimRef ? await tx.get(claimRef) : null;
+    if (claimRef && i.claim) {
+      if (!claimSnap?.exists) throw new HttpsError("unavailable", "Refund claim was released while reconciling; held with zero financial writes.");
+      const cur = claimSnap.data() as { claimedAt?: string; reconcileState?: string };
+      const generationDrift =
+        (cur.claimedAt ?? null) !== i.claim.claimedAt ||
+        cur.reconcileState === "resolved" ||
+        (i.claim.updateTimeSeconds != null &&
+          (!claimSnap.updateTime ||
+            claimSnap.updateTime.seconds !== i.claim.updateTimeSeconds ||
+            claimSnap.updateTime.nanoseconds !== i.claim.updateTimeNanoseconds));
+      if (generationDrift) {
+        throw new HttpsError("unavailable", "Refund claim changed while reconciling; held with zero financial writes.");
+      }
+    }
     if (providerRefundId) {
       const ledgerSnap = await tx.get(
         db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${paymentId}_${providerRefundId}`),
@@ -102,28 +126,6 @@ export async function projectLegacyRefund(
     const bookingSnap = payment.bookingId
       ? await tx.get(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId))
       : null;
-    // The claim (when the reconciler drives this projection) is reread inside
-    // the SAME transaction and must still be the exact generation that was
-    // reconciled: a released/recreated claim or a concurrent annotate means
-    // this pass is stale - hold with zero financial writes.
-    const claimRef = i.claim
-      ? db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${i.claim.paymentId}`)
-      : null;
-    const claimSnap = claimRef ? await tx.get(claimRef) : null;
-    if (claimRef && i.claim) {
-      if (!claimSnap?.exists) throw new HttpsError("unavailable", "Refund claim was released while reconciling; held with zero financial writes.");
-      const cur = claimSnap.data() as { claimedAt?: string; reconcileState?: string };
-      const generationDrift =
-        (cur.claimedAt ?? null) !== i.claim.claimedAt ||
-        cur.reconcileState != null ||
-        (i.claim.updateTimeSeconds != null &&
-          (!claimSnap.updateTime ||
-            claimSnap.updateTime.seconds !== i.claim.updateTimeSeconds ||
-            claimSnap.updateTime.nanoseconds !== i.claim.updateTimeNanoseconds));
-      if (generationDrift) {
-        throw new HttpsError("unavailable", "Refund claim changed while reconciling; held with zero financial writes.");
-      }
-    }
     const linkErr = (what: string) => new HttpsError(
       "unavailable",
       `Linked ${what} failed tenant/linkage verification; held for reconciliation with zero financial writes. The refund claim is retained.`,
@@ -312,7 +314,8 @@ export async function reconcileLegacyRefundClaim(
     // (a) Exact projection identity: the payment's recorded provider refund id
     // and its own ledger entry with full coverage.
     if (payment.razorpayRefundId) {
-      const own = rows.find((r) => r.id === `pr_${paymentId}_${payment.razorpayRefundId}` && r.amountPaise === payment.amount);
+      const own = rows.find((r) => r.id === `pr_${paymentId}_${payment.razorpayRefundId}` && r.amountPaise === payment.amount
+        && (r as { source?: string }).source === "legacy");
       if (own) {
         const ok = await finalizeResolved(own.id, { amountPaise: payment.amount, currency: payment.currency ?? null, providerRefundId: payment.razorpayRefundId },
           `verified provider refund ${payment.razorpayRefundId} fully accounted (ledger ${own.id}); matches this claim's exact identity, amount and currency`);
@@ -454,6 +457,7 @@ export async function reconcileLegacyRefundClaims(
   let scanned = 0;
   let done = 0;
   let lastSeen: string | null = null;
+  let visited: string | null = null;
   let hitEnd = false;
   while (done < limit && scanned < maxScan && !hitEnd) {
     let q = db.collection(COLLECTIONS.paymentEvents())
@@ -468,6 +472,7 @@ export async function reconcileLegacyRefundClaims(
     afterId = lastSeen;
     for (const doc of snap.docs) {
       if (done >= limit) break;
+      visited = doc.id;
       const paymentId = doc.id.slice("refund_".length);
       if (!paymentId) continue;
       const data = doc.data() as { reconcileState?: string; tenantId?: string };
@@ -491,8 +496,14 @@ export async function reconcileLegacyRefundClaims(
   counts.exhausted = hitEnd && done < limit;
   if (counts.exhausted) {
     await stateRef.delete().catch(() => undefined);
-  } else if (lastSeen && lastSeen !== startedAfter) {
-    await stateRef.set({ lastId: lastSeen, updatedAt: new Date().toISOString(), tenantId: opts.tenantId }).catch(() => undefined);
+  } else {
+    // Persist the last doc actually VISITED (not the page tail): when the
+    // reconciliation limit breaks mid-page, the rest of the page is still
+    // scanned by the next pass instead of being skipped forever.
+    const progress = visited ?? lastSeen;
+    if (progress && progress !== startedAfter) {
+      await stateRef.set({ lastId: progress, updatedAt: new Date().toISOString(), tenantId: opts.tenantId }).catch(() => undefined);
+    }
   }
   return counts;
 }
