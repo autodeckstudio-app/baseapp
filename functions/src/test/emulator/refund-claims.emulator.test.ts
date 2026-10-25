@@ -727,3 +727,95 @@ describe("truthOnly non-advancing surface (review round 9)", () => {
     expect(new Set(scan.legacyClaims.map((c) => c.paymentId))).toEqual(new Set(ps.map((p) => p.id)));
   });
 });
+
+describe("initiateRefund legacy-entry hardening (review round 9)", () => {
+  it("razorpay payment missing its provider binding refuses before any claim or provider call", async () => {
+    const p = payment({ razorpayPaymentId: null });
+    await seed(p);
+    const calls = mockProvider.initiateRefundCallCount;
+    await expect(
+      initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never),
+    ).rejects.toThrow(/provider payment id/);
+    expect(mockProvider.initiateRefundCallCount).toBe(calls);
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(false);
+    const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
+    expect(fresh.status).toBe("completed");
+    expect(fresh.refundAmount ?? 0).toBe(0);
+  });
+
+  it("in-flight projection refuses to write against a swapped claim generation", async () => {
+    const p = payment();
+    await seed(p);
+    let swapped = false;
+    mockProvider.beforeRefundResponse = async () => {
+      // release+recreate DURING the provider call: the exact read-then-write
+      // window the projection claim-token check protects.
+      const ref = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      await ref.delete();
+      await ref.set({ paymentId: p.id, claimedAt: new Date(Date.now() + 60000).toISOString(), claimedBy: "another-attempt" });
+      swapped = true;
+    };
+    await expect(
+      initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never),
+    ).rejects.toThrow(/claim|held|zero financial writes/i);
+    expect(swapped).toBe(true);
+    const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
+    expect(fresh.status).toBe("completed");
+    expect(fresh.refundAmount ?? 0).toBe(0);
+    const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
+    expect(claim.claimedBy).toBe("another-attempt");
+  });
+
+  it("absent_confirmed release deletes only this claim generation, never a swapped one", async () => {
+    const p = payment();
+    await seed(p);
+    const origInit = mockProvider.initiateRefund.bind(mockProvider);
+    const origLookup = mockProvider.findRefundByReference.bind(mockProvider);
+    // provider call fails BEFORE the refund is recorded -> lookup confirms absence
+    (mockProvider as { initiateRefund: unknown }).initiateRefund = async () => {
+      throw new Error("network: request never reached provider");
+    };
+    mockProvider.authoritativeNegatives = true;
+    (mockProvider as { findRefundByReference: unknown }).findRefundByReference = async (ref: string, binding: never) => {
+      const r = await origLookup(ref, binding);
+      // swap the generation between the lookup and the release delete
+      const docRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      await docRef.delete();
+      await docRef.set({ paymentId: p.id, claimedAt: new Date(Date.now() + 60000).toISOString(), claimedBy: "another-attempt" });
+      return r;
+    };
+    try {
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "retry me" }, auth: adminAuth() } as never),
+      ).rejects.toThrow();
+      const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
+      expect(claim.claimedBy).toBe("another-attempt");
+    } finally {
+      (mockProvider as { initiateRefund: unknown }).initiateRefund = origInit;
+      (mockProvider as { findRefundByReference: unknown }).findRefundByReference = origLookup;
+      mockProvider.authoritativeNegatives = false;
+    }
+  });
+
+  it("absent_confirmed release removes this generation so a genuine retry is possible", async () => {
+    const p = payment();
+    await seed(p);
+    const origInit = mockProvider.initiateRefund.bind(mockProvider);
+    (mockProvider as { initiateRefund: unknown }).initiateRefund = async () => {
+      throw new Error("network: request never reached provider");
+    };
+    mockProvider.authoritativeNegatives = true;
+    try {
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "retry me" }, auth: adminAuth() } as never),
+      ).rejects.toThrow();
+      expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(false);
+      const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
+      expect(fresh.status).toBe("completed");
+      expect(fresh.refundAmount ?? 0).toBe(0);
+    } finally {
+      (mockProvider as { initiateRefund: unknown }).initiateRefund = origInit;
+      mockProvider.authoritativeNegatives = false;
+    }
+  });
+});

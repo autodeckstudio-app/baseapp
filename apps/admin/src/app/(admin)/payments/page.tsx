@@ -9,7 +9,8 @@ import { listenToPayments, refundPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
 import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
-import { listRefundWork, runRefundOutbox, reconcileRefundClaims, type RefundWork } from "../../../lib/refund-work-service";
+import { listRefundWork, runRefundOutbox, reconcileRefundClaims } from "../../../lib/refund-work-service";
+import { createRefundWorkCycle, type RefundWorkCycle } from "../../../lib/refund-work-cycle";
 
 export default function PaymentsPage() {
   const { claims, user } = useAdminAuth();
@@ -26,59 +27,23 @@ export default function PaymentsPage() {
   }, [searchParams]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [refundWork, setRefundWork] = useState<RefundWork | null>(null);
-  // Retained-claim rows are PAGED on the server: accumulate every page seen
-  // in this review cycle keyed by paymentId. A row never disappears just
-  // because the scan cursor advanced past it; fresh pages update known rows
-  // with the latest truth, and rows the server reports resolved are dropped
-  // as resolved (that is truth, not cursor advance).
-  const [legacyAccum, setLegacyAccum] = useState<Map<string, import("../../../lib/refund-work-service").LegacyRefundClaim>>(new Map());
-  // Identity generation: bumped whenever the signed-in identity/tenant
-  // changes. A response from a previous generation is dropped, so a late
-  // old-identity response can never repopulate the new identity's rows.
-  const identityGenRef = useRef(0);
-  const [refundWorkLoading, setRefundWorkLoading] = useState(true);
-  const [refundWorkError, setRefundWorkError] = useState<string | null>(null);
+  // Identity-scoped review cycle (login, tenant switch AND logout all reset
+  // it): a delayed response from a previous identity can never repopulate
+  // the new identity's rows, surface its error, or move its spinner, and a
+  // fresh identity never sends the previous cycle's known claim ids.
+  const cycleRef = useRef<RefundWorkCycle | null>(null);
+  if (cycleRef.current === null) cycleRef.current = createRefundWorkCycle(listRefundWork);
+  const cycle = cycleRef.current;
+  const [, setCycleTick] = useState(0);
+  useEffect(() => cycle.subscribe(() => setCycleTick((t) => t + 1)), [cycle]);
+  const { accum: legacyAccum, work: refundWork, loading: refundWorkLoading, error: refundWorkError } = cycle.getState();
   const [runningOutbox, setRunningOutbox] = useState(false);
   const [reconciling, setReconciling] = useState(false);
 
-  async function refreshRefundWork() {
-    const gen = identityGenRef.current;
-    setRefundWorkLoading(true);
-    try {
-      // Ask for the authoritative truth of every row we already show: paged
-      // scans never return resolved/released claims, so known rows would
-      // otherwise stay stale "held" forever after an actual reconcile.
-      const work = await listRefundWork([...legacyAccum.keys()]);
-      if (gen !== identityGenRef.current) return; // stale identity response
-      setRefundWork(work);
-      setLegacyAccum((prev) => {
-        const next = new Map(prev);
-        for (const c of work.legacyClaims) next.set(c.paymentId, c);
-        for (const t of work.claimTruth) {
-          if (t.state === "resolved" || t.state === "released") next.delete(t.paymentId);
-          else {
-            const row = next.get(t.paymentId);
-            if (row) next.set(t.paymentId, { ...row, reconcileState: t.state, reconcileNote: t.note });
-          }
-        }
-        return next;
-      });
-      setRefundWorkError(null);
-    } catch (err) {
-      setRefundWorkError(err instanceof Error ? err.message : "Refund work unavailable.");
-    } finally {
-      setRefundWorkLoading(false);
-    }
-  }
-
   useEffect(() => {
-    if (!claims) return;
-    identityGenRef.current += 1; // new identity/tenant: new review cycle
-    setLegacyAccum(new Map());
-    void refreshRefundWork();
+    cycle.reset(!!claims);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claims?.tenantId, user?.uid]);
+  }, [claims?.tenantId, user?.uid, cycle]);
 
   async function handleReconcileClaims() {
     setReconciling(true);
@@ -90,7 +55,7 @@ export default function PaymentsPage() {
       setMessage(err instanceof Error ? err.message : "Claim reconciliation failed.");
     } finally {
       setReconciling(false);
-      void refreshRefundWork();
+      void cycle.refresh();
     }
   }
 
@@ -104,7 +69,7 @@ export default function PaymentsPage() {
       setMessage(err instanceof Error ? err.message : "Outbox run failed.");
     } finally {
       setRunningOutbox(false);
-      void refreshRefundWork();
+      void cycle.refresh();
     }
   }
 
@@ -152,7 +117,7 @@ export default function PaymentsPage() {
       running={runningOutbox}
       reconciling={reconciling}
       onReconcile={() => void handleReconcileClaims()}
-      onContinueScan={() => void refreshRefundWork()}
+      onContinueScan={() => void cycle.refresh()}
       names={names}
       onRun={() => void handleRunOutbox()}
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}

@@ -51,6 +51,16 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
       "Can only refund completed payments.",
     );
   }
+  // Fail CLOSED on a razorpay payment with no provider binding: without the
+  // provider payment id no provider refund can be submitted or reconciled,
+  // and falling through to projection would fabricate a manual refund for
+  // money that never moved. Refuse BEFORE any claim is created.
+  if (payment.method === "razorpay_payment_link" && !payment.razorpayPaymentId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Razorpay payment is missing its provider payment id; the refund cannot be submitted or reconciled without the provider binding.",
+    );
+  }
 
   const now = new Date().toISOString();
 
@@ -78,6 +88,12 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
         `Cannot refund a payment in status '${freshPayment.status}'.`,
       );
     }
+    if (freshPayment.method === "razorpay_payment_link" && !freshPayment.razorpayPaymentId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Razorpay payment is missing its provider payment id; the refund cannot be submitted or reconciled without the provider binding.",
+      );
+    }
     const eventSnap = await tx.get(refundEventRef);
     if (eventSnap.exists) {
       throw new HttpsError("already-exists", "A refund has already been initiated for this payment.");
@@ -92,6 +108,20 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     }
     tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid });
   });
+
+  // Capture THIS claim's exact generation (claimedAt is ours by construction;
+  // pair it with the full-precision updateTime). A release+recreate anywhere
+  // between the provider call and projection must stop this in-flight refund
+  // from writing against a claim generation it does not own.
+  const claimedSnap = await refundEventRef.get();
+  if (!claimedSnap.exists || (claimedSnap.data() as { claimedAt?: string }).claimedAt !== now) {
+    throw new HttpsError("unavailable", "Refund claim changed before the refund could be submitted; held with zero financial writes.");
+  }
+  const claimToken = {
+    paymentId: data.paymentId, claimedAt: now,
+    updateTimeSeconds: claimedSnap.updateTime ? claimedSnap.updateTime.seconds : null,
+    updateTimeNanoseconds: claimedSnap.updateTime ? claimedSnap.updateTime.nanoseconds : null,
+  };
 
   // Call provider refund (mock in dev, real Razorpay in production) — exactly
   // once, now that this call has exclusive claim on this payment's refund.
@@ -141,8 +171,18 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
       }
       if (outcome === "absent_confirmed") {
         // Authoritative: the provider never accepted this refund. Safe to
-        // release the claim for a genuine retry.
-        await refundEventRef.delete().catch(() => undefined);
+        // release the claim for a genuine retry - but only THIS generation:
+        // a released/recreated claim belongs to a new refund attempt and is
+        // never removed here.
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(refundEventRef);
+          if (!snap.exists) return;
+          const cur = snap.data() as { claimedAt?: string };
+          if ((cur.claimedAt ?? null) !== now) return;
+          if (claimToken.updateTimeSeconds != null &&
+            (!snap.updateTime || snap.updateTime.seconds !== claimToken.updateTimeSeconds || snap.updateTime.nanoseconds !== claimToken.updateTimeNanoseconds)) return;
+          tx.delete(refundEventRef);
+        }).catch(() => undefined);
         throw err;
       }
       if (outcome === "found" && foundId) {
@@ -160,7 +200,7 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   }
 
   const { converged } = await projectLegacyRefund(db, {
-    paymentId: data.paymentId, payment, providerRefundId, reason: data.reason, user, now,
+    paymentId: data.paymentId, payment, providerRefundId, reason: data.reason, user, now, claim: claimToken,
   });
 
   return { paymentId: data.paymentId, refunded: true, providerRefundId, ...(converged ? { converged: true } : {}) };
