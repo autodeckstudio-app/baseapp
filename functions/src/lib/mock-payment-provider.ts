@@ -100,7 +100,7 @@ export class MockPaymentProvider implements PaymentProvider {
     if (this.failNextRefund) {
       this.failNextRefund = false;
       this.submitted.set(params.referenceId, { ...result, status: "failed" });
-      throw new Error("network: response lost; provider-side refund failed terminally");
+      throw new Error("network: response lost; provider-side refund reported failed");
     }
     this.submitted.set(params.referenceId, result);
     if (this.loseNextRefundResponse) {
@@ -120,7 +120,7 @@ export class MockPaymentProvider implements PaymentProvider {
     // Bound like the real adapter: identity only when payment id, amount and
     // currency all agree; a partial match is held as unknown, never attached.
     // Status-aware like the real adapter: only a processed refund founds; a
-    // terminally failed one is failed_confirmed; anything else holds.
+    // one reported failed is failed_confirmed; anything else holds.
     if (hit && hit.providerPaymentId === binding.providerPaymentId
         && hit.amount === binding.amountPaise
         && ((hit as { currency?: string }).currency ?? "INR") === binding.currency) {

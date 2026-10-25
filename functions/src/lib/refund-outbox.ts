@@ -225,8 +225,8 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     // booking the payment does not belong to is a data-integrity stop, not a
     // projection.
     if (payment.tenantId !== fresh.tenantId) throw new Error(`refund projection rejected: request tenant ${fresh.tenantId} != payment tenant ${payment.tenantId}`);
-    if (fresh.jobId && payment.jobId !== fresh.jobId) throw new Error(`refund projection rejected: request job ${fresh.jobId} != payment job ${payment.jobId}`);
-    if (fresh.bookingId && payment.bookingId !== fresh.bookingId) throw new Error(`refund projection rejected: request booking ${fresh.bookingId} != payment booking ${payment.bookingId}`);
+    if (fresh.jobId !== payment.jobId) throw new Error(`refund projection rejected: request job ${fresh.jobId} != payment job ${payment.jobId}`);
+    if (fresh.bookingId !== payment.bookingId) throw new Error(`refund projection rejected: request booking ${fresh.bookingId} != payment booking ${payment.bookingId}`);
     // Related-record invariant: the actual job/booking documents must exist,
     // belong to the same tenant as the payment, and agree on linkage - all
     // read inside this transaction before any write.
@@ -423,12 +423,30 @@ export async function runRefundOutbox(
       const preflightBad = await (async (): Promise<string | null> => {
         if (!payment) return `payment ${request.paymentId} missing`;
         if (payment.tenantId !== request.tenantId) return `payment tenant ${payment.tenantId} != request tenant ${request.tenantId}`;
+        // Strict nullable linkage equality: the request must point at exactly
+        // the payment's own job/booking - a different existing same-tenant
+        // pair is tampering, not a refund.
+        if (request.jobId !== payment.jobId) return `request job ${request.jobId} != payment job ${payment.jobId}`;
+        if (request.bookingId !== payment.bookingId) return `request booking ${request.bookingId} != payment booking ${payment.bookingId}`;
+        // Financial state revalidated at submit time, not just reservation:
+        // the payment may have been refunded or altered since.
+        if (payment.status !== "completed" && (payment.status as string) !== "partially_refunded") {
+          return `payment status '${payment.status}' is not refundable`;
+        }
+        if (refundablePaise(payment) < request.amountPaise) {
+          return `refundable ${refundablePaise(payment)} now below reserved ${request.amountPaise}`;
+        }
+        if (payment.method !== "razorpay_payment_link") return `payment method '${payment.method}' has no provider refund rail`;
+        if (!payment.razorpayPaymentId) return "payment has no provider payment id to refund";
+        // The identity binding for every later reconciliation needs the stored
+        // currency: never submit what we could not reconcile.
+        if (!payment.currency) return "payment has no stored currency to bind a reconciliation";
         if (request.jobId) {
           const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(request.jobId).get();
           if (!jobSnap.exists) return `job ${request.jobId} missing`;
           const job = jobSnap.data() as ServiceJob;
           if (job.tenantId !== payment.tenantId) return `job ${request.jobId} tenant ${job.tenantId} != payment tenant ${payment.tenantId}`;
-          if (request.bookingId && job.bookingId !== request.bookingId) return `job ${request.jobId} booking ${job.bookingId} != request booking ${request.bookingId}`;
+          if (job.bookingId !== request.bookingId) return `job ${request.jobId} booking ${job.bookingId} != request booking ${request.bookingId}`;
         }
         if (request.bookingId) {
           const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(request.bookingId).get();

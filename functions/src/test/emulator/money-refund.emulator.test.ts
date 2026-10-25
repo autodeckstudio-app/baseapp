@@ -633,3 +633,61 @@ describe("D-review round 3: deterministic barrier races", () => {
     expect(req.status).toBe("projected");
   });
 });
+
+describe("D-review round 4: pre-effect financial and strict-linkage gates", () => {
+  const countingProvider = (provider: MockPaymentProvider) => {
+    const box = { calls: 0 };
+    const wrapped = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: never) => { box.calls++; return MockPaymentProvider.prototype.initiateRefund.call(provider, params); },
+    });
+    return { wrapped, box };
+  };
+
+  it("a tampered request pointing at a DIFFERENT existing same-tenant job+booking never reaches the provider", async () => {
+    const p = payment();
+    await seedPayment(p);
+    // A second, legitimate same-tenant job+booking pair that belongs to another payment.
+    const other = payment();
+    await seedPayment(other);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
+    // Tamper: point the request at the OTHER payment's job+booking (which are
+    // internally consistent with each other and same-tenant).
+    await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({ jobId: other.jobId, bookingId: other.bookingId });
+    const provider = new MockPaymentProvider();
+    const { wrapped, box } = countingProvider(provider);
+    await runRefundOutbox(db, wrapped, { limit: 10 });
+    expect(box.calls).toBe(0);
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toContain("request job");
+  });
+
+  it("a payment fully refunded after reservation holds at submit: provider never called", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 60000, reason: "x", createdBy: "admin" });
+    // Financial state changed after reservation: already refunded elsewhere.
+    await db.collection(COLLECTIONS.payments()).doc(p.id).update({ status: "refunded", refundAmount: p.amount });
+    const provider = new MockPaymentProvider();
+    const { wrapped, box } = countingProvider(provider);
+    await runRefundOutbox(db, wrapped, { limit: 10 });
+    expect(box.calls).toBe(0);
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toMatch(/not refundable|below reserved/);
+  });
+
+  it("a payment whose stored currency went missing holds before submit (cannot bind reconciliation)", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
+    await db.collection(COLLECTIONS.payments()).doc(p.id).update({ currency: null });
+    const provider = new MockPaymentProvider();
+    const { wrapped, box } = countingProvider(provider);
+    await runRefundOutbox(db, wrapped, { limit: 10 });
+    expect(box.calls).toBe(0);
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toContain("currency");
+  });
+});

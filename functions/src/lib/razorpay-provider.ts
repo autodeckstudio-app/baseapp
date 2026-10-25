@@ -201,7 +201,9 @@ export class RazorpayProvider implements PaymentProvider {
     );
     // A found refund is not necessarily successful: only "processed" moves
     // money. Per Razorpay's documented lifecycle (created -> processed |
-    // failed), "failed" is terminal (no money moved); "pending"/"partial"/
+    // failed), "failed" is a failure NOTIFICATION whose finality the provider
+    // contract does not settle (the runner holds it for manual
+    // reconciliation); "pending"/"partial"/
     // missing status is inconclusive - hold, do not project, do not release.
     if (bound.length === 1 && bound.length === receiptMatches.length && bound[0]?.id) {
       if (bound[0].status === "processed") return { outcome: "found", providerRefundId: bound[0].id };
