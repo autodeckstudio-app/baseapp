@@ -417,13 +417,22 @@ describe("D-review corrections: concurrency, lifecycle, tenancy, integrity", () 
     expect(payB.status).toBe("completed");
   });
 
-  it("D6: a request whose job/booking linkage disagrees with the payment never projects", async () => {
+  it("D6: a request whose job/booking linkage disagrees with the payment never reaches the provider", async () => {
     const p = payment();
     await seedPayment(p);
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
     // Tamper: the request points at a job the payment does not belong to.
     await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({ jobId: "job_FOREIGN" });
-    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/request job job_FOREIGN/);
+    const provider = new MockPaymentProvider();
+    let providerCalls = 0;
+    const counting = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: never) => { providerCalls++; return MockPaymentProvider.prototype.initiateRefund.call(provider, params); },
+    });
+    await runRefundOutbox(db, counting, { limit: 10 });
+    expect(providerCalls).toBe(0); // held at preflight, no money movement
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toContain("integrity preflight failed");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
     expect(pay.refundAmount ?? null).toBeNull();
@@ -495,26 +504,132 @@ describe("D-review round 2: lease identity, monotonic transitions, related-recor
     expect(pay.refundAmount).toBe(p.amount);
   });
 
-  it("D6b: a job from another tenant blocks projection even when ids line up", async () => {
+  it("D6b: a job from another tenant stops the runner BEFORE any provider call", async () => {
     const p = payment();
     await seedPayment(p);
-    // Move the job doc to another tenant AFTER reservation.
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
     await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).update({ tenantId: "t2" });
-    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/tenant t2 != payment tenant t1/);
-    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string };
-    expect(req.status).not.toBe("projected");
+    const provider = new MockPaymentProvider();
+    let providerCalls = 0;
+    const counting = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: never) => { providerCalls++; return MockPaymentProvider.prototype.initiateRefund.call(provider, params); },
+    });
+    const r = await runRefundOutbox(db, counting, { limit: 10 });
+    expect(providerCalls).toBe(0); // no money movement for known-bad records
+    expect(r).toMatchObject({ submitted: 0, projected: 0 });
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous"); // held for data repair, guard retained
+    expect(req.lastError).toContain("integrity preflight failed");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
   });
 
-  it("D6c: a missing booking doc blocks projection", async () => {
+  it("D6c: a missing booking doc stops the runner BEFORE any provider call", async () => {
     const p = payment();
     await seedPayment(p);
-    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
     await db.collection(COLLECTIONS.bookings()).doc(p.bookingId!).delete();
-    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/booking .* missing/);
+    const provider = new MockPaymentProvider();
+    let providerCalls = 0;
+    const counting = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: never) => { providerCalls++; return MockPaymentProvider.prototype.initiateRefund.call(provider, params); },
+    });
+    await runRefundOutbox(db, counting, { limit: 10 });
+    expect(providerCalls).toBe(0);
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toContain("booking");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
+  });
+
+  it("D6d: the in-transaction projection recheck still fires when records break between submit and projection", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
+    // Simulate a submitted request awaiting projection, then break the job.
+    await db.collection(COLLECTIONS.refundRequests()).doc(requestId)
+      .update({ status: "submitted", projectionNeeded: true, providerRefundId: "rfnd_x" });
+    await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).update({ tenantId: "t2" });
+    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/tenant t2 != payment tenant t1/);
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+  });
+
+  it("reserve-time preflight: broken job/booking records refuse the reservation itself", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).update({ tenantId: "t2" });
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "bad job", createdBy: "a" }))
+      .rejects.toThrow(/job .* tenant t2/);
+    const p2 = payment();
+    await seedPayment(p2);
+    await db.collection(COLLECTIONS.bookings()).doc(p2.bookingId!).delete();
+    await expect(reserveRefund(db, { payment: p2, amountPaise: 1000, reason: "bad booking", createdBy: "a" }))
+      .rejects.toThrow(/booking .* missing/);
+    // Nothing reserved, nothing to run: no provider interaction possible.
+    const r = await runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 });
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 0 });
+  });
+});
+
+describe("D-review round 3: deterministic barrier races", () => {
+  it("a stale in-flight FAILED response can never overwrite an already-projected request", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    // Gated provider: the refund lands provider-side as processed, the
+    // RESPONSE is held on a barrier we control, then lost (throw).
+    let release!: () => void;
+    const barrier = new Promise<void>((res) => { release = res; });
+    let callStarted = false;
+    const gated = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: { providerPaymentId: string; amount: number; reason: string; referenceId: string }) => {
+        callStarted = true;
+        await MockPaymentProvider.prototype.initiateRefund.call(provider, params); // provider-side accepted
+        await barrier; // response in flight...
+        throw new Error("network: response lost"); // ...then lost
+      },
+    });
+    const pass1 = runRefundOutbox(db, gated, { limit: 10, runnerId: "runner_ORIG" });
+    while (!callStarted) await new Promise((r) => setTimeout(r, 5));
+    // Recovery pass sees the lease as crashed and reconciles: found -> submitted -> PROJECTED.
+    const recovery = await runRefundOutbox(db, provider, { limit: 10, runnerId: "runner_RECOVERY", leaseStaleMs: 0 });
+    expect(recovery).toMatchObject({ submitted: 1, projected: 1, failed: 0 });
+    expect(((await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string }).status).toBe("projected");
+    // The provider now flips its record to failed (failure NOTIFICATION) and
+    // only THEN does the original pass's lost response resolve.
+    provider.setStoredRefundStatus(requestId, "failed");
+    release();
+    const r1 = await pass1;
+    // The stale pass could not overwrite the projected terminal state.
+    expect(r1).toEqual({ submitted: 0, projected: 0, failed: 0 });
+    expect(((await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string }).status).toBe("projected");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(p.amount);
+  });
+
+  it("overlapping lifecycle reconciliations (pending -> processed) commit exactly one projection", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "slow", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    provider.nextRefundStatus = "pending";
+    const r1 = await runRefundOutbox(db, provider, { limit: 10, runnerId: "runner_A" });
+    expect(r1).toMatchObject({ submitted: 1, projected: 0, failed: 0 });
+    provider.setStoredRefundStatus(requestId, "processed");
+    // Two overlapping reconciliation passes both load the submitted-held state.
+    const [r2, r3] = await Promise.all([
+      runRefundOutbox(db, provider, { limit: 10, runnerId: "runner_B" }),
+      runRefundOutbox(db, provider, { limit: 10, runnerId: "runner_C" }),
+    ]);
+    // Exactly one COMMITTED projection across both passes (no-op losing races
+    // are not counted).
+    expect(r2.projected + r3.projected).toBe(1);
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(p.amount);
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string };
+    expect(req.status).toBe("projected");
   });
 });

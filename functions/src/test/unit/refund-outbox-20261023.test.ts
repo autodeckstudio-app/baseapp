@@ -185,7 +185,9 @@ describe("ambiguous submit reconciliation", () => {
     // Confirmed-absent case: provider authoritatively confirms nothing was
     // accepted -> failed, balance released.
     const p2 = payment({ id: "pay2", bookingId: "b2" });
-    const f2 = fakeFirestore({ payments: { pay2: p2 as never }, bookings: { b2: { id: "b2" } } });
+    const f2 = fakeFirestore({ payments: { pay2: p2 as never },
+      jobs: { job1: { id: "job1", tenantId: "t1", bookingId: "b2", paymentStatus: "paid" } },
+      bookings: { b2: { id: "b2", tenantId: "t1", paymentStatus: "paid" } } });
     await reserveRefund(f2.db, { payment: p2, amountPaise: 50000, reason: "x", createdBy: "admin1" });
     f2.data["refundRequests"]!["rr_pay2_1"]!["status"] = "ambiguous";
     const provider2 = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();

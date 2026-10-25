@@ -116,6 +116,23 @@ export async function planReserveInTx(
   if (amount > refundable) {
     return { ok: false, code: "invalid", reason: `refund of ${amount} exceeds the refundable ${refundable} on payment ${i.payment.id}` };
   }
+  // Related-record preflight INSIDE the reservation transaction: refuse to
+  // open a reservation whose job/booking records are missing, foreign-tenant,
+  // or inconsistently linked - broken source records must stop money movement
+  // before it starts, not after the provider was called.
+  if (payment.jobId) {
+    const jobSnap = await tx.get(db.collection(COLLECTIONS.jobs()).doc(payment.jobId));
+    if (!jobSnap.exists) return { ok: false, code: "invalid", reason: `payment ${payment.id} job ${payment.jobId} missing` };
+    const job = jobSnap.data() as ServiceJob;
+    if (job.tenantId !== payment.tenantId) return { ok: false, code: "invalid", reason: `payment ${payment.id} job ${payment.jobId} tenant ${job.tenantId} != payment tenant ${payment.tenantId}` };
+    if (payment.bookingId && job.bookingId !== payment.bookingId) return { ok: false, code: "invalid", reason: `payment ${payment.id} job ${payment.jobId} booking ${job.bookingId} != payment booking ${payment.bookingId}` };
+  }
+  if (payment.bookingId) {
+    const bookingSnap = await tx.get(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId));
+    if (!bookingSnap.exists) return { ok: false, code: "invalid", reason: `payment ${payment.id} booking ${payment.bookingId} missing` };
+    const booking = bookingSnap.data() as Booking;
+    if (booking.tenantId !== payment.tenantId) return { ok: false, code: "invalid", reason: `payment ${payment.id} booking ${payment.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}` };
+  }
   const guardRef = requestsCol(db).doc(`active_${payment.id}`);
   const now = new Date().toISOString();
   // Transactional reads: a losing racer's snapshot conflicts with the
@@ -189,16 +206,16 @@ async function releaseGuard(db: Firestore, paymentId: string): Promise<void> {
  * issued invoice: credit-note/tax treatment is an owner/accountant hold, so
  * the payment carries invoiceReviewNeeded instead of a fabricated void.
  */
-async function projectRefund(db: Firestore, request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }): Promise<void> {
+async function projectRefund(db: Firestore, request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }): Promise<boolean> {
   const now = new Date().toISOString();
-  await db.runTransaction(async (tx) => {
+  return db.runTransaction(async (tx) => {
     const reqSnap = await tx.get(request.ref);
     const fresh = reqSnap.data() as RefundRequest | undefined;
     // Idempotent + monotonic: only a submitted/accepted request with a pending
     // projection may project; anything else (already projected, failed, or a
     // reopened hold) is left exactly as the newer state wrote it.
-    if (!fresh || !fresh.projectionNeeded) return;
-    if (fresh.status !== "submitted" && fresh.status !== "accepted") return;
+    if (!fresh || !fresh.projectionNeeded) return false;
+    if (fresh.status !== "submitted" && fresh.status !== "accepted") return false;
     const paymentRef = db.collection(COLLECTIONS.payments()).doc(fresh.paymentId);
     const paySnap = await tx.get(paymentRef);
     if (!paySnap.exists) throw new Error(`payment ${fresh.paymentId} missing during refund projection`);
@@ -252,6 +269,7 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });
     tx.delete(db.collection(COLLECTIONS.refundRequests()).doc(`active_${fresh.paymentId}`));
+    return true;
   });
 }
 
@@ -398,6 +416,32 @@ export async function runRefundOutbox(
     if (request.status === "submitting" && claimedThisRun.has(request.id)) {
       const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
       const payment = paySnap.data() as Payment | undefined;
+      // Pre-effect integrity preflight: records that went bad AFTER
+      // reservation (deleted/foreign/re-linked job or booking) hold the
+      // request BEFORE the provider is ever called. The in-transaction
+      // recheck in projectRefund remains the authority at write time.
+      const preflightBad = await (async (): Promise<string | null> => {
+        if (!payment) return `payment ${request.paymentId} missing`;
+        if (payment.tenantId !== request.tenantId) return `payment tenant ${payment.tenantId} != request tenant ${request.tenantId}`;
+        if (request.jobId) {
+          const jobSnap = await db.collection(COLLECTIONS.jobs()).doc(request.jobId).get();
+          if (!jobSnap.exists) return `job ${request.jobId} missing`;
+          const job = jobSnap.data() as ServiceJob;
+          if (job.tenantId !== payment.tenantId) return `job ${request.jobId} tenant ${job.tenantId} != payment tenant ${payment.tenantId}`;
+          if (request.bookingId && job.bookingId !== request.bookingId) return `job ${request.jobId} booking ${job.bookingId} != request booking ${request.bookingId}`;
+        }
+        if (request.bookingId) {
+          const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(request.bookingId).get();
+          if (!bookingSnap.exists) return `booking ${request.bookingId} missing`;
+          const booking = bookingSnap.data() as Booking;
+          if (booking.tenantId !== payment.tenantId) return `booking ${request.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`;
+        }
+        return null;
+      })();
+      if (preflightBad) {
+        await holdAmbiguous(request, `integrity preflight failed before any provider call: ${preflightBad}; held for data repair`, now);
+        continue;
+      }
       try {
         if (!payment || !payment.razorpayPaymentId) throw new Error("payment has no provider payment id to refund");
         const result = await provider.initiateRefund({
@@ -488,8 +532,9 @@ export async function runRefundOutbox(
       }
     }
     if (request.projectionNeeded) {
-      await projectRefund(db, request);
-      projected++;
+      // Counts only a projection this pass actually committed - a lost race
+      // against a concurrent pass is a no-op, not a projection.
+      if (await projectRefund(db, request)) projected++;
     }
   }
   return { submitted, projected, failed };
