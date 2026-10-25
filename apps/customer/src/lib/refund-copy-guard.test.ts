@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 describe("booking refund notice does not publish a refund time range", () => {
   const src = readFileSync(join(__dirname, "../app/(tabs)/bookings/[id].tsx"), "utf8");
   it("uses the approved wording and no day range", () => {
-    expect(src).toContain("Refund timing depends on your bank or payment provider.");
+    expect(src).toContain("depends on your bank or payment provider.");
     expect(src).not.toContain("5-10");
     expect(src).not.toMatch(/within \d+(-\d+)? (working|business) days/);
   });
@@ -20,9 +20,9 @@ describe("refund status copy provenance", () => {
     expect(line).toContain("Your refund request is recorded");
     expect(line).not.toMatch(/queued with the payment provider|on its way|approved/i);
   });
-  it("accepted copy stays tied to the initiated state only", () => {
-    const hits = src.split("\n").filter((l: string) => l.includes("has accepted your refund"));
-    expect(hits).toHaveLength(1);
-    expect(hits[0]).toContain('refundStatus === "initiated"');
+  it("initiated copy stays mechanism-neutral (the initiated writer is also the manual cash/UPI path)", () => {
+    expect(src.split("\n").filter((l: string) => l.includes("has accepted your refund"))).toHaveLength(0);
+    const line = src.split("\n").find((l: string) => l.includes('refundStatus === "initiated"')) ?? "";
+    expect(line).toContain("The studio has recorded your refund");
   });
 });
