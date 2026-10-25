@@ -41,7 +41,7 @@ import type { PaymentProvider } from "./payment-provider.js";
  */
 export async function projectLegacyRefund(
   db: Firestore,
-  i: { paymentId: string; payment: Payment; providerRefundId: string | null; reason: string; user: AuthorizedUser; now: string },
+  i: { paymentId: string; payment: Payment; providerRefundId: string | null; reason: string; user: AuthorizedUser; now: string; claim?: { paymentId: string; claimedAt: string | null; updateTimeSeconds: number | null; updateTimeNanoseconds: number | null } },
 ): Promise<{ converged: boolean }> {
   const { paymentId, payment, providerRefundId, reason, user, now } = i;
   let converged = false;
@@ -102,20 +102,45 @@ export async function projectLegacyRefund(
     const bookingSnap = payment.bookingId
       ? await tx.get(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId))
       : null;
+    // The claim (when the reconciler drives this projection) is reread inside
+    // the SAME transaction and must still be the exact generation that was
+    // reconciled: a released/recreated claim or a concurrent annotate means
+    // this pass is stale - hold with zero financial writes.
+    const claimRef = i.claim
+      ? db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${i.claim.paymentId}`)
+      : null;
+    const claimSnap = claimRef ? await tx.get(claimRef) : null;
+    if (claimRef && i.claim) {
+      if (!claimSnap?.exists) throw new HttpsError("unavailable", "Refund claim was released while reconciling; held with zero financial writes.");
+      const cur = claimSnap.data() as { claimedAt?: string; reconcileState?: string };
+      const generationDrift =
+        (cur.claimedAt ?? null) !== i.claim.claimedAt ||
+        cur.reconcileState != null ||
+        (i.claim.updateTimeSeconds != null &&
+          (!claimSnap.updateTime ||
+            claimSnap.updateTime.seconds !== i.claim.updateTimeSeconds ||
+            claimSnap.updateTime.nanoseconds !== i.claim.updateTimeNanoseconds));
+      if (generationDrift) {
+        throw new HttpsError("unavailable", "Refund claim changed while reconciling; held with zero financial writes.");
+      }
+    }
     const linkErr = (what: string) => new HttpsError(
       "unavailable",
       `Linked ${what} failed tenant/linkage verification; held for reconciliation with zero financial writes. The refund claim is retained.`,
     );
-    if (payment.invoiceId && invoiceSnap?.exists) {
+    if (payment.invoiceId) {
+      if (!invoiceSnap?.exists) throw linkErr(`invoice ${payment.invoiceId} (missing)`);
       const inv = invoiceSnap.data() as Invoice;
       if (inv.tenantId !== payment.tenantId) throw linkErr(`invoice ${payment.invoiceId}`);
-      if (payment.bookingId && inv.bookingId && inv.bookingId !== payment.bookingId) {
-        throw linkErr(`invoice ${payment.invoiceId}`);
-      }
+      if (payment.jobId && inv.jobId !== payment.jobId) throw linkErr(`invoice ${payment.invoiceId}`);
+      if (payment.bookingId && inv.bookingId !== payment.bookingId) throw linkErr(`invoice ${payment.invoiceId}`);
+      if (inv.paymentId && inv.paymentId !== paymentId) throw linkErr(`invoice ${payment.invoiceId}`);
     }
     if (payment.jobId) {
       if (!jobSnap?.exists) throw linkErr(`job ${payment.jobId} (missing)`);
-      if ((jobSnap.data() as { tenantId?: string }).tenantId !== payment.tenantId) throw linkErr(`job ${payment.jobId}`);
+      const job = jobSnap.data() as { tenantId?: string; bookingId?: string | null };
+      if (job.tenantId !== payment.tenantId) throw linkErr(`job ${payment.jobId}`);
+      if (payment.bookingId && job.bookingId !== payment.bookingId) throw linkErr(`job ${payment.jobId}`);
     }
     if (payment.bookingId) {
       if (!bookingSnap?.exists) throw linkErr(`booking ${payment.bookingId} (missing)`);
@@ -182,9 +207,22 @@ export type LegacyClaimOutcome =
   | "skipped";         // no claim, or nothing to reconcile
 
 /** Identity token binding one reconciliation pass to the exact claim
- * generation it read. A released-then-recreated claim has a new claimedAt
- * and updateTime, so stale work can neither delete nor annotate it. */
-type ClaimToken = { claimedAt: string | null; updateTimeMs: number | null };
+ * generation it read: claimedAt plus the claim doc's FULL-PRECISION
+ * updateTime (seconds+nanos, never millis). A released-then-recreated claim
+ * has a new updateTime even when claimedAt repeats, so stale work can
+ * neither delete nor annotate it. */
+type ClaimToken = { claimedAt: string | null; updateTime: import("firebase-admin/firestore").Timestamp | null };
+
+function tokenMatches(snap: import("firebase-admin/firestore").DocumentSnapshot, token: ClaimToken): boolean {
+  if (!snap.exists) return false;
+  const cur = snap.data() as { claimedAt?: string };
+  if ((cur.claimedAt ?? null) !== token.claimedAt) return false;
+  if (token.updateTime) {
+    if (!snap.updateTime) return false;
+    if (snap.updateTime.seconds !== token.updateTime.seconds || snap.updateTime.nanoseconds !== token.updateTime.nanoseconds) return false;
+  }
+  return true;
+}
 
 /** Reconcile ONE retained legacy claim. Read-only at the provider. */
 export async function reconcileLegacyRefundClaim(
@@ -195,12 +233,13 @@ export async function reconcileLegacyRefundClaim(
 ): Promise<LegacyClaimOutcome> {
   const now = new Date().toISOString();
   const claimRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentId}`);
+  const paymentRef = db.collection(COLLECTIONS.payments()).doc(paymentId);
 
   const claimSnap = await claimRef.get();
   if (!claimSnap.exists) return "skipped";
   const token: ClaimToken = {
     claimedAt: (claimSnap.data() as { claimedAt?: string }).claimedAt ?? null,
-    updateTimeMs: claimSnap.updateTime ? claimSnap.updateTime.toMillis() : null,
+    updateTime: claimSnap.updateTime ?? null,
   };
 
   // Transactional token-bound annotate: updates the claim only if it still
@@ -209,15 +248,12 @@ export async function reconcileLegacyRefundClaim(
   const annotate = async (state: string, note: string, extra: Record<string, unknown> = {}) => {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(claimRef);
-      if (!snap.exists) return;
-      const cur = snap.data() as { claimedAt?: string };
-      if ((cur.claimedAt ?? null) !== token.claimedAt) return;
-      if (token.updateTimeMs != null && snap.updateTime && snap.updateTime.toMillis() !== token.updateTimeMs) return;
+      if (!tokenMatches(snap, token)) return;
       tx.update(claimRef, { reconcileState: state, reconcileNote: note, reconcileAt: now, ...extra });
     }).catch(() => undefined);
   };
 
-  const paymentSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
+  const paymentSnap = await paymentRef.get();
   if (!paymentSnap.exists) {
     await annotate("held", `payment ${paymentId} missing; claim retained for data repair`);
     return "held";
@@ -227,11 +263,41 @@ export async function reconcileLegacyRefundClaim(
   // doc (never guessed), so future sweeps can tenant-scope without the read.
   const tenantExtra = typeof payment.tenantId === "string" ? { tenantId: payment.tenantId } : {};
 
+  const ledgerRefFor = (providerRefundId: string) =>
+    db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${paymentId}_${providerRefundId}`);
+
+  // Transactional, token-bound resolution for the already-accounted paths:
+  // rereads the claim (exact generation), the payment (fresh binding), and
+  // the exact ledger entry (identity + full coverage) inside ONE transaction
+  // before marking resolved. Any drift -> no write, held.
+  const finalizeResolved = async (ledgerId: string, expected: { amountPaise: number; currency: string | null; providerRefundId: string }, note: string) => {
+    let ok = false;
+    await db.runTransaction(async (tx) => {
+      const [cSnap, pSnap, lSnap] = await Promise.all([tx.get(claimRef), tx.get(paymentRef), tx.get(db.collection(COLLECTIONS.paymentRefunds()).doc(ledgerId))]);
+      if (!tokenMatches(cSnap, token)) return;
+      if (!pSnap.exists || !lSnap.exists) return;
+      const pf = pSnap.data() as Payment;
+      if (pf.tenantId !== payment.tenantId || pf.amount !== payment.amount || pf.currency !== payment.currency ||
+          pf.razorpayPaymentId !== payment.razorpayPaymentId || pf.status !== payment.status ||
+          (pf.refundAmount ?? 0) !== (payment.refundAmount ?? 0) || pf.razorpayRefundId !== payment.razorpayRefundId) return;
+      const lf = lSnap.data() as { paymentId?: string; amountPaise?: number; currency?: string | null; providerRefundId?: string };
+      if (lf.paymentId !== paymentId || lf.providerRefundId !== expected.providerRefundId ||
+          lf.amountPaise !== expected.amountPaise || (lf.currency ?? null) !== expected.currency) return;
+      tx.update(claimRef, {
+        reconcileState: "resolved", reconcileNote: note, reconcileAt: now,
+        providerRefundId: expected.providerRefundId, ...tenantExtra,
+      });
+      ok = true;
+    }).catch(() => undefined);
+    return ok;
+  };
+
   // Another path may already have accounted the money (webhook projection,
-  // outbox). Only a ledger entry that FULLY covers this claim's binding
-  // (exact amount + currency for this payment) establishes the outcome; a
-  // partial refund for something else does not, and a conflicting row is a
-  // data problem - both HOLD visibly instead of resolving.
+  // outbox). Full coverage alone does NOT establish THIS claim's outcome:
+  // resolution requires exact identity evidence - either the payment's own
+  // recorded provider refund id with its exact ledger entry, or provider
+  // confirmation for THIS claim's deterministic referenceId plus its exact
+  // ledger entry. Partial or conflicting rows always HOLD visibly.
   if (payment.status !== "completed" || (payment.refundAmount ?? 0) !== 0) {
     const ledger = await db.collection(COLLECTIONS.paymentRefunds()).where("paymentId", "==", paymentId).limit(10).get();
     const rows = ledger.docs.map((d) => ({
@@ -243,17 +309,59 @@ export async function reconcileLegacyRefundClaim(
       await annotate("held", `ledger entry ${conflict.id} conflicts with this claim's binding (amount/currency); held for reconciliation, zero writes`, tenantExtra);
       return "held";
     }
-    const full = rows.find((r) => r.amountPaise === payment.amount);
-    if (full) {
-      await annotate("resolved", `full refund verified in ledger entry ${full.id} (providerRefundId ${full.providerRefundId ?? "n/a"}, ${full.amountPaise} ${payment.currency ?? ""}); matches the claim binding`,
-        { providerRefundId: full.providerRefundId ?? null, ...tenantExtra });
-      return "already_accounted";
+    // (a) Exact projection identity: the payment's recorded provider refund id
+    // and its own ledger entry with full coverage.
+    if (payment.razorpayRefundId) {
+      const own = rows.find((r) => r.id === `pr_${paymentId}_${payment.razorpayRefundId}` && r.amountPaise === payment.amount);
+      if (own) {
+        const ok = await finalizeResolved(own.id, { amountPaise: payment.amount, currency: payment.currency ?? null, providerRefundId: payment.razorpayRefundId },
+          `verified provider refund ${payment.razorpayRefundId} fully accounted (ledger ${own.id}); matches this claim's exact identity, amount and currency`);
+        if (ok) return "already_accounted";
+        await annotate("held", "accounting drifted while resolving; held, zero writes", tenantExtra);
+        return "held";
+      }
     }
-    if (rows.length > 0) {
-      await annotate("held", `only partial/other ledger entries (${rows.map((r) => `${r.id}:${r.amountPaise}`).join(", ")}); they do not establish this full claim's outcome; held, zero writes`, tenantExtra);
+    // (b) Provider-side confirmation bound to THIS claim's referenceId.
+    if (payment.razorpayPaymentId && payment.currency && provider.findRefundByReference) {
+      let lookup: Awaited<ReturnType<NonNullable<PaymentProvider["findRefundByReference"]>>>;
+      try {
+        lookup = await provider.findRefundByReference(`refund_${paymentId}`, {
+          providerPaymentId: payment.razorpayPaymentId, amountPaise: payment.amount, currency: payment.currency,
+        });
+      } catch {
+        await annotate("held", "provider lookup failed while verifying accounting; claim retained", tenantExtra);
+        return "held";
+      }
+      if (lookup.outcome === "found" && lookup.providerRefundId) {
+        const own = rows.find((r) => r.id === `pr_${paymentId}_${lookup.providerRefundId}` && r.amountPaise === payment.amount);
+        if (own) {
+          const ok = await finalizeResolved(own.id, { amountPaise: payment.amount, currency: payment.currency ?? null, providerRefundId: lookup.providerRefundId },
+            `provider confirmed refund ${lookup.providerRefundId} processed for this claim's reference; fully accounted (ledger ${own.id})`);
+          if (ok) return "already_accounted";
+          await annotate("held", "accounting drifted while resolving; held, zero writes", tenantExtra);
+          return "held";
+        }
+        await annotate("held", `provider confirms refund ${lookup.providerRefundId} processed for this claim's reference but no full ledger entry exists; held for projection review, zero writes`, tenantExtra);
+        return "held";
+      }
+      if (lookup.outcome === "absent_confirmed" && payment.status === "refunded" && (payment.refundAmount ?? 0) === payment.amount) {
+        const full = rows.find((r) => r.amountPaise === payment.amount && typeof r.providerRefundId === "string");
+        if (full) {
+          const ok = await finalizeResolved(full.id, { amountPaise: payment.amount, currency: payment.currency ?? null, providerRefundId: full.providerRefundId! },
+            `provider confirms this claim's refund was never accepted; payment already fully refunded by ledger ${full.id} (providerRefundId ${full.providerRefundId}); claim outcome superseded, money accounted exactly once`);
+          if (ok) return "already_accounted";
+          await annotate("held", "accounting drifted while resolving; held, zero writes", tenantExtra);
+          return "held";
+        }
+      }
+      if (rows.length > 0) {
+        await annotate("held", `only partial/unbound ledger entries (${rows.map((r) => `${r.id}:${r.amountPaise ?? "?"}`).join(", ")}) and no provider confirmation for this claim's reference; held, zero writes`, tenantExtra);
+        return "held";
+      }
+      await annotate("held", `payment state '${payment.status}' refunded ${payment.refundAmount ?? 0} with no ledger entry and provider outcome '${lookup.outcome}'; held for reconciliation, zero writes`, tenantExtra);
       return "held";
     }
-    await annotate("held", `payment state '${payment.status}' refunded ${payment.refundAmount ?? 0} has no ledger entry; held for reconciliation, zero writes`, tenantExtra);
+    await annotate("held", `payment state '${payment.status}' refunded ${payment.refundAmount ?? 0} cannot be verified (missing provider binding); held, zero writes`, tenantExtra);
     return "held";
   }
 
@@ -272,25 +380,28 @@ export async function reconcileLegacyRefundClaim(
   }
 
   if (lookup.outcome === "absent_confirmed") {
-    // Authoritative: the provider never accepted this refund. Release is
-    // transactional and token-bound: reread inside the transaction and delete
-    // only if the SAME claim generation is still there and another path has
-    // not already resolved it. A released-then-recreated claim is a NEW
-    // refund in flight and is never deleted here.
+    // Authoritative: the provider never accepted this refund. Release is ONE
+    // transaction that rereads BOTH the claim (exact generation, full-precision
+    // updateTime, unresolved) AND the payment (fresh binding identical to what
+    // the provider lookup was bound to). Any drift -> no delete.
     let released = false;
     await db.runTransaction(async (tx) => {
-      const snap = await tx.get(claimRef);
-      if (!snap.exists) return;
-      const cur = snap.data() as { claimedAt?: string; reconcileState?: string };
-      if ((cur.claimedAt ?? null) !== token.claimedAt) return;
+      const [cSnap, pSnap] = await Promise.all([tx.get(claimRef), tx.get(paymentRef)]);
+      if (!tokenMatches(cSnap, token)) return;
+      const cur = cSnap.data() as { reconcileState?: string };
       if (cur.reconcileState === "resolved") return;
+      if (!pSnap.exists) return;
+      const pf = pSnap.data() as Payment;
+      if (pf.tenantId !== payment.tenantId || pf.amount !== payment.amount || pf.currency !== payment.currency ||
+          pf.razorpayPaymentId !== payment.razorpayPaymentId || pf.status !== payment.status) return;
       tx.delete(claimRef);
       released = true;
     }).catch(() => undefined);
     if (!released) {
-      // The claim changed while we were reconciling; leave it untouched and
-      // visible for the next pass. annotate is a no-op if it is a new claim.
-      await annotate("held", "release raced with a newer claim state; claim retained, will reconcile later", tenantExtra);
+      // The claim or payment changed while we were reconciling; leave the
+      // claim untouched and visible for the next pass. annotate is a no-op if
+      // a newer claim generation now lives here.
+      await annotate("held", "release raced with a newer claim or payment state; claim retained, will reconcile later", tenantExtra);
       return "held";
     }
     return "released_absent";
@@ -301,11 +412,13 @@ export async function reconcileLegacyRefundClaim(
     return "held";
   }
   // Processed money confirmed by the provider, bound by payment id + amount +
-  // currency + the claim's deterministic referenceId. Project it truthfully.
+  // currency + the claim's deterministic referenceId. Project it truthfully;
+  // the projection transaction rereads the claim generation itself.
   try {
     const { converged } = await projectLegacyRefund(db, {
       paymentId, payment, providerRefundId: lookup.providerRefundId,
       reason: "reconciled from retained refund claim", user: actor, now,
+      claim: { paymentId, claimedAt: token.claimedAt, updateTimeSeconds: token.updateTime ? token.updateTime.seconds : null, updateTimeNanoseconds: token.updateTime ? token.updateTime.nanoseconds : null },
     });
     await annotate("resolved", converged
       ? `provider refund ${lookup.providerRefundId} already accounted; converged without double counting`
@@ -318,40 +431,45 @@ export async function reconcileLegacyRefundClaim(
   }
 }
 
-/** Sweep a tenant's retained legacy claims. Bounded; never submits refunds.
- * Paginates with a cursor so other tenants' claims (or already-resolved
- * ones) ahead in id order cannot starve this tenant's unresolved rows. */
+/** Sweep a tenant's retained legacy claims. Bounded per pass; never submits
+ * refunds. Progress is PERSISTED (paymentEvents/reconcileSweep_<tenantId>)
+ * so unresolved rows beyond one pass's scan bound are reached by the next
+ * pass instead of starving forever. A completed cycle clears the cursor so
+ * later passes rescan from the start for newly retained claims. */
 export async function reconcileLegacyRefundClaims(
   db: Firestore,
   provider: PaymentProvider,
   opts: { tenantId: string; limit?: number; maxScan?: number; actor: AuthorizedUser },
-): Promise<{ projected: number; converged: number; released: number; held: number; alreadyAccounted: number }> {
+): Promise<{ projected: number; converged: number; released: number; held: number; alreadyAccounted: number; scanned: number; exhausted: boolean }> {
   const limit = opts.limit ?? 20;
   const maxScan = opts.maxScan ?? 500;
-  const counts = { projected: 0, converged: 0, released: 0, held: 0, alreadyAccounted: 0 };
+  const counts = { projected: 0, converged: 0, released: 0, held: 0, alreadyAccounted: 0, scanned: 0, exhausted: false };
+  const stateRef = db.collection(COLLECTIONS.paymentEvents()).doc(`reconcileSweep_${opts.tenantId}`);
+  const state = (await stateRef.get()).data() as { lastId?: string } | undefined;
+  const startedAfter: string | null = typeof state?.lastId === "string" ? state.lastId : null;
+  let afterId: string | null = startedAfter;
+
   // Claim docs are paymentEvents/refund_<paymentId>; other event ids never
   // carry that prefix, so a documentId range selects exactly the claims.
-  let cursor: QueryDocumentSnapshot | null = null;
   let scanned = 0;
   let done = 0;
-  while (done < limit && scanned < maxScan) {
+  let lastSeen: string | null = null;
+  let hitEnd = false;
+  while (done < limit && scanned < maxScan && !hitEnd) {
     let q = db.collection(COLLECTIONS.paymentEvents())
       .where("__name__", ">=", "refund_")
       .where("__name__", "<", "refund`")
-      .orderBy("__name__")
-      .limit(100);
-    if (cursor) q = q.startAfter(cursor);
-    const snap = await q.get();
-    if (snap.empty) break;
+      .orderBy("__name__");
+    if (afterId) q = q.where("__name__", ">", afterId);
+    const snap = await q.limit(100).get();
+    if (snap.empty) { hitEnd = true; break; }
     scanned += snap.size;
-    cursor = snap.docs[snap.size - 1]!;
+    lastSeen = snap.docs[snap.size - 1]!.id;
+    afterId = lastSeen;
     for (const doc of snap.docs) {
       if (done >= limit) break;
       const paymentId = doc.id.slice("refund_".length);
       if (!paymentId) continue;
-      // Only unresolved claims for THIS tenant. A backfilled tenantId lets us
-      // skip foreign claims without a payment read; without it we verify via
-      // the payment doc (and the reconcile pass backfills it).
       const data = doc.data() as { reconcileState?: string; tenantId?: string };
       if (data.reconcileState === "resolved") continue;
       if (typeof data.tenantId === "string" && data.tenantId !== opts.tenantId) continue;
@@ -367,7 +485,14 @@ export async function reconcileLegacyRefundClaims(
       else if (outcome === "already_accounted") counts.alreadyAccounted++;
       else if (outcome === "held") counts.held++;
     }
-    if (snap.size < 100) break;
+    if (snap.size < 100) hitEnd = true;
+  }
+  counts.scanned = scanned;
+  counts.exhausted = hitEnd && done < limit;
+  if (counts.exhausted) {
+    await stateRef.delete().catch(() => undefined);
+  } else if (lastSeen && lastSeen !== startedAfter) {
+    await stateRef.set({ lastId: lastSeen, updatedAt: new Date().toISOString(), tenantId: opts.tenantId }).catch(() => undefined);
   }
   return counts;
 }

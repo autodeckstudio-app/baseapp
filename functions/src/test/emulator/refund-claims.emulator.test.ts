@@ -19,6 +19,7 @@ import { reconcileLegacyRefundClaim, reconcileLegacyRefundClaims } from "../../l
 import { mockProvider } from "../../lib/mock-payment-provider.js";
 import { initiateRefund } from "../../functions/payment/initiateRefund.js";
 import { reconcileRefundClaims } from "../../functions/payment/reconcileRefundClaims.js";
+import { listRefundWork } from "../../functions/payment/listRefundWork.js";
 
 const db = getFirestore();
 let seq = 0;
@@ -42,7 +43,7 @@ async function seed(p: Payment, withInvoice = false) {
   await db.collection(COLLECTIONS.payments()).doc(p.id).set(p);
   if (p.jobId) await db.collection(COLLECTIONS.jobs()).doc(p.jobId).set({ id: p.jobId, tenantId: p.tenantId, bookingId: p.bookingId, paymentStatus: "paid" });
   if (p.bookingId) await db.collection(COLLECTIONS.bookings()).doc(p.bookingId).set({ id: p.bookingId, tenantId: p.tenantId, paymentStatus: "paid" });
-  if (withInvoice && p.invoiceId) await db.collection(COLLECTIONS.invoices()).doc(p.invoiceId).set({ id: p.invoiceId, tenantId: p.tenantId, status: "paid" });
+  if (withInvoice && p.invoiceId) await db.collection(COLLECTIONS.invoices()).doc(p.invoiceId).set({ id: p.invoiceId, tenantId: p.tenantId, status: "paid", jobId: p.jobId, bookingId: p.bookingId, paymentId: p.id });
 }
 
 async function plantClaim(paymentId: string) {
@@ -213,7 +214,7 @@ describe("reconciliation hardening (review findings)", () => {
     expect(outcome).toBe("held");
     const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
     expect(claim.reconcileState).toBe("held");
-    expect(claim.reconcileNote).toContain("partial/other ledger");
+    expect(claim.reconcileNote).toContain("partial/unbound ledger");
   });
 
   it("conflicting ledger row (wrong currency) holds instead of resolving", async () => {
@@ -241,8 +242,11 @@ describe("reconciliation hardening (review findings)", () => {
       // A fresh refund attempt lands between the lookup and the release:
       // old claim released, NEW claim created (new claimedAt generation).
       const c = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const prevClaimedAt = (await c.get()).data()!.claimedAt;
       await c.delete();
-      await c.set({ paymentId: p.id, claimedAt: new Date(Date.now() + 60000).toISOString(), claimedBy: "a2" });
+      // SAME claimedAt as the released generation: claimedAt alone must not
+      // authorize the stale release; only the exact doc generation does.
+      await c.set({ paymentId: p.id, claimedAt: prevClaimedAt, claimedBy: "a2" });
       return r;
     };
     try {
@@ -308,6 +312,135 @@ describe("reconciliation hardening (review findings)", () => {
     expect(fresh.refundAmount ?? 0).toBe(0);
     const ledger = await db.collection(COLLECTIONS.paymentRefunds()).where("paymentId", "==", p.id).get();
     expect(ledger.empty).toBe(true);
+    const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
+    expect(claim.reconcileState).toBe("held");
+  });
+});
+
+
+describe("reconciliation adversarial invariants (review round 2)", () => {
+  it("payment binding mutated during blocked lookup: no stale release", async () => {
+    const p = payment();
+    await seed(p);
+    await plantClaim(p.id);
+    mockProvider.authoritativeNegatives = true;
+    const orig = mockProvider.findRefundByReference.bind(mockProvider);
+    mockProvider.findRefundByReference = async (ref: string, binding: never) => {
+      const r = await orig(ref, binding);
+      await db.collection(COLLECTIONS.payments()).doc(p.id).update({ amount: 999 });
+      return r;
+    };
+    try {
+      const outcome = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+      expect(outcome).toBe("held");
+    } finally {
+      mockProvider.findRefundByReference = orig;
+      mockProvider.authoritativeNegatives = false;
+    }
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(true);
+  });
+
+  it("claim recreated with same claimedAt during blocked lookup: no stale projection", async () => {
+    const p = payment();
+    await seed(p);
+    await plantClaim(p.id);
+    await plantProviderRefund(p, "processed");
+    const orig = mockProvider.findRefundByReference.bind(mockProvider);
+    mockProvider.findRefundByReference = async (ref: string, binding: never) => {
+      const r = await orig(ref, binding);
+      const c = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const prevClaimedAt = (await c.get()).data()!.claimedAt;
+      await c.delete();
+      await c.set({ paymentId: p.id, claimedAt: prevClaimedAt, claimedBy: "a2" });
+      return r;
+    };
+    try {
+      const outcome = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+      expect(outcome).toBe("held");
+    } finally {
+      mockProvider.findRefundByReference = orig;
+    }
+    const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(fresh.status).toBe("completed");
+    const ledger = await db.collection(COLLECTIONS.paymentRefunds()).where("paymentId", "==", p.id).get();
+    expect(ledger.empty).toBe(true);
+    const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
+    expect(claim.claimedBy).toBe("a2");
+    expect(claim.reconcileState).toBeUndefined();
+  });
+
+  it("sweep converges across passes beyond the 500-scan bound (persisted cursor)", async () => {
+    for (let i = 0; i < 600; i++) {
+      const fid = `fb${String(i).padStart(4, "0")}`;
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${fid}`).set({ paymentId: fid, tenantId: "t2", claimedAt: new Date().toISOString(), claimedBy: "x" });
+    }
+    const p = payment({ id: "zz-target2" });
+    await seed(p);
+    await plantClaim(p.id);
+    await plantProviderRefund(p, "processed");
+    const first = await reconcileLegacyRefundClaims(db, mockProvider, { tenantId: "t1", limit: 5, maxScan: 500, actor });
+    expect(first.projected).toBe(0);
+    expect(first.exhausted).toBe(false);
+    const second = await reconcileLegacyRefundClaims(db, mockProvider, { tenantId: "t1", limit: 5, maxScan: 500, actor });
+    expect(second.projected).toBe(1);
+    expect(second.exhausted).toBe(true);
+    expect((await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!.status).toBe("refunded");
+  });
+
+  it("same-tenant job with wrong booking linkage: held, zero financial writes", async () => {
+    const p = payment();
+    await seed(p);
+    await plantClaim(p.id);
+    await plantProviderRefund(p, "processed");
+    await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).update({ bookingId: "some-other-booking" });
+    const outcome = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+    expect(outcome).toBe("held");
+    const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(fresh.status).toBe("completed");
+    const job = (await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).get()).data()!;
+    expect(job.paymentStatus).toBe("paid");
+    const ledger = await db.collection(COLLECTIONS.paymentRefunds()).where("paymentId", "==", p.id).get();
+    expect(ledger.empty).toBe(true);
+  });
+
+  it("missing invoice with invoiceId set: held, zero financial writes", async () => {
+    const p = payment({ invoiceId: uid("inv") });
+    await seed(p);
+    await plantClaim(p.id);
+    await plantProviderRefund(p, "processed");
+    const outcome = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+    expect(outcome).toBe("held");
+    const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(fresh.status).toBe("completed");
+  });
+
+  it("list discovery converges across calls beyond the scan bound (persisted cursor + backfill)", async () => {
+    for (let i = 0; i < 600; i++) {
+      const fid = `fc${String(i).padStart(4, "0")}`;
+      await db.collection(COLLECTIONS.payments()).doc(fid).set(payment({ id: fid, tenantId: "t2" }));
+      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${fid}`).set({ paymentId: fid, claimedAt: new Date().toISOString(), claimedBy: "x" });
+    }
+    const p = payment({ id: "zz-listtarget" });
+    await seed(p);
+    await plantClaim(p.id);
+    const auth = adminAuth();
+    const first = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[] };
+    expect(first.legacyClaims.some((c) => c.paymentId === p.id)).toBe(false);
+    const second = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[] };
+    expect(second.legacyClaims.some((c) => c.paymentId === p.id)).toBe(true);
+  });
+
+  it("full-coverage ledger row from a DIFFERENT refund reference without provider confirmation: held, not resolved", async () => {
+    const p = payment({ status: "refunded", refundAmount: 100000, refundedAt: new Date().toISOString() });
+    await seed(p);
+    await plantClaim(p.id);
+    await db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${p.id}_rfnd_other`).set({
+      paymentId: p.id, providerRefundId: "rfnd_other", amountPaise: 100000, currency: "INR", source: "outbox", createdAt: new Date().toISOString(),
+    });
+    // Provider has no record of THIS claim's reference and payment has no
+    // razorpayRefundId recorded: full coverage alone must not resolve.
+    const outcome = await reconcileLegacyRefundClaim(db, mockProvider, p.id, actor);
+    expect(outcome).toBe("held");
     const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
     expect(claim.reconcileState).toBe("held");
   });
