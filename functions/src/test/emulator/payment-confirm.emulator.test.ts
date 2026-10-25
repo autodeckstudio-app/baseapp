@@ -667,32 +667,58 @@ describe("initiateRefund — race safety and idempotency", () => {
     ).rejects.toThrow(/Can only refund completed payments/);
   });
 
-  it("releases the claim on provider failure so a genuine retry can succeed", async () => {
+  it("retains the claim on an unknown provider outcome; release only via in-call authoritative absence", async () => {
+    // Case 1: unknown outcome -> claim retained, blind retry refused with no provider call.
     const paymentId = uid("pay-refund-retry");
     await seedCompletedRazorpayPayment(paymentId);
 
     const spy = vi.spyOn(getPaymentProvider(), "initiateRefund").mockRejectedValueOnce(new Error("provider down"));
-
     await expect(
       initiateRefund.run({
         data: { paymentId, reason: "will fail" },
         auth: adminAuth(uid("admin-fail"), REFUND_TENANT),
       } as never),
-    ).rejects.toThrow(/provider down/);
+    ).rejects.toThrow(/outcome could not be confirmed/);
 
-    // Payment must still be "completed" — the failed attempt must not have
-    // left it stuck in a half-refunded state.
     const midSnap = await db.collection(COLLECTIONS.payments()).doc(paymentId).get();
     expect((midSnap.data() as Payment).status).toBe("completed");
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentId}`).get()).exists).toBe(true);
 
     spy.mockRestore();
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    const callsBefore = mockProvider.initiateRefundCallCount;
+    await expect(
+      initiateRefund.run({
+        data: { paymentId, reason: "blind retry" },
+        auth: adminAuth(uid("admin-blind"), REFUND_TENANT),
+      } as never),
+    ).rejects.toThrow(/already/);
+    expect(mockProvider.initiateRefundCallCount).toBe(callsBefore); // refused before any provider call
 
-    // Retry succeeds now that the claim was released.
-    const retryResult = (await initiateRefund.run({
-      data: { paymentId, reason: "retry after provider recovers" },
-      auth: adminAuth(uid("admin-retry"), REFUND_TENANT),
-    } as never)) as { refunded: boolean };
-    expect(retryResult.refunded).toBe(true);
+    // Case 2: the SAME call that fails reconciles immediately - authoritative
+    // provider absence releases the claim in-call, and only then does a retry succeed.
+    const paymentId2 = uid("pay-refund-retry-2");
+    await seedCompletedRazorpayPayment(paymentId2);
+    mockProvider.authoritativeNegatives = true;
+    const spy2 = vi.spyOn(getPaymentProvider(), "initiateRefund").mockRejectedValueOnce(new Error("provider down"));
+    try {
+      await expect(
+        initiateRefund.run({
+          data: { paymentId: paymentId2, reason: "fails but provider confirms absence" },
+          auth: adminAuth(uid("admin-fail2"), REFUND_TENANT),
+        } as never),
+      ).rejects.toThrow(/provider down/);
+      expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentId2}`).get()).exists).toBe(false);
+
+      spy2.mockRestore();
+      const retryResult = (await initiateRefund.run({
+        data: { paymentId: paymentId2, reason: "retry after provider recovers" },
+        auth: adminAuth(uid("admin-retry2"), REFUND_TENANT),
+      } as never)) as { refunded: boolean };
+      expect(retryResult.refunded).toBe(true);
+    } finally {
+      mockProvider.authoritativeNegatives = false;
+    }
   });
 });
 
