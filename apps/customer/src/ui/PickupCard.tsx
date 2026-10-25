@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { Kicker, Pane, Row } from "./kit";
 import { PICKUP_POLICY } from "../lib/pickup-policy";
+import { completedLegRows } from "../lib/pickup-legs";
 import { listenToPickupRequest, type PickupRequest } from "../lib/pickup-service";
 
 const KINDS: { value: PickupRequest["kind"]; label: string }[] = [
@@ -49,6 +50,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             <>
               {wantsPickup && req.agreedPickupAt ? <Row title="Pickup time" detail={formatAgreed(req.agreedPickupAt)} /> : null}
               {wantsDrop && req.agreedDropAt ? <Row title="Drop-off time" detail={formatAgreed(req.agreedDropAt)} /> : null}
+              {completedLegRows(req).map((l) => <Row key={l.title} title={l.title} detail={formatAgreed(l.at)} />)}
             </>
           ) : (
             <>
