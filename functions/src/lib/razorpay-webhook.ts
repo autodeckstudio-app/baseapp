@@ -26,6 +26,7 @@ export type WebhookOutcome =
   | "already_final"
   | "unknown_payment"
   | "amount_mismatch"
+  | "outbox_owned"
   | "ignored";
 
 function systemUser(tenantId: string): AuthorizedUser {
@@ -49,6 +50,33 @@ async function findPayment(db: Firestore, ev: ProviderWebhookEvent): Promise<Pay
     if (!q.empty) return q.docs[0]!.data() as Payment;
   }
   return null;
+}
+
+/**
+ * Durable outbox ownership of an incoming refund event: true only when a
+ * persisted refund request agrees on payment id AND amount AND (when both
+ * carry it) currency. Receipt binding first (our request id is the provider
+ * refund's receipt), then the provider refund id recorded at submit time.
+ */
+async function isOutboxOwnedRefund(
+  tx: FirebaseFirestore.Transaction,
+  db: Firestore,
+  ev: ProviderWebhookEvent,
+  payment: Payment,
+): Promise<boolean> {
+  const refundAmount = ev.providerRefundAmount ?? ev.amount;
+  const binds = (r: { paymentId?: string; amountPaise?: number }): boolean =>
+    r.paymentId === payment.id && r.amountPaise === refundAmount &&
+    (!ev.providerRefundCurrency || !payment.currency || ev.providerRefundCurrency === payment.currency);
+  if (ev.providerRefundReceipt) {
+    const snap = await tx.get(db.collection(COLLECTIONS.refundRequests()).doc(ev.providerRefundReceipt));
+    if (snap.exists && binds(snap.data() as { paymentId?: string; amountPaise?: number })) return true;
+  }
+  if (ev.providerRefundId) {
+    const q = await tx.get(db.collection(COLLECTIONS.refundRequests()).where("providerRefundId", "==", ev.providerRefundId));
+    if (q.docs.some((d) => binds(d.data() as { paymentId?: string; amountPaise?: number }))) return true;
+  }
+  return false;
 }
 
 export async function processProviderEvent(
@@ -197,6 +225,16 @@ export async function processProviderEvent(
     // refund.created (e.g. refunded from the Razorpay dashboard rather than the admin app)
     if (payment.status === "refunded") { record("already_final"); return "already_final"; }
     if (payment.status !== "completed") { record("ignored"); return "ignored"; }
+    // Refund-outbox ownership, checked BEFORE any generic projection and
+    // durable across the outbox lifecycle: an outbox-created refund carries
+    // our request id as the provider receipt, or matches a persisted
+    // request's providerRefundId. The request document survives projection
+    // and guard release, and ownership binds payment id + amount + currency -
+    // so a delayed or out-of-order refund.created for an outbox refund is
+    // recorded but never generically projected here (no premature
+    // full-amount write, no invoice void, no gift void). Refunds with no
+    // outbox owner (dashboard / legacy admin path) keep the generic path.
+    if (await isOutboxOwnedRefund(tx, db, ev, payment)) { record("outbox_owned"); return "outbox_owned"; }
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
     const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
     const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;

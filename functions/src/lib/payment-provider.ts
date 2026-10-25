@@ -47,6 +47,13 @@ export interface ProviderWebhookEvent {
   providerPaymentId: string;
   providerPaymentLinkId: string | null;
   providerRefundId: string | null;
+  // Refund-entity fields, when the event carries a refund: its own amount,
+  // currency, and our durable receipt (the refund-outbox request id, or
+  // refund_<paymentId> for the legacy path). Identity for outbox ownership
+  // never rests on the payment entity alone.
+  providerRefundAmount?: number | null;
+  providerRefundCurrency?: string | null;
+  providerRefundReceipt?: string | null;
   providerOrderId?: string | null;
   referenceId?: string | null; // our payment doc id, set as reference_id on the payment link
   amount: number; // paise
