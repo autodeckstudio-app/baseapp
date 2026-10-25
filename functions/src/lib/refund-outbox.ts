@@ -542,6 +542,10 @@ export async function runRefundOutbox(
       // request BEFORE the provider is ever called. The in-transaction
       // recheck in projectRefund remains the authority at write time.
       const preflightBad = await (async (): Promise<string | null> => {
+        // A malformed request must never reach the provider: the referenceId
+        // is the reconciliation anchor, so a missing id would submit an
+        // unbindable refund.
+        if (typeof request.id !== "string" || !request.id) return "request id missing";
         if (!payment) return `payment ${request.paymentId} missing`;
         if (payment.tenantId !== request.tenantId) return `payment tenant ${payment.tenantId} != request tenant ${request.tenantId}`;
         // Strict nullable linkage equality: the request must point at exactly
