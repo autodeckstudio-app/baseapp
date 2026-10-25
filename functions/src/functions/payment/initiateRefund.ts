@@ -2,6 +2,7 @@
 // Mutates the original Payment record in place (status -> "refunded") — there
 // is no partial-refund model or separate refund Payment record in this schema.
 // In dev/emulator: mock provider is used. No live Razorpay refund API called.
+import { randomUUID } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
@@ -78,8 +79,14 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   // never re-verified, so two concurrent initiateRefund calls both passed the
   // check and both issued real provider refunds).
   const refundEventRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${data.paymentId}`);
+  const paymentRef = db.collection(COLLECTIONS.payments()).doc(data.paymentId);
+  // The nonce originates INSIDE the claim transaction: a claim recreated with
+  // the same claimedAt clock value is never adopted as ours, before or after
+  // the provider call.
+  const claimNonce = randomUUID();
+  let claimedPayment: Payment = payment;
   await db.runTransaction(async (tx) => {
-    const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(data.paymentId));
+    const freshSnap = await tx.get(paymentRef);
     if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
     const freshPayment = freshSnap.data() as Payment;
     if (freshPayment.status !== "completed") {
@@ -106,21 +113,45 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     if (guardSnap.exists) {
       throw new HttpsError("already-exists", "A refund request is already active for this payment.");
     }
-    tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid });
+    tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid, claimToken: claimNonce });
+    // Provider inputs come from THIS in-transaction read, never the stale
+    // pre-transaction snapshot.
+    claimedPayment = freshPayment;
   });
 
-  // Capture THIS claim's exact generation (claimedAt is ours by construction;
-  // pair it with the full-precision updateTime). A release+recreate anywhere
-  // between the provider call and projection must stop this in-flight refund
-  // from writing against a claim generation it does not own.
+  // Pre-submit verification in ONE transaction: the claim must still be our
+  // exact invocation (nonce), and the payment's identity must still match the
+  // exact values we are about to send the provider (amount, currency,
+  // provider payment id, method, tenant, linkage, status). Any drift holds
+  // with zero financial writes and zero provider calls.
+  let submitPayment: Payment = claimedPayment;
+  await db.runTransaction(async (tx) => {
+    const [cSnap, pSnap] = await Promise.all([tx.get(refundEventRef), tx.get(paymentRef)]);
+    if (!cSnap.exists || (cSnap.data() as { claimToken?: string }).claimToken !== claimNonce) {
+      throw new HttpsError("unavailable", "Refund claim changed before the refund could be submitted; held with zero financial writes.");
+    }
+    if (!pSnap.exists) throw new HttpsError("not-found", "Payment not found.");
+    const fp = pSnap.data() as Payment;
+    const drift =
+      fp.tenantId !== claimedPayment.tenantId ||
+      fp.amount !== claimedPayment.amount ||
+      fp.currency !== claimedPayment.currency ||
+      fp.razorpayPaymentId !== claimedPayment.razorpayPaymentId ||
+      fp.method !== claimedPayment.method ||
+      fp.status !== claimedPayment.status ||
+      fp.invoiceId !== claimedPayment.invoiceId ||
+      fp.jobId !== claimedPayment.jobId ||
+      fp.bookingId !== claimedPayment.bookingId;
+    if (drift) {
+      throw new HttpsError("unavailable", "Payment identity changed before the refund could be submitted; held with zero financial writes.");
+    }
+    submitPayment = fp;
+  });
   const claimedSnap = await refundEventRef.get();
-  if (!claimedSnap.exists || (claimedSnap.data() as { claimedAt?: string }).claimedAt !== now) {
-    throw new HttpsError("unavailable", "Refund claim changed before the refund could be submitted; held with zero financial writes.");
-  }
   const claimToken = {
-    paymentId: data.paymentId, claimedAt: now,
-    updateTimeSeconds: claimedSnap.updateTime ? claimedSnap.updateTime.seconds : null,
-    updateTimeNanoseconds: claimedSnap.updateTime ? claimedSnap.updateTime.nanoseconds : null,
+    paymentId: data.paymentId, claimedAt: now, claimToken: claimNonce,
+    updateTimeSeconds: claimedSnap.exists && (claimedSnap.data() as { claimToken?: string }).claimToken === claimNonce && claimedSnap.updateTime ? claimedSnap.updateTime.seconds : null,
+    updateTimeNanoseconds: claimedSnap.exists && (claimedSnap.data() as { claimToken?: string }).claimToken === claimNonce && claimedSnap.updateTime ? claimedSnap.updateTime.nanoseconds : null,
   };
 
   // Call provider refund (mock in dev, real Razorpay in production) — exactly
@@ -128,12 +159,12 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   // Deterministic referenceId (no Date.now()) so a network-level retry of
   // this exact call is idempotent at the provider too.
   let providerRefundId: string | null = null;
-  if (payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
+  if (submitPayment.method === "razorpay_payment_link" && submitPayment.razorpayPaymentId) {
     const provider = getPaymentProvider();
     try {
       const result = await provider.initiateRefund({
-        providerPaymentId: payment.razorpayPaymentId,
-        amount: payment.amount,
+        providerPaymentId: submitPayment.razorpayPaymentId,
+        amount: submitPayment.amount,
         reason: data.reason,
         referenceId: `refund_${data.paymentId}`,
       });
@@ -160,10 +191,10 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
       // only an authoritative provider negative releases the claim.
       let outcome: string = "unknown";
       let foundId: string | null = null;
-      if (provider.findRefundByReference && payment.currency) {
+      if (provider.findRefundByReference && submitPayment.currency) {
         try {
           const lookup = await provider.findRefundByReference(`refund_${data.paymentId}`, {
-            providerPaymentId: payment.razorpayPaymentId, amountPaise: payment.amount, currency: payment.currency,
+            providerPaymentId: submitPayment.razorpayPaymentId, amountPaise: submitPayment.amount, currency: submitPayment.currency,
           });
           outcome = lookup.outcome;
           if (lookup.outcome === "found") foundId = lookup.providerRefundId;
@@ -177,10 +208,9 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
         await db.runTransaction(async (tx) => {
           const snap = await tx.get(refundEventRef);
           if (!snap.exists) return;
-          const cur = snap.data() as { claimedAt?: string };
+          const cur = snap.data() as { claimedAt?: string; claimToken?: string };
+          if (cur.claimToken !== claimNonce) return; // never remove another invocation's claim
           if ((cur.claimedAt ?? null) !== now) return;
-          if (claimToken.updateTimeSeconds != null &&
-            (!snap.updateTime || snap.updateTime.seconds !== claimToken.updateTimeSeconds || snap.updateTime.nanoseconds !== claimToken.updateTimeNanoseconds)) return;
           tx.delete(refundEventRef);
         }).catch(() => undefined);
         throw err;
@@ -200,7 +230,7 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   }
 
   const { converged } = await projectLegacyRefund(db, {
-    paymentId: data.paymentId, payment, providerRefundId, reason: data.reason, user, now, claim: claimToken,
+    paymentId: data.paymentId, payment: submitPayment, providerRefundId, reason: data.reason, user, now, claim: claimToken,
   });
 
   return { paymentId: data.paymentId, refunded: true, providerRefundId, ...(converged ? { converged: true } : {}) };

@@ -41,7 +41,7 @@ import type { PaymentProvider } from "./payment-provider.js";
  */
 export async function projectLegacyRefund(
   db: Firestore,
-  i: { paymentId: string; payment: Payment; providerRefundId: string | null; reason: string; user: AuthorizedUser; now: string; claim?: { paymentId: string; claimedAt: string | null; updateTimeSeconds: number | null; updateTimeNanoseconds: number | null } },
+  i: { paymentId: string; payment: Payment; providerRefundId: string | null; reason: string; user: AuthorizedUser; now: string; claim?: { paymentId: string; claimedAt: string | null; updateTimeSeconds: number | null; updateTimeNanoseconds: number | null; claimToken?: string } },
 ): Promise<{ converged: boolean }> {
   const { paymentId, payment, providerRefundId, reason, user, now } = i;
   let converged = false;
@@ -82,6 +82,10 @@ export async function projectLegacyRefund(
       const generationDrift =
         (cur.claimedAt ?? null) !== i.claim.claimedAt ||
         cur.reconcileState === "resolved" ||
+        // An invocation that wrote a nonce INTO its claim transaction never
+        // adopts a same-clock recreation: the nonce must match too.
+        (i.claim.claimToken !== undefined &&
+          (cur as { claimToken?: string }).claimToken !== i.claim.claimToken) ||
         (i.claim.updateTimeSeconds != null &&
           (!claimSnap.updateTime ||
             claimSnap.updateTime.seconds !== i.claim.updateTimeSeconds ||

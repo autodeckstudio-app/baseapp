@@ -748,11 +748,13 @@ describe("initiateRefund legacy-entry hardening (review round 9)", () => {
     await seed(p);
     let swapped = false;
     mockProvider.beforeRefundResponse = async () => {
-      // release+recreate DURING the provider call: the exact read-then-write
-      // window the projection claim-token check protects.
+      // release+recreate DURING the provider call with the SAME claimedAt
+      // clock value: a claimedAt-only check would adopt this recreation; the
+      // invocation nonce must refuse it at projection.
       const ref = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const cur = (await ref.get()).data()!;
       await ref.delete();
-      await ref.set({ paymentId: p.id, claimedAt: new Date(Date.now() + 60000).toISOString(), claimedBy: "another-attempt" });
+      await ref.set({ paymentId: p.id, claimedAt: cur.claimedAt, claimedBy: "another-attempt" });
       swapped = true;
     };
     await expect(
@@ -778,10 +780,12 @@ describe("initiateRefund legacy-entry hardening (review round 9)", () => {
     mockProvider.authoritativeNegatives = true;
     (mockProvider as { findRefundByReference: unknown }).findRefundByReference = async (ref: string, binding: never) => {
       const r = await origLookup(ref, binding);
-      // swap the generation between the lookup and the release delete
+      // swap the generation between the lookup and the release delete,
+      // keeping the SAME claimedAt clock value (no nonce)
       const docRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const cur = (await docRef.get()).data()!;
       await docRef.delete();
-      await docRef.set({ paymentId: p.id, claimedAt: new Date(Date.now() + 60000).toISOString(), claimedBy: "another-attempt" });
+      await docRef.set({ paymentId: p.id, claimedAt: cur.claimedAt, claimedBy: "another-attempt" });
       return r;
     };
     try {
@@ -794,6 +798,68 @@ describe("initiateRefund legacy-entry hardening (review round 9)", () => {
       (mockProvider as { initiateRefund: unknown }).initiateRefund = origInit;
       (mockProvider as { findRefundByReference: unknown }).findRefundByReference = origLookup;
       mockProvider.authoritativeNegatives = false;
+    }
+  });
+
+  it("a same-claimedAt claim recreated BEFORE the provider call is never adopted: no submit, held, recreation intact", async () => {
+    const p = payment();
+    await seed(p);
+    const origRunTx = db.runTransaction.bind(db);
+    let swapped = false;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: never) => Promise<unknown>) => {
+      // State-based, not ordinal: the FIRST transaction after the claim
+      // exists (the pre-submit verification) finds the claim recreated with
+      // the SAME claimedAt clock value but no invocation nonce.
+      const ref = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const snap = await ref.get();
+      if (!swapped && snap.exists) {
+        const cur = snap.data()!;
+        await ref.delete();
+        await ref.set({ paymentId: p.id, claimedAt: cur.claimedAt, claimedBy: "another-attempt" });
+        swapped = true;
+      }
+      return origRunTx(fn);
+    };
+    try {
+      const calls = mockProvider.initiateRefundCallCount;
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never),
+      ).rejects.toThrow(/claim|held|zero financial writes/i);
+      expect(swapped).toBe(true);
+      expect(mockProvider.initiateRefundCallCount).toBe(calls); // provider never called
+      const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
+      expect(claim.claimedBy).toBe("another-attempt"); // the recreation is never removed
+    } finally {
+      (db as unknown as { runTransaction: unknown }).runTransaction = origRunTx;
+    }
+  });
+
+  it("provider inputs come from the in-transaction payment read, not the stale pre-transaction snapshot", async () => {
+    const p = payment();
+    await seed(p);
+    const origRunTx = db.runTransaction.bind(db);
+    let first = true;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: never) => Promise<unknown>) => {
+      if (first) {
+        first = false;
+        // Window: pre-transaction payment snapshot already read, claim tx not
+        // yet started. The provider must receive the FRESH amount.
+        await db.collection(COLLECTIONS.payments()).doc(p.id).update({ amount: p.amount + 500 });
+      }
+      return origRunTx(fn);
+    };
+    try {
+      const r = (await initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never)) as { refunded: boolean };
+      expect(r.refunded).toBe(true);
+      const bound = await mockProvider.findRefundByReference(`refund_${p.id}`, { providerPaymentId: p.razorpayPaymentId!, amountPaise: p.amount + 500, currency: "INR" });
+      expect(bound.outcome).toBe("found");
+      const stale = await mockProvider.findRefundByReference(`refund_${p.id}`, { providerPaymentId: p.razorpayPaymentId!, amountPaise: p.amount, currency: "INR" });
+      expect(stale.outcome).toBe("unknown");
+      const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
+      expect(fresh.status).toBe("refunded");
+      expect(fresh.refundAmount).toBe(p.amount + 500);
+    } finally {
+      (db as unknown as { runTransaction: unknown }).runTransaction = origRunTx;
     }
   });
 
