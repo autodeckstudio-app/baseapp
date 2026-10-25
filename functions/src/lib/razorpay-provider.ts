@@ -183,14 +183,14 @@ export class RazorpayProvider implements PaymentProvider {
     //  - a receipt match whose amount/currency disagrees: conflict-shaped,
     //    treated as unknown (held) rather than attached or released;
     //  - transport failure, non-OK status, malformed JSON: unknown.
-    let data: { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string }> };
+    let data: { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string; status?: string }> };
     try {
       const response = await fetch(
         `${this.baseUrl}/payments/${encodeURIComponent(binding.providerPaymentId)}/refunds?count=100`,
         { headers: { Authorization: this.authHeader } },
       );
       if (!response.ok) return { outcome: "unknown" };
-      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string }> };
+      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string; status?: string }> };
     } catch {
       return { outcome: "unknown" };
     }
@@ -198,8 +198,13 @@ export class RazorpayProvider implements PaymentProvider {
     const bound = receiptMatches.filter(
       (refund) => refund?.amount === binding.amountPaise && refund?.currency === binding.currency,
     );
+    // A found refund is not necessarily successful: only "processed" moves
+    // money. Per Razorpay's documented lifecycle (created -> processed |
+    // failed), "failed" is terminal (no money moved); "pending"/"partial"/
+    // missing status is inconclusive - hold, do not project, do not release.
     if (bound.length === 1 && bound.length === receiptMatches.length && bound[0]?.id) {
-      return { outcome: "found", providerRefundId: bound[0].id };
+      if (bound[0].status === "processed") return { outcome: "found", providerRefundId: bound[0].id };
+      if (bound[0].status === "failed") return { outcome: "failed_confirmed", providerRefundId: bound[0].id };
     }
     return { outcome: "unknown" };
   }

@@ -30,6 +30,10 @@ export interface RefundResult {
 
 export type RefundLookupResult =
   | { outcome: "found"; providerRefundId: string }
+  // The provider confirms a refund with our reference exists and is TERMINALLY
+  // failed: no money moved. The request fails truthfully and the guard can
+  // release; any retry is a NEW reservation with a NEW reference id.
+  | { outcome: "failed_confirmed"; providerRefundId: string }
   | { outcome: "absent_confirmed" }
   | { outcome: "unknown" };
 

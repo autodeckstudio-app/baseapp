@@ -250,8 +250,10 @@ export async function runRefundOutbox(
         // durable reference id — NEVER resubmit just because local state is
         // missing. A provider that cannot look up fails closed as "failed".
         let lookup: Awaited<ReturnType<NonNullable<PaymentProvider["findRefundByReference"]>>> = { outcome: "unknown" };
-        if (provider.findRefundByReference && payment?.razorpayPaymentId) {
-          const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency ?? "INR" };
+        // Bind only from the STORED financial snapshot; a missing currency is
+        // a hold, never an assumed INR.
+        if (provider.findRefundByReference && payment?.razorpayPaymentId && payment.currency) {
+          const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency };
           try { lookup = await provider.findRefundByReference(request.id, binding); } catch { lookup = { outcome: "unknown" }; }
         }
         if (lookup.outcome === "found") {
@@ -260,10 +262,15 @@ export async function runRefundOutbox(
           request.status = "submitted";
           request.providerRefundId = lookup.providerRefundId;
           request.projectionNeeded = true;
-        } else if (lookup.outcome === "absent_confirmed") {
-          // Authoritative negative under the provider's reconciliation
-          // contract: the submit never landed. A real failure; balance releases.
-          await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
+        } else if (lookup.outcome === "absent_confirmed" || lookup.outcome === "failed_confirmed") {
+          // Authoritative negative: the submit never landed, or it landed and
+          // the provider TERMINALLY failed it - no money moved either way. The
+          // request fails truthfully and the balance releases; any retry is a
+          // NEW reservation with a NEW reference id, never a resubmit.
+          const why = lookup.outcome === "failed_confirmed"
+            ? `provider refund ${lookup.providerRefundId} failed terminally`
+            : (err instanceof Error ? err.message : String(err));
+          await request.ref.update({ status: "failed", lastError: why, updatedAt: now });
           await releaseGuard(db, request.paymentId);
           failed++;
           continue;
@@ -282,8 +289,8 @@ export async function runRefundOutbox(
       try {
         const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
         const payment = paySnap.data() as Payment | undefined;
-        if (!payment?.razorpayPaymentId) continue; // cannot bind: keep holding
-        const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency ?? "INR" };
+        if (!payment?.razorpayPaymentId || !payment.currency) continue; // cannot bind from stored snapshot: keep holding
+        const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency };
         const lookup = await provider.findRefundByReference(request.id, binding);
         if (lookup.outcome === "found") {
           await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
@@ -291,8 +298,9 @@ export async function runRefundOutbox(
           request.providerRefundId = lookup.providerRefundId;
           request.projectionNeeded = true;
           submitted++;
-        } else if (lookup.outcome === "absent_confirmed") {
-          await request.ref.update({ status: "failed", updatedAt: now });
+        } else if (lookup.outcome === "absent_confirmed" || lookup.outcome === "failed_confirmed") {
+          const why = lookup.outcome === "failed_confirmed" ? `provider refund ${lookup.providerRefundId} failed terminally` : "provider confirms no such refund";
+          await request.ref.update({ status: "failed", lastError: why, updatedAt: now });
           await releaseGuard(db, request.paymentId);
           failed++;
           continue;

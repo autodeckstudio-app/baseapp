@@ -214,3 +214,32 @@ describe("callable gates", () => {
     expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
   });
 });
+
+describe("legacy initiateRefund <-> outbox mutual interlock (both race orders)", () => {
+  const adminAuth2 = () => ({ uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" });
+
+  it("legacy claim first: an existing refund_<paymentId> claim blocks every outbox reservation, no provider submit", async () => {
+    const p = payment({ bookingId: null });
+    await seedPayment(p);
+    // What the DEPLOYED initiateRefund writes before calling the provider:
+    await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).set({ paymentId: p.id, claimedAt: new Date().toISOString(), claimedBy: "legacy" });
+    await expect(reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" }))
+      .rejects.toThrow(/manual refund obligation/);
+    // Nothing reserved: a runner pass submits nothing to the provider.
+    const r = await runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 });
+    expect(r).toMatchObject({ submitted: 0, projected: 0, failed: 0 });
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).get();
+    expect(reqs.size).toBe(0);
+  });
+
+  it("outbox first: an active reservation makes legacy initiateRefund refuse (already-exists), provider never called twice", async () => {
+    const p = payment({ bookingId: null });
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "generic path" }, auth: adminAuth2() } as never))
+      .rejects.toMatchObject({ code: "already-exists" });
+    // The legacy claim doc must NOT have been written by the refused call.
+    const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
+    expect(claim.exists).toBe(false);
+  });
+});

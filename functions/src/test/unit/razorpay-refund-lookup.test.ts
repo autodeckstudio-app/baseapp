@@ -30,7 +30,7 @@ describe("RazorpayProvider.findRefundByReference (bound)", () => {
       ok: true,
       body: { items: [
         { id: "rfnd_1", receipt: "other", amount: 50000, currency: "INR" },
-        { id: "rfnd_2", receipt: "req-123", amount: 50000, currency: "INR" },
+        { id: "rfnd_2", receipt: "req-123", amount: 50000, currency: "INR", status: "processed" },
       ] },
     }));
     await expect(provider.findRefundByReference("req-123", BINDING)).resolves.toEqual({
@@ -60,7 +60,7 @@ describe("RazorpayProvider.findRefundByReference (bound)", () => {
     stubFetch(() => ({
       ok: true,
       body: { items: [
-        { id: "rfnd_1", receipt: "req-123", amount: 50000, currency: "INR" },
+        { id: "rfnd_1", receipt: "req-123", amount: 50000, currency: "INR", status: "processed" },
         { id: "rfnd_2", receipt: "req-123", amount: 100, currency: "INR" },
       ] },
     }));
@@ -95,6 +95,30 @@ describe("RazorpayProvider.findRefundByReference (bound)", () => {
     const r = await provider.findRefundByReference("req-123", BINDING);
     expect(r).toEqual({ outcome: "unknown" });
     expect(JSON.stringify(r)).not.toContain("rfnd_");
+  });
+  it("pending refund on our reference is unknown - never projected as money moved", async () => {
+    stubFetch(() => ({
+      ok: true,
+      body: { items: [{ id: "rfnd_1", receipt: "req-123", amount: 50000, currency: "INR", status: "pending" }] },
+    }));
+    await expect(provider.findRefundByReference("req-123", BINDING)).resolves.toEqual({ outcome: "unknown" });
+  });
+  it("missing status is unknown - never assumed processed", async () => {
+    stubFetch(() => ({
+      ok: true,
+      body: { items: [{ id: "rfnd_1", receipt: "req-123", amount: 50000, currency: "INR" }] },
+    }));
+    await expect(provider.findRefundByReference("req-123", BINDING)).resolves.toEqual({ outcome: "unknown" });
+  });
+  it("terminally failed refund on our reference is failed_confirmed with its id", async () => {
+    stubFetch(() => ({
+      ok: true,
+      body: { items: [{ id: "rfnd_1", receipt: "req-123", amount: 50000, currency: "INR", status: "failed" }] },
+    }));
+    await expect(provider.findRefundByReference("req-123", BINDING)).resolves.toEqual({
+      outcome: "failed_confirmed",
+      providerRefundId: "rfnd_1",
+    });
   });
   it("receipt-bearing refunds are what initiateRefund submits (receipt = referenceId)", async () => {
     const spy = stubFetch(() => ({ ok: true, body: { id: "rfnd_9" } }));
