@@ -121,7 +121,7 @@ describe("webhook refund.created outbox ownership", () => {
     // Amount mismatch on THIS payment's own request: still fail-closed.
     const p2 = payment({ invoiceId: "inv-m" });
     await seedPayment(p2);
-    await db.collection(COLLECTIONS.invoices()).doc("inv-m").set({ id: "inv-m", tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: p.id, status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv-m").set({ id: "inv-m", tenantId: "t1", jobId: p2.jobId, bookingId: p2.bookingId ?? null, paymentId: p2.id, status: "issued" });
     const req2 = await seedRequest(p2, { amountPaise: 30000, status: "submitted" });
     const r2 = await processProviderEvent(db, refundEvent(p2, { providerRefundReceipt: req2, providerRefundAmount: 50000 }));
     expect(r2.outcome).toBe("ownership_mismatch");
