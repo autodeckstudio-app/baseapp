@@ -4,7 +4,7 @@
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080)
  * Rules are loaded from ../../../../firestore.rules (repo root)
  */
-import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import {
   initializeTestEnvironment,
   assertFails,
@@ -1799,5 +1799,87 @@ describe("/bayLocks/{key} — server-only, no client access of any kind", () => 
     const anonDb = anon.firestore();
     await assertFails(anonDb.collection("bayLocks").doc("t__s__b1").get());
     await assertFails(anonDb.collection("bayLocks").doc("t__s__b1").set({ lastAssignedAt: "now" }));
+  });
+});
+
+// ─── /adminApprovalRequests (staff-to-admin approval queue) ─────────────────
+// Contract: a studio reads only its OWN studio's requests (tenantId + studioId
+// equality filters, enforced server-side by the rules); an admin reads the
+// whole tenant queue; customers and other tenants are denied; ALL direct
+// writes are denied (only the callable functions write, via Admin SDK).
+
+describe("adminApprovalRequests collection rules", () => {
+  const seedRequests = async () => {
+    const now = new Date().toISOString();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      for (const [id, studioId] of [
+        ["rules-req-mine", "studio-a"],
+        ["rules-req-other", "studio-other"],
+      ] as const) {
+        await db.collection("adminApprovalRequests").doc(id).set({
+          id,
+          tenantId: FIRST_TENANT_ID,
+          studioId,
+          targetType: "none",
+          targetId: null,
+          reason: "seeded",
+          amountPaise: null,
+          requestedBy: "staff-1",
+          status: "pending",
+          respondedAt: null,
+          respondedBy: null,
+          responseNote: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+  };
+
+  it("studio reads only its own studio's requests; admin reads the tenant queue; others and all writes denied", async () => {
+    await seedRequests();
+    const staff = testEnv.authenticatedContext("uid-staff-rules", {
+      role: "studio",
+      tenantId: FIRST_TENANT_ID,
+      studioId: "studio-a",
+    }).firestore();
+    const admin = testEnv.authenticatedContext("uid-admin-rules", {
+      role: "admin",
+      tenantId: FIRST_TENANT_ID,
+      studioId: null,
+    }).firestore();
+    const customer = testEnv.authenticatedContext("uid-cust-rules", {
+      role: "customer",
+      tenantId: FIRST_TENANT_ID,
+      studioId: null,
+    }).firestore();
+    const otherTenantStaff = testEnv.authenticatedContext("uid-staff-rules-b", {
+      role: "studio",
+      tenantId: "tenant-b",
+      studioId: "studio-a",
+    }).firestore();
+
+    // Studio read contract: tenantId + studioId equality (no orderBy - no
+    // composite index needed; the client sorts by createdAt itself).
+    const mine = await assertSucceeds(
+      staff.collection("adminApprovalRequests").where("tenantId", "==", FIRST_TENANT_ID).where("studioId", "==", "studio-a").get(),
+    );
+    expect(mine.docs.map((d) => d.id)).toContain("rules-req-mine");
+    // The same studio querying another studio's queue is denied at the rules layer.
+    await assertFails(
+      staff.collection("adminApprovalRequests").where("tenantId", "==", FIRST_TENANT_ID).where("studioId", "==", "studio-other").get(),
+    );
+    // A tenant-wide studio query (no studioId filter) cannot be proven safe - denied.
+    await assertFails(staff.collection("adminApprovalRequests").where("tenantId", "==", FIRST_TENANT_ID).get());
+    // Admin reads the whole tenant queue, including another studio's request.
+    const queue = await assertSucceeds(admin.collection("adminApprovalRequests").where("tenantId", "==", FIRST_TENANT_ID).get());
+    expect(queue.docs.map((d) => d.id)).toContain("rules-req-other");
+    // Customers and other tenants cannot read at all.
+    await assertFails(customer.collection("adminApprovalRequests").where("tenantId", "==", FIRST_TENANT_ID).get());
+    await assertFails(otherTenantStaff.collection("adminApprovalRequests").where("tenantId", "==", FIRST_TENANT_ID).get());
+    // No direct writes from any client role - the callables own writes.
+    await assertFails(staff.collection("adminApprovalRequests").doc("rules-req-mine").update({ status: "approved" }));
+    await assertFails(admin.collection("adminApprovalRequests").doc("rules-req-new").set({ tenantId: FIRST_TENANT_ID }));
   });
 });

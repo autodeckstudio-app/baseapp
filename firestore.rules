@@ -188,6 +188,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── /adminApprovalRequests/{requestId} ──────────────────────────────
+    // Staff-to-admin approval requests. Tenant staff (studio and admin) read
+    // their own tenant's requests - studio staff follow the answer to their
+    // request, admins work the pending queue. Customers never see these.
+    // All writes are Cloud-Function-only (requestAdminApproval /
+    // respondToAdminApproval).
+    match /adminApprovalRequests/{requestId} {
+      // Server-side scoping, not a client filter: admins read the whole
+      // tenant queue; studio staff read only their OWN studio's requests -
+      // one studio's staff never see another studio's internal asks.
+      // Studio list queries must include where("studioId", "==", ...) so the
+      // rule is statically verifiable.
+      allow read: if isAuthenticated()
+                  && (isSuperadmin() || ownTenant(resource.data))
+                  && (isAdminOrAbove() || (role() == 'studio' && resource.data.studioId == studioId()));
+      allow write: if false; // Cloud Function only
+    }
+
     // âââ /payments/{paymentId} ââââââââââââââââââââââââââââââââââââââââââââââ
     match /payments/{paymentId} {
       allow read: if isAuthenticated()

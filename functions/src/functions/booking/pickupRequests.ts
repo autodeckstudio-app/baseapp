@@ -166,6 +166,23 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     }
 
     if (data.status === "CONFIRMED") {
+      // Unpriced guard: feePaise is null when the customer sent no location
+      // pin and no admin has priced the request yet. Confirming in that
+      // state silently bills Rs 0 (legFees(null) -> {0,0}) even though the
+      // real fee is unknown - the distance tier (Rs 100/leg under 3 km,
+      // Rs 150/leg beyond, per packages/core pickup-zone) was never
+      // determined. An explicit fee of 0 can only come from an admin
+      // deliberately pricing the request free (pin-computed fees are always
+      // > 0), and member free pickups only ever apply to a known fee > 0,
+      // so neither is affected. The admin prices the request first
+      // (feePaise is accepted only while status is REQUESTED), then staff
+      // confirm.
+      if (curFeePaise === null || curFeePaise === undefined) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This pickup request has no fee yet because the customer sent no location pin. An admin must set the fee in the admin app before the request can be confirmed - do not confirm it as free.",
+        );
+      }
       const needsPickup = cur.kind === "pickup" || cur.kind === "both";
       const needsDrop = cur.kind === "drop" || cur.kind === "both";
       if (needsPickup && !agreedPickupAt) {

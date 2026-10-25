@@ -16,6 +16,8 @@ export const COLLECTIONS = {
   accountDeletionRequests: () => "accountDeletionRequests",
   jobs: () => "jobs",
   approvals: () => "approvals",
+  // Staff-to-admin approval requests (distinct from customer additional-work approvals)
+  adminApprovalRequests: () => "adminApprovalRequests",
   payments: () => "payments",
   invoices: () => "invoices",
   warranties: () => "warranties",

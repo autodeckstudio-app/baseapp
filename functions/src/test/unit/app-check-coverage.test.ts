@@ -109,6 +109,8 @@ const EXCLUDED_NON_CALLABLE = [
 const DEFERRED = [
   "approval/cancelApproval.ts",
   "approval/createApproval.ts",
+  "approval/requestAdminApproval.ts",
+  "approval/respondToAdminApproval.ts",
   "approval/respondToApproval.ts",
   "auth/createWalkinCustomer.ts",
   "auth/updateCustomerContact.ts",
@@ -122,6 +124,7 @@ const DEFERRED = [
   "studio/getStudioInfo.ts",
   "booking/rescheduleBooking.ts",
   "inspection/finalizeInspection.ts",
+  "inspection/issueInspectionPhotoUploadUrl.ts",
   "inspection/startInspection.ts",
   "inspection/updateInspection.ts",
   "job/advanceJobStatus.ts",

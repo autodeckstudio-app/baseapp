@@ -102,6 +102,9 @@ export type RateLimitAction =
   | "inspection.start"
   | "inspection.update"
   | "inspection.finalize"
+  | "inspection.photoUpload"
+  | "adminApproval.request"
+  | "adminApproval.respond"
   | "read.availability"
   | "read.studioInfo"
   | "read.catalogue"
@@ -223,6 +226,9 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "inspection.start": { limit: 30, windowMs: 60_000 },
   "inspection.update": { limit: 120, windowMs: 60_000 }, // many small checklist edits per session
   "inspection.finalize": { limit: 30, windowMs: 60_000 },
+  "inspection.photoUpload": { limit: 60, windowMs: 60_000 }, // several photos per intake
+  "adminApproval.request": { limit: 30, windowMs: 60_000 },
+  "adminApproval.respond": { limit: 60, windowMs: 60_000 },
   "read.availability": { limit: 120, windowMs: 60_000 },
   "read.studioInfo": { limit: 60, windowMs: 60_000 },
   "read.catalogue": { limit: 120, windowMs: 60_000 },

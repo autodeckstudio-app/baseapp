@@ -34,9 +34,11 @@ export interface Inspection {
   status: InspectionStatus;
   checklist: InspectionChecklistItem[];
   overallNotes: string | null;
-  // Reserved for a future Storage-backed photo capability — always [] today.
-  // No Firebase Storage/Blaze is enabled in this build; do not populate this
-  // client-side or imply photo upload works anywhere in the UI.
+  // Storage OBJECT PATHS (never URLs) under {tenantId}/jobs/{jobId}/photos/,
+  // recorded via updateInspection { addPhotos } after a signed-URL upload
+  // issued by issueInspectionPhotoUploadUrl. Clients render them with the
+  // Firebase Storage SDK (getDownloadURL); the storage read rule scopes them
+  // to tenant staff and the owning customer.
   photos: string[];
   startedAt: string;
   startedBy: string; // studio/admin uid
