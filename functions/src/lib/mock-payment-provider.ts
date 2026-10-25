@@ -3,6 +3,7 @@
 // NOT for production use.
 import type {
   PaymentProvider,
+  RefundLookupResult, RefundBinding,
   CreatePaymentLinkParams,
   PaymentLinkResult,
   InitiateRefundParams,
@@ -41,7 +42,7 @@ export class MockPaymentProvider implements PaymentProvider {
       event?: string;
       payload?: {
         payment?: { entity?: { id?: string; amount?: number; currency?: string } };
-        refund?: { entity?: { id?: string; payment_id?: string; amount?: number } };
+        refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string; status?: string; receipt?: string | null } };
         payment_link?: { entity?: { id?: string } };
       };
       id?: string;
@@ -57,13 +58,72 @@ export class MockPaymentProvider implements PaymentProvider {
       providerPaymentId: payment?.id ?? refund?.payment_id ?? "mock_pay_id",
       providerPaymentLinkId: plink?.id ?? null,
       providerRefundId: refund?.id ?? null,
+      providerRefundAmount: refund?.amount ?? null,
+      providerRefundCurrency: refund?.currency ?? null,
+      providerRefundPaymentId: refund?.payment_id ?? null,
+      providerPaymentEntityId: payment?.id ?? null,
+      providerPaymentEntityCurrency: payment?.currency ?? null,
+      providerRefundStatus: refund?.status ?? null,
+      providerRefundReceipt: refund?.receipt ?? null,
       amount: payment?.amount ?? refund?.amount ?? 0,
       currency: payment?.currency ?? "INR",
     };
   }
 
+  // Test hook: when set, initiateRefund "succeeds" server-side but the
+  // response is lost (the ambiguous-submit case). The lookup still finds it.
+  loseNextRefundResponse = false;
+  private submitted = new Map<string, RefundResult & InitiateRefundParams>();
+
+  // Test hook: like loseNextRefundResponse, but the provider-side refund
+  // lands in "failed" status (Razorpay refund.failed: "not able to process a
+  // refund" - a notification; docs settle no finality). The bound lookup then
+  // reports failed_confirmed.
+  failNextRefund = false;
+
+  // Test hook: flip a stored refund's status (e.g. a failed notification that
+  // later turns out to have processed - exactly why holds must not release).
+  setStoredRefundStatus(referenceId: string, status: string): void {
+    const hit = this.submitted.get(referenceId);
+    if (hit) this.submitted.set(referenceId, { ...hit, ...( { status } as object) });
+  }
+
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
-    return { providerRefundId: this.mockRefundId(params.referenceId) };
+    const result = { providerRefundId: this.mockRefundId(params.referenceId), ...params };
+    if (this.failNextRefund) {
+      this.failNextRefund = false;
+      this.submitted.set(params.referenceId, { ...result, ...( { status: "failed" } as object) });
+      throw new Error("network: response lost; provider-side refund failed terminally");
+    }
+    this.submitted.set(params.referenceId, result);
+    if (this.loseNextRefundResponse) {
+      this.loseNextRefundResponse = false;
+      throw new Error("network: response lost after provider accepted");
+    }
+    return result;
+  }
+
+  // When false (default), a miss reports "unknown" (inconclusive) — matching
+  // providers with no authoritative negative lookup. Set true in tests to
+  // model a provider whose reconciliation contract confirms absence.
+  authoritativeNegatives = false;
+
+  async findRefundByReference(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult> {
+    const hit = this.submitted.get(referenceId);
+    // Bound like the real adapter: identity only when payment id, amount and
+    // currency all agree; a partial match is held as unknown, never attached.
+    // Status-aware like the real adapter: only a processed refund founds; a
+    // terminally failed one is failed_confirmed; anything else holds.
+    if (hit && hit.providerPaymentId === binding.providerPaymentId
+        && hit.amount === binding.amountPaise
+        && ((hit as { currency?: string }).currency ?? "INR") === binding.currency) {
+      const status = (hit as { status?: string }).status ?? "processed";
+      if (status === "processed") return { outcome: "found", providerRefundId: hit.providerRefundId };
+      if (status === "failed") return { outcome: "failed_confirmed", providerRefundId: hit.providerRefundId };
+      return { outcome: "unknown" };
+    }
+    if (hit) return { outcome: "unknown" };
+    return this.authoritativeNegatives ? { outcome: "absent_confirmed" } : { outcome: "unknown" };
   }
 }
 

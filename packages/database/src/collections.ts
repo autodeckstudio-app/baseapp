@@ -52,6 +52,8 @@ export const COLLECTIONS = {
   // invoiceCounters/{tenantId} — atomic invoice number counter (Admin SDK only)
   invoiceCounters: () => "invoiceCounters",
   // paymentEvents/{providerEventId} — idempotency guard for webhook/event deduplication
+  // refundRequests/{requestId} — booking refund outbox: reservation -> provider -> projection
+  refundRequests: () => "refundRequests",
   paymentEvents: () => "paymentEvents",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
   rateLimits: () => "rateLimits",

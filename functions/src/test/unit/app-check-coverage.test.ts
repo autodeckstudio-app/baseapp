@@ -67,6 +67,8 @@ const ENFORCED = [
   "membership/setMembershipPlanActive.ts",
   "membership/updateMembershipPlan.ts",
   "payment/initiateRefund.ts",
+  "payment/processRefundOutbox.ts",
+  "payment/requestBookingRefund.ts",
   "protection/createProtection.ts",
   "protection/updateProtection.ts",
   "service/createService.ts",

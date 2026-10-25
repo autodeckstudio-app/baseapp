@@ -13,6 +13,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiateRefundSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
+import { activeReservation } from "../../lib/refund-outbox.js";
 
 export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -33,6 +34,15 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   if (payment.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
+  // Mutual interlock with the booking-refund outbox: a payment with an active
+  // outbox reservation is refused here, so this legacy single-shot path and
+  // the outbox runner can never both submit provider refunds for the same
+  // money (race order b; race order a is the outbox's refund_<paymentId>
+  // legacy-claim check).
+  if (await activeReservation(db, payment.id)) {
+    throw new HttpsError("already-exists", "A refund request is already active for this payment.");
+  }
+
   if (payment.status !== "completed") {
     throw new HttpsError(
       "failed-precondition",
