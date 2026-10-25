@@ -48,8 +48,12 @@ describe("admin refund recovery surface", () => {
     expect(service).toContain("knownClaimPaymentIds");
     expect(page).toContain("work.claimTruth");
     expect(page).toContain('t.state === "resolved" || t.state === "released"');
-    // identity/tenant change resets the review cycle
+    // identity/tenant change resets the review cycle, and a late response
+    // from the previous identity is dropped (generation guard)
     expect(page).toContain("setLegacyAccum(new Map())");
+    expect(page).toContain("identityGenRef");
+    expect(page).toContain("gen !== identityGenRef.current");
+    expect(page).toContain("user?.uid");
     // claim row payment link lands on the filtered record
     expect(page).toContain("useSearchParams");
     expect(page).toContain('searchParams.get("search")');

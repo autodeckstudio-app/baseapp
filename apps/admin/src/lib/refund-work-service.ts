@@ -59,8 +59,19 @@ export type RefundWork = {
  * refund work for their own tenant. */
 export async function listRefundWork(knownClaimPaymentIds: string[] = []): Promise<RefundWork> {
   const fn = httpsCallable<{ knownClaimPaymentIds: string[] }, RefundWork>(functions, "listRefundWork");
-  const result = await fn({ knownClaimPaymentIds });
-  return result.data;
+  // The backend bounds known ids per call; batch so an accumulated review
+  // cycle larger than the bound still refreshes EVERY shown row. Paged scan
+  // fields come from the first call; claimTruth merges across all batches.
+  const chunks: string[][] = [];
+  for (let i = 0; i < knownClaimPaymentIds.length; i += 200) chunks.push(knownClaimPaymentIds.slice(i, i + 200));
+  if (chunks.length === 0) chunks.push([]);
+  const first = (await fn({ knownClaimPaymentIds: chunks[0]! })).data;
+  const claimTruth = [...first.claimTruth];
+  for (const chunk of chunks.slice(1)) {
+    const more = (await fn({ knownClaimPaymentIds: chunk })).data;
+    claimTruth.push(...more.claimTruth);
+  }
+  return { ...first, claimTruth };
 }
 
 export type RunRefundOutboxOutput = { submitted: number; projected: number; failed: number };

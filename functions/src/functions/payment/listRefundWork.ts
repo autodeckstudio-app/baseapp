@@ -221,18 +221,21 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   const claimTruth: { paymentId: string; state: string; note: string | null }[] = [];
   for (const pid of knownIds) {
     if (!/^[A-Za-z0-9_-]+$/.test(pid)) continue;
+    // Tenant verification comes FIRST and uses the CURRENT payment whenever
+    // it exists (a stored claim tenantId can be stale). An absent claim is
+    // only reported "released" when the owning payment verifiably belongs to
+    // this tenant - otherwise the id is omitted entirely, so this endpoint
+    // is neither an existence oracle nor cross-tenant false proof.
+    const pSnap = await db.collection(COLLECTIONS.payments()).doc(pid).get();
+    const payTenant = pSnap.exists ? (pSnap.data() as { tenantId?: string }).tenantId : undefined;
     const cSnap = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${pid}`).get();
     if (!cSnap.exists) {
-      claimTruth.push({ paymentId: pid, state: "released", note: null });
+      if (payTenant === tenantId) claimTruth.push({ paymentId: pid, state: "released", note: null });
       continue;
     }
     const cd = cSnap.data() as { reconcileState?: string; reconcileNote?: string; tenantId?: string };
-    let claimTenant = typeof cd.tenantId === "string" ? cd.tenantId : undefined;
-    if (!claimTenant) {
-      const pSnap = await db.collection(COLLECTIONS.payments()).doc(pid).get();
-      claimTenant = pSnap.exists ? (pSnap.data() as { tenantId?: string }).tenantId : undefined;
-    }
-    if (claimTenant !== tenantId) continue; // never leak another tenant's claim state
+    const claimTenant = payTenant ?? (typeof cd.tenantId === "string" ? cd.tenantId : undefined);
+    if (claimTenant !== tenantId) continue;
     claimTruth.push({ paymentId: pid, state: cd.reconcileState ?? "retained", note: cd.reconcileNote ?? null });
   }
   return {

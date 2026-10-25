@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -12,7 +12,7 @@ import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
 import { listRefundWork, runRefundOutbox, reconcileRefundClaims, type RefundWork } from "../../../lib/refund-work-service";
 
 export default function PaymentsPage() {
-  const { claims } = useAdminAuth();
+  const { claims, user } = useAdminAuth();
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,18 +33,24 @@ export default function PaymentsPage() {
   // with the latest truth, and rows the server reports resolved are dropped
   // as resolved (that is truth, not cursor advance).
   const [legacyAccum, setLegacyAccum] = useState<Map<string, import("../../../lib/refund-work-service").LegacyRefundClaim>>(new Map());
+  // Identity generation: bumped whenever the signed-in identity/tenant
+  // changes. A response from a previous generation is dropped, so a late
+  // old-identity response can never repopulate the new identity's rows.
+  const identityGenRef = useRef(0);
   const [refundWorkLoading, setRefundWorkLoading] = useState(true);
   const [refundWorkError, setRefundWorkError] = useState<string | null>(null);
   const [runningOutbox, setRunningOutbox] = useState(false);
   const [reconciling, setReconciling] = useState(false);
 
   async function refreshRefundWork() {
+    const gen = identityGenRef.current;
     setRefundWorkLoading(true);
     try {
       // Ask for the authoritative truth of every row we already show: paged
       // scans never return resolved/released claims, so known rows would
       // otherwise stay stale "held" forever after an actual reconcile.
       const work = await listRefundWork([...legacyAccum.keys()]);
+      if (gen !== identityGenRef.current) return; // stale identity response
       setRefundWork(work);
       setLegacyAccum((prev) => {
         const next = new Map(prev);
@@ -68,10 +74,11 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (!claims) return;
-    setLegacyAccum(new Map()); // new identity/tenant: new review cycle
+    identityGenRef.current += 1; // new identity/tenant: new review cycle
+    setLegacyAccum(new Map());
     void refreshRefundWork();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claims?.tenantId, claims?.uid]);
+  }, [claims?.tenantId, user?.uid]);
 
   async function handleReconcileClaims() {
     setReconciling(true);

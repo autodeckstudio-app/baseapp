@@ -676,3 +676,33 @@ describe("claimTruth authoritative refresh (review round 7)", () => {
     expect(truth).toHaveLength(0);
   });
 });
+
+describe("claimTruth tenant verification (review round 8)", () => {
+  const listTruth = async (ids: string[]) =>
+    ((await listRefundWork.run({ data: { knownClaimPaymentIds: ids }, auth: adminAuth() } as never)) as {
+      claimTruth: { paymentId: string; state: string }[];
+    }).claimTruth;
+
+  it("absent claim is only 'released' when the owning payment verifiably belongs to the tenant", async () => {
+    const foreign = payment({ tenantId: "t2" });
+    await db.collection(COLLECTIONS.payments()).doc(foreign.id).set(foreign);
+    const own = payment();
+    await seed(own);
+    const ghost = payment(); // no payment doc at all
+    const truth = await listTruth([foreign.id, own.id, ghost.id]);
+    // foreign: omitted (no oracle); ghost: omitted; own absent claim: released
+    expect(truth.map((t) => t.paymentId)).toEqual([own.id]);
+    expect(truth[0]?.state).toBe("released");
+  });
+
+  it("stale stored claim tenantId does not leak when the current payment moved tenants", async () => {
+    const p = payment();
+    await seed(p);
+    await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).set({
+      paymentId: p.id, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "x", reconcileState: "held", reconcileNote: "pending",
+    });
+    await db.collection(COLLECTIONS.payments()).doc(p.id).update({ tenantId: "t2" });
+    const truth = await listTruth([p.id]);
+    expect(truth).toHaveLength(0);
+  });
+});
