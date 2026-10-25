@@ -1,10 +1,11 @@
 /**
  * adminCancelBooking rerouted through the refund outbox (single refund
- * authority): the cancellation reserves the refund INSIDE the cancellation
- * transaction, and the callable's POST-COMMIT drain owns submission (a
- * reservation emits no provider event, so no webhook can bootstrap it).
- * The manual runner remains the idempotent backstop. Manual (non-Razorpay)
- * refunds keep the deployed record-what-the-studio-returns behavior.
+ * authority), RESERVE-ONLY CONTAINMENT variant: the cancellation reserves the
+ * refund INSIDE the cancellation transaction and the callable does NOT drain
+ * post-commit (a reservation emits no provider event, so no webhook can
+ * bootstrap it either). The ONLY submission path is the manual runner, which
+ * these tests drive explicitly. Manual (non-Razorpay) refunds keep the
+ * deployed record-what-the-studio-returns behavior.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
@@ -66,15 +67,27 @@ beforeEach(async () => {
 });
 
 describe("adminCancelBooking -> outbox (single refund authority)", () => {
-  it("razorpay cancel with late fee: atomic reservation + POST-COMMIT drain submits and projects truthfully; manual runner backstop is a no-op; legacy path refuses", async () => {
+  it("razorpay cancel with late fee: atomic reservation, NO inline submission; manual runner submits and projects truthfully; backstop is a no-op; legacy path refuses", async () => {
     const { bookingId, jobId, payId, invId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
 
     const r = await runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin");
     expect(r).toMatchObject({ success: true, feePaise: 10000, refundPaise: 90000, manualRefund: false });
     expect((r as { refundRequestId?: string }).refundRequestId).toBeTruthy();
 
-    // Bootstrap: the post-commit drain already submitted + projected (the
-    // cancellation needed NO manual runner invocation to complete).
+    // Reserve-only: the cancellation itself makes NO provider call. The
+    // durable claim sits reserved with the real amount on the booking.
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+    {
+      const reqId0 = (r as { refundRequestId?: string }).refundRequestId!;
+      const req0 = (await db.collection(COLLECTIONS.refundRequests()).doc(reqId0).get()).data() as Record<string, unknown>;
+      expect(req0.status).toBe("reserved");
+      const booking0 = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>;
+      expect(booking0.refundStatus).toBe("requested"); // truthful: requested, never claimed refunded
+      expect(booking0.refundedPaise).toBe(0);
+    }
+    // The manual runner (the only submission path left) submits + projects.
+    const first = await runRefundOutbox(db, mockProvider, { limit: 10 });
+    expect(first).toMatchObject({ submitted: 1, projected: 1, failed: 0 });
     expect(mockProvider.initiateRefundCallCount).toBe(1); // exactly one provider submission end to end
     let pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
     expect((pay.status as string)).toBe("partially_refunded"); // fee withheld: truthful partial
@@ -107,14 +120,17 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     expect(job.paymentStatus).toBe("partial");
   });
 
-  it("post-commit drain provider failure: request HOLDS with the reason on it (never resubmitted), manual runner reconciles and completes", async () => {
+  it("manual runner provider failure: request HOLDS with the reason on it (never resubmitted), a later runner pass reconciles and completes", async () => {
     const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
-    // The provider-side refund lands in "failed" status and the response is
-    // lost: a failure NOTIFICATION, not settled finality - the drain must
-    // hold, not project and not resubmit.
-    mockProvider.failNextRefund = true;
     const r = await runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin");
     expect(r).toMatchObject({ success: true, refundPaise: 100000 }); // the cancellation itself succeeded
+    expect(mockProvider.initiateRefundCallCount).toBe(0); // reserve-only: no inline submission
+    // The provider-side refund lands in "failed" status and the response is
+    // lost: a failure NOTIFICATION, not settled finality - the runner must
+    // hold, not project and not resubmit.
+    mockProvider.failNextRefund = true;
+    const failed = await runRefundOutbox(db, mockProvider, { limit: 10 });
+    expect(failed.failed).toBe(1);
     expect(mockProvider.initiateRefundCallCount).toBe(1); // submitted exactly once
     let pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
     expect(pay.refundAmount ?? null).toBeNull(); // nothing projected on failed evidence
@@ -140,12 +156,13 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     void bookingId;
   });
 
-  it("waived fee: full refund reserved, submitted by the post-commit drain, projected as fully refunded", async () => {
+  it("waived fee: full refund reserved with NO inline submission, then submitted by the manual runner and projected as fully refunded", async () => {
     const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
     const r = await runCancel(adminUser(), { bookingId, reason: "studio cannot take it", feeAction: "waive" }, "admin");
     expect(r).toMatchObject({ success: true, feePaise: 0, refundPaise: 100000 });
+    expect(mockProvider.initiateRefundCallCount).toBe(0); // reserve-only
     const out = await runRefundOutbox(db, mockProvider, { limit: 10 });
-    expect(out).toMatchObject({ submitted: 0, projected: 0, failed: 0 }); // drain already settled it
+    expect(out).toMatchObject({ submitted: 1, projected: 1, failed: 0 }); // the runner settles it
     expect(mockProvider.initiateRefundCallCount).toBe(1);
     const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
     expect(pay.status).toBe("refunded");
@@ -237,9 +254,10 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     expect(ok.length).toBe(1);
     const reqs = await db.collection(COLLECTIONS.refundRequests()).get();
     expect(reqs.docs.filter((d) => d.id.startsWith("rr_")).length).toBe(1);
-    expect(mockProvider.initiateRefundCallCount).toBe(1); // winner's drain submitted exactly once
+    expect(mockProvider.initiateRefundCallCount).toBe(0); // reserve-only: NEITHER cancel submits inline
     const out = await runRefundOutbox(db, mockProvider, { limit: 10 });
-    expect(out).toMatchObject({ submitted: 0, projected: 0, failed: 0 }); // backstop no-op
+    expect(out).toMatchObject({ submitted: 1, projected: 1, failed: 0 }); // one runner pass settles the single reservation
+    expect(mockProvider.initiateRefundCallCount).toBe(1);
     const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
     expect(pay.refundAmount).toBe(100000); // exactly once
   });
@@ -293,7 +311,7 @@ describe("cross-vintage interlock (old Oct-20 producer vs outbox reservation)", 
     const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
     const r = await runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin");
     expect(r.success).toBe(true);
-    expect(mockProvider.initiateRefundCallCount).toBe(1); // the new drain exactly once
+    expect(mockProvider.initiateRefundCallCount).toBe(0); // reserve-only: the cancellation itself never calls the provider
     // The active reservation's tombstone carries the outbox marker.
     const tomb = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).get()).data() as Record<string, unknown>;
     expect(tomb).toMatchObject({ claimedBy: "refund-outbox" });
@@ -302,10 +320,14 @@ describe("cross-vintage interlock (old Oct-20 producer vs outbox reservation)", 
     // booking read or on the tombstone's already-exists, both BEFORE any
     // provider call. (Two independent layers of the interlock.)
     await expect(legacyClaimTx(payId, bookingId)).rejects.toThrow(/already-exists|just cancelled/);
-    expect(mockProvider.initiateRefundCallCount).toBe(1); // unchanged: no second submission
-    // After the provider reports processed and a pass projects, the tombstone
-    // is released: the payment's own refunded status now blocks legacy paths,
-    // and later partial refunds of the same payment are not wedged.
+    expect(mockProvider.initiateRefundCallCount).toBe(0); // unchanged: still no submission anywhere
+    // The manual runner submits (provider says pending: submitted, not yet
+    // projected), then the provider reports processed and a pass projects:
+    // the tombstone is released, the payment's own refunded status now blocks
+    // legacy paths, and later partial refunds of the same payment are not wedged.
+    const sub = await runRefundOutbox(db, mockProvider, { limit: 10 });
+    expect(sub.submitted).toBe(1);
+    expect(mockProvider.initiateRefundCallCount).toBe(1);
     mockProvider.setStoredRefundStatus((tomb.outboxRequestId as string), "processed");
     const out = await runRefundOutbox(db, mockProvider, { limit: 10 });
     expect(out.projected).toBe(1);

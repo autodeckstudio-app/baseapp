@@ -16,8 +16,7 @@ import { extractUser, assertRole, assertTenant, assertStudio } from "../../middl
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { planReserveInTx, applyReserveInTx, runRefundOutbox } from "../../lib/refund-outbox.js";
-import { getPaymentProvider } from "../../lib/razorpay-provider.js";
+import { planReserveInTx, applyReserveInTx } from "../../lib/refund-outbox.js";
 import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
 const adminCancelSchema = z.object({
@@ -291,27 +290,16 @@ export async function runCancel(
       });
     });
 
-    // Submission ownership: the reservation committed atomically with the
-    // cancellation above, and a reservation emits NO provider event - so no
-    // webhook can ever bootstrap its submission. THIS post-commit drain is
-    // what actually submits the refund to the provider, scoped to exactly
-    // the request just created. It runs after the commit (never inside the
-    // retrying transaction) and is safe to re-run: the runner claims a
-    // transactional lease, submits at most once, and reconciles through the
-    // bound provider lookup. If it fails, the durable request stays reserved
-    // with the failure written on it, reconcilable by the manual runner and
-    // visible to the held-requests surface - the cancellation is never
-    // rolled back for a drain error.
-    if (refundRequestId) {
-      try {
-        await runRefundOutbox(db, getPaymentProvider(), { requestId: refundRequestId, runnerId: `cancel:${user.uid}` });
-      } catch (err) {
-        await db.collection(COLLECTIONS.refundRequests()).doc(refundRequestId).update({
-          lastError: `post-cancellation refund submission failed: ${err instanceof Error ? err.message : String(err)}`,
-          updatedAt: new Date().toISOString(),
-        }).catch(() => undefined);
-      }
-    }
+    // CONTAINMENT VEHICLE (reserve-only): no inline post-commit drain here.
+    // The reservation committed atomically with the cancellation above and a
+    // reservation emits NO provider event - so no webhook can bootstrap its
+    // submission, and this handler deliberately does not submit either. The
+    // durable claim stays "reserved" with the full ledger, visible on the
+    // held-requests surface; the ONLY submission path left is the admin
+    // manual runner callable, which remains server-active and is held by
+    // operational "do not invoke", not technical denial. The response below
+    // stays truthful: money is REQUESTED (refundRequestId), never claimed as
+    // refunded.
 
     // Respond with the plan the transaction actually committed (recomputed
     // from fresh records inside it), not the pre-transaction preview.
