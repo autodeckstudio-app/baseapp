@@ -172,14 +172,45 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(data.paymentId));
     if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
     const fresh = freshSnap.data() as Payment;
+    // The provider was called with the PRE-transaction snapshot. If the
+    // payment's identity moved in flight (amount, currency, provider payment
+    // id, invoice/job/booking linkage), the refund that was actually
+    // submitted no longer matches the current record: HOLD with the claim
+    // retained, zero writes - never project a different amount than was
+    // submitted, never void a different invoice, never touch a re-linked
+    // job or booking.
+    const identityDrift =
+      fresh.tenantId !== payment.tenantId ||
+      fresh.amount !== payment.amount ||
+      fresh.currency !== payment.currency ||
+      fresh.razorpayPaymentId !== payment.razorpayPaymentId ||
+      fresh.invoiceId !== payment.invoiceId ||
+      fresh.jobId !== payment.jobId ||
+      fresh.bookingId !== payment.bookingId;
+    if (identityDrift) {
+      throw new HttpsError(
+        "unavailable",
+        "Payment identity changed while the refund was in flight; held for reconciliation. The refund claim is retained.",
+      );
+    }
     if (providerRefundId) {
       const ledgerSnap = await tx.get(
         db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${data.paymentId}_${providerRefundId}`),
       );
       if (ledgerSnap.exists) {
-        // Same provider refund id, already accounted - by THIS path's own
-        // earlier commit or by the webhook's strict-bound projection. Both
-        // are the same money counted once: converge with zero writes.
+        // Same provider refund id already accounted. Converge only when the
+        // entry's identity AGREES (same payment, same amount, same
+        // currency); a conflicting entry is a hold, not a no-op.
+        const prior = ledgerSnap.data() as { paymentId?: string; amountPaise?: number; currency?: string | null };
+        if (prior.paymentId !== data.paymentId || prior.amountPaise !== payment.amount ||
+            (prior.currency ?? null) !== (payment.currency ?? null)) {
+          throw new HttpsError(
+            "unavailable",
+            `Existing accounting for provider refund ${providerRefundId} conflicts with this payment; held for reconciliation. The refund claim is retained.`,
+          );
+        }
+        // By THIS path's own earlier commit or the webhook's strict-bound
+        // projection: the same money counted once. Converge, zero writes.
         converged = true;
         return;
       }

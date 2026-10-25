@@ -231,7 +231,7 @@ describe("adoptProcessedRefundEvidence + reconcile-only passes", () => {
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
     let providerCalls = 0;
     const spy = { ...mockProvider, initiateRefund: async () => { providerCalls++; throw new Error("must not submit"); } };
-    const adopted = await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_evt", amountPaise: 50000, currency: "INR" });
+    const adopted = await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_evt", providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR" });
     expect(adopted).toBe("adopted");
     const r = await runRefundOutbox(db, spy as never, { requestId, submit: false });
     expect(providerCalls).toBe(0); // evidence, not a new provider refund
@@ -245,13 +245,40 @@ describe("adoptProcessedRefundEvidence + reconcile-only passes", () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
-    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_1", amountPaise: 99999, currency: "INR" })).toBe("conflict");
-    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_1", amountPaise: 50000, currency: "USD" })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_1", providerPaymentId: "rzp_pay_1", amountPaise: 99999, currency: "INR" })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_1", providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "USD" })).toBe("conflict");
     expect(data["refundRequests"]![requestId]).toMatchObject({ status: "reserved", providerRefundId: null });
     // The same provider refund already accounted by another path: never re-bind.
     data["paymentRefunds"] = { pr_pay1_rfnd_leg: { paymentId: "pay1", providerRefundId: "rfnd_leg", source: "legacy", amountPaise: 50000, currency: "INR" } };
-    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_leg", amountPaise: 50000, currency: "INR" })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_leg", providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR" })).toBe("conflict");
     expect(data["refundRequests"]![requestId]).toMatchObject({ status: "reserved", providerRefundId: null });
+  });
+
+  it("adoption is strict INDEPENDENTLY: missing/wrong provider payment id, missing amount/currency, tenant or linkage drift - all conflict, zero writes", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    const base = { requestId, providerRefundId: "rfnd_s", providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR" };
+    // Missing pieces never agree.
+    expect(await adoptProcessedRefundEvidence(db, { ...base, providerPaymentId: null })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { ...base, amountPaise: null })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { ...base, currency: null })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { ...base, amountPaise: 50000.5 })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { ...base, providerPaymentId: "rzp_other" })).toBe("conflict");
+    // Docs that moved since the caller's ownership check never agree.
+    data["payments"]!["pay1"]!["tenantId"] = "t2";
+    expect(await adoptProcessedRefundEvidence(db, base)).toBe("conflict");
+    data["payments"]!["pay1"]!["tenantId"] = "t1";
+    data["payments"]!["pay1"]!["jobId"] = "job-other";
+    expect(await adoptProcessedRefundEvidence(db, base)).toBe("conflict");
+    data["payments"]!["pay1"]!["jobId"] = "job1";
+    // Nothing moved through any of it.
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "reserved", providerRefundId: null });
+    expect(data["payments"]!["pay1"]!["refundAmount"] ?? null).toBeNull();
+    expect(data["paymentRefunds"] ?? null).toBeNull();
+    // And the fully-bound evidence still adopts.
+    expect(await adoptProcessedRefundEvidence(db, base)).toBe("adopted");
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "submitted", providerRefundId: "rfnd_s", projectionNeeded: true });
   });
 
   it("a reconcile-only (submit:false) pass NEVER submits reserved requests", async () => {
@@ -270,7 +297,7 @@ describe("adoptProcessedRefundEvidence + reconcile-only passes", () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
-    await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_evt", amountPaise: 50000, currency: "INR" });
+    await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_evt", providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR" });
     // A foreign ledger entry for the SAME provider refund id appears before
     // the projection runs: projection must hold, and the pass must report it.
     data["paymentRefunds"] = { pr_pay1_rfnd_evt: { paymentId: "pay1", providerRefundId: "rfnd_evt", source: "webhook", amountPaise: 50000, currency: "INR" } };

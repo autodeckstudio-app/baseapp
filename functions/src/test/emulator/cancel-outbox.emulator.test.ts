@@ -202,7 +202,7 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     // the emulator, so the barrier fires before the transaction starts.)
     const origRun = db.runTransaction.bind(db);
     let interleaved = false;
-    (db as unknown as { runTransaction: unknown }).runTransaction = async (cb: (tx: never) => Promise<unknown>) => {
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (cb: (tx: unknown) => Promise<unknown>) => {
       if (!interleaved) {
         interleaved = true;
         await db.collection(COLLECTIONS.jobs()).doc(jobId).update({ status: "IN_PROGRESS", updatedAt: new Date().toISOString() });
