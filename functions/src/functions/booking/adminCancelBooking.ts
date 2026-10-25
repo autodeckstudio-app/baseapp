@@ -16,7 +16,8 @@ import { extractUser, assertRole, assertTenant, assertStudio } from "../../middl
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { planReserveInTx, applyReserveInTx } from "../../lib/refund-outbox.js";
+import { planReserveInTx, applyReserveInTx, runRefundOutbox } from "../../lib/refund-outbox.js";
+import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { isProductionProject } from "../../lib/environment.js";
 import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
@@ -201,6 +202,28 @@ export async function runCancel(
         metadata: { cancelledBy: actor, refundRequestId },
       });
     });
+
+    // Submission ownership: the reservation committed atomically with the
+    // cancellation above, and a reservation emits NO provider event - so no
+    // webhook can ever bootstrap its submission. THIS post-commit drain is
+    // what actually submits the refund to the provider, scoped to exactly
+    // the request just created. It runs after the commit (never inside the
+    // retrying transaction) and is safe to re-run: the runner claims a
+    // transactional lease, submits at most once, and reconciles through the
+    // bound provider lookup. If it fails, the durable request stays reserved
+    // with the failure written on it, reconcilable by the manual runner and
+    // visible to the held-requests surface - the cancellation is never
+    // rolled back for a drain error.
+    if (refundRequestId) {
+      try {
+        await runRefundOutbox(db, getPaymentProvider(), { requestId: refundRequestId, runnerId: `cancel:${user.uid}` });
+      } catch (err) {
+        await db.collection(COLLECTIONS.refundRequests()).doc(refundRequestId).update({
+          lastError: `post-cancellation refund submission failed: ${err instanceof Error ? err.message : String(err)}`,
+          updatedAt: new Date().toISOString(),
+        }).catch(() => undefined);
+      }
+    }
 
     return { success: true, ...summary, refundRequestId, manualRefund };
 }

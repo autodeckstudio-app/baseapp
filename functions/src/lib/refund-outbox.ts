@@ -201,6 +201,62 @@ async function releaseGuard(db: Firestore, paymentId: string): Promise<void> {
 }
 
 /**
+ * Binds a webhook event's affirmative "processed" evidence to ITS OWN
+ * request, transactionally, BEFORE any submission is considered.
+ *
+ * Why: when the provider already processed the refund while the local
+ * request is still reserved/submitting, the truth is that the money moved -
+ * the request must ADOPT that provider refund id and project it. Blindly
+ * running the reserved->submit flow would create a SECOND provider refund
+ * for the same money.
+ *
+ * Every disagreement fails closed with zero writes ("conflict"): a different
+ * provider refund id already bound, a different amount, a different
+ * currency, a terminal request, or a per-refund ledger entry that says this
+ * provider refund was already accounted by another path.
+ */
+export async function adoptProcessedRefundEvidence(
+  db: Firestore,
+  i: { requestId: string; providerRefundId: string; amountPaise?: number | null; currency?: string | null },
+): Promise<"adopted" | "already_projected" | "already_bound" | "conflict" | "missing"> {
+  return db.runTransaction(async (tx) => {
+    const ref = requestsCol(db).doc(i.requestId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) return "missing";
+    const cur = snap.data() as RefundRequest;
+    if (cur.status === "projected") {
+      return cur.providerRefundId === i.providerRefundId ? "already_projected" : "conflict";
+    }
+    if (cur.status === "failed") return "conflict";
+    if (cur.providerRefundId && cur.providerRefundId !== i.providerRefundId) return "conflict";
+    if (typeof i.amountPaise === "number" && i.amountPaise !== cur.amountPaise) return "conflict";
+    const paySnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(cur.paymentId));
+    const payment = paySnap.data() as Payment | undefined;
+    if (!payment) return "conflict";
+    if (i.currency && payment.currency && i.currency !== payment.currency) return "conflict";
+    // Already accounted by another path (webhook generic, legacy handler):
+    // never re-bind for a second projection of the same money.
+    const ledgerSnap = await tx.get(
+      db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${cur.paymentId}_${i.providerRefundId}`),
+    );
+    if (ledgerSnap.exists) return "conflict";
+    if (cur.providerRefundId === i.providerRefundId && cur.status === "submitted" && cur.projectionNeeded) {
+      return "already_bound";
+    }
+    tx.update(ref, {
+      status: "submitted",
+      providerRefundId: i.providerRefundId,
+      projectionNeeded: true,
+      leaseBy: null,
+      leaseAt: null,
+      lastError: null,
+      updatedAt: new Date().toISOString(),
+    });
+    return "adopted";
+  });
+}
+
+/**
  * Projects one provider-accepted refund onto the payment, job and booking in
  * a single transaction. Idempotent via projectionNeeded. NEVER touches the
  * issued invoice: credit-note/tax treatment is an owner/accountant hold, so
@@ -324,19 +380,36 @@ const SUBMIT_LEASE_STALE_MS = 10 * 60 * 1000;
 export async function runRefundOutbox(
   db: Firestore,
   provider: PaymentProvider,
-  opts: { limit?: number; tenantId?: string; runnerId?: string; leaseStaleMs?: number } = {},
+  opts: { limit?: number; tenantId?: string; runnerId?: string; leaseStaleMs?: number; submit?: boolean; requestId?: string } = {},
 ): Promise<{ submitted: number; projected: number; failed: number }> {
   const limit = opts.limit ?? 10;
   const leaseStaleMs = opts.leaseStaleMs ?? SUBMIT_LEASE_STALE_MS;
   const tenantId = opts.tenantId ?? null;
+  // submit:false = reconcile-only pass (event-driven drains): reserved
+  // requests are left untouched, so an event for ONE refund can never submit
+  // unrelated reservations. Submission ownership lives with the reservation
+  // commit's post-transaction drain and the manual runner, both submit:true.
+  const allowSubmit = opts.submit !== false;
   const runnerId = opts.runnerId ?? `runner_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const open: Array<RefundRequest & { ref: FirebaseFirestore.DocumentReference }> = [];
-  for (const status of ["reserved", "submitting", "submitted", "accepted", "ambiguous"] as const) {
-    let q: FirebaseFirestore.Query = requestsCol(db).where("status", "==", status);
-    if (tenantId) q = q.where("tenantId", "==", tenantId);
-    const snap = await q.get();
-    for (const doc of snap.docs) open.push({ ...(doc.data() as RefundRequest), ref: doc.ref });
-    if (open.length >= limit) break;
+  if (opts.requestId) {
+    // Single-request pass: process exactly the bound request, nothing else.
+    const snap = await requestsCol(db).doc(opts.requestId).get();
+    if (snap.exists) {
+      const r = snap.data() as RefundRequest;
+      const active = ["reserved", "submitting", "submitted", "accepted", "ambiguous"] as const;
+      if ((active as readonly string[]).includes(r.status) && (!tenantId || r.tenantId === tenantId)) {
+        open.push({ ...r, ref: snap.ref });
+      }
+    }
+  } else {
+    for (const status of ["reserved", "submitting", "submitted", "accepted", "ambiguous"] as const) {
+      let q: FirebaseFirestore.Query = requestsCol(db).where("status", "==", status);
+      if (tenantId) q = q.where("tenantId", "==", tenantId);
+      const snap = await q.get();
+      for (const doc of snap.docs) open.push({ ...(doc.data() as RefundRequest), ref: doc.ref });
+      if (open.length >= limit) break;
+    }
   }
   let submitted = 0, projected = 0, failed = 0;
   // Leases THIS invocation won. A provider submit may only ever follow a claim
@@ -410,6 +483,7 @@ export async function runRefundOutbox(
 
   for (const request of open.slice(0, limit)) {
     const now = new Date().toISOString();
+    if (request.status === "reserved" && !allowSubmit) continue; // reconcile-only pass: never submits
     if (request.status === "reserved") {
       // D2: claim the submission lease before any provider call.
       const claimed = await db.runTransaction(async (tx) => {
@@ -580,7 +654,15 @@ export async function runRefundOutbox(
     if (request.projectionNeeded) {
       // Counts only a projection this pass actually committed - a lost race
       // against a concurrent pass is a no-op, not a projection.
-      if (await projectRefund(db, request)) projected++;
+      try {
+        if (await projectRefund(db, request)) projected++;
+      } catch (err) {
+        // A projection rejection (foreign per-refund ledger entry, broken
+        // related records, over-refund arithmetic) is a HOLD, not a crash:
+        // one bad request must never wedge the whole pass, and the durable
+        // hold keeps the obligation visible for reconciliation.
+        await holdAmbiguous(request, `projection held: ${err instanceof Error ? err.message : String(err)}`, now);
+      }
     }
   }
   return { submitted, projected, failed };

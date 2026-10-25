@@ -162,21 +162,29 @@ describe("callable gates", () => {
   const adminAuth = () => ({ uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" });
   const customerAuth = () => ({ uid: uid("cust"), token: { role: "customer", tenantId: "t1", studioId: null }, rawToken: "t" });
 
-  it("requestBookingRefund rejects non-admins and reserves for admins", async () => {
+  it("requestBookingRefund rejects non-admins; for admins it reserves AND its post-commit drain submits+projects (mock provider)", async () => {
     const p = payment();
     await seedPayment(p);
     await expect(requestBookingRefund.run({ data: { paymentId: p.id, reason: "customer ask" }, auth: customerAuth() } as never))
       .rejects.toMatchObject({ code: "permission-denied" });
     const r = (await requestBookingRefund.run({ data: { paymentId: p.id, reason: "customer asked nicely" }, auth: adminAuth() } as never)) as { status: string };
-    expect(r.status).toBe("reserved");
+    // The reservation emits no provider event, so the producer's post-commit
+    // drain owns submission: with the (instant) mock provider the request is
+    // already settled by the time the callable returns.
+    expect(r.status).toBe("projected");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("refunded");
+    expect(pay.refundAmount).toBe(100000);
   });
 
-  it("processRefundOutbox runs in the dev project with the mock provider", async () => {
+  it("processRefundOutbox is the idempotent manual backstop: already-drained work is a no-op", async () => {
     const p = payment();
     await seedPayment(p);
     await requestBookingRefund.run({ data: { paymentId: p.id, reason: "run me" }, auth: adminAuth() } as never);
     const r = (await processRefundOutbox.run({ data: {}, auth: adminAuth() } as never)) as { submitted: number; projected: number; failed: number };
-    expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 0 }); // bootstrap already settled it
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(100000); // exactly once
   });
 });
 
@@ -551,7 +559,13 @@ describe("D-review round 2: lease identity, monotonic transitions, related-recor
     await db.collection(COLLECTIONS.refundRequests()).doc(requestId)
       .update({ status: "submitted", projectionNeeded: true, providerRefundId: "rfnd_x" });
     await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).update({ tenantId: "t2" });
-    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/tenant t2 != payment tenant t1/);
+    // The projection's in-transaction recheck rejects - as a durable HOLD on
+    // the request (never a crashed pass, never a financial write).
+    const r = await runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 });
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 1 });
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string; lastError: string | null };
+    expect(req.status).toBe("ambiguous");
+    expect(req.lastError).toContain("tenant t2 != payment tenant t1");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
   });

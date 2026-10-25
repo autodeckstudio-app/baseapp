@@ -159,8 +159,41 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     }
   }
 
+  // Converged = this exact provider refund was already accounted while this
+  // handler was in flight (webhook event, or a replayed own projection):
+  // the money is truthfully returned exactly once, so project nothing again.
+  let converged = false;
   await db.runTransaction(async (tx) => {
     // All reads must happen before any writes within a Firestore transaction.
+    // The payment is re-read INSIDE this transaction: the exclusivity claim
+    // was won BEFORE the provider call, and another path (webhook event,
+    // outbox projection) may have accounted money since. Never overwrite
+    // another path's accounting from the stale pre-transaction snapshot.
+    const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(data.paymentId));
+    if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
+    const fresh = freshSnap.data() as Payment;
+    if (providerRefundId) {
+      const ledgerSnap = await tx.get(
+        db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${data.paymentId}_${providerRefundId}`),
+      );
+      if (ledgerSnap.exists) {
+        // Same provider refund id, already accounted - by THIS path's own
+        // earlier commit or by the webhook's strict-bound projection. Both
+        // are the same money counted once: converge with zero writes.
+        converged = true;
+        return;
+      }
+    }
+    // Any other accounting on this payment (a partial webhook projection, an
+    // outbox projection) means this single-shot FULL-refund projection no
+    // longer describes reality: overwriting refundAmount/status would erase
+    // the other path's truthful partial state. HOLD with the claim retained.
+    if (fresh.status !== "completed" || (fresh.refundAmount ?? 0) !== 0) {
+      throw new HttpsError(
+        "unavailable",
+        `Payment state changed while the refund was in flight (status '${fresh.status}', refunded ${fresh.refundAmount ?? 0}); held for reconciliation. The refund claim is retained.`,
+      );
+    }
     const invoiceSnap = payment.invoiceId
       ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId))
       : null;
@@ -169,17 +202,18 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
       status: "refunded",
       razorpayRefundId: providerRefundId,
-      refundAmount: payment.amount,
+      refundAmount: fresh.amount,
       refundedAt: now,
       updatedAt: now,
     });
     // Cross-path per-refund identity: record this provider refund so a later
     // webhook event or outbox projection for the SAME refund cannot count it
-    // again.
+    // again. The in-transaction READ above is what makes a racing webhook
+    // projection conflict and retry into "duplicate" instead of double-counting.
     if (providerRefundId) {
       tx.set(db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${data.paymentId}_${providerRefundId}`), {
         paymentId: data.paymentId, providerRefundId,
-        amountPaise: payment.amount, currency: payment.currency,
+        amountPaise: fresh.amount, currency: fresh.currency ?? null,
         source: "legacy", createdAt: now,
       });
     }
@@ -238,5 +272,5 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     });
   });
 
-  return { paymentId: data.paymentId, refunded: true, providerRefundId };
+  return { paymentId: data.paymentId, refunded: true, providerRefundId, ...(converged ? { converged: true } : {}) };
 });

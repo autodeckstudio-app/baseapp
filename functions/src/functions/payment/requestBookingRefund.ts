@@ -13,9 +13,10 @@ import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { requestBookingRefundSchema } from "../../schemas/payment.js";
-import { reserveRefund, refundablePaise } from "../../lib/refund-outbox.js";
+import { reserveRefund, refundablePaise, runRefundOutbox } from "../../lib/refund-outbox.js";
+import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 
-export const requestBookingRefund = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+export const requestBookingRefund = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   if (!["admin", "superadmin"].includes(user.claims.role)) {
     throw new HttpsError("permission-denied", "Admin role required to reserve refunds.");
@@ -44,8 +45,23 @@ export const requestBookingRefund = onCall({ region: "asia-south1", enforceAppCh
     const { requestId } = await reserveRefund(db, {
       payment, amountPaise: amount, reason: data.reason, createdBy: user.uid,
     });
-    return { requestId, amountPaise: amount, status: "reserved" };
+    // Submission ownership: a reservation emits no provider event, so this
+    // post-commit drain is what submits it (scoped to the request just
+    // created). Failure leaves the durable reservation in place with the
+    // error written on it; the manual runner remains the backstop.
+    try {
+      await runRefundOutbox(db, getPaymentProvider(), { requestId, runnerId: `request:${user.uid}` });
+    } catch (err) {
+      await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({
+        lastError: `post-reservation refund submission failed: ${err instanceof Error ? err.message : String(err)}`,
+        updatedAt: new Date().toISOString(),
+      }).catch(() => undefined);
+    }
+    const settled = await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get();
+    const status = (settled.data() as { status?: string } | undefined)?.status ?? "reserved";
+    return { requestId, amountPaise: amount, status };
   } catch (err) {
+    if (err instanceof HttpsError) throw err;
     throw new HttpsError("failed-precondition", err instanceof Error ? err.message : "Could not reserve refund.");
   }
 });

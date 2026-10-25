@@ -63,6 +63,8 @@ beforeEach(async () => {
     const snap = await db.collection(col).get();
     await Promise.all(snap.docs.map((d) => d.ref.delete()));
   }
+  const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+  mockProvider.reset();
 });
 
 describe("webhook refund.created outbox ownership", () => {
@@ -181,16 +183,24 @@ describe("webhook refund.created outbox ownership", () => {
     expect(inv.status).toBe("void"); // existing legacy obligation preserved
   });
 
-  it("refund.processed: outbox-owned stays owned; unrelated projects truthfully across partials", async () => {
-    // Outbox-owned refund.processed: never generically projected.
+  it("refund.processed: outbox-owned stays owned (never GENERICALLY projected - it projects through the outbox's own truthful path); unrelated projects truthfully across partials", async () => {
+    // Outbox-owned refund.processed: recorded owned, then the drain ADOPTS
+    // the evidence and projects through the outbox projection (ledger source
+    // "outbox", no generic full-amount write, no provider call).
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
     const p = payment();
     await seedPayment(p);
     const reqId = await seedRequest(p, { amountPaise: 50000, status: "submitted", providerRefundId: "rfnd_o" });
     const r = await processProviderEvent(db, refundEvent(p, { eventType: "refund.processed", providerRefundReceipt: reqId, providerRefundId: "rfnd_o", providerRefundAmount: 50000 }));
     expect(r.outcome).toBe("outbox_owned");
     let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
-    expect(pay.status).toBe("completed");
-    expect(pay.refundAmount ?? null).toBeNull();
+    expect((pay.status as string)).toBe("partially_refunded"); // truthful 50000 of 100000, NOT a generic full write
+    expect(pay.refundAmount).toBe(50000);
+    expect(pay.razorpayRefundId).toBe("rfnd_o");
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+    const ownedLedger = await db.collection(COLLECTIONS.paymentRefunds()).get();
+    expect(ownedLedger.size).toBe(1);
+    expect(ownedLedger.docs[0]!.data()).toMatchObject({ source: "outbox", requestId: reqId, providerRefundId: "rfnd_o" });
 
     // Unrelated dashboard PARTIAL refund via refund.processed: truthful amount,
     // partial status, invoice NOT voided.
@@ -272,25 +282,136 @@ describe("webhook refund.created outbox ownership", () => {
     expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-b").get()).data() as { status: string }).status).toBe("issued");
   });
 
-  it("outbox-owned refund.processed DRAINS the runner: reserved request submits+projects, no manual invocation", async () => {
+  it("outbox-owned refund.processed ADOPTS the event's own evidence: reserved request projects with ZERO provider submissions, exact refund id preserved", async () => {
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
     const p = payment();
     await seedPayment(p);
+    // The request was never submitted (e.g. the post-commit drain crashed):
+    // the provider-side refund exists and this event proves it processed.
     const reqId = await seedRequest(p, { amountPaise: 50000, status: "reserved" });
+    const before = mockProvider.initiateRefundCallCount;
     const r = await processProviderEvent(db, refundEvent(p, {
       eventType: "refund.processed", providerRefundReceipt: reqId,
       providerRefundId: "rfnd_drain", providerRefundAmount: 50000, providerRefundStatus: "processed",
     }));
     expect(r.outcome).toBe("outbox_owned"); // recorded owned, never generically projected
-    // The drain ran the outbox: request submitted + projected truthfully.
+    // The evidence was adopted into the SAME request and projected - a blind
+    // reserved->submit here would have created a SECOND provider refund.
+    expect(mockProvider.initiateRefundCallCount).toBe(before); // ZERO submissions
     const req = (await db.collection(COLLECTIONS.refundRequests()).doc(reqId).get()).data() as Record<string, unknown>;
     expect(req.status).toBe("projected");
+    expect(req.providerRefundId).toBe("rfnd_drain"); // the event's own refund, adopted
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect((pay.status as string)).toBe("partially_refunded");
     expect(pay.refundAmount).toBe(50000);
-    // Per-refund ledger entry from the outbox projection.
+    expect(pay.razorpayRefundId).toBe("rfnd_drain");
     const ledger = await db.collection(COLLECTIONS.paymentRefunds()).get();
-    expect(ledger.empty).toBe(false);
-    expect(ledger.docs[0]!.data()).toMatchObject({ paymentId: p.id, source: "outbox", amountPaise: 50000 });
+    expect(ledger.size).toBe(1);
+    expect(ledger.docs[0]!.data()).toMatchObject({ paymentId: p.id, providerRefundId: "rfnd_drain", source: "outbox", requestId: reqId, amountPaise: 50000 });
+  });
+
+  it("an event-driven drain NEVER submits unrelated reserved requests", async () => {
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    const p = payment();
+    await seedPayment(p);
+    const other = payment();
+    await seedPayment(other);
+    const reqA = await seedRequest(p, { amountPaise: 50000, status: "reserved" });
+    const reqB = await seedRequest(other, { amountPaise: 70000, status: "reserved" });
+    const r = await processProviderEvent(db, refundEvent(p, {
+      eventType: "refund.processed", providerRefundReceipt: reqA,
+      providerRefundId: "rfnd_a", providerRefundAmount: 50000, providerRefundStatus: "processed",
+    }));
+    expect(r.outcome).toBe("outbox_owned");
+    // The bound request projected from its own evidence...
+    expect((await db.collection(COLLECTIONS.refundRequests()).doc(reqA).get()).data()!.status).toBe("projected");
+    // ...the UNRELATED reservation was never submitted by the event drain.
+    const b = (await db.collection(COLLECTIONS.refundRequests()).doc(reqB).get()).data() as Record<string, unknown>;
+    expect(b.status).toBe("reserved");
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+    const otherPay = (await db.collection(COLLECTIONS.payments()).doc(other.id).get()).data() as Payment;
+    expect(otherPay.refundAmount ?? null).toBeNull();
+  });
+
+  it("duplicate redelivery of an owned processed event re-runs the drain idempotently: still counted ONCE", async () => {
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    const p = payment();
+    await seedPayment(p);
+    const reqId = await seedRequest(p, { amountPaise: 50000, status: "reserved" });
+    const ev = refundEvent(p, {
+      eventType: "refund.processed", providerRefundReceipt: reqId,
+      providerRefundId: "rfnd_dup", providerRefundAmount: 50000, providerRefundStatus: "processed",
+    });
+    const r1 = await processProviderEvent(db, ev);
+    expect(r1.outcome).toBe("outbox_owned");
+    const r2 = await processProviderEvent(db, ev); // same event id redelivered
+    expect(r2.outcome).toBe("duplicate");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(50000); // counted exactly once
+    expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(1);
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+  });
+
+  it("legacy handler IN FLIGHT while the webhook projects the same refund: converges, never double-counts (barrier)", { timeout: 30000 }, async () => {
+    const { initiateRefund } = await import("../../functions/payment/initiateRefund.js");
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    const p = payment({ bookingId: null, jobId: null });
+    await seedPayment(p);
+    // Hold the handler between provider-side acceptance and response delivery.
+    let release!: () => void;
+    let gated = false;
+    mockProvider.beforeRefundResponse = async () => {
+      gated = true;
+      await new Promise<void>((res) => { release = res; });
+    };
+    const run = initiateRefund.run({ data: { paymentId: p.id, reason: "full" }, auth: { uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" } } as never);
+    while (!gated) await new Promise((r) => setTimeout(r, 10));
+    // The provider-side refund already exists (mock recorded it); its
+    // processed event lands and projects BEFORE the handler resumes. The
+    // mock's refund id is deterministic: mock_rfnd_<referenceId>.
+    const ev = await processProviderEvent(db, refundEvent(p, {
+      providerRefundId: `mock_rfnd_refund_${p.id}`, providerRefundAmount: 100000, providerRefundStatus: "processed",
+    }));
+    expect(ev.outcome).toBe("refunded");
+    release!();
+    const rr = (await run) as Record<string, unknown>;
+    expect(rr.refunded).toBe(true);
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(100000); // the same money, counted exactly once
+    expect(pay.status).toBe("refunded");
+    const ledger = await db.collection(COLLECTIONS.paymentRefunds()).get();
+    expect(ledger.size).toBe(1);
+    expect(mockProvider.initiateRefundCallCount).toBe(1); // one provider refund exists
+  });
+
+  it("legacy handler IN FLIGHT while a PARTIAL webhook projection lands: HOLDS, never overwrites the partial (barrier)", { timeout: 30000 }, async () => {
+    const { initiateRefund } = await import("../../functions/payment/initiateRefund.js");
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    const p = payment({ bookingId: null, jobId: null });
+    await seedPayment(p);
+    let release!: () => void;
+    let gated = false;
+    mockProvider.beforeRefundResponse = async () => {
+      gated = true;
+      await new Promise<void>((res) => { release = res; });
+    };
+    const run = initiateRefund.run({ data: { paymentId: p.id, reason: "full" }, auth: { uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" } } as never);
+    while (!gated) await new Promise((r) => setTimeout(r, 10));
+    // A DIFFERENT partial refund (40000) projects via the webhook mid-flight.
+    const ev = await processProviderEvent(db, refundEvent(p, {
+      providerRefundId: "rfnd_partial", providerRefundAmount: 40000, providerRefundStatus: "processed",
+    }));
+    expect(ev.outcome).toBe("refunded");
+    release!();
+    // The handler's full-refund projection must NOT overwrite the partial
+    // accounting: it holds with its claim retained.
+    await expect(run).rejects.toThrow();
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect((pay.status as string)).toBe("partially_refunded");
+    expect(pay.refundAmount).toBe(40000); // untouched
+    const ledger = await db.collection(COLLECTIONS.paymentRefunds()).get();
+    expect(ledger.size).toBe(1);
+    expect(ledger.docs[0]!.data()).toMatchObject({ providerRefundId: "rfnd_partial", source: "webhook" });
   });
 
   it("handler + webhook, both orders: the same money is never counted twice", async () => {
@@ -327,8 +448,12 @@ describe("webhook refund.created outbox ownership", () => {
     const r = await processProviderEvent(db, refundEvent(p, { providerRefundReceipt: reqId, providerRefundAmount: 100000 }));
     expect(r.outcome).toBe("outbox_owned");
     const inv = (await db.collection(COLLECTIONS.invoices()).doc("inv2").get()).data() as { status: string };
-    expect(inv.status).toBe("issued"); // untouched
+    expect(inv.status).toBe("issued"); // untouched: the outbox projection NEVER voids (credit-note hold)
+    // The owned refund DID project through the outbox's own truthful path
+    // (full amount here) - the hold is about the invoice, not the money.
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
-    expect(pay.status).toBe("completed");
+    expect(pay.status).toBe("refunded");
+    expect(pay.refundAmount).toBe(100000);
+    expect(pay.invoiceReviewNeeded).toBe(true); // the hold is explicit on the payment
   });
 });

@@ -1,7 +1,7 @@
 // Track A2 (fresh, local/fake-provider only): refund accounting + outbox runner.
 import { describe, it, expect } from "vitest";
 import { labelForRefund, verifyRefundAccounting } from "../../lib/refund-accounting.js";
-import { reserveRefund, runRefundOutbox, refundablePaise, activeReservation } from "../../lib/refund-outbox.js";
+import { reserveRefund, runRefundOutbox, refundablePaise, activeReservation, adoptProcessedRefundEvidence } from "../../lib/refund-outbox.js";
 import { fakeFirestore } from "./fake-firestore.js";
 import { mockProvider } from "../../lib/mock-payment-provider.js";
 import type { Payment } from "@autodeck/core";
@@ -221,5 +221,63 @@ describe("ambiguous submit reconciliation", () => {
     }
     expect(data["payments"]!["pay1"]!["status"]).toBe("completed");
     expect(data["payments"]!["pay1"]!["refundAmount"]).toBeNull();
+  });
+});
+
+describe("adoptProcessedRefundEvidence + reconcile-only passes", () => {
+  it("adopts a webhook's processed evidence into its OWN reserved request and projects with ZERO provider submissions", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    let providerCalls = 0;
+    const spy = { ...mockProvider, initiateRefund: async () => { providerCalls++; throw new Error("must not submit"); } };
+    const adopted = await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_evt", amountPaise: 50000, currency: "INR" });
+    expect(adopted).toBe("adopted");
+    const r = await runRefundOutbox(db, spy as never, { requestId, submit: false });
+    expect(providerCalls).toBe(0); // evidence, not a new provider refund
+    expect(r).toEqual({ submitted: 0, projected: 1, failed: 0 });
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000, razorpayRefundId: "rfnd_evt" });
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "projected", providerRefundId: "rfnd_evt" });
+    expect(data["paymentRefunds"]![`pr_pay1_rfnd_evt`]).toMatchObject({ source: "outbox", requestId, amountPaise: 50000 });
+  });
+
+  it("adoption fails CLOSED on conflicting amount/currency and on an already-accounted provider refund (zero writes)", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_1", amountPaise: 99999, currency: "INR" })).toBe("conflict");
+    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_1", amountPaise: 50000, currency: "USD" })).toBe("conflict");
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "reserved", providerRefundId: null });
+    // The same provider refund already accounted by another path: never re-bind.
+    data["paymentRefunds"] = { pr_pay1_rfnd_leg: { paymentId: "pay1", providerRefundId: "rfnd_leg", source: "legacy", amountPaise: 50000, currency: "INR" } };
+    expect(await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_leg", amountPaise: 50000, currency: "INR" })).toBe("conflict");
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "reserved", providerRefundId: null });
+  });
+
+  it("a reconcile-only (submit:false) pass NEVER submits reserved requests", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    let providerCalls = 0;
+    const spy = { ...mockProvider, initiateRefund: async () => { providerCalls++; throw new Error("must not submit"); } };
+    const r = await runRefundOutbox(db, spy as never, { submit: false });
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 0 });
+    expect(providerCalls).toBe(0);
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "reserved" });
+  });
+
+  it("a projection rejection becomes a durable HOLD, not a crashed pass", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    await adoptProcessedRefundEvidence(db, { requestId, providerRefundId: "rfnd_evt", amountPaise: 50000, currency: "INR" });
+    // A foreign ledger entry for the SAME provider refund id appears before
+    // the projection runs: projection must hold, and the pass must report it.
+    data["paymentRefunds"] = { pr_pay1_rfnd_evt: { paymentId: "pay1", providerRefundId: "rfnd_evt", source: "webhook", amountPaise: 50000, currency: "INR" } };
+    const r = await runRefundOutbox(db, mockProvider, { requestId, submit: false });
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 1 });
+    expect(data["payments"]!["pay1"]!["refundAmount"] ?? null).toBeNull(); // no double count
+    expect(data["refundRequests"]![requestId]).toMatchObject({ status: "ambiguous" });
+    expect(String(data["refundRequests"]![requestId]!["lastError"])).toMatch(/projection held/);
   });
 });

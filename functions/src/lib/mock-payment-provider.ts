@@ -75,6 +75,26 @@ export class MockPaymentProvider implements PaymentProvider {
   loseNextRefundResponse = false;
   private submitted = new Map<string, RefundResult & InitiateRefundParams>();
 
+  // Observable submission count: a path that must NOT submit (event-driven
+  // drain, held request) asserts this never moves.
+  public initiateRefundCallCount = 0;
+
+  // Test hook: awaited AFTER the provider-side refund is recorded but BEFORE
+  // the response is delivered - a refund that already exists at the provider
+  // while the caller is still in flight (webhook-vs-handler race barrier).
+  beforeRefundResponse: (() => Promise<void>) | null = null;
+
+  // Test helper: back to a pristine provider between tests.
+  reset(): void {
+    this.submitted.clear();
+    this.initiateRefundCallCount = 0;
+    this.loseNextRefundResponse = false;
+    this.failNextRefund = false;
+    this.nextRefundStatus = null;
+    this.authoritativeNegatives = false;
+    this.beforeRefundResponse = null;
+  }
+
   // Test hook: like loseNextRefundResponse, but the provider-side refund
   // lands in "failed" status (Razorpay refund.failed: "not able to process a
   // refund" - a notification; docs settle no finality). The bound lookup then
@@ -94,6 +114,7 @@ export class MockPaymentProvider implements PaymentProvider {
   nextRefundStatus: string | null = null;
 
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
+    this.initiateRefundCallCount += 1;
     const status = this.nextRefundStatus ?? "processed";
     this.nextRefundStatus = null;
     const result = { providerRefundId: this.mockRefundId(params.referenceId), status, ...params };
@@ -103,6 +124,11 @@ export class MockPaymentProvider implements PaymentProvider {
       throw new Error("network: response lost; provider-side refund reported failed");
     }
     this.submitted.set(params.referenceId, result);
+    if (this.beforeRefundResponse) {
+      const hook = this.beforeRefundResponse;
+      this.beforeRefundResponse = null;
+      await hook();
+    }
     if (this.loseNextRefundResponse) {
       this.loseNextRefundResponse = false;
       throw new Error("network: response lost after provider accepted");

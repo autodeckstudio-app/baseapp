@@ -17,7 +17,7 @@ import type { AuthorizedUser } from "@autodeck/auth";
 import type { ProviderWebhookEvent } from "./payment-provider.js";
 import { writeAuditLog } from "../middleware/audit.js";
 import { prepareJobInvoice } from "./job-invoice.js";
-import { runRefundOutbox } from "./refund-outbox.js";
+import { runRefundOutbox, adoptProcessedRefundEvidence } from "./refund-outbox.js";
 import { getPaymentProvider } from "./razorpay-provider.js";
 
 export type WebhookOutcome =
@@ -340,20 +340,67 @@ export async function processProviderEvent(
     return "refunded";
   });
 
-  // Execution ownership for outbox-owned refunds: an owned event carrying
-  // affirmative processed evidence drives the outbox runner directly, so a
-  // normal cancellation completes without anyone knowing to invoke the
-  // manual runner. The runner reconciles truthfully through the bound
-  // provider lookup (never projects on this event's word alone), is
-  // idempotent under duplicate delivery, and its transactional lease means
-  // concurrent drains still submit exactly once. A drain failure leaves the
-  // recorded event + open request for the manual-runner backstop.
-  if (outcome === "outbox_owned" && ev.providerRefundStatus === "processed" &&
-      (ev.eventType === "refund.created" || ev.eventType === "refund.processed")) {
-    try {
-      await runRefundOutbox(db, getPaymentProvider(), { limit: 10, tenantId: found.tenantId });
-    } catch {
-      // recorded event + open request remain for reconciliation/backstop
+  // Execution ownership for outbox-owned refunds.
+  //
+  // What an event CANNOT do: submit. A cancellation reservation emits no
+  // provider event, so submission ownership lives with the reservation
+  // commit's post-transaction drain (adminCancelBooking / requestBookingRefund)
+  // and the manual runner - never with event handling. An event-driven pass
+  // is reconcile-ONLY and scoped to the ONE request this event binds to, so
+  // no event can ever submit unrelated reservations.
+  //
+  // What an owned "processed" event MUST do: its evidence is adopted into
+  // its OWN request first (adoptProcessedRefundEvidence) - a refund the
+  // provider already processed is projected from that evidence with ZERO
+  // provider calls, never re-submitted into a second refund.
+  //
+  // Retry safety: a duplicate redelivery of an already-recorded owned event
+  // re-runs the same idempotent drain, so a failed first attempt is retried
+  // by provider redelivery instead of being lost behind the event claim. A
+  // drain failure is written onto the request (durable, visible to the
+  // held-requests surface) and the open request stays reconcilable by any
+  // later trigger.
+  const ownedProcessed = ev.providerRefundStatus === "processed" &&
+    (ev.eventType === "refund.created" || ev.eventType === "refund.processed");
+  let drainWanted = outcome === "outbox_owned" && ownedProcessed;
+  if (!drainWanted && outcome === "duplicate" && ownedProcessed) {
+    const prior = await eventRef.get().catch(() => null);
+    drainWanted = !!prior?.exists && (prior.data() as { outcome?: string }).outcome === "outbox_owned";
+  }
+  if (drainWanted) {
+    // Re-derive the same binding the in-transaction ownership check proved.
+    let requestId: string | null = null;
+    if (ev.providerRefundReceipt && ev.providerRefundReceipt.startsWith("rr_")) {
+      requestId = ev.providerRefundReceipt;
+    }
+    if (!requestId && ev.providerRefundId) {
+      const q = await db.collection(COLLECTIONS.refundRequests())
+        .where("providerRefundId", "==", ev.providerRefundId).limit(1).get().catch(() => null);
+      requestId = q && !q.empty ? q.docs[0]!.id : null;
+    }
+    if (requestId) {
+      try {
+        if (ev.providerRefundId) {
+          const adopted = await adoptProcessedRefundEvidence(db, {
+            requestId,
+            providerRefundId: ev.providerRefundId,
+            amountPaise: typeof ev.providerRefundAmount === "number" ? ev.providerRefundAmount : null,
+            currency: ev.providerRefundCurrency ?? null,
+          });
+          if (adopted === "conflict" || adopted === "missing") {
+            await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({
+              lastError: `processed evidence for provider refund ${ev.providerRefundId} does not bind to this request (${adopted}); held for reconciliation`,
+              updatedAt: new Date().toISOString(),
+            }).catch(() => undefined);
+          }
+        }
+        await runRefundOutbox(db, getPaymentProvider(), { requestId, submit: false });
+      } catch (err) {
+        await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({
+          lastError: `post-event drain failed: ${err instanceof Error ? err.message : String(err)}`,
+          updatedAt: new Date().toISOString(),
+        }).catch(() => undefined);
+      }
     }
   }
 
