@@ -49,7 +49,7 @@ export default function PaymentsPage() {
     setMessage(null);
     try {
       const r = await runRefundOutbox();
-      setMessage(`Outbox run: ${r.submitted} submitted, ${r.projected} completed, ${r.failed} failed.`);
+      setMessage(`Outbox run: ${r.submitted} sent to provider, ${r.projected} completed, ${r.failed} held for review.`);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Outbox run failed.");
     } finally {

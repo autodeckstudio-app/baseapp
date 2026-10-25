@@ -388,9 +388,12 @@ export function RefundWorkPanel(p: {
     <section className="ax-panel" aria-label="Refund work">
       <div className="ax-row-actions" style={{ justifyContent: "space-between", marginBottom: "12px" }}>
         <p className="ax-title" style={{ margin: 0 }}>Refund work</p>
-        <button type="button" className="ax-button" disabled={p.running} onClick={p.onRun}>
-          {p.running ? "Running" : "Run outbox now"}
-        </button>
+        <span className="ax-row-actions">
+          <span className="ax-muted">Sends reserved refunds to the provider</span>
+          <button type="button" className="ax-button" disabled={p.running} onClick={p.onRun}>
+            {p.running ? "Running" : "Run outbox now"}
+          </button>
+        </span>
       </div>
       {requests.length > 0 && (
         <div>
@@ -402,7 +405,11 @@ export function RefundWorkPanel(p: {
                 <span className="ax-muted">{r.updatedAt ? formatDateTime(r.updatedAt) : ""}</span>
                 {r.lastError && <span className="ax-muted"> - {r.lastError}</span>}
               </span>
-              <span className="ax-muted">{r.providerRefundId ?? r.id}</span>
+              <span className="ax-row-actions">
+                {r.providerRefundId && <span className="ax-muted">{r.providerRefundId}</span>}
+                {r.bookingId && <Link className="ax-button" href={`/bookings/${r.bookingId}`}>Booking</Link>}
+                {!r.bookingId && r.jobId && <Link className="ax-button" href={`/jobs/${r.jobId}`}>Job</Link>}
+              </span>
             </div>
           ))}
         </div>
@@ -413,8 +420,11 @@ export function RefundWorkPanel(p: {
           {reviewPayments.map((x) => (
             <div key={x.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
               <span>
-                <strong>{x.amount != null ? formatPaise(x.amount) : "-"}</strong>{" "}
-                <span className="ax-muted">{x.customerId ? (p.names?.[x.customerId] ?? "Customer") : ""} refunded; the linked invoice needs review</span>
+                <strong>{x.refundAmount != null ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
+                <span className="ax-muted">
+                  refunded{x.refundAmount != null && x.amount != null && x.refundAmount !== x.amount ? ` of ${formatPaise(x.amount)} captured` : ""}
+                  {x.customerId ? ` - ${p.names?.[x.customerId] ?? "Customer"}` : ""}; the linked invoice needs review
+                </span>
               </span>
               {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
             </div>

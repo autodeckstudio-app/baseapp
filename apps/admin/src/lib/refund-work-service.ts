@@ -20,6 +20,7 @@ export type RefundReviewPayment = {
   status: string;
   refundState: string | null;
   amount: number | null;
+  refundAmount: number | null;
   currency: string | null;
   invoiceId: string | null;
   bookingId: string | null;

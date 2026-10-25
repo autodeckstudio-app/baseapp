@@ -19,6 +19,10 @@ describe("admin refund recovery surface", () => {
     expect(panel).toContain("Run outbox now");
     expect(panel).toContain("lastError");
     expect(panel).toContain("Invoices to review");
+    expect(panel).toContain("captured");
+    expect(panel).toContain("Sends reserved refunds to the provider");
+    expect(panel).toContain("/bookings/");
+    expect(page).toContain("held for review");
     expect(panel).not.toContain("—");
   });
   it("is mounted on the payments page and refreshes after a run", () => {

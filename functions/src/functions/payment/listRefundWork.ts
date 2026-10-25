@@ -59,6 +59,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       status: String(d.status ?? ""),
       refundState: typeof d.refundState === "string" ? d.refundState : null,
       amount: typeof d.amount === "number" ? d.amount : null,
+      refundAmount: typeof d.refundAmount === "number" ? d.refundAmount : null,
       currency: typeof d.currency === "string" ? d.currency : null,
       invoiceId: typeof d.invoiceId === "string" ? d.invoiceId : null,
       bookingId: typeof d.bookingId === "string" ? d.bookingId : null,
