@@ -20,6 +20,8 @@ export function fakeFirestore(
     };
   };
   const docRef = (c: string, id: string): any => ({
+    _col: c,
+    _id: id,
     id,
     path: `${c}/${id}`,
     get: async () => snap(c, id),
@@ -58,6 +60,7 @@ export function fakeFirestore(
       return fn({
         get: async (x: any) => x.get(),
         set: (ref: any, v: Doc) => { void ref.set(v); },
+        create: (ref: any, v: Doc) => { if (data[ref._col]?.[ref._id] !== undefined) throw new Error("already exists"); void ref.set(v); },
         update: (ref: any, v: Doc) => { void ref.update(v); },
         delete: (ref: any) => { void ref.delete(); },
       });
