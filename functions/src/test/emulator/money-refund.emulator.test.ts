@@ -857,3 +857,41 @@ describe("admin recovery surface (listRefundWork)", () => {
       .rejects.toThrow(/Admin role/);
   });
 });
+
+describe("submit preflight integrity", () => {
+  it("a request with a missing stored id is held before ANY provider call", async () => {
+    const p = payment();
+    await seedPayment(p);
+    // Malformed: no id field inside the document (reserveRefund always writes one).
+    await db.collection(COLLECTIONS.refundRequests()).doc("rr_malformed_1").set({
+      tenantId: "t1", studioId: "s1", paymentId: p.id, jobId: p.jobId, bookingId: p.bookingId,
+      amountPaise: 10000, reason: "r", status: "reserved", providerRefundId: null, projectionNeeded: false,
+      leaseBy: null, leaseAt: null, lastError: null, createdBy: "a", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    const mock = new MockPaymentProvider();
+    const r = await runRefundOutbox(db, mock, { limit: 10 });
+    expect(mock.initiateRefundCallCount).toBe(0);
+    expect(r.submitted).toBe(0);
+    const after = (await db.collection(COLLECTIONS.refundRequests()).doc("rr_malformed_1").get()).data()!;
+    expect(after.status).toBe("ambiguous");
+    expect(after.lastError).toContain("request id missing");
+    // No financial writes of any kind.
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
+    expect(pay.refundState ?? null).toBeNull();
+    expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(0);
+  });
+
+  it("a request whose stored id disagrees with its doc id still submits bound to the STORED id", async () => {
+    // The loader spreads doc.data(), so the stored id is the reference anchor;
+    // this pins the behaviour so a future loader change cannot silently rebind.
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 10000, reason: "ok", createdBy: "a" });
+    const mock = new MockPaymentProvider();
+    const r = await runRefundOutbox(db, mock, { limit: 10 });
+    expect(mock.initiateRefundCallCount).toBe(1);
+    expect(r.submitted).toBe(1);
+    const after = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data()!;
+    expect(after.providerRefundId).toBe(`mock_rfnd_${requestId}`);
+  });
+});
