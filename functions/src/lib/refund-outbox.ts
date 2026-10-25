@@ -243,6 +243,22 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       const booking = bookingSnap.data() as Booking;
       if (booking.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: booking ${fresh.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`);
     }
+    // Cross-path per-refund identity: if this provider refund was already
+    // accounted by another path (webhook generic, legacy handler), project
+    // nothing and hold - the same money must never be counted twice.
+    if (fresh.providerRefundId) {
+      const ledgerRef = db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${payment.id}_${fresh.providerRefundId}`);
+      const ledgerSnap = await tx.get(ledgerRef);
+      if (ledgerSnap.exists) {
+        const prior = ledgerSnap.data() as { source?: string; requestId?: string };
+        // My own prior projection (crash recovery on a non-atomic store, or a
+        // replayed projection): idempotent no-op. A FOREIGN entry (webhook
+        // generic path, legacy handler, another request) means this provider
+        // refund was already accounted elsewhere - hold, never double-count.
+        if (prior.source === "outbox" && prior.requestId === fresh.id) return false;
+        throw new Error(`refund projection rejected: provider refund ${fresh.providerRefundId} already accounted by ${prior.source ?? "unknown"}`);
+      }
+    }
     const newRefunded = (payment.refundAmount ?? 0) + fresh.amountPaise;
     const check = verifyRefundAccounting({ capturedPaise: payment.amount, refundedPaise: newRefunded });
     if (!check.ok) throw new Error(`refund projection rejected: ${check.reason}`);
@@ -270,6 +286,13 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
         refundedPaise: newRefunded,
         refundId: fresh.providerRefundId ?? null,
         updatedAt: now,
+      });
+    }
+    if (fresh.providerRefundId) {
+      tx.set(db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${payment.id}_${fresh.providerRefundId}`), {
+        paymentId: payment.id, providerRefundId: fresh.providerRefundId,
+        amountPaise: fresh.amountPaise, currency: payment.currency,
+        source: "outbox", requestId: fresh.id, createdAt: now,
       });
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });

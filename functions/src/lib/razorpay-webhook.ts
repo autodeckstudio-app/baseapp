@@ -17,6 +17,8 @@ import type { AuthorizedUser } from "@autodeck/auth";
 import type { ProviderWebhookEvent } from "./payment-provider.js";
 import { writeAuditLog } from "../middleware/audit.js";
 import { prepareJobInvoice } from "./job-invoice.js";
+import { runRefundOutbox } from "./refund-outbox.js";
+import { getPaymentProvider } from "./razorpay-provider.js";
 
 export type WebhookOutcome =
   | "completed"
@@ -337,6 +339,23 @@ export async function processProviderEvent(
       after: { status: settledStatus, refundAmount: totalRefunded, providerRefundId: ev.providerRefundId, via: "razorpay_webhook" } });
     return "refunded";
   });
+
+  // Execution ownership for outbox-owned refunds: an owned event carrying
+  // affirmative processed evidence drives the outbox runner directly, so a
+  // normal cancellation completes without anyone knowing to invoke the
+  // manual runner. The runner reconciles truthfully through the bound
+  // provider lookup (never projects on this event's word alone), is
+  // idempotent under duplicate delivery, and its transactional lease means
+  // concurrent drains still submit exactly once. A drain failure leaves the
+  // recorded event + open request for the manual-runner backstop.
+  if (outcome === "outbox_owned" && ev.providerRefundStatus === "processed" &&
+      (ev.eventType === "refund.created" || ev.eventType === "refund.processed")) {
+    try {
+      await runRefundOutbox(db, getPaymentProvider(), { limit: 10, tenantId: found.tenantId });
+    } catch {
+      // recorded event + open request remain for reconciliation/backstop
+    }
+  }
 
   return { outcome, paymentId: found.id };
 }

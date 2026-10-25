@@ -103,6 +103,10 @@ describe("refund outbox", () => {
     data["refundRequests"]![requestId]!["projectionNeeded"] = true;
     data["payments"]!["pay1"]!["refundAmount"] = null;
     data["payments"]!["pay1"]!["status"] = "completed";
+    // The per-refund ledger commits ATOMICALLY with the payment projection in
+    // a real Firestore transaction; this forced crash state must clear it
+    // too, otherwise it models an impossible half-committed projection.
+    delete data["paymentRefunds"];
     const r2 = await runRefundOutbox(db, crashing as never);
     expect(providerCalls).toBe(1); // NOT resubmitted
     expect(r2).toEqual({ submitted: 0, projected: 1, failed: 0 });
@@ -179,6 +183,9 @@ describe("ambiguous submit reconciliation", () => {
     data["refundRequests"]!["rr_pay1_1"]!["projectionNeeded"] = false;
     data["payments"]!["pay1"]!["refundAmount"] = null;
     data["payments"]!["pay1"]!["status"] = "completed";
+    // Clear the atomically-committed ledger too: the forced state models a
+    // crash before the projection transaction committed at all.
+    delete data["paymentRefunds"];
     const r = await runRefundOutbox(db, provider);
     expect(r).toEqual({ submitted: 1, projected: 1, failed: 0 });
     expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000 });

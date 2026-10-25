@@ -173,6 +173,16 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
       refundedAt: now,
       updatedAt: now,
     });
+    // Cross-path per-refund identity: record this provider refund so a later
+    // webhook event or outbox projection for the SAME refund cannot count it
+    // again.
+    if (providerRefundId) {
+      tx.set(db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${data.paymentId}_${providerRefundId}`), {
+        paymentId: data.paymentId, providerRefundId,
+        amountPaise: payment.amount, currency: payment.currency,
+        source: "legacy", createdAt: now,
+      });
+    }
 
     // Void the linked invoice (if any)
     if (payment.invoiceId && invoiceSnap) {

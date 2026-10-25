@@ -43,7 +43,7 @@ async function seedRequest(p: Payment, o: { id?: string; amountPaise: number; st
 
 async function seedPayment(p: Payment) {
   await db.collection(COLLECTIONS.payments()).doc(p.id).set(p);
-  if (p.jobId) await db.collection(COLLECTIONS.jobs()).doc(p.jobId).set({ id: p.jobId, tenantId: p.tenantId, paymentStatus: "paid" });
+  if (p.jobId) await db.collection(COLLECTIONS.jobs()).doc(p.jobId).set({ id: p.jobId, tenantId: p.tenantId, bookingId: p.bookingId ?? null, paymentStatus: "paid" });
   if (p.bookingId) await db.collection(COLLECTIONS.bookings()).doc(p.bookingId).set({ id: p.bookingId, tenantId: p.tenantId, paymentStatus: "paid" });
 }
 
@@ -59,22 +59,25 @@ function refundEvent(p: Payment, o: Partial<ProviderWebhookEvent>): ProviderWebh
 }
 
 beforeEach(async () => {
-  for (const col of [COLLECTIONS.payments(), COLLECTIONS.refundRequests(), COLLECTIONS.paymentEvents(), COLLECTIONS.invoices(), COLLECTIONS.jobs(), COLLECTIONS.bookings()]) {
+  for (const col of [COLLECTIONS.payments(), COLLECTIONS.refundRequests(), COLLECTIONS.paymentRefunds(), COLLECTIONS.paymentEvents(), COLLECTIONS.invoices(), COLLECTIONS.jobs(), COLLECTIONS.bookings()]) {
     const snap = await db.collection(col).get();
     await Promise.all(snap.docs.map((d) => d.ref.delete()));
   }
 });
 
 describe("webhook refund.created outbox ownership", () => {
-  it("webhook FIRST (reservation exists, not yet submitted): recorded as outbox_owned, zero payment writes", async () => {
+  it("webhook FIRST (reservation exists, not yet submitted, refund still pending): recorded as outbox_owned, zero payment writes, NO drain", async () => {
     const p = payment();
     await seedPayment(p);
     const reqId = await seedRequest(p, { amountPaise: 50000, status: "reserved" });
-    const r = await processProviderEvent(db, refundEvent(p, { providerRefundReceipt: reqId }));
+    // Pending evidence: owned, recorded, nothing moves (no projection, no drain).
+    const r = await processProviderEvent(db, refundEvent(p, { providerRefundReceipt: reqId, providerRefundStatus: "pending" }));
     expect(r.outcome).toBe("outbox_owned");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
     expect(pay.refundAmount ?? null).toBeNull();
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(reqId).get()).data() as Record<string, unknown>;
+    expect(req.status).toBe("reserved"); // untouched: pending evidence drives nothing
   });
 
   it("delayed webhook AFTER full projection (guard released, request projected): still owned, no double projection", async () => {
@@ -267,6 +270,53 @@ describe("webhook refund.created outbox ownership", () => {
     pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.refundAmount).toBe(40000); // unchanged through all of it
     expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-b").get()).data() as { status: string }).status).toBe("issued");
+  });
+
+  it("outbox-owned refund.processed DRAINS the runner: reserved request submits+projects, no manual invocation", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const reqId = await seedRequest(p, { amountPaise: 50000, status: "reserved" });
+    const r = await processProviderEvent(db, refundEvent(p, {
+      eventType: "refund.processed", providerRefundReceipt: reqId,
+      providerRefundId: "rfnd_drain", providerRefundAmount: 50000, providerRefundStatus: "processed",
+    }));
+    expect(r.outcome).toBe("outbox_owned"); // recorded owned, never generically projected
+    // The drain ran the outbox: request submitted + projected truthfully.
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(reqId).get()).data() as Record<string, unknown>;
+    expect(req.status).toBe("projected");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect((pay.status as string)).toBe("partially_refunded");
+    expect(pay.refundAmount).toBe(50000);
+    // Per-refund ledger entry from the outbox projection.
+    const ledger = await db.collection(COLLECTIONS.paymentRefunds()).get();
+    expect(ledger.empty).toBe(false);
+    expect(ledger.docs[0]!.data()).toMatchObject({ paymentId: p.id, source: "outbox", amountPaise: 50000 });
+  });
+
+  it("handler + webhook, both orders: the same money is never counted twice", async () => {
+    // Webhook first (unrelated partial, 40000): legacy handler then REFUSES
+    // (payment no longer 'completed') - no double count.
+    const p = payment();
+    await seedPayment(p);
+    const r1 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_w1", providerRefundAmount: 40000, providerRefundStatus: "processed" }));
+    expect(r1.outcome).toBe("refunded");
+    const { initiateRefund } = await import("../../functions/payment/initiateRefund.js");
+    await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "second" }, auth: { uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" } } as never))
+      .rejects.toThrow();
+    let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(40000); // unchanged
+    // Handler first (full refund via legacy path, mock provider): the same
+    // refund's later webhook event is already_final, zero double count.
+    const p2 = payment({ bookingId: null, jobId: null });
+    await seedPayment(p2);
+    const { mockProvider } = await import("../../lib/mock-payment-provider.js");
+    mockProvider.loseNextRefundResponse = false;
+    const rr = await initiateRefund.run({ data: { paymentId: p2.id, reason: "full" }, auth: { uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" } } as never);
+    expect(rr).toMatchObject({ refunded: true });
+    const r2 = await processProviderEvent(db, refundEvent(p2, { providerRefundId: "rfnd_leg", providerRefundAmount: 100000, providerRefundStatus: "processed" }));
+    expect(r2.outcome).toBe("already_final");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(100000); // exactly once
   });
 
   it("outbox-owned refund NEVER voids the invoice (accounting hold stays with the runner)", async () => {
