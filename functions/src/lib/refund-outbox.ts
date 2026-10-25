@@ -226,17 +226,19 @@ export async function reserveRefund(
   });
 }
 
-/** Terminal release of the active-reservation guard (failed only; projection keeps its tombstone as the permanent dedup marker, matching legacy claim semantics). */
-async function releaseGuard(db: Firestore, paymentId: string): Promise<void> {
-  await requestsCol(db).doc(`active_${paymentId}`).delete().catch(() => undefined);
-  // Release our cross-vintage tombstone too - but ONLY one this system
-  // created (outboxRequestId marker). A true legacy claim is never deleted
-  // here: it belongs to the legacy-claim reconciler.
-  const tombRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentId}`);
-  const tomb = await tombRef.get().catch(() => null);
-  if (tomb?.exists && (tomb.data() as { outboxRequestId?: string }).outboxRequestId) {
-    await tombRef.delete().catch(() => undefined);
-  }
+/** Terminal release of the active-reservation guard + cross-vintage tombstone
+ * (failed only). ATOMIC and ownership-checked: both docs are deleted in one
+ * transaction ONLY while they still belong to THIS terminal request - a slow
+ * cleanup must never remove a newer reservation's guard or tombstone, and a
+ * true legacy claim (no marker) is never deleted here. */
+async function releaseGuard(db: Firestore, paymentId: string, requestId: string): Promise<void> {
+  await db.runTransaction(async (tx) => {
+    const guardRef = requestsCol(db).doc(`active_${paymentId}`);
+    const tombRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentId}`);
+    const [g, t] = await Promise.all([tx.get(guardRef), tx.get(tombRef)]);
+    if (g.exists && (g.data() as { requestId?: string }).requestId === requestId) tx.delete(guardRef);
+    if (t.exists && (t.data() as { outboxRequestId?: string }).outboxRequestId === requestId) tx.delete(tombRef);
+  }).catch(() => undefined);
 }
 
 /**
@@ -372,6 +374,10 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     const tombSnap = await tx.get(tombRef);
     const releaseTombstone = tombSnap.exists
       && (tombSnap.data() as { outboxRequestId?: string }).outboxRequestId === fresh.id;
+    const activeGuardRef = db.collection(COLLECTIONS.refundRequests()).doc(`active_${fresh.paymentId}`);
+    const activeGuardSnap = await tx.get(activeGuardRef);
+    const releaseActiveGuard = activeGuardSnap.exists
+      && (activeGuardSnap.data() as { requestId?: string }).requestId === fresh.id;
     // Cross-path per-refund identity: if this provider refund was already
     // accounted by another path (webhook generic, legacy handler), project
     // nothing and hold - the same money must never be counted twice.
@@ -425,7 +431,7 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       });
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });
-    tx.delete(db.collection(COLLECTIONS.refundRequests()).doc(`active_${fresh.paymentId}`));
+    if (releaseActiveGuard) tx.delete(activeGuardRef);
     if (releaseTombstone) tx.delete(tombRef);
     return true;
   });
@@ -684,7 +690,7 @@ export async function runRefundOutbox(
           const won = await transitionInTx(request, ["submitting", "ambiguous"],
             { status: "failed", leaseBy: null, leaseAt: null, lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
           if (won) {
-            await releaseGuard(db, request.paymentId);
+            await releaseGuard(db, request.paymentId, request.id);
             failed++;
           }
           continue;
@@ -724,7 +730,7 @@ export async function runRefundOutbox(
         const won = await transitionInTx(request, ["submitting", "ambiguous"],
           { status: "failed", lastError: "provider confirms no such refund", updatedAt: now });
         if (won) {
-          await releaseGuard(db, request.paymentId);
+          await releaseGuard(db, request.paymentId, request.id);
           failed++;
         }
         continue;

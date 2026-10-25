@@ -119,18 +119,38 @@ export async function runCancel(
       const fresh = (await tx.get(bookingRef)).data() as Booking | undefined;
       if (!fresh) throw new HttpsError("not-found", "Booking not found.");
       if (fresh.status === "CANCELLED") throw new HttpsError("failed-precondition", "This booking was just cancelled.");
+      // Terminal-state and ownership revalidation INSIDE the transaction:
+      // the pre-transaction checks used a snapshot that can stale before commit.
+      if (fresh.status === "COMPLETED" || fresh.status === "EXPIRED") {
+        throw new HttpsError("failed-precondition", `Cannot cancel a booking with status ${fresh.status}.`);
+      }
+      if (fresh.tenantId !== booking.tenantId || fresh.studioId !== booking.studioId) {
+        throw new HttpsError("failed-precondition", "The booking's studio changed. Reload and try again.");
+      }
       const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1));
       const jobDoc = jobs.docs[0];
       const j = jobDoc?.data() as ServiceJob | undefined;
       if (j && !CANCELLABLE_JOB.includes(j.status)) throw new HttpsError("failed-precondition", "Work has already started on this job.");
-      const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "completed"]).limit(10)) : null;
+      // Payment eligibility is re-derived INSIDE the transaction with the
+      // same rules as the pre-transaction preview: a payment that appears,
+      // starts processing, or completes between the preview read and this
+      // commit must change the outcome, never slip past a stale choice.
+      const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "processing", "completed"]).limit(10)) : null;
+      const txPayDocs = pays?.docs ?? [];
+      if (txPayDocs.some((d) => d.data()["status"] === "processing")) {
+        throw new HttpsError("failed-precondition", "A payment is still processing on this booking. Wait for it to settle, then cancel.");
+      }
+      const txCompleted = txPayDocs.filter((d) => d.data()["status"] === "completed");
+      if (txCompleted.length > 1) {
+        throw new HttpsError("failed-precondition", "This booking has more than one payment. Cancel it by hand and refund each payment from Payments.");
+      }
       // Fresh financial truth INSIDE the transaction: the pre-transaction
       // plan was computed from a snapshot that a retry or a concurrent write
       // can stale. Terms, fee and refund sizing are recomputed here from the
       // fresh booking and the fresh payment document; nothing financial is
       // sized from the caller's pre-transaction reads.
-      const freshPaymentSnap = paymentRef ? await tx.get(paymentRef) : null;
-      const freshPayment = freshPaymentSnap?.exists ? (freshPaymentSnap.data() as Payment) : undefined;
+      const txPaymentRef = txCompleted[0]?.ref ?? null;
+      const freshPayment = txCompleted[0]?.data() as Payment | undefined;
       let txCategories = fresh.cancelCategories ?? [];
       if (!txCategories.length) {
         const svcSnap = await tx.get(db.collection(COLLECTIONS.services()).doc(fresh.serviceId));
@@ -138,7 +158,7 @@ export async function runCancel(
       }
       const txTerms = cancellationTerms({ categories: txCategories, totalPaise: fresh.totalAmount, scheduledAtMs: Date.parse(fresh.scheduledAt), nowMs: Date.now() });
       const txPlan = planRefund({ paidPaise: freshPayment?.amount ?? 0, feePaise: txTerms.feePaise, waive: data.feeAction === "waive" });
-      const txNeedsRefund = txPlan.refundPaise > 0 && !!freshPayment && !!paymentRef;
+      const txNeedsRefund = txPlan.refundPaise > 0 && !!freshPayment && !!txPaymentRef;
       const txProviderRefund = txNeedsRefund && freshPayment?.method === "razorpay_payment_link";
       const txManualRefund = txNeedsRefund && !txProviderRefund;
       if (txProviderRefund && !freshPayment?.razorpayPaymentId) {
@@ -160,7 +180,7 @@ export async function runCancel(
       // booking that was not cancelled. The expected booking/job binding
       // pins the refund to THIS cancellation: a payment re-linked elsewhere
       // since the snapshot is a refusal, never a redirect.
-      if (txProviderRefund && paymentRef && freshPayment) {
+      if (txProviderRefund && txPaymentRef && freshPayment) {
         const reservePlan = await planReserveInTx(tx, db, {
           payment: freshPayment, amountPaise: txPlan.refundPaise, reason: data.reason, createdBy: user.uid,
           expectedBookingId: data.bookingId, expectedJobId: jobDoc?.id ?? null,
@@ -182,8 +202,8 @@ export async function runCancel(
       // an OBLIGATION the studio still has to pay out, projected as settled
       // immediately; changing that timing is a product decision, not part of
       // this activation.
-      if (txManualRefund && txNeedsRefund && paymentRef && freshPayment) {
-        tx.update(paymentRef, { status: "refunded", razorpayRefundId: null, refundAmount: txPlan.refundPaise, refundedAt: now, updatedAt: now });
+      if (txManualRefund && txNeedsRefund && txPaymentRef && freshPayment) {
+        tx.update(txPaymentRef, { status: "refunded", razorpayRefundId: null, refundAmount: txPlan.refundPaise, refundedAt: now, updatedAt: now });
         if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && freshPayment.invoiceId) {
           tx.update(invoiceSnap.ref, { status: "void", voidedAt: now, voidedReason: `Booking cancelled: ${data.reason}`, updatedAt: now });
         }

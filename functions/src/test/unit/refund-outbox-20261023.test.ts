@@ -310,7 +310,7 @@ describe("adoptProcessedRefundEvidence + reconcile-only passes", () => {
 });
 
 describe("activation review fixes", () => {
-  it("pending accept persists the bound providerRefundId; later processed lookup + webhook adoption race yields exactly ONE ledger entry and ONE amount", async () => {
+  it("pending accept persists the bound providerRefundId; later processed lookup with webhook-adoption-first order yields exactly ONE ledger entry and ONE amount", async () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1", expectedBookingId: "b1", expectedJobId: "job1" });
@@ -347,7 +347,7 @@ describe("activation review fixes", () => {
     expect(r3).toEqual({ submitted: 0, projected: 0, failed: 0 });
   });
 
-  it("reverse race: runner projects first, webhook adoption then reports already_projected with no second ledger entry", async () => {
+  it("reverse order: runner projects first, webhook adoption then reports already_projected with no second ledger entry", async () => {
     const p = payment();
     const { db, data } = fakeFirestore(seed(p));
     await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
@@ -420,5 +420,30 @@ describe("activation review fixes", () => {
     await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "a" }))
       .rejects.toThrow(/manual refund obligation/);
     expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ claimedBy: "legacy-admin-cancel" });
+  });
+});
+
+describe("terminal cleanup ownership", () => {
+  it("a slow terminal-failure cleanup never deletes a NEWER reservation's guard or tombstone", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "first", createdBy: "admin1" });
+    // Force the first request into a failed-with-authoritative-absence path,
+    // but BEFORE its cleanup runs, a newer reservation owns guard + tombstone.
+    data["refundRequests"]!["rr_pay1_1"] = { ...(data["refundRequests"]!["rr_pay1_1"] as object), status: "ambiguous" };
+    data["refundRequests"]!["active_pay1"] = { paymentId: "pay1", requestId: "rr_pay1_2", createdAt: new Date().toISOString() };
+    // rr_pay1_2 is mid-submission under ANOTHER runner's fresh lease, so this
+    // pass leaves it untouched - isolating the cleanup-ownership assertion.
+    data["refundRequests"]!["rr_pay1_2"] = { ...(data["refundRequests"]!["rr_pay1_1"] as object), id: "rr_pay1_2", status: "submitting", leaseBy: "other-runner", leaseAt: new Date().toISOString() };
+    data["paymentEvents"]!["refund_pay1"] = { paymentId: "pay1", outboxRequestId: "rr_pay1_2", claimedBy: "refund-outbox", claimedAt: new Date().toISOString() };
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider.authoritativeNegatives = true; // provider confirms: rr_pay1_1 never landed
+    const r = await runRefundOutbox(db, provider as never);
+    expect(r.failed).toBe(1);
+    expect(data["refundRequests"]!["rr_pay1_1"]!["status"]).toBe("failed");
+    // The newer reservation's artifacts survive the older request's cleanup.
+    expect(data["refundRequests"]!["active_pay1"]).toMatchObject({ requestId: "rr_pay1_2" });
+    expect(data["refundRequests"]!["rr_pay1_2"]).toBeTruthy();
+    expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ outboxRequestId: "rr_pay1_2" });
   });
 });
