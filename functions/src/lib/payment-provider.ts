@@ -39,6 +39,7 @@ export type ProviderEventType =
   | "payment.link.paid"
   | "payment_link.paid" // documented Razorpay name
   | "refund.created"
+  | "refund.processed"
   | "refund.failed";
 
 export interface ProviderWebhookEvent {

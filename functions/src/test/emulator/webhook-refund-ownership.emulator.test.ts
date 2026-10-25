@@ -88,14 +88,16 @@ describe("webhook refund.created outbox ownership", () => {
     expect(pay.refundAmount).toBe(100000); // unchanged
   });
 
-  it("delayed webhook AFTER PARTIAL projection: payment partially_refunded -> ignored, never bumped to full", async () => {
+  it("delayed webhook AFTER PARTIAL projection: still outbox-owned, never bumped to full", async () => {
     const p = payment({ status: "partially_refunded" as never, refundAmount: 50000, razorpayRefundId: "rfnd_p" });
     await seedPayment(p);
     const reqId = await seedRequest(p, { amountPaise: 50000, status: "projected", providerRefundId: "rfnd_p" });
     const r = await processProviderEvent(db, refundEvent(p, { providerRefundReceipt: reqId, providerRefundId: "rfnd_p" }));
-    expect(r.outcome).toBe("ignored");
+    // Partial payments now continue to ownership evaluation (truthful partial
+    // accounting); ownership is durable, so the event is owned - zero writes.
+    expect(r.outcome).toBe("outbox_owned");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
-    expect(pay.status).toBe("partially_refunded");
+    expect((pay.status as string)).toBe("partially_refunded");
     expect(pay.refundAmount).toBe(50000);
   });
 
@@ -155,11 +157,13 @@ describe("webhook refund.created outbox ownership", () => {
     expect(r2.outcome).toBe("refund_pending");
     pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
-    // sequence: the SAME refund later arrives processed -> now it projects (new event id).
-    const r3 = await processProviderEvent(db, refundEvent(p2, { providerRefundStatus: "processed", providerRefundId: "rfnd_x" }));
+    // sequence: the SAME refund later arrives as a REAL refund.processed event
+    // -> now it projects with truthful accounting (new provider event id).
+    const r3 = await processProviderEvent(db, refundEvent(p2, { eventType: "refund.processed", providerRefundStatus: "processed", providerRefundId: "rfnd_x", providerRefundAmount: 100000 }));
     expect(r3.outcome).toBe("refunded");
     pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
     expect(pay.status).toBe("refunded");
+    expect(pay.refundAmount).toBe(100000);
   });
 
   it("legacy refunds (receipt refund_<paymentId>, no outbox request) keep the generic projection incl. invoice void", async () => {
@@ -172,6 +176,46 @@ describe("webhook refund.created outbox ownership", () => {
     expect(pay.status).toBe("refunded");
     const inv = (await db.collection(COLLECTIONS.invoices()).doc("inv1").get()).data() as { status: string };
     expect(inv.status).toBe("void"); // existing legacy obligation preserved
+  });
+
+  it("refund.processed: outbox-owned stays owned; unrelated projects truthfully across partials", async () => {
+    // Outbox-owned refund.processed: never generically projected.
+    const p = payment();
+    await seedPayment(p);
+    const reqId = await seedRequest(p, { amountPaise: 50000, status: "submitted", providerRefundId: "rfnd_o" });
+    const r = await processProviderEvent(db, refundEvent(p, { eventType: "refund.processed", providerRefundReceipt: reqId, providerRefundId: "rfnd_o", providerRefundAmount: 50000 }));
+    expect(r.outcome).toBe("outbox_owned");
+    let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+
+    // Unrelated dashboard PARTIAL refund via refund.processed: truthful amount,
+    // partial status, invoice NOT voided.
+    const p2 = payment({ invoiceId: "inv-pp" });
+    await seedPayment(p2);
+    await db.collection(COLLECTIONS.invoices()).doc("inv-pp").set({ id: "inv-pp", status: "issued" });
+    const r2 = await processProviderEvent(db, refundEvent(p2, { eventType: "refund.processed", providerRefundId: "rfnd_a", providerRefundAmount: 40000 }));
+    expect(r2.outcome).toBe("refunded");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
+    expect((pay.status as string)).toBe("partially_refunded");
+    expect(pay.refundAmount).toBe(40000); // truthful partial, NOT the payment amount
+    expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-pp").get()).data() as { status: string }).status).toBe("issued");
+    // A second partial event on the same payment accumulates to full -> now voids.
+    const r3 = await processProviderEvent(db, refundEvent(p2, { eventType: "refund.processed", providerRefundId: "rfnd_b", providerRefundAmount: 60000 }));
+    expect(r3.outcome).toBe("refunded");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
+    expect(pay.status).toBe("refunded");
+    expect(pay.refundAmount).toBe(100000);
+    expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-pp").get()).data() as { status: string }).status).toBe("void");
+
+    // A processed refund with NO refund-entity amount is incomplete evidence: held, zero writes.
+    const p3 = payment();
+    await seedPayment(p3);
+    const r4 = await processProviderEvent(db, refundEvent(p3, { eventType: "refund.processed", providerRefundAmount: null }));
+    expect(r4.outcome).toBe("refund_pending");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p3.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
   });
 
   it("outbox-owned refund NEVER voids the invoice (accounting hold stays with the runner)", async () => {

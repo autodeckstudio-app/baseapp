@@ -113,7 +113,7 @@ export async function processProviderEvent(
     // "payment_link.paid" is the name Razorpay actually documents and emits for payment links
     // (https://razorpay.com/docs/webhooks/payment-links); "payment.link.paid" is kept so any
     // endpoint already subscribed to the legacy name keeps working.
-    "payment.captured", "payment.link.paid", "payment_link.paid", "payment.failed", "refund.created",
+    "payment.captured", "payment.link.paid", "payment_link.paid", "payment.failed", "refund.created", "refund.processed",
   ];
   if (!handled.includes(ev.eventType)) {
     await eventRef.set({ eventType: ev.eventType, outcome: "ignored", processedAt: new Date().toISOString() }).catch(() => undefined);
@@ -247,9 +247,11 @@ export async function processProviderEvent(
       return "failed";
     }
 
-    // refund.created (e.g. refunded from the Razorpay dashboard rather than the admin app)
+    // refund.created / refund.processed (e.g. refunded from the Razorpay dashboard
+    // rather than the admin app). A partially refunded payment is NOT final: a later
+    // event for another partial on the same payment must still account truthfully.
     if (payment.status === "refunded") { record("already_final"); return "already_final"; }
-    if (payment.status !== "completed") { record("ignored"); return "ignored"; }
+    if (payment.status !== "completed" && (payment.status as string) !== "partially_refunded") { record("ignored"); return "ignored"; }
     // Refund-outbox ownership, checked BEFORE any generic projection and
     // durable across the outbox lifecycle: an outbox-created refund carries
     // our request id as the provider receipt, or matches a persisted
@@ -267,27 +269,41 @@ export async function processProviderEvent(
     // pending, failed or statusless refund.created is recorded and held for
     // reconciliation with zero financial writes.
     if (ev.providerRefundStatus !== "processed") { record("refund_pending"); return "refund_pending"; }
+    // Truthful amount: the refund entity's OWN amount is the money returned.
+    // A processed refund whose amount evidence is missing is incomplete -
+    // held (zero writes) for reconciliation, never defaulted to the payment
+    // amount.
+    const eventRefundAmount = ev.providerRefundAmount;
+    if (typeof eventRefundAmount !== "number" || eventRefundAmount <= 0) {
+      record("refund_pending");
+      return "refund_pending";
+    }
+    const totalRefunded = (payment.refundAmount ?? 0) + eventRefundAmount;
+    const fullyRefunded = totalRefunded >= payment.amount;
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
     const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
     const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;
     record("refunded");
-    // A refunded gift payment (done in the Razorpay dashboard) stops the code working, unless the wash was already used.
-    if (giftRefRefund && giftSnapRefund?.exists && (giftSnapRefund.data() as Gift).status !== "REDEEMED") {
+    // Invoice and gift obligations survive a PARTIAL refund: only a fully
+    // refunded payment voids them (preexisting full-refund obligation).
+    if (fullyRefunded && giftRefRefund && giftSnapRefund?.exists && (giftSnapRefund.data() as Gift).status !== "REDEEMED") {
       tx.update(giftRefRefund, { status: "REFUNDED", voidedAt: now, voidReason: "Payment refunded" });
       writeAuditLog(tx, { action: "gift.voided", entityType: "Gift", entityId: giftRefRefund.id, user, studioId: null, after: { reason: "payment_refunded" } });
     }
-    tx.update(paymentRef, { status: "refunded", razorpayRefundId: ev.providerRefundId, refundAmount: ev.amount || payment.amount,
+    tx.update(paymentRef, { status: fullyRefunded ? "refunded" : ("partially_refunded" as Payment["status"]),
+      razorpayRefundId: ev.providerRefundId, refundAmount: totalRefunded,
       refundedAt: now, providerEventId: ev.providerEventId, updatedAt: now });
-    if (payment.invoiceId && invSnap?.exists && (invSnap.data() as Invoice).status !== "void") {
+    if (fullyRefunded && payment.invoiceId && invSnap?.exists && (invSnap.data() as Invoice).status !== "void") {
       tx.update(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId), { status: "void", voidedAt: now,
         voidedReason: "Refunded via payment provider", updatedAt: now });
       writeAuditLog(tx, { action: "invoice.voided", entityType: "Invoice", entityId: payment.invoiceId, user, studioId: payment.studioId,
         after: { status: "void", reason: "refund" } });
     }
-    if (payment.jobId) tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), { paymentStatus: "refunded", updatedAt: now });
-    if (payment.bookingId) tx.update(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId), { paymentStatus: "refunded", updatedAt: now });
+    const settledStatus = fullyRefunded ? "refunded" : "partially_refunded";
+    if (payment.jobId) tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), { paymentStatus: settledStatus, updatedAt: now });
+    if (payment.bookingId) tx.update(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId), { paymentStatus: settledStatus, updatedAt: now });
     writeAuditLog(tx, { action: "payment.refunded", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
-      after: { status: "refunded", refundAmount: ev.amount || payment.amount, providerRefundId: ev.providerRefundId, via: "razorpay_webhook" } });
+      after: { status: settledStatus, refundAmount: totalRefunded, providerRefundId: ev.providerRefundId, via: "razorpay_webhook" } });
     return "refunded";
   });
 
