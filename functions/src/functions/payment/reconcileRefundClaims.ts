@@ -8,7 +8,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { isProductionProject } from "../../lib/environment.js";
 import { extractUser } from "../../middleware/auth.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
@@ -18,9 +17,6 @@ export const reconcileRefundClaims = onCall({ region: "asia-south1", secrets: ["
   const user = extractUser(request);
   if (!["admin", "superadmin"].includes(user.claims.role)) {
     throw new HttpsError("permission-denied", "Admin role required to reconcile refund claims.");
-  }
-  if (isProductionProject()) {
-    throw new HttpsError("failed-precondition", "Refund claim reconciliation is not wired to the live provider; held for deploy-time review.");
   }
   await enforceRateLimit(subjectFrom(user), "payment.refund");
   const result = await reconcileLegacyRefundClaims(getFirestore(), getPaymentProvider(), { tenantId: user.claims.tenantId, actor: user });

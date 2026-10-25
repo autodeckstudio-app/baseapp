@@ -18,7 +18,6 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { planReserveInTx, applyReserveInTx, runRefundOutbox } from "../../lib/refund-outbox.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
-import { isProductionProject } from "../../lib/environment.js";
 import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
 const adminCancelSchema = z.object({
@@ -109,9 +108,6 @@ export async function runCancel(
         "failed-precondition",
         "This Razorpay payment is missing its provider payment id, so its refund cannot be submitted or verified. The booking is NOT cancelled.",
       );
-    }
-    if (providerRefund && isProductionProject()) {
-      throw new HttpsError("unavailable", "Refunds on paid bookings are held for deploy-time activation review. The booking is NOT cancelled.");
     }
     const manualRefund = needsRefund && !providerRefund;
     let refundRequestId: string | null = null;

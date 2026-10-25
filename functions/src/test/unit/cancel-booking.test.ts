@@ -106,13 +106,13 @@ describe("guards on the server code", () => {
     // Single refund authority: provider refunds are RESERVED in the outbox
     // INSIDE the cancellation transaction (no standalone runnable
     // reservation); this callable never calls the provider, never releases a
-    // claim on an unknown outcome, holds malformed provider payments, and
-    // refuses in production while the runner refusal holds.
+    // claim on an unknown outcome, and holds malformed provider payments.
+    // Production activation: no environment gate remains in this callable.
     expect(s).toContain("planReserveInTx(tx, db, {");
     expect(s).toContain("applyReserveInTx(tx, reservePlan)");
     expect(s).toContain("amountPaise: plan.refundPaise");
     expect(s).not.toContain(".initiateRefund(");
-    expect(s).toContain("isProductionProject()");
+    expect(s).not.toContain("isProductionProject()");
     expect(s).toContain("The booking is NOT cancelled");
     expect(s).toContain("missing its provider payment id");
   });
