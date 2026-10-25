@@ -105,10 +105,6 @@ export async function reconcileRefundClaims(): Promise<ReconcileRefundClaimsOutp
 }
 
 /** Refund write actions (outbox run, claim reconciliation) are gated
- * server-side: both callables refuse with failed-precondition in the
- * production project until activation is separately reviewed and lifted.
- * The surface must not offer working-looking controls that are guaranteed
- * to error, so the actions render ENABLED only where the backend actually
- * executes them (emulator/dev builds) and disabled-with-reason elsewhere.
- * Listing/continue-scan stay enabled everywhere: they are read-only. */
-export const refundActionsEnabled = process.env["NEXT_PUBLIC_USE_FIREBASE_EMULATOR"] === "true";
+ * server-side: both callables execute against the live provider adapter.
+ * Controls stay explicit admin actions (click to run), never automatic. */
+export const refundActionsEnabled = true;

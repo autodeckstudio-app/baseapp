@@ -76,10 +76,11 @@ describe("admin refund recovery surface", () => {
     expect(page).toContain("setReconciling(false);");
     // unmount disposes the cycle so no late callback lands
     expect(page).toContain("cycle.dispose()");
-    // production truth: actions disabled with the activation-pending reason,
-    // enabled only where the backend actually executes (emulator/dev)
-    expect(service).toContain("refundActionsEnabled");
-    expect(service).toContain("failed-precondition");
+    // production truth post-activation: actions enabled, backend executes
+    // against the live provider adapter; panel keeps its prop-driven
+    // disabled-reason rendering for any future gate
+    expect(service).toContain("refundActionsEnabled = true");
+    expect(service).not.toContain("failed-precondition");
     expect(panel).toContain("actionsEnabled");
     expect(panel).toContain("Not yet activated in production - held for activation review");
     expect(panel).toContain("!p.actionsEnabled");
