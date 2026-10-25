@@ -301,8 +301,9 @@ export async function processProviderEvent(
       // ledger entry under this refund id binding a DIFFERENT amount or
       // currency is conflicting evidence - hold with zero writes, never
       // silently treat it as a duplicate of this event.
-      const prior = ledgerSnap.data() as { amountPaise?: unknown; currency?: unknown };
-      if (prior.amountPaise !== eventRefundAmount || prior.currency !== ev.providerRefundCurrency) {
+      const prior = ledgerSnap.data() as { amountPaise?: unknown; currency?: unknown; paymentId?: unknown; providerRefundId?: unknown };
+      if (prior.amountPaise !== eventRefundAmount || prior.currency !== ev.providerRefundCurrency ||
+          prior.paymentId !== payment.id || prior.providerRefundId !== ev.providerRefundId) {
         record("ownership_mismatch");
         return "ownership_mismatch";
       }
@@ -334,16 +335,35 @@ export async function processProviderEvent(
     const jobSnapRefund = jobRefRefund ? await tx.get(jobRefRefund) : null;
     const bookingRefRefund = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
     const bookingSnapRefund = bookingRefRefund ? await tx.get(bookingRefRefund) : null;
-    // Related documents must still belong to this payment's tenant before any
-    // of them is written: a stale or tampered linkage must never propagate a
-    // refund write into another tenant's invoice, gift, job or booking.
-    // Missing related docs are tolerated (they simply get no update); a
-    // present doc in a DIFFERENT tenant fails closed with zero writes.
+    // Related documents must still be the payment's OWN records before any of
+    // them is written. A doc the payment links to must exist (a dangling link
+    // means the linkage drifted), must sit in the payment's tenant, and must
+    // point back along the SAME linkage: a same-tenant invoice for another
+    // job or payment, a job on a different booking, or a gift bound to a
+    // different payment must never absorb this refund's writes. Any break
+    // fails closed with zero financial writes.
+    const inv = invSnap?.exists ? (invSnap.data() as Invoice) : null;
+    const gift = giftSnapRefund?.exists ? (giftSnapRefund.data() as Gift) : null;
+    const job = jobSnapRefund?.exists ? (jobSnapRefund.data() as ServiceJob) : null;
+    const booking = bookingSnapRefund?.exists ? (bookingSnapRefund.data() as Booking) : null;
     const relatedMismatch =
-      (invSnap?.exists && (invSnap.data() as Invoice).tenantId !== payment.tenantId) ||
-      (giftSnapRefund?.exists && (giftSnapRefund.data() as Gift).tenantId !== payment.tenantId) ||
-      (jobSnapRefund?.exists && (jobSnapRefund.data() as ServiceJob).tenantId !== payment.tenantId) ||
-      (bookingSnapRefund?.exists && (bookingSnapRefund.data() as Booking).tenantId !== payment.tenantId);
+      // A carried link must resolve: dangling invoiceId/giftId/jobId/bookingId.
+      (payment.invoiceId ? !inv : invSnap !== null && !inv) ||
+      (giftRefRefund ? !gift : false) ||
+      (jobRefRefund ? !job : false) ||
+      (bookingRefRefund ? !booking : false) ||
+      // Invoice: same tenant, same job, same booking (strict nullable), and
+      // if a payment is linked it must be THIS payment.
+      (inv ? inv.tenantId !== payment.tenantId || inv.jobId !== payment.jobId ||
+             (inv.bookingId ?? null) !== (payment.bookingId ?? null) ||
+             (inv.paymentId ?? null) !== null && inv.paymentId !== payment.id : false) ||
+      // Gift: same tenant, and if bound to a payment it must be THIS payment.
+      (gift ? gift.tenantId !== payment.tenantId ||
+              (gift.paymentId ?? null) !== null && gift.paymentId !== payment.id : false) ||
+      // Job: same tenant, same booking (strict nullable).
+      (job ? job.tenantId !== payment.tenantId || (job.bookingId ?? null) !== (payment.bookingId ?? null) : false) ||
+      // Booking: same tenant.
+      (booking ? booking.tenantId !== payment.tenantId : false);
     if (relatedMismatch) { record("related_mismatch"); return "related_mismatch"; }
     // Reads are all done; the ledger entry lands atomically with the writes.
     // Race safety comes from the in-transaction READ above: a concurrent

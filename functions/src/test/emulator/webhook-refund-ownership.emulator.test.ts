@@ -121,7 +121,7 @@ describe("webhook refund.created outbox ownership", () => {
     // Amount mismatch on THIS payment's own request: still fail-closed.
     const p2 = payment({ invoiceId: "inv-m" });
     await seedPayment(p2);
-    await db.collection(COLLECTIONS.invoices()).doc("inv-m").set({ id: "inv-m", tenantId: "t1", status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv-m").set({ id: "inv-m", tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: p.id, status: "issued" });
     const req2 = await seedRequest(p2, { amountPaise: 30000, status: "submitted" });
     const r2 = await processProviderEvent(db, refundEvent(p2, { providerRefundReceipt: req2, providerRefundAmount: 50000 }));
     expect(r2.outcome).toBe("ownership_mismatch");
@@ -148,7 +148,7 @@ describe("webhook refund.created outbox ownership", () => {
     // pending lifecycle
     const p = payment({ invoiceId: "inv-p" });
     await seedPayment(p);
-    await db.collection(COLLECTIONS.invoices()).doc("inv-p").set({ id: "inv-p", tenantId: "t1", status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv-p").set({ id: "inv-p", tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: p.id, status: "issued" });
     const r = await processProviderEvent(db, refundEvent(p, { providerRefundStatus: "pending" }));
     expect(r.outcome).toBe("refund_pending");
     let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
@@ -174,7 +174,7 @@ describe("webhook refund.created outbox ownership", () => {
   it("legacy refunds (receipt refund_<paymentId>, no outbox request) keep the generic projection incl. invoice void", async () => {
     const p = payment({ invoiceId: "inv1" });
     await seedPayment(p);
-    await db.collection(COLLECTIONS.invoices()).doc("inv1").set({ id: "inv1", tenantId: "t1", status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv1").set({ id: "inv1", tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: p.id, status: "issued" });
     const r = await processProviderEvent(db, refundEvent(p, { providerRefundReceipt: `refund_${p.id}`, providerRefundAmount: 100000 }));
     expect(r.outcome).toBe("refunded");
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
@@ -206,7 +206,7 @@ describe("webhook refund.created outbox ownership", () => {
     // partial status, invoice NOT voided.
     const p2 = payment({ invoiceId: "inv-pp" });
     await seedPayment(p2);
-    await db.collection(COLLECTIONS.invoices()).doc("inv-pp").set({ id: "inv-pp", tenantId: "t1", status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv-pp").set({ id: "inv-pp", tenantId: "t1", jobId: p2.jobId, bookingId: p2.bookingId ?? null, paymentId: p2.id, status: "issued" });
     const r2 = await processProviderEvent(db, refundEvent(p2, { eventType: "refund.processed", providerRefundId: "rfnd_a", providerRefundAmount: 40000 }));
     expect(r2.outcome).toBe("refunded");
     pay = (await db.collection(COLLECTIONS.payments()).doc(p2.id).get()).data() as Payment;
@@ -234,7 +234,7 @@ describe("webhook refund.created outbox ownership", () => {
   it("per-refund identity ledger: same refund across event types and duplicate deliveries counts ONCE", async () => {
     const p = payment({ invoiceId: "inv-led" });
     await seedPayment(p);
-    await db.collection(COLLECTIONS.invoices()).doc("inv-led").set({ id: "inv-led", tenantId: "t1", status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv-led").set({ id: "inv-led", tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: p.id, status: "issued" });
     // Same partial refund, first as refund.created with processed status...
     const r1 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_same", providerRefundAmount: 40000, providerRefundStatus: "processed" }));
     expect(r1.outcome).toBe("refunded");
@@ -258,7 +258,7 @@ describe("webhook refund.created outbox ownership", () => {
   it("bounds: over-captured, fractional, and currency-conflicting refunds write NOTHING", async () => {
     const p = payment({ invoiceId: "inv-b" });
     await seedPayment(p);
-    await db.collection(COLLECTIONS.invoices()).doc("inv-b").set({ id: "inv-b", tenantId: "t1", status: "issued" });
+    await db.collection(COLLECTIONS.invoices()).doc("inv-b").set({ id: "inv-b", tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: p.id, status: "issued" });
     // seed one truthful partial (40000)
     await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_p1", providerRefundAmount: 40000, providerRefundStatus: "processed" }));
     // over-captured: 40000 + 70000 > 100000 -> hold, zero writes (never capped, never full)
@@ -643,5 +643,67 @@ describe("webhook generic refund projection hardening (related-doc + prior-accou
     expect(s.ledgerExists).toBe(true);
     expect((s.job as { paymentStatus?: string }).paymentStatus).toBe("partially_refunded");
     expect((s.booking as { paymentStatus?: string }).paymentStatus).toBe("partially_refunded");
+  });
+});
+
+describe("webhook generic refund projection: strict related-doc linkage", () => {
+  it("same-tenant invoice linked to ANOTHER job: related_mismatch, invoice never voided", async () => {
+    const p = payment({ invoiceId: uid("inv") });
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.invoices()).doc(p.invoiceId!).set({ id: p.invoiceId, tenantId: "t1", jobId: uid("job"), bookingId: p.bookingId ?? null, paymentId: null, status: "issued" });
+    const r = await processProviderEvent(db, refundEvent(p, { providerRefundAmount: 100000 }));
+    expect(r.outcome).toBe("related_mismatch");
+    expect(((await db.collection(COLLECTIONS.invoices()).doc(p.invoiceId!).get()).data() as { status?: string }).status).toBe("issued");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+  });
+
+  it("invoice bound to a DIFFERENT payment: related_mismatch even when tenant and job agree", async () => {
+    const p = payment({ invoiceId: uid("inv") });
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.invoices()).doc(p.invoiceId!).set({ id: p.invoiceId, tenantId: "t1", jobId: p.jobId, bookingId: p.bookingId ?? null, paymentId: "pay_OTHER", status: "issued" });
+    const r = await processProviderEvent(db, refundEvent(p, { providerRefundAmount: 100000 }));
+    expect(r.outcome).toBe("related_mismatch");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+  });
+
+  it("same-tenant job on a DIFFERENT booking: related_mismatch, job and booking untouched", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).set({ id: p.jobId, tenantId: "t1", bookingId: uid("b"), paymentStatus: "paid" });
+    const r = await processProviderEvent(db, refundEvent(p, {}));
+    expect(r.outcome).toBe("related_mismatch");
+    expect(((await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).get()).data() as { paymentStatus?: string }).paymentStatus).toBe("paid");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+  });
+
+  it("dangling jobId (job doc missing): recorded related_mismatch hold, NOT a thrown update", async () => {
+    const p = payment();
+    await db.collection(COLLECTIONS.payments()).doc(p.id).set(p); // no job/booking docs at all
+    const r = await processProviderEvent(db, refundEvent(p, {}));
+    expect(r.outcome).toBe("related_mismatch");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? null).toBeNull();
+    expect((await db.collection(COLLECTIONS.paymentRefunds()).get()).size).toBe(0);
+  });
+
+  it("existing ledger under the same id but bound to a DIFFERENT payment: ownership_mismatch, ledger untouched", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${p.id}_rfnd_x`).set({
+      paymentId: "pay_OTHER", providerRefundId: "rfnd_x", amountPaise: 50000, currency: "INR",
+      source: "webhook", providerEventId: "evt_prior", createdAt: new Date().toISOString(),
+    });
+    const r = await processProviderEvent(db, refundEvent(p, {}));
+    expect(r.outcome).toBe("ownership_mismatch");
+    const ledger = (await db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${p.id}_rfnd_x`).get()).data() as { paymentId?: string };
+    expect(ledger.paymentId).toBe("pay_OTHER");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
   });
 });
