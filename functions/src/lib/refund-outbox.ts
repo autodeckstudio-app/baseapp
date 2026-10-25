@@ -261,9 +261,14 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       });
     }
     if (fresh.bookingId) {
+      // Requested -> processed: projection happens ONLY on exact provider
+      // "processed" evidence, so the booking now carries the real refunded
+      // amount and the provider refund id - never a planned figure.
       tx.update(db.collection(COLLECTIONS.bookings()).doc(fresh.bookingId), {
         paymentStatus: check.label === "refunded" ? "refunded" : "partial",
-        refundStatus: "initiated",
+        refundStatus: "processed",
+        refundedPaise: newRefunded,
+        refundId: fresh.providerRefundId ?? null,
         updatedAt: now,
       });
     }

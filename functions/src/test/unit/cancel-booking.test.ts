@@ -103,15 +103,18 @@ describe("guards on the server code", () => {
     expect(s).toContain('assertRole(user, "admin", "superadmin")');
     expect(s).toContain("enforceAppCheck: shouldEnforceAppCheck()");
     expect(s).toContain("data.preview");
-    // Single refund authority: provider refunds are RESERVED in the outbox;
-    // this callable never calls the provider, never releases a claim on an
-    // unknown outcome, and refuses in production while the runner refusal
-    // holds (no stranded reservations).
-    expect(s).toContain("reserveRefund(db, {");
+    // Single refund authority: provider refunds are RESERVED in the outbox
+    // INSIDE the cancellation transaction (no standalone runnable
+    // reservation); this callable never calls the provider, never releases a
+    // claim on an unknown outcome, holds malformed provider payments, and
+    // refuses in production while the runner refusal holds.
+    expect(s).toContain("planReserveInTx(tx, db, {");
+    expect(s).toContain("applyReserveInTx(tx, reservePlan)");
     expect(s).toContain("amountPaise: plan.refundPaise");
     expect(s).not.toContain(".initiateRefund(");
     expect(s).toContain("isProductionProject()");
     expect(s).toContain("The booking is NOT cancelled");
+    expect(s).toContain("missing its provider payment id");
   });
   it("the close-time auto-cancel records the fee and restores through the shared helper", () => {
     const s = src("lib/missed-bookings.ts");

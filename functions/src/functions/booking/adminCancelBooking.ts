@@ -16,7 +16,7 @@ import { extractUser, assertRole, assertTenant, assertStudio } from "../../middl
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { reserveRefund } from "../../lib/refund-outbox.js";
+import { planReserveInTx, applyReserveInTx } from "../../lib/refund-outbox.js";
 import { isProductionProject } from "../../lib/environment.js";
 import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
@@ -90,32 +90,30 @@ export async function runCancel(
     const paymentRef = completed[0]?.ref;
     const needsRefund = plan.refundPaise > 0 && !!payment && !!paymentRef;
 
-    // 1. Provider (Razorpay) refunds go through the refund outbox: the single
-    // refund authority. The reservation is claimed atomically here; the
-    // (emulator-gated) runner submits to the provider and projects the
-    // truthful result. No provider call happens in this callable, so a lost
-    // or ambiguous provider response can never double-submit or fabricate a
-    // completed refund. While the runner's production refusal holds, a
-    // cancellation that needs a provider refund refuses in production too -
-    // a reservation with no runner to drain it would strand the balance.
-    let refundRequestId: string | null = null;
-    if (needsRefund && payment && paymentRef && payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
-      if (isProductionProject()) {
-        throw new HttpsError("unavailable", "Refunds on paid bookings are held for deploy-time activation review. The booking is NOT cancelled.");
-      }
-      try {
-        ({ requestId: refundRequestId } = await reserveRefund(db, {
-          payment, amountPaise: plan.refundPaise, reason: data.reason, createdBy: user.uid,
-        }));
-      } catch (err) {
-        const why = err instanceof Error ? err.message : "Could not reserve the refund.";
-        throw new HttpsError("failed-precondition", `${why} The booking is NOT cancelled.`);
-      }
+    // 1. Decide the refund path. Provider (Razorpay) refunds go through the
+    // refund outbox: the single refund authority. The reservation is created
+    // INSIDE the cancellation transaction below (planReserveInTx +
+    // applyReserveInTx), so a refund can never survive for a booking that was
+    // not cancelled and a cancellation can never lose its refund reservation.
+    // A Razorpay payment missing its provider payment id is malformed: HOLD,
+    // never pretend an offline (manual) refund. While the runner's production
+    // refusal holds, a cancellation that needs a provider refund refuses in
+    // production too - a reservation with no runner to drain it would strand
+    // the balance. Cash/UPI/bank refunds settle outside the provider; the
+    // studio returns the money by hand and this records that obligation
+    // (deployed behavior, preserved explicitly by payment method).
+    const providerRefund = needsRefund && payment?.method === "razorpay_payment_link";
+    if (providerRefund && !payment?.razorpayPaymentId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This Razorpay payment is missing its provider payment id, so its refund cannot be submitted or verified. The booking is NOT cancelled.",
+      );
     }
-    // Cash/UPI/bank refunds settle outside the provider; the studio returns
-    // the money by hand and this records that obligation (deployed behavior,
-    // preserved - no provider involvement, no duplicate-money exposure).
-    const manualRefund = needsRefund && !refundRequestId;
+    if (providerRefund && isProductionProject()) {
+      throw new HttpsError("unavailable", "Refunds on paid bookings are held for deploy-time activation review. The booking is NOT cancelled.");
+    }
+    const manualRefund = needsRefund && !providerRefund;
+    let refundRequestId: string | null = null;
 
     // 3. Cancel everything in one transaction.
     await db.runTransaction(async (tx) => {
@@ -129,6 +127,23 @@ export async function runCancel(
       const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "completed"]).limit(10)) : null;
       const invoiceSnap = needsRefund && payment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
       const reads = await readCancelReads(tx, db, fresh, data.bookingId);
+
+      // Atomic refund reservation (provider payments only): planned and
+      // applied INSIDE this transaction, after fresh booking/job eligibility
+      // revalidation above. planReserveInTx re-reads the payment and its
+      // related records transactionally; a concurrent cancellation, job
+      // start, or payment change retries this transaction and refuses on the
+      // fresh state, so no standalone runnable reservation can survive a
+      // booking that was not cancelled.
+      if (providerRefund && paymentRef && payment) {
+        const reservePlan = await planReserveInTx(tx, db, {
+          payment, amountPaise: plan.refundPaise, reason: data.reason, createdBy: user.uid,
+        });
+        if (!reservePlan.ok) {
+          throw new HttpsError("failed-precondition", `${reservePlan.reason} The booking is NOT cancelled.`);
+        }
+        refundRequestId = applyReserveInTx(tx, reservePlan).requestId;
+      }
 
       for (const d of pays?.docs ?? []) {
         if (d.data()["status"] === "pending") tx.update(d.ref, { status: "cancelled", updatedAt: now });
@@ -173,7 +188,16 @@ export async function runCancel(
         user,
         studioId: booking.studioId,
         before: { status: fresh.status },
-        after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: plan.refundPaise, feeStatus: plan.feeStatus },
+        after: {
+          status: "CANCELLED",
+          cancellationReason: data.reason,
+          cancellationFeePaise: plan.feePaise,
+          // Truthful accounting: money RETURNED (manual, recorded now) vs
+          // money REQUESTED from the provider (projected later by the runner).
+          refundedPaise: manualRefund && needsRefund ? plan.refundPaise : 0,
+          ...(refundRequestId ? { refundRequestedPaise: plan.refundPaise } : {}),
+          feeStatus: plan.feeStatus,
+        },
         metadata: { cancelledBy: actor, refundRequestId },
       });
     });

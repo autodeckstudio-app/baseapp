@@ -33,8 +33,9 @@ describe("cancellation policy", () => {
     expect(run).toContain("cancellationTerms(");
     expect(run).not.toContain("isCancellableDay"); expect(run).not.toContain("until the day before");
     // Provider refunds route through the outbox reservation (single refund
-    // authority); the callable itself never submits to the provider.
-    expect(run).toContain("reserveRefund(db, {");
+    // authority), inside the cancellation transaction; the callable itself
+    // never submits to the provider.
+    expect(run).toContain("planReserveInTx(tx, db, {");
     expect(run).not.toContain("getPaymentProvider().initiateRefund");
     expect(run).toContain("the booking is NOT cancelled");
     expect(src).toContain("Work on your car has already started");

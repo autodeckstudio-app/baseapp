@@ -94,6 +94,12 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     expect(providerCalls).toBe(1); // exactly one provider submission end to end
     // The issued invoice is NEVER voided by the projection (credit-note hold).
     expect(((await db.collection(COLLECTIONS.invoices()).doc(invId).get()).data() as { status: string }).status).toBe("issued");
+    // Requested -> processed: the booking now carries the REAL amount and id.
+    const settled = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>;
+    expect(settled.refundStatus).toBe("processed");
+    expect(settled.refundedPaise).toBe(90000);
+    expect(settled.refundId).toBeTruthy();
+    expect(settled.refundRequestedPaise).toBe(90000);
 
     // Interlock: the legacy manual path refuses on the same payment.
     await expect(initiateRefund.run({ data: { paymentId: payId, reason: "second" }, auth: adminAuth() } as never))
@@ -127,7 +133,90 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     expect(reqs.empty).toBe(true); // no outbox involvement for manual money
   });
 
-  it("a reserve failure cancels NOTHING (booking stays live, no partial state)", async () => {
+  it("a malformed Razorpay payment (no provider payment id) HOLDS - never falls through to a fake manual refund", async () => {
+    const bookingId = uid("b"); const jobId = uid("job"); const payId = uid("pay");
+    await db.collection(COLLECTIONS.bookings()).doc(bookingId).set({
+      id: bookingId, tenantId: "t1", studioId: "s1", customerId: "c1", serviceId: "svc1",
+      status: "CONFIRMED", scheduledAt: new Date(Date.now() + 2 * 3600_000).toISOString(),
+      totalAmount: 100000, cancelCategories: [], paymentStatus: "paid",
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    await db.collection(COLLECTIONS.jobs()).doc(jobId).set({
+      id: jobId, tenantId: "t1", studioId: "s1", bookingId, status: "PENDING_VEHICLE",
+      paymentStatus: "paid", statusHistory: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    await db.collection(COLLECTIONS.payments()).doc(payId).set({
+      id: payId, tenantId: "t1", studioId: "s1", targetType: "job", jobId, bookingId,
+      membershipId: null, giftId: null, customerId: "c1", amount: 100000, currency: "INR",
+      method: "razorpay_payment_link", status: "completed", razorpayPaymentLinkId: "pl1",
+      razorpayPaymentId: null, razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
+      manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null,
+      completedAt: new Date().toISOString(), failedAt: null, cancelledAt: null, refundedAt: null,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    } as Payment);
+    await expect(runCancel(adminUser(), { bookingId, reason: "x", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/missing its provider payment id/);
+    const booking = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>;
+    expect(booking.status).toBe("CONFIRMED"); // NOT cancelled
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
+    expect(pay.status).toBe("completed"); // never marked refunded
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).get();
+    expect(reqs.empty).toBe(true);
+  });
+
+  it("barrier: a job that STARTS between the initial read and the commit refuses the cancel and leaves NO reservation, NO guard, NO provider call", { timeout: 30000 }, async () => {
+    const { bookingId, jobId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    const provider = new MockPaymentProvider();
+    let providerCalls = 0;
+    const realInit = provider.initiateRefund.bind(provider);
+    provider.initiateRefund = (async (...a: unknown[]) => { providerCalls++; return realInit(...(a as [])); }) as never;
+    // Interleave: work starts on the job AFTER runCancel's initial reads but
+    // BEFORE its cancellation transaction begins - the transaction's fresh
+    // revalidation must refuse, and nothing may survive. (Writing the job
+    // from outside an OPEN transaction would deadlock against its locks in
+    // the emulator, so the barrier fires before the transaction starts.)
+    const origRun = db.runTransaction.bind(db);
+    let interleaved = false;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (cb: (tx: never) => Promise<unknown>) => {
+      if (!interleaved) {
+        interleaved = true;
+        await db.collection(COLLECTIONS.jobs()).doc(jobId).update({ status: "IN_PROGRESS", updatedAt: new Date().toISOString() });
+      }
+      return origRun(cb);
+    };
+    await expect(runCancel(adminUser(), { bookingId, reason: "race", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/already started/);
+    (db as unknown as { runTransaction: unknown }).runTransaction = origRun;
+    expect(interleaved).toBe(true); // the barrier actually fired mid-transaction
+    const booking = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>;
+    expect(booking.status).toBe("CONFIRMED");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).get();
+    expect(reqs.empty).toBe(true); // no standalone runnable reservation
+    const out = await runRefundOutbox(db, provider, { limit: 10 });
+    expect(out).toMatchObject({ submitted: 0, projected: 0, failed: 0 });
+    expect(providerCalls).toBe(0);
+  });
+
+  it("double-tap: two concurrent cancels commit exactly ONE reservation and ONE cancellation", { timeout: 45000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    const provider = new MockPaymentProvider();
+    const [r1, r2] = await Promise.allSettled([
+      runCancel(adminUser(), { bookingId, reason: "tap1", feeAction: "waive" }, "admin"),
+      runCancel(adminUser(), { bookingId, reason: "tap2", feeAction: "waive" }, "admin"),
+    ]);
+    const ok = [r1, r2].filter((r) => r.status === "fulfilled");
+    expect(ok.length).toBe(1);
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).get();
+    expect(reqs.docs.filter((d) => d.id.startsWith("rr_")).length).toBe(1);
+    const out = await runRefundOutbox(db, provider, { limit: 10 });
+    expect(out).toMatchObject({ submitted: 1, projected: 1, failed: 0 });
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(100000); // exactly once
+  });
+
+  it("a reserve failure cancels NOTHING (booking stays live, no partial state)", { timeout: 30000 }, async () => {
     const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
     // Pre-claim via the legacy path's claim doc shape so the reservation refuses.
     await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).set({ paymentId: payId, claimedAt: new Date().toISOString() });
