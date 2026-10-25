@@ -18,8 +18,8 @@ const payment = (o: Record<string, unknown> = {}): Payment => ({
 
 const seed = (p: Payment) => ({
   payments: { [p.id]: p as unknown as Record<string, unknown> },
-  jobs: { job1: { id: "job1", paymentStatus: "paid" } },
-  bookings: { b1: { id: "b1", paymentStatus: "paid" } },
+  jobs: { job1: { id: "job1", tenantId: "t1", bookingId: "b1", paymentStatus: "paid" } },
+  bookings: { b1: { id: "b1", tenantId: "t1", paymentStatus: "paid" } },
 });
 
 describe("refund accounting", () => {

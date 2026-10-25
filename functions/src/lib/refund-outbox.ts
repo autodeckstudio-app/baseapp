@@ -17,7 +17,7 @@
 // refund (owner's accountant decides) — the runner never voids an invoice and
 // marks the hold explicitly instead.
 import type { Firestore } from "firebase-admin/firestore";
-import type { Payment } from "@autodeck/core";
+import type { Payment, ServiceJob, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import type { PaymentProvider } from "./payment-provider.js";
 import { verifyRefundAccounting } from "./refund-accounting.js";
@@ -194,7 +194,11 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
   await db.runTransaction(async (tx) => {
     const reqSnap = await tx.get(request.ref);
     const fresh = reqSnap.data() as RefundRequest | undefined;
-    if (!fresh || !fresh.projectionNeeded || fresh.status === "projected") return;
+    // Idempotent + monotonic: only a submitted/accepted request with a pending
+    // projection may project; anything else (already projected, failed, or a
+    // reopened hold) is left exactly as the newer state wrote it.
+    if (!fresh || !fresh.projectionNeeded) return;
+    if (fresh.status !== "submitted" && fresh.status !== "accepted") return;
     const paymentRef = db.collection(COLLECTIONS.payments()).doc(fresh.paymentId);
     const paySnap = await tx.get(paymentRef);
     if (!paySnap.exists) throw new Error(`payment ${fresh.paymentId} missing during refund projection`);
@@ -206,6 +210,22 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     if (payment.tenantId !== fresh.tenantId) throw new Error(`refund projection rejected: request tenant ${fresh.tenantId} != payment tenant ${payment.tenantId}`);
     if (fresh.jobId && payment.jobId !== fresh.jobId) throw new Error(`refund projection rejected: request job ${fresh.jobId} != payment job ${payment.jobId}`);
     if (fresh.bookingId && payment.bookingId !== fresh.bookingId) throw new Error(`refund projection rejected: request booking ${fresh.bookingId} != payment booking ${payment.bookingId}`);
+    // Related-record invariant: the actual job/booking documents must exist,
+    // belong to the same tenant as the payment, and agree on linkage - all
+    // read inside this transaction before any write.
+    if (fresh.jobId) {
+      const jobSnap = await tx.get(db.collection(COLLECTIONS.jobs()).doc(fresh.jobId));
+      if (!jobSnap.exists) throw new Error(`refund projection rejected: job ${fresh.jobId} missing`);
+      const job = jobSnap.data() as ServiceJob;
+      if (job.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: job ${fresh.jobId} tenant ${job.tenantId} != payment tenant ${payment.tenantId}`);
+      if (fresh.bookingId && job.bookingId !== fresh.bookingId) throw new Error(`refund projection rejected: job ${fresh.jobId} booking ${job.bookingId} != request booking ${fresh.bookingId}`);
+    }
+    if (fresh.bookingId) {
+      const bookingSnap = await tx.get(db.collection(COLLECTIONS.bookings()).doc(fresh.bookingId));
+      if (!bookingSnap.exists) throw new Error(`refund projection rejected: booking ${fresh.bookingId} missing`);
+      const booking = bookingSnap.data() as Booking;
+      if (booking.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: booking ${fresh.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`);
+    }
     const newRefunded = (payment.refundAmount ?? 0) + fresh.amountPaise;
     const check = verifyRefundAccounting({ capturedPaise: payment.amount, refundedPaise: newRefunded });
     if (!check.ok) throw new Error(`refund projection rejected: ${check.reason}`);
@@ -258,9 +278,10 @@ const SUBMIT_LEASE_STALE_MS = 10 * 60 * 1000;
 export async function runRefundOutbox(
   db: Firestore,
   provider: PaymentProvider,
-  opts: { limit?: number; tenantId?: string; runnerId?: string } = {},
+  opts: { limit?: number; tenantId?: string; runnerId?: string; leaseStaleMs?: number } = {},
 ): Promise<{ submitted: number; projected: number; failed: number }> {
   const limit = opts.limit ?? 10;
+  const leaseStaleMs = opts.leaseStaleMs ?? SUBMIT_LEASE_STALE_MS;
   const tenantId = opts.tenantId ?? null;
   const runnerId = opts.runnerId ?? `runner_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const open: Array<RefundRequest & { ref: FirebaseFirestore.DocumentReference }> = [];
@@ -272,6 +293,29 @@ export async function runRefundOutbox(
     if (open.length >= limit) break;
   }
   let submitted = 0, projected = 0, failed = 0;
+  // Leases THIS invocation won. A provider submit may only ever follow a claim
+  // won in this run - never a stored lease that merely matches our identity
+  // (two overlapping invocations from the same admin share runner identity).
+  const claimedThisRun = new Set<string>();
+
+  // Monotonic, transactional status transitions (D2/D3 race protection): a
+  // write lands only while the request is still in an expected from-state, so
+  // a slow or stale pass can never overwrite a newer state (e.g. resurrect a
+  // projected request back to ambiguous, or double-project). Returns whether
+  // THIS pass performed the transition; callers must not act on a lost race.
+  const transitionInTx = async (
+    request: RefundRequest & { ref: FirebaseFirestore.DocumentReference },
+    from: readonly RefundRequestStatus[],
+    patch: Record<string, unknown>,
+  ): Promise<boolean> => {
+    return db.runTransaction(async (tx) => {
+      const snap = await tx.get(request.ref);
+      const cur = snap.data() as RefundRequest | undefined;
+      if (!cur || !from.includes(cur.status)) return false;
+      tx.update(request.ref, patch);
+      return true;
+    });
+  };
 
   // Bound provider evidence for one request, or null when the stored
   // financial snapshot cannot ground an identity binding.
@@ -289,23 +333,33 @@ export async function runRefundOutbox(
     }
   };
   const holdAmbiguous = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, note: string, now: string) => {
-    await request.ref.update({ status: "ambiguous", leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
-    failed++;
+    const won = await transitionInTx(request, ["submitting", "submitted", "accepted", "ambiguous"],
+      { status: "ambiguous", leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
+    if (won) { request.status = "ambiguous"; failed++; }
+    return won;
   };
   const markSubmitted = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, providerRefundId: string, now: string) => {
-    await request.ref.update({ status: "submitted", providerRefundId, projectionNeeded: true, leaseBy: null, leaseAt: null, lastError: null, updatedAt: now });
-    request.status = "submitted";
-    request.providerRefundId = providerRefundId;
-    request.projectionNeeded = true;
-    submitted++;
+    const won = await transitionInTx(request, ["submitting", "submitted", "accepted", "ambiguous"],
+      { status: "submitted", providerRefundId, projectionNeeded: true, leaseBy: null, leaseAt: null, lastError: null, updatedAt: now });
+    if (won) {
+      request.status = "submitted";
+      request.providerRefundId = providerRefundId;
+      request.projectionNeeded = true;
+      submitted++;
+    }
+    return won;
   };
   const holdLifecycle = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, note: string, now: string) => {
     // Provider accepted the refund but has not reported it processed: hold as
     // submitted WITHOUT projectionNeeded; later passes reconcile via lookup.
-    await request.ref.update({ status: "submitted", projectionNeeded: false, leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
-    request.status = "submitted";
-    request.projectionNeeded = false;
-    submitted++;
+    const won = await transitionInTx(request, ["submitting"],
+      { status: "submitted", projectionNeeded: false, leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
+    if (won) {
+      request.status = "submitted";
+      request.projectionNeeded = false;
+      submitted++;
+    }
+    return won;
   };
 
   for (const request of open.slice(0, limit)) {
@@ -320,14 +374,15 @@ export async function runRefundOutbox(
         return true;
       });
       if (!claimed) continue; // another runner won the lease
+      claimedThisRun.add(request.id);
       request.status = "submitting";
       request.leaseBy = runnerId;
       request.leaseAt = now;
     }
-    if (request.status === "submitting" && request.leaseBy !== runnerId) {
+    if (request.status === "submitting" && !claimedThisRun.has(request.id)) {
       // Another runner's lease: fresh = in flight, leave it alone. Stale =
       // crashed runner: reconcile from provider evidence, never resubmit.
-      const stale = !request.leaseAt || (Date.parse(now) - Date.parse(request.leaseAt)) > SUBMIT_LEASE_STALE_MS;
+      const stale = !request.leaseAt || (Date.parse(now) - Date.parse(request.leaseAt)) > leaseStaleMs;
       if (!stale) continue;
       const lookup = await boundLookup(request);
       if (lookup.outcome === "found") {
@@ -340,7 +395,7 @@ export async function runRefundOutbox(
         continue;
       }
     }
-    if (request.status === "submitting" && request.leaseBy === runnerId) {
+    if (request.status === "submitting" && claimedThisRun.has(request.id)) {
       const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
       const payment = paySnap.data() as Payment | undefined;
       try {
@@ -381,9 +436,12 @@ export async function runRefundOutbox(
         } else if (lookup.outcome === "absent_confirmed") {
           // Authoritative negative under the provider's reconciliation
           // contract: the submit never landed. A real failure; balance releases.
-          await request.ref.update({ status: "failed", leaseBy: null, leaseAt: null, lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
-          await releaseGuard(db, request.paymentId);
-          failed++;
+          const won = await transitionInTx(request, ["submitting", "ambiguous"],
+            { status: "failed", leaseBy: null, leaseAt: null, lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
+          if (won) {
+            await releaseGuard(db, request.paymentId);
+            failed++;
+          }
           continue;
         } else {
           // Inconclusive: hold as ambiguous. Never resubmit, never release.
@@ -396,8 +454,9 @@ export async function runRefundOutbox(
       // Awaiting lifecycle evidence: reconcile via the bound lookup only.
       const lookup = await boundLookup(request);
       if (lookup.outcome === "found") {
-        await request.ref.update({ projectionNeeded: true, lastError: null, updatedAt: now });
-        request.projectionNeeded = true;
+        const won = await transitionInTx(request, ["submitted", "accepted"], { projectionNeeded: true, lastError: null, updatedAt: now });
+        if (won) request.projectionNeeded = true;
+        else continue;
       } else if (lookup.outcome === "failed_confirmed") {
         await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, now);
         continue;
@@ -413,12 +472,16 @@ export async function runRefundOutbox(
         await markSubmitted(request, lookup.providerRefundId, now);
       } else if (lookup.outcome === "failed_confirmed") {
         // Failure notification, not finality: keep the hold, refresh the evidence.
-        await request.ref.update({ status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
+        await transitionInTx(request, ["ambiguous"],
+          { status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
         continue;
       } else if (lookup.outcome === "absent_confirmed") {
-        await request.ref.update({ status: "failed", lastError: "provider confirms no such refund", updatedAt: now });
-        await releaseGuard(db, request.paymentId);
-        failed++;
+        const won = await transitionInTx(request, ["submitting", "ambiguous"],
+          { status: "failed", lastError: "provider confirms no such refund", updatedAt: now });
+        if (won) {
+          await releaseGuard(db, request.paymentId);
+          failed++;
+        }
         continue;
       } else {
         continue; // inconclusive: keep holding

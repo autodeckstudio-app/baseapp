@@ -40,8 +40,8 @@ function payment(o: Record<string, unknown> = {}): Payment {
 
 async function seedPayment(p: Payment) {
   await db.collection(COLLECTIONS.payments()).doc(p.id).set(p);
-  if (p.jobId) await db.collection(COLLECTIONS.jobs()).doc(p.jobId).set({ id: p.jobId, paymentStatus: "paid" });
-  if (p.bookingId) await db.collection(COLLECTIONS.bookings()).doc(p.bookingId).set({ id: p.bookingId, paymentStatus: "paid" });
+  if (p.jobId) await db.collection(COLLECTIONS.jobs()).doc(p.jobId).set({ id: p.jobId, tenantId: p.tenantId, bookingId: p.bookingId, paymentStatus: "paid" });
+  if (p.bookingId) await db.collection(COLLECTIONS.bookings()).doc(p.bookingId).set({ id: p.bookingId, tenantId: p.tenantId, paymentStatus: "paid" });
 }
 
 beforeEach(async () => {
@@ -427,5 +427,94 @@ describe("D-review corrections: concurrency, lifecycle, tenancy, integrity", () 
     const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
     expect(pay.status).toBe("completed");
     expect(pay.refundAmount ?? null).toBeNull();
+  });
+});
+
+describe("D-review round 2: lease identity, monotonic transitions, related-record invariant", () => {
+  it("D2c: two overlapping passes with the SAME runner identity still submit only once (claim-won gating)", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    let providerCalls = 0;
+    const provider = new MockPaymentProvider();
+    const counting = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: never) => { providerCalls++; await new Promise((r) => setTimeout(r, 50)); return MockPaymentProvider.prototype.initiateRefund.call(provider, params); },
+    });
+    // Same runnerId for both passes: identity match must NOT authorize a submit.
+    const [r1, r2] = await Promise.all([
+      runRefundOutbox(db, counting, { limit: 10, runnerId: "admin1:invocationA" }),
+      runRefundOutbox(db, counting, { limit: 10, runnerId: "admin1:invocationA" }),
+    ]);
+    expect(providerCalls).toBe(1);
+    expect(r1.submitted + r2.submitted).toBe(1);
+    expect(r1.projected + r2.projected).toBe(1);
+  });
+
+  it("D2d: slow original runner + stale-lease recovery converge to exactly one projection, no resurrection", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    // Original runner: slow provider call (response in flight while recovery happens).
+    const slow = Object.assign(Object.create(Object.getPrototypeOf(provider)), provider, {
+      initiateRefund: async (params: never) => { await new Promise((r) => setTimeout(r, 120)); return MockPaymentProvider.prototype.initiateRefund.call(provider, params); },
+    });
+    const original = runRefundOutbox(db, slow, { limit: 10, runnerId: "runner_ORIG" });
+    // Give the original time to win the lease and enter the provider call.
+    await new Promise((r) => setTimeout(r, 30));
+    // Recovery pass with a zero staleness window: treats the in-flight lease as crashed.
+    const recovery = await runRefundOutbox(db, provider, { limit: 10, runnerId: "runner_RECOVERY", leaseStaleMs: 0 });
+    const r1 = await original;
+    // The provider was called exactly once (recovery reconciled, never resubmitted)...
+    const reqs = await db.collection(COLLECTIONS.refundRequests()).where("paymentId", "==", p.id).get();
+    const req = reqs.docs.filter((d) => d.id === requestId)[0]!.data() as { status: string; providerRefundId: string | null };
+    expect(req.status).toBe("projected");
+    // ...and exactly one projection landed, regardless of which pass finished first.
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(p.amount);
+    expect(pay.status).toBe("refunded");
+    expect(r1.projected + recovery.projected).toBe(1);
+    expect(r1.submitted + recovery.submitted).toBeGreaterThanOrEqual(1);
+  });
+
+  it("D2e: a projected request is terminal - a late hold attempt cannot resurrect it", async () => {
+    const p = payment();
+    await seedPayment(p);
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "x", createdBy: "admin" });
+    const provider = new MockPaymentProvider();
+    await runRefundOutbox(db, provider, { limit: 10 });
+    const ref = db.collection(COLLECTIONS.refundRequests()).doc(requestId);
+    expect((await ref.get()).data()!["status"]).toBe("projected");
+    // A failing provider now (late failed notification after projection):
+    // no pass may move the request out of projected or touch the payment.
+    provider.setStoredRefundStatus(requestId, "failed");
+    const r = await runRefundOutbox(db, provider, { limit: 10 });
+    expect(r).toEqual({ submitted: 0, projected: 0, failed: 0 });
+    expect((await ref.get()).data()!["status"]).toBe("projected");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(p.amount);
+  });
+
+  it("D6b: a job from another tenant blocks projection even when ids line up", async () => {
+    const p = payment();
+    await seedPayment(p);
+    // Move the job doc to another tenant AFTER reservation.
+    const { requestId } = await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
+    await db.collection(COLLECTIONS.jobs()).doc(p.jobId!).update({ tenantId: "t2" });
+    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/tenant t2 != payment tenant t1/);
+    const req = (await db.collection(COLLECTIONS.refundRequests()).doc(requestId).get()).data() as { status: string };
+    expect(req.status).not.toBe("projected");
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+  });
+
+  it("D6c: a missing booking doc blocks projection", async () => {
+    const p = payment();
+    await seedPayment(p);
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin" });
+    await db.collection(COLLECTIONS.bookings()).doc(p.bookingId!).delete();
+    await expect(runRefundOutbox(db, new MockPaymentProvider(), { limit: 10 })).rejects.toThrow(/booking .* missing/);
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
   });
 });
