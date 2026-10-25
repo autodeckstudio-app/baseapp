@@ -48,7 +48,10 @@ async function seed(o: { method: string; amount?: number; scheduledInHrs?: numbe
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   } as Payment);
   await db.collection(COLLECTIONS.invoices()).doc(invId).set({
-    id: invId, tenantId: "t1", studioId: "s1", status: "issued", total: o.amount ?? 100000,
+    // Production-shaped issued invoice: full linkage on every axis.
+    id: invId, tenantId: "t1", studioId: "s1", jobId, bookingId, customerId: "c1",
+    vehicleId: "v1", paymentId: payId, invoiceNumber: "INV-TEST-1",
+    status: "issued", total: o.amount ?? 100000,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   });
   return { bookingId, jobId, payId, invId };
@@ -251,5 +254,176 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     expect(booking.status).toBe("CONFIRMED"); // untouched
     const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
     expect(pay.status).toBe("completed");
+  });
+});
+
+describe("cross-vintage interlock (old Oct-20 producer vs outbox reservation)", () => {
+  // Faithful simulation of the DEPLOYED Oct-20 producer's claim transaction
+  // (verified against the live console source): it reads the booking, the
+  // payment and the claim doc; refuses when the booking is already CANCELLED
+  // or the payment is no longer "completed" or a claim exists; else claims.
+  const legacyClaimTx = async (payId: string, bookingId: string) => {
+    const ref = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`);
+    const bookingRef = db.collection(COLLECTIONS.bookings()).doc(bookingId);
+    const paymentRef = db.collection(COLLECTIONS.payments()).doc(payId);
+    await db.runTransaction(async (tx) => {
+      const [b, p, ev] = await Promise.all([tx.get(bookingRef), tx.get(paymentRef), tx.get(ref)]);
+      if ((b.data() as { status?: string } | undefined)?.status === "CANCELLED") throw new Error("failed-precondition: This booking was just cancelled.");
+      if ((p.data() as { status?: string } | undefined)?.status !== "completed") throw new Error("failed-precondition: The payment changed. Reload and try again.");
+      if (ev.exists) throw new Error("already-exists: A refund has already been started for this payment.");
+      tx.set(ref, { paymentId: payId, claimedAt: new Date().toISOString(), claimedBy: "legacy-sim", bookingId, amount: 90000 });
+    });
+  };
+
+  it("legacy claim committed FIRST: the new cancellation refuses and neither cancels nor reserves nor submits", async () => {
+    const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    await legacyClaimTx(payId, bookingId);
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin"))
+      .rejects.toThrow(/manual refund obligation/);
+    const booking = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>;
+    expect(booking.status).toBe("CONFIRMED");
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+    expect((await db.collection(COLLECTIONS.refundRequests()).get()).size).toBe(0);
+  });
+
+  it("reservation committed FIRST: while the reservation is ACTIVE the legacy claim transaction conflicts onto the tombstone and aborts before any provider call; after projection the tombstone is released", async () => {
+    // Keep the refund pending at the provider so the reservation stays active
+    // (the tombstone's lifetime is the active window by design).
+    mockProvider.nextRefundStatus = "pending";
+    const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    const r = await runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin");
+    expect(r.success).toBe(true);
+    expect(mockProvider.initiateRefundCallCount).toBe(1); // the new drain exactly once
+    // The active reservation's tombstone carries the outbox marker.
+    const tomb = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).get()).data() as Record<string, unknown>;
+    expect(tomb).toMatchObject({ claimedBy: "refund-outbox" });
+    expect(typeof tomb.outboxRequestId).toBe("string");
+    // The legacy producer's claim transaction now aborts - on the CANCELLED
+    // booking read or on the tombstone's already-exists, both BEFORE any
+    // provider call. (Two independent layers of the interlock.)
+    await expect(legacyClaimTx(payId, bookingId)).rejects.toThrow(/already-exists|just cancelled/);
+    expect(mockProvider.initiateRefundCallCount).toBe(1); // unchanged: no second submission
+    // After the provider reports processed and a pass projects, the tombstone
+    // is released: the payment's own refunded status now blocks legacy paths,
+    // and later partial refunds of the same payment are not wedged.
+    mockProvider.setStoredRefundStatus((tomb.outboxRequestId as string), "processed");
+    const out = await runRefundOutbox(db, mockProvider, { limit: 10 });
+    expect(out.projected).toBe(1);
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).get()).exists).toBe(false);
+    expect(mockProvider.initiateRefundCallCount).toBe(1);
+  });
+});
+
+describe("payment mutations between preview read and commit", () => {
+  it("barrier: a payment that starts PROCESSING before the transaction refuses the cancel - no refund, no reservation", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    const origRun = db.runTransaction.bind(db);
+    let interleaved = false;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (cb: (tx: unknown) => Promise<unknown>) => {
+      if (!interleaved) {
+        interleaved = true;
+        await db.collection(COLLECTIONS.payments()).doc(payId).update({ status: "processing", updatedAt: new Date().toISOString() });
+      }
+      return origRun(cb);
+    };
+    await expect(runCancel(adminUser(), { bookingId, reason: "race", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/still processing/);
+    (db as unknown as { runTransaction: unknown }).runTransaction = origRun;
+    expect(interleaved).toBe(true);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+    expect((await db.collection(COLLECTIONS.refundRequests()).get()).empty).toBe(true);
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+  });
+
+  it("barrier: a SECOND completed payment appearing before the transaction refuses the cancel - never refunds the wrong captured amount", { timeout: 30000 }, async () => {
+    const { bookingId, jobId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    const origRun = db.runTransaction.bind(db);
+    let interleaved = false;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (cb: (tx: unknown) => Promise<unknown>) => {
+      if (!interleaved) {
+        interleaved = true;
+        await db.collection(COLLECTIONS.payments()).doc("pay_late").set({
+          id: "pay_late", tenantId: "t1", studioId: "s1", targetType: "job", jobId, bookingId,
+          membershipId: null, giftId: null, customerId: "c1", amount: 40000, currency: "INR",
+          method: "razorpay_payment_link", status: "completed", razorpayPaymentLinkId: "pl2",
+          razorpayPaymentId: "rzp_pay_2", razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
+          manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null,
+          completedAt: new Date().toISOString(), failedAt: null, cancelledAt: null, refundedAt: null,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        });
+      }
+      return origRun(cb);
+    };
+    await expect(runCancel(adminUser(), { bookingId, reason: "race", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/more than one payment/);
+    (db as unknown as { runTransaction: unknown }).runTransaction = origRun;
+    expect(interleaved).toBe(true);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+    expect((await db.collection(COLLECTIONS.refundRequests()).get()).empty).toBe(true);
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+  });
+});
+
+describe("refund ownership validation (both methods)", () => {
+  it("manual path: a same-tenant payment linked to a DIFFERENT booking refuses the cancel - no payment/invoice writes", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    await db.collection(COLLECTIONS.payments()).doc(payId).update({ bookingId: "bOTHER" });
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/no longer linked to this booking/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+    expect(((await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment).status).toBe("completed");
+  });
+
+  it("manual path: a foreign-studio payment refuses the cancel", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    await db.collection(COLLECTIONS.payments()).doc(payId).update({ studioId: "sFOREIGN" });
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/does not belong to this booking's studio/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+  });
+});
+
+describe("bounded overflow behavior", () => {
+  it("more than 10 payment records on the job fails closed", { timeout: 30000 }, async () => {
+    const { bookingId, jobId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    for (let n = 0; n < 11; n++) {
+      await db.collection(COLLECTIONS.payments()).doc(`pay_extra_${n}`).set({
+        id: `pay_extra_${n}`, tenantId: "t1", studioId: "s1", targetType: "job", jobId, bookingId,
+        membershipId: null, giftId: null, customerId: "c1", amount: 100, currency: "INR",
+        method: "cash", status: "pending", razorpayPaymentLinkId: null, razorpayPaymentId: null,
+        razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
+        manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null,
+        completedAt: null, failedAt: null, cancelledAt: null, refundedAt: null,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      });
+    }
+    await expect(runCancel(adminUser(), { bookingId, reason: "x reason", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/too many payment records/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+  });
+
+  it("a second job on the booking fails closed instead of silently picking one", { timeout: 30000 }, async () => {
+    const { bookingId, jobId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    await db.collection(COLLECTIONS.jobs()).doc("job_second").set({
+      id: "job_second", tenantId: "t1", studioId: "s1", bookingId, status: "PENDING_VEHICLE",
+      paymentStatus: "unpaid", statusHistory: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    await expect(runCancel(adminUser(), { bookingId, reason: "x reason", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/more than one job/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
+    void jobId;
+  });
+});
+
+describe("invoice binding", () => {
+  it("a same-tenant invoice linked to a different payment refuses the cancel", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    const paySnap = await db.collection(COLLECTIONS.payments()).doc(payId).get();
+    const invId = (paySnap.data() as Payment).invoiceId;
+    expect(invId).toBeTruthy();
+    await db.collection(COLLECTIONS.invoices()).doc(invId!).update({ paymentId: "payFOREIGN" });
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/does not belong to this payment/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
   });
 });
