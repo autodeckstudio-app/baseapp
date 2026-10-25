@@ -3,7 +3,7 @@
 // NOT for production use.
 import type {
   PaymentProvider,
-  RefundLookupResult,
+  RefundLookupResult, RefundBinding,
   CreatePaymentLinkParams,
   PaymentLinkResult,
   InitiateRefundParams,
@@ -73,10 +73,10 @@ export class MockPaymentProvider implements PaymentProvider {
   // Test hook: when set, initiateRefund "succeeds" server-side but the
   // response is lost (the ambiguous-submit case). The lookup still finds it.
   loseNextRefundResponse = false;
-  private submitted = new Map<string, RefundResult>();
+  private submitted = new Map<string, RefundResult & InitiateRefundParams>();
 
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
-    const result = { providerRefundId: this.mockRefundId(params.referenceId) };
+    const result = { providerRefundId: this.mockRefundId(params.referenceId), ...params };
     this.submitted.set(params.referenceId, result);
     if (this.loseNextRefundResponse) {
       this.loseNextRefundResponse = false;
@@ -90,9 +90,16 @@ export class MockPaymentProvider implements PaymentProvider {
   // model a provider whose reconciliation contract confirms absence.
   authoritativeNegatives = false;
 
-  async findRefundByReference(referenceId: string): Promise<RefundLookupResult> {
+  async findRefundByReference(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult> {
     const hit = this.submitted.get(referenceId);
-    if (hit) return { outcome: "found", providerRefundId: hit.providerRefundId };
+    // Bound like the real adapter: identity only when payment id, amount and
+    // currency all agree; a partial match is held as unknown, never attached.
+    if (hit && hit.providerPaymentId === binding.providerPaymentId
+        && hit.amount === binding.amountPaise
+        && ((hit as { currency?: string }).currency ?? "INR") === binding.currency) {
+      return { outcome: "found", providerRefundId: hit.providerRefundId };
+    }
+    if (hit) return { outcome: "unknown" };
     return this.authoritativeNegatives ? { outcome: "absent_confirmed" } : { outcome: "unknown" };
   }
 }

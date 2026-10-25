@@ -10,7 +10,7 @@ import type {
   PaymentLinkResult,
   InitiateRefundParams,
   RefundResult,
-  RefundLookupResult,
+  RefundLookupResult, RefundBinding,
   VerifyWebhookParams,
   ProviderWebhookEvent,
 } from "./payment-provider.js";
@@ -162,43 +162,46 @@ export class RazorpayProvider implements PaymentProvider {
 
   /**
    * Reconciles an ambiguous refund submit by our durable reference id, which
-   * initiateRefund sets as the Razorpay refund's receipt. Razorpay has no
-   * lookup-by-receipt; the account-wide list endpoint is paginated and its
-   * index freshness is not contractual, so a miss can NEVER be treated as
-   * authoritative absence (a committed refund could sit beyond the page or
-   * behind an index delay). Every miss is "unknown": the reservation stays
-   * held for manual reconciliation rather than releasing the balance.
+   * initiateRefund sets as the Razorpay refund's receipt. The query is scoped
+   * to OUR stored provider payment id and the match is bound to amount and
+   * currency, so identity never rests on the receipt field alone (receipts
+   * have no provider uniqueness contract). List freshness is still not
+   * contractual, so a miss can NEVER be treated as authoritative absence (a
+   * committed refund could sit beyond the page or behind an index delay).
+   * Every miss, ambiguity, or partial match is "unknown": the reservation
+   * stays held for manual reconciliation rather than releasing the balance.
    */
-  async findRefundByReference(referenceId: string): Promise<RefundLookupResult> {
-    // EVERY failure mode is inconclusive, never a thrown error and never
-    // authoritative absence: transport rejection, non-OK status, malformed
-    // JSON. The runner also catches, this is belt and braces at the boundary.
-    let data: { items?: Array<{ id?: string; receipt?: string | null }> };
+  async findRefundByReference(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult> {
+    // BOUND reconciliation. The query is scoped to OUR payment
+    // (/payments/{providerPaymentId}/refunds), anchoring identity to the
+    // stored provider payment id instead of an account-wide receipt scan.
+    // A match must then agree on receipt AND amount AND currency. Exactly one
+    // fully-bound match founds; every other shape is "unknown" and the hold
+    // stays held for manual reconciliation:
+    //  - zero matches: inconclusive (page/index lag), NEVER absent_confirmed;
+    //  - 2+ bound matches: ambiguous, never an arbitrary pick;
+    //  - a receipt match whose amount/currency disagrees: conflict-shaped,
+    //    treated as unknown (held) rather than attached or released;
+    //  - transport failure, non-OK status, malformed JSON: unknown.
+    let data: { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string }> };
     try {
-      const response = await fetch(`${this.baseUrl}/refunds?count=100`, {
-        headers: { Authorization: this.authHeader },
-      });
+      const response = await fetch(
+        `${this.baseUrl}/payments/${encodeURIComponent(binding.providerPaymentId)}/refunds?count=100`,
+        { headers: { Authorization: this.authHeader } },
+      );
       if (!response.ok) return { outcome: "unknown" };
-      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null }> };
+      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string }> };
     } catch {
       return { outcome: "unknown" };
     }
-    // receipt is a free-form merchant field with NO provider uniqueness
-    // contract. Zero matches is inconclusive (page/index lag); 2+ matches
-    // cannot identify WHICH refund is ours - arbitrarily picking the first
-    // could attach someone else's refund id. Only exactly one match founds.
-    //
-    // KNOWN LIMITATION (activation blocker, recorded from safety review):
-    // even one match on this first-100 page is not globally unique proof and
-    // is NOT bound to the intended payment/amount/currency. Before any
-    // production activation, reconciliation must verify owner-grounded
-    // identity - the refund's payment id against our stored providerPaymentId
-    // plus amount/currency - instead of receipt alone.
-    const matches = (data.items ?? []).filter((refund) => refund?.receipt === referenceId);
-    const only = matches.length === 1 ? matches[0] : null;
-    return only?.id
-      ? { outcome: "found", providerRefundId: only.id }
-      : { outcome: "unknown" };
+    const receiptMatches = (data.items ?? []).filter((refund) => refund?.receipt === referenceId);
+    const bound = receiptMatches.filter(
+      (refund) => refund?.amount === binding.amountPaise && refund?.currency === binding.currency,
+    );
+    if (bound.length === 1 && bound.length === receiptMatches.length && bound[0]?.id) {
+      return { outcome: "found", providerRefundId: bound[0].id };
+    }
+    return { outcome: "unknown" };
   }
 }
 

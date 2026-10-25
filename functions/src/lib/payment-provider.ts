@@ -33,6 +33,15 @@ export type RefundLookupResult =
   | { outcome: "absent_confirmed" }
   | { outcome: "unknown" };
 
+// Owner-grounded identity for a refund lookup: the stored provider payment id
+// anchors the query to OUR payment, and the refund must also match the exact
+// amount and currency we reserved. Receipt alone is never identity.
+export type RefundBinding = {
+  providerPaymentId: string;
+  amountPaise: number;
+  currency: string;
+};
+
 export interface VerifyWebhookParams {
   rawBody: string;
   signature: string;
@@ -90,5 +99,5 @@ export interface PaymentProvider {
    *    absence. Optional: a provider without a lookup contract leaves this
    *    undefined and every ambiguous hold awaits manual reconciliation.
    */
-  findRefundByReference?(referenceId: string): Promise<RefundLookupResult>;
+  findRefundByReference?(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult>;
 }

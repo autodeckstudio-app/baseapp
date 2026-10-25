@@ -250,8 +250,9 @@ export async function runRefundOutbox(
         // durable reference id — NEVER resubmit just because local state is
         // missing. A provider that cannot look up fails closed as "failed".
         let lookup: Awaited<ReturnType<NonNullable<PaymentProvider["findRefundByReference"]>>> = { outcome: "unknown" };
-        if (provider.findRefundByReference) {
-          try { lookup = await provider.findRefundByReference(request.id); } catch { lookup = { outcome: "unknown" }; }
+        if (provider.findRefundByReference && payment?.razorpayPaymentId) {
+          const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency ?? "INR" };
+          try { lookup = await provider.findRefundByReference(request.id, binding); } catch { lookup = { outcome: "unknown" }; }
         }
         if (lookup.outcome === "found") {
           await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
@@ -275,10 +276,15 @@ export async function runRefundOutbox(
       }
     }
     if (request.status === "ambiguous") {
-      // Reconcile an unresolved hold ONLY from provider evidence.
+      // Reconcile an unresolved hold ONLY from provider evidence, bound to the
+      // stored provider payment id + reserved amount/currency.
       if (!provider.findRefundByReference) continue;
       try {
-        const lookup = await provider.findRefundByReference(request.id);
+        const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
+        const payment = paySnap.data() as Payment | undefined;
+        if (!payment?.razorpayPaymentId) continue; // cannot bind: keep holding
+        const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency ?? "INR" };
+        const lookup = await provider.findRefundByReference(request.id, binding);
         if (lookup.outcome === "found") {
           await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
           request.status = "submitted";
