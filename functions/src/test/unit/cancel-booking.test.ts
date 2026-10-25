@@ -110,7 +110,7 @@ describe("guards on the server code", () => {
     // Production activation: no environment gate remains in this callable.
     expect(s).toContain("planReserveInTx(tx, db, {");
     expect(s).toContain("applyReserveInTx(tx, reservePlan)");
-    expect(s).toContain("amountPaise: plan.refundPaise");
+    expect(s).toContain("amountPaise: txPlan.refundPaise");
     expect(s).not.toContain(".initiateRefund(");
     expect(s).not.toContain("isProductionProject()");
     expect(s).toContain("The booking is NOT cancelled");

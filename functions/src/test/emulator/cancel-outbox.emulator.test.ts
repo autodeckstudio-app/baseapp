@@ -253,3 +253,53 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     expect(pay.status).toBe("completed");
   });
 });
+
+describe("cross-vintage interlock (old Oct-20 producer vs outbox reservation)", () => {
+  const legacyClaimTx = async (payId: string, bookingId: string) => {
+    // Faithful simulation of the deployed Oct-20 producer's claim transaction:
+    // read paymentEvents/refund_<payId>, throw already-exists if present, else set it.
+    const ref = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`);
+    await db.runTransaction(async (tx) => {
+      const ev = await tx.get(ref);
+      if (ev.exists) throw new Error("already-exists: A refund has already been started for this payment.");
+      tx.set(ref, { paymentId: payId, claimedAt: new Date().toISOString(), claimedBy: "legacy-sim", bookingId, amount: 90000 });
+    });
+  };
+
+  it("legacy claim committed FIRST: the new cancellation refuses and neither cancels nor reserves nor submits", async () => {
+    const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    await legacyClaimTx(payId, bookingId);
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin"))
+      .rejects.toThrow(/manual refund obligation/);
+    const booking = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>;
+    expect(booking.status).toBe("CONFIRMED");
+    expect(mockProvider.initiateRefundCallCount).toBe(0);
+    expect((await db.collection(COLLECTIONS.refundRequests()).get()).size).toBe(0);
+  });
+
+  it("reservation committed FIRST: while the reservation is ACTIVE the legacy claim transaction conflicts onto the tombstone and aborts before any provider call; after projection the tombstone is released", async () => {
+    // Keep the refund pending at the provider so the reservation stays active
+    // (the tombstone's lifetime is the active window by design).
+    mockProvider.nextRefundStatus = "pending";
+    const { bookingId, payId } = await seed({ method: "razorpay_payment_link", amount: 100000, scheduledInHrs: 2 });
+    const r = await runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin");
+    expect(r.success).toBe(true);
+    expect(mockProvider.initiateRefundCallCount).toBe(1); // the new drain exactly once
+    // The active reservation's tombstone carries the outbox marker.
+    const tomb = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).get()).data() as Record<string, unknown>;
+    expect(tomb).toMatchObject({ claimedBy: "refund-outbox" });
+    expect(typeof tomb.outboxRequestId).toBe("string");
+    // The legacy producer's claim transaction now aborts exactly as its
+    // already-exists guard would - BEFORE its provider call.
+    await expect(legacyClaimTx(payId, bookingId)).rejects.toThrow(/already-exists/);
+    expect(mockProvider.initiateRefundCallCount).toBe(1); // unchanged: no second submission
+    // After the provider reports processed and a pass projects, the tombstone
+    // is released: the payment's own refunded status now blocks legacy paths,
+    // and later partial refunds of the same payment are not wedged.
+    mockProvider.setStoredRefundStatus((tomb.outboxRequestId as string), "processed");
+    const out = await runRefundOutbox(db, mockProvider, { limit: 10 });
+    expect(out.projected).toBe(1);
+    expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).get()).exists).toBe(false);
+    expect(mockProvider.initiateRefundCallCount).toBe(1);
+  });
+});

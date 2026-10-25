@@ -87,7 +87,7 @@ export async function activeReservation(db: Firestore, paymentId: string): Promi
  * when the request reaches a terminal state (projected or failed).
  */
 export type ReservePlan =
-  | { ok: true; guardRef: FirebaseFirestore.DocumentReference; requestRef: FirebaseFirestore.DocumentReference; guard: Record<string, unknown>; request: RefundRequest }
+  | { ok: true; guardRef: FirebaseFirestore.DocumentReference; requestRef: FirebaseFirestore.DocumentReference; guard: Record<string, unknown>; request: RefundRequest; legacyClaimRef: FirebaseFirestore.DocumentReference; legacyClaim: Record<string, unknown> }
   | { ok: false; reason: string; code: "same_reservation" | "conflict" | "invalid" };
 
 /**
@@ -99,7 +99,7 @@ export type ReservePlan =
 export async function planReserveInTx(
   tx: FirebaseFirestore.Transaction,
   db: Firestore,
-  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string },
+  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string; expectedBookingId?: string | null; expectedJobId?: string | null },
 ): Promise<ReservePlan> {
   const amount = Math.round(i.amountPaise);
   if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)", code: "invalid" };
@@ -111,6 +111,16 @@ export async function planReserveInTx(
   const payment = freshSnap.data() as Payment;
   if (payment.tenantId !== i.payment.tenantId) {
     return { ok: false, code: "invalid", reason: `payment ${i.payment.id} tenant does not match the caller's payment` };
+  }
+  // Exact context binding: the fresh payment must still belong to the very
+  // booking/job the caller is acting on. A payment re-linked to a different
+  // same-tenant booking since the caller's snapshot is a STOP, not a hint to
+  // refund whoever the payment points at now.
+  if (i.expectedBookingId !== undefined && payment.bookingId !== i.expectedBookingId) {
+    return { ok: false, code: "invalid", reason: `payment ${payment.id} is no longer linked to booking ${i.expectedBookingId} (now ${payment.bookingId ?? "none"})` };
+  }
+  if (i.expectedJobId !== undefined && payment.jobId !== i.expectedJobId) {
+    return { ok: false, code: "invalid", reason: `payment ${payment.id} is no longer linked to job ${i.expectedJobId} (now ${payment.jobId ?? "none"})` };
   }
   const refundable = refundablePaise(payment);
   if (amount > refundable) {
@@ -138,8 +148,8 @@ export async function planReserveInTx(
   // Transactional reads: a losing racer's snapshot conflicts with the
   // winner's guard create, retries, and then sees the guard here.
   // A manual-refund obligation (admin cancel with no provider id) claims refund_<paymentId>: never open a provider refund on top of it.
-  const manualClaim = await tx.get(db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payment.id}`));
-  if (manualClaim.exists) return { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
+  const legacyClaimRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payment.id}`);
+  const manualClaim = await tx.get(legacyClaimRef);
   const guardSnap = await tx.get(guardRef);
   const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", payment.id));
   const active = allSnap.docs
@@ -150,6 +160,17 @@ export async function planReserveInTx(
     const same = !!active && active.paymentId === payment.id && active.amountPaise === amount && active.reason === i.reason && (active.status === "reserved" || active.status === "submitted" || active.status === "accepted");
     const id = active?.id ?? (guardSnap.data() as { requestId?: string } | undefined)?.requestId ?? "unknown";
     return { ok: false, code: same ? "same_reservation" : "conflict", reason: `payment ${payment.id} already has an active refund request (${id})` };
+  }
+  // Evaluated AFTER the active-reservation check so the more specific live
+  // conflict wins: an outbox tombstone with a live reservation reports the
+  // reservation; a tombstone surviving a completed projection is a permanent
+  // dedup marker (legacy claim semantics); an unmarked doc is a true legacy
+  // manual-refund claim.
+  if (manualClaim.exists) {
+    const marker = (manualClaim.data() as { outboxRequestId?: string } | undefined)?.outboxRequestId;
+    return marker
+      ? { ok: false, code: "conflict", reason: `payment ${payment.id} already has a completed outbox refund (${marker})` }
+      : { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
   }
   // Count only real rr_* requests (never the transient guard) so ids stay
   // unique even after a guard is released on a terminal request.
@@ -174,19 +195,29 @@ export async function planReserveInTx(
     createdAt: now,
     updatedAt: now,
   };
-  return { ok: true, guardRef, requestRef: requestsCol(db).doc(requestId), guard: { paymentId: payment.id, requestId, createdAt: now }, request };
+  // Cross-vintage interlock: the legacy producer's exclusivity token was this
+  // paymentEvents/refund_<paymentId> doc, claimed inside its own transaction.
+  // Creating it HERE, in the same transaction as the reservation, makes an
+  // in-flight legacy invocation conflict-retry onto this doc and abort with
+  // already-exists BEFORE its provider call - and this read above refuses a
+  // reservation whenever the legacy claim landed first. The marker lets the
+  // legacy-claim reconciler skip outbox-owned tombstones and lets a terminal
+  // release delete only our own.
+  const legacyClaim = { paymentId: payment.id, outboxRequestId: requestId, claimedBy: "refund-outbox", claimedAt: now, bookingId: payment.bookingId ?? null, amountPaise: amount };
+  return { ok: true, guardRef, requestRef: requestsCol(db).doc(requestId), guard: { paymentId: payment.id, requestId, createdAt: now }, request, legacyClaimRef, legacyClaim };
 }
 
 /** WRITE phase: only after every read of the transaction is done. */
 export function applyReserveInTx(tx: FirebaseFirestore.Transaction, plan: Extract<ReservePlan, { ok: true }>): { requestId: string } {
   tx.create(plan.guardRef, plan.guard);
   tx.create(plan.requestRef, plan.request);
+  tx.create(plan.legacyClaimRef, plan.legacyClaim);
   return { requestId: plan.request.id };
 }
 
 export async function reserveRefund(
   db: Firestore,
-  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string },
+  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string; expectedBookingId?: string | null; expectedJobId?: string | null },
 ): Promise<{ requestId: string }> {
   return db.runTransaction(async (tx) => {
     const plan = await planReserveInTx(tx, db, i);
@@ -195,9 +226,17 @@ export async function reserveRefund(
   });
 }
 
-/** Terminal release of the active-reservation guard (projected / failed). */
+/** Terminal release of the active-reservation guard (failed only; projection keeps its tombstone as the permanent dedup marker, matching legacy claim semantics). */
 async function releaseGuard(db: Firestore, paymentId: string): Promise<void> {
   await requestsCol(db).doc(`active_${paymentId}`).delete().catch(() => undefined);
+  // Release our cross-vintage tombstone too - but ONLY one this system
+  // created (outboxRequestId marker). A true legacy claim is never deleted
+  // here: it belongs to the legacy-claim reconciler.
+  const tombRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentId}`);
+  const tomb = await tombRef.get().catch(() => null);
+  if (tomb?.exists && (tomb.data() as { outboxRequestId?: string }).outboxRequestId) {
+    await tombRef.delete().catch(() => undefined);
+  }
 }
 
 /**
@@ -291,6 +330,11 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     // reopened hold) is left exactly as the newer state wrote it.
     if (!fresh || !fresh.projectionNeeded) return false;
     if (fresh.status !== "submitted" && fresh.status !== "accepted") return false;
+    // Identity before money: a projection without the bound provider refund id
+    // would write a null-identity ledger entry and silently skip the per-refund
+    // cross-path dedup below. Hold instead (the caller turns this into a
+    // visible ambiguous hold, never a crash).
+    if (!fresh.providerRefundId) throw new Error("refund projection rejected: request has no bound provider refund id");
     const paymentRef = db.collection(COLLECTIONS.payments()).doc(fresh.paymentId);
     const paySnap = await tx.get(paymentRef);
     if (!paySnap.exists) throw new Error(`payment ${fresh.paymentId} missing during refund projection`);
@@ -318,6 +362,16 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       const booking = bookingSnap.data() as Booking;
       if (booking.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: booking ${fresh.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`);
     }
+    // Cross-vintage tombstone lifecycle: read BEFORE any write in this
+    // transaction. The tombstone exists to exclude the legacy producer while
+    // this reservation is ACTIVE; once the projection commits, the payment's
+    // own refunded/partially_refunded status blocks the legacy producer, so
+    // the tombstone is released with the guard - otherwise it would wedge
+    // legitimate later partial refunds of the same payment.
+    const tombRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payment.id}`);
+    const tombSnap = await tx.get(tombRef);
+    const releaseTombstone = tombSnap.exists
+      && (tombSnap.data() as { outboxRequestId?: string }).outboxRequestId === fresh.id;
     // Cross-path per-refund identity: if this provider refund was already
     // accounted by another path (webhook generic, legacy handler), project
     // nothing and hold - the same money must never be counted twice.
@@ -372,6 +426,7 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });
     tx.delete(db.collection(COLLECTIONS.refundRequests()).doc(`active_${fresh.paymentId}`));
+    if (releaseTombstone) tx.delete(tombRef);
     return true;
   });
 }
@@ -487,11 +542,14 @@ export async function runRefundOutbox(
     }
     return won;
   };
-  const holdLifecycle = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, note: string, now: string) => {
+  const holdLifecycle = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, providerRefundId: string, note: string, now: string) => {
     // Provider accepted the refund but has not reported it processed: hold as
     // submitted WITHOUT projectionNeeded; later passes reconcile via lookup.
+    // The bound providerRefundId is persisted NOW: without it a later
+    // projection would write a ledger entry with a null identity, defeating
+    // the per-refund cross-path dedup.
     const won = await transitionInTx(request, ["submitting"],
-      { status: "submitted", projectionNeeded: false, leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
+      { status: "submitted", providerRefundId, projectionNeeded: false, leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
     if (won) {
       request.status = "submitted";
       request.projectionNeeded = false;
@@ -605,7 +663,7 @@ export async function runRefundOutbox(
             await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, now);
             continue;
           } else {
-            await holdLifecycle(request, `provider accepted refund ${result.providerRefundId} with status '${result.status ?? "unknown"}'; awaiting processed evidence`, now);
+            await holdLifecycle(request, result.providerRefundId, `provider accepted refund ${result.providerRefundId} with status '${result.status ?? "unknown"}'; awaiting processed evidence`, now);
             continue;
           }
         }
@@ -641,8 +699,8 @@ export async function runRefundOutbox(
       // Awaiting lifecycle evidence: reconcile via the bound lookup only.
       const lookup = await boundLookup(request);
       if (lookup.outcome === "found") {
-        const won = await transitionInTx(request, ["submitted", "accepted"], { projectionNeeded: true, lastError: null, updatedAt: now });
-        if (won) request.projectionNeeded = true;
+        const won = await transitionInTx(request, ["submitted", "accepted"], { projectionNeeded: true, providerRefundId: lookup.providerRefundId, lastError: null, updatedAt: now });
+        if (won) { request.projectionNeeded = true; request.providerRefundId = lookup.providerRefundId; }
         else continue;
       } else if (lookup.outcome === "failed_confirmed") {
         await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, now);

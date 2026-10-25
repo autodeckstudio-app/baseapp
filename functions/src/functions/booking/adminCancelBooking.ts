@@ -113,6 +113,8 @@ export async function runCancel(
     let refundRequestId: string | null = null;
 
     // 3. Cancel everything in one transaction.
+    interface CommittedPlan { feePaise: number; feeStatus: string; refundPaise: number; paidPaise: number; policyFeePaise: number; manualRefund: boolean }
+    const planBox: { committed: CommittedPlan | null } = { committed: null };
     await db.runTransaction(async (tx) => {
       const fresh = (await tx.get(bookingRef)).data() as Booking | undefined;
       if (!fresh) throw new HttpsError("not-found", "Booking not found.");
@@ -122,7 +124,31 @@ export async function runCancel(
       const j = jobDoc?.data() as ServiceJob | undefined;
       if (j && !CANCELLABLE_JOB.includes(j.status)) throw new HttpsError("failed-precondition", "Work has already started on this job.");
       const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "completed"]).limit(10)) : null;
-      const invoiceSnap = needsRefund && payment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
+      // Fresh financial truth INSIDE the transaction: the pre-transaction
+      // plan was computed from a snapshot that a retry or a concurrent write
+      // can stale. Terms, fee and refund sizing are recomputed here from the
+      // fresh booking and the fresh payment document; nothing financial is
+      // sized from the caller's pre-transaction reads.
+      const freshPaymentSnap = paymentRef ? await tx.get(paymentRef) : null;
+      const freshPayment = freshPaymentSnap?.exists ? (freshPaymentSnap.data() as Payment) : undefined;
+      let txCategories = fresh.cancelCategories ?? [];
+      if (!txCategories.length) {
+        const svcSnap = await tx.get(db.collection(COLLECTIONS.services()).doc(fresh.serviceId));
+        txCategories = svcSnap.exists ? [String((svcSnap.data() as { category?: string }).category ?? "")] : [];
+      }
+      const txTerms = cancellationTerms({ categories: txCategories, totalPaise: fresh.totalAmount, scheduledAtMs: Date.parse(fresh.scheduledAt), nowMs: Date.now() });
+      const txPlan = planRefund({ paidPaise: freshPayment?.amount ?? 0, feePaise: txTerms.feePaise, waive: data.feeAction === "waive" });
+      const txNeedsRefund = txPlan.refundPaise > 0 && !!freshPayment && !!paymentRef;
+      const txProviderRefund = txNeedsRefund && freshPayment?.method === "razorpay_payment_link";
+      const txManualRefund = txNeedsRefund && !txProviderRefund;
+      if (txProviderRefund && !freshPayment?.razorpayPaymentId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This Razorpay payment is missing its provider payment id, so its refund cannot be submitted or verified. The booking is NOT cancelled.",
+        );
+      }
+      planBox.committed = { feePaise: txPlan.feePaise, feeStatus: txPlan.feeStatus, refundPaise: txPlan.refundPaise, paidPaise: txPlan.paidPaise, policyFeePaise: txTerms.feePaise, manualRefund: txManualRefund };
+      const invoiceSnap = txNeedsRefund && freshPayment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(freshPayment.invoiceId)) : null;
       const reads = await readCancelReads(tx, db, fresh, data.bookingId);
 
       // Atomic refund reservation (provider payments only): planned and
@@ -131,10 +157,13 @@ export async function runCancel(
       // related records transactionally; a concurrent cancellation, job
       // start, or payment change retries this transaction and refuses on the
       // fresh state, so no standalone runnable reservation can survive a
-      // booking that was not cancelled.
-      if (providerRefund && paymentRef && payment) {
+      // booking that was not cancelled. The expected booking/job binding
+      // pins the refund to THIS cancellation: a payment re-linked elsewhere
+      // since the snapshot is a refusal, never a redirect.
+      if (txProviderRefund && paymentRef && freshPayment) {
         const reservePlan = await planReserveInTx(tx, db, {
-          payment, amountPaise: plan.refundPaise, reason: data.reason, createdBy: user.uid,
+          payment: freshPayment, amountPaise: txPlan.refundPaise, reason: data.reason, createdBy: user.uid,
+          expectedBookingId: data.bookingId, expectedJobId: jobDoc?.id ?? null,
         });
         if (!reservePlan.ok) {
           throw new HttpsError("failed-precondition", `${reservePlan.reason} The booking is NOT cancelled.`);
@@ -147,9 +176,15 @@ export async function runCancel(
       }
       writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by ${actor}: ${data.bookingId}`);
 
-      if (manualRefund && needsRefund && paymentRef && payment) {
-        tx.update(paymentRef, { status: "refunded", razorpayRefundId: null, refundAmount: plan.refundPaise, refundedAt: now, updatedAt: now });
-        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && payment.invoiceId) {
+      // Cash/UPI/bank (manual) refunds: deployed behavior preserved - the
+      // studio settles these outside the provider by hand, and this records
+      // the money as returned at cancel time. CAVEAT kept explicit: this is
+      // an OBLIGATION the studio still has to pay out, projected as settled
+      // immediately; changing that timing is a product decision, not part of
+      // this activation.
+      if (txManualRefund && txNeedsRefund && paymentRef && freshPayment) {
+        tx.update(paymentRef, { status: "refunded", razorpayRefundId: null, refundAmount: txPlan.refundPaise, refundedAt: now, updatedAt: now });
+        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && freshPayment.invoiceId) {
           tx.update(invoiceSnap.ref, { status: "void", voidedAt: now, voidedReason: `Booking cancelled: ${data.reason}`, updatedAt: now });
         }
       }
@@ -160,7 +195,7 @@ export async function runCancel(
       if (jobDoc && j) {
         tx.update(jobDoc.ref, {
           status: "CANCELLED",
-          ...(manualRefund && needsRefund ? { paymentStatus: "refunded" } : {}),
+          ...(txManualRefund && txNeedsRefund ? { paymentStatus: "refunded" } : {}),
           statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled by admin: ${data.reason}` }],
           updatedAt: now,
         });
@@ -170,12 +205,12 @@ export async function runCancel(
         cancelledAt: now,
         cancelledBy: actor,
         cancellationReason: data.reason,
-        cancellationFeePaise: plan.feePaise,
-        ...(plan.feeStatus !== "none" ? { cancellationFeeStatus: plan.feeStatus } : {}),
-        ...(plan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
-        refundedPaise: manualRefund && needsRefund ? plan.refundPaise : 0,
-        ...(manualRefund && needsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: null } : {}),
-        ...(refundRequestId ? { refundStatus: "requested", refundRequestId, refundRequestedPaise: plan.refundPaise } : {}),
+        cancellationFeePaise: txPlan.feePaise,
+        ...(txPlan.feeStatus !== "none" ? { cancellationFeeStatus: txPlan.feeStatus } : {}),
+        ...(txPlan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
+        refundedPaise: txManualRefund && txNeedsRefund ? txPlan.refundPaise : 0,
+        ...(txManualRefund && txNeedsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: null } : {}),
+        ...(refundRequestId ? { refundStatus: "requested", refundRequestId, refundRequestedPaise: txPlan.refundPaise } : {}),
         updatedAt: now,
       });
       writeAuditLog(tx, {
@@ -188,12 +223,12 @@ export async function runCancel(
         after: {
           status: "CANCELLED",
           cancellationReason: data.reason,
-          cancellationFeePaise: plan.feePaise,
+          cancellationFeePaise: txPlan.feePaise,
           // Truthful accounting: money RETURNED (manual, recorded now) vs
           // money REQUESTED from the provider (projected later by the runner).
-          refundedPaise: manualRefund && needsRefund ? plan.refundPaise : 0,
-          ...(refundRequestId ? { refundRequestedPaise: plan.refundPaise } : {}),
-          feeStatus: plan.feeStatus,
+          refundedPaise: txManualRefund && txNeedsRefund ? txPlan.refundPaise : 0,
+          ...(refundRequestId ? { refundRequestedPaise: txPlan.refundPaise } : {}),
+          feeStatus: txPlan.feeStatus,
         },
         metadata: { cancelledBy: actor, refundRequestId },
       });
@@ -221,7 +256,10 @@ export async function runCancel(
       }
     }
 
-    return { success: true, ...summary, refundRequestId, manualRefund };
+    // Respond with the plan the transaction actually committed (recomputed
+    // from fresh records inside it), not the pre-transaction preview.
+    const committed = planBox.committed;
+    return { success: true, paidPaise: committed?.paidPaise ?? summary.paidPaise, policyFeePaise: committed?.policyFeePaise ?? summary.policyFeePaise, feePaise: committed?.feePaise ?? summary.feePaise, feeStatus: committed?.feeStatus ?? summary.feeStatus, refundPaise: committed?.refundPaise ?? summary.refundPaise, method: summary.method, refundRequestId, manualRefund: committed?.manualRefund ?? manualRefund };
 }
 
 export const adminCancelBooking = onCall(

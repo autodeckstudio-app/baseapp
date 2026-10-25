@@ -308,3 +308,117 @@ describe("adoptProcessedRefundEvidence + reconcile-only passes", () => {
     expect(String(data["refundRequests"]![requestId]!["lastError"])).toMatch(/projection held/);
   });
 });
+
+describe("activation review fixes", () => {
+  it("pending accept persists the bound providerRefundId; later processed lookup + webhook adoption race yields exactly ONE ledger entry and ONE amount", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1", expectedBookingId: "b1", expectedJobId: "job1" });
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider.nextRefundStatus = "pending"; // provider accepts but does not report processed
+    const r1 = await runRefundOutbox(db, provider as never);
+    expect(r1).toEqual({ submitted: 1, projected: 0, failed: 0 });
+    // The bound identity is persisted on the hold itself - not just in a note.
+    expect(data["refundRequests"]!["rr_pay1_1"]).toMatchObject({
+      status: "submitted", projectionNeeded: false, providerRefundId: "mock_rfnd_rr_pay1_1",
+    });
+    // Provider later reports processed; a webhook event and a runner pass race.
+    provider.setStoredRefundStatus("rr_pay1_1", "processed");
+    const verdict = await adoptProcessedRefundEvidence(db, {
+      requestId: "rr_pay1_1", providerRefundId: "mock_rfnd_rr_pay1_1",
+      providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR",
+    });
+    const r2 = await runRefundOutbox(db, provider as never);
+    // Exactly one ledger entry, bound to the real provider refund id, amount counted once.
+    const ledger = data["paymentRefunds"] ?? {};
+    expect(Object.keys(ledger)).toEqual(["pr_pay1_mock_rfnd_rr_pay1_1"]);
+    expect(data["payments"]!["pay1"]).toMatchObject({ status: "partially_refunded", refundAmount: 50000 });
+    // Repeat both paths: still one ledger entry, amount unchanged.
+    const verdict2 = await adoptProcessedRefundEvidence(db, {
+      requestId: "rr_pay1_1", providerRefundId: "mock_rfnd_rr_pay1_1",
+      providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR",
+    });
+    const r3 = await runRefundOutbox(db, provider as never);
+    expect(Object.keys(data["paymentRefunds"] ?? {})).toEqual(["pr_pay1_mock_rfnd_rr_pay1_1"]);
+    expect(data["payments"]!["pay1"]!["refundAmount"]).toBe(50000);
+    expect(provider.initiateRefundCallCount).toBe(1);
+    expect(["adopted", "already_bound", "already_projected"]).toContain(verdict);
+    expect(["already_projected", "already_bound", "conflict"]).toContain(verdict2);
+    expect(r3).toEqual({ submitted: 0, projected: 0, failed: 0 });
+  });
+
+  it("reverse race: runner projects first, webhook adoption then reports already_projected with no second ledger entry", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider.nextRefundStatus = "pending";
+    await runRefundOutbox(db, provider as never);
+    provider.setStoredRefundStatus("rr_pay1_1", "processed");
+    const r2 = await runRefundOutbox(db, provider as never);
+    expect(r2).toEqual({ submitted: 0, projected: 1, failed: 0 });
+    const verdict = await adoptProcessedRefundEvidence(db, {
+      requestId: "rr_pay1_1", providerRefundId: "mock_rfnd_rr_pay1_1",
+      providerPaymentId: "rzp_pay_1", amountPaise: 50000, currency: "INR",
+    });
+    expect(verdict).toBe("already_projected");
+    expect(Object.keys(data["paymentRefunds"] ?? {})).toEqual(["pr_pay1_mock_rfnd_rr_pay1_1"]);
+    expect(data["payments"]!["pay1"]!["refundAmount"]).toBe(50000);
+  });
+
+  it("a projection without a bound providerRefundId HOLDS - no null-identity ledger entry is ever written", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    // Simulate the pre-fix state: submitted with projectionNeeded but no bound id.
+    data["refundRequests"]!["rr_pay1_1"] = { ...(data["refundRequests"]!["rr_pay1_1"] as object), status: "submitted", projectionNeeded: true, providerRefundId: null };
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    const r = await runRefundOutbox(db, provider as never);
+    expect(r.projected).toBe(0);
+    expect(data["paymentRefunds"] ?? {}).toEqual({});
+    expect(data["payments"]!["pay1"]!["refundAmount"] ?? null).toBeNull();
+    expect(data["refundRequests"]!["rr_pay1_1"]!["status"]).toBe("ambiguous");
+  });
+
+  it("reservation refuses a payment re-linked away from the caller's booking or job", async () => {
+    const p = payment();
+    const { db } = fakeFirestore(seed(p));
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "a", expectedBookingId: "bOTHER" }))
+      .rejects.toThrow(/no longer linked to booking/);
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "a", expectedJobId: "jobOTHER" }))
+      .rejects.toThrow(/no longer linked to job/);
+    // And the exact binding passes.
+    await reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "a", expectedBookingId: "b1", expectedJobId: "job1" });
+  });
+
+  it("cross-vintage tombstone: reservation claims refund_<paymentId>; a second reservation and a legacy claim both conflict; terminal failure releases only the outbox tombstone", async () => {
+    const p = payment();
+    const { db, data } = fakeFirestore(seed(p));
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "x", createdBy: "admin1" });
+    // Tombstone written by the reservation.
+    expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ outboxRequestId: "rr_pay1_1", claimedBy: "refund-outbox" });
+    // A second reservation sees the marker and refuses.
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "y", createdBy: "admin1" }))
+      .rejects.toThrow(/already has an active refund request|outbox refund reservation/);
+    // Terminal failure with authoritative absence releases guard AND tombstone, so a later reservation can proceed.
+    const provider = new (await import("../../lib/mock-payment-provider.js")).MockPaymentProvider();
+    provider.authoritativeNegatives = true;
+    provider.initiateRefund = (async () => { throw new Error("network lost"); }) as never;
+    const r = await runRefundOutbox(db, provider as never);
+    expect(r.failed).toBe(1);
+    expect(data["refundRequests"]!["rr_pay1_1"]!["status"]).toBe("failed");
+    expect(data["paymentEvents"]!["refund_pay1"] ?? null).toBeNull();
+    await reserveRefund(db, { payment: p, amountPaise: 50000, reason: "retry after confirmed non-submission", createdBy: "admin1" });
+    expect(data["refundRequests"]!["rr_pay1_2"]).toBeTruthy();
+  });
+
+  it("a TRUE legacy claim (no outbox marker) blocks reservations and is never deleted by an outbox release", async () => {
+    const p = payment();
+    const seeded: Record<string, Record<string, Record<string, unknown>>> = { ...seed(p) };
+    seeded["paymentEvents"] = { refund_pay1: { paymentId: "pay1", claimedAt: "2026-10-24T10:00:00.000Z", claimedBy: "legacy-admin-cancel", amount: 50000 } };
+    const { db, data } = fakeFirestore(seeded);
+    await expect(reserveRefund(db, { payment: p, amountPaise: 1000, reason: "x", createdBy: "a" }))
+      .rejects.toThrow(/manual refund obligation/);
+    expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ claimedBy: "legacy-admin-cancel" });
+  });
+});

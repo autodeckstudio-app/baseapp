@@ -212,9 +212,12 @@ describe("legacy initiateRefund <-> outbox mutual interlock (both race orders)",
     await reserveRefund(db, { payment: p, amountPaise: p.amount, reason: "race", createdBy: "admin" });
     await expect(initiateRefund.run({ data: { paymentId: p.id, reason: "generic path" }, auth: adminAuth2() } as never))
       .rejects.toMatchObject({ code: "already-exists" });
-    // The legacy claim doc must NOT have been written by the refused call.
+    // The claim doc exists but is the reservation's OWN cross-vintage
+    // tombstone - the refused legacy call wrote nothing.
     const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
-    expect(claim.exists).toBe(false);
+    expect(claim.exists).toBe(true);
+    expect((claim.data() as { claimedBy?: string }).claimedBy).toBe("refund-outbox");
+    expect(typeof (claim.data() as { outboxRequestId?: string }).outboxRequestId).toBe("string");
   });
 });
 
@@ -328,8 +331,16 @@ describe("D-review corrections: concurrency, lifecycle, tenancy, integrity", () 
       expect(legacyWon !== outboxWon).toBe(true);
       const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get();
       const guard = await db.collection(COLLECTIONS.refundRequests()).doc(`active_${p.id}`).get();
-      // Exactly one claim artifact exists - never both, never neither.
-      expect(claim.exists).toBe(legacyWon);
+      // Exactly one path wins - never both, never neither. The claim doc
+      // exists in BOTH outcomes now (the outbox writes its cross-vintage
+      // tombstone there), so OWNERSHIP marks the winner: an unmarked doc is
+      // the legacy claim, a marked doc is the outbox tombstone.
+      expect(claim.exists).toBe(true);
+      if (legacyWon) {
+        expect((claim.data() as { outboxRequestId?: string }).outboxRequestId ?? null).toBeNull();
+      } else {
+        expect(typeof (claim.data() as { outboxRequestId?: string }).outboxRequestId).toBe("string");
+      }
       expect(guard.exists).toBe(outboxWon);
     }
   });
