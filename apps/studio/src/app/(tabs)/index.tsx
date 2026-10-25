@@ -11,6 +11,7 @@ import { colors, spacing, radius, typography, phoneFont, JobCard, LoadingState, 
 import { Icon, FadeUp } from "@autodeck/ui/native";
 import { useJobLabels } from "../../hooks/useBayNames";
 import { useJobPeople } from "../../hooks/useJobPeople";
+import { useMyDay } from "../../hooks/useMyDay";
 
 function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -29,6 +30,7 @@ export default function TodaysJobsScreen() {
   const tenantId = authState.status === "ready" ? authState.claims.tenantId : null;
 
   const { width } = useWindowDimensions();
+  const day = useMyDay();
   const labels = useJobLabels(studioId);
   const people = useJobPeople([...jobs, ...standby]);
   useEffect(() => {
@@ -119,6 +121,23 @@ export default function TodaysJobsScreen() {
         </View>
         <View style={{ width: wide ? 260 : "100%" }}>
           <Button label="New walk-in" onPress={() => router.push("/(tabs)/walkin")} fullWidth />
+        </View>
+      </View>
+      <View accessibilityLabel="My day" style={{ ...glass, borderRadius: 20, padding: spacing.lg, gap: spacing.sm }}>
+        <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: "600" } as never}>My day</Text>
+        <Text style={{ ...typography.title, color: colors.textPrimary }}>{day.ready ? day.state : day.noProfile ? "No staff profile is linked to this account yet. Ask your admin." : "Checking your day..."}</Text>
+        {day.ready ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+            {day.actions.in ? <Button label="Check in" size="md" fullWidth={false} loading={day.busy === "in"} disabled={day.busy !== null} onPress={() => void day.run("in")} /> : null}
+            {day.actions.bs ? <Button label="Start break" size="md" variant="secondary" fullWidth={false} loading={day.busy === "bs"} disabled={day.busy !== null} onPress={() => void day.run("bs")} /> : null}
+            {day.actions.be ? <Button label="End break" size="md" fullWidth={false} loading={day.busy === "be"} disabled={day.busy !== null} onPress={() => void day.run("be")} /> : null}
+            {day.actions.out ? <Button label="Check out" size="md" variant="secondary" fullWidth={false} loading={day.busy === "out"} disabled={day.busy !== null} onPress={() => void day.run("out")} /> : null}
+          </View>
+        ) : null}
+        {day.note ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{day.note}</Text> : null}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs }}>
+          <Button label="Pickups" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/pickups")} />
+          <Button label="Account" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/account")} />
         </View>
       </View>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>

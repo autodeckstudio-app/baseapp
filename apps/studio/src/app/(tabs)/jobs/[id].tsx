@@ -1,10 +1,13 @@
 import { httpsCallable } from "firebase/functions";
-import { MEMBERSHIP_SETTLEMENT_ENABLED } from "../../../lib/backend-features";
+import { MEMBERSHIP_SETTLEMENT_ENABLED, ADMIN_APPROVAL_ENABLED, UPI_RECORD_ENABLED } from "../../../lib/backend-features";
+import { AdminRequestPanel } from "../../../components/AdminRequestPanel";
+import { canRecordPayment, payErrorNote, recordInput, type RecordMethod } from "../../../lib/record-payment-rules";
+import { RecordPaymentFields } from "../../../components/RecordPaymentFields";
 import { membershipCoveredLabel } from "../../../lib/membership-covered-label";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Platform, View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
@@ -259,12 +262,16 @@ export default function JobDetailScreen() {
     }
   }
 
+  const payBusyRef = useRef(false);
   const [cashConfirm, setCashConfirm] = useState<"record" | "confirm" | null>(null);
   const [cashError, setCashError] = useState<string | null>(null);
+  const [payMethod, setPayMethod] = useState<RecordMethod>("cash");
+  const [payVerified, setPayVerified] = useState(false);
+  const [payRef, setPayRef] = useState("");
 
   function handleRecordCashPayment() {
     if (!job?.id) return;
-    setCashError(null); setCashConfirm("record");
+    setCashError(null); setPayMethod("cash"); setPayVerified(false); setPayRef(""); setCashConfirm("record");
   }
 
   function handleConfirmCashPayment() {
@@ -275,15 +282,17 @@ export default function JobDetailScreen() {
   async function performCashAction() {
     const mode = cashConfirm;
     const jobId = job?.id;
-    if (!mode || paymentActionLoading) return;
+    if (!mode || paymentActionLoading || payBusyRef.current) return;
+    payBusyRef.current = true;
     setPaymentActionLoading(true); setCashError(null);
     try {
-      if (mode === "record") { if (!jobId) return; await recordManualPayment({ jobId, method: "cash" }); }
+      if (mode === "record") { if (!jobId) return; { if (UPI_RECORD_ENABLED) { const bad = canRecordPayment({ method: payMethod, verified: payVerified, reference: payRef }); if (bad) { setCashError(bad); return; } await recordManualPayment(recordInput(jobId, { method: payMethod, reference: payRef })); } else await recordManualPayment({ jobId, method: "cash" }); } }
       else if (payment) await confirmManualPayment(payment.id);
       setCashConfirm(null);
     } catch (err) {
-      setCashError(err instanceof Error ? err.message : mode === "record" ? "Failed to record payment." : "Failed to confirm payment.");
+      setCashError(payErrorNote(err, mode));
     } finally {
+      payBusyRef.current = false;
       setPaymentActionLoading(false);
     }
   }
@@ -483,7 +492,7 @@ export default function JobDetailScreen() {
 
         {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !payment && job.status !== "CANCELLED" && (
           <Button
-            label="Record cash payment"
+            label={UPI_RECORD_ENABLED ? "Record payment" : "Record cash payment"}
             onPress={() => void handleRecordCashPayment()}
             loading={paymentActionLoading}
             size="md"
@@ -621,8 +630,11 @@ export default function JobDetailScreen() {
       {job.status === "STANDBY" ? <Section><Text style={{color: colors.textPrimary}}>Waiting since {new Date(job.standbyArrivedAt ?? job.createdAt).toLocaleString("en-IN", {timeZone: "Asia/Kolkata"})}. No bay or time reserved.</Text><Button label="Admit from standby" onPress={() => setStaffAction("admit")} /></Section> : null}
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
+      {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
       {cashConfirm ? <Section>
-        <Text style={{color: colors.textPrimary}}>{cashConfirm === "record" ? "Record cash payment? Confirms the customer paid in full at the studio." : "Confirm cash received? Marks this payment complete and issues the invoice."}</Text>
+        {UPI_RECORD_ENABLED && cashConfirm === "record" && job ? <RecordPaymentFields totalPaise={job.totalAmount} method={payMethod} onMethod={setPayMethod} verified={payVerified} onVerified={setPayVerified} reference={payRef} onReference={setPayRef} /> : null}
+
+        <Text style={{color: colors.textPrimary}}>{cashConfirm === "record" ? (UPI_RECORD_ENABLED && payMethod === "upi_manual" ? "Record UPI payment? Confirms the full amount arrived in the account." : "Record cash payment? Confirms the customer paid in full at the studio.") : "Confirm cash received? Marks this payment complete and issues the invoice."}</Text>
         {cashError ? <Text accessibilityRole="alert" style={{color: colors.textPrimary}}>{cashError}</Text> : null}
         <Button label="Confirm" onPress={() => void performCashAction()} loading={paymentActionLoading} />
         <Button label="Cancel" variant="secondary" disabled={paymentActionLoading} onPress={() => { setCashConfirm(null); setCashError(null); }} />

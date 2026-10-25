@@ -10,14 +10,14 @@ type Props = {
 
 // Desktop and tablet navigation: the same idea as the admin sidebar. Daily pages big,
 // the rest quieter, one orange active pill. Phones keep the bottom bar.
-const MAIN: { name: string; label: string; icon: "home" | "wrench" | "calendar" | "search" | "profile" }[] = [
+const MAIN: { name: string; label: string; icon: "home" | "wrench" | "calendar" | "search" | "profile" | "pin" }[] = [
   { name: "index", label: "Today", icon: "home" },
   { name: "bays", label: "Bays", icon: "wrench" },
+  { name: "pickups", label: "Pickups", icon: "pin" },
   { name: "calendar", label: "Calendar", icon: "calendar" },
   { name: "lookup", label: "Lookup", icon: "search" },
 ];
 const MORE: { name: string; label: string }[] = [
-  { name: "pickups", label: "Pickups" },
   { name: "memberships", label: "Memberships" },
   { name: "account", label: "Account" },
 ];

@@ -7,6 +7,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToInspection, updateInspection, finalizeInspection } from "../../../../lib/inspection-service";
 import type { Inspection, InspectionArea, InspectionRating } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
+import { INSPECTION_PHOTOS_ENABLED } from "../../../../lib/backend-features";
+import { InspectionPhotos } from "../../../../components/InspectionPhotos";
 
 const AREA_LABELS: Record<InspectionArea, string> = {
   exterior: "Exterior",
@@ -169,6 +171,8 @@ export default function InspectionScreen() {
           </View>
         );
       })}
+
+      {INSPECTION_PHOTOS_ENABLED && jobId ? <InspectionPhotos jobId={jobId} photos={inspection.photos ?? []} readOnly={readOnly} /> : null}
 
       <Text style={sectionTitle}>Overall Notes</Text>
       <RNTextInput

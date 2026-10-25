@@ -7,9 +7,9 @@ import { PillTabBar } from "@autodeck/ui/native";
 import { useWindowDimensions } from "react-native";
 import { SideRail } from "../../components/SideRail";
 
-const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "profile"> = { index: "home", bays: "wrench", calendar: "calendar", lookup: "search", account: "profile" };
+const TAB_ICON: Record<string, "home" | "wrench" | "calendar" | "search" | "profile" | "pin"> = { index: "home", bays: "wrench", pickups: "pin", calendar: "calendar", lookup: "search" };
 
-const TAB_LABEL: Record<string, string> = { index: "Today", bays: "Bays", calendar: "Calendar", lookup: "Lookup", account: "Account" };
+const TAB_LABEL: Record<string, string> = { index: "Today", bays: "Bays", pickups: "Pickups", calendar: "Calendar", lookup: "Lookup" };
 
 export default function StudioTabsLayout() {
   const { width } = useWindowDimensions();
@@ -35,6 +35,10 @@ export default function StudioTabsLayout() {
         options={{ title: "Bay Board", tabBarLabel: "Bays", headerShown: false }}
       />
       <Tabs.Screen
+        name="pickups"
+        options={{ title: "Pickups", tabBarLabel: "Pickups", headerShown: false }}
+      />
+      <Tabs.Screen
         name="calendar"
         options={{ title: "Calendar", tabBarLabel: "Calendar", headerShown: false }}
       />
@@ -47,10 +51,6 @@ export default function StudioTabsLayout() {
         options={{ href: null, headerShown: false }} // sub-route, hidden from tab bar
       />
       <Tabs.Screen
-        name="pickups"
-        options={{ title: "Pickup requests", href: null, headerShown: false }}
-      />
-      <Tabs.Screen
         name="memberships"
         options={{ title: "Memberships", href: null, headerShown: false }}
       />
@@ -60,7 +60,7 @@ export default function StudioTabsLayout() {
       />
       <Tabs.Screen
         name="account"
-        options={{ title: "Account", tabBarLabel: "Account", headerShown: false }}
+        options={{ title: "Account", href: null, headerShown: false }} // reached from Today (My day) and the side rail
       />
     </Tabs>
   );
