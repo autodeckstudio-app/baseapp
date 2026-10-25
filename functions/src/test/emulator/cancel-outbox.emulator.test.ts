@@ -48,7 +48,10 @@ async function seed(o: { method: string; amount?: number; scheduledInHrs?: numbe
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   } as Payment);
   await db.collection(COLLECTIONS.invoices()).doc(invId).set({
-    id: invId, tenantId: "t1", studioId: "s1", status: "issued", total: o.amount ?? 100000,
+    // Production-shaped issued invoice: full linkage on every axis.
+    id: invId, tenantId: "t1", studioId: "s1", jobId, bookingId, customerId: "c1",
+    vehicleId: "v1", paymentId: payId, invoiceNumber: "INV-TEST-1",
+    status: "issued", total: o.amount ?? 100000,
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   });
   return { bookingId, jobId, payId, invId };
@@ -409,5 +412,18 @@ describe("bounded overflow behavior", () => {
       .rejects.toThrow(/more than one job/);
     expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
     void jobId;
+  });
+});
+
+describe("invoice binding", () => {
+  it("a same-tenant invoice linked to a different payment refuses the cancel", { timeout: 30000 }, async () => {
+    const { bookingId, payId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
+    const paySnap = await db.collection(COLLECTIONS.payments()).doc(payId).get();
+    const invId = (paySnap.data() as Payment).invoiceId;
+    expect(invId).toBeTruthy();
+    await db.collection(COLLECTIONS.invoices()).doc(invId!).update({ paymentId: "payFOREIGN" });
+    await expect(runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "waive" }, "admin"))
+      .rejects.toThrow(/does not belong to this payment/);
+    expect(((await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as Record<string, unknown>).status).toBe("CONFIRMED");
   });
 });

@@ -170,8 +170,29 @@ export async function planReserveInTx(
   // in the same transaction. With no active reservation the payment's own
   // refunded/partially_refunded status is what excludes the legacy producer.
   // An UNMARKED doc is a true legacy manual-refund claim: conflict.
-  if (manualClaim.exists && typeof (manualClaim.data() as { outboxRequestId?: string } | undefined)?.outboxRequestId !== "string") {
-    return { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
+  if (manualClaim.exists) {
+    const marker = (manualClaim.data() as { outboxRequestId?: string } | undefined)?.outboxRequestId;
+    if (typeof marker !== "string") {
+      return { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
+    }
+    // A missing guard alone is NOT proof of a terminal money state: before
+    // sweeping, the marker must be well-formed for THIS payment and the
+    // referenced request must exist, belong to this payment and be TERMINAL.
+    // Anything else fails closed - inconsistent residue is inspected by hand.
+    if (!marker.startsWith(`rr_${payment.id}_`)) {
+      return { ok: false, code: "conflict", reason: `refund tombstone for payment ${payment.id} references foreign request ${marker}` };
+    }
+    const markerReq = await tx.get(requestsCol(db).doc(marker));
+    if (!markerReq.exists) {
+      return { ok: false, code: "conflict", reason: `refund tombstone for payment ${payment.id} references missing request ${marker}` };
+    }
+    const mr = markerReq.data() as Pick<RefundRequest, "paymentId" | "status">;
+    if (mr.paymentId !== payment.id) {
+      return { ok: false, code: "conflict", reason: `refund tombstone for payment ${payment.id} references request for payment ${mr.paymentId}` };
+    }
+    if (mr.status !== "projected" && mr.status !== "failed") {
+      return { ok: false, code: "conflict", reason: `refund request ${marker} is ${mr.status}, not terminal` };
+    }
   }
   // Count only real rr_* requests (never the transient guard) so ids stay
   // unique even after a guard is released on a terminal request.

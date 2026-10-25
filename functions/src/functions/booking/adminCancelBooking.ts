@@ -195,8 +195,15 @@ export async function runCancel(
         if (j && (j.tenantId !== fresh.tenantId || j.studioId !== fresh.studioId)) {
           throw new HttpsError("failed-precondition", "The job does not belong to this booking's studio. The booking is NOT cancelled.");
         }
-        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).tenantId !== fresh.tenantId) {
-          throw new HttpsError("failed-precondition", "The invoice does not belong to this booking's tenant. The booking is NOT cancelled.");
+        // The Invoice schema carries full linkage (paymentId/jobId/bookingId/
+        // customerId/studioId/tenantId), so a voided invoice must be THIS
+        // payment's own invoice on every axis - tenant equality alone is not
+        // a binding.
+        if (invoiceSnap?.exists) {
+          const inv = invoiceSnap.data() as Invoice;
+          if (inv.tenantId !== fresh.tenantId || inv.studioId !== fresh.studioId || inv.paymentId !== freshPayment.id || inv.jobId !== freshPayment.jobId || inv.bookingId !== data.bookingId || inv.customerId !== freshPayment.customerId) {
+            throw new HttpsError("failed-precondition", "The invoice does not belong to this payment and booking. The booking is NOT cancelled.");
+          }
         }
       }
       const reads = await readCancelReads(tx, db, fresh, data.bookingId);
