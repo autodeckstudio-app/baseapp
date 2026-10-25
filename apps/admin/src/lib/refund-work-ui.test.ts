@@ -39,6 +39,23 @@ describe("admin refund recovery surface", () => {
     expect(page).toContain("handleReconcileClaims");
     expect(page).toContain("held for review");
   });
+  it("keeps continue-scan list-only, refreshes known rows authoritatively, wires the payment link and truthful counts", () => {
+    // continue-scan must not reconcile: it re-lists only
+    expect(panel).toContain("onContinueScan");
+    expect(page).toContain("onContinueScan={() => void refreshRefundWork()}");
+    // authoritative per-known-id truth: resolved/released rows disappear, still-held update in place
+    expect(service).toContain("claimTruth");
+    expect(service).toContain("knownClaimPaymentIds");
+    expect(page).toContain("work.claimTruth");
+    expect(page).toContain('t.state === "resolved" || t.state === "released"');
+    // identity/tenant change resets the review cycle
+    expect(page).toContain("setLegacyAccum(new Map())");
+    // claim row payment link lands on the filtered record
+    expect(page).toContain("useSearchParams");
+    expect(page).toContain('searchParams.get("search")');
+    // truthful accounted count includes already-accounted
+    expect(page).toContain("already recorded");
+  });
   it("is mounted on the payments page and refreshes after a run", () => {
     expect(page).toContain("<RefundWorkPanel");
     expect(page).toContain("refreshRefundWork");

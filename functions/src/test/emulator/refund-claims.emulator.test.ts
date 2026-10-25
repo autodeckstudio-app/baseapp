@@ -625,3 +625,54 @@ describe("reconciliation adversarial invariants (review round 4)", () => {
 
   
 });
+
+describe("claimTruth authoritative refresh (review round 7)", () => {
+  const listTruth = async (ids: string[]) =>
+    ((await listRefundWork.run({ data: { knownClaimPaymentIds: ids }, auth: adminAuth() } as never)) as {
+      claimTruth: { paymentId: string; state: string; note: string | null }[];
+    }).claimTruth;
+
+  it("held row becomes resolved after an actual reconcile; released claim reports released; still-held remains", async () => {
+    const p1 = payment();
+    await seed(p1);
+    await plantClaim(p1.id);
+    const p2 = payment();
+    await seed(p2);
+    await plantClaim(p2.id);
+    mockProvider.authoritativeNegatives = true;
+
+    let truth = await listTruth([p1.id, p2.id]);
+    expect(truth.find((t) => t.paymentId === p1.id)?.state).toBe("retained");
+    expect(truth.find((t) => t.paymentId === p2.id)?.state).toBe("retained");
+
+    // p1: provider confirms processed -> projected -> resolved
+    mockProvider.authoritativeNegatives = false;
+    await plantProviderRefund(p1, "processed");
+    expect(await reconcileLegacyRefundClaim(db, mockProvider, p1.id, actor)).toBe("projected");
+    // p2: provider authoritatively has no record -> released
+    mockProvider.authoritativeNegatives = true;
+    expect(await reconcileLegacyRefundClaim(db, mockProvider, p2.id, actor)).toBe("released_absent");
+    mockProvider.authoritativeNegatives = false;
+
+    truth = await listTruth([p1.id, p2.id]);
+    expect(truth.find((t) => t.paymentId === p1.id)?.state).toBe("resolved");
+    expect(truth.find((t) => t.paymentId === p2.id)?.state).toBe("released");
+
+    // a still-held claim remains held with its note
+    const p3 = payment();
+    await seed(p3);
+    await plantClaim(p3.id);
+    await reconcileLegacyRefundClaim(db, mockProvider, p3.id, actor); // unknown -> held
+    truth = await listTruth([p3.id]);
+    expect(truth[0]?.state).toBe("held");
+    expect(truth[0]?.note).toContain("provider outcome");
+  });
+
+  it("never leaks another tenant's claim truth", async () => {
+    const other = payment({ tenantId: "t2" });
+    await db.collection(COLLECTIONS.payments()).doc(other.id).set(other);
+    await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${other.id}`).set({ paymentId: other.id, tenantId: "t2", claimedAt: new Date().toISOString(), claimedBy: "x" });
+    const truth = await listTruth([other.id]);
+    expect(truth).toHaveLength(0);
+  });
+});

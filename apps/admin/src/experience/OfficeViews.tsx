@@ -371,6 +371,9 @@ export function RefundWorkPanel(p: {
   names?: Names;
   onRun: () => void;
   onReconcile?: () => void;
+  /** List-only: advances the retained-claim scan WITHOUT reconciling
+   * (no provider evidence projection, no claim release). */
+  onContinueScan?: () => void;
   onOpenInvoice: (id: string) => void;
 }) {
   if (p.error) {
@@ -429,11 +432,11 @@ export function RefundWorkPanel(p: {
               </span>
             )}
           </div>
-          {!legacyScanComplete && p.onReconcile && (
+          {!legacyScanComplete && p.onContinueScan && (
             <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
               <span className="ax-muted">Scanning older records - {legacyClaims.length} shown so far, more may exist.</span>
-              <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onReconcile}>
-                {p.reconciling ? "Scanning" : "Continue scan"}
+              <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onContinueScan}>
+                Continue scan
               </button>
             </div>
           )}

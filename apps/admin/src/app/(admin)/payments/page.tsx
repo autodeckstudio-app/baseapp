@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAdminAuth } from "../../../lib/auth-context";
@@ -19,6 +19,11 @@ export default function PaymentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<PaymentStatus | "">("");
   const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get("search");
+    if (q) setSearch(q);
+  }, [searchParams]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [refundWork, setRefundWork] = useState<RefundWork | null>(null);
@@ -36,13 +41,20 @@ export default function PaymentsPage() {
   async function refreshRefundWork() {
     setRefundWorkLoading(true);
     try {
-      const work = await listRefundWork();
+      // Ask for the authoritative truth of every row we already show: paged
+      // scans never return resolved/released claims, so known rows would
+      // otherwise stay stale "held" forever after an actual reconcile.
+      const work = await listRefundWork([...legacyAccum.keys()]);
       setRefundWork(work);
       setLegacyAccum((prev) => {
         const next = new Map(prev);
-        for (const c of work.legacyClaims) {
-          if (c.reconcileState === "resolved") next.delete(c.paymentId);
-          else next.set(c.paymentId, c);
+        for (const c of work.legacyClaims) next.set(c.paymentId, c);
+        for (const t of work.claimTruth) {
+          if (t.state === "resolved" || t.state === "released") next.delete(t.paymentId);
+          else {
+            const row = next.get(t.paymentId);
+            if (row) next.set(t.paymentId, { ...row, reconcileState: t.state, reconcileNote: t.note });
+          }
         }
         return next;
       });
@@ -56,16 +68,17 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (!claims) return;
+    setLegacyAccum(new Map()); // new identity/tenant: new review cycle
     void refreshRefundWork();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claims]);
+  }, [claims?.tenantId, claims?.uid]);
 
   async function handleReconcileClaims() {
     setReconciling(true);
     setMessage(null);
     try {
       const r = await reconcileRefundClaims();
-      setMessage(`Claim reconciliation: ${r.projected + r.converged} accounted, ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - run again)"}.`);
+      setMessage(`Claim reconciliation: ${r.projected + r.converged + r.alreadyAccounted} accounted (${r.alreadyAccounted} already recorded), ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - continue the scan)"}.`);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Claim reconciliation failed.");
     } finally {
@@ -130,8 +143,9 @@ export default function PaymentsPage() {
       loading={refundWorkLoading}
       error={refundWorkError}
       running={runningOutbox}
-            reconciling={reconciling}
-            onReconcile={() => void handleReconcileClaims()}
+      reconciling={reconciling}
+      onReconcile={() => void handleReconcileClaims()}
+      onContinueScan={() => void refreshRefundWork()}
       names={names}
       onRun={() => void handleRunOutbox()}
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}

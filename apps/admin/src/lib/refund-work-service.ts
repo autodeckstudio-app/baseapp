@@ -39,6 +39,8 @@ export type LegacyRefundClaim = {
   currency: string | null;
 };
 
+export type RefundClaimTruth = { paymentId: string; state: string; note: string | null };
+
 export type RefundWork = {
   requests: RefundWorkRequest[];
   reviewPayments: RefundReviewPayment[];
@@ -46,14 +48,18 @@ export type RefundWork = {
   /** false while older claim records are still being scanned: an empty
    * legacyClaims list is not yet an "all clear". */
   legacyScanComplete: boolean;
+  /** Authoritative current state for claim ids the caller already shows:
+   * paged scans never return resolved/released claims, so this is how known
+   * rows learn they were reconciled away. */
+  claimTruth: RefundClaimTruth[];
 };
 
 /** Admin-only, read-only: refundRequests are server-only under Firestore
  * rules, so this callable is the only way staff can see held or in-flight
  * refund work for their own tenant. */
-export async function listRefundWork(): Promise<RefundWork> {
-  const fn = httpsCallable<Record<string, never>, RefundWork>(functions, "listRefundWork");
-  const result = await fn({});
+export async function listRefundWork(knownClaimPaymentIds: string[] = []): Promise<RefundWork> {
+  const fn = httpsCallable<{ knownClaimPaymentIds: string[] }, RefundWork>(functions, "listRefundWork");
+  const result = await fn({ knownClaimPaymentIds });
   return result.data;
 }
 

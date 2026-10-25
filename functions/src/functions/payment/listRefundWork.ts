@@ -22,6 +22,11 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
   await enforceRateLimit(subjectFrom(user), "payment.refund");
   const db = getFirestore();
   const tenantId = user.claims.tenantId;
+  // Authoritative truth channel for claims the caller already shows: paged
+  // scans never return resolved/released claims, so without this the caller
+  // could not tell "still held" from "reconciled away". Bounded per call.
+  const rawKnown = (request.data as { knownClaimPaymentIds?: unknown } | undefined)?.knownClaimPaymentIds;
+  const knownIds = Array.isArray(rawKnown) ? rawKnown.filter((x): x is string => typeof x === "string").slice(0, 200) : [];
 
   const [reqSnap, paySnap, claimSnap] = await Promise.all([
     db.collection(COLLECTIONS.refundRequests())
@@ -213,7 +218,28 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       await stateRef.set({ lastId: lastSeen, updatedAt: new Date().toISOString() }).catch(() => undefined);
     }
   }
-  return { requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50), legacyClaims: legacyClaims.slice(0, 50), legacyScanComplete: discoveryComplete && fastComplete };
+  const claimTruth: { paymentId: string; state: string; note: string | null }[] = [];
+  for (const pid of knownIds) {
+    if (!/^[A-Za-z0-9_-]+$/.test(pid)) continue;
+    const cSnap = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${pid}`).get();
+    if (!cSnap.exists) {
+      claimTruth.push({ paymentId: pid, state: "released", note: null });
+      continue;
+    }
+    const cd = cSnap.data() as { reconcileState?: string; reconcileNote?: string; tenantId?: string };
+    let claimTenant = typeof cd.tenantId === "string" ? cd.tenantId : undefined;
+    if (!claimTenant) {
+      const pSnap = await db.collection(COLLECTIONS.payments()).doc(pid).get();
+      claimTenant = pSnap.exists ? (pSnap.data() as { tenantId?: string }).tenantId : undefined;
+    }
+    if (claimTenant !== tenantId) continue; // never leak another tenant's claim state
+    claimTruth.push({ paymentId: pid, state: cd.reconcileState ?? "retained", note: cd.reconcileNote ?? null });
+  }
+  return {
+    requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50),
+    legacyClaims: legacyClaims.slice(0, 50), legacyScanComplete: discoveryComplete && fastComplete,
+    claimTruth,
+  };
 
   // Note: fastComplete is only true when the fast range was fully consumed
   // WITHOUT a mid-page cap break, so a full 50-row page that exactly ends
