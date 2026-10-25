@@ -1,13 +1,12 @@
-// Admin-only, NON-PRODUCTION gate: runs the refund outbox against the payment
-// provider (mock in dev/emulator). There is no scheduler and no production
-// wiring: in the production project this callable refuses, because live
-// Razorpay refund wiring is held for an explicit deploy-time activation
-// review. Nothing here runs in production until that review lifts the refusal.
+// Admin-only manual drain: runs the refund outbox against the payment
+// provider (mock in dev/emulator, live Razorpay in production). There is no
+// scheduler: production refunds are submitted inline by the cancellation
+// producer and drained/projected here and by the webhook; this callable is
+// the explicit admin "run the outbox now" surface.
 import { randomUUID } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { isProductionProject } from "../../lib/environment.js";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -19,9 +18,6 @@ export const processRefundOutbox = onCall({ region: "asia-south1", secrets: ["RA
   const user = extractUser(request);
   if (!["admin", "superadmin"].includes(user.claims.role)) {
     throw new HttpsError("permission-denied", "Admin role required to run the refund outbox.");
-  }
-  if (isProductionProject()) {
-    throw new HttpsError("failed-precondition", "Refund runner is not wired to the live provider; held for deploy-time review.");
   }
   const data = validate(processRefundOutboxSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.refund");

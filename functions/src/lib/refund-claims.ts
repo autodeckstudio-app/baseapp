@@ -243,6 +243,9 @@ export async function reconcileLegacyRefundClaim(
 
   const claimSnap = await claimRef.get();
   if (!claimSnap.exists) return "skipped";
+  // Outbox-owned tombstone: managed by the refund-outbox lifecycle, not a
+  // legacy claim - never reconcile it here.
+  if (typeof (claimSnap.data() as { outboxRequestId?: string }).outboxRequestId === "string") return "skipped";
   const token: ClaimToken = {
     claimedAt: (claimSnap.data() as { claimedAt?: string }).claimedAt ?? null,
     updateTime: claimSnap.updateTime ?? null,
@@ -480,7 +483,13 @@ export async function reconcileLegacyRefundClaims(
       visited = doc.id;
       const paymentId = doc.id.slice("refund_".length);
       if (!paymentId) continue;
-      const data = doc.data() as { reconcileState?: string; tenantId?: string };
+      const data = doc.data() as { reconcileState?: string; tenantId?: string; outboxRequestId?: string };
+      // Outbox-owned tombstones (created by planReserveInTx as the
+      // cross-vintage interlock) are managed by the refund-outbox lifecycle:
+      // their provider evidence is keyed by the outbox request id, not the
+      // legacy refund_<paymentId> reference, so this sweep must never verify,
+      // release, or annotate them.
+      if (typeof data.outboxRequestId === "string") continue;
       if (data.reconcileState === "resolved") continue;
       if (typeof data.tenantId === "string" && data.tenantId !== opts.tenantId) continue;
       if (typeof data.tenantId !== "string") {
