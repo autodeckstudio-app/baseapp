@@ -69,9 +69,11 @@ describe("admin refund recovery surface", () => {
     expect(page).toContain("cycle.refresh");
   });
   it("binds actions to the identity generation and offers truthful disabled controls where the backend refuses", () => {
-    // every post-await effect in both actions is generation-guarded
-    expect(page).toContain("cycle.generation()");
-    expect(page).toContain("if (cycle.generation() !== gen) return;");
+    // both actions run through the identity-bound runner
+    expect(page).toContain("runRefundAction");
+    // identity change resets the action surface (no stuck spinner/message)
+    expect(page).toContain("setRunningOutbox(false);");
+    expect(page).toContain("setReconciling(false);");
     // unmount disposes the cycle so no late callback lands
     expect(page).toContain("cycle.dispose()");
     // production truth: actions disabled with the activation-pending reason,

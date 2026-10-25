@@ -10,6 +10,7 @@ import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
 import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
 import { listRefundWork, runRefundOutbox, reconcileRefundClaims, refundActionsEnabled } from "../../../lib/refund-work-service";
+import { runRefundAction } from "../../../lib/refund-work-actions";
 import { createRefundWorkCycle, type RefundWorkCycle } from "../../../lib/refund-work-cycle";
 
 function PaymentsPageContent() {
@@ -41,49 +42,35 @@ function PaymentsPageContent() {
   const [reconciling, setReconciling] = useState(false);
 
   useEffect(() => {
+    // Identity change resets the cycle AND the action surface: a stale
+    // action's callbacks are generation-guarded no-ops, so without this
+    // reset the new identity would inherit a stuck Running/Reconciling
+    // spinner and the previous identity's result message.
+    setRunningOutbox(false);
+    setReconciling(false);
+    setMessage(null);
     cycle.reset(!!claims);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claims?.tenantId, user?.uid, cycle]);
 
-  async function handleReconcileClaims() {
-    // Identity-bound action: capture the generation BEFORE awaiting; after
-    // logout/tenant switch/unmount every late effect (message, spinner,
-    // follow-up refresh) is a no-op.
-    const gen = cycle.generation();
-    setReconciling(true);
-    setMessage(null);
-    try {
-      const r = await reconcileRefundClaims();
-      if (cycle.generation() !== gen) return;
-      setMessage(`Claim reconciliation: ${r.projected + r.converged + r.alreadyAccounted} accounted (${r.alreadyAccounted} already recorded), ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - continue the scan)"}.`);
-    } catch (err) {
-      if (cycle.generation() !== gen) return;
-      setMessage(err instanceof Error ? err.message : "Claim reconciliation failed.");
-    } finally {
-      if (cycle.generation() === gen) {
-        setReconciling(false);
-        void cycle.refresh();
-      }
-    }
+  function handleReconcileClaims() {
+    void runRefundAction(
+      cycle,
+      reconcileRefundClaims,
+      (r) => `Claim reconciliation: ${r.projected + r.converged + r.alreadyAccounted} accounted (${r.alreadyAccounted} already recorded), ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - continue the scan)"}.`,
+      "Claim reconciliation failed.",
+      { setBusy: setReconciling, setMessage },
+    );
   }
 
-  async function handleRunOutbox() {
-    const gen = cycle.generation();
-    setRunningOutbox(true);
-    setMessage(null);
-    try {
-      const r = await runRefundOutbox();
-      if (cycle.generation() !== gen) return;
-      setMessage(`Outbox run: ${r.submitted} sent to provider, ${r.projected} completed, ${r.failed} held for review.`);
-    } catch (err) {
-      if (cycle.generation() !== gen) return;
-      setMessage(err instanceof Error ? err.message : "Outbox run failed.");
-    } finally {
-      if (cycle.generation() === gen) {
-        setRunningOutbox(false);
-        void cycle.refresh();
-      }
-    }
+  function handleRunOutbox() {
+    void runRefundAction(
+      cycle,
+      runRefundOutbox,
+      (r) => `Outbox run: ${r.submitted} sent to provider, ${r.projected} completed, ${r.failed} held for review.`,
+      "Outbox run failed.",
+      { setBusy: setRunningOutbox, setMessage },
+    );
   }
 
   // Unmount: pending list/action callbacks become no-ops, nothing setStates
