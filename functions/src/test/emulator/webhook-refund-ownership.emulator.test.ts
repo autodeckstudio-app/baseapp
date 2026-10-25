@@ -218,6 +218,57 @@ describe("webhook refund.created outbox ownership", () => {
     expect(pay.refundAmount ?? null).toBeNull();
   });
 
+  it("per-refund identity ledger: same refund across event types and duplicate deliveries counts ONCE", async () => {
+    const p = payment({ invoiceId: "inv-led" });
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.invoices()).doc("inv-led").set({ id: "inv-led", status: "issued" });
+    // Same partial refund, first as refund.created with processed status...
+    const r1 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_same", providerRefundAmount: 40000, providerRefundStatus: "processed" }));
+    expect(r1.outcome).toBe("refunded");
+    let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(40000);
+    // ...then as refund.processed with a DISTINCT provider event id: NOT counted again.
+    const r2 = await processProviderEvent(db, refundEvent(p, { eventType: "refund.processed", providerRefundId: "rfnd_same", providerRefundAmount: 40000 }));
+    expect(r2.outcome).toBe("duplicate");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(40000); // exactly once
+    expect((pay.status as string)).toBe("partially_refunded");
+    // A DIFFERENT refund id accumulates once more.
+    const r3 = await processProviderEvent(db, refundEvent(p, { eventType: "refund.processed", providerRefundId: "rfnd_other", providerRefundAmount: 60000 }));
+    expect(r3.outcome).toBe("refunded");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(100000);
+    expect(pay.status).toBe("refunded");
+    expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-led").get()).data() as { status: string }).status).toBe("void");
+  });
+
+  it("bounds: over-captured, fractional, and currency-conflicting refunds write NOTHING", async () => {
+    const p = payment({ invoiceId: "inv-b" });
+    await seedPayment(p);
+    await db.collection(COLLECTIONS.invoices()).doc("inv-b").set({ id: "inv-b", status: "issued" });
+    // seed one truthful partial (40000)
+    await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_p1", providerRefundAmount: 40000, providerRefundStatus: "processed" }));
+    // over-captured: 40000 + 70000 > 100000 -> hold, zero writes (never capped, never full)
+    const r1 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_over", providerRefundAmount: 70000, providerRefundStatus: "processed" }));
+    expect(r1.outcome).toBe("amount_mismatch");
+    let pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(40000);
+    expect((pay.status as string)).toBe("partially_refunded");
+    expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-b").get()).data() as { status: string }).status).toBe("issued");
+    // fractional paise -> held
+    const r2 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_frac", providerRefundAmount: 100.5, providerRefundStatus: "processed" }));
+    expect(r2.outcome).toBe("refund_pending");
+    // currency conflict on the unrelated path -> fail closed
+    const r3 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_cur", providerRefundAmount: 60000, providerRefundCurrency: "USD", providerRefundStatus: "processed" }));
+    expect(r3.outcome).toBe("ownership_mismatch");
+    // refund entity payment_id mismatch -> fail closed
+    const r4 = await processProviderEvent(db, refundEvent(p, { providerRefundId: "rfnd_pid", providerRefundAmount: 60000, providerRefundPaymentId: "rzp_pay_OTHER", providerRefundStatus: "processed" }));
+    expect(r4.outcome).toBe("ownership_mismatch");
+    pay = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data() as Payment;
+    expect(pay.refundAmount).toBe(40000); // unchanged through all of it
+    expect(((await db.collection(COLLECTIONS.invoices()).doc("inv-b").get()).data() as { status: string }).status).toBe("issued");
+  });
+
   it("outbox-owned refund NEVER voids the invoice (accounting hold stays with the runner)", async () => {
     const p = payment({ invoiceId: "inv2" });
     await seedPayment(p);

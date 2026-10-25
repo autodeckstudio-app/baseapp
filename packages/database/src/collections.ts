@@ -56,6 +56,11 @@ export const COLLECTIONS = {
   // paymentEvents/{providerEventId} — idempotency guard for webhook/event deduplication
   // refundRequests/{requestId} — booking refund outbox: reservation -> provider -> projection
   refundRequests: () => "refundRequests",
+  // paymentRefunds/pr_<paymentId>_<providerRefundId> — durable per-refund
+  // identity ledger: one doc per provider refund, written transactionally
+  // with its projection so the same refund can never be counted twice
+  // across webhook event types, duplicate deliveries, or code paths.
+  paymentRefunds: () => "paymentRefunds",
   paymentEvents: () => "paymentEvents",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
   rateLimits: () => "rateLimits",

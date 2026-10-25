@@ -269,20 +269,51 @@ export async function processProviderEvent(
     // pending, failed or statusless refund.created is recorded and held for
     // reconciliation with zero financial writes.
     if (ev.providerRefundStatus !== "processed") { record("refund_pending"); return "refund_pending"; }
+    // Strict binding for the UNRELATED path too: the refund entity's own
+    // payment id and currency must agree with the stored payment - missing
+    // or conflicting evidence fails closed with zero writes.
+    if (!ev.providerRefundId ||
+        !ev.providerRefundPaymentId || ev.providerRefundPaymentId !== payment.razorpayPaymentId ||
+        !ev.providerRefundCurrency || ev.providerRefundCurrency !== payment.currency) {
+      record("ownership_mismatch");
+      return "ownership_mismatch";
+    }
     // Truthful amount: the refund entity's OWN amount is the money returned.
-    // A processed refund whose amount evidence is missing is incomplete -
-    // held (zero writes) for reconciliation, never defaulted to the payment
-    // amount.
+    // Integer paise only; missing/fractional/non-positive evidence is held
+    // with zero writes, never defaulted.
     const eventRefundAmount = ev.providerRefundAmount;
-    if (typeof eventRefundAmount !== "number" || eventRefundAmount <= 0) {
+    if (typeof eventRefundAmount !== "number" || !Number.isInteger(eventRefundAmount) || eventRefundAmount <= 0) {
       record("refund_pending");
       return "refund_pending";
     }
+    // Durable per-refund identity: the SAME provider refund must be counted
+    // exactly once across refund.created/refund.processed, duplicate
+    // deliveries with distinct event ids, and every code path. The ledger
+    // doc is created inside this transaction; a racing delivery conflicts
+    // and retries into "duplicate".
+    const ledgerRef = db.collection(COLLECTIONS.paymentRefunds()).doc(`pr_${payment.id}_${ev.providerRefundId}`);
+    const ledgerSnap = await tx.get(ledgerRef);
+    if (ledgerSnap.exists) { record("duplicate"); return "duplicate"; }
     const totalRefunded = (payment.refundAmount ?? 0) + eventRefundAmount;
-    const fullyRefunded = totalRefunded >= payment.amount;
+    // An over-refund is never valid: hold with zero writes for
+    // reconciliation rather than capping or marking full.
+    if (totalRefunded > payment.amount) {
+      record("amount_mismatch");
+      return "amount_mismatch";
+    }
+    const fullyRefunded = totalRefunded === payment.amount;
     const invSnap = payment.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
     const giftRefRefund = payment.targetType === "gift" && payment.giftId ? db.collection(COLLECTIONS.gifts()).doc(payment.giftId) : null;
     const giftSnapRefund = giftRefRefund ? await tx.get(giftRefRefund) : null;
+    // Reads are all done; the ledger entry lands atomically with the writes.
+    // Race safety comes from the in-transaction READ above: a concurrent
+    // delivery of the same refund conflicts on that read and retries into
+    // "duplicate".
+    tx.set(ledgerRef, {
+      paymentId: payment.id, providerRefundId: ev.providerRefundId,
+      amountPaise: eventRefundAmount, currency: ev.providerRefundCurrency,
+      source: "webhook", providerEventId: ev.providerEventId, createdAt: now,
+    });
     record("refunded");
     // Invoice and gift obligations survive a PARTIAL refund: only a fully
     // refunded payment voids them (preexisting full-refund obligation).
