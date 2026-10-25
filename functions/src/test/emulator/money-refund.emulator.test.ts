@@ -47,7 +47,7 @@ async function seedPayment(p: Payment) {
 
 beforeEach(async () => {
   // Wipe the collections this suite touches.
-  for (const col of [COLLECTIONS.payments(), COLLECTIONS.jobs(), COLLECTIONS.bookings(), COLLECTIONS.refundRequests(), COLLECTIONS.paymentEvents()]) {
+  for (const col of [COLLECTIONS.payments(), COLLECTIONS.jobs(), COLLECTIONS.bookings(), COLLECTIONS.refundRequests(), COLLECTIONS.paymentEvents(), COLLECTIONS.paymentRefunds()]) {
     const snap = await db.collection(col).get();
     await Promise.all(snap.docs.map((d) => d.ref.delete()));
   }
