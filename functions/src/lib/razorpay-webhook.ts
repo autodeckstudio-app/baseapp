@@ -380,21 +380,28 @@ export async function processProviderEvent(
     }
     if (requestId) {
       try {
+        // The drain runs ONLY on evidence that binds completely to the
+        // request's current docs. Anything missing or conflicting holds the
+        // request with the reason on it and moves NOTHING - a mismatched
+        // event must never trigger work.
+        let verdict: string = "missing";
         if (ev.providerRefundId) {
-          const adopted = await adoptProcessedRefundEvidence(db, {
+          verdict = await adoptProcessedRefundEvidence(db, {
             requestId,
             providerRefundId: ev.providerRefundId,
+            providerPaymentId: ev.providerRefundPaymentId ?? null,
             amountPaise: typeof ev.providerRefundAmount === "number" ? ev.providerRefundAmount : null,
             currency: ev.providerRefundCurrency ?? null,
           });
-          if (adopted === "conflict" || adopted === "missing") {
-            await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({
-              lastError: `processed evidence for provider refund ${ev.providerRefundId} does not bind to this request (${adopted}); held for reconciliation`,
-              updatedAt: new Date().toISOString(),
-            }).catch(() => undefined);
-          }
         }
-        await runRefundOutbox(db, getPaymentProvider(), { requestId, submit: false });
+        if (verdict === "conflict" || verdict === "missing") {
+          await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({
+            lastError: `processed evidence ${ev.providerRefundId ?? "(no provider refund id)"} does not bind to this request (${verdict}); held for reconciliation - no drain ran`,
+            updatedAt: new Date().toISOString(),
+          }).catch(() => undefined);
+        } else {
+          await runRefundOutbox(db, getPaymentProvider(), { requestId, submit: false });
+        }
       } catch (err) {
         await db.collection(COLLECTIONS.refundRequests()).doc(requestId).update({
           lastError: `post-event drain failed: ${err instanceof Error ? err.message : String(err)}`,

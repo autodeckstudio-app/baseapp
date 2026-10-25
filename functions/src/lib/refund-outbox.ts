@@ -210,30 +210,49 @@ async function releaseGuard(db: Firestore, paymentId: string): Promise<void> {
  * running the reserved->submit flow would create a SECOND provider refund
  * for the same money.
  *
- * Every disagreement fails closed with zero writes ("conflict"): a different
- * provider refund id already bound, a different amount, a different
- * currency, a terminal request, or a per-refund ledger entry that says this
- * provider refund was already accounted by another path.
+ * STRICT and self-sufficient: the caller's earlier ownership check happened
+ * in a DIFFERENT transaction, and the request/payment may have changed
+ * since. Adoption therefore re-validates the complete binding against the
+ * CURRENT documents - request<->payment identity, tenant, provider payment
+ * id, exact integer amount, exact currency - and fails closed with zero
+ * writes on anything missing or conflicting. A terminal request still gets
+ * the full binding check before its verdict, so a mismatched event can
+ * never hide behind an early return.
  */
 export async function adoptProcessedRefundEvidence(
   db: Firestore,
-  i: { requestId: string; providerRefundId: string; amountPaise?: number | null; currency?: string | null },
+  i: {
+    requestId: string;
+    providerRefundId: string;
+    providerPaymentId: string | null;
+    amountPaise: number | null;
+    currency: string | null;
+  },
 ): Promise<"adopted" | "already_projected" | "already_bound" | "conflict" | "missing"> {
   return db.runTransaction(async (tx) => {
     const ref = requestsCol(db).doc(i.requestId);
     const snap = await tx.get(ref);
     if (!snap.exists) return "missing";
     const cur = snap.data() as RefundRequest;
+    const paySnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(cur.paymentId));
+    const payment = paySnap.data() as Payment | undefined;
+    if (!payment) return "conflict";
+    // Complete binding against CURRENT docs - every axis required, none
+    // defaulted. Missing evidence never agrees.
+    const bound =
+      !!i.providerRefundId &&
+      !!i.providerPaymentId && !!payment.razorpayPaymentId && i.providerPaymentId === payment.razorpayPaymentId &&
+      payment.tenantId === cur.tenantId &&
+      cur.jobId === payment.jobId && cur.bookingId === payment.bookingId &&
+      typeof i.amountPaise === "number" && Number.isInteger(i.amountPaise) && i.amountPaise > 0 &&
+      i.amountPaise === cur.amountPaise &&
+      !!i.currency && !!payment.currency && i.currency === payment.currency;
+    if (!bound) return "conflict";
     if (cur.status === "projected") {
       return cur.providerRefundId === i.providerRefundId ? "already_projected" : "conflict";
     }
     if (cur.status === "failed") return "conflict";
     if (cur.providerRefundId && cur.providerRefundId !== i.providerRefundId) return "conflict";
-    if (typeof i.amountPaise === "number" && i.amountPaise !== cur.amountPaise) return "conflict";
-    const paySnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(cur.paymentId));
-    const payment = paySnap.data() as Payment | undefined;
-    if (!payment) return "conflict";
-    if (i.currency && payment.currency && i.currency !== payment.currency) return "conflict";
     // Already accounted by another path (webhook generic, legacy handler):
     // never re-bind for a second projection of the same money.
     const ledgerSnap = await tx.get(
