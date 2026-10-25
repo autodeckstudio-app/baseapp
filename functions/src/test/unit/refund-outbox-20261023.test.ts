@@ -471,3 +471,36 @@ describe("mixed-vintage consumer compatibility", () => {
       .rejects.toThrow(/manual refund obligation/);
   });
 });
+
+describe("tombstone sweep validation - missing guard is not proof of terminal money state", () => {
+  const mkResidue = (marker: unknown, req?: Record<string, unknown> | null) => {
+    const p = payment({ status: "partially_refunded", refundAmount: 50000 });
+    const seeded: Record<string, Record<string, Record<string, unknown>>> = { ...seed(p) };
+    seeded["paymentEvents"] = { refund_pay1: { paymentId: "pay1", outboxRequestId: marker, claimedBy: "refund-outbox", claimedAt: "2026-10-25T09:00:00.000Z" } };
+    if (req) seeded["refundRequests"] = { [String(marker)]: req };
+    return fakeFirestore(seeded);
+  };
+  const base = { payment: payment({ status: "partially_refunded", refundAmount: 50000 }), amountPaise: 50000, reason: "x", createdBy: "a", expectedBookingId: "b1", expectedJobId: "job1" };
+
+  it("sweeps only when the marker references THIS payment's terminal request", async () => {
+    const { db, data } = mkResidue("rr_pay1_1", { id: "rr_pay1_1", paymentId: "pay1", status: "projected" });
+    await expect(reserveRefund(db, base)).resolves.toMatchObject({ requestId: "rr_pay1_2" });
+    expect(data["paymentEvents"]!["refund_pay1"]).toMatchObject({ outboxRequestId: "rr_pay1_2" });
+  });
+  it("fails closed on a malformed marker not shaped for this payment", async () => {
+    const { db } = mkResidue("garbage", { id: "garbage", paymentId: "pay1", status: "projected" });
+    await expect(reserveRefund(db, base)).rejects.toThrow(/foreign request/);
+  });
+  it("fails closed when the marker references a missing request", async () => {
+    const { db } = mkResidue("rr_pay1_9", null);
+    await expect(reserveRefund(db, base)).rejects.toThrow(/missing request/);
+  });
+  it("fails closed when the referenced request belongs to another payment", async () => {
+    const { db } = mkResidue("rr_pay1_1", { id: "rr_pay1_1", paymentId: "payOTHER", status: "projected" });
+    await expect(reserveRefund(db, base)).rejects.toThrow(/different payment|payment payOTHER/);
+  });
+  it("fails closed when the referenced request is NOT terminal (guard missing + processing = inconsistent residue)", async () => {
+    const { db } = mkResidue("rr_pay1_1", { id: "rr_pay1_1", paymentId: "pay1", status: "processing" });
+    await expect(reserveRefund(db, base)).rejects.toThrow(/not terminal/);
+  });
+});
