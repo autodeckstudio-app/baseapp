@@ -26,6 +26,7 @@ interface RazorpayPaymentLinkResponse {
 
 interface RazorpayRefundResponse {
   id: string;
+  status?: string;
 }
 
 interface RazorpayWebhookPayload {
@@ -157,7 +158,7 @@ export class RazorpayProvider implements PaymentProvider {
     }
 
     const data = (await response.json()) as RazorpayRefundResponse;
-    return { providerRefundId: data.id };
+    return { providerRefundId: data.id, status: data.status ?? null };
   }
 
   /**

@@ -26,7 +26,10 @@ import { verifyRefundAccounting } from "./refund-accounting.js";
   // confirm). It is an unresolved hold, NOT a failure: the reservation stays
   // active so the refundable balance is never released for a duplicate
   // request, and the runner only reconciles it via provider evidence.
-export type RefundRequestStatus = "reserved" | "submitted" | "accepted" | "ambiguous" | "projected" | "failed";
+// submitting = a runner holds the submission lease: the provider call is in
+// flight or was lost mid-flight. Reconciled like ambiguous (bound provider
+// evidence only), NEVER blindly resubmitted.
+export type RefundRequestStatus = "reserved" | "submitting" | "submitted" | "accepted" | "ambiguous" | "projected" | "failed";
 
 export interface RefundRequest {
   id: string;
@@ -40,6 +43,10 @@ export interface RefundRequest {
   status: RefundRequestStatus;
   providerRefundId: string | null;
   projectionNeeded: boolean;
+  // Submission lease (D2): which runner claimed reserved->submitting and when.
+  // A stale lease means a crashed runner; recovery reconciles, never resubmits.
+  leaseBy: string | null;
+  leaseAt: string | null;
   lastError: string | null;
   createdBy: string;
   createdAt: string;
@@ -62,7 +69,7 @@ export async function activeReservation(db: Firestore, paymentId: string): Promi
   const snap = await requestsCol(db).where("paymentId", "==", paymentId).get();
   for (const doc of snap.docs) {
     const r = doc.data() as RefundRequest;
-    if (r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous") {
+    if (r.status === "reserved" || r.status === "submitting" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous") {
       return { ...r, ref: doc.ref };
     }
   }
@@ -96,49 +103,61 @@ export async function planReserveInTx(
 ): Promise<ReservePlan> {
   const amount = Math.round(i.amountPaise);
   if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)", code: "invalid" };
-  if (amount > refundablePaise(i.payment)) {
-    return { ok: false, code: "invalid", reason: `refund of ${amount} exceeds the refundable ${refundablePaise(i.payment)} on payment ${i.payment.id}` };
+  // D4: financial truth is re-read INSIDE the transaction. The caller's
+  // Payment is only a hint for which doc to load - a stale snapshot (e.g.
+  // read before another refund projected) must never size a reservation.
+  const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(i.payment.id));
+  if (!freshSnap.exists) return { ok: false, code: "invalid", reason: `payment ${i.payment.id} not found` };
+  const payment = freshSnap.data() as Payment;
+  if (payment.tenantId !== i.payment.tenantId) {
+    return { ok: false, code: "invalid", reason: `payment ${i.payment.id} tenant does not match the caller's payment` };
   }
-  const guardRef = requestsCol(db).doc(`active_${i.payment.id}`);
+  const refundable = refundablePaise(payment);
+  if (amount > refundable) {
+    return { ok: false, code: "invalid", reason: `refund of ${amount} exceeds the refundable ${refundable} on payment ${i.payment.id}` };
+  }
+  const guardRef = requestsCol(db).doc(`active_${payment.id}`);
   const now = new Date().toISOString();
   // Transactional reads: a losing racer's snapshot conflicts with the
   // winner's guard create, retries, and then sees the guard here.
   // A manual-refund obligation (admin cancel with no provider id) claims refund_<paymentId>: never open a provider refund on top of it.
-  const manualClaim = await tx.get(db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${i.payment.id}`));
-  if (manualClaim.exists) return { ok: false, code: "conflict", reason: `payment ${i.payment.id} already has a manual refund obligation` };
+  const manualClaim = await tx.get(db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payment.id}`));
+  if (manualClaim.exists) return { ok: false, code: "conflict", reason: `payment ${payment.id} already has a manual refund obligation` };
   const guardSnap = await tx.get(guardRef);
-  const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", i.payment.id));
+  const allSnap = await tx.get(requestsCol(db).where("paymentId", "==", payment.id));
   const active = allSnap.docs
     .map((d) => d.data() as RefundRequest)
     .find((r) => r.status === "reserved" || r.status === "submitted" || r.status === "accepted" || r.status === "ambiguous");
   if (guardSnap.exists || active) {
     // The SAME payment, FULL amount and reason already reserved is satisfied (idempotent). Anything else is a conflict.
-    const same = !!active && active.paymentId === i.payment.id && active.amountPaise === amount && active.reason === i.reason && (active.status === "reserved" || active.status === "submitted" || active.status === "accepted");
+    const same = !!active && active.paymentId === payment.id && active.amountPaise === amount && active.reason === i.reason && (active.status === "reserved" || active.status === "submitted" || active.status === "accepted");
     const id = active?.id ?? (guardSnap.data() as { requestId?: string } | undefined)?.requestId ?? "unknown";
-    return { ok: false, code: same ? "same_reservation" : "conflict", reason: `payment ${i.payment.id} already has an active refund request (${id})` };
+    return { ok: false, code: same ? "same_reservation" : "conflict", reason: `payment ${payment.id} already has an active refund request (${id})` };
   }
   // Count only real rr_* requests (never the transient guard) so ids stay
   // unique even after a guard is released on a terminal request.
   const priorCount = allSnap.docs.filter((d) => d.id.startsWith("rr_")).length;
-  const requestId = `rr_${i.payment.id}_${priorCount + 1}`;
+  const requestId = `rr_${payment.id}_${priorCount + 1}`;
   const request: RefundRequest = {
     id: requestId,
-    tenantId: i.payment.tenantId,
-    studioId: i.payment.studioId,
-    paymentId: i.payment.id,
-    jobId: i.payment.jobId,
-    bookingId: i.payment.bookingId,
+    tenantId: payment.tenantId,
+    studioId: payment.studioId,
+    paymentId: payment.id,
+    jobId: payment.jobId,
+    bookingId: payment.bookingId,
     amountPaise: amount,
     reason: i.reason,
     status: "reserved",
     providerRefundId: null,
     projectionNeeded: false,
+    leaseBy: null,
+    leaseAt: null,
     lastError: null,
     createdBy: i.createdBy,
     createdAt: now,
     updatedAt: now,
   };
-  return { ok: true, guardRef, requestRef: requestsCol(db).doc(requestId), guard: { paymentId: i.payment.id, requestId, createdAt: now }, request };
+  return { ok: true, guardRef, requestRef: requestsCol(db).doc(requestId), guard: { paymentId: payment.id, requestId, createdAt: now }, request };
 }
 
 /** WRITE phase: only after every read of the transaction is done. */
@@ -180,6 +199,13 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
     const paySnap = await tx.get(paymentRef);
     if (!paySnap.exists) throw new Error(`payment ${fresh.paymentId} missing during refund projection`);
     const payment = paySnap.data() as Payment;
+    // D6: the request's related-record identity must agree with the payment's
+    // own linkage before anything is written - a request pointing at a job or
+    // booking the payment does not belong to is a data-integrity stop, not a
+    // projection.
+    if (payment.tenantId !== fresh.tenantId) throw new Error(`refund projection rejected: request tenant ${fresh.tenantId} != payment tenant ${payment.tenantId}`);
+    if (fresh.jobId && payment.jobId !== fresh.jobId) throw new Error(`refund projection rejected: request job ${fresh.jobId} != payment job ${payment.jobId}`);
+    if (fresh.bookingId && payment.bookingId !== fresh.bookingId) throw new Error(`refund projection rejected: request booking ${fresh.bookingId} != payment booking ${payment.bookingId}`);
     const newRefunded = (payment.refundAmount ?? 0) + fresh.amountPaise;
     const check = verifyRefundAccounting({ capturedPaise: payment.amount, refundedPaise: newRefunded });
     if (!check.ok) throw new Error(`refund projection rejected: ${check.reason}`);
@@ -210,27 +236,111 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
 }
 
 /**
- * One runner pass over open requests. Reserved requests are submitted to the
- * provider; anything with projectionNeeded (fresh or left over from a crash)
- * is then projected WITHOUT a second provider call. Single-runner assumption:
- * invoked from one local/emulator gate at a time — there is no scheduler.
+ * One runner pass over open requests, optionally scoped to one tenant (D5:
+ * an admin may only ever process their own tenant's requests).
+ *
+ * Submission protocol (D2): a reserved request is claimed TRANSACTIONALLY
+ * (reserved -> submitting with a lease token) before any provider call, so
+ * two overlapping runners cannot both submit the same request - the loser's
+ * claim transaction retries, sees "submitting", and skips. A request left in
+ * "submitting" with a stale lease means a crashed runner: recovery reconciles
+ * through the bound provider lookup and NEVER blindly resubmits.
+ *
+ * Projection protocol (D3): a successful provider RESPONSE alone never
+ * projects. Money is projected only on provider lifecycle evidence of
+ * "processed" - the creation response's own status, or the bound lookup.
+ * Anything else (pending/accepted/unknown) stays held and is reconciled on
+ * later passes. Crash safety: projectionNeeded survives crashes and projects
+ * WITHOUT a second provider call.
  */
+const SUBMIT_LEASE_STALE_MS = 10 * 60 * 1000;
+
 export async function runRefundOutbox(
   db: Firestore,
   provider: PaymentProvider,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; tenantId?: string; runnerId?: string } = {},
 ): Promise<{ submitted: number; projected: number; failed: number }> {
   const limit = opts.limit ?? 10;
+  const tenantId = opts.tenantId ?? null;
+  const runnerId = opts.runnerId ?? `runner_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const open: Array<RefundRequest & { ref: FirebaseFirestore.DocumentReference }> = [];
-  for (const status of ["reserved", "submitted", "accepted", "ambiguous"] as const) {
-    const snap = await requestsCol(db).where("status", "==", status).get();
+  for (const status of ["reserved", "submitting", "submitted", "accepted", "ambiguous"] as const) {
+    let q: FirebaseFirestore.Query = requestsCol(db).where("status", "==", status);
+    if (tenantId) q = q.where("tenantId", "==", tenantId);
+    const snap = await q.get();
     for (const doc of snap.docs) open.push({ ...(doc.data() as RefundRequest), ref: doc.ref });
     if (open.length >= limit) break;
   }
   let submitted = 0, projected = 0, failed = 0;
+
+  // Bound provider evidence for one request, or null when the stored
+  // financial snapshot cannot ground an identity binding.
+  const boundLookup = async (request: RefundRequest) => {
+    if (!provider.findRefundByReference) return { outcome: "unknown" } as const;
+    const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
+    const payment = paySnap.data() as Payment | undefined;
+    if (!payment?.razorpayPaymentId || !payment.currency) return { outcome: "unknown" } as const;
+    try {
+      return await provider.findRefundByReference(request.id, {
+        providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency,
+      });
+    } catch {
+      return { outcome: "unknown" } as const;
+    }
+  };
+  const holdAmbiguous = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, note: string, now: string) => {
+    await request.ref.update({ status: "ambiguous", leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
+    failed++;
+  };
+  const markSubmitted = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, providerRefundId: string, now: string) => {
+    await request.ref.update({ status: "submitted", providerRefundId, projectionNeeded: true, leaseBy: null, leaseAt: null, lastError: null, updatedAt: now });
+    request.status = "submitted";
+    request.providerRefundId = providerRefundId;
+    request.projectionNeeded = true;
+    submitted++;
+  };
+  const holdLifecycle = async (request: RefundRequest & { ref: FirebaseFirestore.DocumentReference }, note: string, now: string) => {
+    // Provider accepted the refund but has not reported it processed: hold as
+    // submitted WITHOUT projectionNeeded; later passes reconcile via lookup.
+    await request.ref.update({ status: "submitted", projectionNeeded: false, leaseBy: null, leaseAt: null, lastError: note, updatedAt: now });
+    request.status = "submitted";
+    request.projectionNeeded = false;
+    submitted++;
+  };
+
   for (const request of open.slice(0, limit)) {
     const now = new Date().toISOString();
     if (request.status === "reserved") {
+      // D2: claim the submission lease before any provider call.
+      const claimed = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(request.ref);
+        const cur = snap.data() as RefundRequest | undefined;
+        if (!cur || cur.status !== "reserved") return false;
+        tx.update(request.ref, { status: "submitting", leaseBy: runnerId, leaseAt: now, updatedAt: now });
+        return true;
+      });
+      if (!claimed) continue; // another runner won the lease
+      request.status = "submitting";
+      request.leaseBy = runnerId;
+      request.leaseAt = now;
+    }
+    if (request.status === "submitting" && request.leaseBy !== runnerId) {
+      // Another runner's lease: fresh = in flight, leave it alone. Stale =
+      // crashed runner: reconcile from provider evidence, never resubmit.
+      const stale = !request.leaseAt || (Date.parse(now) - Date.parse(request.leaseAt)) > SUBMIT_LEASE_STALE_MS;
+      if (!stale) continue;
+      const lookup = await boundLookup(request);
+      if (lookup.outcome === "found") {
+        await markSubmitted(request, lookup.providerRefundId, now);
+      } else if (lookup.outcome === "failed_confirmed") {
+        await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed after a crashed submit; held for manual reconciliation (finality not settled by provider docs)`, now);
+        continue;
+      } else {
+        await holdAmbiguous(request, "submit outcome lost with a crashed runner; provider cannot confirm - held, never resubmitted blindly", now);
+        continue;
+      }
+    }
+    if (request.status === "submitting" && request.leaseBy === runnerId) {
       const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
       const payment = paySnap.data() as Payment | undefined;
       try {
@@ -241,80 +351,78 @@ export async function runRefundOutbox(
           reason: request.reason,
           referenceId: request.id,
         });
-        await request.ref.update({ status: "submitted", providerRefundId: result.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
-        submitted++;
-        request.status = "submitted";
-        request.providerRefundId = result.providerRefundId;
-        request.projectionNeeded = true;
+        // D3: a 2xx response alone is not money moved. Project only on
+        // lifecycle evidence of "processed" (response status or bound lookup).
+        if (result.status === "processed") {
+          await markSubmitted(request, result.providerRefundId, now);
+        } else {
+          const lookup = await boundLookup(request);
+          if (lookup.outcome === "found") {
+            await markSubmitted(request, lookup.providerRefundId, now);
+          } else if (lookup.outcome === "failed_confirmed") {
+            await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, now);
+            continue;
+          } else {
+            await holdLifecycle(request, `provider accepted refund ${result.providerRefundId} with status '${result.status ?? "unknown"}'; awaiting processed evidence`, now);
+            continue;
+          }
+        }
       } catch (err) {
         // The submit outcome is ambiguous: the provider may have accepted and
         // the response was lost. Reconcile against the provider using our
-        // durable reference id — NEVER resubmit just because local state is
-        // missing. A provider that cannot look up fails closed as "failed".
-        let lookup: Awaited<ReturnType<NonNullable<PaymentProvider["findRefundByReference"]>>> = { outcome: "unknown" };
-        // Bind only from the STORED financial snapshot; a missing currency is
-        // a hold, never an assumed INR.
-        if (provider.findRefundByReference && payment?.razorpayPaymentId && payment.currency) {
-          const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency };
-          try { lookup = await provider.findRefundByReference(request.id, binding); } catch { lookup = { outcome: "unknown" }; }
-        }
+        // durable reference id - NEVER resubmit just because local state is
+        // missing.
+        const lookup = await boundLookup(request);
         if (lookup.outcome === "found") {
-          await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
-          submitted++;
-          request.status = "submitted";
-          request.providerRefundId = lookup.providerRefundId;
-          request.projectionNeeded = true;
+          await markSubmitted(request, lookup.providerRefundId, now);
         } else if (lookup.outcome === "failed_confirmed") {
-          // Provider reports our refund failed - a NOTIFICATION, not settled
-          // finality. Hold as ambiguous with the evidence recorded: no release,
-          // no resubmit, no projection. Manual reconciliation decides.
-          await request.ref.update({ status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
-          failed++;
+          await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, now);
           continue;
         } else if (lookup.outcome === "absent_confirmed") {
           // Authoritative negative under the provider's reconciliation
           // contract: the submit never landed. A real failure; balance releases.
-          await request.ref.update({ status: "failed", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
+          await request.ref.update({ status: "failed", leaseBy: null, leaseAt: null, lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
           await releaseGuard(db, request.paymentId);
           failed++;
           continue;
         } else {
           // Inconclusive: hold as ambiguous. Never resubmit, never release.
-          await request.ref.update({ status: "ambiguous", lastError: err instanceof Error ? err.message : String(err), updatedAt: now });
-          failed++;
+          await holdAmbiguous(request, err instanceof Error ? err.message : String(err), now);
           continue;
         }
+      }
+    }
+    if ((request.status === "submitted" && !request.projectionNeeded) || request.status === "accepted") {
+      // Awaiting lifecycle evidence: reconcile via the bound lookup only.
+      const lookup = await boundLookup(request);
+      if (lookup.outcome === "found") {
+        await request.ref.update({ projectionNeeded: true, lastError: null, updatedAt: now });
+        request.projectionNeeded = true;
+      } else if (lookup.outcome === "failed_confirmed") {
+        await holdAmbiguous(request, `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, now);
+        continue;
+      } else {
+        continue; // still pending/unknown: keep holding
       }
     }
     if (request.status === "ambiguous") {
       // Reconcile an unresolved hold ONLY from provider evidence, bound to the
       // stored provider payment id + reserved amount/currency.
-      if (!provider.findRefundByReference) continue;
-      try {
-        const paySnap = await db.collection(COLLECTIONS.payments()).doc(request.paymentId).get();
-        const payment = paySnap.data() as Payment | undefined;
-        if (!payment?.razorpayPaymentId || !payment.currency) continue; // cannot bind from stored snapshot: keep holding
-        const binding = { providerPaymentId: payment.razorpayPaymentId, amountPaise: request.amountPaise, currency: payment.currency };
-        const lookup = await provider.findRefundByReference(request.id, binding);
-        if (lookup.outcome === "found") {
-          await request.ref.update({ status: "submitted", providerRefundId: lookup.providerRefundId, projectionNeeded: true, lastError: null, updatedAt: now });
-          request.status = "submitted";
-          request.providerRefundId = lookup.providerRefundId;
-          request.projectionNeeded = true;
-          submitted++;
-        } else if (lookup.outcome === "failed_confirmed") {
-          // Failure notification, not finality: keep the hold, refresh the evidence.
-          await request.ref.update({ status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
-          continue;
-        } else if (lookup.outcome === "absent_confirmed") {
-          await request.ref.update({ status: "failed", lastError: "provider confirms no such refund", updatedAt: now });
-          await releaseGuard(db, request.paymentId);
-          failed++;
-          continue;
-        } else {
-          continue; // inconclusive: keep holding
-        }
-      } catch { continue; } // still unknown: keep holding
+      const lookup = await boundLookup(request);
+      if (lookup.outcome === "found") {
+        await markSubmitted(request, lookup.providerRefundId, now);
+      } else if (lookup.outcome === "failed_confirmed") {
+        // Failure notification, not finality: keep the hold, refresh the evidence.
+        await request.ref.update({ status: "ambiguous", lastError: `provider refund ${lookup.providerRefundId} reported failed; held for manual reconciliation (finality not settled by provider docs)`, updatedAt: now });
+        continue;
+      } else if (lookup.outcome === "absent_confirmed") {
+        await request.ref.update({ status: "failed", lastError: "provider confirms no such refund", updatedAt: now });
+        await releaseGuard(db, request.paymentId);
+        failed++;
+        continue;
+      } else {
+        continue; // inconclusive: keep holding
+      }
     }
     if (request.projectionNeeded) {
       await projectRefund(db, request);

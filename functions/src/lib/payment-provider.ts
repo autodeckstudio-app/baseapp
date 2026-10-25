@@ -26,6 +26,10 @@ export interface InitiateRefundParams {
 
 export interface RefundResult {
   providerRefundId: string;
+  // Provider-reported refund lifecycle status at creation, when the provider
+  // returns one ("processed" | "pending" | "failed" | ...). Absence means the
+  // runner must reconcile via the bound lookup before projecting.
+  status?: string | null;
 }
 
 export type RefundLookupResult =

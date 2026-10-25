@@ -90,7 +90,7 @@ describe("refund outbox", () => {
     let providerCalls = 0;
     const crashing = {
       ...mockProvider,
-      initiateRefund: async (params: { referenceId: string }) => { providerCalls++; return { providerRefundId: `mock_rfnd_${params.referenceId}` }; },
+      initiateRefund: async (params: { referenceId: string }) => { providerCalls++; return { providerRefundId: `mock_rfnd_${params.referenceId}`, status: "processed" }; },
     };
     // First run: submit only (projection hook throws before the projection transaction).
     const { db: db2 } = { db };

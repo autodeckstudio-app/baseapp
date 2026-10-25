@@ -39,6 +39,8 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   // the outbox runner can never both submit provider refunds for the same
   // money (race order b; race order a is the outbox's refund_<paymentId>
   // legacy-claim check).
+  // Fast path only - the authoritative check is inside the claim transaction
+  // below, so an overlapping reservation cannot slip between read and claim.
   if (await activeReservation(db, payment.id)) {
     throw new HttpsError("already-exists", "A refund request is already active for this payment.");
   }
@@ -79,6 +81,14 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     const eventSnap = await tx.get(refundEventRef);
     if (eventSnap.exists) {
       throw new HttpsError("already-exists", "A refund has already been initiated for this payment.");
+    }
+    // D1: the outbox guard is read in THIS transaction, so the two paths
+    // overlap-safe: if the outbox reservation commits first, this transaction
+    // retries on the guard-doc conflict and refuses; if this claim commits
+    // first, planReserveInTx's refund_<paymentId> read conflicts and refuses.
+    const guardSnap = await tx.get(db.collection(COLLECTIONS.refundRequests()).doc(`active_${data.paymentId}`));
+    if (guardSnap.exists) {
+      throw new HttpsError("already-exists", "A refund request is already active for this payment.");
     }
     tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid });
   });

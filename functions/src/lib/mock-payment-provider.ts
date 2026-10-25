@@ -85,14 +85,21 @@ export class MockPaymentProvider implements PaymentProvider {
   // later turns out to have processed - exactly why holds must not release).
   setStoredRefundStatus(referenceId: string, status: string): void {
     const hit = this.submitted.get(referenceId);
-    if (hit) this.submitted.set(referenceId, { ...hit, ...( { status } as object) });
+    if (hit) this.submitted.set(referenceId, { ...hit, status });
   }
 
+  // Test hook: lifecycle status the NEXT successful initiateRefund lands in
+  // (e.g. "pending" -> later flipped with setStoredRefundStatus). Default
+  // "processed", matching an instant refund.
+  nextRefundStatus: string | null = null;
+
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {
-    const result = { providerRefundId: this.mockRefundId(params.referenceId), ...params };
+    const status = this.nextRefundStatus ?? "processed";
+    this.nextRefundStatus = null;
+    const result = { providerRefundId: this.mockRefundId(params.referenceId), status, ...params };
     if (this.failNextRefund) {
       this.failNextRefund = false;
-      this.submitted.set(params.referenceId, { ...result, ...( { status: "failed" } as object) });
+      this.submitted.set(params.referenceId, { ...result, status: "failed" });
       throw new Error("network: response lost; provider-side refund failed terminally");
     }
     this.submitted.set(params.referenceId, result);
@@ -117,7 +124,7 @@ export class MockPaymentProvider implements PaymentProvider {
     if (hit && hit.providerPaymentId === binding.providerPaymentId
         && hit.amount === binding.amountPaise
         && ((hit as { currency?: string }).currency ?? "INR") === binding.currency) {
-      const status = (hit as { status?: string }).status ?? "processed";
+      const status = hit.status ?? "processed";
       if (status === "processed") return { outcome: "found", providerRefundId: hit.providerRefundId };
       if (status === "failed") return { outcome: "failed_confirmed", providerRefundId: hit.providerRefundId };
       return { outcome: "unknown" };

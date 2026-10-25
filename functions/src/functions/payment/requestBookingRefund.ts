@@ -1,12 +1,14 @@
 // Admin-only: reserves a booking/job refund in the outbox. No provider call
 // happens here — the reserved request is submitted and projected by the
-// (emulator-gated) runner, so a booking refund can never fire twice and never
-// silently: the amount and reason are explicit on the reservation.
+// (emulator-gated) runner. While the runner's production refusal holds, this
+// producer refuses in production too: a reservation with no runner to drain
+// it would strand the payment's refundable balance behind its guard.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { isProductionProject } from "../../lib/environment.js";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
@@ -17,6 +19,9 @@ export const requestBookingRefund = onCall({ region: "asia-south1", enforceAppCh
   const user = extractUser(request);
   if (!["admin", "superadmin"].includes(user.claims.role)) {
     throw new HttpsError("permission-denied", "Admin role required to reserve refunds.");
+  }
+  if (isProductionProject()) {
+    throw new HttpsError("failed-precondition", "Refund reservations are held for deploy-time activation review.");
   }
   const data = validate(requestBookingRefundSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.refund");
