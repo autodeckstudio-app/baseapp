@@ -25,6 +25,20 @@ describe("admin refund recovery surface", () => {
     expect(page).toContain("held for review");
     expect(panel).not.toContain("—");
   });
+  it("surfaces retained legacy claims with a reconciliation-only action, scan progress and accumulation", () => {
+    expect(service).toContain('"reconcileRefundClaims"');
+    expect(service).toContain("legacyScanComplete");
+    expect(panel).toContain("Retained refund claims");
+    expect(panel).toContain("Reconcile retained refunds");
+    expect(panel).toContain("never submits a new refund");
+    expect(panel).toContain("Continue scan");
+    expect(panel).toContain("shown so far, more may exist");
+    expect(panel).toContain("reconcileNote");
+    expect(page).toContain("legacyAccum");
+    expect(page).toContain("reconciling");
+    expect(page).toContain("handleReconcileClaims");
+    expect(page).toContain("held for review");
+  });
   it("is mounted on the payments page and refreshes after a run", () => {
     expect(page).toContain("<RefundWorkPanel");
     expect(page).toContain("refreshRefundWork");

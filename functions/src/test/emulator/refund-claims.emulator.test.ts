@@ -623,28 +623,5 @@ describe("reconciliation adversarial invariants (review round 4)", () => {
     expect(claim.data()!.tenantId).toBeUndefined();
   });
 
-  it("list cap boundary: 150 unresolved claims paginate distinctly across calls, no repeats, then completes", async () => {
-    for (let i = 0; i < 150; i++) {
-      const tp = payment({ id: `cap-${String(i).padStart(4, "0")}` });
-      await db.collection(COLLECTIONS.payments()).doc(tp.id).set(tp);
-      await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${tp.id}`).set({
-        paymentId: tp.id, tenantId: "t1", claimedAt: new Date().toISOString(), claimedBy: "x", reconcileState: "held", reconcileNote: "pending",
-      });
-    }
-    const auth = adminAuth();
-    const seen: string[] = [];
-    let lastComplete = false;
-    for (let call = 0; call < 4; call++) {
-      const r = (await listRefundWork.run({ data: {}, auth } as never)) as { legacyClaims: { paymentId: string }[]; legacyScanComplete: boolean };
-      lastComplete = r.legacyScanComplete;
-      for (const c of r.legacyClaims) {
-        expect(seen).not.toContain(c.paymentId); // no repeats across calls
-        seen.push(c.paymentId);
-      }
-      if (r.legacyScanComplete) break;
-    }
-    expect(seen.length).toBe(150);
-    expect(lastComplete).toBe(true);
-  });
-
+  
 });

@@ -367,8 +367,10 @@ export function RefundWorkPanel(p: {
   loading: boolean;
   error: string | null;
   running: boolean;
+  reconciling?: boolean;
   names?: Names;
   onRun: () => void;
+  onReconcile?: () => void;
   onOpenInvoice: (id: string) => void;
 }) {
   if (p.error) {
@@ -382,8 +384,8 @@ export function RefundWorkPanel(p: {
   if (p.loading || !p.work) {
     return <div className="ax-panel" role="status">Checking refund work...</div>;
   }
-  const { requests, reviewPayments } = p.work;
-  if (requests.length === 0 && reviewPayments.length === 0) return null;
+  const { requests, reviewPayments, legacyClaims, legacyScanComplete } = p.work;
+  if (requests.length === 0 && reviewPayments.length === 0 && legacyClaims.length === 0 && legacyScanComplete) return null;
   return (
     <section className="ax-panel" aria-label="Refund work">
       <div className="ax-row-actions" style={{ justifyContent: "space-between", marginBottom: "12px" }}>
@@ -410,6 +412,42 @@ export function RefundWorkPanel(p: {
                 {r.bookingId && <Link className="ax-button" href={`/bookings/${r.bookingId}`}>Booking</Link>}
                 {!r.bookingId && r.jobId && <Link className="ax-button" href={`/jobs/${r.jobId}`}>Job</Link>}
               </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {(legacyClaims.length > 0 || !legacyScanComplete) && (
+        <div style={{ marginTop: requests.length ? "16px" : 0 }}>
+          <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
+            <p className="ax-title">Retained refund claims</p>
+            {p.onReconcile && (
+              <span className="ax-row-actions">
+                <span className="ax-muted">Reconciliation-only: checks the provider read-only; never submits a new refund</span>
+                <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onReconcile}>
+                  {p.reconciling ? "Reconciling" : "Reconcile retained refunds"}
+                </button>
+              </span>
+            )}
+          </div>
+          {!legacyScanComplete && p.onReconcile && (
+            <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
+              <span className="ax-muted">Scanning older records - {legacyClaims.length} shown so far, more may exist.</span>
+              <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onReconcile}>
+                {p.reconciling ? "Scanning" : "Continue scan"}
+              </button>
+            </div>
+          )}
+          {legacyClaims.map((c) => (
+            <div key={c.paymentId} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+              <span>
+                <StatusBadge label={c.reconcileState === "held" ? "held" : "retained"} />{" "}
+                <strong>{c.amount != null ? formatPaise(c.amount) : "-"}</strong>{" "}
+                <span className="ax-muted">
+                  claimed {c.claimedAt ? formatDateTime(c.claimedAt) : "earlier"} - payment {c.paymentStatus ?? "unknown"}
+                </span>
+                {c.reconcileNote && <span className="ax-muted"> - {c.reconcileNote}</span>}
+              </span>
+              <Link className="ax-button" href={`/payments?search=${c.paymentId}`}>Payment</Link>
             </div>
           ))}
         </div>

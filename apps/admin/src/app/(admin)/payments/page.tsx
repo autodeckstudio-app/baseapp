@@ -9,7 +9,7 @@ import { listenToPayments, refundPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
 import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
-import { listRefundWork, runRefundOutbox, type RefundWork } from "../../../lib/refund-work-service";
+import { listRefundWork, runRefundOutbox, reconcileRefundClaims, type RefundWork } from "../../../lib/refund-work-service";
 
 export default function PaymentsPage() {
   const { claims } = useAdminAuth();
@@ -22,14 +22,30 @@ export default function PaymentsPage() {
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [refundWork, setRefundWork] = useState<RefundWork | null>(null);
+  // Retained-claim rows are PAGED on the server: accumulate every page seen
+  // in this review cycle keyed by paymentId. A row never disappears just
+  // because the scan cursor advanced past it; fresh pages update known rows
+  // with the latest truth, and rows the server reports resolved are dropped
+  // as resolved (that is truth, not cursor advance).
+  const [legacyAccum, setLegacyAccum] = useState<Map<string, import("../../../lib/refund-work-service").LegacyRefundClaim>>(new Map());
   const [refundWorkLoading, setRefundWorkLoading] = useState(true);
   const [refundWorkError, setRefundWorkError] = useState<string | null>(null);
   const [runningOutbox, setRunningOutbox] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
 
   async function refreshRefundWork() {
     setRefundWorkLoading(true);
     try {
-      setRefundWork(await listRefundWork());
+      const work = await listRefundWork();
+      setRefundWork(work);
+      setLegacyAccum((prev) => {
+        const next = new Map(prev);
+        for (const c of work.legacyClaims) {
+          if (c.reconcileState === "resolved") next.delete(c.paymentId);
+          else next.set(c.paymentId, c);
+        }
+        return next;
+      });
       setRefundWorkError(null);
     } catch (err) {
       setRefundWorkError(err instanceof Error ? err.message : "Refund work unavailable.");
@@ -43,6 +59,20 @@ export default function PaymentsPage() {
     void refreshRefundWork();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claims]);
+
+  async function handleReconcileClaims() {
+    setReconciling(true);
+    setMessage(null);
+    try {
+      const r = await reconcileRefundClaims();
+      setMessage(`Claim reconciliation: ${r.projected + r.converged} accounted, ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - run again)"}.`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Claim reconciliation failed.");
+    } finally {
+      setReconciling(false);
+      void refreshRefundWork();
+    }
+  }
 
   async function handleRunOutbox() {
     setRunningOutbox(true);
@@ -96,10 +126,12 @@ export default function PaymentsPage() {
   return (
     <>
     <RefundWorkPanel
-      work={refundWork}
+      work={refundWork ? { ...refundWork, legacyClaims: [...legacyAccum.values()] } : refundWork}
       loading={refundWorkLoading}
       error={refundWorkError}
       running={runningOutbox}
+            reconciling={reconciling}
+            onReconcile={() => void handleReconcileClaims()}
       names={names}
       onRun={() => void handleRunOutbox()}
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
