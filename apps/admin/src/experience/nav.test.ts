@@ -10,10 +10,12 @@ const RETIRED = ["/gallery"];
 const ROLE_ONLY = ["/accountant"];
 const routes = readdirSync(appDir).filter((n) => statSync(join(appDir, n)).isDirectory()).map((n) => `/${n}`).filter((r) => !RETIRED.includes(r) && !ROLE_ONLY.includes(r));
 
+import { ADMIN_APPROVAL_REVIEW_ENABLED } from "../lib/backend-features";
 describe("admin navigation", () => {
   const reachable = new Set([...SECTIONS.flatMap((s) => s.links.map((l) => l.href)), ...MORE_LINKS.map((l) => l.href), ...GROUPS.flatMap((g) => g.links.map((l) => l.href))]);
   it("every page in the app is reachable from the menu (no URL-only pages)", () => {
-    expect(routes.filter((r) => !reachable.has(r))).toEqual([]);
+    // /office-requests stays off every menu while its backend flag is false (same rule as the accountant page).
+    expect(routes.filter((r) => !reachable.has(r) && !(r === "/office-requests" && !ADMIN_APPROVAL_REVIEW_ENABLED))).toEqual([]);
   });
   it("every menu link points at a real page", () => {
     expect([...reachable].filter((h) => !routes.includes(h))).toEqual([]);

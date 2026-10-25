@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { listenToPickupRequests, setPickupStatus, type PickupRequestRow } from "../../../lib/pickup-service";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { doneLegLines, outstandingLegNote } from "../../../lib/pickup-leg-display";
 import { StatusBadge } from "../../../components/StatusBadge";
 
 type Status = PickupRequestRow["status"];
@@ -128,6 +129,8 @@ export default function PickupsPage() {
             const agreed: [string, string][] = [];
             if (r.status !== "REQUESTED" && r.agreedPickupAt) agreed.push(["Pickup", formatAgreed(r.agreedPickupAt)]);
             if (r.status !== "REQUESTED" && r.agreedDropAt) agreed.push(["Drop", formatAgreed(r.agreedDropAt)]);
+            const legLines = doneLegLines(r, formatAgreed);
+            const legNote = outstandingLegNote(r);
             return (
               <section key={r.id} className="ax-panel ax-pu-card">
                 <div className="ax-pu-top">
@@ -168,6 +171,12 @@ export default function PickupsPage() {
                       </label>
                     ) : null}
                   </div>
+                ) : null}
+
+                {legLines.length > 0 ? (
+                  <dl className="ax-pu-facts">
+                    <div><dt>Studio recorded</dt>{legLines.map(([k, v]) => <dd key={k}><span>{k}</span>{v}</dd>)}{legNote ? <dd>{legNote}</dd> : null}</div>
+                  </dl>
                 ) : null}
 
                 {open ? (

@@ -1,9 +1,10 @@
+import { ADMIN_APPROVAL_REVIEW_ENABLED } from "../lib/backend-features";
 // Admin navigation: one source for the sidebar, phone bottom bar and Menu sheet.
 // Sidebar and More sheet: sections ordered by daily use. Studio-role staff only see sections with office:false links.
 export type NavLink = { href: string; label: string; office: boolean };
 export const SECTIONS: { group: string; key: string; label: string; icon: string; links: NavLink[] }[] = [
   { group: "Daily", key: "today", label: "Today", icon: "home", links: [{ href: "/dashboard", label: "Dashboard", office: true }] },
-  { group: "Daily", key: "floor", label: "Floor", icon: "wrench", links: [{ href: "/jobs", label: "Jobs", office: false }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, { href: "/attendance", label: "Attendance", office: false }] },
+  { group: "Daily", key: "floor", label: "Floor", icon: "wrench", links: [{ href: "/jobs", label: "Jobs", office: false }, { href: "/bookings", label: "Bookings", office: false }, { href: "/pickups", label: "Pickup and drop", office: true }, ...(ADMIN_APPROVAL_REVIEW_ENABLED ? [{ href: "/office-requests", label: "Staff requests", office: true }] : []), { href: "/attendance", label: "Attendance", office: false }] },
   { group: "Daily", key: "people", label: "People", icon: "users", links: [{ href: "/customers", label: "Customers", office: true }, { href: "/vehicles", label: "Cars", office: true }, { href: "/papers", label: "Documents", office: true }, { href: "/memberships", label: "Memberships", office: true }] },
   { group: "Daily", key: "money", label: "Money", icon: "payments", links: [{ href: "/payments", label: "Payments", office: true }, { href: "/invoices", label: "Invoices", office: true }, { href: "/expenses", label: "Expenses", office: true }, { href: "/daily-close", label: "Day close", office: true }, { href: "/reports", label: "Reports", office: true }] },
   { group: "Grow", key: "marketing", label: "Marketing", icon: "star", links: [{ href: "/stories", label: "Stories", office: true }, { href: "/offers", label: "Offers", office: true }, { href: "/cars", label: "Cars for sale", office: true }] },
