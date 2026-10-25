@@ -806,7 +806,7 @@ describe("initiateRefund legacy-entry hardening (review round 9)", () => {
     await seed(p);
     const origRunTx = db.runTransaction.bind(db);
     let swapped = false;
-    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: never) => Promise<unknown>) => {
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: FirebaseFirestore.Transaction) => Promise<unknown>) => {
       // State-based, not ordinal: the FIRST transaction after the claim
       // exists (the pre-submit verification) finds the claim recreated with
       // the SAME claimedAt clock value but no invocation nonce.
@@ -834,12 +834,122 @@ describe("initiateRefund legacy-entry hardening (review round 9)", () => {
     }
   });
 
+  it("a payment re-tenanted between the outer read and the claim transaction is refused: no claim, no provider call", async () => {
+    const p = payment();
+    await seed(p);
+    const origRunTx = db.runTransaction.bind(db);
+    let txCount = 0;
+    let swapped = false;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: FirebaseFirestore.Transaction) => Promise<unknown>) => {
+      txCount += 1;
+      if (txCount === 2) {
+        // After the outer (pre-transaction) payment read, before the claim
+        // transaction's fresh read.
+        await db.collection(COLLECTIONS.payments()).doc(p.id).update({ tenantId: "t2" });
+        swapped = true;
+      }
+      return origRunTx(fn);
+    };
+    try {
+      const calls = mockProvider.initiateRefundCallCount;
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never),
+      ).rejects.toThrow(/cross-tenant/i);
+      expect(swapped).toBe(true);
+      expect(mockProvider.initiateRefundCallCount).toBe(calls);
+      expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(false);
+    } finally {
+      (db as unknown as { runTransaction: unknown }).runTransaction = origRunTx;
+    }
+  });
+
+  it("modified money is never blind-adopted: a negative amount in the fresh record refuses before any claim", async () => {
+    const p = payment();
+    await seed(p);
+    const origRunTx = db.runTransaction.bind(db);
+    let txCount = 0;
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: FirebaseFirestore.Transaction) => Promise<unknown>) => {
+      txCount += 1;
+      if (txCount === 2) {
+        await db.collection(COLLECTIONS.payments()).doc(p.id).update({ amount: -5 });
+      }
+      return origRunTx(fn);
+    };
+    try {
+      const calls = mockProvider.initiateRefundCallCount;
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never),
+      ).rejects.toThrow(/positive integer/);
+      expect(mockProvider.initiateRefundCallCount).toBe(calls);
+      expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(false);
+    } finally {
+      (db as unknown as { runTransaction: unknown }).runTransaction = origRunTx;
+    }
+  });
+
+  it("a claim swapped between pre-submit verification and the provider response is refused at projection", async () => {
+    const p = payment();
+    await seed(p);
+    let swapped = false;
+    const origInit = mockProvider.initiateRefund.bind(mockProvider);
+    (mockProvider as { initiateRefund: unknown }).initiateRefund = async (params: never) => {
+      // Window: pre-submit verification passed, provider call not yet made.
+      const ref = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`);
+      const cur = (await ref.get()).data()!;
+      await ref.delete();
+      await ref.set({ paymentId: p.id, claimedAt: cur.claimedAt, claimedBy: "another-attempt" });
+      swapped = true;
+      return origInit(params);
+    };
+    try {
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "customer asked" }, auth: adminAuth() } as never),
+      ).rejects.toThrow(/claim|held|zero financial writes/i);
+      expect(swapped).toBe(true);
+      const fresh = (await db.collection(COLLECTIONS.payments()).doc(p.id).get()).data()!;
+      expect(fresh.status).toBe("completed");
+      expect(fresh.refundAmount ?? 0).toBe(0);
+      const claim = (await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).data()!;
+      expect(claim.claimedBy).toBe("another-attempt");
+    } finally {
+      (mockProvider as { initiateRefund: unknown }).initiateRefund = origInit;
+    }
+  });
+
+  it("absent_confirmed release refuses when the payment binding drifted before the delete", async () => {
+    const p = payment();
+    await seed(p);
+    const origInit = mockProvider.initiateRefund.bind(mockProvider);
+    const origLookup = mockProvider.findRefundByReference.bind(mockProvider);
+    (mockProvider as { initiateRefund: unknown }).initiateRefund = async () => {
+      throw new Error("network: request never reached provider");
+    };
+    mockProvider.authoritativeNegatives = true;
+    (mockProvider as { findRefundByReference: unknown }).findRefundByReference = async (ref: string, binding: never) => {
+      const r = await origLookup(ref, binding);
+      // Money identity drifts between the lookup and the release delete.
+      await db.collection(COLLECTIONS.payments()).doc(p.id).update({ amount: p.amount + 1 });
+      return r;
+    };
+    try {
+      await expect(
+        initiateRefund.run({ data: { paymentId: p.id, reason: "retry me" }, auth: adminAuth() } as never),
+      ).rejects.toThrow();
+      // claim SURVIVES: the release's fresh binding check refused the delete
+      expect((await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${p.id}`).get()).exists).toBe(true);
+    } finally {
+      (mockProvider as { initiateRefund: unknown }).initiateRefund = origInit;
+      (mockProvider as { findRefundByReference: unknown }).findRefundByReference = origLookup;
+      mockProvider.authoritativeNegatives = false;
+    }
+  });
+
   it("provider inputs come from the in-transaction payment read, not the stale pre-transaction snapshot", async () => {
     const p = payment();
     await seed(p);
     const origRunTx = db.runTransaction.bind(db);
     let first = true;
-    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: never) => Promise<unknown>) => {
+    (db as unknown as { runTransaction: unknown }).runTransaction = async (fn: (tx: FirebaseFirestore.Transaction) => Promise<unknown>) => {
       if (first) {
         first = false;
         // Window: pre-transaction payment snapshot already read, claim tx not

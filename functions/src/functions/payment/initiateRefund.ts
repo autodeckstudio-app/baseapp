@@ -89,11 +89,28 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     const freshSnap = await tx.get(paymentRef);
     if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
     const freshPayment = freshSnap.data() as Payment;
+    // The fresh record must still belong to the CALLER's tenant: a payment
+    // re-tenanted between the outer read and this transaction is refused,
+    // never silently adopted.
+    if (freshPayment.tenantId !== user.claims.tenantId) {
+      throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    }
     if (freshPayment.status !== "completed") {
       throw new HttpsError(
         "failed-precondition",
         `Cannot refund a payment in status '${freshPayment.status}'.`,
       );
+    }
+    // Never blind-adopt modified money: the amount must be a positive
+    // integer (paise), the currency present, and nothing refunded yet.
+    if (!Number.isInteger(freshPayment.amount) || freshPayment.amount <= 0) {
+      throw new HttpsError("failed-precondition", "Payment amount is not a positive integer; held for reconciliation.");
+    }
+    if (typeof freshPayment.currency !== "string" || freshPayment.currency.length === 0) {
+      throw new HttpsError("failed-precondition", "Payment currency is missing; held for reconciliation.");
+    }
+    if ((freshPayment.refundAmount ?? 0) !== 0) {
+      throw new HttpsError("failed-precondition", "Payment already carries a refunded amount; held for reconciliation.");
     }
     if (freshPayment.method === "razorpay_payment_link" && !freshPayment.razorpayPaymentId) {
       throw new HttpsError(
@@ -125,11 +142,18 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   // provider payment id, method, tenant, linkage, status). Any drift holds
   // with zero financial writes and zero provider calls.
   let submitPayment: Payment = claimedPayment;
+  let claimUpdateTimeSeconds: number | null = null;
+  let claimUpdateTimeNanoseconds: number | null = null;
   await db.runTransaction(async (tx) => {
     const [cSnap, pSnap] = await Promise.all([tx.get(refundEventRef), tx.get(paymentRef)]);
     if (!cSnap.exists || (cSnap.data() as { claimToken?: string }).claimToken !== claimNonce) {
       throw new HttpsError("unavailable", "Refund claim changed before the refund could be submitted; held with zero financial writes.");
     }
+    // The projection token is captured in THIS verified read: there is no
+    // post-verification read-back window in which a swapped claim could be
+    // adopted while the provider is still called.
+    claimUpdateTimeSeconds = cSnap.updateTime ? cSnap.updateTime.seconds : null;
+    claimUpdateTimeNanoseconds = cSnap.updateTime ? cSnap.updateTime.nanoseconds : null;
     if (!pSnap.exists) throw new HttpsError("not-found", "Payment not found.");
     const fp = pSnap.data() as Payment;
     const drift =
@@ -147,11 +171,10 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     }
     submitPayment = fp;
   });
-  const claimedSnap = await refundEventRef.get();
   const claimToken = {
     paymentId: data.paymentId, claimedAt: now, claimToken: claimNonce,
-    updateTimeSeconds: claimedSnap.exists && (claimedSnap.data() as { claimToken?: string }).claimToken === claimNonce && claimedSnap.updateTime ? claimedSnap.updateTime.seconds : null,
-    updateTimeNanoseconds: claimedSnap.exists && (claimedSnap.data() as { claimToken?: string }).claimToken === claimNonce && claimedSnap.updateTime ? claimedSnap.updateTime.nanoseconds : null,
+    updateTimeSeconds: claimUpdateTimeSeconds,
+    updateTimeNanoseconds: claimUpdateTimeNanoseconds,
   };
 
   // Call provider refund (mock in dev, real Razorpay in production) — exactly
@@ -206,11 +229,22 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
         // a released/recreated claim belongs to a new refund attempt and is
         // never removed here.
         await db.runTransaction(async (tx) => {
-          const snap = await tx.get(refundEventRef);
+          const [snap, pSnap] = await Promise.all([tx.get(refundEventRef), tx.get(paymentRef)]);
           if (!snap.exists) return;
-          const cur = snap.data() as { claimedAt?: string; claimToken?: string };
-          if (cur.claimToken !== claimNonce) return; // never remove another invocation's claim
+          const cur = snap.data() as { claimedAt?: string; claimToken?: string; reconcileState?: string };
+          // Exact generation only: nonce + claimedAt + full-precision
+          // updateTime, and never an already-resolved claim.
+          if (cur.claimToken !== claimNonce) return;
           if ((cur.claimedAt ?? null) !== now) return;
+          if (cur.reconcileState === "resolved") return;
+          if (claimToken.updateTimeSeconds != null &&
+            (!snap.updateTime || snap.updateTime.seconds !== claimToken.updateTimeSeconds || snap.updateTime.nanoseconds !== claimToken.updateTimeNanoseconds)) return;
+          // Fresh payment binding: the record the provider inputs came from
+          // must still be the record this claim covers.
+          if (!pSnap.exists) return;
+          const fp = pSnap.data() as Payment;
+          if (fp.tenantId !== submitPayment.tenantId || fp.amount !== submitPayment.amount ||
+              fp.currency !== submitPayment.currency || fp.razorpayPaymentId !== submitPayment.razorpayPaymentId) return;
           tx.delete(refundEventRef);
         }).catch(() => undefined);
         throw err;
