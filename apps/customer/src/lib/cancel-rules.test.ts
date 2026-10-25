@@ -30,9 +30,10 @@ describe("customer cancel rules", () => {
   it("no day-before block or line is left anywhere in the app", () => {
     for (const f of ["./booking-rules.ts", "../app/(tabs)/bookings/[id].tsx"]) { const t = readFileSync(new URL(f, import.meta.url).pathname, "utf8"); expect(t).not.toContain("until the day before"); expect(t).not.toContain("SAME_DAY"); }
   });
-  it("the confirm text shows the fee and, if paid, the refund route, with no em dash", () => {
+  it("the confirm text shows the fee and, if paid, the refund route as a recorded request, with no em dash", () => {
     const t = cancelConfirmBody({ feePaise: 10000, line: "Line." }, true);
     expect(t).toContain("Rs 100"); expect(t).not.toContain("working days"); expect(t).not.toContain("\u2014");
+    expect(t).toContain("refund request will be recorded"); expect(t).not.toContain("will be refunded");
     expect(cancelConfirmBody({ feePaise: 0, line: "Line." }, false)).not.toContain("costs");
   });
 });

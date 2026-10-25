@@ -46,7 +46,7 @@ export function cancelState(booking: Booking, now = Date.now(), category?: strin
 /** Text for the cancel confirmation: the rule, and the fee if one applies now. */
 export function cancelConfirmBody(c: { feePaise: number; line: string }, paid: boolean): string {
   const fee = c.feePaise > 0 ? ` Cancelling now costs Rs ${c.feePaise / 100}, which is taken from your refund.` : "";
-  const money = paid ? ` Your payment will be refunded to your original payment method.` : " The slot is released straight away and nothing is charged.";
+  const money = paid ? ` A refund request will be recorded for your original payment method. Timing depends on your bank or payment provider.` : " The slot is released straight away and nothing is charged.";
   return `${c.line}${fee}${money} This can't be undone.`;
 }
 
