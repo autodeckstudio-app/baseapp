@@ -73,9 +73,10 @@ export interface Booking {
   holdExpiresAt?: string | null;
   /** Refund tracking on a cancelled, paid booking. */
   // reserved = approved and queued in the outbox, NOT yet sent to the provider;
+  // requested = same recorded-request state as written by the current backend;
   // initiated = accepted by the provider; failed = the provider refused it.
   // processed = the provider reported this exact refund as processed (a provider status, NOT proof the money reached the bank).
-  refundStatus?: "reserved" | "initiated" | "processed" | "failed";
+  refundStatus?: "reserved" | "requested" | "initiated" | "processed" | "failed";
   refundProcessedAt?: string | null;
   refundId?: string | null;
   notes: string | null;

@@ -89,6 +89,10 @@ describe("refund notices (source guard, not rendered proof)", () => {
   const src = _rf(_join(__dirname, "../app/(tabs)/bookings/[id].tsx"), "utf8");
   it("drops the unfulfillable promise and states provider status only", () => {
     expect(src).not.toContain("We will update here when it is complete");
+    // The backend writes "requested" at reserve time: the recorded-request
+    // notice must actually fire for it, and must not promise payment.
+    expect(src).toContain('booking.refundStatus === "requested"');
+    expect(src.slice(src.indexOf('booking.refundStatus === "requested"'), src.indexOf('booking.refundStatus === "requested"') + 200)).toContain("Your refund request is recorded");
     expect(src).toContain("Razorpay reports your refund as processed");
     expect(src).not.toMatch(/\d+\s*(-\s*\d+\s*)?(working |business )?days/i.exec(src.slice(src.indexOf('refundStatus === "processed"'), src.indexOf('refundStatus === "processed"') + 300))?.[0] ?? "NOPE_XYZ");
   });
