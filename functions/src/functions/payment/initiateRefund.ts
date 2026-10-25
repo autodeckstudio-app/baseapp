@@ -2,17 +2,19 @@
 // Mutates the original Payment record in place (status -> "refunded") — there
 // is no partial-refund model or separate refund Payment record in this schema.
 // In dev/emulator: mock provider is used. No live Razorpay refund API called.
+import { randomUUID } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Payment, Invoice } from "@autodeck/core";
+import type { Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
-import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiateRefundSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
+import { activeReservation } from "../../lib/refund-outbox.js";
+import { projectLegacyRefund } from "../../lib/refund-claims.js";
 
 export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -33,10 +35,31 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   if (payment.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
+  // Mutual interlock with the booking-refund outbox: a payment with an active
+  // outbox reservation is refused here, so this legacy single-shot path and
+  // the outbox runner can never both submit provider refunds for the same
+  // money (race order b; race order a is the outbox's refund_<paymentId>
+  // legacy-claim check).
+  // Fast path only - the authoritative check is inside the claim transaction
+  // below, so an overlapping reservation cannot slip between read and claim.
+  if (await activeReservation(db, payment.id)) {
+    throw new HttpsError("already-exists", "A refund request is already active for this payment.");
+  }
+
   if (payment.status !== "completed") {
     throw new HttpsError(
       "failed-precondition",
       "Can only refund completed payments.",
+    );
+  }
+  // Fail CLOSED on a razorpay payment with no provider binding: without the
+  // provider payment id no provider refund can be submitted or reconciled,
+  // and falling through to projection would fabricate a manual refund for
+  // money that never moved. Refuse BEFORE any claim is created.
+  if (payment.method === "razorpay_payment_link" && !payment.razorpayPaymentId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Razorpay payment is missing its provider payment id; the refund cannot be submitted or reconciled without the provider binding.",
     );
   }
 
@@ -56,115 +79,193 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
   // never re-verified, so two concurrent initiateRefund calls both passed the
   // check and both issued real provider refunds).
   const refundEventRef = db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${data.paymentId}`);
+  const paymentRef = db.collection(COLLECTIONS.payments()).doc(data.paymentId);
+  // The nonce originates INSIDE the claim transaction: a claim recreated with
+  // the same claimedAt clock value is never adopted as ours, before or after
+  // the provider call.
+  const claimNonce = randomUUID();
+  let claimedPayment: Payment = payment;
   await db.runTransaction(async (tx) => {
-    const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(data.paymentId));
+    const freshSnap = await tx.get(paymentRef);
     if (!freshSnap.exists) throw new HttpsError("not-found", "Payment not found.");
     const freshPayment = freshSnap.data() as Payment;
+    // The fresh record must still belong to the CALLER's tenant: a payment
+    // re-tenanted between the outer read and this transaction is refused,
+    // never silently adopted.
+    if (freshPayment.tenantId !== user.claims.tenantId) {
+      throw new HttpsError("permission-denied", "Cross-tenant access denied.");
+    }
     if (freshPayment.status !== "completed") {
       throw new HttpsError(
         "failed-precondition",
         `Cannot refund a payment in status '${freshPayment.status}'.`,
       );
     }
+    // Never blind-adopt modified money: the amount must be a positive
+    // integer (paise), the currency present, and nothing refunded yet.
+    if (!Number.isInteger(freshPayment.amount) || freshPayment.amount <= 0) {
+      throw new HttpsError("failed-precondition", "Payment amount is not a positive integer; held for reconciliation.");
+    }
+    if (typeof freshPayment.currency !== "string" || freshPayment.currency.length === 0) {
+      throw new HttpsError("failed-precondition", "Payment currency is missing; held for reconciliation.");
+    }
+    if ((freshPayment.refundAmount ?? 0) !== 0) {
+      throw new HttpsError("failed-precondition", "Payment already carries a refunded amount; held for reconciliation.");
+    }
+    if (freshPayment.method === "razorpay_payment_link" && !freshPayment.razorpayPaymentId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Razorpay payment is missing its provider payment id; the refund cannot be submitted or reconciled without the provider binding.",
+      );
+    }
     const eventSnap = await tx.get(refundEventRef);
     if (eventSnap.exists) {
       throw new HttpsError("already-exists", "A refund has already been initiated for this payment.");
     }
-    tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid });
+    // D1: the outbox guard is read in THIS transaction, so the two paths
+    // overlap-safe: if the outbox reservation commits first, this transaction
+    // retries on the guard-doc conflict and refuses; if this claim commits
+    // first, planReserveInTx's refund_<paymentId> read conflicts and refuses.
+    const guardSnap = await tx.get(db.collection(COLLECTIONS.refundRequests()).doc(`active_${data.paymentId}`));
+    if (guardSnap.exists) {
+      throw new HttpsError("already-exists", "A refund request is already active for this payment.");
+    }
+    tx.set(refundEventRef, { paymentId: data.paymentId, claimedAt: now, claimedBy: user.uid, claimToken: claimNonce });
+    // Provider inputs come from THIS in-transaction read, never the stale
+    // pre-transaction snapshot.
+    claimedPayment = freshPayment;
   });
+
+  // Pre-submit verification in ONE transaction: the claim must still be our
+  // exact invocation (nonce), and the payment's identity must still match the
+  // exact values we are about to send the provider (amount, currency,
+  // provider payment id, method, tenant, linkage, status). Any drift holds
+  // with zero financial writes and zero provider calls.
+  let submitPayment: Payment = claimedPayment;
+  let claimUpdateTimeSeconds: number | null = null;
+  let claimUpdateTimeNanoseconds: number | null = null;
+  await db.runTransaction(async (tx) => {
+    const [cSnap, pSnap] = await Promise.all([tx.get(refundEventRef), tx.get(paymentRef)]);
+    if (!cSnap.exists || (cSnap.data() as { claimToken?: string }).claimToken !== claimNonce) {
+      throw new HttpsError("unavailable", "Refund claim changed before the refund could be submitted; held with zero financial writes.");
+    }
+    // The projection token is captured in THIS verified read: there is no
+    // post-verification read-back window in which a swapped claim could be
+    // adopted while the provider is still called.
+    claimUpdateTimeSeconds = cSnap.updateTime ? cSnap.updateTime.seconds : null;
+    claimUpdateTimeNanoseconds = cSnap.updateTime ? cSnap.updateTime.nanoseconds : null;
+    if (!pSnap.exists) throw new HttpsError("not-found", "Payment not found.");
+    const fp = pSnap.data() as Payment;
+    const drift =
+      fp.tenantId !== claimedPayment.tenantId ||
+      fp.amount !== claimedPayment.amount ||
+      fp.currency !== claimedPayment.currency ||
+      fp.razorpayPaymentId !== claimedPayment.razorpayPaymentId ||
+      fp.method !== claimedPayment.method ||
+      fp.status !== claimedPayment.status ||
+      fp.invoiceId !== claimedPayment.invoiceId ||
+      fp.jobId !== claimedPayment.jobId ||
+      fp.bookingId !== claimedPayment.bookingId;
+    if (drift) {
+      throw new HttpsError("unavailable", "Payment identity changed before the refund could be submitted; held with zero financial writes.");
+    }
+    submitPayment = fp;
+  });
+  const claimToken = {
+    paymentId: data.paymentId, claimedAt: now, claimToken: claimNonce,
+    updateTimeSeconds: claimUpdateTimeSeconds,
+    updateTimeNanoseconds: claimUpdateTimeNanoseconds,
+  };
 
   // Call provider refund (mock in dev, real Razorpay in production) — exactly
   // once, now that this call has exclusive claim on this payment's refund.
   // Deterministic referenceId (no Date.now()) so a network-level retry of
   // this exact call is idempotent at the provider too.
   let providerRefundId: string | null = null;
-  try {
-    if (payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
-      const provider = getPaymentProvider();
+  if (submitPayment.method === "razorpay_payment_link" && submitPayment.razorpayPaymentId) {
+    const provider = getPaymentProvider();
+    try {
       const result = await provider.initiateRefund({
-        providerPaymentId: payment.razorpayPaymentId,
-        amount: payment.amount,
+        providerPaymentId: submitPayment.razorpayPaymentId,
+        amount: submitPayment.amount,
         reason: data.reason,
         referenceId: `refund_${data.paymentId}`,
       });
+      // A 2xx response alone is not money moved: only a refund the provider
+      // already reports as processed may be projected below. Anything else
+      // keeps the claim and stays a hold for reconciliation - the app does
+      // not fabricate a completed refund.
+      // Only AFFIRMATIVE processed evidence may project. A missing, null or
+      // empty lifecycle status is not a completed refund: hold exactly like
+      // any other non-processed outcome.
+      if (result.status !== "processed") {
+        throw new HttpsError(
+          "unavailable",
+          `Refund ${result.providerRefundId} accepted by the provider with status '${result.status ?? "unknown"}'; the refund claim is retained. Reconcile before any retry.`,
+        );
+      }
       providerRefundId = result.providerRefundId;
-    }
-  } catch (err) {
-    // Provider call failed — release the claim so a genuine retry is
-    // possible instead of permanently blocking this payment on
-    // "already-exists" for a refund that never actually happened.
-    await refundEventRef.delete().catch(() => undefined);
-    throw err;
-  }
-
-  await db.runTransaction(async (tx) => {
-    // All reads must happen before any writes within a Firestore transaction.
-    const invoiceSnap = payment.invoiceId
-      ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId))
-      : null;
-
-    // Mark original payment as refunded
-    tx.update(db.collection(COLLECTIONS.payments()).doc(data.paymentId), {
-      status: "refunded",
-      razorpayRefundId: providerRefundId,
-      refundAmount: payment.amount,
-      refundedAt: now,
-      updatedAt: now,
-    });
-
-    // Void the linked invoice (if any)
-    if (payment.invoiceId && invoiceSnap) {
-      if (invoiceSnap.exists) {
-        const invoice = invoiceSnap.data() as Invoice;
-        if (invoice.status !== "void") {
-          tx.update(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId), {
-            status: "void",
-            voidedAt: now,
-            voidedReason: `Refund initiated: ${data.reason}`,
-            updatedAt: now,
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      // The provider outcome is UNKNOWN (e.g. the response was lost after
+      // acceptance). NEVER release the claim on an unknown outcome: a
+      // released claim would let a retry - or the outbox - submit a second
+      // refund for the same money. Reconcile by the durable reference id:
+      // only an authoritative provider negative releases the claim.
+      let outcome: string = "unknown";
+      let foundId: string | null = null;
+      if (provider.findRefundByReference && submitPayment.currency) {
+        try {
+          const lookup = await provider.findRefundByReference(`refund_${data.paymentId}`, {
+            providerPaymentId: submitPayment.razorpayPaymentId, amountPaise: submitPayment.amount, currency: submitPayment.currency,
           });
-          writeAuditLog(tx, {
-            action: "invoice.voided",
-            entityType: "Invoice",
-            entityId: payment.invoiceId,
-            user,
-            studioId: payment.studioId,
-            after: { status: "void", reason: data.reason },
-          });
-        }
+          outcome = lookup.outcome;
+          if (lookup.outcome === "found") foundId = lookup.providerRefundId;
+        } catch { outcome = "unknown"; }
+      }
+      if (outcome === "absent_confirmed") {
+        // Authoritative: the provider never accepted this refund. Safe to
+        // release the claim for a genuine retry - but only THIS generation:
+        // a released/recreated claim belongs to a new refund attempt and is
+        // never removed here.
+        await db.runTransaction(async (tx) => {
+          const [snap, pSnap] = await Promise.all([tx.get(refundEventRef), tx.get(paymentRef)]);
+          if (!snap.exists) return;
+          const cur = snap.data() as { claimedAt?: string; claimToken?: string; reconcileState?: string };
+          // Exact generation only: nonce + claimedAt + full-precision
+          // updateTime, and never an already-resolved claim.
+          if (cur.claimToken !== claimNonce) return;
+          if ((cur.claimedAt ?? null) !== now) return;
+          if (cur.reconcileState === "resolved") return;
+          if (claimToken.updateTimeSeconds != null &&
+            (!snap.updateTime || snap.updateTime.seconds !== claimToken.updateTimeSeconds || snap.updateTime.nanoseconds !== claimToken.updateTimeNanoseconds)) return;
+          // Fresh payment binding: the record the provider inputs came from
+          // must still be the record this claim covers.
+          if (!pSnap.exists) return;
+          const fp = pSnap.data() as Payment;
+          if (fp.tenantId !== submitPayment.tenantId || fp.amount !== submitPayment.amount ||
+              fp.currency !== submitPayment.currency || fp.razorpayPaymentId !== submitPayment.razorpayPaymentId) return;
+          tx.delete(refundEventRef);
+        }).catch(() => undefined);
+        throw err;
+      }
+      if (outcome === "found" && foundId) {
+        // The provider DID accept (and reports it processed): project it
+        // truthfully below instead of losing the obligation.
+        providerRefundId = foundId;
+      } else {
+        // failed notification or unknown: hold. Claim retained.
+        throw new HttpsError(
+          "unavailable",
+          "Refund outcome could not be confirmed with the provider; the refund claim is retained so no second refund can be submitted. Reconcile before any retry.",
+        );
       }
     }
+  }
 
-    // Update job paymentStatus — the job is always present, booking-sourced or walk-in
-    if (payment.jobId) {
-      tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), {
-        paymentStatus: "refunded",
-        updatedAt: now,
-      });
-    }
-
-    // Sync linked booking, if any
-    if (payment.bookingId) {
-      tx.update(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId), {
-        paymentStatus: "refunded",
-        updatedAt: now,
-      });
-    }
-
-    writeAuditLog(tx, {
-      action: "payment.refunded",
-      entityType: "Payment",
-      entityId: data.paymentId,
-      user,
-      studioId: payment.studioId,
-      after: {
-        status: "refunded",
-        reason: data.reason,
-        refundAmount: payment.amount,
-        providerRefundId,
-      },
-    });
+  const { converged } = await projectLegacyRefund(db, {
+    paymentId: data.paymentId, payment: submitPayment, providerRefundId, reason: data.reason, user, now, claim: claimToken,
   });
 
-  return { paymentId: data.paymentId, refunded: true, providerRefundId };
+  return { paymentId: data.paymentId, refunded: true, providerRefundId, ...(converged ? { converged: true } : {}) };
 });

@@ -32,9 +32,12 @@ describe("cancellation policy", () => {
     expect(src).toContain("RAZORPAY_KEY_SECRET");
     expect(run).toContain("cancellationTerms(");
     expect(run).not.toContain("isCancellableDay"); expect(run).not.toContain("until the day before");
-    expect(run).toContain("getPaymentProvider().initiateRefund");
-    expect(run).toContain("refund_${paymentRef.id}");
-    expect(run).toContain("The refund did not go through, so the booking is NOT cancelled");
+    // Provider refunds route through the outbox reservation (single refund
+    // authority), inside the cancellation transaction; the callable itself
+    // never submits to the provider.
+    expect(run).toContain("planReserveInTx(tx, db, {");
+    expect(run).not.toContain("getPaymentProvider().initiateRefund");
+    expect(run).toContain("the booking is NOT cancelled");
     expect(src).toContain("Work on your car has already started");
   });
   it("the Terms page states the same numbers as the config", () => {

@@ -10,6 +10,7 @@ import type {
   PaymentLinkResult,
   InitiateRefundParams,
   RefundResult,
+  RefundLookupResult, RefundBinding,
   VerifyWebhookParams,
   ProviderWebhookEvent,
 } from "./payment-provider.js";
@@ -25,6 +26,7 @@ interface RazorpayPaymentLinkResponse {
 
 interface RazorpayRefundResponse {
   id: string;
+  status?: string;
 }
 
 interface RazorpayWebhookPayload {
@@ -32,7 +34,7 @@ interface RazorpayWebhookPayload {
   event: string;
   payload?: {
     payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } };
-    refund?: { entity?: { id?: string; payment_id?: string; amount?: number } };
+    refund?: { entity?: { id?: string; payment_id?: string; amount?: number; currency?: string; status?: string; receipt?: string | null } };
     payment_link?: { entity?: { id?: string; reference_id?: string; order_id?: string; amount?: number } };
   };
 }
@@ -120,6 +122,13 @@ export class RazorpayProvider implements PaymentProvider {
       providerPaymentId: payment?.id ?? refund?.payment_id ?? "",
       providerPaymentLinkId: plink?.id ?? null,
       providerRefundId: refund?.id ?? null,
+      providerRefundAmount: refund?.amount ?? null,
+      providerRefundCurrency: refund?.currency ?? null,
+      providerRefundPaymentId: refund?.payment_id ?? null,
+      providerPaymentEntityId: payment?.id ?? null,
+      providerPaymentEntityCurrency: payment?.currency ?? null,
+      providerRefundStatus: refund?.status ?? null,
+      providerRefundReceipt: refund?.receipt ?? null,
       providerOrderId: payment?.order_id ?? plink?.order_id ?? null,
       referenceId: plink?.reference_id ?? null,
       amount: payment?.amount ?? plink?.amount ?? refund?.amount ?? 0,
@@ -149,7 +158,58 @@ export class RazorpayProvider implements PaymentProvider {
     }
 
     const data = (await response.json()) as RazorpayRefundResponse;
-    return { providerRefundId: data.id };
+    return { providerRefundId: data.id, status: data.status ?? null };
+  }
+
+  /**
+   * Reconciles an ambiguous refund submit by our durable reference id, which
+   * initiateRefund sets as the Razorpay refund's receipt. The query is scoped
+   * to OUR stored provider payment id and the match is bound to amount and
+   * currency, so identity never rests on the receipt field alone (receipts
+   * have no provider uniqueness contract). List freshness is still not
+   * contractual, so a miss can NEVER be treated as authoritative absence (a
+   * committed refund could sit beyond the page or behind an index delay).
+   * Every miss, ambiguity, or partial match is "unknown": the reservation
+   * stays held for manual reconciliation rather than releasing the balance.
+   */
+  async findRefundByReference(referenceId: string, binding: RefundBinding): Promise<RefundLookupResult> {
+    // BOUND reconciliation. The query is scoped to OUR payment
+    // (/payments/{providerPaymentId}/refunds), anchoring identity to the
+    // stored provider payment id instead of an account-wide receipt scan.
+    // A match must then agree on receipt AND amount AND currency. Exactly one
+    // fully-bound match founds; every other shape is "unknown" and the hold
+    // stays held for manual reconciliation:
+    //  - zero matches: inconclusive (page/index lag), NEVER absent_confirmed;
+    //  - 2+ bound matches: ambiguous, never an arbitrary pick;
+    //  - a receipt match whose amount/currency disagrees: conflict-shaped,
+    //    treated as unknown (held) rather than attached or released;
+    //  - transport failure, non-OK status, malformed JSON: unknown.
+    let data: { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string; status?: string }> };
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/payments/${encodeURIComponent(binding.providerPaymentId)}/refunds?count=100`,
+        { headers: { Authorization: this.authHeader } },
+      );
+      if (!response.ok) return { outcome: "unknown" };
+      data = (await response.json()) as { items?: Array<{ id?: string; receipt?: string | null; amount?: number; currency?: string; status?: string }> };
+    } catch {
+      return { outcome: "unknown" };
+    }
+    const receiptMatches = (data.items ?? []).filter((refund) => refund?.receipt === referenceId);
+    const bound = receiptMatches.filter(
+      (refund) => refund?.amount === binding.amountPaise && refund?.currency === binding.currency,
+    );
+    // A found refund is not necessarily successful: only "processed" moves
+    // money. Per Razorpay's documented lifecycle (created -> processed |
+    // failed), "failed" is a failure NOTIFICATION whose finality the provider
+    // contract does not settle (the runner holds it for manual
+    // reconciliation); "pending"/"partial"/
+    // missing status is inconclusive - hold, do not project, do not release.
+    if (bound.length === 1 && bound.length === receiptMatches.length && bound[0]?.id) {
+      if (bound[0].status === "processed") return { outcome: "found", providerRefundId: bound[0].id };
+      if (bound[0].status === "failed") return { outcome: "failed_confirmed", providerRefundId: bound[0].id };
+    }
+    return { outcome: "unknown" };
   }
 }
 

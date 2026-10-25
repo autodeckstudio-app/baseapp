@@ -98,15 +98,23 @@ describe("guards on the server code", () => {
     expect(s).toContain("writeCancelRestores(");
     expect(s).not.toContain('user.claims.role === "studio" ||');
   });
-  it("adminCancelBooking is admin-only, App Check enforced, previews, claims before the provider and releases on failure", () => {
+  it("adminCancelBooking is admin-only, App Check enforced, previews, and routes provider refunds through the outbox only", () => {
     const s = src("functions/booking/adminCancelBooking.ts");
     expect(s).toContain('assertRole(user, "admin", "superadmin")');
     expect(s).toContain("enforceAppCheck: shouldEnforceAppCheck()");
     expect(s).toContain("data.preview");
-    expect(s.indexOf("tx.set(refundEventRef")).toBeLessThan(s.indexOf(".initiateRefund("));
-    expect(s).toContain("refundEventRef.delete()");
-    expect(s).toContain("the booking is NOT cancelled");
-    expect(s).toContain("amount: plan.refundPaise");
+    // Single refund authority: provider refunds are RESERVED in the outbox
+    // INSIDE the cancellation transaction (no standalone runnable
+    // reservation); this callable never calls the provider, never releases a
+    // claim on an unknown outcome, holds malformed provider payments, and
+    // refuses in production while the runner refusal holds.
+    expect(s).toContain("planReserveInTx(tx, db, {");
+    expect(s).toContain("applyReserveInTx(tx, reservePlan)");
+    expect(s).toContain("amountPaise: plan.refundPaise");
+    expect(s).not.toContain(".initiateRefund(");
+    expect(s).toContain("isProductionProject()");
+    expect(s).toContain("The booking is NOT cancelled");
+    expect(s).toContain("missing its provider payment id");
   });
   it("the close-time auto-cancel records the fee and restores through the shared helper", () => {
     const s = src("lib/missed-bookings.ts");
