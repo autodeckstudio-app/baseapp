@@ -59,7 +59,8 @@ async function seedStudio(bayCount = 10, studioId = STUDIO_ID) {
     currency: "INR",
     taxRatePercent: 18,
     taxDescription: "GST 18%",
-    operatingHours: [],
+    // Open every day: reschedule only offers slots on days that have hours.
+    operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d as 0 | 1 | 2 | 3 | 4 | 5 | 6, open: "09:00", close: "19:00", closed: false })),
     holidays: [],
     vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
     slotIntervalMinutes: 30,

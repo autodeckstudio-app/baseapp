@@ -6,6 +6,7 @@ import type { IconName } from "@autodeck/ui/theme";
 // row shows starting price, time and warranty; the editor opens in a drawer.
 import { useState } from "react";
 import type { BayType, Service, ServiceCategory, VehicleCategory, WarrantyDurationUnit } from "@autodeck/core";
+import { formatDuration } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
 import { formatPaise } from "../lib/format";
 import { uploadServiceImage } from "../lib/service-image";
@@ -22,10 +23,7 @@ const BAY_NAME: Record<BayType, string> = { wash: "Wash bay", protection: "Prote
 const UNIT_NAME: Record<WarrantyDurationUnit, string> = { days: "Days", months: "Months", years: "Years", lifetime: "Lifetime" };
 
 export function duration(mins: number): string {
-  if (mins < 60) return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h} h ${m} min` : `${h} h`;
+  return formatDuration(mins);
 }
 
 function warranty(s: Service): string | null {
@@ -169,19 +167,25 @@ export function ServicesView(p: {
               <label className="ax-form-row"><span>Starting price (₹)</span><input inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
               <label className="ax-form-row"><span>Time needed (min)</span><input inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
             </div>
-            <p className="ax-note">Bigger cars can cost more and take longer. Add a rule per size; smaller cars pay the starting price.</p>
-            {draft.sizes.length > 0 && <div className="ax-size-rule ax-size-head"><span>Car size</span><span>Extra ₹</span><span>Extra min</span><span /></div>}
-            {draft.sizes.map((r, i) => (
-              <div key={i} className="ax-size-rule">
-                <select value={r.vehicleCategory} aria-label="Car size" onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, vehicleCategory: e.target.value as VehicleCategory } : x)) })}>
-                  {SIZES.filter((z) => z !== "luxury" || r.vehicleCategory === "luxury").map((z) => <option key={z} value={z}>{SIZE_NAME[z]}</option>)}
-                </select>
-                <input inputMode="decimal" aria-label="Extra price in rupees" placeholder="+₹" value={r.extraRupees} onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, extraRupees: e.target.value } : x)) })} />
-                <input inputMode="numeric" aria-label="Extra minutes" placeholder="+min" value={r.extraMinutes} onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, extraMinutes: e.target.value } : x)) })} />
-                <button type="button" className="ax-button" aria-label="Remove rule" onClick={() => set({ sizes: draft.sizes.filter((_, j) => j !== i) })}>×</button>
-              </div>
-            ))}
-            <button type="button" className="ax-button" onClick={() => set({ sizes: [...draft.sizes, { vehicleCategory: SIZES.find((z) => !draft.sizes.some((x) => x.vehicleCategory === z)) ?? "suv", extraRupees: "", extraMinutes: "" }] })}>Add a size rule</button>
+            {draft.category === "ppf" ? (
+            <>
+              <p className="ax-note">Bigger cars can cost more and take longer. Add a rule per size; smaller cars pay the starting price.</p>
+              {draft.sizes.length > 0 && <div className="ax-size-rule ax-size-head"><span>Car size</span><span>Extra ₹</span><span>Extra min</span><span /></div>}
+              {draft.sizes.map((r, i) => (
+                <div key={i} className="ax-size-rule">
+                  <select value={r.vehicleCategory} aria-label="Car size" onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, vehicleCategory: e.target.value as VehicleCategory } : x)) })}>
+                    {SIZES.filter((z) => z !== "luxury" || r.vehicleCategory === "luxury").map((z) => <option key={z} value={z}>{SIZE_NAME[z]}</option>)}
+                  </select>
+                  <input inputMode="decimal" aria-label="Extra price in rupees" placeholder="+₹" value={r.extraRupees} onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, extraRupees: e.target.value } : x)) })} />
+                  <input inputMode="numeric" aria-label="Extra minutes" placeholder="+min" value={r.extraMinutes} onChange={(e) => set({ sizes: draft.sizes.map((x, j) => (j === i ? { ...x, extraMinutes: e.target.value } : x)) })} />
+                  <button type="button" className="ax-button" aria-label="Remove rule" onClick={() => set({ sizes: draft.sizes.filter((_, j) => j !== i) })}>×</button>
+                </div>
+              ))}
+              <button type="button" className="ax-button" onClick={() => set({ sizes: [...draft.sizes, { vehicleCategory: SIZES.find((z) => !draft.sizes.some((x) => x.vehicleCategory === z)) ?? "suv", extraRupees: "", extraMinutes: "" }] })}>Add a size rule</button>
+            </>
+            ) : (
+              <p className="ax-note">Only paint film is priced by car size. Every other service has one price for every car.{draft.sizes.length > 0 ? " Size rules saved earlier on this service are kept, not shown, and not used for pricing." : ""}</p>
+            )}
 
             <p className="ax-label ax-form-section">Care tips</p>
             <p className="ax-note">Short aftercare lines customers see on this service. Leave empty to hide the card.</p>

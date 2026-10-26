@@ -30,3 +30,17 @@ export async function createRazorpayOrder(params: { amount: number; currency: st
   }
   return (await res.json()) as { id: string; amount: number; currency: string };
 }
+
+/** Looks up orders by receipt (our payment id). Used only to reconcile an ambiguous create:
+ * the provider's own answer decides whether a fresh order may be made. */
+export async function findRazorpayOrderByReceipt(params: { receipt: string; keyId: string; keySecret: string }): Promise<{ id: string; amount: number; currency: string } | null> {
+  const res = await fetch(`${BASE}/orders?receipt=${encodeURIComponent(params.receipt.slice(0, 40))}`, {
+    headers: { Authorization: `Basic ${Buffer.from(`${params.keyId}:${params.keySecret}`).toString("base64")}` },
+  });
+  if (!res.ok) throw new Error(`Razorpay order lookup failed: ${res.status}`);
+  const body = (await res.json()) as { items?: Array<{ id: string; amount: number; currency: string }> };
+  const items = body.items ?? [];
+  if (items.length === 0) return null;
+  const latest = items[0]!;
+  return { id: latest.id, amount: latest.amount, currency: latest.currency };
+}

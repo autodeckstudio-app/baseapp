@@ -37,7 +37,7 @@ export interface InvoiceDocInput {
 /** Horizon: one document architecture for the dark screen and ivory A4 export. */
 export function buildInvoiceHtml({ invoice: inv, catalogue, studio, customer, vehicle, appearance = "print" }: InvoiceDocInput): string {
   const { split, cgst, sgst } = gstSplit(inv);
-  const status = inv.status === "void" ? "Void" : inv.status === "paid" ? "Paid" : "Issued";
+  const status = inv.settlementKind === "membership_covered" ? "Membership-covered" : inv.status === "void" ? "Void" : inv.status === "paid" ? "Paid" : "Issued";
   const date = inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Not issued";
   const snapshot = inv as unknown as { customerSnapshot?: InvoiceDocInput["customer"]; vehicleSnapshot?: InvoiceDocInput["vehicle"] };
   customer = snapshot.customerSnapshot ?? customer;

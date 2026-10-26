@@ -6,7 +6,7 @@ import fixture from '../../data/shop-fixture.json';
 const dev = import.meta.env.DEV;
 const imgs = Object.fromEntries((fixture.products as { id: string; image: string }[]).map(p => [p.id, p.image]));
 ---
-<Base title="Cart · AutoDeck Store" description="Your AutoDeck Store cart." page="shop">
+<Base title="Cart · AutoDeck Store" description="Your AutoDeck Store cart." page="shop" noindex>
 {dev ? (
   <section class="wrap cart" data-cart data-api="http://127.0.0.1:8796" data-imgs={JSON.stringify(imgs)}>
     <div>

@@ -1,3 +1,4 @@
+import { membershipCoveredLabel } from "@autodeck/core";
 import { View, Text } from "react-native";
 import type { Booking } from "@autodeck/core";
 import { colors } from "../tokens/colors.js";
@@ -32,7 +33,7 @@ export function BookingCard({ booking, onPress }: BookingCardProps) {
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "capitalize" }}>
-          {booking.paymentStatus}
+          {membershipCoveredLabel(booking) ?? booking.paymentStatus}
         </Text>
         <Text style={{ ...typography.priceSmall, color: colors.textPrimary }}>{formatPaise(booking.totalAmount)}</Text>
       </View>

@@ -1,3 +1,4 @@
+import { unresolvedCancel } from "./waiting-cancel.js";
 // Cancel unarrived bookings at studio close. Transaction reads protect arrivals,
 // cancellations and reschedules, and restore an unused membership wash once.
 import type { Firestore } from "firebase-admin/firestore";
@@ -11,12 +12,12 @@ export async function flagMissedBookings(db: Firestore, nowMs: number = Date.now
   const snap = await db.collection(COLLECTIONS.bookings()).where("scheduledAt", "<", now).get();
   let flagged = 0;
   for (const doc of snap.docs) {
-    if (!isBookingMissed(doc.data() as Booking, nowMs)) continue;
+    if (unresolvedCancel(doc.data() as Booking) || !isBookingMissed(doc.data() as Booking, nowMs)) continue;
     const wrote = await db.runTransaction(async (tx) => {
       const fresh = await tx.get(doc.ref);
       if (!fresh.exists) return false;
       const b = fresh.data() as Booking;
-      if (!isBookingMissed(b, nowMs)) return false;
+      if (unresolvedCancel(b) || !isBookingMissed(b, nowMs)) return false;
       const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", doc.id));
       // STANDBY means the vehicle arrived but has not yet been admitted to a bay.
       if (jobs.docs.some((d) => d.data()["status"] !== "PENDING_VEHICLE" && d.data()["status"] !== "CANCELLED")) return false;

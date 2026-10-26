@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
+import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
 
 // metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
 // the "react-native" package-exports condition so Metro picks @firebase/auth's RN build
@@ -52,13 +53,25 @@ export const db = initializeFirestore(app, Platform.OS === "web" ? { experimenta
 export const functions = getFunctions(app, "asia-south1");
 export const storage = getStorage(app);
 
-export const useEmulator = process.env["USE_FIREBASE_EMULATOR"] === "true";
+// NOTE: direct process.env["..."] reads only - Expo's web export inlines
+// EXPO_PUBLIC_* variables per access site and cannot see through a
+// passed-around process.env object.
+export const useEmulator = resolveUseEmulator({
+  USE_FIREBASE_EMULATOR: process.env["USE_FIREBASE_EMULATOR"],
+  EXPO_PUBLIC_USE_FIREBASE_EMULATOR: process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"],
+});
 
 if (useEmulator) {
-  const host = process.env["FIREBASE_EMULATOR_HOST"] ?? "localhost";
+  const targets = emulatorTargets({
+    FIREBASE_EMULATOR_HOST: process.env["FIREBASE_EMULATOR_HOST"],
+    EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
+    EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: process.env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"],
+    EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT: process.env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"],
+    EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
+  });
   try {
-    connectFirestoreEmulator(db, host, 8080);
-    connectFunctionsEmulator(functions, host, 5001);
+    connectFirestoreEmulator(db, targets.host, targets.firestorePort);
+    connectFunctionsEmulator(functions, targets.host, targets.functionsPort);
   } catch {
     // Already connected (React Native fast refresh)
   }

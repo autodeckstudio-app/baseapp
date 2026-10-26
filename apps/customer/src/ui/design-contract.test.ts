@@ -136,7 +136,7 @@ it("keeps Home glass to three blur surfaces, hides the campaign slot without rea
 });
 it("every journey element has a reason: no None status rows, a call route when online cancel is closed, a next step after pay at the studio",()=>{
   expect(read("src/ui/CarOverview.tsx")).not.toContain('"None"');
-  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("Next: bring your car at {displayTime}");
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain('label="Call the studio"');expect(b).toContain("tel:${STUDIO_INFO.phone}");expect(b).toContain("nextStepLine({ giftCovered");
 });
 it("audit batch: no spinner price labels, no icon placeholders over titles, labelled remove, headline on You, action on every notification",()=>{
   expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("Checking price");
@@ -359,7 +359,7 @@ describe("membership wash", () => {
   it("sends the plan id the server expects, never a price", () => {
     expect(read("src/lib/membership-wash.ts")).toContain("export const MEMBERSHIP_WASH_LIVE = true");
     const c = read("src/app/(tabs)/book/confirm.tsx");
-    expect(c).toContain("MEMBERSHIP_WASH_LIVE && wash && wash.ok");
+    expect(c).toContain("MEMBERSHIP_WASH_LIVE && !giftCode && wash && wash.ok");
     expect(c).toContain("...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {})");
     expect(c).not.toContain("useMembershipWash");
   });
@@ -590,10 +590,10 @@ describe("car detail and add car (batch 1)", () => {
     const d = read("src/app/(tabs)/garage/[id].tsx");
     expect(d).not.toContain("TabPills");
     expect(d).not.toContain('label="Book maintenance"');
-    expect(d).toContain('title="Coming up"');
+    expect(d).toContain('title="Documents"'); // round7 point 9: the expiry list is titled Documents (was Coming up)
     expect(d).toContain("<Kicker>Papers</Kicker>");
     const a = read("src/app/(tabs)/garage/add.tsx");
-    expect(a).toContain("uploadVehicleRc");
+    expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only
     expect(a).toContain("uploadVehiclePhoto");
   });
 });
@@ -729,4 +729,9 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
     for (const f of ["../../packages/ui/src/theme/float.ts","../admin/src/experience/float.css","../admin/src/experience/orizon.css"]) expect(read(f)).not.toContain("hero-studio");
     expect(read("../../packages/ui/src/theme/float.ts")).toContain("export const LAMP_GLOW");
   });
+});
+
+it("gift-covered zero-total bookings use the shared next-step helper (behaviour tested in booking-next-step.test.ts)",()=>{
+  const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("nextStepLine({ giftCovered, jobStatus: job?.status ?? null");
+  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Your slot is confirmed. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
 });

@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import type { Employee } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { ownerEmail } from "../../lib/roleResolver.js";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
@@ -39,6 +40,10 @@ export const updateStaffRole = onCall({ region: "asia-south1", enforceAppCheck: 
 
   if (existing.terminatedAt) {
     throw new HttpsError("failed-precondition", "Cannot change role of a terminated employee.");
+  }
+  // An accountant roster entry is not editable by an ordinary admin: only the platform superadmin or the owner account.
+  if (existing.role === "accountant" && user.claims.role !== "superadmin" && (user.email ?? "").trim().toLowerCase() !== ownerEmail()) {
+    throw new HttpsError("permission-denied", "Only the owner or a platform operator can change an accountant entry.");
   }
 
   const adminAuth = getAuth();

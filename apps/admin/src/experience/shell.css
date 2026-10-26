@@ -319,6 +319,15 @@ html[data-theme="night"] .ax-shell a.ax-button--primary { color: #1A1410; }
 @media (max-width: 860px) {
   .ax-list-head { display: none; }
   .ax-shell .ax-list-row { grid-template-columns: 1fr 1fr !important; padding: var(--ad-space-line) var(--ad-space-gap); row-gap: 4px; }
+  /* Invoices: the generic 2-column squeeze reflows 5 cells so the Status badge
+     lands on the right-aligned Total. Give each cell its own grid line instead:
+     the badge sits alone on its line, the amount right-aligned on its own. */
+  .ax-shell .ax-list--invoices .ax-list-row { grid-template-columns: minmax(0, 1fr) auto !important; row-gap: 6px; }
+  .ax-shell .ax-list--invoices .ax-list-row > [data-col="no"] { grid-column: 1; grid-row: 1; }
+  .ax-shell .ax-list--invoices .ax-list-row > [data-col="issued"] { grid-column: 2; grid-row: 1; justify-self: end; }
+  .ax-shell .ax-list--invoices .ax-list-row > [data-col="who"] { grid-column: 1 / -1; grid-row: 2; }
+  .ax-shell .ax-list--invoices .ax-list-row > [data-col="status"] { grid-column: 1; grid-row: 3; }
+  .ax-shell .ax-list--invoices .ax-list-row > [data-col="total"] { grid-column: 2; grid-row: 4; justify-self: end; }
 }
 .ax-inline-form { display: inline-flex; gap: 6px; align-items: center; }
 .ax-shell .ax-search--plate { font-family: var(--ad-font-data, Inter), var(--ad-font-gu), var(--ad-font-hi), system-ui, sans-serif; letter-spacing: 1px; max-width: 220px; }

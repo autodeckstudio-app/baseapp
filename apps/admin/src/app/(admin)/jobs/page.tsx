@@ -1,4 +1,5 @@
 "use client";
+import { membershipCoveredLabel } from "@autodeck/core";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -107,7 +108,7 @@ export default function JobsPage() {
     bay: j.status !== "STANDBY" ? bayLabel(j.bayId, bays) : undefined,
     when: j.status === "STANDBY" ? `Waiting since ${formatDateTime(j.standbyArrivedAt ?? j.createdAt)}` : formatDateTime(j.scheduledAt),
     walkIn: j.isWalkIn,
-    payment: j.paymentStatus,
+    payment: membershipCoveredLabel(j) ?? j.paymentStatus,
   });
   const open = (id: string) => router.push(`/jobs/${id}`);
 
@@ -191,7 +192,7 @@ export default function JobsPage() {
                 <td>{customerNames[j.customerId] ?? "-"}</td>
                 <td>{serviceNames[j.serviceId] ?? "-"}</td>
                 <td>{bayLabel(j.bayId, bays) ?? ""}</td>
-                <td><StatusBadge label={j.paymentStatus} /></td>
+                <td><StatusBadge label={membershipCoveredLabel(j) ?? j.paymentStatus} /></td>
                 <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(j.totalAmount)}</td>
               </tr>
             ))}

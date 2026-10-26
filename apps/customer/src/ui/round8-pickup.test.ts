@@ -1,0 +1,87 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+const read = (p: string) => readFileSync(p, "utf8");
+
+describe("round 8 fix 2: reschedule hidden on the post-booking landing view", () => {
+  const detail = read("src/app/(tabs)/bookings/[id].tsx");
+  it("the reschedule section stays hidden only when opened with placed=1", () => {
+    expect(detail).toContain('const showRescheduleSection = placed !== "1" &&');
+  });
+  it("the cancel flow keeps its own Reschedule instead button", () => {
+    expect(detail).toContain('label="Reschedule instead"');
+  });
+  it("the reschedule screen and rules keep their own logic", () => {
+    expect(read("src/app/(tabs)/bookings/reschedule.tsx")).toContain("rescheduleBooking");
+    expect(read("src/lib/booking-rules.ts")).toContain("getRescheduleEligibility");
+  });
+});
+
+describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with Confirm booking", () => {
+  const confirm = read("src/app/(tabs)/book/confirm.tsx");
+  const card = read("src/ui/PickupCard.tsx");
+  it("the confirm screen carries the optional section: kind chips, address, location and slot dropdown", () => {
+    expect(confirm).toContain("Pickup and drop (optional)");
+    expect(confirm).toContain("pickupSlotOptions(params.scheduledTime, studioHours)");
+    expect(confirm).toContain("SelectField");
+    expect(confirm).toContain("getDeviceLocation");
+    expect(confirm).toContain("This is your preference, not a confirmed slot. The studio agrees the exact time with you by phone call.");
+  });
+  it("the pickup request goes with the new booking id right after create, before the payment step, never by a separate Send button", () => {
+    expect(confirm).toContain("const pickupSent = await sendPickupRequest(result.id);");
+    const create = confirm.indexOf("await createBooking(");
+    const request = confirm.indexOf("sendPickupRequest(result.id)");
+    const pay = confirm.indexOf("await payHeld(h)");
+    expect(create).toBeGreaterThan(0);
+    expect(request).toBeGreaterThan(create);
+    expect(pay).toBeGreaterThan(request);
+    expect(confirm).not.toContain("Send request");
+  });
+  it("the slot dropdown opens at the booking day's live studio opening time, not a hardcoded guess", () => {
+    expect(confirm).toContain("getStudioInfo(FIRST_STUDIO_ID)");
+    expect(confirm).toContain("pickupSlotOptions(params.scheduledTime, studioHours)");
+    expect(confirm).toContain("pickupDayHoursFor(info, params.scheduledDate)");
+  });
+  it("no invented fallback open exists anywhere on the confirm screen", () => {
+    expect(confirm).not.toContain("PICKUP_SLOT_OPEN");
+    expect(confirm).not.toContain("bookingDayOpen");
+  });
+  it("loading, failed and closed hours show no slot list; loading says hours are being checked", () => {
+    expect(confirm).toContain('useState<PickupDayHours>({ status: "loading" })');
+    expect(confirm).toContain('setStudioHours({ status: "unavailable" });');
+    expect(confirm).toContain("Checking the studio's hours for pickup times...");
+  });
+  it("a stale choice is dropped and never sent: the sent preference is always a current option", () => {
+    expect(confirm).toContain("const chosenSlot = validPickupSlot(pickupSlot, pickupSlots);");
+    expect(confirm).toContain("requestedPickupTime: chosenSlot");
+    expect(confirm).not.toContain("requestedPickupTime: pickupSlot");
+  });
+  it("a failed pickup request never fails the booking; the booking page shows the note", () => {
+    expect(confirm).toContain('pickup: "failed"');
+    const detail = read("src/app/(tabs)/bookings/[id].tsx");
+    expect(detail).toContain('pickup === "failed"');
+    expect(detail).toContain("Pickup request not sent");
+  });
+  it("the drop-off time field is gone and its value is never sent", () => {
+    expect(confirm).not.toContain("requestedDropTime");
+    expect(confirm).not.toContain("Preferred drop-off time");
+    expect(card).not.toContain("Preferred drop-off time");
+  });
+  it("the booking page card shows request status only - no form or entry point", () => {
+    expect(card).not.toContain("Request pickup or drop");
+    expect(card).not.toContain("Send request");
+    expect(card).not.toContain("requestPickupDrop(");
+    expect(card).not.toContain("getDeviceLocation");
+    expect(card).toContain("Waiting for studio approval");
+    expect(card).toContain("agreedPickupAt");
+    expect(card).toContain("if (!req) return null;");
+  });
+  it("fee and distance wording has one shared source", () => {
+    const policy = read("src/lib/pickup-policy.ts");
+    expect(policy).toContain("PICKUP_NEAR_KM");
+    expect(confirm).toContain("PICKUP_POLICY");
+    expect(card).toContain("PICKUP_POLICY");
+  });
+  it("pickup stays optional and reversible: deselecting clears kind, address, slot and location", () => {
+    expect(confirm).toContain('setPickupKind(null);\n      setPickupAddress("");\n      setPickupSlot("");\n      setPickupWhere(null);');
+  });
+});

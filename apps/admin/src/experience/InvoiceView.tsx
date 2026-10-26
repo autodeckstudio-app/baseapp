@@ -64,7 +64,7 @@ export function InvoiceView(p: {
                 <div className="kv"><span>Method</span><span>{methodLabel(p.payment.method)}</span></div>
                 <div className="kv"><span>Amount</span><span className="ax-data">{formatPaise(p.payment.amount)}</span></div>
               </>
-            ) : <p className="ax-note" style={{ marginTop: 0 }}>Not paid yet.</p>}
+            ) : <p className="ax-note" style={{ marginTop: 0 }}>{inv.settlementKind === "membership_covered" ? "Membership-covered" : "Not paid yet."}</p>}
           </section>
           <section className="ax-panel">
             <span className="ax-label">Actions</span>
@@ -74,7 +74,7 @@ export function InvoiceView(p: {
               {inv.bookingId && <button type="button" className="ax-button" onClick={() => p.onOpen(`/bookings/${inv.bookingId}`)}>Open booking</button>}
             </div>
           </section>
-          {inv.status !== "void" && (
+          {inv.status !== "void" && inv.settlementKind !== "membership_covered" && (
             <section className="ax-panel">
               <span className="ax-label">Void</span>
               {inv.status === "paid" ? (

@@ -1,3 +1,7 @@
+import { httpsCallable } from "firebase/functions";
+import { MEMBERSHIP_SETTLEMENT_ENABLED } from "../../../lib/backend-features";
+import { membershipCoveredLabel } from "@autodeck/core";
+import { waitingCancellation } from "../../../lib/waiting-cancel";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
@@ -5,7 +9,7 @@ import { useState, useEffect } from "react";
 import { Platform, View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
+import { db, functions } from "../../../lib/firebase";
 import { updateStandby, advanceJobStatus, cancelWalkinJob, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
 import {
   recordManualPayment,
@@ -18,7 +22,7 @@ import { approvalSendButton, pendingApprovalNote } from "../../../lib/approval-s
 import { createApproval, cancelApproval, listenToApprovalsForJob, getActiveServices } from "../../../lib/approval-service";
 import { listenToInspection, startInspection } from "../../../lib/inspection-service";
 import type { Vehicle, Customer, ServiceJob, StudioConfig, Payment, Invoice, Booking, Membership, ApprovalRequest, Service, Inspection } from "@autodeck/core";
-import { JOB_STATUS_TRANSITIONS } from "@autodeck/core";
+import { JOB_STATUS_TRANSITIONS, formatDuration } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import {
   colors,
@@ -83,6 +87,8 @@ export default function JobDetailScreen() {
   const [reslotPick, setReslotPick] = useState<ReslotOption | null>(null);
   const [reslotDone, setReslotDone] = useState(false);
   const [job, setJob] = useState<ServiceJob | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const waitingCancel = waitingCancellation(booking);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [startingInspection, setStartingInspection] = useState(false);
   const [vehicle,setVehicle] = useState<Vehicle|null>(null);
@@ -157,6 +163,11 @@ export default function JobDetailScreen() {
     };
   }, [job?.id]);
 
+  useEffect(() => {
+    if (!job?.bookingId) { setBooking(null); return; }
+    return onSnapshot(doc(db, COLLECTIONS.bookings(), job.bookingId), snap => setBooking(snap.exists() ? snap.data() as Booking : null));
+  }, [job?.bookingId]);
+
   // Read-only membership status for this job's booking (if any) — studio can
   // see it but has no authority to alter it (doc08 §8.2).
   useEffect(() => {
@@ -167,14 +178,14 @@ export default function JobDetailScreen() {
     void (async () => {
       const bookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
       if (!bookingSnap.exists()) return;
-      const booking = bookingSnap.data() as Booking;
-      if (!booking.membershipId) return;
-      const membership = await getCustomerMembership(job.customerId, booking.membershipId);
+      const bookingData = bookingSnap.data() as Booking;
+      if (!bookingData.membershipId) return;
+      const membership = await getCustomerMembership(job.customerId, bookingData.membershipId);
       if (membership) {
         setBookingMembership({
           membership,
-          washUsed: booking.membershipWashUsed,
-          discountApplied: booking.membershipDiscountApplied,
+          washUsed: bookingData.membershipWashUsed,
+          discountApplied: bookingData.membershipDiscountApplied,
         });
       }
     })();
@@ -376,7 +387,7 @@ export default function JobDetailScreen() {
   });
   const durationLabel =
     job.estimatedDurationMinutes < 24 * 60
-      ? `~${job.estimatedDurationMinutes} min`
+      ? `~${formatDuration(job.estimatedDurationMinutes)}`
       : `~${Math.round(job.estimatedDurationMinutes / 60)} hrs of service time`;
 
   const compatibleBays = config?.bays.filter((b) => b.active && b.id !== job.bayId && b.bayType === requiredBayType) ?? [];
@@ -395,7 +406,7 @@ export default function JobDetailScreen() {
         <Row label="Scheduled" value={job.status === "STANDBY" ? "Waiting - no slot reserved" : scheduledTime} />
         <Row label="Duration" value={durationLabel} />
         <Row label="Expected ready" value={job.status === "STANDBY" ? "Set on admission" : estimatedEndTime} />
-        <Row label="Payment" value={job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus} />
+        <Row label="Payment" value={waitingCancel ? "Cancellation requested" : membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (job.paymentStatus==="paid"?"Paid":job.paymentStatus==="unpaid"?"Unpaid":job.paymentStatus)} />
       </Section>
 
       {actionError?<ErrorState title="Action not completed" message={actionError} fill={false}/>:null}
@@ -461,13 +472,17 @@ export default function JobDetailScreen() {
         )}
       </Section>
 
+      {MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && booking.totalAmount === 0 && job.totalAmount === 0 && !job.settlementKind && job.status !== "CANCELLED" && !["CANCELLED","EXPIRED"].includes(booking.status) ? <Section>
+        <Text style={{color:colors.textPrimary}}>Membership-covered, not yet settled</Text>
+        <Button label="Settle membership-covered visit" loading={paymentActionLoading} onPress={()=>{setPaymentActionLoading(true);setActionError(null);void httpsCallable(functions,"settleMembershipCoveredJob")({jobId:job.id}).catch(e=>setActionError(e instanceof Error?e.message:"Could not settle this visit.")).finally(()=>setPaymentActionLoading(false));}} />
+      </Section> : null}
       <Text style={sectionTitle}>Payment</Text>
       <Section>
-        <Row label="Status" value={payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated"} />
+        <Row label="Status" value={waitingCancel ? "Cancellation requested" : membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated")} />
         <Row label="Amount" value={formatPaise(job.totalAmount)} />
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
-        {!payment && job.status !== "CANCELLED" && (
+        {!waitingCancel && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && !payment && job.status !== "CANCELLED" && (
           <Button
             label="Record cash payment"
             onPress={() => void handleRecordCashPayment()}
@@ -476,7 +491,7 @@ export default function JobDetailScreen() {
             style={{ marginTop: spacing.xs }}
           />
         )}
-        {payment &&
+        {!waitingCancel && payment &&
           (payment.status === "pending" || payment.status === "processing") &&
           payment.method !== "razorpay_payment_link" && (
             <Button
@@ -614,7 +629,7 @@ export default function JobDetailScreen() {
         <Button label="Cancel" variant="secondary" disabled={paymentActionLoading} onPress={() => { setCashConfirm(null); setCashError(null); }} />
       </Section> : null}
       {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
-      {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>Collect and confirm full payment before marking delivered.</Text> : null}
+      {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>{booking?.membershipWashUsed && job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</Text> : null}
       {canAdvance && (
         <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => (job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm(true) : void handleAdvance())} loading={advancing} style={{ marginBottom: spacing.lg }} />
       )}

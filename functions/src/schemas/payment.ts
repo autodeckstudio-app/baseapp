@@ -32,6 +32,17 @@ export const initiateRefundSchema = z.object({
   reason: z.string().min(1).max(500),
 }).strict();
 
+export const requestBookingRefundSchema = z.object({
+  paymentId: z.string().min(1),
+  // Explicit amount in paise; omit to refund the full remaining balance.
+  amountPaise: z.number().int().positive().nullish(),
+  reason: z.string().trim().min(3).max(500),
+}).strict();
+
+export const processRefundOutboxSchema = z.object({
+  limit: z.number().int().min(1).max(50).nullish(),
+}).strict();
+
 export const createCheckoutOrderSchema = z.object({ paymentId: z.string().min(1) }).strict();
 
 export const verifyCheckoutPaymentSchema = z.object({

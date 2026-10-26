@@ -13,6 +13,9 @@ export function extractRawAuth(
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required.");
   }
+  if ((request.auth.token as Record<string, unknown>)["role"] === "accountant") {
+    throw new HttpsError("permission-denied", "Role 'accountant' is not authorized for this operation.");
+  }
   return {
     uid: request.auth.uid,
     phone: (request.auth.token.phone_number as string | undefined) ?? null,
@@ -26,6 +29,25 @@ export function extractRawAuth(
  * Use extractRawAuth instead for functions that run before claims are established.
  */
 export function extractUser(request: CallableRequest): AuthorizedUser {
+  const user = readUser(request);
+  // Default-deny for the read-only accountant role: every callable that goes through extractUser (and so every
+  // assertRole site and every endpoint without one) rejects it. Only extractAccountantUser admits it.
+  if (user.claims.role === "accountant") {
+    throw new HttpsError("permission-denied", "Role 'accountant' is not authorized for this operation.");
+  }
+  return user;
+}
+
+/** The ONLY extractor that admits the accountant role (the read-only Money projection). */
+export function extractAccountantUser(request: CallableRequest): AuthorizedUser {
+  const user = readUser(request);
+  if (user.claims.role !== "accountant") {
+    throw new HttpsError("permission-denied", `Role '${user.claims.role}' is not authorized for this operation.`);
+  }
+  return user;
+}
+
+function readUser(request: CallableRequest): AuthorizedUser {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required.");
   }

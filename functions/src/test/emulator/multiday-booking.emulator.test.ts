@@ -181,6 +181,19 @@ async function seedVehicle(vehicleId: string, ownerId: string, tenantId: string)
   return vehicle;
 }
 
+/** These tests book the studio's first slot of a day, which is held for priority members until 18:00 the evening before. They are about
+ *  multi-day scheduling, not the hold, so the customer gets an active priority membership (the hold itself is tested elsewhere). */
+async function ensurePriorityMember(customerUid: string, tenantId: string) {
+  await db.collection("memberships").doc(`prio-${customerUid}`).set({
+    id: `prio-${customerUid}`,
+    tenantId,
+    customerId: customerUid,
+    status: "active",
+    prioritySlot: true,
+    endDate: null,
+  });
+}
+
 async function makeBooking(
   customerUid: string,
   service: Service,
@@ -189,7 +202,9 @@ async function makeBooking(
   scheduledDate: string,
   scheduledTime = "09:00",
   tenantId = TENANT_A,
+  asPriorityMember = true,
 ) {
+  if (asPriorityMember) await ensurePriorityMember(customerUid, tenantId);
   return createBooking.run({
     data: {
       serviceId: service.id,
@@ -592,5 +607,25 @@ describe("Multi-day service scheduling (Phase 5 Part 2)", () => {
     // total 4200) + 120 min into the next open day (Tue+8) = 09:00+2:00.
     expect(booking.estimatedEndDate).toBe(addDays(monday, 8));
     expect(booking.estimatedEndTime).toBe("11:00");
+  });
+
+  // Normal-customer coverage (no priority membership). The scheduling tests above use a priority member to book the held first slot.
+  it("18. a normal customer is refused a held first slot of the day (hold boundary), and the refusal is about the hold", async () => {
+    const studio = await seedStudio(uid("studio-hold"), TENANT_A, 3);
+    const service = await seedService(uid("svc-hold"), TENANT_A, 700);
+    const { customerId, vehicle } = await freshVehicle();
+    await expect(
+      makeBooking(customerId, service, vehicle, studio.id, nextMonday(), "09:00", TENANT_A, false),
+    ).rejects.toThrow(/held for Platinum members/);
+  });
+
+  it("19. a normal customer can book a multi-day service at a start time that is not held, and it rolls over as usual", async () => {
+    const studio = await seedStudio(uid("studio-normal"), TENANT_A, 3);
+    const service = await seedService(uid("svc-normal"), TENANT_A, 700);
+    const { customerId, vehicle } = await freshVehicle();
+    const monday = nextMonday();
+    const { booking } = await makeBooking(customerId, service, vehicle, studio.id, monday, "10:00", TENANT_A, false);
+    expect(booking.scheduledDate).toBe(monday);
+    expect(booking.estimatedEndDate).toBe(addDays(monday, 1));
   });
 });

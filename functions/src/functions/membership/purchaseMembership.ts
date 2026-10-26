@@ -160,6 +160,26 @@ export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZ
         "A membership purchase is already in progress or active for this customer.",
       );
     }
+    // Per-customer claim document. The query above cannot detect a concurrent insert (phantom read), but a read of one
+    // specific document IS conflict-checked by Firestore transactions, so two simultaneous purchases both touch this
+    // document and one retries and then sees the other's pending membership. No release step is needed: the claim points
+    // at a membership, and it only blocks while that membership is still pending or active.
+    const claimRef = db.collection("membershipClaims").doc(`${user.claims.tenantId}_${user.uid}`);
+    const claimSnap = await tx.get(claimRef);
+    if (claimSnap.exists) {
+      const heldId = (claimSnap.data() as { membershipId?: string }).membershipId;
+      if (heldId) {
+        const heldSnap = await tx.get(db.collection(COLLECTIONS.memberships()).doc(heldId));
+        const heldStatus = heldSnap.exists ? (heldSnap.data() as Membership).status : null;
+        if (heldStatus === "pending" || heldStatus === "active") {
+          throw new HttpsError(
+            "already-exists",
+            "A membership purchase is already in progress or active for this customer.",
+          );
+        }
+      }
+    }
+    tx.set(claimRef, { tenantId: user.claims.tenantId, customerId: user.uid, membershipId: membershipRef.id, updatedAt: now });
 
     tx.set(membershipRef, membership);
     tx.set(paymentRef, payment);

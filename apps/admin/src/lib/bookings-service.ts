@@ -6,6 +6,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Customer, Vehicle, Service } from "@autodeck/core";
 
 const LIST_LIMIT = 300;
+export const BOOKINGS_LIST_LIMIT = LIST_LIMIT;
 
 /** Live, tenant-wide booking feed - newest scheduled slot first. Filters beyond
  * tenantId (status/service/studio/customer/vehicle search) are applied client-side
@@ -137,4 +138,42 @@ export async function settleCancellationFee(bookingId: string, action: "collecte
   const { httpsCallable } = await import("firebase/functions");
   const { functions } = await import("./firebase");
   await httpsCallable(functions, "settleCancellationFee")({ bookingId, action, ...(note?.trim() ? { note: note.trim() } : {}) });
+}
+
+export interface NoShowCandidate { key: string; chargePaise: number; refundPaise: number }
+export interface NoShowPreview { bookingId: string; capturedPaise: number; candidates: NoShowCandidate[]; policyNote: string }
+
+export async function recordNoShowContact(bookingId: string, channel: "phone" | "whatsapp" | "in_person", note: string): Promise<void> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  await httpsCallable(functions, "recordNoShowContact")({ bookingId, channel, note });
+}
+
+export async function previewNoShowResolution(bookingId: string): Promise<NoShowPreview> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<{ bookingId: string }, NoShowPreview>(functions, "previewNoShowResolution")({ bookingId });
+  return res.data;
+}
+
+export interface NoShowResolutionState {
+  resolution: string | null;
+  chargePaise: number;
+  refundRequestId: string | null;
+  refundAmountPaise: number | null;
+  refundStatus: string | null;
+}
+
+export async function getNoShowResolution(bookingId: string): Promise<NoShowResolutionState> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<{ bookingId: string }, NoShowResolutionState & { bookingId: string }>(functions, "getNoShowResolution")({ bookingId });
+  return res.data;
+}
+
+export async function resolveNoShow(input: { bookingId: string; resolution: "charge" | "waive" | "reopen"; chargePaise?: number; reason: string }): Promise<{ refundRequestId: string | null }> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const res = await httpsCallable<typeof input, { refundRequestId: string | null }>(functions, "resolveNoShow")(input);
+  return res.data;
 }

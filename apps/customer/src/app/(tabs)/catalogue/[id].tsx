@@ -1,3 +1,4 @@
+import { formatDurationWithDays } from "../../../lib/duration";
 import { TabPills } from "../../../ui/CarOverview";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
@@ -143,7 +144,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
     </View>
   );
   const mins = service.estimatedDurationMinutes;
-  const dur = mins < 60 ? `${mins} min` : mins >= 480 ? `${Math.round(mins / 480)} day${mins >= 960 ? "s" : ""}` : `${Number.isInteger(mins / 60) ? mins / 60 : (mins / 60).toFixed(1)} hr`;
+  const dur = formatDurationWithDays(mins);
 
   return (
     <View style={{ flex: 1 }}>

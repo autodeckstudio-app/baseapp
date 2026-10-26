@@ -14,9 +14,11 @@ export type AuditAction =
   | "booking.confirmed"
   | "booking.expired"
   | "booking.cancelled"
+  | "booking.noshow_resolved"
   | "booking.quoted"
   | "booking.quote_approved"
   | "job.status_advanced"
+  | "job.membership_covered"
   | "job.sealed"
   | "payment.recorded"
   | "payment.refunded"
@@ -88,6 +90,7 @@ export type AuditAction =
   | "paper.submitted"
   | "paper.reviewed"
   | "paper.updated"
+  | "paper.deleted"
   | "dailyClose.performed"
   | "dailyClose.reclosed"
   | "gallery.imageAdded"
@@ -101,6 +104,7 @@ export type AuditAction =
   | "gift.claimed"
   | "gift.redeemed"
   | "gift.restored"
+  | "gift.restore_skipped"
   | "booking.cancel_fee_settled"
   | "gift.voided"
   | "gift.cancel_requested"
@@ -110,6 +114,8 @@ export type AuditAction =
   | "carListing.submitted"
   | "carListing.reviewed"
   | "carListing.sold"
+  | "carListing.photoRemoved"
+  | "carListing.photoReplaced"
   | "carLead.created";
 
 export interface AuditLog {

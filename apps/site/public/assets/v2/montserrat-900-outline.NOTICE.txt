@@ -1,0 +1,6 @@
+montserrat-900-outline.woff2 is a modified version of montserrat.woff2 (Montserrat variable font, Version 9.000,
+Copyright 2011 The Montserrat Project Authors, https://github.com/JulietaUla/Montserrat),
+licensed under the SIL Open Font License 1.1. montserrat-OFL.txt is the OFL.txt at the upstream tag v9.000
+(identical to upstream master at the time of copying). The font's own name table names no Reserved Font Name.
+Changes: instanced at wght 900, overlapping contours removed (fontTools + skia-pathops), subset to Basic Latin
+(U+0020-007E), internal names changed to "Montserrat Outline". Used only for outlined headline words (.ol in home.css).

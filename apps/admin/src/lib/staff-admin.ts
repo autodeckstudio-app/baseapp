@@ -5,6 +5,7 @@
 // before Cloud Functions are deployed. Same rules: admin-only, tenant taken
 // from the caller's verified claims, audit entry written in the same
 // transaction as the change, and deactivation demotes rather than disables.
+import { ownerEmail } from "./role-resolver";
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import type { AuditAction, AuditLog, Employee } from "@autodeck/core";
@@ -166,6 +167,10 @@ export async function changeRole(
   if (existing.terminatedAt) {
     throw new StaffError(409, "failed-precondition", "Cannot change role of a terminated employee.");
   }
+  // An accountant roster entry is not editable by an ordinary admin: only the platform superadmin or the owner account.
+  if (existing.role === "accountant" && user.claims.role !== "superadmin" && (user.email ?? "").trim().toLowerCase() !== ownerEmail()) {
+    throw new StaffError(403, "permission-denied", "Only the owner or a platform operator can change an accountant entry.");
+  }
   const linked = existing.authUid !== "";
   if (linked) {
     await auth.setCustomUserClaims(existing.authUid, {
@@ -199,6 +204,9 @@ export async function changeRole(
 
 export async function deactivate(auth: Auth, db: Firestore, user: AuthorizedUser, employeeId: string) {
   const { ref, existing } = await loadInTenant(db, user, employeeId);
+  if (existing.role === "accountant" && user.claims.role !== "superadmin" && (user.email ?? "").trim().toLowerCase() !== ownerEmail()) {
+    throw new StaffError(403, "permission-denied", "Only the owner or a platform operator can change an accountant entry.");
+  }
   if (existing.terminatedAt) return { employeeId, alreadyTerminated: true };
   if (existing.authUid) {
     await auth.setCustomUserClaims(existing.authUid, {

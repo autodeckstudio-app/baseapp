@@ -183,3 +183,8 @@ export async function uploadLicensePhoto(blob: Blob, contentType: string): Promi
   await httpsCallable<{ customerId: string; path: string; publish: boolean }, { url: string }>(functions, "publishLicensePhoto")({ customerId, path, publish: true });
   return path;
 }
+
+/** Removes the car's saved cover or RC photo (the image and its field only, never the car). Safe to retry. */
+export async function removeVehicleImage(vehicleId: string, kind: "cover" | "rc"): Promise<void> {
+  await httpsCallable<{ vehicleId: string; kind: "cover" | "rc" }, { removed: boolean }>(functions, "removeMyVehicleImage")({ vehicleId, kind });
+}

@@ -31,6 +31,10 @@ export interface PriceBreakdown {
 export type QuoteStatus = "requested" | "quoted" | "approved";
 
 export interface Booking {
+  settlementKind?: "membership_covered";
+  invoiceId?: string;
+  /** Public projection only. Operational cancellation details are server-only. */
+  cancelIntent?: { state: "waiting" | "needs_review" | "resolved"; requestedAt: string };
   id: string;
   // Set only for price-on-request services. requested -> quoted (studio sets price) -> approved (customer).
   quoteStatus?: QuoteStatus;
@@ -68,7 +72,22 @@ export interface Booking {
   /** PENDING online bookings hold their slot until this time (ISO). */
   holdExpiresAt?: string | null;
   /** Refund tracking on a cancelled, paid booking. */
-  refundStatus?: "initiated" | "failed";
+  // requested = a durable recorded refund request. The field alone does not
+  //   establish whether the refund was submitted to or accepted by the
+  //   provider (it can persist after submission until the processed
+  //   projection), so UI copy must not promise submission, acceptance, or
+  //   money movement.
+  // reserved = legacy vocabulary for the same recorded-request state, kept so
+  //   older written docs still render; no current backend writer.
+  // initiated = the refund is recorded as in motion. Current backend: written
+  //   by the MANUAL cash/UPI path when the studio records the return. Older
+  //   writes used it for refunds submitted to the provider through the legacy
+  //   path (submission recorded, provider acceptance never verified) - the
+  //   value alone does not say which, so UI copy must stay mechanism-neutral.
+  // processed = the provider reported this exact refund as processed (a provider status, NOT proof the money reached the bank).
+  // failed = the provider refused it (legacy writer; no current backend writer).
+  refundStatus?: "reserved" | "requested" | "initiated" | "processed" | "failed";
+  refundProcessedAt?: string | null;
   refundId?: string | null;
   notes: string | null;
   idempotencyKey: string;
@@ -85,11 +104,19 @@ export interface Booking {
   /** Who settles the fee and how it ended: "due" until the studio marks it, then "collected", "withheld" (kept from a refund) or "waived". */
   cancellationFeeStatus?: "due" | "collected" | "withheld" | "waived";
   cancelledBy?: "customer" | "admin" | "system";
+  /** Set when an admin cancelled as the studio (full refund, no customer fee). */
+  cancelledByStudio?: boolean;
+  /** Historical recorded cash compensation obligation. Preserved for older bookings; new studio cancellations do not create this obligation. */
+  studioCompensationPaise?: number;
+  /** Historical obligation status, preserved without waiver or payout. No settlement or payout flow exists. */
+  studioCompensationStatus?: "due";
   cancellationFeeSettledBy?: string;
   cancellationFeeSettledAt?: string;
   cancellationFeeNote?: string;
   /** Paise sent back to the customer when an admin cancelled a paid booking. */
   refundedPaise?: number;
+  /** Manual/counter cancel: paise OWED to the customer and NOT yet returned. Not a refund claim; payment stays completed. */
+  manualRefundDuePaise?: number | null;
   /** Service categories of the visit (primary first), saved at booking time so the cancel band cannot change later. */
   cancelCategories?: string[];
   createdAt: string;

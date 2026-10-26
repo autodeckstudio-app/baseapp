@@ -1,9 +1,11 @@
 "use client";
+import { membershipCoveredLabel } from "@autodeck/core";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { matchBookingCode, isBookingMissed, type Booking, type BookingStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { StaffAlertsNotice } from "../../../components/StaffAlertsNotice";
 import { getStudioConfig } from "../../../lib/studio-service";
 import { bayLabel } from "../../../lib/bay-label";
 import { listenToBookings } from "../../../lib/bookings-service";
@@ -96,6 +98,7 @@ export default function BookingsPage() {
   const dayCount = bookings.filter((b) => b.scheduledDate === date && b.status !== "CANCELLED" && b.status !== "EXPIRED").length;
   const pending = bookings.filter((b) => b.status === "PENDING").length;
   const upcoming = bookings.filter((b) => b.scheduledDate > today && (b.status === "CONFIRMED" || b.status === "PENDING")).length;
+  const owedBadge = (b: Booking) => (b.status === "CANCELLED" && typeof b.manualRefundDuePaise === "number" && b.manualRefundDuePaise > 0 ? `Refund owed ${formatPaise(b.manualRefundDuePaise)}` : undefined);
   const open = (id: string) => router.push(`/bookings/${id}`);
   const toItem = (b: Booking): AgendaItem => ({
     id: b.id,
@@ -106,8 +109,9 @@ export default function BookingsPage() {
     service: serviceNames[b.serviceId] ?? "Service",
     bay: bayLabel(b.bayId, bays),
     status: b.status,
-    payment: b.paymentStatus,
+    payment: b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review" ? "Cancellation requested" : membershipCoveredLabel(b) ?? b.paymentStatus,
     amount: formatPaise(b.totalAmount),
+    owed: owedBadge(b),
   });
 
   const bookingTable = (rows: Booking[]) => (
@@ -133,7 +137,7 @@ export default function BookingsPage() {
                 <td>{customerNames[b.customerId] ?? "-"}</td>
                 <td>{serviceNames[b.serviceId] ?? "-"}</td>
                 <td>{b.bayId}</td>
-                <td><StatusBadge label={b.paymentStatus} /></td>
+                <td><StatusBadge label={b.cancelIntent?.state === "waiting" || b.cancelIntent?.state === "needs_review" ? "Cancellation requested" : membershipCoveredLabel(b) ?? b.paymentStatus} />{owedBadge(b) ? <div className="ax-label" style={{ color: "var(--ad-danger)" }}>{owedBadge(b)}</div> : null}</td>
                 <td className="ax-data" style={{ textAlign: "right" }}>{formatPaise(b.totalAmount)}</td>
               </tr>
             ))}
@@ -154,6 +158,7 @@ export default function BookingsPage() {
           <div><span className="ax-kpi-v ax-kpi-v--premium">{upcoming}</span><span className="ax-label">Coming up</span></div>
         </div>
       </header>
+      <StaffAlertsNotice />
 
       <div className="ax-toolbar">
         {dayMode ? (

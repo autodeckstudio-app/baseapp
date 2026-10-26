@@ -5,7 +5,7 @@ const faqs = [
   { q: 'Where is AutoDeck?', a: 'Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge, Ahmedabad 380006. ', link: { href: 'https://www.google.com/maps/search/?api=1&query=Sunbeam+Complex+Old+Sharda+Mandir+Rd+Ellisbridge+Ahmedabad', text: 'Get directions' } },
   { q: 'When are you open?', a: 'Monday to Saturday, 10 am to 9 pm. Sunday, 10 am to 7 pm.' },
   { q: 'How do I book a service?', a: 'In the AutoDeck app: pick a service, pick your car, pick a slot. Slots run inside studio hours.', link: { href: '/app', text: 'About the app' } },
-  { q: 'Can I reschedule or cancel?', a: 'You can reschedule up to three times, at least 24 hours before your slot. For washes and other short jobs, cancelling is free until 4 hours before the start; after that, Rs 100 applies. For bigger services (coatings, paint protection film, garage repairs and inspections, mods and wraps), cancelling is free until 24 hours before the start; after that, 20% of the booking total applies. Refunds go back to your original payment method in 5 to 7 working days.' },
+  { q: 'Can I reschedule or cancel?', a: 'You can reschedule up to two times, at least 24 hours before your slot. For washes and other short jobs, cancelling is free until 4 hours before the start; after that, Rs 100 applies. For bigger services (coatings, paint protection film, garage repairs and inspections, mods and wraps), cancelling is free until 24 hours before the start; after that, 20% of the booking total applies. Refunds go back to your original payment method.' },
   { q: 'Do you offer pickup and drop?', a: 'Yes, for every service. It costs Rs 100 for each leg under 3 km from the studio, and Rs 150 for each leg from 3 km. Club plans include free pickups.' },
   { q: 'How do payments work?', a: 'Pay at the studio or online in the app. Online payments are processed by Razorpay, and you get an invoice for every completed job.' },
   { q: 'What is AutoDeck Club?', a: 'Club plans last 30 days and bundle a set number of washes and pickups for one price. They belong to your account, so you can use them for any car in your garage.', link: { href: '/app', text: 'See Club in the app' } },
@@ -14,8 +14,18 @@ const faqs = [
   { q: 'Do you buy and sell cars?', a: 'Yes. Cars are listed in the app and the studio reviews every listing before other customers see it. Number plates, owner details and prices stay hidden until you sign in.', link: { href: '/cars', text: 'See the showcase' } },
   { q: 'How do I reach the studio?', a: 'Call or WhatsApp +91 98986 79711, or write to autodeckstudio@gmail.com.', phone: true },
 ];
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
 ---
 <Base title="Questions · AutoDeck" description="Answers about booking, hours, pickup and drop, Club plans and car care at AutoDeck, Ahmedabad." page="faq">
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
   <section class="phero"><div class="wrap">
     <p class="eyebrow">Good to know</p>
     <h1>Questions.</h1>

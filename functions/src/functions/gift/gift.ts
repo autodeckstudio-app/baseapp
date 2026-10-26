@@ -8,16 +8,17 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import {
-  GIFT_PRICE_CATEGORY, GIFT_SERVICE_ID, giftState, type Gift, type Payment, type Service, type StudioConfig,
+  GIFT_PRICE_CATEGORY, GIFT_SERVICE_ID, giftState, type Gift, type Service, type StudioConfig,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { calculatePrice } from "../../lib/pricing.js";
+import { calculatePrice, taxFor } from "../../lib/pricing.js";
 import { planGiftActivation } from "../../lib/gift-activate.js";
-import { generateGiftCode, hashGiftCode } from "../../lib/gift-code.js";
+import { createGiftPurchase } from "../../lib/gift-purchase.js";
+import { hashGiftCode } from "../../lib/gift-code.js";
 import { assertNotLocked, attemptKeys, findGiftByHash, giftBlockReason, recordFailure } from "../../lib/gift-store.js";
 
 const empty = z.object({}).strict();
@@ -38,7 +39,8 @@ export async function giftPricePaise(db: FirebaseFirestore.Firestore, tenantId: 
     serviceCategory: service.category,
     vehicleCategory: GIFT_PRICE_CATEGORY,
     vehicleCategoryPricing: service.vehicleCategoryPricing,
-    ...(config ? { taxRatePercent: config.taxRatePercent, taxDescription: config.taxDescription, currency: config.currency } : {}),
+    ...taxFor(config),
+    ...(config ? { currency: config.currency } : {}),
   }).total;
 }
 
@@ -56,38 +58,8 @@ export const createGift = onCall({ region: "asia-south1" }, async (request) => {
   await enforceRateLimit(subjectFrom(user), "gift.create");
   const db = getFirestore();
   const amountPaise = await giftPricePaise(db, user.claims.tenantId);
-  const recent = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", user.uid).orderBy("createdAt", "desc").limit(5).get();
-  for (const d of recent.docs) {
-    const g = d.data() as Gift;
-    if (g.status !== "PENDING_PAYMENT" || g.amountPaise !== amountPaise || Date.now() - Date.parse(g.createdAt) > 24 * 3_600_000) continue;
-    const p = await db.collection(COLLECTIONS.payments()).where("giftId", "==", g.id).limit(1).get();
-    const pay = p.empty ? null : (p.docs[0]!.data() as Payment);
-    if (pay && (pay.status === "pending" || pay.status === "processing")) return { giftId: g.id, paymentId: pay.id, amountPaise };
-  }
-  const code = generateGiftCode();
-  const codeHash = hashGiftCode(code)!;
-  const ref = db.collection(COLLECTIONS.gifts()).doc();
-  const payRef = db.collection(COLLECTIONS.payments()).doc();
-  const nowIso = new Date().toISOString();
-  const gift: Gift = {
-    id: ref.id, tenantId: user.claims.tenantId, buyerId: user.uid, serviceId: GIFT_SERVICE_ID, amountPaise, codeHash, codeTail: code.slice(-4),
-    status: "PENDING_PAYMENT", createdAt: nowIso, purchasedAt: null, expiresAt: null, claimedBy: null, redeemedBy: null, redeemedAt: null,
-    bookingId: null, voidedAt: null, voidReason: null, refundRequested: false, paymentId: null,
-  };
-  const payment: Payment = {
-    id: payRef.id, tenantId: user.claims.tenantId, studioId: null, targetType: "gift", jobId: null, bookingId: null, membershipId: null, giftId: ref.id,
-    customerId: user.uid, amount: amountPaise, currency: "INR", method: "razorpay_payment_link", status: "pending",
-    razorpayPaymentLinkId: null, razorpayPaymentId: null, razorpayOrderId: null, razorpayRefundId: null, refundAmount: null,
-    manualReference: null, recordedBy: null, invoiceId: null, providerEventId: null, completedAt: null, failedAt: null, cancelledAt: null,
-    refundedAt: null, createdAt: nowIso, updatedAt: nowIso,
-  };
-  await db.runTransaction(async (tx) => {
-    tx.create(ref, gift);
-    tx.create(payRef, payment);
-    tx.create(db.collection(COLLECTIONS.giftSecrets()).doc(ref.id), { giftId: ref.id, buyerId: user.uid, tenantId: user.claims.tenantId, code, createdAt: nowIso });
-    writeAuditLog(tx, { action: "gift.created", entityType: "Gift", entityId: ref.id, user, studioId: null, after: { amountPaise, tail: gift.codeTail } });
-  });
-  return { giftId: ref.id, paymentId: payRef.id, amountPaise };
+  const { giftId, paymentId } = await createGiftPurchase(db, user, amountPaise);
+  return { giftId, paymentId, amountPaise };
 });
 
 /** The buyer's code, only once the payment is verified (gift ACTIVE) and only to the buyer. This is how a buyer who closed the app
@@ -116,14 +88,14 @@ export const listMyGifts = onCall({ region: "asia-south1" }, async (request) => 
   const snap = await db.collection(COLLECTIONS.gifts()).where("buyerId", "==", user.uid).orderBy("createdAt", "desc").limit(50).get();
   const now = Date.now();
   const offer = await giftPricePaise(db, user.claims.tenantId).then((amountPaise) => ({ amountPaise })).catch(() => null);
-  return { gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT").map((g) => view(g, now)), offer };
+  return { gifts: snap.docs.map((d) => d.data() as Gift).filter((g) => g.status !== "PENDING_PAYMENT" || now - Date.parse(g.createdAt) <= 24 * 3_600_000).map((g) => view(g, now)), offer };
 });
 
 /** Recipient claims a code. It binds to this account; a second account cannot claim it. Wrong codes are counted and locked out. */
 export const redeemGift = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
-  if (!user.phone) throw new HttpsError("failed-precondition", "Sign in with your phone number to redeem a gift.");
+  if (!user.phone && !user.email) throw new HttpsError("failed-precondition", "Sign in with your phone number or Google account to redeem a gift.");
   const data = validate(codeSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "gift.redeem");
   const db = getFirestore();

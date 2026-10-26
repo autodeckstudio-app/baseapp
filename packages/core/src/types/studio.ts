@@ -47,7 +47,10 @@ export interface Employee {
   email?: string;
   name: string;
   phone: string;
-  role: "studio" | "admin";
+  // "accountant" is read-only Money access. No callable, API route or UI creates or assigns it (their role enums reject it).
+  // Any roster entry with this role is fixture or owner-approved data; edits and deactivation are owner or superadmin only.
+  // Access still requires an ACTIVE roster entry matching a verified email at sign-in.
+  role: "studio" | "admin" | "accountant";
   active: boolean;
   createdAt: string;
   updatedAt: string;

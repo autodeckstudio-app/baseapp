@@ -30,9 +30,10 @@ describe("customer cancel rules", () => {
   it("no day-before block or line is left anywhere in the app", () => {
     for (const f of ["./booking-rules.ts", "../app/(tabs)/bookings/[id].tsx"]) { const t = readFileSync(new URL(f, import.meta.url).pathname, "utf8"); expect(t).not.toContain("until the day before"); expect(t).not.toContain("SAME_DAY"); }
   });
-  it("the confirm text shows the fee and, if paid, the refund timeline, with no em dash", () => {
+  it("the confirm text shows the fee and, if paid, the refund route as a recorded request, with no em dash", () => {
     const t = cancelConfirmBody({ feePaise: 10000, line: "Line." }, true);
-    expect(t).toContain("Rs 100"); expect(t).toContain("5 to 7 working days"); expect(t).not.toContain("\u2014");
+    expect(t).toContain("Rs 100"); expect(t).not.toContain("working days"); expect(t).not.toContain("\u2014");
+    expect(t).toContain("refund request will be recorded"); expect(t).not.toContain("will be refunded");
     expect(cancelConfirmBody({ feePaise: 0, line: "Line." }, false)).not.toContain("costs");
   });
 });
@@ -41,7 +42,7 @@ describe("Round 5 booking page", () => {
   const d = readFileSync(new URL("../app/(tabs)/bookings/[id].tsx", import.meta.url).pathname, "utf8");
   it("shows Pending payment with a Pay now retry, an Expired notice, the refund line and a specific error title", () => {
     expect(d).toContain("Pending payment"); expect(d).toContain('label="Pay now"'); expect(d).toContain("Slot released");
-    expect(d).toContain("Refund initiated"); expect(d).toContain("Reschedule instead"); expect(d).not.toContain('title="Something went wrong"');
+    expect(d).toContain("Refund recorded"); expect(d).toContain("Reschedule instead"); expect(d).not.toContain('title="Something went wrong"');
   });
 });
 
@@ -79,5 +80,24 @@ describe("booking page text stays readable in Night", () => {
   it("the reschedule explanation is not tertiary", () => {
     expect(src).not.toMatch(/tone="tertiary">\{rescheduleEligibility\.reason\}/);
     expect(src).not.toMatch(/tone="tertiary">Payment status is/);
+  });
+});
+
+import { readFileSync as _rf } from "node:fs";
+import { join as _join } from "node:path";
+describe("refund notices (source guard, not rendered proof)", () => {
+  const src = _rf(_join(__dirname, "../app/(tabs)/bookings/[id].tsx"), "utf8");
+  it("drops the unfulfillable promise and states provider status only", () => {
+    expect(src).not.toContain("We will update here when it is complete");
+    // The backend writes "requested" at reserve time: the recorded-request
+    // notice must actually fire for it, and must not promise payment.
+    expect(src).toContain('booking.refundStatus === "requested"');
+    expect(src.slice(src.indexOf('booking.refundStatus === "requested"'), src.indexOf('booking.refundStatus === "requested"') + 200)).toContain("Your refund request is recorded");
+    expect(src).toContain("Razorpay reports your refund as processed");
+    // initiated is written by the MANUAL cash/UPI path too: the notice must
+    // stay mechanism-neutral and must not claim the provider accepted it.
+    expect(src).not.toContain("Razorpay has accepted your refund");
+    expect(src).toContain("The studio has recorded your refund");
+    expect(src).not.toMatch(/\d+\s*(-\s*\d+\s*)?(working |business )?days/i.exec(src.slice(src.indexOf('refundStatus === "processed"'), src.indexOf('refundStatus === "processed"') + 300))?.[0] ?? "NOPE_XYZ");
   });
 });

@@ -19,6 +19,7 @@ process.env["USE_PAYMENT_MOCK"] = "true";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { createProtection } from "../../functions/protection/createProtection.js";
 import { updateProtection } from "../../functions/protection/updateProtection.js";
 import { createService } from "../../functions/service/createService.js";
@@ -160,7 +161,9 @@ async function jobForBooking(bookingId: string) {
 
 async function deliverJob(jobId: string, studioUid: string, tenantId = TENANT_A) {
   // PENDING_VEHICLE -> VEHICLE_RECEIVED -> IN_PROGRESS -> QUALITY_CHECK -> READY_FOR_DELIVERY -> DELIVERED
+// Delivery now needs the visit paid in full with a live invoice (advanceJobStatus), so the studio records the payment before the last step.
   for (let i = 0; i < 5; i++) {
+    if (i === 4) await recordManualPayment.run({ data: { jobId, method: "cash" }, auth: studioAuth(studioUid, tenantId) } as never);
     await advanceJobStatus.run({ data: { jobId }, auth: studioAuth(studioUid, tenantId) } as never);
   }
 }

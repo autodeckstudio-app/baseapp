@@ -24,6 +24,7 @@ import {
   type Unsubscribe,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
+import { emulatorTargets } from "./emulator-flag";
 import { auth, functions, useEmulator } from "./firebase";
 
 // Connect auth emulator (called once, here rather than firebase.ts to avoid
@@ -31,7 +32,10 @@ import { auth, functions, useEmulator } from "./firebase";
 let authEmulatorConnected = false;
 if (useEmulator && !authEmulatorConnected) {
   try {
-    connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+    connectAuthEmulator(auth, emulatorTargets({
+    EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
+    EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
+  }).authUrl, { disableWarnings: true });
     authEmulatorConnected = true;
   } catch {
     // Already connected

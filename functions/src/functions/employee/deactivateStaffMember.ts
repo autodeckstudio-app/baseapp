@@ -8,6 +8,7 @@ import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { ownerEmail } from "../../lib/roleResolver.js";
 import { deactivateStaffMemberSchema } from "../../schemas/employee.js";
 
 // Admin-only. Soft-deletes a staff member: demotes their account to customer,
@@ -27,6 +28,10 @@ export const deactivateStaffMember = onCall({ region: "asia-south1", enforceAppC
 
   const existing = snap.data() as Employee;
   assertTenant(user, existing.tenantId);
+  // Every mutation of an accountant entry, deactivation included, is owner or superadmin only.
+  if (existing.role === "accountant" && user.claims.role !== "superadmin" && (user.email ?? "").trim().toLowerCase() !== ownerEmail()) {
+    throw new HttpsError("permission-denied", "Only the owner or a platform operator can change an accountant entry.");
+  }
 
   if (existing.terminatedAt) {
     return { employeeId: data.employeeId, alreadyTerminated: true };

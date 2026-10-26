@@ -62,6 +62,9 @@ export const voidInvoice = onCall({ region: "asia-south1", enforceAppCheck: shou
     if (invoice.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
+    if (invoice.settlementKind === "membership_covered") {
+      throw new HttpsError("failed-precondition", "Membership-covered invoices cannot be voided.");
+    }
     if (invoice.status === "void") {
       throw new HttpsError("failed-precondition", "Invoice is already void.");
     }

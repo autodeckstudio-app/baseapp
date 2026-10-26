@@ -71,7 +71,8 @@ async function seedStudio(studioId: string, tenantId: string) {
     currency: "INR",
     taxRatePercent: 18,
     taxDescription: "GST 18%",
-    operatingHours: [],
+    // Open every day: reschedule only offers slots on days that have hours (an empty list offered none).
+    operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d as 0 | 1 | 2 | 3 | 4 | 5 | 6, open: "09:00", close: "19:00", closed: false })),
     holidays: [],
     vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
     slotIntervalMinutes: 30,
@@ -159,8 +160,9 @@ async function fireTrigger(logDoc: FirebaseFirestore.QueryDocumentSnapshot) {
 async function fireFor(action: string, entityId: string): Promise<Notification | null> {
   const logDoc = await findAuditLog(action, entityId);
   await fireTrigger(logDoc);
-  const notifSnap = await db.collection("notifications").doc(logDoc.id).get();
-  return notifSnap.exists ? (notifSnap.data() as Notification) : null;
+  // The notification id is its dedupeKey when it has one (e.g. booking-confirmed-<id>), else the audit log id, so find it by auditLogId.
+  const notifSnap = await db.collection("notifications").where("auditLogId", "==", logDoc.id).limit(1).get();
+  return notifSnap.empty ? null : (notifSnap.docs[0]!.data() as Notification);
 }
 
 async function bookOnce(cust: string, vehicleId: string, service: Service) {
@@ -347,10 +349,10 @@ describe("Notification system", () => {
       const jobDoc = await jobForBooking(booking.id);
       expect(jobDoc).toBeTruthy();
 
-      // PENDING_VEHICLE -> VEHICLE_RECEIVED: no notification
+      // PENDING_VEHICLE -> VEHICLE_RECEIVED: vehicle_received (the code notifies on this step now)
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never);
       const afterReceived = await fireFor("job.status_advanced", jobDoc.id);
-      expect(afterReceived).toBeNull();
+      expect(afterReceived?.type).toBe("vehicle_received");
 
       // VEHICLE_RECEIVED -> IN_PROGRESS: job_started
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never);
@@ -371,7 +373,7 @@ describe("Notification system", () => {
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never); // IN_PROGRESS
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never); // QUALITY_CHECK
       const afterQC = await fireFor("job.status_advanced", jobDoc.id);
-      expect(afterQC).toBeNull();
+      expect(afterQC?.type).toBe("quality_check"); // the code notifies on this step now
 
       await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never); // READY_FOR_DELIVERY
       const completed = await fireFor("job.status_advanced", jobDoc.id);
@@ -471,11 +473,7 @@ describe("Notification system", () => {
         auth: adminAuth(adminUid),
       } as never);
 
-      await activateMembership.run({
-        data: { membershipId: purchase.membershipId },
-        auth: adminAuth(adminUid),
-      } as never);
-
+      // Payment confirmation already activates the membership; no separate activation call.
       const notification = await fireFor("membership.activated", purchase.membershipId);
       expect(notification?.type).toBe("membership_activated");
       expect(notification?.userId).toBe(cust);

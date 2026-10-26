@@ -5,7 +5,8 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
-import { pickDay } from "../../../lib/booking-ideas";
+import { pickDay, comboFor } from "../../../lib/booking-ideas";
+import { formatDuration } from "../../../lib/duration";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
 import { getAvailability, peekAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
@@ -19,12 +20,13 @@ import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
 import { applyBundleUpgrade, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
+import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 
 const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 
-const durationText = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+const durationText = formatDuration;
 
 export default function BookServiceScreen() {
   const { serviceId, extras: extrasParam, day } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string }>();
@@ -53,7 +55,12 @@ export default function BookServiceScreen() {
 
   // More services in the same visit: same bay type only, so one slot fits them all. The server checks again.
   const [catalogue, setCatalogue] = useState<Service[]>([]);
-  const [extraIds, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
+  // A claimed gift covers its wash alone (server blocks gift + extras), so extras stay hidden while a code is pending.
+  const [giftPending] = useState(() => (GIFT_LIVE ? takePendingGiftCode() !== null : false));
+  const [extraIdsState, setExtraIds] = useState<string[]>(() => extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId));
+  // A combo is one fixed bundle: no options, no default selections, nothing added to price or time, and no extras are sent when booking.
+  const combo = comboFor(catalogue, serviceId);
+  const extraIds = combo ? [] : extraIdsState;
   const [upgradeNote, setUpgradeNote] = useState<string | null>(null);
   useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]);
   const pickExtra = (id: string) => {
@@ -210,7 +217,14 @@ export default function BookServiceScreen() {
         <Button label="Add car type" kind="quiet" onPress={() => router.push(`/(tabs)/garage/${selectedVehicle.id}`)} />
       </View>:selectedVehicle?.category?<T role="caption" tone="secondary">{segmentLabel(selectedVehicle.category)} · Saved with your car</T>:null}
 
-      {service.priceOnRequest !== true && eligibleExtras(service, catalogue).length > 0 ? (
+      {combo ? (
+        <View style={{ gap: space.hair }}>
+          <Kicker>Included</Kicker>
+          <T role="body" tone="secondary">{combo.parts.join(" + ")}</T>
+        </View>
+      ) : null}
+
+      {!combo && service.priceOnRequest !== true && !giftPending && eligibleExtras(service, catalogue).length > 0 ? (
         <View style={{ gap: space.hair }}>
           <Kicker>Add to this visit</Kicker>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>

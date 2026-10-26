@@ -1,0 +1,640 @@
+{
+  "link-error": {
+    "outcome": {
+      "error": {
+        "code": "failed-precondition",
+        "message": "Cannot pay for a cancelled job."
+      }
+    },
+    "docs": {
+      "jobs": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "customerId": "c",
+            "vehicleId": "v",
+            "serviceId": "fx-noncovered-zero",
+            "bookingId": null,
+            "status": "CANCELLED",
+            "paymentStatus": "unpaid",
+            "priceBreakdown": {
+              "vehicleCategory": "hatchback",
+              "basePrice": 0,
+              "scopeAdjustment": 0,
+              "addOns": [],
+              "subtotal": 0,
+              "membershipDiscount": 0,
+              "membershipDiscountPercent": null,
+              "pickupFee": 0,
+              "dropFee": 0,
+              "taxRatePercent": 0,
+              "taxDescription": "No tax",
+              "tax": 0,
+              "total": 0,
+              "currency": "INR"
+            },
+            "totalAmount": 0,
+            "additionalWorkDelta": 0,
+            "statusHistory": [],
+            "isWalkIn": true,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "bookings": [],
+      "payments": [],
+      "invoices": [],
+      "auditLog": [],
+      "invoiceCounters": [],
+      "warranties": [],
+      "services": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "name": "Zero ordinary service"
+          }
+        }
+      ],
+      "customers": []
+    }
+  },
+  "link-success": {
+    "outcome": {
+      "result": {
+        "paymentId": "fx-zero-auto-1",
+        "paymentUrl": "https://mock-razorpay.local/pay/fx-zero-auto-1?amount=0",
+        "status": "pending"
+      }
+    },
+    "docs": {
+      "jobs": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "customerId": "c",
+            "vehicleId": "v",
+            "serviceId": "fx-noncovered-zero",
+            "bookingId": null,
+            "status": "PENDING_VEHICLE",
+            "paymentStatus": "unpaid",
+            "priceBreakdown": {
+              "vehicleCategory": "hatchback",
+              "basePrice": 0,
+              "scopeAdjustment": 0,
+              "addOns": [],
+              "subtotal": 0,
+              "membershipDiscount": 0,
+              "membershipDiscountPercent": null,
+              "pickupFee": 0,
+              "dropFee": 0,
+              "taxRatePercent": 0,
+              "taxDescription": "No tax",
+              "tax": 0,
+              "total": 0,
+              "currency": "INR"
+            },
+            "totalAmount": 0,
+            "additionalWorkDelta": 0,
+            "statusHistory": [],
+            "isWalkIn": true,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "bookings": [],
+      "payments": [
+        {
+          "id": "fx-zero-auto-1",
+          "data": {
+            "id": "fx-zero-auto-1",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "targetType": "job",
+            "jobId": "fx-noncovered-zero",
+            "bookingId": null,
+            "membershipId": null,
+            "customerId": "c",
+            "amount": 0,
+            "currency": "INR",
+            "method": "razorpay_payment_link",
+            "status": "pending",
+            "razorpayPaymentId": null,
+            "razorpayRefundId": null,
+            "refundAmount": null,
+            "manualReference": null,
+            "recordedBy": null,
+            "invoiceId": null,
+            "providerEventId": null,
+            "completedAt": null,
+            "failedAt": null,
+            "cancelledAt": null,
+            "refundedAt": null,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z",
+            "paymentUrl": "https://mock-razorpay.local/pay/fx-zero-auto-1?amount=0",
+            "razorpayOrderId": "mock_order_fx-zero-auto-1",
+            "razorpayPaymentLinkId": "mock_plink_fx-zero-auto-1"
+          }
+        }
+      ],
+      "invoices": [],
+      "auditLog": [
+        {
+          "id": "fx-zero-auto-1",
+          "data": {
+            "id": "fx-zero-auto-1",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "action": "payment.initiated",
+            "entityType": "Payment",
+            "entityId": "fx-zero-auto-1",
+            "performedBy": "staff",
+            "performedByName": "Account staff",
+            "targetLabel": "",
+            "performedByRole": "admin",
+            "before": null,
+            "after": {
+              "jobId": "fx-noncovered-zero",
+              "bookingId": null,
+              "amount": 0,
+              "method": "razorpay_payment_link",
+              "status": "pending"
+            },
+            "metadata": {},
+            "createdAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "invoiceCounters": [],
+      "warranties": [],
+      "services": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "name": "Zero ordinary service"
+          }
+        }
+      ],
+      "customers": []
+    }
+  },
+  "cash-error": {
+    "outcome": {
+      "error": {
+        "code": "failed-precondition",
+        "message": "Cannot record payment for a cancelled job."
+      }
+    },
+    "docs": {
+      "jobs": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "customerId": "c",
+            "vehicleId": "v",
+            "serviceId": "fx-noncovered-zero",
+            "bookingId": null,
+            "status": "CANCELLED",
+            "paymentStatus": "unpaid",
+            "priceBreakdown": {
+              "vehicleCategory": "hatchback",
+              "basePrice": 0,
+              "scopeAdjustment": 0,
+              "addOns": [],
+              "subtotal": 0,
+              "membershipDiscount": 0,
+              "membershipDiscountPercent": null,
+              "pickupFee": 0,
+              "dropFee": 0,
+              "taxRatePercent": 0,
+              "taxDescription": "No tax",
+              "tax": 0,
+              "total": 0,
+              "currency": "INR"
+            },
+            "totalAmount": 0,
+            "additionalWorkDelta": 0,
+            "statusHistory": [],
+            "isWalkIn": true,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "bookings": [],
+      "payments": [],
+      "invoices": [],
+      "auditLog": [],
+      "invoiceCounters": [],
+      "warranties": [],
+      "services": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "name": "Zero ordinary service"
+          }
+        }
+      ],
+      "customers": []
+    }
+  },
+  "cash-success": {
+    "outcome": {
+      "result": {
+        "paymentId": "fx-zero-auto-1",
+        "invoiceId": "inv_fx-noncovered-zero"
+      }
+    },
+    "docs": {
+      "jobs": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "customerId": "c",
+            "vehicleId": "v",
+            "serviceId": "fx-noncovered-zero",
+            "bookingId": null,
+            "status": "PENDING_VEHICLE",
+            "priceBreakdown": {
+              "vehicleCategory": "hatchback",
+              "basePrice": 0,
+              "scopeAdjustment": 0,
+              "addOns": [],
+              "subtotal": 0,
+              "membershipDiscount": 0,
+              "membershipDiscountPercent": null,
+              "pickupFee": 0,
+              "dropFee": 0,
+              "taxRatePercent": 0,
+              "taxDescription": "No tax",
+              "tax": 0,
+              "total": 0,
+              "currency": "INR"
+            },
+            "totalAmount": 0,
+            "additionalWorkDelta": 0,
+            "statusHistory": [],
+            "isWalkIn": true,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z",
+            "paymentStatus": "paid"
+          }
+        }
+      ],
+      "bookings": [],
+      "payments": [
+        {
+          "id": "fx-zero-auto-1",
+          "data": {
+            "id": "fx-zero-auto-1",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "targetType": "job",
+            "jobId": "fx-noncovered-zero",
+            "bookingId": null,
+            "membershipId": null,
+            "customerId": "c",
+            "amount": 0,
+            "currency": "INR",
+            "method": "cash",
+            "status": "completed",
+            "razorpayPaymentLinkId": null,
+            "razorpayPaymentId": null,
+            "razorpayOrderId": null,
+            "razorpayRefundId": null,
+            "refundAmount": null,
+            "manualReference": null,
+            "recordedBy": "staff",
+            "invoiceId": "inv_fx-noncovered-zero",
+            "providerEventId": null,
+            "completedAt": "2026-10-24T09:00:00.000Z",
+            "failedAt": null,
+            "cancelledAt": null,
+            "refundedAt": null,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "invoices": [
+        {
+          "id": "inv_fx-noncovered-zero",
+          "data": {
+            "id": "inv_fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "jobId": "fx-noncovered-zero",
+            "bookingId": null,
+            "customerId": "c",
+            "vehicleId": "v",
+            "visitId": "fx-noncovered-zero",
+            "paymentId": "fx-zero-auto-1",
+            "invoiceNumber": "INV-2026-00001",
+            "lineItems": [
+              {
+                "description": "Zero ordinary service",
+                "serviceName": "Zero ordinary service",
+                "serviceId": "fx-noncovered-zero",
+                "quantity": 1,
+                "unitPrice": 0,
+                "total": 0
+              }
+            ],
+            "subtotal": 0,
+            "discount": 0,
+            "discountDescription": null,
+            "taxRatePercent": 0,
+            "taxDescription": "No tax",
+            "tax": 0,
+            "total": 0,
+            "currency": "INR",
+            "status": "issued",
+            "pdfUrl": null,
+            "publicToken": "00000000-0000-4000-8000-000000000001",
+            "issuedAt": "2026-10-24T09:00:00.000Z",
+            "voidedAt": null,
+            "voidedReason": null,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "auditLog": [
+        {
+          "id": "fx-zero-auto-1",
+          "data": {
+            "id": "fx-zero-auto-1",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "action": "payment.completed",
+            "entityType": "Payment",
+            "entityId": "fx-zero-auto-1",
+            "performedBy": "staff",
+            "performedByName": "Account staff",
+            "targetLabel": "",
+            "performedByRole": "admin",
+            "before": null,
+            "after": {
+              "method": "cash",
+              "amount": 0,
+              "status": "completed",
+              "invoiceId": "inv_fx-noncovered-zero"
+            },
+            "metadata": {},
+            "createdAt": "2026-10-24T09:00:00.000Z"
+          }
+        },
+        {
+          "id": "fx-zero-auto-2",
+          "data": {
+            "id": "fx-zero-auto-2",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "action": "invoice.issued",
+            "entityType": "Invoice",
+            "entityId": "inv_fx-noncovered-zero",
+            "performedBy": "staff",
+            "performedByName": "Account staff",
+            "targetLabel": "INV-2026-00001",
+            "performedByRole": "admin",
+            "before": null,
+            "after": {
+              "invoiceNumber": "INV-2026-00001",
+              "total": 0,
+              "status": "issued"
+            },
+            "metadata": {},
+            "createdAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "invoiceCounters": [
+        {
+          "id": "zero-control",
+          "data": {
+            "tenantId": "zero-control",
+            "nextNumber": 2,
+            "year": 2026
+          }
+        }
+      ],
+      "warranties": [],
+      "services": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "name": "Zero ordinary service"
+          }
+        }
+      ],
+      "customers": []
+    }
+  },
+  "delivery-error": {
+    "outcome": {
+      "error": {
+        "code": "failed-precondition",
+        "message": "Job is in terminal status 'CANCELLED' and cannot be advanced."
+      }
+    },
+    "docs": {
+      "jobs": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "customerId": "c",
+            "vehicleId": "v",
+            "serviceId": "fx-noncovered-zero",
+            "bookingId": null,
+            "status": "CANCELLED",
+            "paymentStatus": "paid",
+            "priceBreakdown": {
+              "vehicleCategory": "hatchback",
+              "basePrice": 0,
+              "scopeAdjustment": 0,
+              "addOns": [],
+              "subtotal": 0,
+              "membershipDiscount": 0,
+              "membershipDiscountPercent": null,
+              "pickupFee": 0,
+              "dropFee": 0,
+              "taxRatePercent": 0,
+              "taxDescription": "No tax",
+              "tax": 0,
+              "total": 0,
+              "currency": "INR"
+            },
+            "totalAmount": 0,
+            "additionalWorkDelta": 0,
+            "statusHistory": [],
+            "isWalkIn": true,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "bookings": [],
+      "payments": [],
+      "invoices": [
+        {
+          "id": "fx-zero-existing",
+          "data": {
+            "id": "fx-zero-existing",
+            "jobId": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "status": "paid",
+            "total": 0
+          }
+        }
+      ],
+      "auditLog": [],
+      "invoiceCounters": [],
+      "warranties": [],
+      "services": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "name": "Zero ordinary service"
+          }
+        }
+      ],
+      "customers": []
+    }
+  },
+  "delivery-success": {
+    "outcome": {
+      "result": {
+        "jobId": "fx-noncovered-zero",
+        "previousStatus": "READY_FOR_DELIVERY",
+        "newStatus": "DELIVERED"
+      }
+    },
+    "docs": {
+      "jobs": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "customerId": "c",
+            "vehicleId": "v",
+            "serviceId": "fx-noncovered-zero",
+            "bookingId": null,
+            "paymentStatus": "paid",
+            "priceBreakdown": {
+              "vehicleCategory": "hatchback",
+              "basePrice": 0,
+              "scopeAdjustment": 0,
+              "addOns": [],
+              "subtotal": 0,
+              "membershipDiscount": 0,
+              "membershipDiscountPercent": null,
+              "pickupFee": 0,
+              "dropFee": 0,
+              "taxRatePercent": 0,
+              "taxDescription": "No tax",
+              "tax": 0,
+              "total": 0,
+              "currency": "INR"
+            },
+            "totalAmount": 0,
+            "additionalWorkDelta": 0,
+            "isWalkIn": true,
+            "createdAt": "2026-10-24T09:00:00.000Z",
+            "updatedAt": "2026-10-24T09:00:00.000Z",
+            "statusHistory": [
+              {
+                "status": "DELIVERED",
+                "changedAt": "2026-10-24T09:00:00.000Z",
+                "changedBy": "staff",
+                "notes": null
+              }
+            ],
+            "sealedAt": "2026-10-24T09:00:00.000Z",
+            "status": "DELIVERED"
+          }
+        }
+      ],
+      "bookings": [],
+      "payments": [],
+      "invoices": [
+        {
+          "id": "fx-zero-existing",
+          "data": {
+            "id": "fx-zero-existing",
+            "jobId": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "status": "paid",
+            "total": 0
+          }
+        }
+      ],
+      "auditLog": [
+        {
+          "id": "fx-zero-auto-1",
+          "data": {
+            "id": "fx-zero-auto-1",
+            "tenantId": "zero-control",
+            "studioId": "s",
+            "action": "job.status_advanced",
+            "entityType": "ServiceJob",
+            "entityId": "fx-noncovered-zero",
+            "performedBy": "staff",
+            "performedByName": "Account staff",
+            "targetLabel": "",
+            "performedByRole": "admin",
+            "before": {
+              "status": "READY_FOR_DELIVERY"
+            },
+            "after": {
+              "status": "DELIVERED"
+            },
+            "metadata": {},
+            "createdAt": "2026-10-24T09:00:00.000Z"
+          }
+        }
+      ],
+      "invoiceCounters": [],
+      "warranties": [],
+      "services": [
+        {
+          "id": "fx-noncovered-zero",
+          "data": {
+            "id": "fx-noncovered-zero",
+            "tenantId": "zero-control",
+            "name": "Zero ordinary service"
+          }
+        }
+      ],
+      "customers": []
+    }
+  }
+}

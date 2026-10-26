@@ -39,10 +39,21 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${seq}`;
 }
 
-let dayOffset = 3;
+// Each call returns a NEW calendar day (IST), so no two bookings in this file compete for the same studio/bay slot.
+// createBooking rejects a start later than now + 30 x 24h (start time evaluated in Asia/Kolkata). Today (IST) + 29 days
+// at 15:00 IST is always inside that window whatever the time of day, so the usable range is +2..+29 days (28 dates).
+// Past that the helper throws instead of silently reusing a date (which would risk capacity collisions).
+const FIRST_OFFSET_DAYS = 2;
+const LAST_OFFSET_DAYS = 29;
+let dateCalls = 0;
 function nextDate(): string {
-  dayOffset += 1;
-  return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
+  const offset = FIRST_OFFSET_DAYS + dateCalls;
+  dateCalls += 1;
+  if (offset > LAST_OFFSET_DAYS) {
+    throw new Error(`nextDate(): fixture needs more distinct days than the ${LAST_OFFSET_DAYS}-day booking horizon allows`);
+  }
+  const IST_MS = 5.5 * 3600 * 1000;
+  return new Date(Date.now() + IST_MS + offset * 86400000).toISOString().slice(0, 10);
 }
 
 function customerAuth(authUid: string, tenantId = TENANT_A) {
@@ -65,7 +76,8 @@ async function seedStudio(studioId: string, tenantId: string) {
     currency: "INR",
     taxRatePercent: 18,
     taxDescription: "GST 18%",
-    operatingHours: [],
+    // Open every day: reschedule only offers slots on days that have hours.
+    operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d as 0 | 1 | 2 | 3 | 4 | 5 | 6, open: "09:00", close: "19:00", closed: false })),
     holidays: [],
     vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
     slotIntervalMinutes: 30,
@@ -460,24 +472,60 @@ describe("confirmManualPayment — production cash payment completion", () => {
     ).rejects.toThrow(/already been marked as paid/);
   });
 
-  it("S: cancelBooking is rejected once a payment has been initiated for its job", async () => {
+  // Owner 18 Oct (21:41 wamid ...M0FEQzlBRjRERDY1NzBBODkxMjkA, "2 - yes"; peer-confirmed): a customer may cancel their own booking.
+  // cancelBooking now refuses only when money is taken or being taken; a payment that was only started holds no money.
+  it("S: a customer can cancel when the payment was only started (no money taken); the started payment is cancelled (customer cancel now runs the shared runCancel path, which also handles paid bookings with a refund; not exercised here)", async () => {
     const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
     const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
 
-    await initiatePayment.run({
+    const initResult = (await initiatePayment.run({
       data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { paymentId: string };
+
+    await cancelBooking.run({
+      data: { bookingId: booking.id, reason: "test cancellation attempt" },
       auth: customerAuth(freshCustomerId),
     } as never);
 
-    await expect(
-      cancelBooking.run({
-        data: { bookingId: booking.id, reason: "test cancellation attempt" },
-        auth: customerAuth(freshCustomerId),
-      } as never),
-    ).rejects.toThrow(/Cannot cancel a booking once payment/);
-
     const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
-    expect((bookingSnap.data() as Booking).status).toBe("CONFIRMED");
+    expect((bookingSnap.data() as Booking).status).toBe("CANCELLED");
+    const paySnap = await db.collection(COLLECTIONS.payments()).doc(initResult.paymentId).get();
+    expect(paySnap.data()?.["status"]).toBe("cancelled");
+  });
+
+  // Local seeded fixture only: a cash payment (no provider call), so the refund is a manual refund record. No real refund or provider call is made.
+  // Unresolved contract review (not decided here): the original "cancel rejected once payment initiated" rule vs the current shared runCancel behaviour.
+  it("S2: a customer cancelling a booking with a completed cash payment records the refund as OWED: payment stays completed, refund claim exists, invoice stays issued", async () => {
+    const { customerId: freshCustomerId, vehicle: freshVehicle } = await freshCustomerAndVehicle();
+    const { booking, job } = await makeBookingAndJob(freshCustomerId, service, freshVehicle, STUDIO_A);
+    const init = (await initiatePayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { paymentId: string };
+    const conf = (await confirmManualPayment.run({
+      data: { paymentId: init.paymentId },
+      auth: studioAuth(uid("studio-user"), STUDIO_A),
+    } as never)) as { invoiceId: string };
+
+    const res = (await cancelBooking.run({
+      data: { bookingId: booking.id, reason: "fixture paid cancel" },
+      auth: customerAuth(freshCustomerId),
+    } as never)) as { success: boolean; manualRefund: boolean; providerRefundId: string | null; refundPaise: number };
+
+    expect(res.success).toBe(true);
+    expect(res.providerRefundId).toBeNull();
+    expect(res.manualRefund).toBe(true);
+    expect(res.refundPaise).toBeGreaterThan(0);
+    const pay = (await db.collection(COLLECTIONS.payments()).doc(init.paymentId).get()).data() as Payment;
+    expect(pay.status).toBe("completed");
+    const ev = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${init.paymentId}`).get();
+    expect(ev.exists).toBe(true);
+    const b = (await db.collection(COLLECTIONS.bookings()).doc(booking.id).get()).data() as Booking & { manualRefundDuePaise?: number };
+    expect(b.status).toBe("CANCELLED");
+    expect(b.manualRefundDuePaise).toBe(res.refundPaise);
+    const inv = await db.collection(COLLECTIONS.invoices()).doc(conf.invoiceId).get();
+    expect(inv.data()?.["status"]).toBe("issued");
   });
 
   it("T: confirmManualPayment cannot complete payment for an already-cancelled job", async () => {
@@ -980,6 +1028,7 @@ describe("Cross-studio authorization (Phase 5B P1-14)", () => {
     ).rejects.toThrow(/different studio/);
   });
 
+  // Owner 18 Oct 10:58 phonemsg-01M56QPP5JT965BN99KWS7KN9X: cancel/refund is admin only for now, staff later. A studio-role caller is refused by the role gate.
   it("cancelBooking: a Studio B employee cannot cancel a Studio A booking", async () => {
     const { booking } = await makeBookingAndJob(csCustomerId, csService, csVehicle, STUDIO_A);
 
@@ -988,7 +1037,7 @@ describe("Cross-studio authorization (Phase 5B P1-14)", () => {
         data: { bookingId: booking.id, reason: "cross-studio attempt" },
         auth: studioAuth(uid("studio-b-user-4"), STUDIO_B),
       } as never),
-    ).rejects.toThrow(/different studio/);
+    ).rejects.toThrow(/Unauthorized/);
 
     const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(booking.id).get();
     expect((bookingSnap.data() as Booking).status).not.toBe("CANCELLED");

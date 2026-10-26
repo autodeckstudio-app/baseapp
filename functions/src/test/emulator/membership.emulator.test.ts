@@ -62,7 +62,8 @@ async function seedStudio(studioId: string, tenantId: string, bayCount = 10) {
     currency: "INR",
     taxRatePercent: 18,
     taxDescription: "GST 18%",
-    operatingHours: [],
+    // Open every day: reschedule only offers slots on days that have hours (an empty list offered none).
+    operatingHours: [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dayOfWeek: d as 0 | 1 | 2 | 3 | 4 | 5 | 6, open: "09:00", close: "19:00", closed: false })),
     holidays: [],
     vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
     slotIntervalMinutes: 30,
@@ -163,10 +164,15 @@ async function purchaseAndActivate(
     auth: adminAuth(adminUid, tenantId),
   } as never);
 
-  await activateMembership.run({
-    data: { membershipId: purchaseResult.membershipId },
-    auth: adminAuth(adminUid, tenantId),
-  } as never);
+  // Confirming the payment already activates the membership (confirmMembershipPayment, via_payment_confirmed). Only call the
+  // separate admin activation if the membership is still pending.
+  const afterPay = await db.collection("memberships").doc(purchaseResult.membershipId).get();
+  if ((afterPay.data() as Membership).status === "pending") {
+    await activateMembership.run({
+      data: { membershipId: purchaseResult.membershipId },
+      auth: adminAuth(adminUid, tenantId),
+    } as never);
+  }
 
   const snap = await db.collection("memberships").doc(purchaseResult.membershipId).get();
   return snap.data() as Membership;
@@ -263,32 +269,70 @@ describe("Membership system", () => {
     expect(paymentsSnap.docs).toHaveLength(1);
   });
 
-  // KNOWN OPEN GAP (Phase 7 hostile audit) — documented, not silently
-  // hidden. Two GENUINELY simultaneous purchaseMembership calls (fired via
-  // Promise.all with no await between them, both reaching Firestore at
-  // effectively the same instant) can still both succeed and each create a
-  // separate Membership + Payment. Root cause, confirmed by direct
-  // empirical stress-testing (not assumed): Firestore transactions do not
-  // reliably serialize two concurrent transactions whose only overlapping
-  // read is a QUERY result that both see as empty before either commits —
-  // this is a "phantom read" gap, distinct from (and not fixed by) reading
-  // a specific document reference inside a transaction, which IS reliably
-  // conflict-detected. The SAME underlying gap was found and partially
-  // mitigated (not fully closed) in createBooking's bay-assignment race
-  // this same audit pass — see functions/src/functions/booking/
-  // createBooking.ts's bayLocks usage and its own caveat comment. A full
-  // fix requires a deterministic claim/lock document with a real lifecycle
-  // (created/released in step with membership status transitions), which
-  // is a larger architectural change deliberately deferred rather than
-  // rushed — tracked as required follow-up work, not implemented here.
-  it.skip("2c. [KNOWN GAP] TRUE simultaneous purchaseMembership calls can still both succeed (tracked, not fixed this pass)", async () => {
+  // Formerly a documented known gap (phantom read on a query-only check). Fixed by a per-customer claim document read
+  // inside the purchase transaction (membershipClaims/{tenantId}_{uid}); a read of one document IS conflict-checked.
+  const buy = (cust: string, key = uid("idem")) =>
+    purchaseMembership.run({ data: { planId, method: "cash", idempotencyKey: key }, auth: customerAuth(cust) } as never) as Promise<{
+      membershipId: string;
+      paymentId: string;
+    }>;
+  const countFor = async (cust: string) => ({
+    memberships: (await db.collection("memberships").where("customerId", "==", cust).get()).docs,
+    payments: (await db.collection("payments").where("customerId", "==", cust).get()).docs,
+  });
+
+  it("2c. TRUE simultaneous purchaseMembership calls: exactly one membership and one payment are created", async () => {
     const cust = uid("cust-true-race");
-    const results = await Promise.allSettled([
-      purchaseMembership.run({ data: { planId, method: "cash", idempotencyKey: uid("idem") }, auth: customerAuth(cust) } as never),
-      purchaseMembership.run({ data: { planId, method: "cash", idempotencyKey: uid("idem") }, auth: customerAuth(cust) } as never),
-    ]);
+    const results = await Promise.allSettled([buy(cust), buy(cust)]);
     const fulfilled = results.filter((r) => r.status === "fulfilled");
-    expect(fulfilled).toHaveLength(1); // currently fails ~100% of the time — see comment above
+    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    const { memberships, payments } = await countFor(cust);
+    expect(memberships).toHaveLength(1);
+    expect(payments).toHaveLength(1);
+  });
+
+  it("2d. five simultaneous purchases with different idempotency keys create exactly one membership and one payment", async () => {
+    const cust = uid("cust-race5");
+    await Promise.allSettled([buy(cust), buy(cust), buy(cust), buy(cust), buy(cust)]);
+    const { memberships, payments } = await countFor(cust);
+    expect(memberships).toHaveLength(1);
+    expect(payments).toHaveLength(1);
+  });
+
+  it("2e. the claim document key is deterministic per tenant+customer and points at the created membership", async () => {
+    const cust = uid("cust-claimkey");
+    const first = await buy(cust);
+    const claim = await db.collection("membershipClaims").doc(`${TENANT_A}_${cust}`).get();
+    expect(claim.exists).toBe(true);
+    expect((claim.data() as { membershipId: string }).membershipId).toBe(first.membershipId);
+    // a different customer gets an independent claim and is not blocked
+    const other = uid("cust-claimkey-other");
+    await expect(buy(other)).resolves.toMatchObject({ membershipId: expect.any(String) });
+    expect((await countFor(other)).memberships).toHaveLength(1);
+  });
+
+  it("2f. a purchase is possible again after the held membership is cancelled or expired (claim does not stick)", async () => {
+    for (const terminal of ["cancelled", "expired"] as const) {
+      const cust = uid(`cust-retry-${terminal}`);
+      const first = await buy(cust);
+      await db.collection("memberships").doc(first.membershipId).update({ status: terminal });
+      const second = await buy(cust);
+      expect(second.membershipId).not.toBe(first.membershipId);
+      const claim = await db.collection("membershipClaims").doc(`${TENANT_A}_${cust}`).get();
+      expect((claim.data() as { membershipId: string }).membershipId).toBe(second.membershipId);
+      // and the new one blocks again
+      await buy(cust).catch(() => undefined);
+      expect((await countFor(cust)).memberships).toHaveLength(2); // one terminal + one pending, no third
+    }
+  });
+
+  it("2g. a legacy active membership with no claim document still blocks a new purchase", async () => {
+    const cust = uid("cust-legacy");
+    const first = await buy(cust);
+    await db.collection("memberships").doc(first.membershipId).update({ status: "active" });
+    await db.collection("membershipClaims").doc(`${TENANT_A}_${cust}`).delete();
+    await buy(cust).catch(() => undefined);
+    expect((await countFor(cust)).memberships).toHaveLength(1);
   });
 
   it("3. membership activation — admin activates after payment completes", async () => {
@@ -297,7 +341,8 @@ describe("Membership system", () => {
     expect(membership.status).toBe("active");
     expect(membership.startDate).not.toBeNull();
     expect(membership.endDate).not.toBeNull();
-    expect(membership.activatedBy).toBe(adminUid);
+    // Activation happens inside the payment confirmation, recorded as "system" (not the admin who confirmed).
+    expect(membership.activatedBy).toBe("system");
   });
 
   it("4. expiry — expireStaleMemberships flips a past-endDate active membership", async () => {

@@ -65,10 +65,16 @@ export const submitMyPaperSchema = z.object({
   vehicleId: z.string().min(1),
   kind: customerKind,
   reference: z.string().min(1).max(120),
+  title: z.string().trim().min(1).max(80).optional(),
   issuedOn: dateString.optional(),
   expiresOn: dateString.optional(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
 }).strict().transform((v, ctx) => {
+  // An OTHER document needs a name (round 7 point 8). Existing papers without a title still render.
+  if (v.kind === "OTHER" && !v.title) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["title"], message: "Give this document a name" });
+    return z.NEVER;
+  }
   // Insurance, PUC and other references stay free text. Only RC is checked and normalised.
   if (v.kind !== "RC") return v;
   const reference = normalizeRcReference(v.reference);
@@ -82,3 +88,15 @@ export const submitMyPaperSchema = z.object({
   }
   return { ...v, reference };
 });
+
+// Customer edit of their own document: number, expiry, name and photo only. Kind, car and owner never change.
+export const updateMyPaperSchema = z.object({
+  paperId: z.string().min(1).max(120),
+  reference: z.string().min(1).max(120).optional(),
+  title: z.string().trim().min(1).max(80).optional(),
+  issuedOn: dateString.nullable().optional(),
+  expiresOn: dateString.nullable().optional(),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
+}).strict();
+
+export const deleteMyPaperSchema = z.object({ paperId: z.string().min(1).max(120) }).strict();

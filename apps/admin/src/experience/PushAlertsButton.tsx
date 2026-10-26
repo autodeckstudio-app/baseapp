@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "./Icon";
 import { enablePush, pushState, syncPushRegistration } from "../lib/push";
 
 /** One small button to turn on chat alerts on this device. Hidden when unavailable or already on. */
@@ -18,6 +19,7 @@ export function PushAlertsButton() {
       disabled={busy || state === "denied"}
       onClick={() => { setBusy(true); void enablePush().then(setState).catch(() => undefined).finally(() => setBusy(false)); }}
     >
+      <Icon name="bell" size={18} />
       <span className="ax-corner-out-t">Alerts</span>
     </button>
   );

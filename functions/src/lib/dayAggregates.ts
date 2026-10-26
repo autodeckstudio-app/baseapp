@@ -2,6 +2,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import type { Expense, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { utcToLocalDate } from "./schedule.js";
+import { refundsOwed } from "./refunds-owed.js";
 
 export interface DayAggregates {
   cashPaise: number; // completed cash payments (gross, before cash expenses)
@@ -14,6 +15,10 @@ export interface DayAggregates {
   cashExpensesPaise: number;
   expenseCount: number;
   expectedCashPaise: number; // cashPaise - cashExpensesPaise
+  /** OPEN manual refunds owed to customers (running total, not for this date, not netted into any figure above). */
+  refundsOwedPaise: number;
+  refundsOwedCount: number;
+  refundsOwedTruncated: boolean;
 }
 
 /**
@@ -48,6 +53,9 @@ export async function dayAggregates(
     cashExpensesPaise: 0,
     expenseCount: 0,
     expectedCashPaise: 0,
+    refundsOwedPaise: 0,
+    refundsOwedCount: 0,
+    refundsOwedTruncated: false,
   };
 
   for (const doc of paymentsSnap.docs) {
@@ -78,5 +86,7 @@ export async function dayAggregates(
   }
 
   agg.expectedCashPaise = agg.cashPaise - agg.cashExpensesPaise;
+  const owed = await refundsOwed(db, tenantId, studioId);
+  agg.refundsOwedPaise = owed.owedPaise; agg.refundsOwedCount = owed.count; agg.refundsOwedTruncated = owed.truncated;
   return agg;
 }

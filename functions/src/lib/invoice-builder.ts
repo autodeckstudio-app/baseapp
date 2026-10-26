@@ -9,6 +9,7 @@ import { calculateTax } from "./pricing.js";
 import { randomUUID } from "node:crypto";
 
 export interface BuildInvoiceParams {
+  coveredMembershipId?: string;
   invoiceId: string;
   invoiceNumber: string; // allocated atomically by allocateInvoiceNumber()
   tenantId: string;
@@ -125,6 +126,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
   const tax = additionalGross === 0 ? pb.tax : total - (subtotal - discount);
 
   return {
+    ...(params.coveredMembershipId ? { settlementKind: "membership_covered" as const, membershipId: params.coveredMembershipId } : {}),
     id: invoiceId,
     tenantId,
     studioId,
@@ -146,7 +148,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     tax,
     total, // must equal the job's totalAmount — never editable
     currency: pb.currency,
-    status: paymentId ? "issued" : "draft",
+    status: paymentId || params.coveredMembershipId ? "issued" : "draft",
     pdfUrl: null,
     // Reserved for a future unauthenticated/shareable invoice link — no
     // route or Cloud Function consumes this today (Phase 3H audit: kept as
@@ -154,7 +156,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     // customer/admin invoice views already satisfy the current requirement
     // and dropping the field would touch invoice identity for no benefit).
     publicToken: randomUUID(),
-    issuedAt: paymentId ? now : null,
+    issuedAt: paymentId || params.coveredMembershipId ? now : null,
     voidedAt: null,
     voidedReason: null,
     createdAt: now,

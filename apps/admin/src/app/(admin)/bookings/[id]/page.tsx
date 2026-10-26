@@ -1,4 +1,5 @@
 "use client";
+import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
@@ -31,7 +32,7 @@ export default function BookingDetailPage() {
   const [booking, setBooking] = useState<Booking | null | undefined>(undefined);
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<Payment | null | undefined>(undefined); // undefined = not loaded yet
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -75,7 +76,11 @@ export default function BookingDetailPage() {
 
   // One detail page per visit: once the car is checked in, the Job page shows the booking too.
   useEffect(() => {
-    if (job) router.replace(`/jobs/${job.id}`);
+    // Redirect only once the car is at the studio (checked in or later):
+    // pre-arrival bookings and cancelled no-shows keep this page, where
+    // contact, quotes, reschedules and the no-show review live.
+    const LIVE_STATUSES = ["STANDBY", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"];
+    if (job && LIVE_STATUSES.includes(job.status)) router.replace(`/jobs/${job.id}`);
   }, [job, router]);
 
   if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
@@ -101,12 +106,12 @@ export default function BookingDetailPage() {
           <p className="ax-label">Booking · {formatDayLong(booking.scheduledDate)} at {formatTime(booking.scheduledAt)}</p>
           <h1>{vehicle?.registrationNumber ?? "Vehicle"}</h1>
           <p className="ax-hero-sub">{[service?.name, car, customer?.name].filter(Boolean).join(" · ")}</p>
-          {booking.status === "CANCELLED" ? <p className="ax-hero-sub">{booking.cancellationFeePaise ? `Cancelled${booking.cancelledBy === "admin" ? " by the studio" : booking.cancelledBy === "system" ? " (visitor did not arrive)" : " by the customer"}. Cancellation fee ${formatPaise(booking.cancellationFeePaise)}${booking.cancellationFeeStatus === "due" || !booking.cancellationFeeStatus ? ", collect or waive at the studio." : booking.cancellationFeeStatus === "withheld" ? ", kept from the refund." : booking.cancellationFeeStatus === "collected" ? ", collected." : ", waived."}` : "Cancelled. No cancellation fee."}</p> : null}
+          {booking.status === "CANCELLED" ? <p className="ax-hero-sub">{(booking as { noShowResolution?: string }).noShowResolution ? `Cancelled (visitor did not arrive). ${(booking as { noShowResolution?: string }).noShowResolution === "waive" ? "No-show charge waived." : `No-show charge ${formatPaise((booking as { noShowChargePaise?: number | null }).noShowChargePaise ?? 0)} kept.`}` : booking.cancellationFeePaise ? `Cancelled${booking.cancelledBy === "admin" ? " by the studio" : booking.cancelledBy === "system" ? " (visitor did not arrive)" : " by the customer"}. Cancellation fee ${formatPaise(booking.cancellationFeePaise)}${booking.cancellationFeeStatus === "due" || !booking.cancellationFeeStatus ? ", collect or waive at the studio." : booking.cancellationFeeStatus === "withheld" ? ", kept from the refund." : booking.cancellationFeeStatus === "collected" ? ", collected." : ", waived."}` : "Cancelled. No cancellation fee."}</p> : null}
         </div>
         <div className="ax-hero-side">
           <StatusBadge label={isBookingMissed(booking) ? "MISSED" : booking.status} />
           <span className="ax-hero-total">{formatPaise(booking.totalAmount)}</span>
-          <StatusBadge label={booking.paymentStatus} />
+          <StatusBadge label={membershipCoveredLabel(booking) ?? booking.paymentStatus} />
         </div>
       </header>
 
@@ -162,10 +167,12 @@ export default function BookingDetailPage() {
 
           <section className="ax-panel">
             <span className="ax-label">Payment</span>
-            {payment ? (
+            {payment === undefined ? (
+              <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
+            ) : payment ? (
               <div className="kv"><span>{statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
             ) : (
-              <p className="ax-note" style={{ marginTop: 0 }}>No payment started yet.</p>
+              <p className="ax-note" style={{ marginTop: 0 }}>{membershipCoveredLabel(booking) ?? "No payment started yet."}</p>
             )}
             {invoice && (
               <>

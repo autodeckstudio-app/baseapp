@@ -16,6 +16,7 @@ export interface AgendaItem {
   status: string;
   payment: string;
   amount: string;
+  owed?: string | undefined;
 }
 
 export function DayAgenda({ items, loading, onOpen }: { items: AgendaItem[]; loading?: boolean; onOpen: (id: string) => void }) {
@@ -60,6 +61,7 @@ export function DayAgenda({ items, loading, onOpen }: { items: AgendaItem[]; loa
               <span className="ax-slot-amt">
                 <span className="ax-data">{b.amount}</span>
                 <StatusBadge label={b.payment} />
+                {b.owed ? <span className="ax-label" style={{ color: "var(--ad-danger)" }}>{b.owed}</span> : null}
               </span>
             </span>
           </button>

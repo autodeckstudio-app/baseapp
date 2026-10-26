@@ -50,12 +50,12 @@ export async function resolveClaims(auth: Auth, db: Firestore, token: TokenFacts
       .get();
     const doc = snap.docs[0];
     const data = doc?.data() as Partial<Employee> | undefined;
-    if (doc && data && (data.role === "studio" || data.role === "admin") && typeof data.tenantId === "string") {
+    if (doc && data && (data.role === "studio" || data.role === "admin" || data.role === "accountant") && typeof data.tenantId === "string") {
       rosterId = doc.id;
       claims = {
         role: data.role,
         tenantId: data.tenantId,
-        studioId: data.role === "admin" ? null : (data.studioId ?? null),
+        studioId: data.role === "studio" ? (data.studioId ?? null) : null,
       };
     }
   }

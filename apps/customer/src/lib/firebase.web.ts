@@ -4,9 +4,10 @@
 import { resolveAuthDomain } from "./auth-domain";
 import { getApps, initializeApp } from "firebase/app";
 import { browserLocalPersistence, initializeAuth, browserPopupRedirectResolver } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getFunctions } from "firebase/functions";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
+import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
 
 if (!__DEV__ && !process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"]) {
   throw new Error(
@@ -35,4 +36,27 @@ export const auth = initializeAuth(app, {
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "asia-south1");
 export const storage = getStorage(app);
-export const useEmulator = false;
+
+// NOTE: direct process.env["..."] reads only - Expo's web export inlines
+// EXPO_PUBLIC_* variables per access site and cannot see through a
+// passed-around process.env object. Production builds set neither flag,
+// so the emulator stays off there.
+export const useEmulator = resolveUseEmulator({
+  USE_FIREBASE_EMULATOR: process.env["USE_FIREBASE_EMULATOR"],
+  EXPO_PUBLIC_USE_FIREBASE_EMULATOR: process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"],
+});
+
+if (useEmulator) {
+  const targets = emulatorTargets({
+    FIREBASE_EMULATOR_HOST: process.env["FIREBASE_EMULATOR_HOST"],
+    EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
+    EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: process.env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"],
+    EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT: process.env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"],
+  });
+  try {
+    connectFirestoreEmulator(db, targets.host, targets.firestorePort);
+    connectFunctionsEmulator(functions, targets.host, targets.functionsPort);
+  } catch {
+    // Already connected
+  }
+}

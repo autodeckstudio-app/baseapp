@@ -14,6 +14,13 @@ import { ConnectionBanner } from "../ui/ConnectionBanner";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 
 installWebFonts();
+
+// Direct process.env reads only: Expo's web export inlines each access, so a
+// production export folds this to null and the strip can never render there.
+const LOCAL_TEST_NOTICE: string | null =
+  process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"] === "true" || process.env["USE_FIREBASE_EMULATOR"] === "true"
+    ? "Local test build. Emulator data; sample content and prices."
+    : null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;
 
@@ -101,6 +108,11 @@ function ThemedRoot() {
   return (
     <View style={{ flex: 1, backgroundColor: GROUND_COLOR, ...(Platform.OS === "web" ? ({ backgroundImage: COALMINE } as object) : null) }}>
       <StatusBar style={name === "night" ? "light" : "dark"} />
+      {LOCAL_TEST_NOTICE ? (
+        <View style={{ backgroundColor: "#FFF3D6", borderBottomWidth: 1, borderColor: "rgba(151,99,18,0.4)", paddingVertical: 5, paddingHorizontal: 12, alignItems: "center" }}>
+          <T role="label" tone="primary" style={{ color: "#6B4A08", fontWeight: "600" }}>{LOCAL_TEST_NOTICE}</T>
+        </View>
+      ) : null}
       <ConnectionBanner />
       <ErrorBoundary>
       <NavigationGuard key={name}>

@@ -19,6 +19,8 @@ export const COLLECTIONS = {
   // Staff-to-admin approval requests (distinct from customer additional-work approvals)
   adminApprovalRequests: () => "adminApprovalRequests",
   payments: () => "payments",
+  // Staff-only attention items (reason code + references, no customer data). Cloud Function writes only.
+  staffAlerts: () => "staffAlerts",
   invoices: () => "invoices",
   warranties: () => "warranties",
   // inspections/{jobId} — one per job (id == jobId), same pattern as warranties
@@ -45,6 +47,8 @@ export const COLLECTIONS = {
   giftAttempts: () => "giftAttempts",
   /** Server only (default-deny rules): the plain gift code, so a buyer who closed the app after paying can get it again. */
   giftSecrets: () => "giftSecrets",
+  /** Server only (default-deny rules): one in-flight gift purchase per buyer, serializes concurrent createGift calls. */
+  giftPurchaseSlots: () => "giftPurchaseSlots",
   carListings: () => "carListings",
   carLeads: () => "carLeads",
   studioConfig: () => "studioConfig",
@@ -64,6 +68,10 @@ export const COLLECTIONS = {
   // across webhook event types, duplicate deliveries, or code paths.
   paymentRefunds: () => "paymentRefunds",
   paymentEvents: () => "paymentEvents",
+  // refundRequests/{requestId} — booking refund outbox: reservation -> provider -> projection
+  refundRequests: () => "refundRequests",
+  // shopRateLimits/{hashedKey} — shared abuse-limiter windows (server only)
+  shopRateLimits: () => "shopRateLimits",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters
   rateLimits: () => "rateLimits",
   // bayLocks/{tenantId__studioId__bayId} — server-only deterministic-document

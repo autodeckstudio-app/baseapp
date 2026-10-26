@@ -21,7 +21,7 @@
     {
       "key": "wash",
       "label": "Wash & Care",
-      "blurb": "Hand washes and interior cleaning, priced by car size.",
+      "blurb": "Hand washes and interior cleaning.",
       "byBrand": false,
       "items": [
         {

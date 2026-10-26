@@ -9,6 +9,8 @@ export type PaymentStatus =
   | "completed"
   | "failed"
   | "cancelled"
+  // Some captured money returned, the rest retained (e.g. no-show charge).
+  | "partially_refunded"
   | "refunded";
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
@@ -35,6 +37,9 @@ export interface Payment {
   razorpayPaymentLinkId: string | null;
   razorpayPaymentId: string | null;
   razorpayOrderId: string | null;
+  // Set when the provider may have created an order but the response was lost.
+  // While true, checkout order creation fails closed until reconciled with the provider.
+  orderAmbiguous?: boolean | null;
   // Refund tracking (set when a refund is issued)
   razorpayRefundId: string | null;
   refundAmount: number | null; // paise; null until refund initiated
@@ -55,6 +60,8 @@ export interface Payment {
 }
 
 export interface Invoice {
+  settlementKind?: "membership_covered";
+  membershipId?: string;
   id: string;
   tenantId: string;
   studioId: string;

@@ -63,4 +63,6 @@ export const expressInterestSchema = z.object({
 export const setLeadStatusSchema = z.object({ leadId: z.string().min(1), status: z.enum(["new", "contacted", "closed"]) }).strict();
 export const listCarLeadsSchema = z.object({}).strict();
 
+export const removeMyListingPhotoSchema = z.object({ listingId: z.string().min(1).max(120), index: z.number().int().min(0).max(11), expectedCount: z.number().int().min(1).max(12) }).strict();
+export const replaceMyListingPhotoSchema = z.object({ listingId: z.string().min(1).max(120), index: z.number().int().min(0).max(11), expectedCount: z.number().int().min(1).max(12), newPath: z.string().min(1).max(300) }).strict();
 export const markMyListingSoldSchema = z.object({ listingId: z.string().min(1) }).strict();

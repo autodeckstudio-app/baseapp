@@ -55,3 +55,9 @@ export function comboCards(catalogue: Service[]): Array<{ service: Service; part
   }
   return out;
 }
+
+/** The combo (fixed bundle) a service id belongs to, from the same list the Combos section shows, so the two never disagree. Null for a normal service. */
+export function comboFor(catalogue: Service[], serviceId: string | undefined): { service: Service; parts: string[] } | null {
+  if (!serviceId) return null;
+  return comboCards(catalogue).find((c) => c.service.id === serviceId) ?? null;
+}

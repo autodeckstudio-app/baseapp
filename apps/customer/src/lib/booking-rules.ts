@@ -1,6 +1,6 @@
 // Reschedule and cancel rules for a customer booking, shared by the booking page and the Bookings list.
 import type { Booking } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, cancellationTerms, cancellationLine, REFUND_TIMELINE_TEXT } from "@autodeck/core";
+import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed, cancellationTerms, cancellationLine } from "@autodeck/core";
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
@@ -38,7 +38,7 @@ export function getRescheduleEligibility(booking: Booking): { eligible: boolean;
 
 export function cancelState(booking: Booking, now = Date.now(), category?: string | null): { canCancel: boolean; lateToCancel: boolean; feePaise: number; line: string } {
   const missed = isBookingMissed(booking, now);
-  const open = !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
+  const open = booking.cancelIntent?.state !== "waiting" && booking.cancelIntent?.state !== "needs_review" && !missed && (booking.status === "CONFIRMED" || booking.status === "PENDING");
   const terms = cancellationTerms({ category, totalPaise: booking.totalAmount ?? 0, scheduledAtMs: new Date(booking.scheduledAt).getTime(), nowMs: now });
   return { canCancel: open, lateToCancel: !missed && booking.status === "ACTIVE", feePaise: terms.feePaise, line: cancellationLine(category) };
 }
@@ -46,7 +46,7 @@ export function cancelState(booking: Booking, now = Date.now(), category?: strin
 /** Text for the cancel confirmation: the rule, and the fee if one applies now. */
 export function cancelConfirmBody(c: { feePaise: number; line: string }, paid: boolean): string {
   const fee = c.feePaise > 0 ? ` Cancelling now costs Rs ${c.feePaise / 100}, which is taken from your refund.` : "";
-  const money = paid ? ` Your payment will be refunded to your original payment method in ${REFUND_TIMELINE_TEXT}.` : " The slot is released straight away and nothing is charged.";
+  const money = paid ? ` A refund request will be recorded for your original payment method. Timing depends on your bank or payment provider.` : " The slot is released straight away and nothing is charged.";
   return `${c.line}${fee}${money} This can't be undone.`;
 }
 
@@ -68,4 +68,13 @@ export function expectedReady(b: Pick<Booking, "scheduledAt" | "estimatedEndAt" 
   if (end === null) return null;
   const ist = new Date(end + IST_MS).toISOString();
   return { date: ist.slice(0, 10), time: ist.slice(11, 16) };
+}
+
+const AT_STUDIO_JOB = ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"];
+
+/** The caption under the price block for an unpaid booking. Copy only: it never changes payment state. The bring-your-car line is shown only before the vehicle is at the studio. */
+export function nextStepLine(o: { giftCovered: boolean; jobStatus?: string | null; time: string }): string {
+  const atStudio = !!o.jobStatus && AT_STUDIO_JOB.includes(o.jobStatus);
+  if (o.giftCovered) return atStudio ? "Your gift covers this wash." : `Next: bring your car at ${o.time}. Your gift covers this wash.`;
+  return atStudio ? "You pay at the studio, and the team marks it paid once you do." : `Next: bring your car at ${o.time}. You pay at the studio, and the team marks it paid once you do.`;
 }

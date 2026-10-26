@@ -15,6 +15,9 @@ export interface DayAggregates {
   cashExpensesPaise: number;
   expenseCount: number;
   expectedCashPaise: number;
+  refundsOwedPaise: number;
+  refundsOwedCount: number;
+  refundsOwedTruncated: boolean;
 }
 
 export async function getDailyClose(
@@ -55,6 +58,9 @@ export interface OfficeReport {
   jobsCreated: number;
   jobsCompleted: number;
   jobsCancelled: number;
+  refundsOwedPaise: number;
+  refundsOwedCount: number;
+  refundsOwedTruncated: boolean;
 }
 
 export async function getOfficeReport(studioId: string, month: string): Promise<OfficeReport> {

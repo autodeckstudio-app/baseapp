@@ -1,0 +1,159 @@
+[
+  {
+    "collection": "studioConfig",
+    "id": "studio-ahmedabad",
+    "data": {
+      "studioId": "studio-ahmedabad",
+      "taxRatePercent": 18,
+      "slotIntervalMinutes": 30,
+      "timezone": "Asia/Kolkata",
+      "vehiclePlateRegex": "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$",
+      "holidays": [],
+      "cancellationWindowHours": 24,
+      "operatingHours": [
+        {
+          "dayOfWeek": 0,
+          "closed": true,
+          "close": "19:00",
+          "open": "09:00"
+        },
+        {
+          "dayOfWeek": 1,
+          "closed": false,
+          "close": "19:00",
+          "open": "09:00"
+        },
+        {
+          "dayOfWeek": 2,
+          "closed": false,
+          "close": "19:00",
+          "open": "09:00"
+        },
+        {
+          "dayOfWeek": 3,
+          "closed": false,
+          "close": "19:00",
+          "open": "09:00"
+        },
+        {
+          "dayOfWeek": 4,
+          "closed": false,
+          "close": "19:00",
+          "open": "09:00"
+        },
+        {
+          "dayOfWeek": 5,
+          "closed": false,
+          "close": "19:00",
+          "open": "09:00"
+        },
+        {
+          "dayOfWeek": 6,
+          "closed": false,
+          "close": "19:00",
+          "open": "09:00"
+        }
+      ],
+      "bays": [
+        {
+          "studioId": "studio-ahmedabad",
+          "tenantId": "automodz",
+          "name": "Wash Bay 1",
+          "active": true,
+          "id": "bay-wash-1",
+          "bayType": "wash"
+        },
+        {
+          "studioId": "studio-ahmedabad",
+          "tenantId": "automodz",
+          "name": "Wash Bay 2",
+          "active": true,
+          "id": "bay-wash-2",
+          "bayType": "wash"
+        },
+        {
+          "studioId": "studio-ahmedabad",
+          "tenantId": "automodz",
+          "name": "Protection Bay 1",
+          "active": true,
+          "id": "bay-protection-1",
+          "bayType": "protection"
+        },
+        {
+          "studioId": "studio-ahmedabad",
+          "tenantId": "automodz",
+          "name": "Protection Bay 2",
+          "active": true,
+          "id": "bay-protection-2",
+          "bayType": "protection"
+        },
+        {
+          "studioId": "studio-ahmedabad",
+          "tenantId": "automodz",
+          "name": "Protection Bay 3",
+          "active": true,
+          "id": "bay-protection-3",
+          "bayType": "protection"
+        }
+      ],
+      "tenantId": "automodz",
+      "name": "AutoDeck Ahmedabad",
+      "taxDescription": "GST 18%",
+      "maxAdvanceBookingDays": 30,
+      "currency": "INR",
+      "id": "studio-ahmedabad",
+      "updatedAt": "2026-10-24T07:49:39.134Z"
+    }
+  },
+  {
+    "collection": "services",
+    "id": "svc-rule-fixture",
+    "data": {
+      "vehicleCategoryPricing": [
+        {
+          "additionalPricePaise": 50000,
+          "vehicleCategory": "suv",
+          "additionalMinutes": 30
+        }
+      ],
+      "warrantyLabel": null,
+      "warrantyDurationValue": null,
+      "displayOrder": 0,
+      "description": "Fixture service with a saved non-PPF size rule.",
+      "active": true,
+      "requiredBayType": "wash",
+      "createdAt": "2026-10-24T07:50:07.202Z",
+      "membershipWashEligible": true,
+      "estimatedDurationMinutes": 60,
+      "tenantId": "automodz",
+      "name": "Rule Fixture Wash",
+      "currency": "INR",
+      "warrantyDurationUnit": null,
+      "id": "svc-rule-fixture",
+      "category": "washing",
+      "brand": null,
+      "basePrice": 90000,
+      "updatedAt": "2026-10-24T07:50:07.202Z"
+    }
+  },
+  {
+    "collection": "vehicles",
+    "id": "3fGoNM3LQQyZnbLUxt19",
+    "data": {
+      "color": "White",
+      "odometer": null,
+      "year": 2022,
+      "ownerId": "L7QxPdcsJ60NwLUyfHj3Zc2mH1oB",
+      "photoUrl": null,
+      "createdAt": "2026-10-24T07:50:05.862Z",
+      "deletedAt": null,
+      "registrationNumber": "GJ01AB1234",
+      "tenantId": "automodz",
+      "model": "Baleno",
+      "id": "3fGoNM3LQQyZnbLUxt19",
+      "category": "hatchback",
+      "make": "Maruti",
+      "updatedAt": "2026-10-24T07:50:05.862Z"
+    }
+  }
+]

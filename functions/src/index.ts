@@ -16,6 +16,7 @@ export { createWalkinCustomer } from "./functions/auth/createWalkinCustomer.js";
 export { updateCustomerContact } from "./functions/auth/updateCustomerContact.js";
 export { submitReview } from "./functions/booking/submitReview.js";
 export { publishVehiclePhoto } from "./functions/vehicle/publishVehiclePhoto.js";
+export { removeMyVehicleImage } from "./functions/vehicle/removeMyVehicleImage.js";
 export { issueLicensePhotoUploadUrl, publishLicensePhoto } from "./functions/customer/licensePhoto.js";
 export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhotoUploadUrl.js";
 
@@ -32,6 +33,7 @@ export { getStudioInfo } from "./functions/studio/getStudioInfo.js";
 export { createBooking } from "./functions/booking/createBooking.js";
 export { cancelBooking } from "./functions/booking/cancelBooking.js";
 export { adminCancelBooking, settleCancellationFee } from "./functions/booking/adminCancelBooking.js";
+export { getNoShowResolution, recordNoShowContact, previewNoShowResolution, resolveNoShow } from "./functions/booking/noShowReview.js";
 export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
 
 // âââ Studio Jobs ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -46,6 +48,8 @@ export { initiatePayment } from "./functions/payment/initiatePayment.js";
 export { createCheckoutOrder } from "./functions/payment/createCheckoutOrder.js";
 export { verifyCheckoutPayment } from "./functions/payment/verifyCheckoutPayment.js";
 export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
+export { requestBookingRefund } from "./functions/payment/requestBookingRefund.js";
+export { processRefundOutbox } from "./functions/payment/processRefundOutbox.js";
 export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
 export { confirmManualPayment } from "./functions/payment/confirmManualPayment.js";
 export { initiateRefund } from "./functions/payment/initiateRefund.js";
@@ -139,6 +143,7 @@ export { reviewPaper } from "./functions/papers/reviewPaper.js";
 export { updatePaper } from "./functions/papers/updatePaper.js";
 export { listPapers } from "./functions/papers/listPapers.js";
 export { submitMyPaper, finalizeMyPaper } from "./functions/papers/submitMyPaper.js";
+export { updateMyPaper, deleteMyPaper } from "./functions/papers/myPaperEdits.js";
 export { getServiceReviews } from "./functions/booking/getServiceReviews.js";
 
 // âââ Daily Close (M6 Automodz Office) ââââââââââââââââââââââââââââââââââââââ
@@ -168,6 +173,7 @@ export { listOffers } from "./functions/offer/listOffers.js";
 // âââ Office dashboard & reports (M6 Automodz Office) âââââââââââââââââââââââ
 export { getOfficeDashboard } from "./functions/office/getOfficeDashboard.js";
 export { getOfficeReport } from "./functions/office/getOfficeReport.js";
+export { getAccountantMoney } from "./functions/office/getAccountantMoney.js";
 
 // âââ Notifications ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";
@@ -178,7 +184,7 @@ export { markNotificationRead } from "./functions/notification/markNotificationR
 export { healthCheck } from "./functions/health.js";
 
 // âââ Cars for sale (studio stock + customer submissions behind approval) âââ
-export { issueListingPhotoUploadUrl, adminSaveListing, submitMyListing, reviewListing, markMyListingSold, listCarListings, listPublicCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
+export { issueListingPhotoUploadUrl, adminSaveListing, submitMyListing, reviewListing, markMyListingSold, removeMyListingPhoto, replaceMyListingPhoto, listCarListings, listPublicCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
 
 // âââ Push (web, OFF until PUSH_ENABLED=true) ââââââââââââââââââââââââââââââââââ
 export { registerPushToken } from "./functions/push/registerPushToken.js";
@@ -190,3 +196,5 @@ export { standbyBooking } from "./functions/job/standbyBooking.js";
 export { createGift, getGiftCode, listMyGifts, redeemGift, cancelGift, lookupGift, voidGift } from "./functions/gift/gift.js";
 export { expiryRemindersScheduled } from "./functions/notification/expiryRemindersScheduled.js";
 export { bookingRemindersScheduled } from "./functions/notification/bookingRemindersScheduled.js";
+
+export { settleMembershipCoveredJob } from "./functions/job/settleMembershipCoveredJob.js";

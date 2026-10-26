@@ -1,0 +1,49 @@
+{
+  "id": "fx-nonmember-byte",
+  "tenantId": "automodz",
+  "studioId": "studio-ahmedabad",
+  "bookingId": "fx-nonmember-byte",
+  "customerId": "L7QxPdcsJ60NwLUyfHj3Zc2mH1oB",
+  "vehicleId": "3fGoNM3LQQyZnbLUxt19",
+  "serviceId": "svc-rule-fixture",
+  "bayId": "bay-wash-1",
+  "assignedEmployeeId": null,
+  "status": "PENDING_VEHICLE",
+  "statusHistory": [
+    {
+      "status": "PENDING_VEHICLE",
+      "changedAt": "2026-10-24T09:00:00.000Z",
+      "changedBy": "L7QxPdcsJ60NwLUyfHj3Zc2mH1oB",
+      "notes": null
+    }
+  ],
+  "scheduledAt": "2026-10-31T09:30:00.000Z",
+  "scheduledDate": "2026-10-31",
+  "estimatedEndAt": "2026-10-31T10:30:00.000Z",
+  "estimatedEndDate": "2026-10-31",
+  "estimatedDurationMinutes": 60,
+  "studioNotes": null,
+  "additionalWorkDelta": 0,
+  "priceBreakdown": {
+    "vehicleCategory": "hatchback",
+    "basePrice": 90000,
+    "scopeAdjustment": 0,
+    "addOns": [],
+    "subtotal": 90000,
+    "membershipDiscount": null,
+    "membershipDiscountPercent": null,
+    "pickupFee": 0,
+    "dropFee": 0,
+    "taxRatePercent": 0,
+    "taxDescription": "No tax",
+    "tax": 0,
+    "total": 90000,
+    "currency": "INR"
+  },
+  "totalAmount": 90000,
+  "paymentStatus": "unpaid",
+  "isWalkIn": false,
+  "createdAt": "2026-10-24T09:00:00.000Z",
+  "updatedAt": "2026-10-24T09:00:00.000Z",
+  "sealedAt": null
+}

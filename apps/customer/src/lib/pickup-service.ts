@@ -4,6 +4,8 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "./firebase";
 
 export type PickupRequest = {
+  /** ISO time the studio recorded the leg as done. Absent on requests made before leg progress existed. */
+  pickupCompletedAt?: string | null; dropCompletedAt?: string | null;
   /** Set by the studio when a member free pickup covered this request. */
   memberMembershipId?: string | null; kind: "pickup" | "drop" | "both"; address: string; preferredTime: string; requestedPickupTime: string; requestedDropTime: string; agreedPickupAt: string | null; agreedDropAt: string | null; status: "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED"; staffNote: string; feePaise?: number | null };
 

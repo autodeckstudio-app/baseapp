@@ -1,13 +1,17 @@
 "use client";
+import { MembershipSettlement } from "../../../../components/MembershipSettlement";
+import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo } from "../../../../lib/go-back";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
 import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
+import { formatDuration } from "@autodeck/core";
 import { functions } from "../../../../lib/firebase";
 import { useAdminAuth } from "../../../../lib/auth-context";
 import { listenToJob, getWarrantyForJob, listenToAuditForEntity, listenToInspectionForJob } from "../../../../lib/jobs-service";
+import { canOfferPayment, paymentPanelMode } from "../../../../lib/payment-panel-state";
 import { listenToBooking, listenToApprovalsForJob, listenToPaymentForJob, listenToInvoiceForJob, getCustomer, getVehicle, getService } from "../../../../lib/bookings-service";
 import { getStudioConfig } from "../../../../lib/studio-service";
 import { StatusBadge } from "../../../../components/StatusBadge";
@@ -30,7 +34,7 @@ export default function JobDetailPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [job, setJob] = useState<ServiceJob | null | undefined>(undefined);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<Payment | null | undefined>(undefined); // undefined = not loaded yet (never show "no payment" before the listener answers)
   const [linking, setLinking] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [warranty, setWarranty] = useState<Warranty | null>(null);
@@ -182,12 +186,13 @@ export default function JobDetailPage() {
         <div className="ax-hero-side">
           <StatusBadge label={job.status} />
           <span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
-          <StatusBadge label={job.paymentStatus} />
+          <StatusBadge label={membershipCoveredLabel(job) ?? job.paymentStatus} />
         </div>
       </header>
 
       <StageTrack current={job.status} />
       <JobControls job={job} />
+      <MembershipSettlement job={job} booking={booking ?? null} />
 
       <div className="ax-detail">
         <div className="ax-detail-main">
@@ -290,7 +295,7 @@ export default function JobDetailPage() {
               <span>Work time</span>
               <span>
                 {job.estimatedDurationMinutes < 24 * 60
-                  ? `About ${job.estimatedDurationMinutes} min`
+                  ? `About ${formatDuration(job.estimatedDurationMinutes)}`
                   : `About ${Math.round(job.estimatedDurationMinutes / 60)} hrs`}
               </span>
             </div>
@@ -302,7 +307,7 @@ export default function JobDetailPage() {
 
           <section className="ax-panel">
             <span className="ax-label">Price</span>
-            <div className="kv"><span>Service</span><span className="ax-data">{formatPaise(job.priceBreakdown.total)}</span></div>
+            <div className="kv"><span>Service</span><span className="ax-data">{formatPaise(job.priceBreakdown?.total as number)}</span></div>
             <div className="kv"><span>Extra work</span><span className="ax-data">{formatPaise(job.additionalWorkDelta)}</span></div>
             <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
           </section>
@@ -310,7 +315,9 @@ export default function JobDetailPage() {
           <section className="ax-panel">
             <span className="ax-label">Payment</span>
             {status && <p className="ax-status-msg" role="status">{status}</p>}
-            {payment ? (
+            {paymentPanelMode(payment) === "loading" ? (
+              <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
+            ) : payment ? (
               <>
                 <div className="kv"><span>{METHOD_LABEL[payment.method] ?? statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
                 <div className="kv"><span>Amount</span><span className="ax-data">{formatPaise(payment.amount)}</span></div>
@@ -334,7 +341,7 @@ export default function JobDetailPage() {
                   ))}
               </>
             ) : (
-              <p className="ax-note" style={{ marginTop: 0 }}>No payment started yet.</p>
+              <p className="ax-note" style={{ marginTop: 0 }}>{membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? "No payment started yet."}</p>
             )}
             {invoice && (
               <>
@@ -344,14 +351,14 @@ export default function JobDetailPage() {
                 </div>
               </>
             )}
-            {job.paymentStatus === "unpaid" && (!payment || payment.status === "failed" || payment.status === "cancelled") && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).link && (
               <div className="ax-panel-actions" style={{ marginTop: 12 }}>
                 <button type="button" className="ax-button ax-button--primary" style={{ width: "100%" }} onClick={() => void handleCreateLink()} disabled={linking}>
                   {linking ? "Creating link…" : `Send ${formatPaise(job.totalAmount)} payment link`}
                 </button>
               </div>
             )}
-            {job.paymentStatus === "unpaid" && (
+            {!(booking?.cancelIntent?.state === "waiting" || booking?.cancelIntent?.state === "needs_review") && !membershipCoveredLabel(job) && !(booking && membershipCoveredLabel(booking)) && canOfferPayment(payment, job.paymentStatus).counter && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--ad-border-subtle)" }}>
                 <p className="ax-label" style={{ margin: "0 0 12px" }}>Record a payment taken at the counter</p>
                 <label className="ax-form-row">

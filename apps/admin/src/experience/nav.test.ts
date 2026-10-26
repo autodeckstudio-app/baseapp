@@ -6,7 +6,9 @@ import { SECTIONS, MORE_LINKS, GROUPS } from "./nav";
 const appDir = join(__dirname, "../app/(admin)");
 /** Pages kept in the code but taken off every menu (owner, 20 Oct): Gallery. */
 const RETIRED = ["/gallery"];
-const routes = readdirSync(appDir).filter((n) => statSync(join(appDir, n)).isDirectory()).map((n) => `/${n}`).filter((r) => !RETIRED.includes(r));
+/** Role-only page: reached through homeFor("accountant"), deliberately on no staff menu. */
+const ROLE_ONLY = ["/accountant"];
+const routes = readdirSync(appDir).filter((n) => statSync(join(appDir, n)).isDirectory()).map((n) => `/${n}`).filter((r) => !RETIRED.includes(r) && !ROLE_ONLY.includes(r));
 
 describe("admin navigation", () => {
   const reachable = new Set([...SECTIONS.flatMap((s) => s.links.map((l) => l.href)), ...MORE_LINKS.map((l) => l.href), ...GROUPS.flatMap((g) => g.links.map((l) => l.href))]);
@@ -26,3 +28,5 @@ describe("menu sheet", () => {
     expect(readFileSync(join(__dirname, "StaffShell.tsx"), "utf8")).toContain("setMoreOpen(false); }, [pathname])");
   });
 });
+
+describe("accountant page", () => { it("is on no staff menu", () => { expect([...SECTIONS.flatMap((s) => s.links.map((l) => l.href)), ...MORE_LINKS.map((l) => l.href), ...GROUPS.flatMap((g) => g.links.map((l) => l.href))]).not.toContain("/accountant"); }); });

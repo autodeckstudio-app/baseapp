@@ -11,7 +11,8 @@ import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { ModalCard } from "../../../ui/ModalCard";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
-import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto, uploadVehicleRc } from "../../../lib/vehicle-service";
+import { limitRegistrationInput } from "../../../lib/registration-input";
+import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
   registrationNumber: string;
@@ -30,7 +31,7 @@ type FieldDef = {
 };
 
 const FIELDS: FieldDef[] = [
-  { key: "registrationNumber", label: "Registration number", placeholder: "e.g. MH 12 AB 1234", autoCapitalize: "characters" },
+  { key: "registrationNumber", label: "Registration number", placeholder: "e.g. MH12AB1234", autoCapitalize: "characters" },
   { key: "make", label: "Make", placeholder: "e.g. Maruti Suzuki", autoCapitalize: "words" },
   { key: "model", label: "Model", placeholder: "e.g. Swift", autoCapitalize: "words" },
   { key: "year", label: "Year", placeholder: "e.g. 2022", keyboardType: "numeric" },
@@ -58,7 +59,6 @@ export default function AddVehicleScreen() {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
-  const [rc, setRc] = useState<{ blob: Blob; contentType: string } | null>(null);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
   // Stale-response guard: every submission bumps the sequence and captures the
   // plate it was for; async answers from an older submission or plate are dropped.
@@ -66,7 +66,7 @@ export default function AddVehicleScreen() {
   const currentPlate = useRef("");
 
   function pickPhoto(file: { blob: Blob; type: string } | null) {
-    if (!file) return;
+    if (!file) { setPhoto(null); setError(null); return; } // the uploader's Remove badge sends no file
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setError("Photos work as JPEG, PNG or WebP.");
       return;
@@ -82,8 +82,8 @@ export default function AddVehicleScreen() {
     setSavedId(null);
     setError(null);
     setPhotoFailed(false);
-    if (field === "registrationNumber") currentPlate.current = normalizePlate(value);
-    setForm((prev: FormState) => ({ ...prev, [field]: value }));
+    if (field === "registrationNumber") currentPlate.current = normalizePlate(limitRegistrationInput(value));
+    setForm((prev: FormState) => ({ ...prev, [field]: field === "registrationNumber" ? limitRegistrationInput(value) : value }));
   }
 
   function validate(f: FormState): Partial<Record<keyof FormState, string>> {
@@ -92,7 +92,7 @@ export default function AddVehicleScreen() {
     const maxYear = new Date().getFullYear() + 1;
     const fe: Partial<Record<keyof FormState, string>> = {};
     if (!plate) fe.registrationNumber = "Enter your registration number.";
-    else if (/[^A-Za-z0-9\s]/.test(f.registrationNumber) || !/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH 12 AB 1234.";
+    else if (/[^A-Za-z0-9\s]/.test(f.registrationNumber) || !/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/.test(plate)) fe.registrationNumber = "Enter a valid registration number, e.g. MH12AB1234.";
     if (f.make.trim().length < 2) fe.make = "Enter the car make.";
     if (f.model.trim().length < 1) fe.model = "Enter the car model.";
     if (!/^\d{4}$/.test(f.year.trim()) || yearNum < 1980 || yearNum > maxYear) fe.year = `Enter a 4-digit year between 1980 and ${maxYear}.`;
@@ -204,13 +204,6 @@ export default function AddVehicleScreen() {
           return;
         }
       }
-      if (rc) {
-        try {
-          await uploadVehicleRc(vehicle.id, rc.blob, rc.contentType);
-        } catch {
-          // The car is saved; the RC can be added again from the car page.
-        }
-      }
       router.replace(GARAGE_ROUTE);
     } catch (err) {
       if (isStale(seq, plate)) return;
@@ -300,14 +293,14 @@ export default function AddVehicleScreen() {
               onBlur={() => { if (form[key] !== "") checkField(key); }}
               autoCapitalize={autoCapitalize}
               keyboardType={keyboardType}
-              maxLength={key === "registrationNumber" ? 16 : key === "year" ? 4 : 50}
+              maxLength={key === "registrationNumber" ? 10 : key === "year" ? 4 : 50}
             />
           ))}
         </View>
 
         <View style={{ gap: space.breath }}>
           <Kicker>Size</Kicker>
-          <T role="caption" tone="secondary">Saved with your car. Prices will use this size automatically.</T>
+          <T role="caption" tone="secondary">Saved with your car. Only PPF prices change with car size.</T>
           <SelectField label="Car size" value={size ?? ""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>{setSize(v as VehicleCategory);setSizeError(false);}}/>
           {sizeError?<T role="caption" tone="danger">Choose your car's size.</T>:null}
         </View>
@@ -320,13 +313,6 @@ export default function AddVehicleScreen() {
           </View>
         ) : null}
 
-        {Platform.OS === "web" ? (
-          <View style={{ gap: space.hair }}>
-            <Kicker>RC photo (optional)</Kicker>
-            <FileUploader files={rc ? [{ blob: rc.blob, type: rc.contentType }] : []} onChange={(fs) => setRc(fs[0] ? { blob: fs[0].blob, contentType: fs[0].type } : null)} />
-            {rc ? <T role="caption" tone="tertiary">RC photo ready - it uploads when the car is added.</T> : null}
-          </View>
-        ) : null}
 
         {dupOpen && savedId ? (
           <Modal transparent animationType="fade" visible onRequestClose={() => setDupOpen(false)}>

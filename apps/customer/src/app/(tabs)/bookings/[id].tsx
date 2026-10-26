@@ -1,3 +1,6 @@
+import { membershipCoveredLabel } from "@autodeck/core";
+import { manualRefundNotice } from "../../../lib/manual-refund-notice";
+import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { useState, useEffect } from "react";
 import { CarThumb } from "../../../ui/CarThumb";
@@ -21,11 +24,12 @@ import { PickupCard } from "../../../ui/PickupCard";
 import { listenToInspection } from "../../../lib/inspection-service";
 import type { Booking, ServiceJob, Payment, ApprovalRequest, Inspection } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES, isBookingMissed, isBookingLateToday, bookingCode } from "@autodeck/core";
+import type * as BookingDevSample from "../../../lib/booking-dev-sample";
 // Dev-only sample data: required only under __DEV__ so production bundles never contain it (see metro.config.js and scripts/prod-bundle-guard.mjs).
-const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof import("../../../lib/booking-dev-sample")) : null;
+const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof BookingDevSample) : null;
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady, nextStepLine } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -57,6 +61,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   failed: "Payment failed - please try again",
   cancelled: "Payment cancelled",
   refunded: "Refunded",
+  partial: "Partially refunded",
 };
 
 const BOOKING_STATUS_LABELS: Record<string, string> = {
@@ -80,13 +85,9 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
 // Multi-day PPF services run into thousands of minutes - express as hours
 // once past a day (this is service-time, not calendar time; the
 // authoritative calendar span is shown separately via "Expected ready").
-function formatDuration(minutes: number): string {
-  if (minutes < 24 * 60) return `~${minutes} min`;
-  return `~${Math.round(minutes / 60)} hrs of service time`;
-}
 
 export default function BookingDetailScreen() {
-  const { id, placed, mock } = useLocalSearchParams<{ id: string; placed?: string; mock?: string }>();
+  const { id, placed, mock, pickup } = useLocalSearchParams<{ id: string; placed?: string; mock?: string; pickup?: string }>();
   const router = useRouter();
   useLang();
   const [, tick] = useState(0);
@@ -246,8 +247,8 @@ export default function BookingDetailScreen() {
     setCancelling(true);
     setActionError(null);
     try {
-      await cancelBooking(id, "Cancelled by customer");
-      setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
+      const result = await cancelBooking(id, "Cancelled by customer");
+      if (!result.cancellationPending) setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
       setConfirmingCancel(false);
     } catch (err) {
       setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
@@ -261,12 +262,18 @@ export default function BookingDetailScreen() {
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
   const missed = isBookingMissed(booking);
+  const owedNotice = manualRefundNotice(booking);
   const autoCancelled = booking.status === "CANCELLED" && booking.cancellationReason?.startsWith("Auto-cancelled:");
   const cancel = cancelState(booking, Date.now(), svc?.category);
   const { canCancel, lateToCancel } = cancel;
-  const paidAlready = booking.paymentStatus === "paid" || booking.paymentStatus === "partial";
-  const canPay = booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
-  const showRescheduleSection = !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
+  const paidAlready = !membershipCoveredLabel(booking) && (booking.paymentStatus === "paid" || booking.paymentStatus === "partial");
+  const giftCovered = Boolean(booking.giftId) && booking.priceBreakdown.total === 0;
+  const waitingCancel = booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review";
+  const canPay = !membershipCoveredLabel(booking) && !waitingCancel && booking.paymentStatus === "unpaid" && booking.status !== "CANCELLED" && booking.status !== "EXPIRED";
+  // Just booked (placed=1 landing view): offering to reschedule seconds after
+  // booking is noise, so the section stays hidden. Opened later from the
+  // bookings list (no placed param) every rule below applies exactly as before.
+  const showRescheduleSection = placed !== "1" && !waitingCancel && !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
   const rescheduleEligibility = getRescheduleEligibility(booking);
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
@@ -379,7 +386,7 @@ export default function BookingDetailScreen() {
 
       <Pane pad="gap">
         <Row detailTone="secondary" title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
-        <Row detailTone="secondary" title="Duration" detail={formatDuration(booking.durationMinutes)} />
+        <Row detailTone="secondary" title="Duration" detail={formatServiceTime(booking.durationMinutes)} />
         {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
         {booking.notes !== null && booking.notes.trim() !== "" ? <Row detailTone="secondary" title="Notes" detail={booking.notes} last /> : null}
       </Pane>
@@ -459,18 +466,21 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated"} last />
-          {payment?.invoiceId && job ? (
+          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated")} last />
+          {(payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
             <View style={{ marginTop: space.line }}>
-              <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref(payment.invoiceId as string))} />
+              <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref((payment?.invoiceId || job.invoiceId || booking.invoiceId) as string))} />
             </View>
           ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>Next: bring your car at {displayTime}. You pay at the studio, and the team marks it paid once you do.</T> : null}
+          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>{nextStepLine({ giftCovered, jobStatus: job?.status ?? null, time: displayTime })}</T> : null}
         </Pane>
         )}
       </View>
 
-      {booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
+      {waitingCancel ? <Notice title="Cancellation requested" body="Your booked time is still held while the online payment is checked. The booking is not cancelled yet. Contact the studio if you need help." /> : null}
+      {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
+
+      {!waitingCancel && booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
         <Notice
           title="Payment pending"
           body={`${booking.holdExpiresAt ? `Held until ${new Date(booking.holdExpiresAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}. ` : ""}Your slot is held until the payment goes through.`}
@@ -478,9 +488,11 @@ export default function BookingDetailScreen() {
         />
       ) : null}
       {booking.status === "EXPIRED" ? <Notice title="Slot released" body="The payment was not completed in time, so this booking expired. You can book again any time." /> : null}
-      {booking.refundStatus === "requested" ? <Notice title="Refund requested" body="Your refund has been requested. It will be sent to Razorpay and reaches your original payment method in 5-7 working days." /> : null}
-      {(booking.refundStatus === "initiated" || booking.refundStatus === "processed") ? <Notice title="Refund initiated" body="Your refund has been sent to Razorpay. It reaches your original payment method in 5-7 working days." /> : null}
+      {(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
+      {booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. If you paid online, when it reaches you depends on your bank or payment provider." /> : null}
+      {booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
       {actionError ? <Notice title="We could not finish that" body={actionError} /> : null}
+      {pickup === "failed" ? <Notice title="Pickup request not sent" body="Your booking stands. The pickup or drop-off request could not be sent - please call the studio to arrange it." /> : null}
 
       {showRescheduleSection ? (
         rescheduleEligibility.eligible ? (
