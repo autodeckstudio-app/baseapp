@@ -6,7 +6,7 @@ import { checkDecision, sortNewestFirst, targetLink, DECISION_NOTE, type OfficeR
 const src = (f: string) => readFileSync(join(__dirname, f), "utf8");
 const base = { tenantId: "t", studioId: "s", reason: "r", amountPaise: null, status: "pending" as const };
 describe("office review of staff requests", () => {
-  it("stays gated off until the backend ships", () => { expect(ADMIN_APPROVAL_REVIEW_ENABLED).toBe(false); });
+  it("gate is on: backend requestAdminApproval/respondToAdminApproval + adminApprovalRequests rules are live (2026-10-26 deploy, main-held activation vehicle)", () => { expect(ADMIN_APPROVAL_REVIEW_ENABLED).toBe(true); });
   it("the gated page returns before any query or callable is reachable", () => {
     const p = src("../app/(admin)/office-requests/page.tsx");
     expect(p.indexOf("if (!ADMIN_APPROVAL_REVIEW_ENABLED)")).toBeLessThan(p.indexOf("<Review />"));
