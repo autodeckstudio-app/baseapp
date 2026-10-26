@@ -27,6 +27,7 @@ const paidPayment = {
 beforeEach(() => {
   const f = fakeFirestore({
     bookings: { b1: { ...missedBooking } },
+    jobs: { job1: { id: "job1", tenantId: "t1", studioId: "s1", bookingId: "b1", paymentStatus: "paid" } },
     payments: { pay1: { ...paidPayment } },
   });
   h.db = f.db; h.data = f.data;

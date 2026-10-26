@@ -81,6 +81,7 @@ const ENFORCED = [
   "studio/removeHoliday.ts",
   "studio/updateStudioSettings.ts",
   "studio/upsertBay.ts",
+  "booking/noShowReview.ts",
 ].sort();
 
 // Not an onCall callable at all — a Firestore trigger (onDocumentCreated)
@@ -111,6 +112,11 @@ const EXCLUDED_NON_CALLABLE = [
 // Enforcing App Check on any of these today would reject 100% of genuine
 // mobile traffic, since no client here can produce a valid token.
 const DEFERRED = [
+  "vehicle/removeMyVehicleImage.ts",
+  "papers/myPaperEdits.ts",
+  "office/getAccountantMoney.ts",
+  "job/settleMembershipCoveredJob.ts",
+  "shop/placeGuestOrder.ts",
   "approval/cancelApproval.ts",
   "approval/createApproval.ts",
   "approval/requestAdminApproval.ts",
