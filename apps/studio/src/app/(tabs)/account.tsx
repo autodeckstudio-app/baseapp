@@ -14,6 +14,7 @@ import { auth, db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, isNightPalette, spacing, radius, typography, Avatar, LoadingState } from "@autodeck/ui";
 import { Icon } from "@autodeck/ui/native";
+import { dayActions } from "../../lib/my-day";
 
 type IconName = "home" | "wrench" | "calendar" | "search" | "profile" | "plus" | "check" | "pin" | "close" | "bell" | "users";
 
@@ -62,6 +63,8 @@ export default function AccountScreen() {
   const hhmm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "-");
   const onBreak = !!today?.breaks.some((b) => !b.endedAt);
   const dayState = !today?.checkInAt ? "Not checked in yet" : today.checkOutAt ? `Checked out ${hhmm(today.checkOutAt)} · ${Math.floor(today.workedMinutes / 60)}h ${today.workedMinutes % 60}m worked` : onBreak ? `On break · in since ${hhmm(today.checkInAt)}` : `Working · in since ${hhmm(today.checkInAt)}`;
+
+  const acts = me ? dayActions(today) : { in: false, bs: false, be: false, out: false };
 
   async function run(label: string, fn: string, done: string) {
     if(busy) return;
@@ -118,10 +121,10 @@ export default function AccountScreen() {
 
       <Section title="My day">
         <Text style={{ ...typography.body, color: colors.textPrimary, padding: spacing.md }}>{dayState}</Text>
-        <Row icon="check" label="Check in" onPress={() => void run("in", "checkInAttendance", "Checked in for today.")} disabled={busy !== null} />
-        <Row icon="bell" label="Start break" onPress={() => void run("bs", "startAttendanceBreak", "Break started.")} disabled={busy !== null} />
-        <Row icon="bell" label="End break" onPress={() => void run("be", "endAttendanceBreak", "Break ended.")} disabled={busy !== null} />
-        <Row icon="close" label="Check out" onPress={() => void run("out", "checkOutAttendance", "Checked out. See you tomorrow.")} disabled={busy !== null} last />
+        <Row icon="check" label="Check in" onPress={() => void run("in", "checkInAttendance", "Checked in for today.")} disabled={busy !== null || !acts.in} />
+        <Row icon="bell" label="Start break" onPress={() => void run("bs", "startAttendanceBreak", "Break started.")} disabled={busy !== null || !acts.bs} />
+        <Row icon="bell" label="End break" onPress={() => void run("be", "endAttendanceBreak", "Break ended.")} disabled={busy !== null || !acts.be} />
+        <Row icon="close" label="Check out" onPress={() => void run("out", "checkOutAttendance", "Checked out. See you tomorrow.")} disabled={busy !== null || !acts.out} last />
         {note ? <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md }}>{note}</Text> : null}
       </Section>
 

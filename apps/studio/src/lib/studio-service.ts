@@ -10,7 +10,8 @@ import {
 } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
-import type { ServiceJob, StudioConfig, Service } from "@autodeck/core";
+import type { ServiceJob, StudioConfig, Service, Booking } from "@autodeck/core";
+import { dayRangeIST } from "./calendar-bookings";
 import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
 
 // Returns "YYYY-MM-DD" for N days after/before the given local date string.
@@ -162,4 +163,23 @@ export function listenToStandby(tenantId: string, studioId: string, onData: (job
 }
 export async function updateStandby(jobId: string, action: "enqueue" | "admit", bayId?: string): Promise<void> {
   await httpsCallable(functions, "standbyBooking")({ jobId, action, ...(bayId ? { bayId } : {}) });
+}
+
+/** Bookings for one studio day. Staff may read their tenant's bookings (firestore.rules /bookings) and the (tenantId, studioId, scheduledAt) index already exists, so this needs no rules or index change. */
+export function listenToBookingsByDate(
+  tenantId: string,
+  studioId: string,
+  date: string,
+  onData: (bookings: Booking[]) => void,
+  onError: (err: Error) => void,
+): Unsubscribe {
+  const { start, end } = dayRangeIST(date);
+  const q = query(
+    collection(db, COLLECTIONS.bookings()),
+    where("tenantId", "==", tenantId),
+    where("studioId", "==", studioId),
+    where("scheduledAt", ">=", start),
+    where("scheduledAt", "<=", end),
+  );
+  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Booking)), onError);
 }

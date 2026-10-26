@@ -12,7 +12,7 @@ describe("bay occupancy uses the shared rule", () => {
 describe("cancelled jobs take no payment", () => {
   it("the job page hides Record cash payment once a job is cancelled", () => {
     const s = read("app/(tabs)/jobs/[id].tsx");
-    expect(s).toMatch(/!payment && job\.status !== "CANCELLED" && \(\s*<Button\s+label="Record cash payment"/);
+    expect(s).toMatch(/!payment && job\.status !== "CANCELLED" && \(\s*<Button\s+label=(?:"Record cash payment"|\{UPI_RECORD_ENABLED \? "Record payment" : "Record cash payment"\})/);
   });
   it("the server already refuses payment on a cancelled job", () => {
     const f = (n: string) => readFileSync(`${__dirname}/../../../../functions/src/functions/payment/${n}.ts`, "utf8");

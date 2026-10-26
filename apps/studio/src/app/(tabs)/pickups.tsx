@@ -2,7 +2,7 @@ import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { floatCard } from "@autodeck/ui/theme";
 import { CanvasTitle } from "../../components/CanvasTitle";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, FlatList } from "react-native";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -10,9 +10,13 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, spacing, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
+import { AgreedTimeInput } from "../../components/AgreedTimeInput";
+import { PICKUP_LEG_PROGRESS_ENABLED } from "../../lib/backend-features";
+import { legsFor, canMarkLeg, legPayload, outstandingNote, type LegName } from "../../lib/pickup-legs";
+import { pickupFeeLabel, confirmBlockReason, checkAgreedTime } from "../../lib/pickup-form";
 
 type Bk = { plate: string; car: string; when: string; status: string };
-type Req = { id: string; bookingId: string; kind: string; address: string; preferredTime: string; requestedPickupTime?: string; requestedDropTime?: string; agreedPickupAt?: string | null; agreedDropAt?: string | null; note: string; status: string; staffNote: string };
+type Req = { pickupCompletedAt?: string | null; dropCompletedAt?: string | null; feePaise?: number | null; memberMembershipId?: string | null; id: string; bookingId: string; kind: string; address: string; preferredTime: string; requestedPickupTime?: string; requestedDropTime?: string; agreedPickupAt?: string | null; agreedDropAt?: string | null; note: string; status: string; staffNote: string };
 const KIND: Record<string, string> = { pickup: "Pick up", drop: "Drop back", both: "Pick up and drop back" };
 
 function formatAgreed(iso: string): string {
@@ -29,6 +33,8 @@ export default function PickupsScreen() {
   const [bookings, setBookings] = useState<Record<string, Bk | null>>({});
   const [hidden, setHidden] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
+  const busyRef = useRef(false);
+  const [errId, setErrId] = useState<string | null>(null);
   const [agreedPickup, setAgreedPickup] = useState<Record<string, string>>({});
   const [agreedDrop, setAgreedDrop] = useState<Record<string, string>>({});
   const studioId = auth.status === "ready" ? auth.claims.studioId : null;
@@ -58,22 +64,31 @@ export default function PickupsScreen() {
 
   useEffect(() => { void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); }, [load]);
 
+  async function markLeg(r: Req, leg: LegName) {
+    if (busyRef.current || !PICKUP_LEG_PROGRESS_ENABLED || !canMarkLeg(r, leg)) return;
+    busyRef.current = true; setBusy(r.id); setErrId(r.id); setError(null);
+    try { await httpsCallable(functions, "updatePickupRequest")(legPayload(r.id, leg)); await load(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Could not update request. Try again."); }
+    finally { busyRef.current = false; setBusy(null); }
+  }
+
   async function setStatus(r: Req, status: "CONFIRMED" | "DONE" | "DECLINED") {
     if(busy) return;
     setBusy(r.id);
+    setErrId(r.id);
     try {
       const payload: Record<string, string> = { requestId: r.id, status };
       if (status === "CONFIRMED") {
         // Timing is agreed with the customer by phone call; it must be entered here.
         if (r.kind !== "drop") {
-          const v = (agreedPickup[r.id] ?? "").trim();
-          if (!v) { setError("Enter the pickup time agreed with the customer on the call (YYYY-MM-DD HH:mm)."); setBusy(null); return; }
-          payload.agreedPickupAt = v;
+          const c = checkAgreedTime(agreedPickup[r.id] ?? "");
+          if (!c.ok) { setError(`Pickup time: ${c.error}`); setBusy(null); return; }
+          payload.agreedPickupAt = c.value;
         }
         if (r.kind !== "pickup") {
-          const v = (agreedDrop[r.id] ?? "").trim();
-          if (!v) { setError("Enter the dropoff time agreed with the customer on the call (YYYY-MM-DD HH:mm)."); setBusy(null); return; }
-          payload.agreedDropAt = v;
+          const c = checkAgreedTime(agreedDrop[r.id] ?? "");
+          if (!c.ok) { setError(`Drop time: ${c.error}`); setBusy(null); return; }
+          payload.agreedDropAt = c.value;
         }
       }
       await httpsCallable(functions, "updatePickupRequest")(payload);
@@ -102,6 +117,7 @@ export default function PickupsScreen() {
         const asked = r.kind !== "drop" ? (r.requestedPickupTime || r.preferredTime) : r.requestedDropTime;
         const agreed = [r.agreedPickupAt ? `Pickup ${formatAgreed(r.agreedPickupAt)}` : "", r.agreedDropAt ? `Drop ${formatAgreed(r.agreedDropAt)}` : ""].filter(Boolean).join("  ·  ");
         const confirmed = r.status === "CONFIRMED";
+        const block = confirmBlockReason(r);
         return (
           <View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 28, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.sm }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
@@ -113,16 +129,29 @@ export default function PickupsScreen() {
             </View>
             {bookings[r.id] ? <Text numberOfLines={1} style={{ ...typography.caption, color: colors.textPrimary, fontWeight: "600" }}>{[bookings[r.id]?.plate, bookings[r.id]?.car].filter(Boolean).join(" · ")}{bookings[r.id]?.when ? `  ·  Booking ${bookings[r.id]?.when}` : ""}</Text> : null}
             <Text numberOfLines={2} style={{ ...typography.caption, color: colors.textPrimary, opacity: 0.85 }}>{r.address}</Text>
+            <Text accessibilityLabel="Pickup fee" style={{ ...typography.caption, color: r.feePaise === null || r.feePaise === undefined ? colors.accent : colors.textMuted, fontWeight: "600" }}>{`Fee: ${pickupFeeLabel(r.feePaise, r.memberMembershipId, r.kind)}`}</Text>
+            {block ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{block}</Text> : null}
             {confirmed && agreed ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{agreed}</Text> : null}
             {r.status === "REQUESTED" ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-                {r.kind !== "drop" ? <TextInput value={agreedPickup[r.id] ?? ""} onChangeText={(v) => setAgreedPickup((s) => ({ ...s, [r.id]: v }))} placeholder="Pickup time, 2026-10-12 16:30" placeholderTextColor={colors.textMuted} style={input} /> : null}
-                {r.kind !== "pickup" ? <TextInput value={agreedDrop[r.id] ?? ""} onChangeText={(v) => setAgreedDrop((s) => ({ ...s, [r.id]: v }))} placeholder="Drop time, 2026-10-13 18:00" placeholderTextColor={colors.textMuted} style={input} /> : null}
+                {r.kind !== "drop" ? <AgreedTimeInput label="Pickup time agreed on the call" value={agreedPickup[r.id] ?? ""} onChange={(v) => setAgreedPickup((s) => ({ ...s, [r.id]: v }))} /> : null}
+                {r.kind !== "pickup" ? <AgreedTimeInput label="Drop time agreed on the call" value={agreedDrop[r.id] ?? ""} onChange={(v) => setAgreedDrop((s) => ({ ...s, [r.id]: v }))} /> : null}
               </View>
             ) : null}
-            {error && rows !== null ? <Text style={{ ...typography.caption, color: colors.error }}>{error}</Text> : null}
+            {PICKUP_LEG_PROGRESS_ENABLED && confirmed ? (
+              <View style={{ gap: spacing.xs }}>
+                {legsFor(r).map((l) => (
+                  <View key={l.leg} style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
+                    <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: "600" }}>{l.doneAt ? `${l.label} done ${formatAgreed(l.doneAt)}` : `${l.label} not done yet`}</Text>
+                    {!l.doneAt ? <Button label={l.leg === "pickup" ? "Picked up" : "Dropped back"} size="md" variant="secondary" fullWidth={false} disabled={busy !== null} onPress={() => void markLeg(r, l.leg)} /> : null}
+                  </View>
+                ))}
+                {outstandingNote(r) ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{outstandingNote(r)}</Text> : null}
+              </View>
+            ) : null}
+            {error && rows !== null && errId === r.id ? <Text style={{ ...typography.caption, color: colors.error }}>{error}</Text> : null}
             <View style={{ flexDirection: "row", gap: spacing.sm }}>
-              {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
+              {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} disabled={busy !== null || block !== null} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
               {confirmed ? <Button label="Mark done" size="md" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "DONE")} /> : null}
               <Button label="Decline" size="md" variant="secondary" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "DECLINED")} />
             </View>
