@@ -26,6 +26,10 @@ export type AuditAction =
   | "approval.rejected"
   | "approval.cancelled"
   | "approval.expired"
+  // Staff-to-admin approval requests (no customer notification - staff-internal flow)
+  | "adminApproval.requested"
+  | "adminApproval.approved"
+  | "adminApproval.rejected"
   | "membership.plan_created"
   | "membership.plan_updated"
   | "membership.plan_activated"

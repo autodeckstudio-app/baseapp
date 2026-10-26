@@ -31,8 +31,14 @@ service firebase.storage {
     // the previous rule let any authenticated tenant member, including an
     // unrelated customer, read any other customer's job photos).
     match /{tid}/jobs/{jobId}/photos/{filename} {
+      // Customer binding: GCS lowercases custom-metadata keys stamped via
+      // signed-URL PUT headers (customerId -> customerid); SDK/JSON-API
+      // uploads keep camelCase. Accept either casing, same uid binding;
+      // every other condition (auth, tenant, staff role) is unchanged.
       allow read: if isAuthenticated() && tenantId() == tid
-                  && (isStudioOrAbove() || resource.metadata.customerId == request.auth.uid);
+                  && (isStudioOrAbove()
+                      || resource.metadata.get("customerid", "") == request.auth.uid
+                      || resource.metadata.get("customerId", "") == request.auth.uid);
       // Studio/admin write via signed upload URL from Cloud Function only
       allow write: if false;
     }

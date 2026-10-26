@@ -27,6 +27,11 @@ export type {
   InvoiceStatus,
 } from "./payment.js";
 export type { Bay, OperatingHours, StudioConfig, Employee } from "./studio.js";
+export type {
+  AdminApprovalRequest,
+  AdminApprovalStatus,
+  AdminApprovalTargetType,
+} from "./admin-approval.js";
 export type { StaffAccessStatus, StaffAccessRequest } from "./staff-access.js";
 export type { AttendanceStatus, AttendanceBreak, AttendanceRecord } from "./attendance.js";
 export type {

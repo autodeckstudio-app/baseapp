@@ -1,25 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToPayments, refundPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
-import { PaymentsView } from "../../../experience/OfficeViews";
+import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
+import { listRefundWork, runRefundOutbox, reconcileRefundClaims } from "../../../lib/refund-work-service";
+import { createRefundWorkCycle, type RefundWorkCycle } from "../../../lib/refund-work-cycle";
 
 export default function PaymentsPage() {
-  const { claims } = useAdminAuth();
+  const { claims, user } = useAdminAuth();
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<PaymentStatus | "">("");
   const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get("search");
+    if (q) setSearch(q);
+  }, [searchParams]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Identity-scoped review cycle (login, tenant switch AND logout all reset
+  // it): a delayed response from a previous identity can never repopulate
+  // the new identity's rows, surface its error, or move its spinner, and a
+  // fresh identity never sends the previous cycle's known claim ids.
+  const cycleRef = useRef<RefundWorkCycle | null>(null);
+  if (cycleRef.current === null) cycleRef.current = createRefundWorkCycle(listRefundWork);
+  const cycle = cycleRef.current;
+  const [, setCycleTick] = useState(0);
+  useEffect(() => cycle.subscribe(() => setCycleTick((t) => t + 1)), [cycle]);
+  const { accum: legacyAccum, work: refundWork, loading: refundWorkLoading, error: refundWorkError } = cycle.getState();
+  const [runningOutbox, setRunningOutbox] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+
+  useEffect(() => {
+    cycle.reset(!!claims);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claims?.tenantId, user?.uid, cycle]);
+
+  async function handleReconcileClaims() {
+    setReconciling(true);
+    setMessage(null);
+    try {
+      const r = await reconcileRefundClaims();
+      setMessage(`Claim reconciliation: ${r.projected + r.converged + r.alreadyAccounted} accounted (${r.alreadyAccounted} already recorded), ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - continue the scan)"}.`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Claim reconciliation failed.");
+    } finally {
+      setReconciling(false);
+      void cycle.refresh();
+    }
+  }
+
+  async function handleRunOutbox() {
+    setRunningOutbox(true);
+    setMessage(null);
+    try {
+      const r = await runRefundOutbox();
+      setMessage(`Outbox run: ${r.submitted} sent to provider, ${r.projected} completed, ${r.failed} held for review.`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Outbox run failed.");
+    } finally {
+      setRunningOutbox(false);
+      void cycle.refresh();
+    }
+  }
 
   useEffect(() => {
     if (!claims) return undefined;
@@ -57,6 +109,19 @@ export default function PaymentsPage() {
   }
 
   return (
+    <>
+    <RefundWorkPanel
+      work={refundWork ? { ...refundWork, legacyClaims: [...legacyAccum.values()] } : refundWork}
+      loading={refundWorkLoading}
+      error={refundWorkError}
+      running={runningOutbox}
+      reconciling={reconciling}
+      onReconcile={() => void handleReconcileClaims()}
+      onContinueScan={() => void cycle.refresh()}
+      names={names}
+      onRun={() => void handleRunOutbox()}
+      onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
+    />
     <PaymentsView
       payments={payments}
       names={names}
@@ -73,5 +138,6 @@ export default function PaymentsPage() {
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
       today={studioToday()}
     />
+    </>
   );
 }

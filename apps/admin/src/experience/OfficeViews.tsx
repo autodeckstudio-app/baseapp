@@ -11,6 +11,7 @@ import { PageHead, Toolbar, Segmented, ListPane, Drawer, type Column } from "./O
 import { StatusBadge } from "../components/StatusBadge";
 import { formatPaise, formatDate, formatDateTime, studioToday } from "../lib/format";
 import { methodLabel, statusLabel } from "../lib/status-label";
+import type { RefundWork } from "../lib/refund-work-service";
 
 type Names = Record<string, string>;
 
@@ -347,5 +348,130 @@ export function AuditView(p: {
         </Drawer>
       )}
     </div>
+  );
+}
+
+/* ---------------- Refund recovery work ---------------- */
+
+const REFUND_STATUS_LABEL: Record<string, string> = {
+  reserved: "reserved",
+  submitting: "submitting",
+  submitted: "sent to provider",
+  accepted: "accepted",
+  ambiguous: "needs review",
+  failed: "held",
+};
+
+export function RefundWorkPanel(p: {
+  work: RefundWork | null;
+  loading: boolean;
+  error: string | null;
+  running: boolean;
+  reconciling?: boolean;
+  names?: Names;
+  onRun: () => void;
+  onReconcile?: () => void;
+  /** List-only: advances the retained-claim scan WITHOUT reconciling
+   * (no provider evidence projection, no claim release). */
+  onContinueScan?: () => void;
+  onOpenInvoice: (id: string) => void;
+}) {
+  if (p.error) {
+    return (
+      <div className="ax-panel ax-empty" role="alert">
+        <p className="ax-title">Refund work unavailable</p>
+        <p>{p.error}</p>
+      </div>
+    );
+  }
+  if (p.loading || !p.work) {
+    return <div className="ax-panel" role="status">Checking refund work...</div>;
+  }
+  const { requests, reviewPayments, legacyClaims, legacyScanComplete } = p.work;
+  if (requests.length === 0 && reviewPayments.length === 0 && legacyClaims.length === 0 && legacyScanComplete) return null;
+  return (
+    <section className="ax-panel" aria-label="Refund work">
+      <div className="ax-row-actions" style={{ justifyContent: "space-between", marginBottom: "12px" }}>
+        <p className="ax-title" style={{ margin: 0 }}>Refund work</p>
+        <span className="ax-row-actions">
+          <span className="ax-muted">Sends reserved refunds to the provider</span>
+          <button type="button" className="ax-button" disabled={p.running} onClick={p.onRun}>
+            {p.running ? "Running" : "Run outbox now"}
+          </button>
+        </span>
+      </div>
+      {requests.length > 0 && (
+        <div>
+          {requests.map((r) => (
+            <div key={r.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+              <span>
+                <StatusBadge label={REFUND_STATUS_LABEL[r.status] ?? r.status} />{" "}
+                <strong>{r.amountPaise != null ? formatPaise(r.amountPaise) : "-"}</strong>{" "}
+                <span className="ax-muted">{r.updatedAt ? formatDateTime(r.updatedAt) : ""}</span>
+                {r.lastError && <span className="ax-muted"> - {r.lastError}</span>}
+              </span>
+              <span className="ax-row-actions">
+                {r.providerRefundId && <span className="ax-muted">{r.providerRefundId}</span>}
+                {r.bookingId && <Link className="ax-button" href={`/bookings/${r.bookingId}`}>Booking</Link>}
+                {!r.bookingId && r.jobId && <Link className="ax-button" href={`/jobs/${r.jobId}`}>Job</Link>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {(legacyClaims.length > 0 || !legacyScanComplete) && (
+        <div style={{ marginTop: requests.length ? "16px" : 0 }}>
+          <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
+            <p className="ax-title">Retained refund claims</p>
+            {p.onReconcile && (
+              <span className="ax-row-actions">
+                <span className="ax-muted">Reconciliation-only: checks the provider read-only; never submits a new refund</span>
+                <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onReconcile}>
+                  {p.reconciling ? "Reconciling" : "Reconcile retained refunds"}
+                </button>
+              </span>
+            )}
+          </div>
+          {!legacyScanComplete && p.onContinueScan && (
+            <div className="ax-row-actions" style={{ justifyContent: "space-between" }}>
+              <span className="ax-muted">Scanning older records - {legacyClaims.length} shown so far, more may exist.</span>
+              <button type="button" className="ax-button" disabled={p.reconciling} onClick={p.onContinueScan}>
+                Continue scan
+              </button>
+            </div>
+          )}
+          {legacyClaims.map((c) => (
+            <div key={c.paymentId} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+              <span>
+                <StatusBadge label={c.reconcileState === "held" ? "held" : "retained"} />{" "}
+                <strong>{c.amount != null ? formatPaise(c.amount) : "-"}</strong>{" "}
+                <span className="ax-muted">
+                  claimed {c.claimedAt ? formatDateTime(c.claimedAt) : "earlier"} - payment {c.paymentStatus ?? "unknown"}
+                </span>
+                {c.reconcileNote && <span className="ax-muted"> - {c.reconcileNote}</span>}
+              </span>
+              <Link className="ax-button" href={`/payments?search=${c.paymentId}`}>Payment</Link>
+            </div>
+          ))}
+        </div>
+      )}
+      {reviewPayments.length > 0 && (
+        <div style={{ marginTop: requests.length ? "16px" : 0 }}>
+          <p className="ax-title">Invoices to review</p>
+          {reviewPayments.map((x) => (
+            <div key={x.id} className="ax-row-actions" style={{ justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--ax-line, #e5e2dc)" }}>
+              <span>
+                <strong>{x.refundAmount != null ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
+                <span className="ax-muted">
+                  refunded{x.refundAmount != null && x.amount != null && x.refundAmount !== x.amount ? ` of ${formatPaise(x.amount)} captured` : ""}
+                  {x.customerId ? ` - ${p.names?.[x.customerId] ?? "Customer"}` : ""}; the linked invoice needs review
+                </span>
+              </span>
+              {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

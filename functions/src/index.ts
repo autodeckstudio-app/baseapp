@@ -49,6 +49,10 @@ export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
 export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
 export { confirmManualPayment } from "./functions/payment/confirmManualPayment.js";
 export { initiateRefund } from "./functions/payment/initiateRefund.js";
+export { requestBookingRefund } from "./functions/payment/requestBookingRefund.js";
+export { processRefundOutbox } from "./functions/payment/processRefundOutbox.js";
+export { listRefundWork } from "./functions/payment/listRefundWork.js";
+export { reconcileRefundClaims } from "./functions/payment/reconcileRefundClaims.js";
 export { razorpayWebhook } from "./functions/payment/razorpayWebhook.js";
 
 // âââ Invoices âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -91,6 +95,8 @@ export { respondToApproval } from "./functions/approval/respondToApproval.js";
 export { setBookingQuote } from "./functions/booking/setBookingQuote.js";
 export { respondToBookingQuote } from "./functions/booking/respondToBookingQuote.js";
 export { cancelApproval } from "./functions/approval/cancelApproval.js";
+export { requestAdminApproval } from "./functions/approval/requestAdminApproval.js";
+export { respondToAdminApproval } from "./functions/approval/respondToAdminApproval.js";
 export { expireStaleApprovals } from "./functions/approval/expireStaleApprovals.js";
 export { expireStaleApprovalsScheduled } from "./functions/approval/expireStaleApprovalsScheduled.js";
 export { flagMissedBookingsScheduled } from "./functions/booking/flagMissedBookingsScheduled.js";
@@ -103,6 +109,7 @@ export { updateProtection } from "./functions/protection/updateProtection.js";
 export { startInspection } from "./functions/inspection/startInspection.js";
 export { updateInspection } from "./functions/inspection/updateInspection.js";
 export { finalizeInspection } from "./functions/inspection/finalizeInspection.js";
+export { issueInspectionPhotoUploadUrl } from "./functions/inspection/issueInspectionPhotoUploadUrl.js";
 
 // âââ Attendance (M6 Automodz Office) ââââââââââââââââââââââââââââââââââââââââ
 export { checkInAttendance } from "./functions/attendance/checkInAttendance.js";

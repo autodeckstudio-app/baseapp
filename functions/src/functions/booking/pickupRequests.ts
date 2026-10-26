@@ -37,6 +37,15 @@ const updateSchema = z.object({
   agreedDropAt: z.string().trim().max(60).optional(),
   /** Admin only, and only when the customer sent no pin (fee unknown). Total fee in paise for the whole request. */
   feePaise: z.number().int().min(0).max(100000).optional(),
+  /**
+   * Studio/admin marks one leg of the journey physically done (car collected
+   * / car returned). Server stamps the time; the client never sends one.
+   * Pure progress visibility: it does not change the request status (DONE
+   * stays a separate manual step), does not touch pricing, and never marks
+   * the job DELIVERED or charges anything. A completed leg cannot be
+   * reopened - there is no unset path.
+   */
+  markLegCompleted: z.enum(["pickup", "drop"]).optional(),
 }).strict();
 
 interface PickupRequestDoc {
@@ -53,6 +62,10 @@ interface PickupRequestDoc {
   customerId?: string;
   /** Set when a member free pickup paid for this request: the fee is waived and the membership is charged one pickup. */
   memberMembershipId?: string | null;
+  /** Server-stamped when staff marked the pickup leg (car collected) done. Null until then; never unset once set. */
+  pickupCompletedAt?: string | null;
+  /** Server-stamped when staff marked the drop leg (car returned) done. Null until then; never unset once set. */
+  dropCompletedAt?: string | null;
 }
 
 
@@ -166,6 +179,23 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     }
 
     if (data.status === "CONFIRMED") {
+      // Unpriced guard: feePaise is null when the customer sent no location
+      // pin and no admin has priced the request yet. Confirming in that
+      // state silently bills Rs 0 (legFees(null) -> {0,0}) even though the
+      // real fee is unknown - the distance tier (Rs 100/leg under 3 km,
+      // Rs 150/leg beyond, per packages/core pickup-zone) was never
+      // determined. An explicit fee of 0 can only come from an admin
+      // deliberately pricing the request free (pin-computed fees are always
+      // > 0), and member free pickups only ever apply to a known fee > 0,
+      // so neither is affected. The admin prices the request first
+      // (feePaise is accepted only while status is REQUESTED), then staff
+      // confirm.
+      if (curFeePaise === null || curFeePaise === undefined) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This pickup request has no fee yet because the customer sent no location pin. An admin must set the fee in the admin app before the request can be confirmed - do not confirm it as free.",
+        );
+      }
       const needsPickup = cur.kind === "pickup" || cur.kind === "both";
       const needsDrop = cur.kind === "drop" || cur.kind === "both";
       if (needsPickup && !agreedPickupAt) {
@@ -179,7 +209,28 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     const staffNote = data.staffNote ?? cur.staffNote ?? "";
     const now = new Date().toISOString();
 
-    // No-op guard: identical status with no new note or timing changes
+    // Per-leg progress (additive visibility only - see the schema comment).
+    // Allowed only on an open, confirmed request: a REQUESTED request has
+    // nothing in motion yet, and a DONE/DECLINED request is closed, so legs
+    // on it can neither progress nor be reopened. Re-marking a completed leg
+    // is an idempotent no-op that keeps the original server timestamp.
+    let pickupCompletedAt = cur.pickupCompletedAt ?? null;
+    let dropCompletedAt = cur.dropCompletedAt ?? null;
+    let legChanged = false;
+    if (data.markLegCompleted !== undefined) {
+      if (cur.status !== "CONFIRMED") {
+        throw new HttpsError("failed-precondition", "Legs can only be marked completed on a confirmed, still-open request.");
+      }
+      if (data.markLegCompleted === "pickup") {
+        if (cur.kind === "drop") throw new HttpsError("invalid-argument", "This request has no pickup leg.");
+        if (!pickupCompletedAt) { pickupCompletedAt = now; legChanged = true; }
+      } else {
+        if (cur.kind === "pickup") throw new HttpsError("invalid-argument", "This request has no drop leg.");
+        if (!dropCompletedAt) { dropCompletedAt = now; legChanged = true; }
+      }
+    }
+
+    // No-op guard: identical status with no new note, timing or leg changes
     // writes nothing and adds no audit entry, so repeated approval clicks
     // cannot fan out duplicate customer notifications.
     if (
@@ -187,9 +238,10 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       staffNote === cur.staffNote &&
       agreedPickupAt === cur.agreedPickupAt &&
       agreedDropAt === cur.agreedDropAt &&
-      data.feePaise === undefined
+      data.feePaise === undefined &&
+      !legChanged
     ) {
-      return { requestId: data.requestId, status: data.status, idempotent: true };
+      return { requestId: data.requestId, status: data.status, idempotent: true, pickupCompletedAt, dropCompletedAt };
     }
 
     // Fee on the visit's price. Added when the studio confirms, taken off if it is declined. Never touches a job that already
@@ -252,7 +304,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     const feeUnbilled = wantFee && (fees.pickup + fees.drop > 0) && !feeBilled;
 
     if (chargeMembership) tx.update(chargeMembership.ref, { pickupsUsed: chargeMembership.used, updatedAt: now });
-    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, memberMembershipId, ...(data.feePaise !== undefined ? { feePaise: data.feePaise } : {}), updatedAt: now });
+    tx.update(ref, { status: data.status, staffNote, agreedPickupAt, agreedDropAt, feeBilled, memberMembershipId, pickupCompletedAt, dropCompletedAt, ...(data.feePaise !== undefined ? { feePaise: data.feePaise } : {}), updatedAt: now });
     writeAuditLog(tx, {
       action: "pickup.updated",
       entityType: "PickupRequest",
@@ -260,9 +312,9 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       user,
       studioId: cur.studioId,
       before: { status: cur.status },
-      after: { status: data.status, agreedPickupAt, agreedDropAt },
+      after: { status: data.status, agreedPickupAt, agreedDropAt, ...(legChanged ? { legCompleted: data.markLegCompleted } : {}) },
     });
-    return { requestId: data.requestId, status: data.status, idempotent: false, feeBilled, feeUnbilled };
+    return { requestId: data.requestId, status: data.status, idempotent: false, feeBilled, feeUnbilled, pickupCompletedAt, dropCompletedAt };
   });
   return result;
 });

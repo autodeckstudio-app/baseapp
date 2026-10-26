@@ -16,6 +16,7 @@ import { extractUser, assertRole, assertTenant, assertStudio } from "../../middl
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { planReserveInTx, applyReserveInTx, runRefundOutbox } from "../../lib/refund-outbox.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 
@@ -87,68 +88,171 @@ export async function runCancel(
 
     const now = new Date().toISOString();
     const paymentRef = completed[0]?.ref;
-    const refundEventRef = payment && paymentRef ? db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${paymentRef.id}`) : null;
     const needsRefund = plan.refundPaise > 0 && !!payment && !!paymentRef;
 
-    // 1. Claim the refund so it can only ever be sent once, and check nothing changed since the preview.
-    let claimed = false;
-    if (needsRefund && refundEventRef && paymentRef) {
-      await db.runTransaction(async (tx) => {
-        const [b, p, ev] = await Promise.all([tx.get(bookingRef), tx.get(paymentRef), tx.get(refundEventRef)]);
-        if ((b.data() as Booking | undefined)?.status === "CANCELLED") throw new HttpsError("failed-precondition", "This booking was just cancelled.");
-        if ((p.data() as Payment | undefined)?.status !== "completed") throw new HttpsError("failed-precondition", "The payment changed. Reload and try again.");
-        if (ev.exists) throw new HttpsError("already-exists", "A refund has already been started for this payment.");
-        tx.set(refundEventRef, { paymentId: paymentRef.id, claimedAt: now, claimedBy: user.uid, bookingId: data.bookingId, amount: plan.refundPaise });
-      });
-      claimed = true;
+    // 1. Decide the refund path. Provider (Razorpay) refunds go through the
+    // refund outbox: the single refund authority. The reservation is created
+    // INSIDE the cancellation transaction below (planReserveInTx +
+    // applyReserveInTx), so a refund can never survive for a booking that was
+    // not cancelled and a cancellation can never lose its refund reservation.
+    // A Razorpay payment missing its provider payment id is malformed: HOLD,
+    // never pretend an offline (manual) refund. The reservation is drained
+    // inline post-transaction (and re-drained by the admin outbox runner and
+    // projected by the webhook), so it cannot strand the balance.
+    // Cash/UPI/bank refunds settle outside the provider; the
+    // studio returns the money by hand and this records that obligation
+    // (deployed behavior, preserved explicitly by payment method).
+    const providerRefund = needsRefund && payment?.method === "razorpay_payment_link";
+    if (providerRefund && !payment?.razorpayPaymentId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This Razorpay payment is missing its provider payment id, so its refund cannot be submitted or verified. The booking is NOT cancelled.",
+      );
     }
-
-    // 2. Provider refund (partial amount), once. A failure releases the claim and cancels nothing.
-    let providerRefundId: string | null = null;
-    try {
-      if (claimed && payment && paymentRef && payment.method === "razorpay_payment_link" && payment.razorpayPaymentId) {
-        const res = await getPaymentProvider().initiateRefund({
-          providerPaymentId: payment.razorpayPaymentId,
-          amount: plan.refundPaise,
-          reason: data.reason,
-          referenceId: `refund_${paymentRef.id}`,
-        });
-        providerRefundId = res.providerRefundId;
-      }
-    } catch {
-      if (refundEventRef) await refundEventRef.delete().catch(() => undefined);
-      throw new HttpsError("unavailable", "The refund did not go through, so the booking is NOT cancelled. Try again, or refund from Payments.");
-    }
-    const manualRefund = claimed && !providerRefundId;
+    const manualRefund = needsRefund && !providerRefund;
+    let refundRequestId: string | null = null;
 
     // 3. Cancel everything in one transaction.
+    interface CommittedPlan { feePaise: number; feeStatus: string; refundPaise: number; paidPaise: number; policyFeePaise: number; manualRefund: boolean }
+    const planBox: { committed: CommittedPlan | null } = { committed: null };
     await db.runTransaction(async (tx) => {
       const fresh = (await tx.get(bookingRef)).data() as Booking | undefined;
       if (!fresh) throw new HttpsError("not-found", "Booking not found.");
       if (fresh.status === "CANCELLED") throw new HttpsError("failed-precondition", "This booking was just cancelled.");
-      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1));
+      // Terminal-state and ownership revalidation INSIDE the transaction:
+      // the pre-transaction checks used a snapshot that can stale before commit.
+      if (fresh.status === "COMPLETED" || fresh.status === "EXPIRED") {
+        throw new HttpsError("failed-precondition", `Cannot cancel a booking with status ${fresh.status}.`);
+      }
+      if (fresh.tenantId !== booking.tenantId || fresh.studioId !== booking.studioId) {
+        throw new HttpsError("failed-precondition", "The booking's studio changed. Reload and try again.");
+      }
+      const jobs = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(2));
+      // Ambiguity fails closed: a second job for the same booking is a
+      // data-integrity stop, never a silent pick.
+      if (jobs.size > 1) throw new HttpsError("failed-precondition", "This booking has more than one job. Cancel it by hand.");
       const jobDoc = jobs.docs[0];
       const j = jobDoc?.data() as ServiceJob | undefined;
       if (j && !CANCELLABLE_JOB.includes(j.status)) throw new HttpsError("failed-precondition", "Work has already started on this job.");
-      const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "completed"]).limit(10)) : null;
-      const invoiceSnap = needsRefund && payment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(payment.invoiceId)) : null;
+      // Payment eligibility is re-derived INSIDE the transaction with the
+      // same rules as the pre-transaction preview: a payment that appears,
+      // starts processing, or completes between the preview read and this
+      // commit must change the outcome, never slip past a stale choice.
+      const pays = j ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.id).where("status", "in", ["pending", "processing", "completed"]).limit(11)) : null;
+      // Bounded overflow behavior: more records than the inspected page must
+      // stop the cancellation, never let an unseen processing/completed
+      // payment slip past the eligibility checks below.
+      if ((pays?.size ?? 0) > 10) throw new HttpsError("failed-precondition", "This booking has too many payment records to cancel safely here. Cancel it by hand and refund each payment from Payments.");
+      const txPayDocs = pays?.docs ?? [];
+      if (txPayDocs.some((d) => d.data()["status"] === "processing")) {
+        throw new HttpsError("failed-precondition", "A payment is still processing on this booking. Wait for it to settle, then cancel.");
+      }
+      const txCompleted = txPayDocs.filter((d) => d.data()["status"] === "completed");
+      if (txCompleted.length > 1) {
+        throw new HttpsError("failed-precondition", "This booking has more than one payment. Cancel it by hand and refund each payment from Payments.");
+      }
+      // Fresh financial truth INSIDE the transaction: the pre-transaction
+      // plan was computed from a snapshot that a retry or a concurrent write
+      // can stale. Terms, fee and refund sizing are recomputed here from the
+      // fresh booking and the fresh payment document; nothing financial is
+      // sized from the caller's pre-transaction reads.
+      const txPaymentRef = txCompleted[0]?.ref ?? null;
+      const freshPayment = txCompleted[0]?.data() as Payment | undefined;
+      let txCategories = fresh.cancelCategories ?? [];
+      if (!txCategories.length) {
+        const svcSnap = await tx.get(db.collection(COLLECTIONS.services()).doc(fresh.serviceId));
+        txCategories = svcSnap.exists ? [String((svcSnap.data() as { category?: string }).category ?? "")] : [];
+      }
+      const txTerms = cancellationTerms({ categories: txCategories, totalPaise: fresh.totalAmount, scheduledAtMs: Date.parse(fresh.scheduledAt), nowMs: Date.now() });
+      const txPlan = planRefund({ paidPaise: freshPayment?.amount ?? 0, feePaise: txTerms.feePaise, waive: data.feeAction === "waive" });
+      const txNeedsRefund = txPlan.refundPaise > 0 && !!freshPayment && !!txPaymentRef;
+      const txProviderRefund = txNeedsRefund && freshPayment?.method === "razorpay_payment_link";
+      const txManualRefund = txNeedsRefund && !txProviderRefund;
+      if (txProviderRefund && !freshPayment?.razorpayPaymentId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This Razorpay payment is missing its provider payment id, so its refund cannot be submitted or verified. The booking is NOT cancelled.",
+        );
+      }
+      planBox.committed = { feePaise: txPlan.feePaise, feeStatus: txPlan.feeStatus, refundPaise: txPlan.refundPaise, paidPaise: txPlan.paidPaise, policyFeePaise: txTerms.feePaise, manualRefund: txManualRefund };
+      const invoiceSnap = txNeedsRefund && freshPayment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(freshPayment.invoiceId)) : null;
+      // Shared ownership validation for BOTH refund methods (the provider
+      // path's planner/runner checks never cover the manual path): the fresh
+      // payment must belong to THIS booking, job, studio and tenant; the job
+      // must agree on tenant/studio; a voided invoice must be the payment's
+      // own same-tenant invoice. A same-tenant-but-wrong-link payment is a
+      // stop, not a refund target.
+      if (txNeedsRefund && freshPayment) {
+        if (freshPayment.tenantId !== fresh.tenantId || freshPayment.studioId !== fresh.studioId) {
+          throw new HttpsError("failed-precondition", "The payment does not belong to this booking's studio. The booking is NOT cancelled.");
+        }
+        if (freshPayment.bookingId !== data.bookingId) {
+          throw new HttpsError("failed-precondition", "The payment is no longer linked to this booking. The booking is NOT cancelled.");
+        }
+        if ((freshPayment.jobId ?? null) !== (jobDoc?.id ?? null)) {
+          throw new HttpsError("failed-precondition", "The payment is no longer linked to this booking's job. The booking is NOT cancelled.");
+        }
+        if (j && (j.tenantId !== fresh.tenantId || j.studioId !== fresh.studioId)) {
+          throw new HttpsError("failed-precondition", "The job does not belong to this booking's studio. The booking is NOT cancelled.");
+        }
+        // The Invoice schema carries full linkage (paymentId/jobId/bookingId/
+        // customerId/studioId/tenantId), so a voided invoice must be THIS
+        // payment's own invoice on every axis - tenant equality alone is not
+        // a binding.
+        if (invoiceSnap?.exists) {
+          const inv = invoiceSnap.data() as Invoice;
+          if (inv.tenantId !== fresh.tenantId || inv.studioId !== fresh.studioId || inv.paymentId !== freshPayment.id || inv.jobId !== freshPayment.jobId || inv.bookingId !== data.bookingId || inv.customerId !== freshPayment.customerId) {
+            throw new HttpsError("failed-precondition", "The invoice does not belong to this payment and booking. The booking is NOT cancelled.");
+          }
+        }
+      }
       const reads = await readCancelReads(tx, db, fresh, data.bookingId);
+
+      // Atomic refund reservation (provider payments only): planned and
+      // applied INSIDE this transaction, after fresh booking/job eligibility
+      // revalidation above. planReserveInTx re-reads the payment and its
+      // related records transactionally; a concurrent cancellation, job
+      // start, or payment change retries this transaction and refuses on the
+      // fresh state, so no standalone runnable reservation can survive a
+      // booking that was not cancelled. The expected booking/job binding
+      // pins the refund to THIS cancellation: a payment re-linked elsewhere
+      // since the snapshot is a refusal, never a redirect.
+      if (txProviderRefund && txPaymentRef && freshPayment) {
+        const reservePlan = await planReserveInTx(tx, db, {
+          payment: freshPayment, amountPaise: txPlan.refundPaise, reason: data.reason, createdBy: user.uid,
+          expectedBookingId: data.bookingId, expectedJobId: jobDoc?.id ?? null,
+        });
+        if (!reservePlan.ok) {
+          throw new HttpsError("failed-precondition", `${reservePlan.reason} The booking is NOT cancelled.`);
+        }
+        refundRequestId = applyReserveInTx(tx, reservePlan).requestId;
+      }
 
       for (const d of pays?.docs ?? []) {
         if (d.data()["status"] === "pending") tx.update(d.ref, { status: "cancelled", updatedAt: now });
       }
       writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by ${actor}: ${data.bookingId}`);
 
-      if (needsRefund && paymentRef && payment) {
-        tx.update(paymentRef, { status: "refunded", razorpayRefundId: providerRefundId, refundAmount: plan.refundPaise, refundedAt: now, updatedAt: now });
-        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && payment.invoiceId) {
+      // Cash/UPI/bank (manual) refunds: deployed behavior preserved - the
+      // studio settles these outside the provider by hand, and this records
+      // the money as returned at cancel time. CAVEAT kept explicit: this is
+      // an OBLIGATION the studio still has to pay out, projected as settled
+      // immediately; changing that timing is a product decision, not part of
+      // this activation.
+      if (txManualRefund && txNeedsRefund && txPaymentRef && freshPayment) {
+        tx.update(txPaymentRef, { status: "refunded", razorpayRefundId: null, refundAmount: txPlan.refundPaise, refundedAt: now, updatedAt: now });
+        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && freshPayment.invoiceId) {
           tx.update(invoiceSnap.ref, { status: "void", voidedAt: now, voidedReason: `Booking cancelled: ${data.reason}`, updatedAt: now });
         }
       }
+      // Provider refunds: this callable writes NO refund projection. The
+      // outbox runner submits and projects truthfully (partial amounts stay
+      // partial; the issued invoice is never voided by the projection -
+      // credit-note treatment stays an accountant hold).
       if (jobDoc && j) {
         tx.update(jobDoc.ref, {
           status: "CANCELLED",
-          ...(needsRefund ? { paymentStatus: "refunded" } : {}),
+          ...(txManualRefund && txNeedsRefund ? { paymentStatus: "refunded" } : {}),
           statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled by admin: ${data.reason}` }],
           updatedAt: now,
         });
@@ -158,11 +262,12 @@ export async function runCancel(
         cancelledAt: now,
         cancelledBy: actor,
         cancellationReason: data.reason,
-        cancellationFeePaise: plan.feePaise,
-        ...(plan.feeStatus !== "none" ? { cancellationFeeStatus: plan.feeStatus } : {}),
-        ...(plan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
-        refundedPaise: plan.refundPaise,
-        ...(needsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: providerRefundId } : {}),
+        cancellationFeePaise: txPlan.feePaise,
+        ...(txPlan.feeStatus !== "none" ? { cancellationFeeStatus: txPlan.feeStatus } : {}),
+        ...(txPlan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
+        refundedPaise: txManualRefund && txNeedsRefund ? txPlan.refundPaise : 0,
+        ...(txManualRefund && txNeedsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: null } : {}),
+        ...(refundRequestId ? { refundStatus: "requested", refundRequestId, refundRequestedPaise: txPlan.refundPaise } : {}),
         updatedAt: now,
       });
       writeAuditLog(tx, {
@@ -172,12 +277,46 @@ export async function runCancel(
         user,
         studioId: booking.studioId,
         before: { status: fresh.status },
-        after: { status: "CANCELLED", cancellationReason: data.reason, cancellationFeePaise: plan.feePaise, refundedPaise: plan.refundPaise, feeStatus: plan.feeStatus },
-        metadata: { cancelledBy: actor, providerRefundId },
+        after: {
+          status: "CANCELLED",
+          cancellationReason: data.reason,
+          cancellationFeePaise: txPlan.feePaise,
+          // Truthful accounting: money RETURNED (manual, recorded now) vs
+          // money REQUESTED from the provider (projected later by the runner).
+          refundedPaise: txManualRefund && txNeedsRefund ? txPlan.refundPaise : 0,
+          ...(refundRequestId ? { refundRequestedPaise: txPlan.refundPaise } : {}),
+          feeStatus: txPlan.feeStatus,
+        },
+        metadata: { cancelledBy: actor, refundRequestId },
       });
     });
 
-    return { success: true, ...summary, providerRefundId, manualRefund };
+    // Submission ownership: the reservation committed atomically with the
+    // cancellation above, and a reservation emits NO provider event - so no
+    // webhook can ever bootstrap its submission. THIS post-commit drain is
+    // what actually submits the refund to the provider, scoped to exactly
+    // the request just created. It runs after the commit (never inside the
+    // retrying transaction) and is safe to re-run: the runner claims a
+    // transactional lease, submits at most once, and reconciles through the
+    // bound provider lookup. If it fails, the durable request stays reserved
+    // with the failure written on it, reconcilable by the manual runner and
+    // visible to the held-requests surface - the cancellation is never
+    // rolled back for a drain error.
+    if (refundRequestId) {
+      try {
+        await runRefundOutbox(db, getPaymentProvider(), { requestId: refundRequestId, runnerId: `cancel:${user.uid}` });
+      } catch (err) {
+        await db.collection(COLLECTIONS.refundRequests()).doc(refundRequestId).update({
+          lastError: `post-cancellation refund submission failed: ${err instanceof Error ? err.message : String(err)}`,
+          updatedAt: new Date().toISOString(),
+        }).catch(() => undefined);
+      }
+    }
+
+    // Respond with the plan the transaction actually committed (recomputed
+    // from fresh records inside it), not the pre-transaction preview.
+    const committed = planBox.committed;
+    return { success: true, paidPaise: committed?.paidPaise ?? summary.paidPaise, policyFeePaise: committed?.policyFeePaise ?? summary.policyFeePaise, feePaise: committed?.feePaise ?? summary.feePaise, feeStatus: committed?.feeStatus ?? summary.feeStatus, refundPaise: committed?.refundPaise ?? summary.refundPaise, method: summary.method, refundRequestId, manualRefund: committed?.manualRefund ?? manualRefund };
 }
 
 export const adminCancelBooking = onCall(
