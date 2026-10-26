@@ -1,4 +1,3 @@
-import { membershipCoveredLabel } from "@autodeck/core";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { nightGroundStyle, floatCard } from "@autodeck/ui/theme";
@@ -193,7 +192,7 @@ export default function BayBoardScreen() {
                     </View>
                     <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
                       <StatusBadge label={jobStatusLabel(job.status)} tone={statusTone(job.status)} />
-                      <StatusBadge label={membershipCoveredLabel(job) ?? job.paymentStatus} tone={statusTone(job.paymentStatus)} />
+                      <StatusBadge label={job.paymentStatus} tone={statusTone(job.paymentStatus)} />
                       {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
                     </View>
                   </View>

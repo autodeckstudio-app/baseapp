@@ -68,8 +68,6 @@ export const COLLECTIONS = {
   // across webhook event types, duplicate deliveries, or code paths.
   paymentRefunds: () => "paymentRefunds",
   paymentEvents: () => "paymentEvents",
-  // refundRequests/{requestId} — booking refund outbox: reservation -> provider -> projection
-  refundRequests: () => "refundRequests",
   // shopRateLimits/{hashedKey} — shared abuse-limiter windows (server only)
   shopRateLimits: () => "shopRateLimits",
   // rateLimits/{tenantId__uid__action} — server-only fixed-window abuse counters

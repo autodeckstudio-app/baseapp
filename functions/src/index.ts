@@ -48,8 +48,6 @@ export { initiatePayment } from "./functions/payment/initiatePayment.js";
 export { createCheckoutOrder } from "./functions/payment/createCheckoutOrder.js";
 export { verifyCheckoutPayment } from "./functions/payment/verifyCheckoutPayment.js";
 export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
-export { requestBookingRefund } from "./functions/payment/requestBookingRefund.js";
-export { processRefundOutbox } from "./functions/payment/processRefundOutbox.js";
 export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
 export { confirmManualPayment } from "./functions/payment/confirmManualPayment.js";
 export { initiateRefund } from "./functions/payment/initiateRefund.js";
