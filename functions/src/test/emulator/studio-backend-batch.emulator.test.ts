@@ -52,11 +52,15 @@ function nextDate(): string {
 
 // Seeds a photo object the way a signed-URL PUT would land it: bytes plus the
 // customerId custom metadata binding that storage.rules scopes reads by.
-async function seedPhotoObject(path: string, customerId: string, contentType = "image/jpeg") {
+async function seedPhotoObjectWithKey(path: string, metadataKey: string, customerId: string, contentType = "image/jpeg") {
   await getStorage()
     .bucket()
     .file(path)
-    .save(Buffer.from("fake-image-bytes"), { metadata: { contentType, metadata: { customerId } } });
+    .save(Buffer.from("fake-image-bytes"), { metadata: { contentType, metadata: { [metadataKey]: customerId } } });
+}
+
+async function seedPhotoObject(path: string, customerId: string, contentType = "image/jpeg") {
+  await seedPhotoObjectWithKey(path, "customerId", customerId, contentType);
 }
 
 function customerAuth(authUid: string, tenantId = TENANT_A) {
@@ -146,6 +150,8 @@ async function freshJob(
   service: Service,
   tenantId = TENANT_A,
   studioId: string = STUDIO_A,
+  scheduledDate?: string,
+  scheduledTime?: string,
 ): Promise<{ booking: Booking; job: ServiceJob; customerId: string }> {
   const customerId = uid("cust");
   const vehicle = await seedVehicle(uid("veh"), tenantId, customerId);
@@ -155,8 +161,12 @@ async function freshJob(
       vehicleId: vehicle.id,
       vehicleCategory: "hatchback",
       studioId,
-      scheduledDate: nextDate(),
-      scheduledTime: "10:00",
+      // Callers may pin an explicit date so they do not consume the shared
+      // nextDate() counter: the booking window refuses >30 days out, and the
+      // cumulative counter sits exactly at that boundary for the last suite
+      // consumer (recordManualPayment in-flight guard).
+      scheduledDate: scheduledDate ?? nextDate(),
+      scheduledTime: scheduledTime ?? "10:00",
       idempotencyKey: uid("idem"),
     },
     auth: customerAuth(customerId, tenantId),
@@ -360,6 +370,41 @@ describe("inspection photos — addPhotos path validation", () => {
     // Nothing was attached by any of the rejected attempts.
     const snap = await db.collection(COLLECTIONS.inspections()).doc(job.id).get();
     expect(snap.data()?.photos).toEqual([]);
+  });
+
+  it("accepts the lowercase customerid key that real signed-URL PUTs land, and still rejects a wrong-customer binding in that casing", async () => {
+    // Pinned date+time: do not consume the shared nextDate() counter (see
+    // freshJob); 17:30 avoids the bay/time slot every counter booking uses.
+    const { job } = await freshJob(service, TENANT_A, STUDIO_A, "2026-11-10", "17:30");
+    const staff = studioAuth(uid("staff"));
+    await startInspection.run({ data: { jobId: job.id }, auth: staff } as never);
+    const base = `${job.tenantId}/jobs/${job.id}/photos`;
+
+    // Production evidence (2026-10-26 live fixture on autodeck-studio): a v4
+    // signed-URL PUT carrying the x-goog-meta-customerId header stores the
+    // metadata key LOWERCASED ("customerid") - the XML API normalizes header
+    // names. The attach-time binding check must accept that casing or every
+    // real browser upload is refused with "not bound to this inspection's
+    // customer".
+    const lower = `${base}/lower.png`;
+    await seedPhotoObjectWithKey(lower, "customerid", job.customerId, "image/png");
+    await updateInspection.run({ data: { jobId: job.id, addPhotos: [lower] }, auth: staff } as never);
+
+    // Same casing, wrong customer: the binding itself is unchanged and still bites.
+    const foreignLower = `${base}/foreign-lower.png`;
+    await seedPhotoObjectWithKey(foreignLower, "customerid", "some-other-customer", "image/png");
+    await expectErr(
+      updateInspection.run({ data: { jobId: job.id, addPhotos: [foreignLower] }, auth: staff } as never),
+      "failed-precondition",
+    );
+
+    // camelCase (SDK / JSON-API writes) keeps working - no regression.
+    const camel = `${base}/camel.png`;
+    await seedPhotoObjectWithKey(camel, "customerId", job.customerId, "image/png");
+    await updateInspection.run({ data: { jobId: job.id, addPhotos: [camel] }, auth: staff } as never);
+
+    const snap = await db.collection(COLLECTIONS.inspections()).doc(job.id).get();
+    expect(snap.data()?.photos).toEqual([lower, camel]);
   });
 
   it("rejects instead of silently truncating when the 20-photo limit would be exceeded", async () => {

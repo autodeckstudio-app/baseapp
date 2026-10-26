@@ -132,6 +132,27 @@ describe("/{tenantId}/jobs/{jobId}/photos/{filename} — owner-scoped read", () 
     const studio = testEnv.authenticatedContext("uid-studio", studioClaims());
     await assertSucceeds(studio.storage().ref(path).getMetadata());
   });
+
+  // Real signed-URL PUTs store the binding key lowercased (GCS XML API
+  // normalizes x-goog-meta-customerId -> customerid; production-observed
+  // 2026-10-26). The rule must honor that casing and the original one.
+  it("owning customer can read when the binding key landed lowercased (customerid)", async () => {
+    await seedObject(path, { customerid: "uid-alice" });
+    const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
+    await assertSucceeds(alice.storage().ref(path).getMetadata());
+  });
+
+  it("a different customer cannot read a lowercased-key photo", async () => {
+    await seedObject(path, { customerid: "uid-alice" });
+    const bob = testEnv.authenticatedContext("uid-bob", customerClaims());
+    await assertFails(bob.storage().ref(path).getMetadata());
+  });
+
+  it("an object with no binding metadata is not customer-readable", async () => {
+    await seedObject(path, {});
+    const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
+    await assertFails(alice.storage().ref(path).getMetadata());
+  });
 });
 
 describe("/{tenantId}/invoices/{invoiceId}/{filename} — owner-scoped read", () => {

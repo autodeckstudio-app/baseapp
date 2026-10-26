@@ -97,7 +97,12 @@ export const updateInspection = onCall({ region: "asia-south1" }, async (request
             .catch(() => {
               throw new HttpsError("not-found", "Photo was not uploaded - PUT the bytes to the issued URL before attaching it.");
             });
-          if (meta.metadata?.["customerId"] !== inspection.customerId) {
+          // GCS lowercases custom-metadata keys stamped via signed-URL PUT
+          // headers (XML API), so the issue-time x-goog-meta-customerId header
+          // lands as "customerid" on the stored object. SDK/JSON-API writes
+          // keep camelCase. Accept both; the binding check itself is unchanged.
+          const boundCustomer = meta.metadata?.["customerid"] ?? meta.metadata?.["customerId"];
+          if (boundCustomer !== inspection.customerId) {
             throw new HttpsError("failed-precondition", "Photo is not bound to this inspection's customer.");
           }
           if (!ALLOWED_PHOTO_TYPES.has(meta.contentType ?? "")) {
