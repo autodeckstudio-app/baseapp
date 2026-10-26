@@ -1,0 +1,1 @@
+[{"origin":["*"],"method":["PUT","GET","HEAD"],"responseHeader":["Content-Type","x-goog-meta-ownerid","x-goog-meta-ownerId","x-goog-meta-customerId","x-goog-if-generation-match"],"maxAgeSeconds":3600}]
