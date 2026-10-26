@@ -214,7 +214,7 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
             const cd = cur.data() as { claimedAt?: string; tenantId?: string };
             if (typeof cd.tenantId === "string") return;
             if ((cd.claimedAt ?? null) !== gen.claimedAt) return;
-            if (gen.seconds != null && (!cur.updateTime || cur.updateTime.seconds !== gen.seconds || cur.updateTime.nanoseconds !== gen.nanos)) return;
+            if ((gen.seconds !== null && gen.seconds !== undefined) && (!cur.updateTime || cur.updateTime.seconds !== gen.seconds || cur.updateTime.nanoseconds !== gen.nanos)) return;
             const fp = freshPay.data() as { tenantId?: string };
             if (typeof fp.tenantId !== "string") return;
             tx.update(doc.ref, { tenantId: fp.tenantId });

@@ -50,7 +50,6 @@ function PaymentsPageContent() {
     setReconciling(false);
     setMessage(null);
     cycle.reset(!!claims);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claims?.tenantId, user?.uid, cycle]);
 
   function handleReconcileClaims() {

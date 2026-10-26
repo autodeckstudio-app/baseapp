@@ -1,3 +1,4 @@
+import type * as RazorpayProviderModule from "../../lib/razorpay-provider.js";
 /**
  * TEST. The actual HTTP entry (razorpayWebhook) against the real Firestore emulator with a REAL RazorpayProvider (signature check on).
  * Only the provider factory is swapped for one with a local test secret; the fixture events are signed locally. No network, no provider config.
@@ -8,7 +9,7 @@ import { getFirestore } from "firebase-admin/firestore";
 
 const SECRET = "whsec_local_test";
 vi.mock("../../lib/razorpay-provider.js", async (orig) => {
-  const m = await orig<typeof import("../../lib/razorpay-provider.js")>();
+  const m = await orig<typeof RazorpayProviderModule>();
   return { ...m, getPaymentProvider: () => new m.RazorpayProvider("rzp_test_x", "k", SECRET) };
 });
 import { razorpayWebhook } from "../../functions/payment/razorpayWebhook.js";

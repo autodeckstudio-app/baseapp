@@ -25,7 +25,7 @@
 //  - Projection verifies linked invoice/job/booking docs fresh inside the
 //    transaction (tenant + linkage). Mismatch = zero financial writes.
 import { HttpsError } from "firebase-functions/v2/https";
-import type { Firestore, QueryDocumentSnapshot } from "firebase-admin/firestore";
+import type { Firestore, QueryDocumentSnapshot, Timestamp, DocumentSnapshot } from "firebase-admin/firestore";
 import type { Payment, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { writeAuditLog } from "../middleware/audit.js";
@@ -86,7 +86,7 @@ export async function projectLegacyRefund(
         // adopts a same-clock recreation: the nonce must match too.
         (i.claim.claimToken !== undefined &&
           (cur as { claimToken?: string }).claimToken !== i.claim.claimToken) ||
-        (i.claim.updateTimeSeconds != null &&
+        ((i.claim.updateTimeSeconds !== null && i.claim.updateTimeSeconds !== undefined) &&
           (!claimSnap.updateTime ||
             claimSnap.updateTime.seconds !== i.claim.updateTimeSeconds ||
             claimSnap.updateTime.nanoseconds !== i.claim.updateTimeNanoseconds));
@@ -217,9 +217,9 @@ export type LegacyClaimOutcome =
  * updateTime (seconds+nanos, never millis). A released-then-recreated claim
  * has a new updateTime even when claimedAt repeats, so stale work can
  * neither delete nor annotate it. */
-type ClaimToken = { claimedAt: string | null; updateTime: import("firebase-admin/firestore").Timestamp | null };
+type ClaimToken = { claimedAt: string | null; updateTime: Timestamp | null };
 
-function tokenMatches(snap: import("firebase-admin/firestore").DocumentSnapshot, token: ClaimToken): boolean {
+function tokenMatches(snap: DocumentSnapshot, token: ClaimToken): boolean {
   if (!snap.exists) return false;
   const cur = snap.data() as { claimedAt?: string };
   if ((cur.claimedAt ?? null) !== token.claimedAt) return false;

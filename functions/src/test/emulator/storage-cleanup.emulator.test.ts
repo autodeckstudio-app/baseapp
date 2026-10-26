@@ -1,3 +1,4 @@
+import type { getStorage } from "firebase-admin/storage";
 /**
  * Round 7 photo handling against the REAL local Firestore + Storage emulators (success path). Failure paths are unit-tested with mocks.
  * Proves objects are actually removed from Storage, only the intended one, and records match. Fixtures only, emulator only.
@@ -10,7 +11,7 @@ let n = 0;
 const uid = (p: string) => `${p}-${Date.now()}-${++n}`;
 const auth = (u: string) => ({ uid: u, token: { role: "customer", tenantId: TENANT, studioId: null } });
 let db: FirebaseFirestore.Firestore;
-let bucket: ReturnType<ReturnType<typeof import("firebase-admin/storage").getStorage>["bucket"]>;
+let bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>;
 let fns: { deleteMyPaper: any; updateMyPaper: any; removeMyVehicleImage: any; removeMyListingPhoto: any; replaceMyListingPhoto: any };
 const put = (p: string) => bucket.file(p).save(Buffer.from("x"), { contentType: "image/jpeg" });
 const has = async (p: string) => (await bucket.file(p).exists())[0];

@@ -34,7 +34,8 @@ export function bookingCode(bookingId: string): string {
 export function parseBookingCode(input: string): string | null {
   const t = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const m = /^AD([2-9A-HJKMN-Z]{8})$/.exec(t);
-  return m ? `AD-${m[1]!.slice(0, 4)}-${m[1]!.slice(4)}` : null;
+  const body = m?.[1];
+  return body ? `AD-${body.slice(0, 4)}-${body.slice(4)}` : null;
 }
 
 /** Every booking with this code. More than one means the code is ambiguous: show all and make the person confirm with the name or plate. */

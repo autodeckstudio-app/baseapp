@@ -420,7 +420,7 @@ export function RefundWorkPanel(p: {
             <div key={r.id} className="ax-rw-row">
               <span>
                 <StatusBadge label={REFUND_STATUS_LABEL[r.status] ?? r.status} />{" "}
-                <strong>{r.amountPaise != null ? formatPaise(r.amountPaise) : "-"}</strong>{" "}
+                <strong>{(r.amountPaise !== null && r.amountPaise !== undefined) ? formatPaise(r.amountPaise) : "-"}</strong>{" "}
                 <span className="ax-muted">{r.updatedAt ? formatDateTime(r.updatedAt) : ""}</span>
                 {r.lastError && <span className="ax-muted"> - {r.lastError}</span>}
               </span>
@@ -462,7 +462,7 @@ export function RefundWorkPanel(p: {
             <div key={c.paymentId} className="ax-rw-row">
               <span>
                 <StatusBadge label={c.reconcileState === "held" ? "held" : "retained"} />{" "}
-                <strong>{c.amount != null ? formatPaise(c.amount) : "-"}</strong>{" "}
+                <strong>{(c.amount !== null && c.amount !== undefined) ? formatPaise(c.amount) : "-"}</strong>{" "}
                 <span className="ax-muted">
                   claimed {c.claimedAt ? formatDateTime(c.claimedAt) : "earlier"} - payment {c.paymentStatus ?? "unknown"}
                 </span>
@@ -479,9 +479,9 @@ export function RefundWorkPanel(p: {
           {reviewPayments.map((x) => (
             <div key={x.id} className="ax-rw-row">
               <span>
-                <strong>{x.refundAmount != null ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
+                <strong>{(x.refundAmount !== null && x.refundAmount !== undefined) ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
                 <span className="ax-muted">
-                  refunded{x.refundAmount != null && x.amount != null && x.refundAmount !== x.amount ? ` of ${formatPaise(x.amount)} captured` : ""}
+                  refunded{(x.refundAmount !== null && x.refundAmount !== undefined) && (x.amount !== null && x.amount !== undefined) && x.refundAmount !== x.amount ? ` of ${formatPaise(x.amount)} captured` : ""}
                   {x.customerId ? ` - ${p.names?.[x.customerId] ?? "Customer"}` : ""}; the linked invoice needs review
                 </span>
               </span>

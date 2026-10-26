@@ -237,7 +237,7 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
           if (cur.claimToken !== claimNonce) return;
           if ((cur.claimedAt ?? null) !== now) return;
           if (cur.reconcileState === "resolved") return;
-          if (claimToken.updateTimeSeconds != null &&
+          if ((claimToken.updateTimeSeconds !== null && claimToken.updateTimeSeconds !== undefined) &&
             (!snap.updateTime || snap.updateTime.seconds !== claimToken.updateTimeSeconds || snap.updateTime.nanoseconds !== claimToken.updateTimeNanoseconds)) return;
           // Fresh payment binding: the record the provider inputs came from
           // must still be the record this claim covers.

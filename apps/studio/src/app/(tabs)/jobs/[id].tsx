@@ -180,14 +180,14 @@ export default function JobDetailScreen() {
     void (async () => {
       const bookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
       if (!bookingSnap.exists()) return;
-      const booking = bookingSnap.data() as Booking;
-      if (!booking.membershipId) return;
-      const membership = await getCustomerMembership(job.customerId, booking.membershipId);
+      const membershipBooking = bookingSnap.data() as Booking;
+      if (!membershipBooking.membershipId) return;
+      const membership = await getCustomerMembership(job.customerId, membershipBooking.membershipId);
       if (membership) {
         setBookingMembership({
           membership,
-          washUsed: booking.membershipWashUsed,
-          discountApplied: booking.membershipDiscountApplied,
+          washUsed: membershipBooking.membershipWashUsed,
+          discountApplied: membershipBooking.membershipDiscountApplied,
         });
       }
     })();
