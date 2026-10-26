@@ -22,12 +22,14 @@ describe("backend features enabled with their backend release; UPI stays held", 
     const f = await import("./backend-features");
     expect(f.INSPECTION_PHOTOS_ENABLED).toBe(true);
     expect(f.ADMIN_APPROVAL_ENABLED).toBe(true);
+    expect(f.PICKUP_LEG_PROGRESS_ENABLED).toBe(true);
     expect(f.UPI_RECORD_ENABLED).toBe(false);
   });
   it("the screens are gated on those flags", () => {
     expect(src("../app/(tabs)/jobs/inspection/[jobId].tsx")).toContain("INSPECTION_PHOTOS_ENABLED && jobId");
     expect(src("../app/(tabs)/jobs/[id].tsx")).toContain("ADMIN_APPROVAL_ENABLED && job");
     expect(src("../app/(tabs)/jobs/[id].tsx")).toContain("UPI_RECORD_ENABLED && cashConfirm === \"record\"");
+    expect(src("../app/(tabs)/pickups.tsx")).toContain("PICKUP_LEG_PROGRESS_ENABLED && confirmed");
   });
 });
 
