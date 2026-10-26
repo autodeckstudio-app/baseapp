@@ -1,0 +1,123 @@
+/* Admin layout polish (26 Oct 2026). Loaded last. Spacing, field and row fixes only:
+   no colour, nav or flow changes. Hero pages (Today) keep their own heading scale. */
+
+/* ---- page heading and KPI tiles: calmer scale, one rhythm ---- */
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin: 0 0 16px !important; }
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head h1 { font-size: clamp(30px, 3.4vw, 42px) !important; line-height: 1.08 !important; letter-spacing: -1px !important; font-weight: 500 !important; }
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head .ax-label { margin: 0 0 4px; }
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis { display: flex !important; flex-wrap: wrap; gap: 10px; align-self: flex-end; margin-left: auto; }
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis > * { flex: 0 0 auto !important; min-width: 96px; padding: 10px 16px !important; border-radius: 16px !important; gap: 2px; }
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis .ax-kpi-v { font-size: 24px !important; line-height: 28px !important; }
+html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis .ax-label { font-size: 10.5px; letter-spacing: .8px; white-space: nowrap; }
+
+/* ---- fields: readable text, clear edge, nothing wider than its card ---- */
+html:root:root .ax-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+html:root:root .ax-shell select, html:root:root .ax-shell textarea {
+  background: #F3F0EB !important; box-shadow: inset 0 0 0 1px rgba(27,26,25,.10) !important;
+  color: var(--gl-text); font-size: 14px; max-width: 100%; min-width: 0; box-sizing: border-box;
+}
+html:root:root .ax-shell input:focus-visible, html:root:root .ax-shell select:focus-visible, html:root:root .ax-shell textarea:focus-visible { box-shadow: inset 0 0 0 1.5px #E8742A !important; outline: none; }
+html:root:root .ax-shell input::placeholder, html:root:root .ax-shell textarea::placeholder { color: #6E6860 !important; opacity: 1 !important; }
+html:root:root .ax-shell input:disabled, html:root:root .ax-shell select:disabled { color: #6E6860; }
+/* date and time fields: same height, text vertically centred (Safari/iPad put it at the top) */
+html:root:root .ax-shell input[type="date"], html:root:root .ax-shell input[type="time"], html:root:root .ax-shell input[type="datetime-local"] {
+  -webkit-appearance: none; appearance: none; display: flex !important; align-items: center; text-align: left; width: 100%; padding-top: 0; padding-bottom: 0; line-height: 1.2;
+}
+html:root:root .ax-shell input[type="date"]::-webkit-date-and-time-value, html:root:root .ax-shell input[type="time"]::-webkit-date-and-time-value, html:root:root .ax-shell input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 1.2em; }
+html:root:root .ax-shell input[type="date"]::-webkit-datetime-edit, html:root:root .ax-shell input[type="time"]::-webkit-datetime-edit, html:root:root .ax-shell input[type="datetime-local"]::-webkit-datetime-edit { padding: 0; }
+html:root:root .ax-shell .ax-toolbar > input[type="date"] { width: auto !important; min-width: 150px; }
+html:root:root .ax-shell .ax-toolbar .ax-search { flex: 1 1 220px; min-width: 180px; }
+
+/* ---- list rows: flat divided rows inside the card, no grey buttons with notched corners ---- */
+html:root:root .ax-shell .ax-list-row, html:root:root .ax-shell button.ax-list-row {
+  background: transparent !important; border: 0 !important; border-bottom: 1px solid var(--gl-divider) !important; border-radius: 0 !important; box-shadow: none !important; min-height: 52px; color: var(--gl-text) !important;
+}
+html:root:root .ax-shell .ax-list-row:last-child { border-bottom: 0 !important; }
+html:root:root .ax-shell .ax-list-row.is-link:hover:not(:disabled) { background: rgba(27,26,25,.035) !important; }
+html:root:root .ax-shell .ax-list-head, html:root:root .ax-shell .ax-list-row { column-gap: 12px; padding-left: 16px; padding-right: 16px; }
+html:root:root .ax-shell .ax-list-head span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html:root:root .ax-shell .ax-list .ax-row-actions button { min-height: 32px; padding: 0 14px; }
+
+/* ---- nested rows inside cards are rows, not cards ---- */
+html:root:root .ax-shell .ax-panel .ax-paper-row, html:root:root .ax-shell .ax-panel .ax-paper {
+  background: transparent !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border-radius: 0 !important;
+  margin: 0 !important; padding: 14px 0 !important; border-bottom: 1px solid var(--gl-divider) !important; gap: 12px 16px;
+}
+html:root:root .ax-shell .ax-panel .ax-paper-row:last-child, html:root:root .ax-shell .ax-panel .ax-paper:last-child { border-bottom: 0 !important; }
+html:root:root .ax-shell .ax-papers { display: block; }
+
+/* ---- card padding: one inset ---- */
+html:root:root .ax-shell .ax-panel { padding: 20px; }
+html:root:root .ax-shell .ax-toolbar { margin-bottom: 14px; gap: 10px 12px; }
+html:root:root .ax-shell .ax-note { margin: 0 0 16px; }
+
+/* ---- Studio setup: opening hours fit their card ---- */
+html:root:root .ax-shell .ax-hours li { grid-template-columns: 104px minmax(0, 1fr); gap: 2px 10px; }
+@media (min-width: 701px) {
+  html:root:root .ax-shell .ax-hours li > .ax-hours-day { grid-column: 1; grid-row: 1; align-self: end; }
+  html:root:root .ax-shell .ax-hours li > .ax-switch { grid-column: 1; grid-row: 2; align-self: start; }
+  html:root:root .ax-shell .ax-hours li > :nth-child(3) { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}
+@media (max-width: 860px) {
+  html:root:root .ax-shell .ax-person { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  html:root:root .ax-shell .ax-person > .ax-person-main { flex: 1 1 100%; min-width: 0; }
+  html:root:root .ax-shell .ax-person > select { flex: 1 1 120px; min-width: 0; }
+  html:root:root .ax-shell .ax-person > .ax-row-actions { flex: 0 0 auto; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head { flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; text-align: left; gap: 12px; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head > div:first-child { flex: 0 0 auto; width: 100%; text-align: left; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head > .ax-kpis { flex: 0 0 auto; width: 100%; margin: 0; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head > :not(div):not(.ax-kpis) { align-self: flex-start; }
+}
+@media (max-width: 700px) {
+  html:root:root .ax-shell .ax-form-pair { grid-template-columns: minmax(0, 1fr); } html:root:root .ax-shell .ax-hours li { grid-template-columns: 1fr 1fr; } html:root:root .ax-shell .ax-hours li > :nth-child(3) { grid-column: 1 / -1; } }
+html:root:root .ax-shell .ax-hours-times { min-width: 0; flex-wrap: wrap; }
+html:root:root .ax-shell .ax-hours-times input[type="time"] { flex: 1 1 124px; width: auto; min-width: 124px; max-width: 170px; padding-left: 10px; padding-right: 6px; font-size: 14px; }
+html:root:root .ax-shell .ax-hours-times input[type="time"]::-webkit-calendar-picker-indicator { margin: 0 0 0 2px; padding: 0; }
+html:root:root .ax-shell .ax-hours-times .ax-muted, html:root:root .ax-shell .ax-hours-times > span { flex: 0 0 auto; }
+
+/* ---- Pickup and drop: cards use the room, fields never leave the card ---- */
+html:root:root .ax-pu .ax-toolbar { align-items: flex-start; }
+html:root:root .ax-pu .ax-pu-policy { flex: 1 1 100%; max-width: 70ch; }
+html:root:root .ax-pu-card { padding: 18px 20px; gap: 12px; }
+html:root:root .ax-pu-form label, html:root:root .ax-pu-times label { min-width: 0; display: grid; gap: 6px; font-size: 12px; color: var(--ad-text-secondary); }
+html:root:root .ax-pu-form input, html:root:root .ax-pu-times input, html:root:root .ax-pu-note { width: 100% !important; max-width: 100%; min-width: 0; box-sizing: border-box; }
+html:root:root .ax-pu-foot { margin-top: auto; padding-top: 4px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* ---- Refund work panel: one compact, collapsible bar inside the page rhythm ---- */
+html:root:root .ax-shell .ax-rw { padding: 0; margin: 0 0 16px; }
+html:root:root .ax-shell .ax-rw-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 14px 20px; cursor: pointer; list-style: none; }
+html:root:root .ax-shell .ax-rw-sum::-webkit-details-marker { display: none; }
+html:root:root .ax-shell .ax-rw-sum::after { content: "Show"; margin-left: auto; font-size: 12px; color: var(--ad-text-secondary); }
+html:root:root .ax-shell .ax-rw[open] > .ax-rw-sum::after { content: "Hide"; }
+html:root:root .ax-shell .ax-rw .ax-title { margin: 0; font-size: 15px; }
+html:root:root .ax-shell .ax-rw > :not(summary) { margin-left: 20px; margin-right: 20px; }
+html:root:root .ax-shell .ax-rw > :last-child { margin-bottom: 16px; }
+html:root:root .ax-shell .ax-rw-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding-top: 12px; border-top: 1px solid var(--gl-divider); }
+html:root:root .ax-shell .ax-rw-act { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+html:root:root .ax-shell .ax-rw-sec { margin-top: 14px; }
+html:root:root .ax-shell .ax-rw-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 10px 0; border-top: 1px solid var(--gl-divider); font-size: 13px; }
+html:root:root .ax-shell .ax-rw .ax-muted { font-size: 13px; }
+
+/* ---- a list inside a card is a plain list, not a second card ---- */
+html:root:root .ax-shell .ax-panel > ul.ax-list {
+  background: transparent !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border-radius: 0 !important; padding: 0 !important; margin: 12px 0 0 !important; list-style: none; overflow: visible;
+}
+html:root:root .ax-shell .ax-paper-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+html:root:root .ax-shell .ax-paper-row .ax-row-actions { flex-wrap: nowrap; }
+html:root:root .ax-shell .ax-list .ax-row-actions button, html:root:root .ax-shell .ax-list .ax-row-actions .ax-button { padding: 0 12px; }
+
+/* ---- phones ---- */
+@media (max-width: 700px) {
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-page-head h1 { font-size: 30px !important; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis { width: 100%; margin-left: 0; display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; grid-auto-flow: row !important; grid-auto-columns: auto !important; gap: 8px; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis > * { min-width: 0; padding: 8px 12px !important; border-left: 0 !important; flex: none !important; }
+  html:root:root .ax-shell-frame:not([data-hero="on"]) .ax-kpis .ax-label { white-space: normal; font-size: 9.5px; letter-spacing: .4px; }
+  html:root:root .ax-shell .ax-seg { flex-wrap: wrap; max-width: 100%; }
+  html:root:root .ax-shell .ax-panel { padding: 16px; }
+  html:root:root .ax-shell [role="list"][aria-label="Story circles"] { flex-wrap: wrap !important; overflow: visible !important; row-gap: 12px; }
+}
+
+/* ---- File pickers: same field look as every other input, with a pill button ---- */
+html:root:root .ax-shell input[type="file"] { width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 10px; font-size: 14px; color: var(--ad-text-secondary, #6b6b6b); }
+html:root:root .ax-shell input[type="file"]::file-selector-button { margin-right: 12px; min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, .08); color: inherit; font: inherit; font-weight: 600; cursor: pointer; }

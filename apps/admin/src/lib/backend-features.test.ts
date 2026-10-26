@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { NO_SHOW_REVIEW_ENABLED, MEMBERSHIP_SETTLEMENT_ENABLED, ACCOUNTANT_MONEY_ENABLED } from "./backend-features";
+import { NO_SHOW_REVIEW_ENABLED, MEMBERSHIP_SETTLEMENT_ENABLED, ACCOUNTANT_MONEY_ENABLED, ADMIN_APPROVAL_REVIEW_ENABLED } from "./backend-features";
 const src = (f: string) => readFileSync(join(__dirname, f), "utf8");
 describe("backend availability gates (admin)", () => {
-  it("flags stay false until their callables deploy", () => {
+  it("membership and office approval review flags are enabled; other gates stay false until their callables deploy", () => {
     expect(NO_SHOW_REVIEW_ENABLED).toBe(false);
-    expect(MEMBERSHIP_SETTLEMENT_ENABLED).toBe(false);
+    expect(MEMBERSHIP_SETTLEMENT_ENABLED).toBe(true);
     expect(ACCOUNTANT_MONEY_ENABLED).toBe(false);
+    expect(ADMIN_APPROVAL_REVIEW_ENABLED).toBe(true);
   });
   it("the no-show review panel cannot render while its callables are absent", () => {
     const panels = src("../components/BookingPanels.tsx");

@@ -103,3 +103,8 @@ export async function reconcileRefundClaims(): Promise<ReconcileRefundClaimsOutp
   const result = await fn({});
   return result.data;
 }
+
+/** Refund write actions (outbox run, claim reconciliation) are gated
+ * server-side: both callables execute against the live provider adapter.
+ * Controls stay explicit admin actions (click to run), never automatic. */
+export const refundActionsEnabled = true;

@@ -22,6 +22,9 @@ export interface PickupRequestRow {
   /** True once the fee is on the visit's bill. False after approval means the visit was already invoiced or paid. */
   feeBilled?: boolean;
   distanceKm?: number | null;
+  /** ISO time the studio recorded each leg as done. Absent on older requests. Read-only here. */
+  pickupCompletedAt?: string | null;
+  dropCompletedAt?: string | null;
   createdAt: string;
 }
 

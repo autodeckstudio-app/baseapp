@@ -4,6 +4,8 @@
 // resolveNoShow / previewNoShowResolution / getNoShowResolution / recordNoShowContact
 export const NO_SHOW_REVIEW_ENABLED = false;
 // settleMembershipCoveredJob
-export const MEMBERSHIP_SETTLEMENT_ENABLED = false;
+export const MEMBERSHIP_SETTLEMENT_ENABLED = true;
 // getAccountantMoney
 export const ACCOUNTANT_MONEY_ENABLED = false;
+// requestAdminApproval / respondToAdminApproval / adminApprovalRequests (staff ask, office decides). Provisional contract, not deployed.
+export const ADMIN_APPROVAL_REVIEW_ENABLED = true;

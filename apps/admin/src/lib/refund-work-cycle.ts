@@ -31,37 +31,68 @@ export type RefundWorkCycle = ReturnType<typeof createRefundWorkCycle>;
  * the cycle, so a delayed response from a previous identity can never
  * repopulate the new identity's rows, surface its error, or move its spinner.
  * A fresh identity's first refresh sends an empty known-id set: no stale ids
- * from the previous cycle reach the server. */
+ * from the previous cycle reach the server.
+ *
+ * Ordering WITHIN one identity: every refresh takes an operation number and
+ * only the latest operation may land. An older response that arrives after a
+ * newer one is dropped wholesale, so out-of-order completions can never
+ * resurrect rows the newer truth already resolved, and a stale completion
+ * never clears the spinner a newer request still owns.
+ *
+ * dispose() invalidates every pending operation and detaches listeners:
+ * after unmount, no late response can touch state or notify anyone. */
 export function createRefundWorkCycle(list: (knownIds: string[]) => Promise<RefundWork>) {
   let generation = 0;
   let accum: Map<string, LegacyRefundClaim> = new Map();
   let work: RefundWork | null = null;
   let loading = false;
   let error: string | null = null;
+  let tail: Promise<unknown> = Promise.resolve();
+  let inFlight = 0;
   const listeners = new Set<() => void>();
   const emit = () => { for (const l of listeners) l(); };
 
-  async function refresh(knownIds?: string[]) {
+  /** SERIALIZED scan queue: listRefundWork advances persisted backend cursors,
+   * so two competing calls would consume DISTINCT pages - discarding either
+   * response would lose rows forever. Refreshes therefore chain: at most one
+   * call is in flight, every issued call lands (unless its identity is gone),
+   * and each call sends the known-id set as of ITS OWN start, not the caller's
+   * enqueue time. */
+  function refresh(knownIds?: string[]): Promise<void> {
     const gen = generation;
+    inFlight += 1;
     loading = true;
     emit();
-    try {
-      const w = await list(knownIds ?? [...accum.keys()]);
-      if (gen !== generation) return; // stale identity response: drop silently
-      work = w;
-      accum = mergeWorkIntoAccum(accum, w);
-      error = null;
-    } catch (err) {
-      if (gen !== generation) return; // stale identity error must not surface
-      error = err instanceof Error ? err.message : "Refund work unavailable.";
-    } finally {
-      if (gen === generation) { loading = false; emit(); }
-    }
+    const run = tail.then(async () => {
+      if (gen !== generation) return; // stale identity: consume nothing, apply nothing
+      try {
+        const w = await list(knownIds ?? [...accum.keys()]);
+        if (gen !== generation) return; // identity changed mid-flight: drop silently
+        work = w;
+        accum = mergeWorkIntoAccum(accum, w);
+        error = null;
+        emit();
+      } catch (err) {
+        if (gen !== generation) return; // stale error must not surface
+        error = err instanceof Error ? err.message : "Refund work unavailable.";
+        emit();
+      }
+    });
+    tail = run.catch(() => undefined);
+    return run.finally(() => {
+      inFlight -= 1;
+      // The spinner belongs to the live identity's queue as a whole.
+      if (inFlight === 0 && gen === generation) { loading = false; emit(); }
+    });
   }
 
   return {
     subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; },
     getState(): RefundWorkCycleState { return { accum, work, loading, error }; },
+    /** Current identity generation. Async actions (outbox run, reconcile)
+     * capture this before awaiting and must no-op - no message, no spinner,
+     * no refresh - whenever it has changed by the time they settle. */
+    generation(): number { return generation; },
     reset(signedIn: boolean) {
       generation += 1;
       accum = new Map();
@@ -72,5 +103,15 @@ export function createRefundWorkCycle(list: (knownIds: string[]) => Promise<Refu
       if (signedIn) void refresh([]);
     },
     refresh,
+    /** Unmount/dispose: every pending or queued response becomes a no-op and
+     * no listener is ever notified again. */
+    dispose() {
+      generation += 1;
+      accum = new Map();
+      work = null;
+      error = null;
+      loading = false;
+      listeners.clear();
+    },
   };
 }

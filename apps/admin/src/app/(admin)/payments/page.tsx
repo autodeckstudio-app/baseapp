@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -9,10 +9,11 @@ import { listenToPayments, refundPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
 import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
-import { listRefundWork, runRefundOutbox, reconcileRefundClaims } from "../../../lib/refund-work-service";
+import { listRefundWork, runRefundOutbox, reconcileRefundClaims, refundActionsEnabled } from "../../../lib/refund-work-service";
+import { runRefundAction } from "../../../lib/refund-work-actions";
 import { createRefundWorkCycle, type RefundWorkCycle } from "../../../lib/refund-work-cycle";
 
-export default function PaymentsPage() {
+function PaymentsPageContent() {
   const { claims, user } = useAdminAuth();
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -41,37 +42,40 @@ export default function PaymentsPage() {
   const [reconciling, setReconciling] = useState(false);
 
   useEffect(() => {
+    // Identity change resets the cycle AND the action surface: a stale
+    // action's callbacks are generation-guarded no-ops, so without this
+    // reset the new identity would inherit a stuck Running/Reconciling
+    // spinner and the previous identity's result message.
+    setRunningOutbox(false);
+    setReconciling(false);
+    setMessage(null);
     cycle.reset(!!claims);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claims?.tenantId, user?.uid, cycle]);
 
-  async function handleReconcileClaims() {
-    setReconciling(true);
-    setMessage(null);
-    try {
-      const r = await reconcileRefundClaims();
-      setMessage(`Claim reconciliation: ${r.projected + r.converged + r.alreadyAccounted} accounted (${r.alreadyAccounted} already recorded), ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - continue the scan)"}.`);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Claim reconciliation failed.");
-    } finally {
-      setReconciling(false);
-      void cycle.refresh();
-    }
+  function handleReconcileClaims() {
+    void runRefundAction(
+      cycle,
+      reconcileRefundClaims,
+      (r) => `Claim reconciliation: ${r.projected + r.converged + r.alreadyAccounted} accounted (${r.alreadyAccounted} already recorded), ${r.released} released, ${r.held} held for review${r.exhausted ? "" : " (more records to scan - continue the scan)"}.`,
+      "Claim reconciliation failed.",
+      { setBusy: setReconciling, setMessage },
+    );
   }
 
-  async function handleRunOutbox() {
-    setRunningOutbox(true);
-    setMessage(null);
-    try {
-      const r = await runRefundOutbox();
-      setMessage(`Outbox run: ${r.submitted} sent to provider, ${r.projected} completed, ${r.failed} held for review.`);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Outbox run failed.");
-    } finally {
-      setRunningOutbox(false);
-      void cycle.refresh();
-    }
+  function handleRunOutbox() {
+    void runRefundAction(
+      cycle,
+      runRefundOutbox,
+      (r) => `Outbox run: ${r.submitted} sent to provider, ${r.projected} completed, ${r.failed} held for review.`,
+      "Outbox run failed.",
+      { setBusy: setRunningOutbox, setMessage },
+    );
   }
+
+  // Unmount: pending list/action callbacks become no-ops, nothing setStates
+  // into a dead view.
+  useEffect(() => () => cycle.dispose(), [cycle]);
 
   useEffect(() => {
     if (!claims) return undefined;
@@ -116,6 +120,7 @@ export default function PaymentsPage() {
       error={refundWorkError}
       running={runningOutbox}
       reconciling={reconciling}
+      actionsEnabled={refundActionsEnabled}
       onReconcile={() => void handleReconcileClaims()}
       onContinueScan={() => void cycle.refresh()}
       names={names}
@@ -139,5 +144,15 @@ export default function PaymentsPage() {
       today={studioToday()}
     />
     </>
+  );
+}
+
+/** useSearchParams requires a Suspense boundary for static prerendering in
+ * production builds (Next 15 CSR-bailout rule). */
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<p className="ax-muted">Loading payments...</p>}>
+      <PaymentsPageContent />
+    </Suspense>
   );
 }

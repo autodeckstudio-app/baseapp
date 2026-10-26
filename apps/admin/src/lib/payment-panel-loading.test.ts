@@ -3,7 +3,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-const pages = ["jobs", "bookings"].map((d) => [d, readFileSync(join(__dirname, `../app/(admin)/${d}/[id]/page.tsx`), "utf8")] as const);
+const pages: ReadonlyArray<readonly [string, string]> = [
+  // The jobs payment panel lives in the JobPaymentPanel component; the loading-state
+  // useState stays in the page. Guard both together.
+  ["jobs", readFileSync(join(__dirname, "../app/(admin)/jobs/[id]/page.tsx"), "utf8") + readFileSync(join(__dirname, "../components/JobPaymentPanel.tsx"), "utf8")],
+  ["bookings", readFileSync(join(__dirname, "../app/(admin)/bookings/[id]/page.tsx"), "utf8")],
+];
 describe("payment panel loading state", () => {
   for (const [name, src] of pages) {
     it(`${name} page: payment starts undefined and shows Loading before any "No payment" text`, () => {

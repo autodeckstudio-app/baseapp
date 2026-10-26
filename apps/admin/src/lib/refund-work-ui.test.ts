@@ -59,11 +59,30 @@ describe("admin refund recovery surface", () => {
     // claim row payment link lands on the filtered record
     expect(page).toContain("useSearchParams");
     expect(page).toContain('searchParams.get("search")');
+    // Next 15 production build: useSearchParams under a Suspense boundary
+    expect(page).toContain("<Suspense");
     // truthful accounted count includes already-accounted
     expect(page).toContain("already recorded");
   });
   it("is mounted on the payments page and refreshes after a run", () => {
     expect(page).toContain("<RefundWorkPanel");
     expect(page).toContain("cycle.refresh");
+  });
+  it("binds actions to the identity generation and offers truthful disabled controls where the backend refuses", () => {
+    // both actions run through the identity-bound runner
+    expect(page).toContain("runRefundAction");
+    // identity change resets the action surface (no stuck spinner/message)
+    expect(page).toContain("setRunningOutbox(false);");
+    expect(page).toContain("setReconciling(false);");
+    // unmount disposes the cycle so no late callback lands
+    expect(page).toContain("cycle.dispose()");
+    // production truth post-activation: actions enabled, backend executes
+    // against the live provider adapter; panel keeps its prop-driven
+    // disabled-reason rendering for any future gate
+    expect(service).toContain("refundActionsEnabled = true");
+    expect(service).not.toContain("failed-precondition");
+    expect(panel).toContain("actionsEnabled");
+    expect(panel).toContain("Not yet activated in production - held for activation review");
+    expect(panel).toContain("!p.actionsEnabled");
   });
 });
