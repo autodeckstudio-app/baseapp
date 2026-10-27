@@ -6,6 +6,8 @@
 //  3. Stamp again for anything created in the gap (needs the tombstone snapshot).
 // No cascade: bookings, jobs, invoices, payments, approvals, warranties and inspections
 // are never deleted or rewritten except for the added snapshot field. No bulk deletes.
+// The only Storage cleanup is deleteVehiclePhotos below, run by the caller after a
+// successful delete: the car's own cover/RC pictures only, never inspection or papers.
 import type { Firestore, QueryDocumentSnapshot, Transaction } from "firebase-admin/firestore";
 import type { Booking, DeletedVehicle, ServiceJob, Vehicle, VehicleSnapshot } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -160,4 +162,59 @@ export async function permanentlyDeleteVehicle(
   stamped.jobs += late.jobs;
   stamped.invoices += late.invoices;
   return { vehicleId, deleted: true, alreadyDeleted: false, stamped };
+}
+
+// ─── Photo cleanup after permanent deletion ─────────────────────────────────
+// Owner policy (28 Oct 2026): when a car is permanently deleted, delete its
+// pictures; pictures clicked in an inspection stay with the inspection record.
+// Inspection/job photos live under {tenantId}/jobs/{jobId}/photos/ - a
+// different prefix this function never touches. Here we remove ONLY the car's
+// own picture objects: cover.* and rc.* directly under
+// {tenantId}/vehicles/{vehicleId}/. paper-* documents are records, not
+// pictures, and are kept. Anything nested deeper is left alone.
+// Runs after the Firestore delete commits, never before, so a refused delete
+// (open booking/job) can never strand a car without its pictures. Idempotent:
+// ignoreNotFound plus exact-name matching make a retry a no-op, and the
+// alreadyDeleted retry path in permanentlyDeleteVehicle re-runs this sweep.
+
+export interface DeletableStorageFile {
+  name: string;
+  delete(options: { ignoreNotFound: boolean }): Promise<unknown>;
+}
+
+export interface VehiclePhotoBucketLike {
+  getFiles(options: { prefix: string }): Promise<[DeletableStorageFile[], ...unknown[]]>;
+}
+
+export interface VehiclePhotoCleanupResult {
+  deleted: number;
+  failed: boolean;
+}
+
+export function isVehiclePictureObject(folderPrefix: string, name: string): boolean {
+  if (!name.startsWith(folderPrefix)) return false;
+  const rest = name.slice(folderPrefix.length);
+  if (rest.includes("/")) return false; // never reach into nested paths
+  return rest.startsWith("cover.") || rest.startsWith("rc.");
+}
+
+export async function deleteVehiclePhotos(
+  bucket: VehiclePhotoBucketLike,
+  tenantId: string,
+  vehicleId: string,
+): Promise<VehiclePhotoCleanupResult> {
+  const folder = `${tenantId}/vehicles/${vehicleId}/`;
+  const [files] = await bucket.getFiles({ prefix: folder });
+  const targets = files.filter((f) => isVehiclePictureObject(folder, f.name));
+  let deleted = 0;
+  let failed = false;
+  for (const f of targets) {
+    try {
+      await f.delete({ ignoreNotFound: true });
+      deleted += 1;
+    } catch {
+      failed = true; // one bad object must not block the rest; the retry path re-sweeps
+    }
+  }
+  return { deleted, failed };
 }

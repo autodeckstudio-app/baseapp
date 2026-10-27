@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { permanentlyDeleteVehicle, VehicleDeleteError } from "../../lib/vehicle-delete.js";
+import { permanentlyDeleteVehicle, deleteVehiclePhotos, isVehiclePictureObject, VehicleDeleteError } from "../../lib/vehicle-delete.js";
 import { buildNotification } from "../../lib/notification-events.js";
 import { fakeFirestore } from "./fake-firestore.js";
 
@@ -109,5 +109,66 @@ describe("bill-ready notification", () => {
     // retried generation yields the same notification doc id
     const again = await buildNotification(db, { action: "invoice.issued", entityId: "inv_j1" } as never);
     expect(again!.dedupeKey).toBe(n!.dedupeKey);
+  });
+});
+
+describe("deleteVehiclePhotos", () => {
+  const fakeBucket = (names: string[], failNames: string[] = []) => {
+    const deleted: string[] = [];
+    const bucket = {
+      getFiles: async ({ prefix }: { prefix: string }) => {
+        const files = names
+          .filter((n) => n.startsWith(prefix))
+          .map((n) => ({
+            name: n,
+            delete: async (_opts: { ignoreNotFound: boolean }) => {
+              if (failNames.includes(n)) throw new Error("storage down");
+              deleted.push(n);
+            },
+          }));
+        return [files] as [unknown];
+      },
+    };
+    return { bucket: bucket as never, deleted };
+  };
+
+  it("matches only cover.* and rc.* directly in the car folder", () => {
+    const folder = "t/vehicles/v1/";
+    expect(isVehiclePictureObject(folder, "t/vehicles/v1/cover.a.jpg")).toBe(true);
+    expect(isVehiclePictureObject(folder, "t/vehicles/v1/rc.b.png")).toBe(true);
+    expect(isVehiclePictureObject(folder, "t/vehicles/v1/paper-p1.jpg")).toBe(false);
+    expect(isVehiclePictureObject(folder, "t/vehicles/v1/nested/cover.c.jpg")).toBe(false);
+    expect(isVehiclePictureObject(folder, "t/vehicles/v2/cover.d.jpg")).toBe(false);
+    expect(isVehiclePictureObject(folder, "t/jobs/j1/photos/e.jpg")).toBe(false);
+  });
+
+  it("deletes cover and RC pictures, keeps papers and every other car and job photo", async () => {
+    const { bucket, deleted } = fakeBucket([
+      "t/vehicles/v1/cover.1.jpg",
+      "t/vehicles/v1/rc.2.jpg",
+      "t/vehicles/v1/paper-p1.jpg",
+      "t/vehicles/v2/cover.3.jpg",
+      "t/jobs/j1/photos/4.jpg",
+    ]);
+    const r = await deleteVehiclePhotos(bucket, "t", "v1");
+    expect(r).toEqual({ deleted: 2, failed: false });
+    expect(deleted.sort()).toEqual(["t/vehicles/v1/cover.1.jpg", "t/vehicles/v1/rc.2.jpg"]);
+  });
+
+  it("is a no-op on retry when the pictures are already gone", async () => {
+    const { bucket, deleted } = fakeBucket(["t/vehicles/v1/paper-p1.jpg"]);
+    const r = await deleteVehiclePhotos(bucket, "t", "v1");
+    expect(r).toEqual({ deleted: 0, failed: false });
+    expect(deleted).toEqual([]);
+  });
+
+  it("keeps sweeping when one object fails and reports the failure", async () => {
+    const { bucket, deleted } = fakeBucket(
+      ["t/vehicles/v1/cover.1.jpg", "t/vehicles/v1/rc.2.jpg"],
+      ["t/vehicles/v1/cover.1.jpg"],
+    );
+    const r = await deleteVehiclePhotos(bucket, "t", "v1");
+    expect(r).toEqual({ deleted: 1, failed: true });
+    expect(deleted).toEqual(["t/vehicles/v1/rc.2.jpg"]);
   });
 });
