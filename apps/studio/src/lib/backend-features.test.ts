@@ -17,13 +17,13 @@ describe("backend availability gates (studio)", () => {
   });
 });
 
-describe("backend features enabled with their backend release; UPI record activation held for authority review", () => {
-  it("photos, admin requests and pickup legs are on; UPI record stays off pending the owner's payment-flow decision, QR display ships separately", async () => {
+describe("backend features enabled with their backend release", () => {
+  it("photos, admin requests, pickup legs and UPI record are on (UPI activated with the owner-approved claim-only backend release), QR display ships separately", async () => {
     const f = await import("./backend-features");
     expect(f.INSPECTION_PHOTOS_ENABLED).toBe(true);
     expect(f.ADMIN_APPROVAL_ENABLED).toBe(true);
     expect(f.PICKUP_LEG_PROGRESS_ENABLED).toBe(true);
-    expect(f.UPI_RECORD_ENABLED).toBe(false);
+    expect(f.UPI_RECORD_ENABLED).toBe(true);
   });
   it("the shared UPI QR block shows the verified merchant QR and payee line", () => {
     const block = src("../components/UpiQr.tsx");

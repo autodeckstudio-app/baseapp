@@ -12,8 +12,8 @@ export const INSPECTION_PHOTOS_ENABLED = true;
 // live via the admin session (request -> approve, idempotent repeat, resolved-finality
 // deny). The studio-role-only studioId scoping branch is emulator-verified only.
 export const ADMIN_APPROVAL_ENABLED = true;
-// Cash or UPI choice on Record payment. recordManualPayment accepts method "upi_manual", and the owner supplied the verified merchant QR on 27 Oct 2026 (decoded pa=9898679711@okbizaxis, pn=Autodeck, no locked amount; cropped copy at assets/brand/upi-qr.png). The QR display ships on its own; THIS flag activates UPI as a recordable payment method on the job sheet and stays false until the owner's final authority review of the payment-recording flow (arrival check + reference + mismatch-to-office, see WRONG_AMOUNT_NOTE) and the backend release are confirmed.
-export const UPI_RECORD_ENABLED = false;
+// Cash or UPI choice on Record payment. recordManualPayment accepts method "upi_manual", and the owner supplied the verified merchant QR on 27 Oct 2026 (decoded pa=9898679711@okbizaxis, pn=Autodeck, no locked amount; cropped copy at assets/brand/upi-qr.png). Owner-approved claim-only policy: staff never enter an amount or a reference and never confirm UPI themselves - the server derives the exact bill total, staff only show the QR and send the claim, and only the office marks it paid after checking the account (a claim stays pending, never paid, until then). Backend released 2026-10-28 (claim-only recordManualPayment path + office-only confirmManualPayment). Membership-desk UPI claims are NOT behind this flag; they activate with the Studio build itself.
+export const UPI_RECORD_ENABLED = true;
 // updatePickupRequest markLegCompleted ("pickup" | "drop"), pickupCompletedAt / dropCompletedAt.
 // Backend deployed 2026-10-26. Released on emulator/source evidence only: live runtime is
 // deliberately unproven because a synthetic pickup request cannot be hidden from the live
