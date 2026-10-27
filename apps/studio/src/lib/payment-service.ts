@@ -18,6 +18,19 @@ export async function recordManualPayment(input: RecordManualPaymentInput): Prom
   return result.data;
 }
 
+type InitiatePaymentInput = { jobId: string; method: PaymentMethod };
+type InitiatePaymentOutput = { paymentId: string; paymentUrl: string | null; status: string };
+
+// Staff UPI claim (28 Oct 2026 flow): the customer scanned the studio QR and
+// says they paid. This only creates the PENDING payment; the office confirms
+// after checking the receiving account. Idempotent server-side: an existing
+// pending payment for the job is returned, never duplicated.
+export async function claimUpiPayment(jobId: string): Promise<InitiatePaymentOutput> {
+  const fn = httpsCallable<InitiatePaymentInput, InitiatePaymentOutput>(functions, "initiatePayment");
+  const result = await fn({ jobId, method: "upi_manual" });
+  return result.data;
+}
+
 type ConfirmManualPaymentInput = { paymentId: string };
 type ConfirmManualPaymentOutput = { paymentId: string; invoiceId: string | null; alreadyCompleted: boolean };
 

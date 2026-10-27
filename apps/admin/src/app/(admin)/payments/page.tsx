@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { Payment, PaymentStatus, Customer, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAdminAuth } from "../../../lib/auth-context";
-import { listenToPayments, refundPayment } from "../../../lib/payments-service";
+import { listenToPayments, refundPayment, confirmReceivedPayment } from "../../../lib/payments-service";
 import { useLabels } from "../../../lib/use-labels";
 import { studioToday } from "../../../lib/format";
 import { PaymentsView, RefundWorkPanel } from "../../../experience/OfficeViews";
@@ -27,6 +27,7 @@ function PaymentsPageContent() {
     if (q) setSearch(q);
   }, [searchParams]);
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   // Identity-scoped review cycle (login, tenant switch AND logout all reset
   // it): a delayed response from a previous identity can never repopulate
@@ -97,6 +98,19 @@ function PaymentsPageContent() {
 
   const invoiceNos = useLabels(COLLECTIONS.invoices(), payments.map((p) => p.invoiceId ?? "").filter(Boolean), (d) => (d as Invoice).invoiceNumber ?? "");
 
+  async function handleConfirmReceived(paymentId: string) {
+    setConfirmingId(paymentId);
+    setMessage(null);
+    try {
+      await confirmReceivedPayment(paymentId);
+      setMessage("Payment confirmed received. Invoice issued.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not confirm the payment. Check its status, then try again.");
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
   async function handleRefund(paymentId: string, reason: string) {
     setRefundingId(paymentId);
     setMessage(null);
@@ -127,6 +141,8 @@ function PaymentsPageContent() {
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
     />
     <PaymentsView
+      confirmingId={confirmingId}
+      onConfirmReceived={(id) => void handleConfirmReceived(id)}
       payments={payments}
       names={names}
       invoiceNos={invoiceNos}

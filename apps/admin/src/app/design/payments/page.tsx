@@ -22,7 +22,7 @@ const NAMES = { a: "Riya Patel", b: "Karan Joshi", c: "Aarav Shah", d: "Nisha De
 export default function Preview() {
   return (
     <StaffShell pathname="/payments" office role="admin" who="studio@autodeck.example" home="/design/payments" onSignOut={() => {}}>
-      <PaymentsView payments={ROWS} names={NAMES} loading={false} error={null} status="" onStatus={() => {}} search="" onSearch={() => {}} message={null} refundingId={null} onRefund={() => {}} onOpenInvoice={() => {}} today={studioToday()} />
+      <PaymentsView payments={ROWS} names={NAMES} loading={false} error={null} status="" onStatus={() => {}} search="" onSearch={() => {}} message={null} refundingId={null} onRefund={() => {}} confirmingId={null} onConfirmReceived={() => {}} onOpenInvoice={() => {}} today={studioToday()} />
     </StaffShell>
   );
 }

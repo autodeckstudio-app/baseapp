@@ -48,9 +48,10 @@ describe("backend features enabled with their backend release; UPI record activa
 
 
 describe("record payment confirm wording", () => {
-  it("does not show cash wording when UPI is selected", () => {
+  it("UPI is a claim for the office, never cash or staff-confirmed wording", () => {
     const s = require("fs").readFileSync(require("path").join(__dirname, "../app/(tabs)/jobs/[id].tsx"), "utf8");
-    expect(s).toMatch(/payMethod === "upi_manual" \? "Record UPI payment\?/);
+    expect(s).toMatch(/payMethod === "upi_manual" \? "Payment claimed\?/);
+    expect(s).not.toMatch(/Record UPI payment/);
   });
 });
 

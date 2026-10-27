@@ -24,13 +24,21 @@ export const expireStaleApprovalsScheduled = onSchedule(
   { schedule: "0 2 * * *", timeZone: "Asia/Kolkata", region: "asia-south1" },
   async () => {
     const db = getFirestore();
-    await sweepStaleApprovals(db);
+    // The two sweeps are independent: a failure in either one must not skip
+    // or fail the other, and each failure is logged on its own.
+    try {
+      await sweepStaleApprovals(db);
+    } catch (err) {
+      logger.error("Stale approval sweep failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     // Vehicle photo cleanup retry rides this EXISTING daily job so the
     // owner-authorized deletion policy (28 Oct 2026) gains an automatic
     // retry without a new Cloud Scheduler job (a new recurring billed
     // resource). Only tombstones the deletion flow itself marked
     // photoCleanup.status == "failed" are retried - never historical records.
-    // A failure here must not fail the approvals sweep above, and vice versa.
+    // Independent of the approvals sweep above: either may fail alone.
     try {
       const outcome = await retryFailedVehiclePhotoCleanups(db, getStorage().bucket());
       if (outcome.attempted > 0) logger.info("Vehicle photo cleanup retry pass", outcome);

@@ -15,8 +15,8 @@ export function RecordPaymentFields({ totalPaise, method, onMethod, verified, on
       <Text style={{ color: colors.textPrimary }}>{recordAmountLine(totalPaise)}</Text>
       <Text style={{ color: colors.textMuted }}>{WRONG_AMOUNT_NOTE}</Text>
       {upi ? <UpiQr /> : null}
-      {upi ? <TextInput label="UPI reference" value={reference} onChangeText={onReference} autoCapitalize="characters" /> : null}
-      <Button label={verified ? (upi ? "Payment seen in the account" : "Cash in hand") : (upi ? "I checked the payment arrived" : "I have the cash")} size="md" fullWidth={false} variant={verified ? "primary" : "secondary"} onPress={() => onVerified(!verified)} />
+      {upi ? <Text style={{ color: colors.textMuted }}>The customer scans and pays. Tap Confirm once the customer says they paid - the office checks the account and marks it paid.</Text> : null}
+      {!upi ? <Button label={verified ? "Cash in hand" : "I have the cash"} size="md" fullWidth={false} variant={verified ? "primary" : "secondary"} onPress={() => onVerified(!verified)} /> : null}
     </View>
   );
 }

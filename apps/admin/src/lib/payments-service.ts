@@ -24,6 +24,18 @@ export function listenToPayments(
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Payment)), onError);
 }
 
+type ConfirmManualPaymentInput = { paymentId: string };
+type ConfirmManualPaymentOutput = { paymentId: string; invoiceId: string | null; alreadyCompleted: boolean };
+
+// Office-only (server-enforced for UPI since 28 Oct 2026): the admin has
+// checked the receiving account and marks a pending manual payment received.
+// Completes the payment and issues the invoice. Idempotent server-side.
+export async function confirmReceivedPayment(paymentId: string): Promise<ConfirmManualPaymentOutput> {
+  const fn = httpsCallable<ConfirmManualPaymentInput, ConfirmManualPaymentOutput>(functions, "confirmManualPayment");
+  const result = await fn({ paymentId });
+  return result.data;
+}
+
 type InitiateRefundInput = { paymentId: string; reason: string };
 type InitiateRefundOutput = { paymentId: string; refunded: boolean; providerRefundId: string | null };
 

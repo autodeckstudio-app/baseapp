@@ -26,11 +26,12 @@ export const recordManualPayment = onCall({ region: "asia-south1" }, async (requ
   const data = validate(recordManualPaymentSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.recordManual");
 
-  // Office policy (28 Oct 2026): same rule as confirmManualPayment - a
-  // one-step record of an account-arrival payment (direct UPI / bank
-  // transfer) is an office-only act, because only the office can verify the
-  // money actually reached the account. Staff one-step records stay cash-only.
-  if (data.method !== "cash" && !["admin", "superadmin"].includes(user.claims.role)) {
+  // Office policy (28 Oct 2026, explicit owner decision for UPI): same rule
+  // as confirmManualPayment - a one-step record of a direct UPI payment is an
+  // office-only act, because only the office can verify the money actually
+  // reached the account. Staff one-step records stay cash-only. Other
+  // methods are unchanged.
+  if (data.method === "upi_manual" && !["admin", "superadmin"].includes(user.claims.role)) {
     throw new HttpsError(
       "permission-denied",
       "Only the office can record account payments. Staff can record cash payments.",

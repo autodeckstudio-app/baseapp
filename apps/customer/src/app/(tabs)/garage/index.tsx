@@ -7,7 +7,7 @@ import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { archiveVehicle, deleteVehiclePermanently, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
+import { deleteVehiclePermanently, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
@@ -177,7 +177,7 @@ export default function GarageScreen() {
               </View>
               {deleting?.id === v.id ? (
                 <View style={{ gap: 8 }}>
-                  <T tone="secondary">Delete this car forever? Its photos are removed. Service history, bills and inspection photos are kept. This cannot be undone.</T>
+                  <T tone="secondary">Delete this car forever? Its cover photo is removed. Documents, service history, bills and inspection photos are kept. This cannot be undone.</T>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} onPress={() => void confirmDeletePermanently()} />
                     <Button label="Keep it" kind="quiet" onPress={() => setDeleting(null)} />

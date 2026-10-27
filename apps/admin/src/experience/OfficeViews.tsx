@@ -134,11 +134,14 @@ export function PaymentsView(p: {
   message: string | null;
   refundingId: string | null;
   onRefund: (id: string, reason: string) => void;
+  confirmingId: string | null;
+  onConfirmReceived: (id: string) => void;
   onOpenInvoice: (id: string) => void;
   today: string;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [ackId, setAckId] = useState<string | null>(null);
   const q = p.search.trim().toLowerCase();
   const rows = p.payments.filter((x) => {
     if (p.status === "pending" ? !(x.status === "pending" || x.status === "processing") : p.status && x.status !== p.status) return false;
@@ -165,6 +168,17 @@ export function PaymentsView(p: {
       cell: (x) => (
         <span className="ax-row-actions">
           {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
+          {(x.status === "pending" || x.status === "processing") && x.method === "upi_manual" && (ackId === x.id ? (
+            <>
+              <span>Money seen in the account?</span>
+              <button type="button" className="ax-button" disabled={p.confirmingId === x.id} onClick={() => { p.onConfirmReceived(x.id); setAckId(null); }}>
+                {p.confirmingId === x.id ? "Confirming" : "Yes, confirm received"}
+              </button>
+              <button type="button" className="ax-button" onClick={() => setAckId(null)}>Not yet</button>
+            </>
+          ) : (
+            <button type="button" className="ax-button" onClick={() => setAckId(x.id)}>Confirm received</button>
+          ))}
           {x.status === "completed" && (confirmId === x.id ? (
             <>
               <input placeholder="Reason for refund" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Refund reason" />

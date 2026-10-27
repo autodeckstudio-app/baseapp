@@ -223,9 +223,10 @@ export async function deleteVehiclePhotos(
 
 // Durable cleanup truth: the sweep result is recorded on the tombstone
 // (deletedVehicles/{vehicleId}) so a failure is visible after the car is gone
-// from every UI, and a later retry can find it. No automatic re-sweep runs -
-// retry is the owner/admin re-issuing the same delete (alreadyDeleted path),
-// which re-runs the sweep and rewrites this status.
+// from every UI, and retries can find it. Two retry paths exist: the daily
+// maintenance job retries failed tombstones (see expireStaleApprovalsScheduled),
+// and the owner/admin re-issuing the same delete (alreadyDeleted path)
+// re-runs the sweep and rewrites this status.
 export type VehiclePhotoCleanupStatus = "done" | "failed";
 
 export async function recordVehiclePhotoCleanup(
@@ -244,6 +245,9 @@ export async function recordVehiclePhotoCleanup(
 }
 
 // Bounded retry pass over ONLY the tombstones this flow marked failed.
+// Admission rotation without a composite index: read a bounded window of
+// failed tombstones, attempt the least-recently-attempted first, cap attempts
+// per pass - a persistently failing car can never starve the others.
 // Returns counts so the caller can log; per-car status is on the tombstone.
 export interface VehiclePhotoCleanupRetryOutcome {
   attempted: number;
@@ -262,10 +266,16 @@ export async function retryFailedVehiclePhotoCleanups(
   const snap = await db
     .collection(COLLECTIONS.deletedVehicles())
     .where("photoCleanup.status", "==", "failed")
-    .limit(limit)
+    .limit(100)
     .get();
+  const oldestFirst = [...snap.docs].sort(
+    (a, b) =>
+      String((a.data() as DeletedVehicle).photoCleanup?.attemptedAt ?? "").localeCompare(
+        String((b.data() as DeletedVehicle).photoCleanup?.attemptedAt ?? ""),
+      ),
+  );
   const out: VehiclePhotoCleanupRetryOutcome = { attempted: 0, healed: 0, stillFailing: 0 };
-  for (const doc of snap.docs) {
+  for (const doc of oldestFirst.slice(0, limit)) {
     const tomb = doc.data() as DeletedVehicle;
     out.attempted += 1;
     const result = await deleteVehiclePhotos(bucket, tomb.tenantId, tomb.id);
