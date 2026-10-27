@@ -5,7 +5,6 @@ import { useState } from "react";
 import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import type { Booking, Payment, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { db } from "../lib/firebase";
 import { adminCancelBooking, settleCancellationFee, settleManualRefund, type CancelSummary } from "../lib/bookings-service";
 import { formatPaise } from "../lib/format";
 
@@ -24,6 +23,10 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
   // The owed payment is the booking's completed manual payment (cash/UPI/bank):
   // the one the office must return by hand. Provider payments never settle here.
   async function findOwedPaymentId(): Promise<string> {
+    // Lazy import, matching bookings-service: a top-level ./firebase import makes
+    // every consumer of this panel (including unit tests that only render it)
+    // evaluate the production-config guard at module scope.
+    const { db } = await import("../lib/firebase");
     const snap = await getDocs(query(collection(db, COLLECTIONS.payments()), where("bookingId", "==", booking.id), where("status", "==", "completed"), limit(10)));
     const manual = snap.docs.map((d) => d.data() as Payment).find((x) => x.method !== "razorpay_payment_link");
     if (!manual) throw new Error("No completed cash/UPI/bank payment found for this booking.");

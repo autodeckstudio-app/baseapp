@@ -5,6 +5,12 @@ const read = (p: string) => readFileSync(`${__dirname}/../${p}`, "utf8");
 
 describe("admin cancel UI", () => {
   const panel = read("components/CancelBookingPanel.tsx");
+  it("never imports lib/firebase at module scope (lazy only, like bookings-service)", () => {
+    const topLevel = panel.split("
+").filter((l) => /^import .*from "\.\./lib\/firebase"/.test(l));
+    expect(topLevel).toEqual([]);
+    expect(panel).toContain('await import("../lib/firebase")');
+  });
   it("shows the paid, fee and refund numbers (preview) before the confirm button exists", () => {
     expect(panel).toContain("preview: true");
     expect(panel.indexOf("Review")).toBeLessThan(panel.indexOf("Confirm cancel"));
