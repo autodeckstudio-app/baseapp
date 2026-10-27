@@ -27,6 +27,9 @@ export const endAttendanceBreak = onCall({ region: "asia-south1" }, async (reque
       throw new HttpsError("failed-precondition", "No check-in found for today.");
     }
     const record = snap.data() as AttendanceRecord;
+    if (!record.checkInAt) {
+      throw new HttpsError("failed-precondition", "Check in before starting a break or checking out.");
+    }
     const openIndex = record.breaks.findIndex((b) => b.endedAt === null);
     if (openIndex === -1) {
       throw new HttpsError("failed-precondition", "No break is in progress.");

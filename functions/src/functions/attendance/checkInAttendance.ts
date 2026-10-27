@@ -36,8 +36,23 @@ export const checkInAttendance = onCall({ region: "asia-south1" }, async (reques
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    if (snap.exists) {
+    const prior = snap.exists ? snap.data() as AttendanceRecord : null;
+    if (prior?.checkInAt || prior?.checkOutAt || prior?.breaks?.length) {
       throw new HttpsError("already-exists", "Already checked in for today.");
+    }
+    // The office may mark PRESENT before the employee arrives. That row is
+    // unverified until self check-in supplies a real timestamp. Do not
+    // silently override an office absence/leave/half-day decision.
+    if (prior && prior.status !== "PRESENT") {
+      throw new HttpsError("failed-precondition", "Ask the office to mark today as present before checking in.");
+    }
+    if (prior) {
+      tx.update(ref, {
+        checkInAt: now,
+        notes: data.notes ?? prior.notes,
+        markedBy: user.uid,
+        updatedAt: now,
+      });
     }
     const record: AttendanceRecord = {
       id: docId,
@@ -56,7 +71,7 @@ export const checkInAttendance = onCall({ region: "asia-south1" }, async (reques
       createdAt: now,
       updatedAt: now,
     };
-    tx.set(ref, record);
+    if (!prior) tx.set(ref, record);
     writeAuditLog(tx, {
       action: "attendance.checked_in",
       entityType: "attendance",

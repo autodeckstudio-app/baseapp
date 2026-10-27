@@ -33,6 +33,9 @@ export const checkOutAttendance = onCall({ region: "asia-south1" }, async (reque
       throw new HttpsError("failed-precondition", "No check-in found for today.");
     }
     const record = snap.data() as AttendanceRecord;
+    if (!record.checkInAt) {
+      throw new HttpsError("failed-precondition", "Check in before starting a break or checking out.");
+    }
     if (record.checkOutAt !== null) {
       throw new HttpsError("already-exists", "Already checked out for today.");
     }
