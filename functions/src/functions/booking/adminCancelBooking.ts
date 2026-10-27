@@ -112,6 +112,42 @@ export async function runCancel(
     const manualRefund = needsRefund && !providerRefund;
     let refundRequestId: string | null = null;
 
+    // 2b. Kill unpaid payment links BEFORE cancelling the booking: a live
+    // link would let the customer pay into a cancelled booking. The provider
+    // must confirm the link is dead first - a paid/partially paid link refuses
+    // cancellation (verified Razorpay API semantics, 28 Oct 2026), which is the
+    // fail-closed race signal. The booking is never cancelled on an
+    // unconfirmed link. Never runs on preview (preview returns above).
+    const pendingLinks = payDocs.filter((d) => {
+      const pmt = d.data() as Payment;
+      return pmt.status === "pending" && pmt.method === "razorpay_payment_link";
+    });
+    const cancelledLinkPaymentIds: string[] = [];
+    for (const d of pendingLinks) {
+      const pmt = d.data() as Payment;
+      if (!pmt.razorpayPaymentLinkId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This booking's unpaid payment link is missing its provider link id, so it cannot be closed safely. The booking is NOT cancelled.",
+        );
+      }
+      const linkOutcome = await getPaymentProvider().cancelPaymentLink(pmt.razorpayPaymentLinkId);
+      if (linkOutcome.outcome === "already_paid") {
+        throw new HttpsError(
+          "failed-precondition",
+          "A payment just arrived on this booking's payment link. The booking is NOT cancelled - refresh and check the payment before cancelling.",
+        );
+      }
+      if (linkOutcome.outcome === "in_progress") {
+        throw new HttpsError(
+          "unavailable",
+          "The payment provider is still updating this booking's payment link. The booking is NOT cancelled - try again in a moment.",
+        );
+      }
+      // "cancelled" or "already_inactive": the link is confirmed dead.
+      cancelledLinkPaymentIds.push(d.id);
+    }
+
     // 3. Cancel everything in one transaction.
     interface CommittedPlan { feePaise: number; feeStatus: string; refundPaise: number; paidPaise: number; policyFeePaise: number; manualRefund: boolean }
     const planBox: { committed: CommittedPlan | null } = { committed: null };
@@ -238,7 +274,22 @@ export async function runCancel(
       }
 
       for (const d of pays?.docs ?? []) {
-        if (d.data()["status"] === "pending") tx.update(d.ref, { status: "cancelled", updatedAt: now });
+        if (d.data()["status"] === "pending") {
+          // Links the provider confirmed dead above close with a timestamp and
+          // an audit trail; any other pending record keeps the deployed write.
+          const providerClosed = cancelledLinkPaymentIds.includes(d.id);
+          tx.update(d.ref, { status: "cancelled", ...(providerClosed ? { cancelledAt: now } : {}), updatedAt: now });
+          if (providerClosed) {
+            writeAuditLog(tx, {
+              action: "payment.cancelled",
+              entityType: "Payment",
+              entityId: d.id,
+              user,
+              studioId: (d.data() as Payment).studioId ?? null,
+              after: { status: "cancelled", via: "link_cancelled_on_booking_cancel" },
+            });
+          }
+        }
       }
       writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by ${actor}: ${data.bookingId}`);
 

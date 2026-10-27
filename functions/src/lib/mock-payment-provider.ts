@@ -10,6 +10,7 @@ import type {
   RefundResult,
   VerifyWebhookParams,
   ProviderWebhookEvent,
+  CancelPaymentLinkResult,
 } from "./payment-provider.js";
 
 export class MockPaymentProvider implements PaymentProvider {
@@ -21,6 +22,16 @@ export class MockPaymentProvider implements PaymentProvider {
   }
   private mockRefundId(referenceId: string) {
     return `mock_rfnd_${referenceId}`;
+  }
+
+  // Test control: link ids listed here cancel with the given outcome instead
+  // of the default "cancelled". cancelledLinkCalls records every attempt.
+  readonly cancelLinkOutcomes = new Map<string, CancelPaymentLinkResult["outcome"]>();
+  readonly cancelledLinkCalls: string[] = [];
+
+  async cancelPaymentLink(providerPaymentLinkId: string): Promise<CancelPaymentLinkResult> {
+    this.cancelledLinkCalls.push(providerPaymentLinkId);
+    return { outcome: this.cancelLinkOutcomes.get(providerPaymentLinkId) ?? "cancelled" };
   }
 
   async createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult> {

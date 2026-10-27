@@ -13,6 +13,7 @@ import type {
   RefundLookupResult, RefundBinding,
   VerifyWebhookParams,
   ProviderWebhookEvent,
+  CancelPaymentLinkResult,
 } from "./payment-provider.js";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { isProductionProject } from "./environment.js";
@@ -134,6 +135,28 @@ export class RazorpayProvider implements PaymentProvider {
       amount: payment?.amount ?? plink?.amount ?? refund?.amount ?? 0,
       currency: payment?.currency ?? "INR",
     };
+  }
+
+  // POST /v1/payment_links/:id/cancel (official API reference, 28 Oct 2026).
+  // Maps Razorpay's documented 400s to explicit outcomes so the caller can fail
+  // closed on money and retry on the provider's short-lived lock.
+  async cancelPaymentLink(providerPaymentLinkId: string): Promise<CancelPaymentLinkResult> {
+    const response = await fetch(`${this.baseUrl}/payment_links/${encodeURIComponent(providerPaymentLinkId)}/cancel`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader, "Content-Type": "application/json" },
+    });
+    if (response.ok) {
+      const body = (await response.json().catch(() => null)) as { status?: string } | null;
+      if (body?.status === "cancelled") return { outcome: "cancelled" };
+      throw new Error(`Razorpay cancelPaymentLink: unexpected success body (status=${body?.status ?? "unknown"})`);
+    }
+    const detail = await response.text().catch(() => "");
+    let reason = "";
+    try { reason = (JSON.parse(detail) as { error?: { description?: string } }).error?.description ?? ""; } catch { /* non-JSON body */ }
+    if (response.status === 400 && /already paid|partially paid/i.test(reason)) return { outcome: "already_paid" };
+    if (response.status === 400 && /expired link|or cancelled/i.test(reason)) return { outcome: "already_inactive" };
+    if (response.status === 400 && /update is already in progress/i.test(reason)) return { outcome: "in_progress" };
+    throw new Error(`Razorpay cancelPaymentLink failed: ${response.status}${reason ? ` (${reason})` : ""}`);
   }
 
   async initiateRefund(params: InitiateRefundParams): Promise<RefundResult> {

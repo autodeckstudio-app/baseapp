@@ -53,6 +53,24 @@ export type RefundBinding = {
   currency: string;
 };
 
+// Cancelling a payment link at the provider (Razorpay POST /v1/payment_links/:id/cancel,
+// verified against the official API docs 28 Oct 2026). The booking that owns the
+// link must only be cancelled AFTER the provider confirms one of these outcomes -
+// never claim the link is dead on a hope.
+export type CancelPaymentLinkResult =
+  // Provider confirmed: status "cancelled". No new payment can start on it.
+  | { outcome: "cancelled" }
+  // 400 "cannot cancel or expire an expired link": already expired/cancelled.
+  // The link is dead either way, so this is the idempotent repeat.
+  | { outcome: "already_inactive" }
+  // 400 "cannot cancel or expire an already paid/partially paid link": money
+  // arrived or is partially in. FAIL CLOSED - the booking must stay and the
+  // payment must be handled as arrived.
+  | { outcome: "already_paid" }
+  // 400 "an update is already in progress": provider holds a short-lived lock
+  // on the link. Retry; nothing is known yet.
+  | { outcome: "in_progress" };
+
 export interface VerifyWebhookParams {
   rawBody: string;
   signature: string;
@@ -98,6 +116,7 @@ export interface PaymentProvider {
   verifyWebhookSignature(params: VerifyWebhookParams): boolean;
   parseWebhookEvent(rawBody: string): ProviderWebhookEvent;
   initiateRefund(params: InitiateRefundParams): Promise<RefundResult>;
+  cancelPaymentLink(providerPaymentLinkId: string): Promise<CancelPaymentLinkResult>;
   /**
    * Looks up a refund WE submitted, by our durable reference id, to reconcile
    * an ambiguous submit WITHOUT ever blindly resubmitting. Tri-state:
