@@ -6,8 +6,7 @@ const read = (p: string) => readFileSync(`${__dirname}/../${p}`, "utf8");
 describe("admin cancel UI", () => {
   const panel = read("components/CancelBookingPanel.tsx");
   it("never imports lib/firebase at module scope (lazy only, like bookings-service)", () => {
-    const topLevel = panel.split("
-").filter((l) => /^import .*from "\.\./lib\/firebase"/.test(l));
+    const topLevel = panel.split(String.fromCharCode(10)).filter((l) => l.startsWith("import ") && l.includes('from "../lib/firebase"'));
     expect(topLevel).toEqual([]);
     expect(panel).toContain('await import("../lib/firebase")');
   });
