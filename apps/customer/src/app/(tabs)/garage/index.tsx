@@ -49,6 +49,7 @@ export default function GarageScreen() {
   const [showArchived,setShowArchived]=useState(false);
   const [archiveActionError,setArchiveActionError]=useState<string|null>(null);
   const [archiveActionBusy,setArchiveActionBusy]=useState<string|null>(null);
+  const [photoCleanupNote,setPhotoCleanupNote]=useState<string|null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
   const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
   const [jobs, setJobs] = useState<ServiceJob[]>(mock ? mock.jobs : []);
@@ -94,10 +95,15 @@ export default function GarageScreen() {
     setArchiveActionBusy(deleting.id);
     setArchiveActionError(null);
     try {
-      await deleteVehiclePermanently(deleting.id);
+      const outcome = await deleteVehiclePermanently(deleting.id);
       // Do not wait for the archived stream to catch up with the callable.
       setArchived((current) => current.filter((v) => v.id !== deleting.id));
       setDeleting(null);
+      if (outcome.photoCleanupFailed) {
+        // The car is deleted; only the cover-photo sweep failed. It retries
+        // automatically, so say pending rather than claiming it is removed.
+        setPhotoCleanupNote("Car deleted. Its cover photo could not be removed yet - we will keep trying to remove it. Documents, service history, bills and inspection photos are kept.");
+      }
     } catch (e) {
       setArchiveActionError(e instanceof Error ? e.message : "Could not delete the car. Please try again.");
     } finally {
@@ -177,7 +183,7 @@ export default function GarageScreen() {
               </View>
               {deleting?.id === v.id ? (
                 <View style={{ gap: 8 }}>
-                  <T tone="secondary">Delete this car forever? Its cover photo is removed. Documents, service history, bills and inspection photos are kept. This cannot be undone.</T>
+                  <T tone="secondary">Delete this car forever? Its cover photo will be removed. Documents, service history, bills and inspection photos are kept. This cannot be undone.</T>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} onPress={() => void confirmDeletePermanently()} />
                     <Button label="Keep it" kind="quiet" onPress={() => setDeleting(null)} />
@@ -193,6 +199,7 @@ export default function GarageScreen() {
           )) : null}
         </View>
       ) : null}
+      {photoCleanupNote?<Notice title="Photo removal pending" body={photoCleanupNote} action={<Button label="Got it" kind="quiet" onPress={()=>setPhotoCleanupNote(null)}/>}/>:null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
     </Screen>
   );

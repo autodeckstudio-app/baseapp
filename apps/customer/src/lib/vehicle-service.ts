@@ -54,12 +54,18 @@ export async function updateVehicle(input: UpdateVehicleInput): Promise<void> {
 
 // Permanent delete (owner approved 28 Oct 2026): the car record and its cover
 // photos are removed for good; history, bills and inspection photos are kept.
-export async function deleteVehiclePermanently(vehicleId: string): Promise<void> {
-  const fn = httpsCallable<{ vehicleId: string }, { vehicleId: string; deleted: boolean }>(
+export async function deleteVehiclePermanently(
+  vehicleId: string,
+): Promise<{ deleted: boolean; photoCleanupFailed: boolean }> {
+  const fn = httpsCallable<
+    { vehicleId: string },
+    { vehicleId: string; deleted: boolean; photos?: { deleted: number; failed: boolean } }
+  >(
     functions,
     "deleteVehicle",
   );
-  await fn({ vehicleId });
+  const res = await fn({ vehicleId });
+  return { deleted: res.data.deleted, photoCleanupFailed: res.data.photos?.failed === true };
 }
 
 export async function archiveVehicle(vehicleId: string): Promise<void> {
