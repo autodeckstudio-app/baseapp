@@ -648,7 +648,7 @@ export default function JobDetailScreen() {
       {job.status === "PENDING_VEHICLE" && job.bookingId ? (
         <Section>
           <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>Reschedule booking</Text>
-          <Text style={{ ...typography.caption, color: colors.textMuted }}>Customer arrived late? Move this booking into an upcoming available slot before checking in. The same booking and job are kept.</Text>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>Late arrival? Move this booking to an upcoming slot before check-in. Same booking and job kept.</Text>
           {reslotDone ? <Text style={{ ...typography.caption, color: colors.textPrimary }}>Booking rescheduled. The new time is shown above.</Text> : null}
           {!reslotOpen ? <Button label="Reschedule" variant="secondary" onPress={() => void openReslot()} /> : (
             <View style={{ gap: spacing.sm }}>

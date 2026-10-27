@@ -109,7 +109,7 @@ function PendingQueue({ tenantId, plans, onChanged, tick }: { tenantId: string; 
   return (
     <section className="ax-panel ax-mem-sec">
       <h2 className="ax-mem-h">Pending payment approvals</h2>
-      <p style={msgStyle}>Membership purchases awaiting payment confirmation. Approving one activates it immediately and notifies the customer.</p>
+      <p style={msgStyle}>Purchases awaiting payment confirmation. Approving activates it immediately and notifies the customer.</p>
       {loading ? (
         <p style={msgStyle}>Loading...</p>
       ) : rows.length === 0 ? (

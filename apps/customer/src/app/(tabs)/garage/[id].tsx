@@ -455,7 +455,7 @@ export default function VehicleDetailScreen() {
       {true ? (
         <>
           {papers.length === 0 && protections.length === 0 ? (
-            <T role="caption" tone="secondary">No documents yet. Add your RC, insurance or PUC. Clear photos are checked automatically for the plate and expiry. Anything we cannot confirm is kept safely and checked by the studio.</T>
+            <T role="caption" tone="secondary">No documents yet. Add your RC, insurance or PUC. We try to read the plate and expiry. Unclear details need studio review.</T>
           ) : (
             <Pane pad="gap">
               {papers.map((p, i) => {

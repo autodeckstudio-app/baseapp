@@ -127,7 +127,7 @@ export default function JobsPage() {
       </header>
 
       {jobs.some(j=>j.status==="STANDBY") && <section className="ax-panel" aria-label="Standby waiting queue">
-        <h2>Arrived - standby</h2><p className="ax-note">Waiting in arrival order. No bay or time reserved. Open the next car to admit into an available compatible bay.</p>
+        <h2>Arrived - standby</h2><p className="ax-note">Waiting in arrival order - no bay or time reserved. Admit the next car into an available compatible bay.</p>
         {jobs.filter(j => j.status === "STANDBY").sort((a,b) => (a.standbyArrivedAt ?? a.createdAt).localeCompare(b.standbyArrivedAt ?? b.createdAt) || a.id.localeCompare(b.id)).map((j,i) => <button key={j.id} className="ax-button" onClick={() => open(j.id)}>{i+1}. {vehicleRegs[j.vehicleId] ?? "Vehicle"} - {serviceNames[j.serviceId] ?? "Service"} - waiting since {formatDateTime(j.standbyArrivedAt ?? j.createdAt)}</button>)}
         {!jobs.some(j => j.status === "STANDBY") ? <p>No cars waiting.</p> : null}
       </section>}

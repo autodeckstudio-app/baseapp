@@ -110,6 +110,28 @@ describe("/{tenantId}/vehicles/{vehicleId}/{filename} — owner-scoped read", ()
       Promise.resolve(alice.storage().ref(path).put(CONTENT, { customMetadata: { ownerId: "uid-alice" } })),
     );
   });
+
+  // Real signed-URL PUTs store the binding key lowercased: GCS's XML API
+  // normalizes x-goog-meta-ownerId -> ownerid (same normalization proven in
+  // production for x-goog-meta-customerId on 2026-10-26, see fix commit
+  // 50e685c3). The rule must honor that casing and the original one.
+  it("owning customer can read when the binding key landed lowercased (ownerid)", async () => {
+    await seedObject(path, { ownerid: "uid-alice" });
+    const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
+    await assertSucceeds(alice.storage().ref(path).getMetadata());
+  });
+
+  it("a different customer cannot read a lowercased-key vehicle photo", async () => {
+    await seedObject(path, { ownerid: "uid-alice" });
+    const bob = testEnv.authenticatedContext("uid-bob", customerClaims());
+    await assertFails(bob.storage().ref(path).getMetadata());
+  });
+
+  it("an object with no binding metadata is not customer-readable", async () => {
+    await seedObject(path, {});
+    const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
+    await assertFails(alice.storage().ref(path).getMetadata());
+  });
 });
 
 describe("/{tenantId}/jobs/{jobId}/photos/{filename} — owner-scoped read", () => {

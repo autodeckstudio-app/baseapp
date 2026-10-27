@@ -62,8 +62,14 @@ service firebase.storage {
     // ─── Vehicle photos: {tenantId}/vehicles/{vehicleId}/{filename} ─────────
     // Owner-scoped via customMetadata.ownerId — see /jobs/photos comment.
     match /{tid}/vehicles/{vehicleId}/{filename} {
+      // Customer binding: GCS lowercases custom-metadata keys stamped via
+      // signed-URL PUT headers (ownerId -> ownerid); SDK/JSON-API uploads keep
+      // camelCase. Accept either casing, same uid binding; every other
+      // condition (auth, tenant, staff role) is unchanged. See /jobs/photos.
       allow read: if isAuthenticated() && tenantId() == tid
-                  && (isStudioOrAbove() || resource.metadata.ownerId == request.auth.uid);
+                  && (isStudioOrAbove()
+                      || resource.metadata.get("ownerid", "") == request.auth.uid
+                      || resource.metadata.get("ownerId", "") == request.auth.uid);
       // Customer uploads via signed URL from Cloud Function
       allow write: if false;
     }

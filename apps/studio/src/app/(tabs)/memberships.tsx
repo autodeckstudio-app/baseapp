@@ -11,6 +11,8 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, spacing, radius, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
+import { MembershipPaymentFields } from "../../components/MembershipPaymentFields";
+import { canCollectPayment, receiptMatches, type ReceiptBinding } from "../../lib/record-payment-rules";
 
 type PaidMethod = "cash" | "upi_manual" | "bank_transfer";
 const PAID_METHODS: { value: PaidMethod; label: string }[] = [
@@ -77,6 +79,7 @@ export default function MembershipsScreen() {
   const [newEmail, setNewEmail] = useState("");
   const [planId, setPlanId] = useState("");
   const [saleMethod, setSaleMethod] = useState<PaidMethod>("cash");
+  const [saleReceipt, setSaleReceipt] = useState<ReceiptBinding | null>(null);
   const [saleRef, setSaleRef] = useState("");
 
   const load = useCallback(async () => {
@@ -114,6 +117,8 @@ export default function MembershipsScreen() {
   useEffect(() => { void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); }, [load]);
 
   async function approve(row: PendingRow) {
+    const approveMethod = methodById[row.membership.id] ?? ((row.payment?.method as PaidMethod) || "cash");
+    if (approveMethod !== "cash" && (refById[row.membership.id] ?? "").trim().length < 6) { setMessage("Enter the payment reference so the office can match it."); return; }
     setBusy(true);
     setMessage(null);
     try {
@@ -138,6 +143,8 @@ export default function MembershipsScreen() {
     setMessage(null);
     setFound(null);
     setSearched(false);
+    setSaleReceipt(null);
+    setSaleRef("");
     try {
       const snap = await getDocs(query(collection(db, COLLECTIONS.customers()), where("tenantId", "==", tenantId), where("phone", "==", normalizePhone(phone))));
       const c = snap.docs.map((d) => d.data() as Customer).find((x) => !x.deletedAt) ?? null;
@@ -155,7 +162,14 @@ export default function MembershipsScreen() {
     return plans.filter((p) => p.active);
   }
 
+  function saleBinding(): ReceiptBinding {
+    return { customerKey: normalizePhone(phone), planId, amountPaise: activePlans().find((p) => p.id === planId)?.priceInPaise ?? -1 };
+  }
+
   async function sell() {
+    const bound = receiptMatches(saleReceipt, saleBinding());
+    const guard = canCollectPayment({ method: saleMethod, verified: bound, reference: saleRef });
+    if (guard) { setMessage(!bound && saleReceipt !== null ? "Re-confirm the payment for this customer and plan." : guard); return; }
     setBusy(true);
     setMessage(null);
     try {
@@ -182,6 +196,7 @@ export default function MembershipsScreen() {
       setNewName("");
       setNewEmail("");
       setSaleRef("");
+      setSaleReceipt(null);
       await load();
     } catch {
       setMessage("Could not complete the walk-in sale.");
@@ -231,13 +246,13 @@ export default function MembershipsScreen() {
                     key={m.value}
                     label={`Paid via ${m.label}`}
                     active={(methodById[r.membership.id] ?? ((r.payment?.method as PaidMethod) || "cash")) === m.value}
-                    onPress={() => setMethodById((prev) => ({ ...prev, [r.membership.id]: m.value }))}
+                    onPress={() => { setMethodById((prev) => ({ ...prev, [r.membership.id]: m.value })); setRefById((prev) => ({ ...prev, [r.membership.id]: "" })); }}
                   />
                 ))}
               </View>
               <TextInput
                 style={inputStyle}
-                placeholder="Reference / note (optional)"
+                placeholder={(methodById[r.membership.id] ?? ((r.payment?.method as PaidMethod) || "cash")) === "cash" ? "Reference / note (optional)" : "Payment reference (required)"}
                 placeholderTextColor={colors.textMuted}
                 value={refById[r.membership.id] ?? ""}
                 onChangeText={(t) => setRefById((prev) => ({ ...prev, [r.membership.id]: t }))}
@@ -258,7 +273,7 @@ export default function MembershipsScreen() {
             placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
             value={phone}
-            onChangeText={(t) => { setPhone(t); setSearched(false); setFound(null); }}
+            onChangeText={(t) => { setPhone(t); setSearched(false); setFound(null); setSaleReceipt(null); setSaleRef(""); }}
           />
           <Button label="Find customer" onPress={() => void lookup()} disabled={busy || phone.replace(/[^0-9]/g, "").length < 10} variant="secondary" />
           {searched && !found && (
@@ -274,17 +289,11 @@ export default function MembershipsScreen() {
               <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Plan</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
                 {activePlans().map((p) => (
-                  <Chip key={p.id} label={`${p.name} - ${(p.priceInPaise / 100).toFixed(0)} INR`} active={planId === p.id} onPress={() => setPlanId(p.id)} />
+                  <Chip key={p.id} label={`${p.name} - ${(p.priceInPaise / 100).toFixed(0)} INR`} active={planId === p.id} onPress={() => { setPlanId(p.id); setSaleReceipt(null); setSaleRef(""); }} />
                 ))}
               </View>
               {activePlans().length === 0 && <Text style={{ ...typography.caption, color: colors.textMuted }}>No active plans. Ask an admin to activate one.</Text>}
-              <Text style={{ ...typography.caption, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 }}>Paid via</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
-                {PAID_METHODS.map((m) => (
-                  <Chip key={m.value} label={m.label} active={saleMethod === m.value} onPress={() => setSaleMethod(m.value)} />
-                ))}
-              </View>
-              <TextInput style={inputStyle} placeholder="Reference / note (optional)" placeholderTextColor={colors.textMuted} value={saleRef} onChangeText={setSaleRef} />
+              <MembershipPaymentFields amountPaise={planId ? activePlans().find((p) => p.id === planId)?.priceInPaise ?? null : null} method={saleMethod} onMethod={(m) => { setSaleMethod(m); setSaleReceipt(null); setSaleRef(""); }} verified={receiptMatches(saleReceipt, saleBinding())} onVerified={(v) => setSaleReceipt(v ? saleBinding() : null)} reference={saleRef} onReference={setSaleRef} />
               <Button label={busy ? "Processing..." : "Sell and activate"} onPress={() => void sell()} disabled={busy || !planId} />
             </>
           )}

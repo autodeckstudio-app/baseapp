@@ -313,14 +313,14 @@ export default function BookingDetailScreen() {
       {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" ? (
         <Notice
           title="Request sent"
-          body="Pending means the studio has your request and will confirm your slot. You will see the status change here once they do. Nothing is charged now."
+          body="The studio has your request and will confirm your slot. Status updates here. Nothing is charged now."
         />
       ) : null}
 
       {placed === "1" && shouldAskPush(pushPermission(), pushAsked) && pushResult === null ? (
         <Notice
           title="Get live updates"
-          body="We can tell you when the studio confirms your slot, when work starts, and when your car is ready. One tap, and you can turn it off any time."
+          body="Get updates at each step: slot confirmed, work started, car ready. Turn off any time."
           action={
             <View style={{ gap: space.breath }}>
               <Button label="Turn on updates" busy={pushBusy} onPress={() => { setPushBusy(true); void enablePush().then((r) => setPushResult(r === "on" ? "on" : "denied")).catch(() => setPushResult("denied")).finally(() => { setPushBusy(false); try { store?.setItem(PUSH_ASKED_KEY, "1"); } catch { /* private mode */ } setPushAsked(true); }); }} />
@@ -401,7 +401,7 @@ export default function BookingDetailScreen() {
         <Pane pad="inset">
           <View style={{ gap: space.breath }}>
             <Kicker tone="accent">{translate("Studio status")}</Kicker>
-            {job.status === "STANDBY" ? <><T role="heading">Arrived - standby</T><T role="body" tone="tertiary">Your car is waiting for an available compatible bay. No service start time is promised. The studio will update this when you are admitted.</T></> : <T role="heading">Cancelled</T>}
+            {job.status === "STANDBY" ? <><T role="heading">Arrived - standby</T><T role="body" tone="tertiary">Waiting for an available compatible bay. No start time promised. This updates when you are admitted.</T></> : <T role="heading">Cancelled</T>}
           </View>
         </Pane>
       ) : null}
@@ -477,7 +477,7 @@ export default function BookingDetailScreen() {
         )}
       </View>
 
-      {waitingCancel ? <Notice title="Cancellation requested" body="Your booked time is still held while the online payment is checked. The booking is not cancelled yet. Contact the studio if you need help." /> : null}
+      {waitingCancel ? <Notice title="Cancellation requested" body="Your slot is held while the online payment is checked. Not cancelled yet. Contact the studio for help." /> : null}
       {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
 
       {!waitingCancel && booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
@@ -489,7 +489,7 @@ export default function BookingDetailScreen() {
       ) : null}
       {booking.status === "EXPIRED" ? <Notice title="Slot released" body="The payment was not completed in time, so this booking expired. You can book again any time." /> : null}
       {(booking.refundStatus === "reserved" || booking.refundStatus === "requested") ? <Notice title="Refund requested" body="Your refund request is recorded. This page shows its status as it changes." /> : null}
-      {booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. If you paid online, when it reaches you depends on your bank or payment provider." /> : null}
+      {booking.refundStatus === "initiated" ? <Notice title="Refund recorded" body="The studio has recorded your refund. Paid online? When it reaches you depends on your bank or payment provider." /> : null}
       {booking.refundStatus === "processed" ? <Notice title="Refund processed by Razorpay" body="Razorpay reports your refund as processed. When it reaches you depends on your bank or payment provider." /> : null}
       {actionError ? <Notice title="We could not finish that" body={actionError} /> : null}
       {pickup === "failed" ? <Notice title="Pickup request not sent" body="Your booking stands. The pickup or drop-off request could not be sent - please call the studio to arrange it." /> : null}
@@ -516,9 +516,9 @@ export default function BookingDetailScreen() {
 
       {!walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
 
-      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still bring your car today during studio hours. If it is not checked in by studio close (7 pm Sunday, 9 pm other days), this booking will be auto-cancelled. You can make a new booking when you are ready." /> : null}
+      {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
       {autoCancelled ? (
-        <Notice title="Booking auto-cancelled" body="Your car was not checked in by studio close (7 pm Sunday, 9 pm other days). This booking is closed. Make a new booking when you are ready." />
+        <Notice title="Booking auto-cancelled" body="Not checked in by studio close (7 pm Sunday, 9 pm other days), so this booking is closed. Book again any time." />
       ) : null}
 
       {lateToCancel ? (

@@ -13,8 +13,8 @@ describe("waiting cancellation UI source and policy guards",()=>{
   expect(s).toContain('const canPay = !membershipCoveredLabel(booking) && !waitingCancel');
   expect(s).toContain('{!waitingCancel && booking.status === "PENDING"');
   expect(s).toContain('const showRescheduleSection = placed !== "1" && !waitingCancel');
-  expect(s).toContain('Your booked time is still held while the online payment is checked.');
-  expect(s).toContain('The booking is not cancelled yet.');
+  expect(s).toContain('Your slot is held while the online payment is checked.');
+  expect(s).toContain('Not cancelled yet.');
   const service=source('./booking-service.ts');
   expect(service.indexOf('return booking;')).toBeLessThan(service.indexOf('return isBookingMissed(booking)'));
  });

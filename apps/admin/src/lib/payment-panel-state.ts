@@ -39,7 +39,7 @@ export function coveredVisitSettlementNote(
   // once the recordManualPayment guard deploys the old route rejects covered jobs.
   if (MEMBERSHIP_SETTLEMENT_ENABLED) return null;
   // Gate OFF (pre-release): the studio zero route is still the working path.
-  return "Membership-covered visit - the customer's plan covers it, so there is nothing to collect here. To close it out, settle the visit in the studio app: open the job and use Record cash payment for Rs 0.";
+  return "Membership-covered visit - nothing to collect here. Settle it in the studio app: open the job, Record cash payment for Rs 0.";
 }
 
 /**

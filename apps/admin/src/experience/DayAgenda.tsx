@@ -33,7 +33,7 @@ export function DayAgenda({ items, loading, onOpen }: { items: AgendaItem[]; loa
     return (
       <div className="ax-empty">
         <p className="ax-title">A clear day</p>
-        <p>No bookings on this date. New online and phone bookings appear here as they come in.</p>
+        <p>No bookings on this date. New online and phone bookings appear here.</p>
       </div>
     );
   }

@@ -13,6 +13,7 @@ import {
   type ServiceJob,
   type Vehicle,
 } from "@autodeck/core";
+import { clearWatchdogErrorOnDelivery, HOME_WATCHDOG_MSG } from "../lib/home-watchdog";
 import { listenToMyVehicles } from "../lib/vehicle-service";
 import { getMyBookings } from "../lib/booking-service";
 import { listenToVehicleProtections } from "../lib/protection-service";
@@ -62,7 +63,7 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     setCoreReady(false);
     const t = setTimeout(() => {
       if (delivered.current) return;
-      setError((e) => e ?? "This is taking longer than usual. Check your connection and refresh.");
+      setError((e) => e ?? HOME_WATCHDOG_MSG);
       setVehicles((v) => v ?? []);
       setCoreReady(true);
     }, 8000);
@@ -77,7 +78,7 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     const settle = (source: string) => {
       if (!active) return;
       settled.add(source);
-      if (settled.size === 6) { delivered.current = true; setCoreReady(true); }
+      if (settled.size === 6) { delivered.current = true; setCoreReady(true); setError(clearWatchdogErrorOnDelivery); }
     };
     const failFor = (src: string) => (e?: unknown) => {
     // eslint-disable-next-line no-console

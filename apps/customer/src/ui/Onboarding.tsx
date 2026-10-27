@@ -12,7 +12,7 @@ export const ONBOARDED_KEY = "autodeck.onboarded";
 
 type Slide = { image: ImageSourcePropType; kicker: string; title: string; line: string; chips?: string[] };
 const SLIDES: Slide[] = [
-  { image: sceneImagery.heroHome, kicker: "AutoDeck", title: "Everything About Your Car, In One App", line: "From booking care and tracking the work to bills, papers and warranty, easy to manage all your car needs in one place." },
+  { image: sceneImagery.heroHome, kicker: "AutoDeck", title: "Everything About Your Car, In One App", line: "Book care, track the work, manage bills, papers and warranty - all in one place." },
   { image: serviceImagery.washing, kicker: "Book", title: "Pick a service. Pick a time.", line: "Washing, ceramic coating, paint protection film and more, with open slots you can see." },
   { image: serviceImagery.ceramic, kicker: "Follow", title: "Watch the work happen", line: "Live status, photos and approvals. Pay at the studio when you collect your car." },
   { image: require("../../assets/imagery/brands/xpel-hero.jpg"), kicker: "Brands we fit", title: "Products you can trust", line: "Only the names the industry relies on, with their own warranties.", chips: ["XPEL", "Garware", "Kovalent"] },

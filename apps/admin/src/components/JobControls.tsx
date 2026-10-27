@@ -85,7 +85,7 @@ export function JobControls({ job }: { job: ServiceJob }) {
     {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <p role="status">{job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</p> : null}
     {next ? <>{advanceConfirm ? <div style={{ display: "grid", gap: 8 }}><p>{next}? This updates the studio, admin and customer tracker.</p><button className="ax-button ax-button--primary" disabled={busy} onClick={() => void advance()}>Confirm {next.toLowerCase()}</button><button className="ax-button" disabled={busy} onClick={() => setAdvanceConfirm(false)}>Cancel</button></div> : <button className="ax-button ax-button--primary" disabled={busy || (job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid")} onClick={() => job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm(true) : void advance()}>{next}</button>}</> : null}
     {job.status === "PENDING_VEHICLE" && job.bookingId ? <>
-      <p>Late arrival? Move this booking to an upcoming available slot before checking in. The same booking and job are kept.</p>
+      <p>Late arrival? Move this booking to an upcoming slot before check-in. Same booking and job kept.</p>
       {!open ? <button className="ax-button" disabled={busy} onClick={() => void loadSlots()}>Reschedule</button> : <>
         {busy ? <p role="status">Loading or saving...</p> : null}
         {!busy && !error && slots.length === 0 ? <p>No upcoming slots in the next 14 days.</p> : null}

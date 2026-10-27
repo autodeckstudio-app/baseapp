@@ -152,7 +152,7 @@ export function ServicesView(p: {
             </div>
             <div className="ax-form-row">
               <span>Service photo (optional)</span>
-              <p className="ax-sub">Shown on this service's card in the customer app: Home, Book and the service page. Use a real photo of this work, wide, at least 1200 px.</p>
+              <p className="ax-sub">Shown on this service's card in the customer app. Use a real photo of the work - wide, at least 1200 px.</p>
               {draft.imageUrl ? <img src={draft.imageUrl} alt="Service photo" style={{ width: "100%", maxWidth: 280, height: 150, objectFit: "cover", borderRadius: 14 }} /> : <p className="ax-sub">No photo yet. Customers see a standard picture.</p>}
               <input type="file" accept="image/*" disabled={photoBusy} onChange={(e) => void pickPhoto(e.target.files?.[0])} aria-label="Upload service photo" />
               {photoBusy ? <p className="ax-sub">Uploading...</p> : null}

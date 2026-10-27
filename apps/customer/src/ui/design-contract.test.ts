@@ -16,7 +16,7 @@ describe("unified product design contract",()=>{
   });
   it("makes critical booking load failures retryable without false rollback claims",()=>{
     const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(normalizeSegment(selectedVehicle?.category))');expect(booking).toContain('label="Retry"');expect(booking).toContain('date===selectedDate');
-    const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings before trying again");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
+    const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings first - if it reached the studio");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
   });
   it("recovers missing-link reports and membership screens without endless loaders",()=>{
     expect(read("src/app/(tabs)/bookings/inspection.tsx")).toContain("setInspection(null)");

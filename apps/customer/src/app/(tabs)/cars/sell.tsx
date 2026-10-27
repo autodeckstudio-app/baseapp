@@ -144,7 +144,7 @@ export default function SellScreen() {
       {error ? <Notice title="Check these details" body={error} /> : null}
       {step===2 ? <Button label="Send for studio review" busy={busy} onPress={() => void submit()}/> : <Button label={step===0 ? "Continue to photos & price" : "Continue to review"} onPress={next}/>}
       {step>0 && <Button kind="quiet" label="Previous step" disabled={busy} onPress={() => {setError(null);setFieldErrors({});setStep(step-1);}}/>}
-      <T role="caption" tone="tertiary">We check that you are the registered owner before approving. Your phone number is never shown to buyers.</T>
+      <T role="caption" tone="tertiary">We verify you are the registered owner first. Your number is never shown to buyers.</T>
     </Screen>
   );
 }

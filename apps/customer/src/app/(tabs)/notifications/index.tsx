@@ -134,7 +134,7 @@ export default function NotificationsScreen() {
         />
       ) : null}
       {shown.length === 0 ? (
-        <Notice title="You are all caught up" body="Updates about your bookings and services will show up here. Older read ones tidy away after 30 days." />
+        <Notice title="You are all caught up" body="Booking and service updates show here. Older read updates hide from this list." />
       ) : (
         <View style={{ gap: space.line }}>
           {shown.map((item) => {

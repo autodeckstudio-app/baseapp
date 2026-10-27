@@ -137,7 +137,7 @@ export function VehiclesView(p: {
               ) : (
                 <section className="ax-panel">
                   <span className="ax-label">Keep papers current</span>
-                  <p style={{ margin: 0, fontSize: 14 }}>Add insurance, FASTag, PUC or warranty details so the studio can remind the owner before they run out.</p>
+                  <p style={{ margin: 0, fontSize: 14 }}>Add insurance, FASTag, PUC or warranty so the studio can remind the owner before expiry.</p>
                   <div className="ax-panel-actions"><button type="button" className="ax-button ax-button--primary" onClick={() => setAdding(true)}>Add a paper</button></div>
                 </section>
               )}

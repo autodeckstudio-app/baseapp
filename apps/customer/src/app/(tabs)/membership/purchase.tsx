@@ -172,8 +172,8 @@ export default function PurchaseMembershipScreen() {
           title={isStudio ? "Pay at the studio to activate" : "Almost done"}
           body={
             isStudio
-              ? "Your request is saved. Pay at the studio front desk - your benefits unlock as soon as your payment is confirmed. Requests not paid within 48 hours are cancelled automatically."
-              : "Complete the payment to activate. If you closed the payment window, tap Pay online to open it again. Your membership activates automatically as soon as the payment is verified - no studio approval needed. Benefits stay locked until then."
+              ? "Request saved. Pay at the studio front desk - benefits unlock once payment is confirmed. Unpaid requests are cancelled automatically."
+              : "Complete payment to activate. Closed the payment window? Tap Pay online to reopen it. Membership activates on its own once verified - benefits stay locked until then."
           }
           action={
             <View style={{ gap: space.hair }}>

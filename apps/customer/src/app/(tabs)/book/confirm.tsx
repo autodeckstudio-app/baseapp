@@ -273,7 +273,7 @@ export default function BookingConfirmScreen() {
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(pickupSent ? {} : { pickup: "failed" }) } });
     } catch (err) {
       console.warn("create booking failed", err);
-      setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings before trying again. If the request reached the studio, it will appear there.");
+      setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings first - if it reached the studio, it appears there.");
     } finally {
       if (!payBusy.current) setBooking(false);
     }

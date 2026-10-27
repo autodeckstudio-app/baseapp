@@ -17,13 +17,26 @@ describe("backend availability gates (studio)", () => {
   });
 });
 
-describe("backend features enabled with their backend release; UPI stays held", () => {
-  it("photos and admin requests are on, UPI remains off pending the user's verification decision", async () => {
+describe("backend features enabled with their backend release; UPI record activation held for authority review", () => {
+  it("photos, admin requests and pickup legs are on; UPI record stays off pending the owner's payment-flow decision, QR display ships separately", async () => {
     const f = await import("./backend-features");
     expect(f.INSPECTION_PHOTOS_ENABLED).toBe(true);
     expect(f.ADMIN_APPROVAL_ENABLED).toBe(true);
     expect(f.PICKUP_LEG_PROGRESS_ENABLED).toBe(true);
     expect(f.UPI_RECORD_ENABLED).toBe(false);
+  });
+  it("the shared UPI QR block shows the verified merchant QR and payee line", () => {
+    const block = src("../components/UpiQr.tsx");
+    expect(block).toContain('require("../../assets/brand/upi-qr.png")');
+    expect(block).toContain("{UPI_PAYEE_LINE}");
+    const qr = require("fs").readFileSync(require("path").join(__dirname, "../../assets/brand/upi-qr.png"));
+    expect(qr.length).toBeGreaterThan(1000);
+    expect(qr.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true);
+  });
+  it("QR display on the membership walk-in sale via the guarded collection fields (UPI already live there); job-sheet QR wiring is dormant behind UPI_RECORD_ENABLED", () => {
+    expect(src("../app/(tabs)/memberships.tsx")).toContain("<MembershipPaymentFields ");
+    expect(src("../components/MembershipPaymentFields.tsx")).toContain('{method === "upi_manual" ? <UpiQr /> : null}');
+    expect(src("../components/RecordPaymentFields.tsx")).toContain("{upi ? <UpiQr /> : null}");
   });
   it("the screens are gated on those flags", () => {
     expect(src("../app/(tabs)/jobs/inspection/[jobId].tsx")).toContain("INSPECTION_PHOTOS_ENABLED && jobId");
