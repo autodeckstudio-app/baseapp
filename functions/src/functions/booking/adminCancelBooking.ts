@@ -176,6 +176,15 @@ export async function runCancel(
       }
       planBox.committed = { feePaise: txPlan.feePaise, feeStatus: txPlan.feeStatus, refundPaise: txPlan.refundPaise, paidPaise: txPlan.paidPaise, policyFeePaise: txTerms.feePaise, manualRefund: txManualRefund };
       const invoiceSnap = txNeedsRefund && freshPayment?.invoiceId ? await tx.get(db.collection(COLLECTIONS.invoices()).doc(freshPayment.invoiceId)) : null;
+      // Manual-obligation marker read BEFORE any write in this transaction:
+      // an existing refund_<paymentId> doc (legacy claim or outbox tombstone)
+      // means refund accounting already exists for this money - stop, never
+      // double-record the obligation.
+      const manualClaimRef = txManualRefund && txNeedsRefund && txPaymentRef ? db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${txPaymentRef.id}`) : null;
+      const manualClaimSnap = manualClaimRef ? await tx.get(manualClaimRef) : null;
+      if (manualClaimSnap?.exists) {
+        throw new HttpsError("failed-precondition", "A refund record already exists for this payment. The booking is NOT cancelled; settle or inspect the existing refund first.");
+      }
       // Shared ownership validation for BOTH refund methods (the provider
       // path's planner/runner checks never cover the manual path): the fresh
       // payment must belong to THIS booking, job, studio and tenant; the job
@@ -233,17 +242,20 @@ export async function runCancel(
       }
       writeCancelRestores(tx, reads, fresh, data.bookingId, user, now, `Booking cancelled by ${actor}: ${data.bookingId}`);
 
-      // Cash/UPI/bank (manual) refunds: deployed behavior preserved - the
-      // studio settles these outside the provider by hand, and this records
-      // the money as returned at cancel time. CAVEAT kept explicit: this is
-      // an OBLIGATION the studio still has to pay out, projected as settled
-      // immediately; changing that timing is a product decision, not part of
-      // this activation.
-      if (txManualRefund && txNeedsRefund && txPaymentRef && freshPayment) {
-        tx.update(txPaymentRef, { status: "refunded", razorpayRefundId: null, refundAmount: txPlan.refundPaise, refundedAt: now, updatedAt: now });
-        if (invoiceSnap?.exists && (invoiceSnap.data() as Invoice).status !== "void" && freshPayment.invoiceId) {
-          tx.update(invoiceSnap.ref, { status: "void", voidedAt: now, voidedReason: `Booking cancelled: ${data.reason}`, updatedAt: now });
-        }
+      // Cash/UPI/bank (manual) refunds settle outside the provider by hand.
+      // TRUTHFUL PROJECTION (Booking.manualRefundDuePaise contract): at
+      // cancel time the money is still in the studio's hands, so the payment
+      // STAYS "completed" and the invoice STAYS issued - nothing here may
+      // record money as returned before it physically is. The obligation is
+      // written on the booking (manualRefundDuePaise; read by the admin owed
+      // badge, the office refunds-owed report and the customer notice) and
+      // marked with an unmarked refund_<paymentId> doc, the same "manual
+      // refund obligation" marker refund-outbox.ts and initiateRefund.ts
+      // already refuse to double-process. Settlement (office hands the money
+      // back and records it) is a separate explicit action; this cancel path
+      // deliberately does NOT perform it.
+      if (txManualRefund && txNeedsRefund && txPaymentRef && freshPayment && manualClaimRef) {
+        tx.set(manualClaimRef, { paymentId: txPaymentRef.id, claimedAt: now, claimedBy: user.uid, bookingId: data.bookingId, amount: txPlan.refundPaise, kind: "manual_refund_owed" });
       }
       // Provider refunds: this callable writes NO refund projection. The
       // outbox runner submits and projects truthfully (partial amounts stay
@@ -252,7 +264,6 @@ export async function runCancel(
       if (jobDoc && j) {
         tx.update(jobDoc.ref, {
           status: "CANCELLED",
-          ...(txManualRefund && txNeedsRefund ? { paymentStatus: "refunded" } : {}),
           statusHistory: [...j.statusHistory, { status: "CANCELLED", changedAt: now, changedBy: user.uid, notes: `Booking cancelled by admin: ${data.reason}` }],
           updatedAt: now,
         });
@@ -265,8 +276,10 @@ export async function runCancel(
         cancellationFeePaise: txPlan.feePaise,
         ...(txPlan.feeStatus !== "none" ? { cancellationFeeStatus: txPlan.feeStatus } : {}),
         ...(txPlan.feeStatus === "waived" ? { cancellationFeeSettledBy: user.uid, cancellationFeeSettledAt: now } : {}),
-        refundedPaise: txManualRefund && txNeedsRefund ? txPlan.refundPaise : 0,
-        ...(txManualRefund && txNeedsRefund ? { paymentStatus: "refunded", refundStatus: "initiated", refundId: null } : {}),
+        refundedPaise: 0,
+        // Manual cancels: money is OWED, not returned - record the obligation,
+        // leave paymentStatus/refundStatus untouched until a real settlement.
+        ...(txManualRefund && txNeedsRefund ? { manualRefundDuePaise: txPlan.refundPaise } : {}),
         ...(refundRequestId ? { refundStatus: "requested", refundRequestId, refundRequestedPaise: txPlan.refundPaise } : {}),
         updatedAt: now,
       });
@@ -281,9 +294,12 @@ export async function runCancel(
           status: "CANCELLED",
           cancellationReason: data.reason,
           cancellationFeePaise: txPlan.feePaise,
-          // Truthful accounting: money RETURNED (manual, recorded now) vs
-          // money REQUESTED from the provider (projected later by the runner).
-          refundedPaise: txManualRefund && txNeedsRefund ? txPlan.refundPaise : 0,
+          // Truthful accounting: money OWED (manual, nothing returned yet -
+          // the obligation is on manualRefundDuePaise) vs money REQUESTED
+          // from the provider (projected later by the runner). refundedPaise
+          // only ever counts money actually sent back: zero at cancel time.
+          refundedPaise: 0,
+          ...(txManualRefund && txNeedsRefund ? { manualRefundDuePaise: txPlan.refundPaise } : {}),
           ...(refundRequestId ? { refundRequestedPaise: txPlan.refundPaise } : {}),
           feeStatus: txPlan.feeStatus,
         },
@@ -316,7 +332,7 @@ export async function runCancel(
     // Respond with the plan the transaction actually committed (recomputed
     // from fresh records inside it), not the pre-transaction preview.
     const committed = planBox.committed;
-    return { success: true, paidPaise: committed?.paidPaise ?? summary.paidPaise, policyFeePaise: committed?.policyFeePaise ?? summary.policyFeePaise, feePaise: committed?.feePaise ?? summary.feePaise, feeStatus: committed?.feeStatus ?? summary.feeStatus, refundPaise: committed?.refundPaise ?? summary.refundPaise, method: summary.method, refundRequestId, manualRefund: committed?.manualRefund ?? manualRefund };
+    return { success: true, providerRefundId: null, paidPaise: committed?.paidPaise ?? summary.paidPaise, policyFeePaise: committed?.policyFeePaise ?? summary.policyFeePaise, feePaise: committed?.feePaise ?? summary.feePaise, feeStatus: committed?.feeStatus ?? summary.feeStatus, refundPaise: committed?.refundPaise ?? summary.refundPaise, method: summary.method, refundRequestId, manualRefund: committed?.manualRefund ?? manualRefund };
 }
 
 export const adminCancelBooking = onCall(

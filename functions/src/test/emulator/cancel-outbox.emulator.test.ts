@@ -153,16 +153,35 @@ describe("adminCancelBooking -> outbox (single refund authority)", () => {
     void bookingId;
   });
 
-  it("cash payment: manual refund record path preserved (refunded + invoice void, no outbox request)", async () => {
+  it("cash payment: manual refund is recorded as OWED, never as returned (payment completed + invoice issued + obligation marker, no outbox request)", async () => {
     const { bookingId, payId, invId } = await seed({ method: "cash", amount: 100000, scheduledInHrs: 2 });
     const r = await runCancel(adminUser(), { bookingId, reason: "changed plans", feeAction: "charge" }, "admin");
-    expect(r).toMatchObject({ success: true, manualRefund: true, refundPaise: 90000 });
+    expect(r).toMatchObject({ success: true, manualRefund: true, refundPaise: 90000, providerRefundId: null });
+    // The money is still in the studio's hands at cancel time: the payment
+    // stays completed and the invoice stays issued. Nothing may read as
+    // "returned" before the office physically hands the cash back.
     const pay = (await db.collection(COLLECTIONS.payments()).doc(payId).get()).data() as Payment;
-    expect(pay.status).toBe("refunded");
-    expect(pay.refundAmount).toBe(90000);
-    expect(((await db.collection(COLLECTIONS.invoices()).doc(invId).get()).data() as { status: string }).status).toBe("void");
+    expect(pay.status).toBe("completed");
+    expect(pay.refundAmount ?? 0).toBe(0);
+    expect(((await db.collection(COLLECTIONS.invoices()).doc(invId).get()).data() as { status: string }).status).toBe("issued");
+    // The obligation is visible where the office looks: booking manualRefundDuePaise
+    // and the unmarked refund_<paymentId> claim (the "manual refund obligation"
+    // marker refund-outbox refuses to double-process).
+    const b = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as { manualRefundDuePaise?: number | null; refundedPaise?: number };
+    expect(b.manualRefundDuePaise).toBe(90000);
+    expect(b.refundedPaise ?? 0).toBe(0);
+    const claim = await db.collection(COLLECTIONS.paymentEvents()).doc(`refund_${payId}`).get();
+    expect(claim.exists).toBe(true);
+    expect((claim.data() as { outboxRequestId?: string }).outboxRequestId).toBeUndefined();
     const reqs = await db.collection(COLLECTIONS.refundRequests()).get();
     expect(reqs.empty).toBe(true); // no outbox involvement for manual money
+    // A second cancel of the same booking is the designed idempotent return
+    // (alreadyCancelled) and cannot double-record the obligation: still one
+    // claim doc, unchanged amount.
+    const again = await runCancel(adminUser(), { bookingId, reason: "again", feeAction: "charge" }, "admin");
+    expect(again).toMatchObject({ success: true, alreadyCancelled: true });
+    const b2 = (await db.collection(COLLECTIONS.bookings()).doc(bookingId).get()).data() as { manualRefundDuePaise?: number | null };
+    expect(b2.manualRefundDuePaise).toBe(90000);
   });
 
   it("a malformed Razorpay payment (no provider payment id) HOLDS - never falls through to a fake manual refund", async () => {
