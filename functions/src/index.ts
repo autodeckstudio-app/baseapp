@@ -51,6 +51,7 @@ export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";
 export { recordManualPayment } from "./functions/payment/recordManualPayment.js";
 export { confirmManualPayment } from "./functions/payment/confirmManualPayment.js";
 export { initiateRefund } from "./functions/payment/initiateRefund.js";
+export { settleManualRefund } from "./functions/payment/settleManualRefund.js";
 export { requestBookingRefund } from "./functions/payment/requestBookingRefund.js";
 export { processRefundOutbox } from "./functions/payment/processRefundOutbox.js";
 export { listRefundWork } from "./functions/payment/listRefundWork.js";

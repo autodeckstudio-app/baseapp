@@ -1,5 +1,9 @@
 // Studio/admin walk-in sale: the customer is at the studio, staff have found
-// (or just created) their customer record, and cash/UPI has been received.
+// (or just created) their customer record, and cash has been received.
+// Cash/bank creates the membership already ACTIVE with its completed payment in one
+// transaction. UPI is different: staff cannot see the AutoDeck account, so a
+// UPI walk-in only CLAIMS the payment - the membership stays pending with a
+// pending payment until an admin confirms it (confirmMembershipPayment).
 // Creates the membership already ACTIVE with its completed payment in one
 // transaction â the same state a confirmed pay-at-studio purchase ends in.
 // Records who sold it and when. Refuses when the customer already has a
@@ -25,6 +29,9 @@ export const createWalkinMembership = onCall({ region: "asia-south1" }, async (r
   const db = getFirestore();
   const membershipRef = db.collection(COLLECTIONS.memberships()).doc();
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
+  // Staff have no access to UPI references or the account: a UPI walk-in is a
+  // claim only. Any reference the client sent is dropped, never stored.
+  const upiClaim = data.method === "upi_manual";
 
   return db.runTransaction(async (tx) => {
     const planSnap = await tx.get(db.collection(COLLECTIONS.membershipPlans()).doc(data.planId));
@@ -64,17 +71,17 @@ export const createWalkinMembership = onCall({ region: "asia-south1" }, async (r
       customerId: data.customerId,
       planId: plan.id,
       tier: plan.tier,
-      status: "active",
+      status: upiClaim ? "pending" : "active",
       washesTotal: plan.includedWashes,
       washesUsed: 0,
       discountPercent: plan.discountPercent,
       pickupsTotal: plan.freePickups ?? 0,
       pickupsUsed: 0,
       prioritySlot: plan.prioritySlot ?? false,
-      startDate,
-      endDate,
-      activatedAt: nowIso,
-      activatedBy: user.uid,
+      startDate: upiClaim ? null : startDate,
+      endDate: upiClaim ? null : endDate,
+      activatedAt: upiClaim ? null : nowIso,
+      activatedBy: upiClaim ? null : user.uid,
       cancelledAt: null,
       cancelledBy: null,
       cancellationReason: null,
@@ -94,17 +101,17 @@ export const createWalkinMembership = onCall({ region: "asia-south1" }, async (r
       amount: plan.priceInPaise,
       currency: "INR",
       method: data.method,
-      status: "completed",
+      status: upiClaim ? "pending" : "completed",
       razorpayPaymentLinkId: null,
       razorpayPaymentId: null,
       razorpayOrderId: null,
       razorpayRefundId: null,
       refundAmount: null,
-      manualReference: data.manualReference ?? null,
-      recordedBy: user.uid,
+      manualReference: upiClaim ? null : (data.manualReference ?? null),
+      recordedBy: upiClaim ? null : user.uid,
       invoiceId: null,
       providerEventId: null,
-      completedAt: nowIso,
+      completedAt: upiClaim ? null : nowIso,
       failedAt: null,
       cancelledAt: null,
       refundedAt: null,
@@ -122,23 +129,34 @@ export const createWalkinMembership = onCall({ region: "asia-south1" }, async (r
       studioId: null,
       after: { planId: plan.id, tier: plan.tier, priceInPaise: plan.priceInPaise, paymentId: paymentRef.id, via: "walkin" },
     });
-    writeAuditLog(tx, {
-      action: "payment.completed",
-      entityType: "Payment",
-      entityId: paymentRef.id,
-      user,
-      studioId: null,
-      after: { status: "completed", targetType: "membership", membershipId: membershipRef.id, method: data.method },
-    });
-    writeAuditLog(tx, {
-      action: "membership.activated",
-      entityType: "Membership",
-      entityId: membershipRef.id,
-      user,
-      studioId: null,
-      after: { status: "active", startDate, endDate, via: "walkin" },
-    });
+    if (upiClaim) {
+      writeAuditLog(tx, {
+        action: "payment.initiated",
+        entityType: "Payment",
+        entityId: paymentRef.id,
+        user,
+        studioId: null,
+        after: { status: "pending", targetType: "membership", membershipId: membershipRef.id, method: data.method, claim: "staff_upi" },
+      });
+    } else {
+      writeAuditLog(tx, {
+        action: "payment.completed",
+        entityType: "Payment",
+        entityId: paymentRef.id,
+        user,
+        studioId: null,
+        after: { status: "completed", targetType: "membership", membershipId: membershipRef.id, method: data.method },
+      });
+      writeAuditLog(tx, {
+        action: "membership.activated",
+        entityType: "Membership",
+        entityId: membershipRef.id,
+        user,
+        studioId: null,
+        after: { status: "active", startDate, endDate, via: "walkin" },
+      });
+    }
 
-    return { membershipId: membershipRef.id, paymentId: paymentRef.id };
+    return { membershipId: membershipRef.id, paymentId: paymentRef.id, pendingClaim: upiClaim };
   });
 });

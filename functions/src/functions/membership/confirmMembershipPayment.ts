@@ -61,6 +61,17 @@ export const confirmMembershipPayment = onCall({ region: "asia-south1" }, async 
       );
     }
 
+    // UPI claims: staff show the QR and send the claim, but they cannot see
+    // the AutoDeck account - only an admin who has checked it may confirm a
+    // UPI membership payment (same rule as job UPI via confirmManualPayment).
+    const settlesUpiClaim = payment.method === "upi_manual" || (payment.status !== "completed" && data.method === "upi_manual");
+    if (settlesUpiClaim && user.claims.role === "studio") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only an admin can confirm a UPI payment, after checking it arrived in the AutoDeck account.",
+      );
+    }
+
     const now = new Date();
     const nowIso = now.toISOString();
     const startDate = nowIso.slice(0, 10);

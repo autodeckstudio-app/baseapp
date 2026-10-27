@@ -52,3 +52,11 @@ export const verifyCheckoutPaymentSchema = z.object({
   razorpay_signature: z.string().min(1),
 }).strict();
 
+
+export const settleManualRefundSchema = z.object({
+  paymentId: z.string().min(1),
+  // The office's acknowledgement that the money was physically returned
+  // (e.g. "handed back at the counter"). Required: settling is the moment
+  // the books start saying "returned", so it needs a human note.
+  note: z.string().trim().min(3).max(500),
+}).strict();

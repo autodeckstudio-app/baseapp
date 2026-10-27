@@ -98,12 +98,12 @@ function PaymentsPageContent() {
 
   const invoiceNos = useLabels(COLLECTIONS.invoices(), payments.map((p) => p.invoiceId ?? "").filter(Boolean), (d) => (d as Invoice).invoiceNumber ?? "");
 
-  async function handleConfirmReceived(paymentId: string) {
-    setConfirmingId(paymentId);
+  async function handleConfirmReceived(payment: Payment) {
+    setConfirmingId(payment.id);
     setMessage(null);
     try {
-      await confirmReceivedPayment(paymentId);
-      setMessage("Payment confirmed received. Invoice issued.");
+      await confirmReceivedPayment(payment);
+      setMessage(payment.membershipId ? "Membership payment confirmed - the membership is now active." : "Payment confirmed received. Invoice issued.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not confirm the payment. Check its status, then try again.");
     } finally {

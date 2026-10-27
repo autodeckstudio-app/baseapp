@@ -22,9 +22,9 @@ export function MembershipPaymentFields({ amountPaise, method, onMethod, verifie
       {amountPaise !== null ? <Text style={{ color: colors.textPrimary }}>{recordAmountLine(amountPaise)}</Text> : null}
       <Text style={{ color: colors.textMuted }}>{WRONG_AMOUNT_NOTE}</Text>
       {method === "upi_manual" ? <UpiQr /> : null}
-      {method === "upi_manual" ? <Text style={{ color: colors.textMuted, textAlign: "center" }}>Showing this code does not mean the payment arrived. Check the account, then confirm below.</Text> : null}
-      <TextInput label={method === "cash" ? "Reference / note (optional)" : "Payment reference"} value={reference} onChangeText={onReference} autoCapitalize="characters" />
-      <Button label={verified ? (method === "cash" ? "Cash in hand" : "Payment seen in the account") : (method === "cash" ? "I have the cash" : "I checked the payment arrived")} size="md" fullWidth={false} variant={verified ? "primary" : "secondary"} onPress={() => onVerified(!verified)} />
+      {method === "upi_manual" ? <Text style={{ color: colors.textMuted, textAlign: "center" }}>Showing this code does not mean the payment arrived. Staff cannot check the AutoDeck account - only the office confirms UPI after checking it.</Text> : null}
+      {method !== "upi_manual" ? <TextInput label={method === "cash" ? "Reference / note (optional)" : "Payment reference"} value={reference} onChangeText={onReference} autoCapitalize="characters" /> : null}
+      {method !== "upi_manual" ? <Button label={verified ? (method === "cash" ? "Cash in hand" : "Payment seen in the account") : (method === "cash" ? "I have the cash" : "I checked the payment arrived")} size="md" fullWidth={false} variant={verified ? "primary" : "secondary"} onPress={() => onVerified(!verified)} /> : null}
     </View>
   );
 }

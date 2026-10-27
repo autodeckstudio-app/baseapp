@@ -135,7 +135,7 @@ export function PaymentsView(p: {
   refundingId: string | null;
   onRefund: (id: string, reason: string) => void;
   confirmingId: string | null;
-  onConfirmReceived: (id: string) => void;
+  onConfirmReceived: (payment: Payment) => void;
   onOpenInvoice: (id: string) => void;
   today: string;
 }) {
@@ -169,24 +169,28 @@ export function PaymentsView(p: {
         <span className="ax-row-actions">
           {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}
           {(x.status === "pending" || x.status === "processing") && x.method === "upi_manual" && (ackId === x.id ? (
-            <>
-              <span>Money seen in the account?</span>
-              <button type="button" className="ax-button" disabled={p.confirmingId === x.id} onClick={() => { p.onConfirmReceived(x.id); setAckId(null); }}>
-                {p.confirmingId === x.id ? "Confirming" : "Yes, confirm received"}
-              </button>
-              <button type="button" className="ax-button" onClick={() => setAckId(null)}>Not yet</button>
-            </>
+            <span className="ax-confirm-panel">
+              <span className="ax-confirm-q">Money seen in the account?</span>
+              <span className="ax-confirm-buttons">
+                <button type="button" className="ax-button" disabled={p.confirmingId === x.id} onClick={() => { p.onConfirmReceived(x); setAckId(null); }}>
+                  {p.confirmingId === x.id ? "Confirming" : "Yes, confirm received"}
+                </button>
+                <button type="button" className="ax-button" onClick={() => setAckId(null)}>Not yet</button>
+              </span>
+            </span>
           ) : (
             <button type="button" className="ax-button" onClick={() => setAckId(x.id)}>Confirm received</button>
           ))}
           {x.status === "completed" && (confirmId === x.id ? (
-            <>
+            <span className="ax-confirm-panel">
               <input placeholder="Reason for refund" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Refund reason" />
-              <button type="button" className="ax-button ax-button--danger" disabled={p.refundingId === x.id || !reason.trim()} onClick={() => p.onRefund(x.id, reason.trim())}>
-                {p.refundingId === x.id ? "Refunding" : "Refund"}
-              </button>
-              <button type="button" className="ax-button" onClick={() => { setConfirmId(null); setReason(""); }}>Keep</button>
-            </>
+              <span className="ax-confirm-buttons">
+                <button type="button" className="ax-button ax-button--danger" disabled={p.refundingId === x.id || !reason.trim()} onClick={() => p.onRefund(x.id, reason.trim())}>
+                  {p.refundingId === x.id ? "Refunding" : "Refund"}
+                </button>
+                <button type="button" className="ax-button" onClick={() => { setConfirmId(null); setReason(""); }}>Keep</button>
+              </span>
+            </span>
           ) : (
             <button type="button" className="ax-button" onClick={() => { setConfirmId(x.id); setReason(""); }}>Refund</button>
           ))}

@@ -156,6 +156,16 @@ html[data-theme="night"] .ax-shell .ax-kpis > div + div { border-left-color: rgb
   .ax-shell .ax-list-row > [data-col="last"] { grid-column: 2; grid-row: 3; justify-self: end; text-align: right; font-size: 13px; }
   .ax-shell .ax-list-row > [data-col="last"]::before { content: "Last visit "; color: var(--ad-text-tertiary); }
   .ax-shell .ax-row-actions { flex-wrap: wrap; justify-content: flex-end; }
+  /* An open two-step panel (UPI received ack, refund reason) leaves the narrow
+     action column: it takes the full card width and stacks - question or
+     reason line first, buttons in a row below - so the name/date columns are
+     never crushed and nothing overflows the card under the floating tab bar. */
+  .ax-shell .ax-list-row > [data-col="act"]:has(.ax-confirm-panel) { grid-column: 1 / -1; justify-self: stretch; }
+  .ax-shell .ax-confirm-panel { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; text-align: left; }
+  .ax-shell .ax-confirm-panel .ax-confirm-q { font-size: 14px; }
+  .ax-shell .ax-confirm-panel .ax-confirm-buttons { display: flex; gap: 8px; }
+  .ax-shell .ax-confirm-panel .ax-confirm-buttons .ax-button { flex: 1 1 0; justify-content: center; text-align: center; }
+  .ax-shell .ax-confirm-panel input { width: 100%; box-sizing: border-box; }
 }
 
 @media (max-width: 860px) {

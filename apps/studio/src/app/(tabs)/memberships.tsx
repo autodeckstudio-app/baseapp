@@ -168,7 +168,10 @@ export default function MembershipsScreen() {
 
   async function sell() {
     const bound = receiptMatches(saleReceipt, saleBinding());
-    const guard = canCollectPayment({ method: saleMethod, verified: bound, reference: saleRef });
+    // UPI is a claim only: staff cannot verify account arrivals and never
+    // handle the reference, so no receipt guard applies to a UPI claim.
+    const isUpiClaim = saleMethod === "upi_manual";
+    const guard = isUpiClaim ? null : canCollectPayment({ method: saleMethod, verified: bound, reference: saleRef });
     if (guard) { setMessage(!bound && saleReceipt !== null ? "Re-confirm the payment for this customer and plan." : guard); return; }
     setBusy(true);
     setMessage(null);
@@ -188,8 +191,10 @@ export default function MembershipsScreen() {
         return;
       }
       const fn = httpsCallable<{ customerId: string; planId: string; method: PaidMethod; manualReference?: string | undefined }, { membershipId: string }>(functions, "createWalkinMembership");
-      const result = await fn({ customerId, planId, method: saleMethod, manualReference: saleRef.trim() || undefined });
-      setMessage(`Walk-in sale complete - membership ${result.data.membershipId} is ACTIVE.`);
+      const result = await fn(isUpiClaim ? { customerId, planId, method: saleMethod } : { customerId, planId, method: saleMethod, manualReference: saleRef.trim() || undefined });
+      setMessage(isUpiClaim
+        ? "UPI payment claimed. The office confirms it after checking the account - the membership stays pending until then."
+        : `Walk-in sale complete - membership ${result.data.membershipId} is ACTIVE.`);
       setFound(null);
       setPhone("");
       setSearched(false);
@@ -240,24 +245,32 @@ export default function MembershipsScreen() {
                 {r.customerPhone} - Requested {fmtDate(r.membership.createdAt)}
                 {r.payment ? ` - ${(r.payment.amount / 100).toFixed(2)} INR (${r.payment.method.replace("_", " ")})` : " - no payment record found"}
               </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
-                {PAID_METHODS.map((m) => (
-                  <Chip
-                    key={m.value}
-                    label={`Paid via ${m.label}`}
-                    active={(methodById[r.membership.id] ?? ((r.payment?.method as PaidMethod) || "cash")) === m.value}
-                    onPress={() => { setMethodById((prev) => ({ ...prev, [r.membership.id]: m.value })); setRefById((prev) => ({ ...prev, [r.membership.id]: "" })); }}
+              {r.payment?.method === "upi_manual" ? (
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                  UPI claim waiting for the office. Staff cannot confirm UPI - only the office can, after checking the account.
+                </Text>
+              ) : (
+                <>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
+                    {PAID_METHODS.map((m) => (
+                      <Chip
+                        key={m.value}
+                        label={`Paid via ${m.label}`}
+                        active={(methodById[r.membership.id] ?? ((r.payment?.method as PaidMethod) || "cash")) === m.value}
+                        onPress={() => { setMethodById((prev) => ({ ...prev, [r.membership.id]: m.value })); setRefById((prev) => ({ ...prev, [r.membership.id]: "" })); }}
+                      />
+                    ))}
+                  </View>
+                  <TextInput
+                    style={inputStyle}
+                    placeholder={(methodById[r.membership.id] ?? ((r.payment?.method as PaidMethod) || "cash")) === "cash" ? "Reference / note (optional)" : "Payment reference (required)"}
+                    placeholderTextColor={colors.textMuted}
+                    value={refById[r.membership.id] ?? ""}
+                    onChangeText={(t) => setRefById((prev) => ({ ...prev, [r.membership.id]: t }))}
                   />
-                ))}
-              </View>
-              <TextInput
-                style={inputStyle}
-                placeholder={(methodById[r.membership.id] ?? ((r.payment?.method as PaidMethod) || "cash")) === "cash" ? "Reference / note (optional)" : "Payment reference (required)"}
-                placeholderTextColor={colors.textMuted}
-                value={refById[r.membership.id] ?? ""}
-                onChangeText={(t) => setRefById((prev) => ({ ...prev, [r.membership.id]: t }))}
-              />
-              <Button label={busy ? "Working..." : "Approve - payment received"} onPress={() => void approve(r)} disabled={busy} />
+                  <Button label={busy ? "Working..." : "Approve - payment received"} onPress={() => void approve(r)} disabled={busy} />
+                </>
+              )}
             </View>
           ))
         )}
@@ -294,7 +307,7 @@ export default function MembershipsScreen() {
               </View>
               {activePlans().length === 0 && <Text style={{ ...typography.caption, color: colors.textMuted }}>No active plans. Ask an admin to activate one.</Text>}
               <MembershipPaymentFields amountPaise={planId ? activePlans().find((p) => p.id === planId)?.priceInPaise ?? null : null} method={saleMethod} onMethod={(m) => { setSaleMethod(m); setSaleReceipt(null); setSaleRef(""); }} verified={receiptMatches(saleReceipt, saleBinding())} onVerified={(v) => setSaleReceipt(v ? saleBinding() : null)} reference={saleRef} onReference={setSaleRef} />
-              <Button label={busy ? "Processing..." : "Sell and activate"} onPress={() => void sell()} disabled={busy || !planId} />
+              <Button label={busy ? "Processing..." : saleMethod === "upi_manual" ? "Send UPI claim to the office" : "Sell and activate"} onPress={() => void sell()} disabled={busy || !planId} />
             </>
           )}
         </View>

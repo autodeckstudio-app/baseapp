@@ -30,10 +30,19 @@ type ConfirmManualPaymentOutput = { paymentId: string; invoiceId: string | null;
 // Office-only (server-enforced for UPI since 28 Oct 2026): the admin has
 // checked the receiving account and marks a pending manual payment received.
 // Completes the payment and issues the invoice. Idempotent server-side.
-export async function confirmReceivedPayment(paymentId: string): Promise<ConfirmManualPaymentOutput> {
+// Pending claims confirm through the callable that owns the payment's state:
+// job payments through confirmManualPayment (which also issues the invoice),
+// membership claims through confirmMembershipPayment (which activates the
+// membership). A membership payment has no invoice - never route it through
+// the job path.
+export async function confirmReceivedPayment(payment: Pick<Payment, "id" | "membershipId" | "method">): Promise<void> {
+  if (payment.membershipId) {
+    const fn = httpsCallable<{ membershipId: string; method: Payment["method"] }, unknown>(functions, "confirmMembershipPayment");
+    await fn({ membershipId: payment.membershipId, method: payment.method });
+    return;
+  }
   const fn = httpsCallable<ConfirmManualPaymentInput, ConfirmManualPaymentOutput>(functions, "confirmManualPayment");
-  const result = await fn({ paymentId });
-  return result.data;
+  await fn({ paymentId: payment.id });
 }
 
 type InitiateRefundInput = { paymentId: string; reason: string };

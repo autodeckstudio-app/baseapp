@@ -307,6 +307,8 @@ html[data-theme="night"] .ax-shell a.ax-button--primary { color: #1A1410; }
 .ax-list .is-muted { color: var(--ad-text-secondary); font-size: 13px; }
 .ax-skel--row { height: 60px; border-radius: 0; border-bottom: 1px solid var(--ad-border-subtle); }
 .ax-row-actions { display: inline-flex; gap: 6px; align-items: center; }
+.ax-confirm-panel { display: inline-flex; gap: 6px; align-items: center; }
+.ax-confirm-panel .ax-confirm-buttons { display: inline-flex; gap: 6px; align-items: center; }
 .ax-shell .ax-row-actions button, .ax-shell .ax-row-actions input { min-height: 30px; font-size: 12px; padding: 0 12px; }
 .ax-shell .ax-row-actions input { width: 140px; }
 .ax-sub { display: block; font-size: 12px; color: var(--ad-text-tertiary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
