@@ -134,6 +134,16 @@ export async function adminCancelBooking(input: { bookingId: string; reason: str
   return res.data;
 }
 
+/** Admin-only: the office physically returned the money (cash/UPI by hand)
+ * and records that fact. The callable clears the booking's refund-owed
+ * obligation and marks the payment refunded - no provider money moves. */
+export async function settleManualRefund(paymentId: string, note: string): Promise<void> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const fn = httpsCallable<{ paymentId: string; note: string }, unknown>(functions, "settleManualRefund");
+  await fn({ paymentId, note });
+}
+
 export async function settleCancellationFee(bookingId: string, action: "collected" | "waived", note?: string): Promise<void> {
   const { httpsCallable } = await import("firebase/functions");
   const { functions } = await import("./firebase");

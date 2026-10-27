@@ -2,8 +2,11 @@
 
 import { refundOwedText } from "../lib/refund-owed-copy";
 import { useState } from "react";
-import type { Booking, ServiceJob } from "@autodeck/core";
-import { adminCancelBooking, settleCancellationFee, type CancelSummary } from "../lib/bookings-service";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import type { Booking, Payment, ServiceJob } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { db } from "../lib/firebase";
+import { adminCancelBooking, settleCancellationFee, settleManualRefund, type CancelSummary } from "../lib/bookings-service";
 import { formatPaise } from "../lib/format";
 
 const CANCELLABLE = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"];
@@ -16,6 +19,30 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
+  const [settleNote, setSettleNote] = useState("");
+
+  // The owed payment is the booking's completed manual payment (cash/UPI/bank):
+  // the one the office must return by hand. Provider payments never settle here.
+  async function findOwedPaymentId(): Promise<string> {
+    const snap = await getDocs(query(collection(db, COLLECTIONS.payments()), where("bookingId", "==", booking.id), where("status", "==", "completed"), limit(10)));
+    const manual = snap.docs.map((d) => d.data() as Payment).find((x) => x.method !== "razorpay_payment_link");
+    if (!manual) throw new Error("No completed cash/UPI/bank payment found for this booking.");
+    return manual.id;
+  }
+
+  const settleBlock = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+      <label><span>How was the money returned</span>
+        <input value={settleNote} onChange={(e) => setSettleNote(e.target.value)} placeholder="e.g. handed back at the counter" maxLength={500} />
+      </label>
+      <div className="ax-row">
+        <button className="ax-button ax-button--primary" disabled={busy || settleNote.trim().length < 3} onClick={() => run(async () => {
+          const pid = await findOwedPaymentId();
+          await settleManualRefund(pid, settleNote.trim());
+        }, () => setMsg("Refund marked as returned. The owed amount is cleared."))}>Mark refund returned</button>
+      </div>
+    </div>
+  );
 
   const cancelled = booking.status === "CANCELLED";
   const closed = cancelled || booking.status === "COMPLETED" || booking.status === "EXPIRED";
@@ -35,6 +62,9 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
         <section className="ax-panel" data-testid="refund-owed">
           <span className="ax-label">Refund owed</span>
           <p className="ax-note">{refundOwedText(owed)}</p>
+          {settleBlock}
+          {msg ? <p className="ax-status-msg">{msg}</p> : null}
+          {warn ? <p className="ax-status-msg ax-status-msg--warn" role="alert">{warn}</p> : null}
         </section>
       ) : null;
     }
@@ -45,6 +75,7 @@ export function CancelBookingPanel({ booking, job }: { booking: Booking; job: Se
         <div className="kv"><span>Fee</span><span>{formatPaise(booking.cancellationFeePaise)}</span></div>
         <div className="kv"><span>Status</span><span>{st === "due" ? "Due" : st === "collected" ? "Collected" : st === "withheld" ? "Kept from the refund" : st === "waived" ? "Waived" : "Due"}</span></div>
         {owed > 0 ? <p className="ax-note" data-testid="refund-owed">{refundOwedText(owed)}</p> : null}
+        {owed > 0 ? settleBlock : null}
         {typeof booking.refundedPaise === "number" && booking.refundedPaise > 0 ? <div className="kv"><span>Refunded</span><span>{formatPaise(booking.refundedPaise)}</span></div> : null}
         {(!st || st === "due") ? (
           <div className="ax-row">
