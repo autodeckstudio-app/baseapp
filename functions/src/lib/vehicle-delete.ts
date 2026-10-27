@@ -169,9 +169,11 @@ export async function permanentlyDeleteVehicle(
 // pictures; pictures clicked in an inspection stay with the inspection record.
 // Inspection/job photos live under {tenantId}/jobs/{jobId}/photos/ - a
 // different prefix this function never touches. Here we remove ONLY the car's
-// own picture objects: cover.* and rc.* directly under
-// {tenantId}/vehicles/{vehicleId}/. paper-* documents are records, not
-// pictures, and are kept. Anything nested deeper is left alone.
+// own picture objects: cover.* directly under
+// {tenantId}/vehicles/{vehicleId}/. The RC photo is the registration
+// certificate document (schemas/vehicle.ts; staff see it next to the customer
+// licence in DocPhoto), and paper-* files are documents too - records, not
+// pictures - so both are kept. Anything nested deeper is left alone.
 // Runs after the Firestore delete commits, never before, so a refused delete
 // (open booking/job) can never strand a car without its pictures. Idempotent:
 // ignoreNotFound plus exact-name matching make a retry a no-op, and the
@@ -195,7 +197,7 @@ export function isVehiclePictureObject(folderPrefix: string, name: string): bool
   if (!name.startsWith(folderPrefix)) return false;
   const rest = name.slice(folderPrefix.length);
   if (rest.includes("/")) return false; // never reach into nested paths
-  return rest.startsWith("cover.") || rest.startsWith("rc.");
+  return rest.startsWith("cover.");
 }
 
 export async function deleteVehiclePhotos(
@@ -217,4 +219,59 @@ export async function deleteVehiclePhotos(
     }
   }
   return { deleted, failed };
+}
+
+// Durable cleanup truth: the sweep result is recorded on the tombstone
+// (deletedVehicles/{vehicleId}) so a failure is visible after the car is gone
+// from every UI, and a later retry can find it. No automatic re-sweep runs -
+// retry is the owner/admin re-issuing the same delete (alreadyDeleted path),
+// which re-runs the sweep and rewrites this status.
+export type VehiclePhotoCleanupStatus = "done" | "failed";
+
+export async function recordVehiclePhotoCleanup(
+  db: Firestore,
+  tenantId: string,
+  vehicleId: string,
+  result: VehiclePhotoCleanupResult,
+  nowIso: string = new Date().toISOString(),
+): Promise<void> {
+  const tombRef = db.collection(COLLECTIONS.deletedVehicles()).doc(vehicleId);
+  const tomb = await tombRef.get();
+  if (!tomb.exists) return; // delete never completed; nothing to annotate
+  if ((tomb.data() as DeletedVehicle).tenantId !== tenantId) return; // never annotate another tenant's record
+  const status: VehiclePhotoCleanupStatus = result.failed ? "failed" : "done";
+  await tombRef.update({ photoCleanup: { status, deleted: result.deleted, attemptedAt: nowIso } });
+}
+
+// Bounded retry pass over ONLY the tombstones this flow marked failed.
+// Returns counts so the caller can log; per-car status is on the tombstone.
+export interface VehiclePhotoCleanupRetryOutcome {
+  attempted: number;
+  healed: number;
+  stillFailing: number;
+}
+
+const PHOTO_CLEANUP_RETRY_LIMIT = 25;
+
+export async function retryFailedVehiclePhotoCleanups(
+  db: Firestore,
+  bucket: VehiclePhotoBucketLike,
+  limit: number = PHOTO_CLEANUP_RETRY_LIMIT,
+  nowIso: string = new Date().toISOString(),
+): Promise<VehiclePhotoCleanupRetryOutcome> {
+  const snap = await db
+    .collection(COLLECTIONS.deletedVehicles())
+    .where("photoCleanup.status", "==", "failed")
+    .limit(limit)
+    .get();
+  const out: VehiclePhotoCleanupRetryOutcome = { attempted: 0, healed: 0, stillFailing: 0 };
+  for (const doc of snap.docs) {
+    const tomb = doc.data() as DeletedVehicle;
+    out.attempted += 1;
+    const result = await deleteVehiclePhotos(bucket, tomb.tenantId, tomb.id);
+    await recordVehiclePhotoCleanup(db, tomb.tenantId, tomb.id, result, nowIso);
+    if (result.failed) out.stillFailing += 1;
+    else out.healed += 1;
+  }
+  return out;
 }

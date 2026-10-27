@@ -1083,3 +1083,64 @@ describe("Cross-studio authorization (Phase 5B P1-14)", () => {
     expect(rescheduleResult.booking.scheduledTime).toBe("15:00");
   });
 });
+
+describe("office-only confirmation of account payments (28 Oct 2026 policy)", () => {
+  let customerId2: string;
+  let service2: Service;
+  let vehicle2: Vehicle;
+
+  beforeAll(async () => {
+    await seedStudio(STUDIO_A, TENANT_A);
+    service2 = await seedService(uid("svc"), TENANT_A);
+    customerId2 = uid("customer");
+    vehicle2 = await seedVehicle(uid("veh"), TENANT_A, customerId2);
+  });
+
+  it("staff cannot confirm a pending UPI payment; admin confirms it", async () => {
+    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_A);
+    // Staff claims the customer paid by UPI (the QR claim flow creates a pending payment)
+    const init = (await initiatePayment.run({
+      data: { jobId: job.id, method: "upi_manual" },
+      auth: studioAuth(uid("staff"), STUDIO_A),
+    } as never)) as { paymentId: string; status: string };
+    expect(init.status).toBe("pending");
+
+    await expect(confirmManualPayment.run({
+      data: { paymentId: init.paymentId },
+      auth: studioAuth(uid("staff"), STUDIO_A),
+    } as never)).rejects.toThrow(/office/i);
+
+    const done = (await confirmManualPayment.run({
+      data: { paymentId: init.paymentId },
+      auth: adminAuth(uid("admin")),
+    } as never)) as { alreadyCompleted: boolean; invoiceId: string };
+    expect(done.alreadyCompleted).toBe(false);
+    const payment = (await db.collection(COLLECTIONS.payments()).doc(init.paymentId).get()).data() as Payment;
+    expect(payment.status).toBe("completed");
+  });
+
+  it("staff cannot one-step record a UPI payment; admin can", async () => {
+    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_A);
+    await expect(recordManualPayment.run({
+      data: { jobId: job.id, method: "upi_manual", manualReference: "UTR123456" },
+      auth: studioAuth(uid("staff"), STUDIO_A),
+    } as never)).rejects.toThrow(/office/i);
+
+    const recorded = (await recordManualPayment.run({
+      data: { jobId: job.id, method: "upi_manual", manualReference: "UTR123456" },
+      auth: adminAuth(uid("admin")),
+    } as never)) as { paymentId: string };
+    const payment = (await db.collection(COLLECTIONS.payments()).doc(recorded.paymentId).get()).data() as Payment;
+    expect(payment.status).toBe("completed");
+    expect(payment.method).toBe("upi_manual");
+  });
+
+  it("staff can still record and confirm cash (unchanged)", async () => {
+    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_A);
+    const recorded = (await recordManualPayment.run({
+      data: { jobId: job.id, method: "cash" },
+      auth: studioAuth(uid("staff"), STUDIO_A),
+    } as never)) as { paymentId: string };
+    expect(((await db.collection(COLLECTIONS.payments()).doc(recorded.paymentId).get()).data() as Payment).status).toBe("completed");
+  });
+});

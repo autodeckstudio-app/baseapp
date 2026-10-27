@@ -38,6 +38,9 @@ export interface DeletedVehicle {
   snapshot: VehicleSnapshot;
   deletedAt: string;
   deletedBy: string;
+  // Written after the post-delete photo sweep; "failed" stays visible until a
+  // retried delete sweeps again and rewrites it.
+  photoCleanup?: { status: "done" | "failed"; deleted: number; attemptedAt: string };
 }
 
 export interface Vehicle {

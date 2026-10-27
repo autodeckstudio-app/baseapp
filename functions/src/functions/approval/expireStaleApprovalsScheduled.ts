@@ -14,13 +14,30 @@
 // of its own) — a bounded, at-most-24h staleness window there is an
 // accepted operational tradeoff, not a correctness bug.
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { sweepStaleApprovals } from "../../lib/expiry-sweeps.js";
+import { retryFailedVehiclePhotoCleanups } from "../../lib/vehicle-delete.js";
 
 export const expireStaleApprovalsScheduled = onSchedule(
   { schedule: "0 2 * * *", timeZone: "Asia/Kolkata", region: "asia-south1" },
   async () => {
     const db = getFirestore();
     await sweepStaleApprovals(db);
+    // Vehicle photo cleanup retry rides this EXISTING daily job so the
+    // owner-authorized deletion policy (28 Oct 2026) gains an automatic
+    // retry without a new Cloud Scheduler job (a new recurring billed
+    // resource). Only tombstones the deletion flow itself marked
+    // photoCleanup.status == "failed" are retried - never historical records.
+    // A failure here must not fail the approvals sweep above, and vice versa.
+    try {
+      const outcome = await retryFailedVehiclePhotoCleanups(db, getStorage().bucket());
+      if (outcome.attempted > 0) logger.info("Vehicle photo cleanup retry pass", outcome);
+    } catch (err) {
+      logger.error("Vehicle photo cleanup retry pass failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   },
 );

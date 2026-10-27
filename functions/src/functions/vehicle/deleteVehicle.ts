@@ -7,13 +7,14 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deleteVehicleSchema } from "../../schemas/vehicle.js";
-import { permanentlyDeleteVehicle, deleteVehiclePhotos, VehicleDeleteError } from "../../lib/vehicle-delete.js";
+import { permanentlyDeleteVehicle, deleteVehiclePhotos, recordVehiclePhotoCleanup, VehicleDeleteError } from "../../lib/vehicle-delete.js";
 
 // Permanently deletes ONE vehicle record (owner or admin, same tenant) after copying
 // its details onto that car's bookings, jobs and invoices. History is kept.
-// After the record is gone, the car's own pictures (cover/RC) are removed from
+// After the record is gone, the car's own cover pictures are removed from
 // Storage; inspection photos live under the job prefix and are always kept,
-// and paper-* documents are records, not pictures, so they are kept too.
+// and the RC photo plus paper-* documents are records, not pictures, so they
+// are kept too.
 export const deleteVehicle = onCall({ region: "asia-south1" }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "admin", "superadmin");
@@ -52,6 +53,17 @@ export const deleteVehicle = onCall({ region: "asia-south1" }, async (request) =
     }
     if (photos.failed) {
       logger.error("Vehicle photo cleanup left objects behind", { vehicleId: data.vehicleId });
+    }
+    // Durable truth on the tombstone: a failed sweep stays visible (and
+    // retryable) after the car is gone from every UI. A failure here must not
+    // fail the call either - the photos.failed flag still reports it.
+    try {
+      await recordVehiclePhotoCleanup(getFirestore(), user.claims.tenantId, data.vehicleId, photos);
+    } catch (err) {
+      logger.error("Vehicle photo cleanup status could not be recorded", {
+        vehicleId: data.vehicleId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
     return { ...result, photos };
   } catch (err) {

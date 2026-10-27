@@ -36,8 +36,9 @@ export function fakeFirestore(
     where: (f: string, _op: string, v: unknown) => query(c, [...filters, [f, v]]),
     limit: () => query(c, filters),
     get: async () => {
+      const resolve = (d: Doc, path: string): unknown => path.split(".").reduce<unknown>((acc, k) => (acc == null ? undefined : (acc as Doc)[k]), d);
       const docs = Object.keys(col(c))
-        .filter((id) => filters.every(([f, v]) => col(c)[id]![f] === v))
+        .filter((id) => filters.every(([f, v]) => resolve(col(c)[id]!, f as string) === v))
         .map((id) => snap(c, id));
       return { docs, empty: docs.length === 0, size: docs.length };
     },

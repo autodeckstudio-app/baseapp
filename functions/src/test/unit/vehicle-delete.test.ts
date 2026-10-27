@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { permanentlyDeleteVehicle, deleteVehiclePhotos, isVehiclePictureObject, VehicleDeleteError } from "../../lib/vehicle-delete.js";
+import { permanentlyDeleteVehicle, deleteVehiclePhotos, isVehiclePictureObject, recordVehiclePhotoCleanup, retryFailedVehiclePhotoCleanups, VehicleDeleteError } from "../../lib/vehicle-delete.js";
 import { buildNotification } from "../../lib/notification-events.js";
 import { fakeFirestore } from "./fake-firestore.js";
 
@@ -135,14 +135,14 @@ describe("deleteVehiclePhotos", () => {
   it("matches only cover.* and rc.* directly in the car folder", () => {
     const folder = "t/vehicles/v1/";
     expect(isVehiclePictureObject(folder, "t/vehicles/v1/cover.a.jpg")).toBe(true);
-    expect(isVehiclePictureObject(folder, "t/vehicles/v1/rc.b.png")).toBe(true);
+    expect(isVehiclePictureObject(folder, "t/vehicles/v1/rc.b.png")).toBe(false); // RC is a document, kept
     expect(isVehiclePictureObject(folder, "t/vehicles/v1/paper-p1.jpg")).toBe(false);
     expect(isVehiclePictureObject(folder, "t/vehicles/v1/nested/cover.c.jpg")).toBe(false);
     expect(isVehiclePictureObject(folder, "t/vehicles/v2/cover.d.jpg")).toBe(false);
     expect(isVehiclePictureObject(folder, "t/jobs/j1/photos/e.jpg")).toBe(false);
   });
 
-  it("deletes cover and RC pictures, keeps papers and every other car and job photo", async () => {
+  it("deletes only the cover picture, keeps RC, papers and every other car and job photo", async () => {
     const { bucket, deleted } = fakeBucket([
       "t/vehicles/v1/cover.1.jpg",
       "t/vehicles/v1/rc.2.jpg",
@@ -151,8 +151,8 @@ describe("deleteVehiclePhotos", () => {
       "t/jobs/j1/photos/4.jpg",
     ]);
     const r = await deleteVehiclePhotos(bucket, "t", "v1");
-    expect(r).toEqual({ deleted: 2, failed: false });
-    expect(deleted.sort()).toEqual(["t/vehicles/v1/cover.1.jpg", "t/vehicles/v1/rc.2.jpg"]);
+    expect(r).toEqual({ deleted: 1, failed: false });
+    expect(deleted).toEqual(["t/vehicles/v1/cover.1.jpg"]);
   });
 
   it("is a no-op on retry when the pictures are already gone", async () => {
@@ -164,11 +164,51 @@ describe("deleteVehiclePhotos", () => {
 
   it("keeps sweeping when one object fails and reports the failure", async () => {
     const { bucket, deleted } = fakeBucket(
-      ["t/vehicles/v1/cover.1.jpg", "t/vehicles/v1/rc.2.jpg"],
+      ["t/vehicles/v1/cover.1.jpg", "t/vehicles/v1/cover.2.jpg"],
       ["t/vehicles/v1/cover.1.jpg"],
     );
     const r = await deleteVehiclePhotos(bucket, "t", "v1");
     expect(r).toEqual({ deleted: 1, failed: true });
-    expect(deleted).toEqual(["t/vehicles/v1/rc.2.jpg"]);
+    expect(deleted).toEqual(["t/vehicles/v1/cover.2.jpg"]);
+  });
+});
+
+describe("recordVehiclePhotoCleanup", () => {
+  it("writes durable cleanup truth on the tombstone and never touches another tenant", async () => {
+    const { db, data } = fakeFirestore(seed());
+    await permanentlyDeleteVehicle(db, owner, "v1", noAudit);
+    await recordVehiclePhotoCleanup(db, "t", "v1", { deleted: 1, failed: false }, "2026-10-28T00:00:00Z");
+    expect(data.deletedVehicles!.v1!.photoCleanup).toEqual({ status: "done", deleted: 1, attemptedAt: "2026-10-28T00:00:00Z" });
+    // snapshot and identity survive the annotation
+    expect(data.deletedVehicles!.v1!.snapshot).toMatchObject({ registrationNumber: "GJ01AB1234" });
+    expect(data.deletedVehicles!.v1!.ownerId).toBe("c1");
+    await recordVehiclePhotoCleanup(db, "t", "v1", { deleted: 0, failed: true }, "2026-10-28T01:00:00Z");
+    expect(data.deletedVehicles!.v1!.photoCleanup).toMatchObject({ status: "failed", deleted: 0 });
+    // wrong tenant: not annotated
+    await recordVehiclePhotoCleanup(db, "other", "v1", { deleted: 9, failed: false }, "2026-10-28T02:00:00Z");
+    expect(data.deletedVehicles!.v1!.photoCleanup).toMatchObject({ status: "failed", deleted: 0 });
+    // no tombstone: no-op, no throw
+    await recordVehiclePhotoCleanup(db, "t", "v2", { deleted: 1, failed: false });
+    expect(data.deletedVehicles!.v2).toBeUndefined();
+  });
+});
+
+describe("retryFailedVehiclePhotoCleanups", () => {
+  const bucketFor = (names: string[]) => ({
+    getFiles: async ({ prefix }: { prefix: string }) => [
+      names.filter((n) => n.startsWith(prefix)).map((n) => ({ name: n, delete: async () => {} })),
+    ] as [unknown],
+  });
+
+  it("retries only failed tombstones and heals them", async () => {
+    const { db, data } = fakeFirestore(seed());
+    await permanentlyDeleteVehicle(db, owner, "v1", noAudit);
+    data.deletedVehicles!.v1!.photoCleanup = { status: "failed", deleted: 0, attemptedAt: "2026-10-28T00:00:00Z" };
+    const out = await retryFailedVehiclePhotoCleanups(db, bucketFor(["t/vehicles/v1/cover.1.jpg"]) as never, 25, "2026-10-28T03:00:00Z");
+    expect(out).toEqual({ attempted: 1, healed: 1, stillFailing: 0 });
+    expect(data.deletedVehicles!.v1!.photoCleanup).toEqual({ status: "done", deleted: 1, attemptedAt: "2026-10-28T03:00:00Z" });
+    // second pass: nothing failed, no attempts
+    const again = await retryFailedVehiclePhotoCleanups(db, bucketFor([]) as never);
+    expect(again).toEqual({ attempted: 0, healed: 0, stillFailing: 0 });
   });
 });

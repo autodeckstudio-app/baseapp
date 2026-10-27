@@ -7,7 +7,7 @@ import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { archiveVehicle, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
+import { archiveVehicle, deleteVehiclePermanently, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
@@ -49,9 +49,7 @@ export default function GarageScreen() {
   const [showArchived,setShowArchived]=useState(false);
   const [archiveActionError,setArchiveActionError]=useState<string|null>(null);
   const [archiveActionBusy,setArchiveActionBusy]=useState<string|null>(null);
-  const [removing, setRemoving] = useState<Vehicle | null>(null);
-  const [removeBusy, setRemoveBusy] = useState(false);
-  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<Vehicle | null>(null);
   const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
   const [jobs, setJobs] = useState<ServiceJob[]>(mock ? mock.jobs : []);
   const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>(mock ? mock.svcMap : {});
@@ -91,19 +89,19 @@ export default function GarageScreen() {
     void setActiveVehicle(v.id);
     router.push({ pathname: "/(tabs)/garage/[id]", params: { id: v.id } });
   };
-  async function confirmRemove() {
-    if (!removing) return;
-    setRemoveBusy(true);
-    setRemoveError(null);
+  async function confirmDeletePermanently() {
+    if (!deleting) return;
+    setArchiveActionBusy(deleting.id);
+    setArchiveActionError(null);
     try {
-      await archiveVehicle(removing.id);
-      // Do not wait for the Firestore stream to catch up with the callable.
-      setVehicles((current) => current?.filter((v) => v.id !== removing.id) ?? current);
-      setRemoving(null);
-    } catch {
-      setRemoveError("We could not remove this car. Please try again.");
+      await deleteVehiclePermanently(deleting.id);
+      // Do not wait for the archived stream to catch up with the callable.
+      setArchived((current) => current.filter((v) => v.id !== deleting.id));
+      setDeleting(null);
+    } catch (e) {
+      setArchiveActionError(e instanceof Error ? e.message : "Could not delete the car. Please try again.");
     } finally {
-      setRemoveBusy(false);
+      setArchiveActionBusy(null);
     }
   }
   const list = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -160,6 +158,39 @@ export default function GarageScreen() {
         <View style={{ gap: space.breath, marginTop: metrics.sectionGap, paddingBottom: 100 }}>
           <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
           <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
+        </View>
+      ) : null}
+      {archived.length > 0 ? (
+        <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.line }}>
+          <Pressable accessibilityRole="button" onPress={() => setShowArchived((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <T role="heading">Archived cars ({archived.length})</T>
+            <T tone="secondary">{showArchived ? "Hide" : "Show"}</T>
+          </Pressable>
+          {showArchived ? archived.map((v) => (
+            <View key={v.id} style={{ gap: 6, paddingVertical: 6, borderTopWidth: 1, borderTopColor: "rgba(128,128,128,0.18)" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <CarThumb car={v} height={44} width={60} radius={8} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <T role="heading">{`${v.make ?? ""} ${v.model ?? ""}`.trim() || "Car"}</T>
+                  <Plate value={v.registrationNumber} />
+                </View>
+              </View>
+              {deleting?.id === v.id ? (
+                <View style={{ gap: 8 }}>
+                  <T tone="secondary">Delete this car forever? Its photos are removed. Service history, bills and inspection photos are kept. This cannot be undone.</T>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <Button label="Yes, delete forever" kind="danger" busy={archiveActionBusy === v.id} onPress={() => void confirmDeletePermanently()} />
+                    <Button label="Keep it" kind="quiet" onPress={() => setDeleting(null)} />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Button label="Restore" kind="quiet" busy={archiveActionBusy === v.id} onPress={() => void restore(v)} />
+                  <Button label="Delete permanently" kind="danger" onPress={() => setDeleting(v)} />
+                </View>
+              )}
+            </View>
+          )) : null}
         </View>
       ) : null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}

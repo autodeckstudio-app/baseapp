@@ -45,6 +45,18 @@ export const confirmManualPayment = onCall({ region: "asia-south1" }, async (req
     );
   }
 
+  // Office policy (28 Oct 2026): account-arrival payments (direct UPI / bank
+  // transfer) can only be confirmed by someone who can check the receiving
+  // account - admin or superadmin. Staff cannot see the account, so their
+  // confirmation would be unverifiable. Cash stays staff-confirmable: the
+  // notes are physically in hand at the counter.
+  if (payment.method !== "cash" && !["admin", "superadmin"].includes(user.claims.role)) {
+    throw new HttpsError(
+      "permission-denied",
+      "Only the office can confirm account payments. Staff can confirm cash.",
+    );
+  }
+
   // Idempotent: a payment already confirmed (by this or a concurrent call)
   // returns its existing completed state rather than erroring.
   if (payment.status === "completed") {
