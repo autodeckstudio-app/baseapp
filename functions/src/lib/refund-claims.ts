@@ -158,6 +158,10 @@ export async function projectLegacyRefund(
       razorpayRefundId: providerRefundId,
       refundAmount: fresh.amount,
       refundedAt: now,
+      // A no-invoice review flag (e.g. a late capture on a cancelled booking)
+      // is resolved BY this refund - clear it so the payment leaves the office
+      // review queue. Invoiced payments keep whatever flag they carry.
+      ...(fresh.invoiceId ? {} : { invoiceReviewNeeded: false }),
       updatedAt: now,
     });
     if (providerRefundId) {

@@ -500,7 +500,7 @@ export function RefundWorkPanel(p: {
                 <strong>{(x.refundAmount !== null && x.refundAmount !== undefined) ? formatPaise(x.refundAmount) : "-"}</strong>{" "}
                 <span className="ax-muted">
                   refunded{(x.refundAmount !== null && x.refundAmount !== undefined) && (x.amount !== null && x.amount !== undefined) && x.refundAmount !== x.amount ? ` of ${formatPaise(x.amount)} captured` : ""}
-                  {x.customerId ? ` - ${p.names?.[x.customerId] ?? "Customer"}` : ""}; the linked invoice needs review
+                  {x.customerId ? ` - ${p.names?.[x.customerId] ?? "Customer"}` : ""}; {x.invoiceId ? "the linked invoice needs review" : "arrived after the booking was cancelled - refund it from the payments list above"}
                 </span>
               </span>
               {x.invoiceId && <button type="button" className="ax-button" onClick={() => p.onOpenInvoice(x.invoiceId ?? "")}>Invoice</button>}

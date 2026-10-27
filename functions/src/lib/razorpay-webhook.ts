@@ -206,7 +206,14 @@ export async function processProviderEvent(
       record("completed");
       if (!job || anomaly || !prepared || prepared.existing) {
         tx.update(paymentRef, { status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
-          providerEventId: ev.providerEventId, completedAt: now, updatedAt: now });
+          providerEventId: ev.providerEventId, completedAt: now,
+          // Money that arrives AFTER the booking was cancelled is never ours to
+          // keep silently: flag it into the office refund-review queue
+          // (listRefundWork / RefundWorkPanel read invoiceReviewNeeded). The
+          // office returns it through the normal authorized refund route; the
+          // refund projection clears the flag. No automatic money movement.
+          ...(anomaly === "job_cancelled" ? { invoiceReviewNeeded: true } : {}),
+          updatedAt: now });
         writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
           after: { status: "completed", via: "razorpay_webhook" }, metadata: { needsReview: anomaly ?? "invoice_exists" } });
         return "completed";

@@ -428,7 +428,10 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       refundAmount: newRefunded,
       razorpayRefundId: fresh.providerRefundId ?? payment.razorpayRefundId,
       refundedAt: now,
-      ...(payment.invoiceId ? { invoiceReviewNeeded: true } : {}),
+      // Invoiced payments keep needing invoice review after a refund; a
+      // no-invoice flag (e.g. a late capture on a cancelled booking) is
+      // resolved BY this refund, so it clears and leaves the review queue.
+      invoiceReviewNeeded: payment.invoiceId ? true : false,
       updatedAt: now,
     });
     if (fresh.jobId) {
