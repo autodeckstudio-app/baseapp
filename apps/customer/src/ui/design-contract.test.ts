@@ -408,7 +408,7 @@ describe("nav order and drawer", () => {
     expect(h).toContain("export const titleNeedsPill = (day: boolean, hasPhoto: boolean): boolean => day && hasPhoto;");
   });
   it("no back button on a tab root: tab names never appear in the back bar's SUB_ROOTS", () => {
-    const kit = read("src/ui/kit.tsx");
+    const kit = read("src/lib/back-nav.ts");
     const m = kit.match(/const SUB_ROOTS: Record<string, string> = \{([^}]*)\}/);
     expect(m).not.toBeNull();
     for (const tab of ["index", "bookings", "catalogue", "garage", "profile"]) expect(m![1]).not.toMatch(new RegExp(`\\b${tab}:`));

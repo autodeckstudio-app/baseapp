@@ -1,6 +1,7 @@
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
+import { backFallback } from "../lib/back-nav";
 import { AppBar } from "./AppBar";
 import { reportScroll, resetNavScroll } from "../lib/nav-scroll";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -84,19 +85,17 @@ export function T({
 /** Full screen: ambient ground, scrolling column capped at reading width. */
 // One header on every screen: avatar (or Back on a drill-down), screen name, bell. Same height everywhere.
 // Tab roots (index, bookings, catalogue = Services, garage, profile) never show Back: the nav is their way around.
-const SUB_ROOTS: Record<string, string> = { studio: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)" };
 const BAR_TITLES: Record<string, string> = { bookings: "Bookings", catalogue: "Services", garage: "Garage", profile: "You", membership: "Membership", notifications: "Notifications", studio: "The studio", help: "Help", cars: "Cars", book: "Book", approvals: "Approval", invoice: "Invoice", gifts: "Gifts" };
 function useBar(appBar?: string, onBackOverride?: () => void) {
   const router = useRouter();
   const segs = useSegments() as string[];
   const root = segs[1] ?? "";
-  if (segs[0] !== "(tabs)") return appBar ? { title: appBar, back: onBackOverride } : null;
-  const deep = segs.length >= 3 && !(segs[2] === "index");
-  const fallback = SUB_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
+  const fallback = backFallback(segs);
+  const goBack = fallback ? () => (router.canGoBack() ? router.back() : router.replace(fallback as never)) : undefined;
+  if (segs[0] !== "(tabs)") return appBar ? { title: appBar, back: onBackOverride ?? goBack } : null;
   const title = appBar ?? BAR_TITLES[root];
   if (!title) return null;
-  const back = onBackOverride ?? (deep || root in SUB_ROOTS ? () => (router.canGoBack() ? router.back() : router.replace(fallback as never)) : undefined);
-  return { title, back };
+  return { title, back: onBackOverride ?? goBack };
 }
 
 function Ambient({ children }: { children?: ReactNode }) {

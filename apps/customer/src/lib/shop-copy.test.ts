@@ -19,7 +19,7 @@ describe("shop design integration", () => {
   });
   it("keeps the shared shell and a working back path on the guest route", () => {
     // Non-tab screens must keep their onBack in the AppBar (was dropped outside tabs).
-    expect(kit).toContain('{ title: appBar, back: onBackOverride }');
+    expect(kit).toContain('{ title: appBar, back: onBackOverride ?? goBack }');
     expect(shop).toContain('appBar="Shop"');
     expect(shop).toContain('onBack={() => setOpen(null)}');
   });
