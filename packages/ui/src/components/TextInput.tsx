@@ -45,7 +45,8 @@ export function TextInput({ label, error, helperText, onFocus, onBlur, ...rest }
           borderRadius: radius.md,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm + 4,
-          fontSize: typography.body.fontSize,
+          // 16px on web: iOS Safari zooms the page on focus when a field is smaller, and does not zoom back.
+          fontSize: Platform.OS === "web" ? Math.max(16, typography.body.fontSize) : typography.body.fontSize,
           color: colors.textPrimary,
           backgroundColor: colors.surfaceSunken,
           minHeight: 44,

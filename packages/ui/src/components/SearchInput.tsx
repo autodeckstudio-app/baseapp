@@ -1,4 +1,4 @@
-import { View, Text, TextInput as RNTextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput as RNTextInput, TouchableOpacity, Platform } from "react-native";
 import { colors } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
 import { radius } from "../tokens/radius.js";
@@ -32,7 +32,7 @@ export function SearchInput({ value, onChangeText, placeholder = "Search", autoF
         placeholderTextColor={colors.textMuted}
         autoFocus={autoFocus}
         accessibilityLabel={placeholder}
-        style={{ flex: 1, fontSize: typography.body.fontSize, color: colors.textPrimary, paddingVertical: 0 }}
+        style={{ flex: 1, fontSize: Platform.OS === "web" ? Math.max(16, typography.body.fontSize) : typography.body.fontSize, color: colors.textPrimary, paddingVertical: 0 }}
       />
       {value.length > 0 && (
         <TouchableOpacity

@@ -14,7 +14,7 @@ export function AgreedTimeInput({ label, value, onChange }: { label: string; val
             step: 300,
             onChange: (e: { target: { value: string } }) => onChange(e.target.value),
             "aria-label": `${label}, India time`,
-            style: { height: 44, minWidth: 0, width: "100%", boxSizing: "border-box", fontSize: 15, padding: "0 12px", borderRadius: 14, border: `1px solid ${colors.border}`, background: colors.surfaceSunken, color: colors.textPrimary },
+            style: { height: 44, minWidth: 0, width: "100%", boxSizing: "border-box", fontSize: 16, padding: "0 12px", borderRadius: 14, border: `1px solid ${colors.border}`, background: colors.surfaceSunken, color: colors.textPrimary },
           })
         : <TextInput value={value} onChangeText={onChange} placeholder="2026-10-12 16:30" placeholderTextColor={colors.textMuted} style={{ ...typography.caption, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: spacing.sm, height: 44 }} />}
     </View>
