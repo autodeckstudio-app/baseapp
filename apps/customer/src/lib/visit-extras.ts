@@ -45,9 +45,11 @@ export function applyBundleUpgrade(primaryId: string, extras: string[]): { prima
 }
 
 /** Note shown after a bundle upgrade. Says "switched" only when the main service really changed; otherwise the bundle was added to the visit. */
+export const SWITCHED_NOTE = "Full detail wash already covers both. We switched you to it.";
+export const ADDED_NOTE = "Full detail wash covers both. We added it to your visit.";
 export function bundleUpgradeNote(fromPrimaryId: string, up: { primaryId: string; upgradedTo: string | null }): string | null {
   if (!up.upgradedTo) return null;
   return up.primaryId !== fromPrimaryId
-    ? "Full detail wash already covers both. We switched you to it."
-    : "Full detail wash covers both. We added it to your visit.";
+    ? SWITCHED_NOTE
+    : ADDED_NOTE;
 }

@@ -19,7 +19,7 @@ import { SERVICE_INCLUDES, servicesOverlap, CAR_SEGMENTS, FIRST_STUDIO_ID, norma
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
-import { applyBundleUpgrade, bundleUpgradeNote, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
+import { SWITCHED_NOTE, applyBundleUpgrade, bundleUpgradeNote, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
 import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
@@ -29,7 +29,7 @@ const VEHICLE_CATEGORIES = CAR_SEGMENTS;
 const durationText = formatDuration;
 
 export default function BookServiceScreen() {
-  const { serviceId, extras: extrasParam, day } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string }>();
+  const { serviceId, extras: extrasParam, day, upgraded } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string; upgraded?: string }>();
   const [dayMissed, setDayMissed] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -62,13 +62,15 @@ export default function BookServiceScreen() {
   const combo = comboFor(catalogue, serviceId);
   const extraIds = combo ? [] : extraIdsState;
   const [upgradeNote, setUpgradeNote] = useState<string | null>(null);
+  // The "switched" note is carried in the route param because the switch replaces the screen, and a combo page has no extras block to host it.
+  const shownNote = upgradeNote !== null ? (upgradeNote || null) : upgraded === "switched" ? SWITCHED_NOTE : null;
   useEffect(() => { setExtraIds(extrasFromParam(extrasParam).filter((x) => !servicesOverlap(serviceId ?? "", x) && x !== serviceId)); }, [serviceId]);
   const pickExtra = (id: string) => {
     const next = toggleExtra(extraIds, id);
     const up = applyBundleUpgrade(serviceId ?? "", next);
-    if (!up.upgradedTo) { setUpgradeNote(null); setExtraIds(next); return; }
+    if (!up.upgradedTo) { setUpgradeNote(""); setExtraIds(next); return; }
     setUpgradeNote(bundleUpgradeNote(serviceId ?? "", up));
-    if (up.primaryId !== serviceId) router.replace({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: up.primaryId, ...(up.extras.length ? { extras: extrasToParam(up.extras) } : {}) } });
+    if (up.primaryId !== serviceId) router.replace({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: up.primaryId, upgraded: "switched", ...(up.extras.length ? { extras: extrasToParam(up.extras) } : {}) } });
     else setExtraIds(up.extras);
   };
   const [extraTotals, setExtraTotals] = useState<Record<string, number>>({});
@@ -237,13 +239,14 @@ export default function BookServiceScreen() {
               );
             })}
           </ScrollView>
-          {upgradeNote ? <T role="caption" tone="accent">{upgradeNote}</T> : null}
           {extraIds.flatMap((id) => (SERVICE_INCLUDES[id] ?? []).map((inc) => ({ big: id, inc }))).length > 0 ? (
             <T role="caption" tone="tertiary">{extraIds.filter((id) => (SERVICE_INCLUDES[id] ?? []).length > 0).map((id) => `${catalogue.find((c) => c.id === id)?.name ?? "That service"} already includes ${(SERVICE_INCLUDES[id] ?? []).map((i) => catalogue.find((c) => c.id === i)?.name ?? "").filter(Boolean).join(" and ")}.`).join(" ")}</T>
           ) : null}
           {extraIds.length > 0 ? <T role="caption" tone="tertiary">One visit, one slot. Times below fit all {extraIds.length + 1} services.</T> : null}
         </View>
       ) : null}
+
+      {shownNote ? <T role="caption" tone="accent">{shownNote}</T> : null}
 
       <View style={{ gap: space.line }}>
         <Kicker>Pick a time</Kicker>

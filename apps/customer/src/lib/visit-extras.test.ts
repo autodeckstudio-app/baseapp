@@ -74,3 +74,21 @@ describe("bundle upgrade note", () => {
     expect(bundleUpgradeNote("menu-wash-full", applyBundleUpgrade("menu-wash-full", []))).toBeNull();
   });
 });
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { SWITCHED_NOTE, ADDED_NOTE } from "./visit-extras";
+describe("bundle upgrade note is visible on the page it lands on", () => {
+  const page = readFileSync(join(process.cwd(), "src/app/(tabs)/book/[serviceId].tsx"), "utf8");
+  it("note constants match the helper output", () => {
+    expect(bundleUpgradeNote("menu-wash-exterior", { primaryId: "menu-wash-full", upgradedTo: "menu-wash-full" })).toBe(SWITCHED_NOTE);
+    expect(bundleUpgradeNote("menu-wash-foam", { primaryId: "menu-wash-foam", upgradedTo: "menu-wash-full" })).toBe(ADDED_NOTE);
+  });
+  it("the switch passes the note in the route and the note renders outside the combo-hidden extras block", () => {
+    expect(page).toContain('upgraded: "switched"');
+    expect(page).toContain('upgraded === "switched" ? SWITCHED_NOTE');
+    const note = page.indexOf("{shownNote ?"); const extras = page.indexOf("<Kicker>Add to this visit</Kicker>"); const slots = page.indexOf("<Kicker>Pick a time</Kicker>");
+    expect(extras).toBeGreaterThan(0); expect(note).toBeGreaterThan(extras); expect(note).toBeLessThan(slots);
+    expect(page.match(/\{shownNote \?/g)?.length).toBe(1);
+  });
+});
