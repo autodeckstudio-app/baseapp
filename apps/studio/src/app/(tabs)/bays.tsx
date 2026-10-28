@@ -14,6 +14,7 @@ import { jobHoldsBay } from "@autodeck/core";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, ErrorState, jobStatusLabel } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
+import { bayOccupancy } from "../../lib/bay-holders";
 
 const BAY_TYPE_LABELS: Record<BayType, string> = {
   wash: "Washing",
@@ -135,8 +136,8 @@ export default function BayBoardScreen() {
               {BAY_TYPE_LABELS[bayType] ?? bayType} ({bays.length})
             </Text>
             {bays.map((bay) => {
-              const job = jobs.find((j) => j.bayId === bay.id && jobHoldsBay(j));
-              const hasPendingApproval = job ? pendingApprovals.some((a) => a.jobId === job.id) : false;
+              const occupancy = bayOccupancy(jobs, bay.id);
+              const job = occupancy.jobs[0];
 
               if (!bay.active) {
                 return (
@@ -172,31 +173,47 @@ export default function BayBoardScreen() {
               }
 
               return (
-                <TouchableOpacity
-                  key={bay.id}
-                  onPress={() => router.push(`/(tabs)/jobs/${job.id}`)}
-                  style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, marginBottom: spacing.sm }}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{bay.name}</Text>
+                <View key={bay.id} style={occupancy.conflict ? { marginBottom: spacing.sm, borderRadius: 28, borderWidth: 2, borderColor: colors.border, padding: spacing.xs } : undefined}>
+                  {occupancy.conflict && (
+                    <View style={{ paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm }}>
+                      <StatusBadge label={`${occupancy.jobs.length} jobs in this bay`} tone="warning" />
                       <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xxs }}>
-                        {vehicleLabels[job.vehicleId] ?? "…"} · {customerNames[job.customerId] ?? "…"}
-                      </Text>
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
-                        {serviceNames[job.serviceId] ?? "Service"}
-                        {job.isWalkIn ? " · Walk-in" : ""}
-                        {job.scheduledDate !== todayIST() ? ` · since ${job.scheduledDate}` : ""}
-                        {job.scheduledDate !== job.estimatedEndDate ? ` · until ${job.estimatedEndDate}` : ""}
+                        More than one car is marked as in this bay. Open each job to check. Nothing was changed automatically.
                       </Text>
                     </View>
-                    <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
-                      <StatusBadge label={jobStatusLabel(job.status)} tone={statusTone(job.status)} />
-                      <StatusBadge label={job.paymentStatus} tone={statusTone(job.paymentStatus)} />
-                      {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                  )}
+                  {occupancy.jobs.map((j) => {
+                    const hasPendingApproval = pendingApprovals.some((a) => a.jobId === j.id);
+                    return (
+                      <TouchableOpacity
+                        key={j.id}
+                        onPress={() => router.push(`/(tabs)/jobs/${j.id}`)}
+                        style={{ backgroundColor: colors.surface, ...(NightPlatform.OS === "web" ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.md, marginBottom: occupancy.conflict ? spacing.xs : spacing.sm }}
+                      >
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{bay.name}</Text>
+                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xxs }}>
+                              {vehicleLabels[j.vehicleId] ?? "…"} · {customerNames[j.customerId] ?? "…"}
+                            </Text>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xxs }}>
+                              {serviceNames[j.serviceId] ?? "Service"}
+                              {j.isWalkIn ? " · Walk-in" : ""}
+                              {j.scheduledDate !== todayIST() ? ` · since ${j.scheduledDate}` : ""}
+                              {j.scheduledDate !== j.estimatedEndDate ? ` · until ${j.estimatedEndDate}` : ""}
+                          {occupancy.conflict ? ` · slot ${new Date(j.scheduledAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}` : ""}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
+                            <StatusBadge label={jobStatusLabel(j.status)} tone={statusTone(j.status)} />
+                            <StatusBadge label={j.paymentStatus} tone={statusTone(j.paymentStatus)} />
+                            {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               );
             })}
           </View>
