@@ -20,3 +20,13 @@ describe("back navigation coverage", () => {
     expect(backFallback(["preview"])).toBeNull();
   });
 });
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+describe("garage history Back to garage", () => {
+  it("returns to the previous page instead of pushing a new garage entry", () => {
+    const s = readFileSync(join(__dirname, "../app/(tabs)/garage/history.tsx"), "utf8");
+    expect(s).toContain('router.canGoBack() ? router.back() : router.replace("/(tabs)/garage")');
+    expect(s).not.toContain('router.push("/(tabs)/garage")');
+  });
+});

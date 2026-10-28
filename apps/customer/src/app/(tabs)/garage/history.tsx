@@ -97,7 +97,7 @@ export default function ServiceHistoryScreen() {
         </Pane>
       )}
       {invoices.filter(inv=>!jobs.some(j=>j.id===inv.jobId)).map(inv=><Pane key={inv.id} pad="inset"><T role="heading">Invoice {inv.invoiceNumber}</T><T role="caption" tone="secondary">{inv.vehicleSnapshot?.registrationNumber??"Recorded visit"}</T><LinkAction label="View invoice" onPress={()=>router.push(invoiceHref(inv.id))}/></Pane>)}
-      <Button label="Back to garage" kind="quiet" onPress={() => router.push("/(tabs)/garage")} />
+      <Button label="Back to garage" kind="quiet" onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/garage"))} />
     </Screen>
   );
 }
