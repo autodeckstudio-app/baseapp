@@ -33,6 +33,8 @@ beforeAll(async () => {
       mk("overrun", "IN_PROGRESS", "2026-10-26"),
       mk("waiting", "READY_FOR_DELIVERY", "2026-10-19"),
       mk("today", "VEHICLE_RECEIVED", TODAY),
+      mk("future", "PENDING_VEHICLE", "2026-10-29"),
+      mk("standby", "STANDBY", "2026-10-27"),
       mk("done", "DELIVERED", "2026-10-20"),
       mk("cancelled", "CANCELLED", "2026-10-21"),
       mk("other-studio", "IN_PROGRESS", "2026-10-26", "studio-other"),
@@ -59,7 +61,7 @@ describe("studio staff floor queries", () => {
     const open = await db.collection("jobs").where("tenantId", "==", FIRST_TENANT_ID).where("studioId", "==", STUDIO)
       .where("status", "in", [...OPEN_FLOOR_STATUSES]).get();
     const ids = mergeFloorJobs(win.docs.map((d) => d.data() as never), open.docs.map((d) => d.data() as never), TODAY, true).map((j) => j.id);
-    expect(ids).toEqual(["waiting", "overrun", "today"]);
+    expect(ids).toEqual(["waiting", "overrun", "standby", "today"]);
   });
 
   it("rules still refuse a tenant-wide query without the tenant filter", async () => {

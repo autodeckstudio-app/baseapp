@@ -26,4 +26,21 @@ describe("mergeFloorJobs (Studio floor must show what Admin shows as open)", () 
   it("does not add carry-over when viewing a future day", () => {
     expect(mergeFloorJobs([], [overrun, waiting], "2026-10-30", false)).toEqual([]);
   });
+  it("never injects a future-dated open job (it would hold a bay before the car arrives)", () => {
+    const future = job("f", "PENDING_VEHICLE", "2026-10-29", "2026-10-29");
+    expect(mergeFloorJobs([], [future, overrun], today, true).map((j) => j.id)).toEqual(["a"]);
+  });
+  it("shows an open STANDBY job from an earlier day", () => {
+    const standby = job("s", "STANDBY", "2026-10-27", "2026-10-27");
+    expect(mergeFloorJobs([], [standby], today, true).map((j) => j.id)).toEqual(["s"]);
+  });
+  it("bay occupancy: overrun/ready hold a bay, standby does not, future never listed", async () => {
+    const { jobHoldsBay } = await import("@autodeck/core");
+    const future = job("f", "PENDING_VEHICLE", "2026-10-29", "2026-10-29");
+    const standby = job("s", "STANDBY", "2026-10-27", "2026-10-27");
+    const merged = mergeFloorJobs([], [overrun, waiting, standby, future], today, true);
+    const holding = merged.filter((j) => jobHoldsBay({ status: j.status, estimatedEndAt: "2026-10-28T10:00:00.000Z" })).map((j) => j.id);
+    expect(holding.sort()).toEqual(["a", "b"]);
+    expect(merged.map((j) => j.id)).toContain("s");
+  });
 });

@@ -11,9 +11,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useJobLabels } from "../../hooks/useBayNames";
 import { useJobPeople } from "../../hooks/useJobPeople";
 import type { ServiceJob, Booking } from "@autodeck/core";
-// V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
-// is the correct, intentional value here, unlike tenantId which must always
-// come from the authenticated user's own claims (see Phase 3G HANDOFF).
+// tenantId and studioId both come from the signed-in staff member's own claims.
 import { colors, spacing, radius, typography, EmptyState, ErrorState, LoadingState, JobCard } from "@autodeck/ui";
 
 function addDays(dateStr: string, days: number): string {
@@ -58,7 +56,7 @@ export default function CalendarScreen() {
   useEffect(() => {
     if (auth.status !== "ready") return undefined;
     const studioId = auth.claims.studioId;
-    if (!studioId) return undefined;
+    if (!studioId) { setLoading(false); setError("This account is not linked to a studio yet. Ask an admin to assign one."); return undefined; }
     setLoading(true); setError(null);
     const unsub = listenToJobsByDate(
       auth.claims.tenantId,
