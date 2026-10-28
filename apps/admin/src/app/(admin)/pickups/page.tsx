@@ -54,10 +54,17 @@ export default function PickupsPage() {
   }, [claims]);
 
   const counts = useMemo(() => {
-    const c: Record<Tab, number> = { REQUESTED: 0, CONFIRMED: 0, DONE: 0, DECLINED: 0, ALL: 0 };
-    for (const r of rows ?? []) { c[r.status] += 1; c.ALL += 1; }
+    // REQUESTED/CONFIRMED count only requests that can still be acted on; open requests whose booking is
+    // closed or missing are counted separately as needsClosure (still listed under their tab and All).
+    const c: Record<Tab, number> & { needsClosure: number } = { REQUESTED: 0, CONFIRMED: 0, DONE: 0, DECLINED: 0, ALL: 0, needsClosure: 0 };
+    for (const r of rows ?? []) {
+      c.ALL += 1;
+      const isOpen = r.status === "REQUESTED" || r.status === "CONFIRMED";
+      if (isOpen && !pickupRowState(r, r.bookingId, bookingStatus, BOOKINGS_LIST_LIMIT).actionable) { c.needsClosure += 1; continue; }
+      c[r.status] += 1;
+    }
     return c;
-  }, [rows]);
+  }, [rows, bookingStatus]);
   const shown = (rows ?? []).filter((r) => tab === "ALL" || r.status === tab);
 
   async function act(r: PickupRequestRow, status: Status) {
@@ -103,13 +110,14 @@ export default function PickupsPage() {
           <div><span className="ax-kpi-v ax-kpi-v--accent">{counts.REQUESTED}</span><span className="ax-label">Waiting</span></div>
           <div><span className="ax-kpi-v">{counts.CONFIRMED}</span><span className="ax-label">Approved</span></div>
           <div><span className="ax-kpi-v ax-kpi-v--premium">{counts.DONE}</span><span className="ax-label">Done</span></div>
+          {counts.needsClosure > 0 ? <div><span className="ax-kpi-v">{counts.needsClosure}</span><span className="ax-label">Needs closure</span></div> : null}
         </div>
       </header>
 
       <div className="ax-toolbar">
         <div className="ax-seg" role="group" aria-label="Show">
           {TABS.map((t) => (
-            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {counts[t.id]}</button>
+            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {t.id === "ALL" ? counts.ALL : counts[t.id]}{(t.id === "REQUESTED" || t.id === "CONFIRMED") && counts.needsClosure > 0 && t.id === "REQUESTED" ? ` (+${counts.needsClosure} to close)` : ""}</button>
           ))}
         </div>
         <p className="ax-pu-policy">Under 3 km is Rs 100 per leg, from 3 km is Rs 150 per leg (pickup and drop each, so both is two legs). Collected at the studio. Requests without a shared location need the distance and fee confirmed by phone.</p>
