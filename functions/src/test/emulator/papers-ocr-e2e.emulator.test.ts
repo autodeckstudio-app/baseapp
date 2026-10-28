@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { submitMyPaper, finalizeMyPaper } from "../../functions/papers/submitMyPaper.js";
+import { updateMyPaper } from "../../functions/papers/myPaperEdits.js";
 const db = getFirestore(); const T = "ocr-e2e-tenant";
 const img = readFileSync(resolve(__dirname, "../fixtures/synthetic-policy.png"));
 async function run(label: string, vehiclePlate: string, kind: "INSURANCE" | "PUC", ctype = "image/png", bytes: Buffer = img) {
@@ -30,4 +31,27 @@ describe.skipIf(!process.env["TEST_SIGN_PRIVATE_KEY"])("synthetic doc through su
   it("wrong plate", async () => { const a = await run("wrongplate", "MH12CD9999", "INSURANCE"); expect(a["status"]).toBe("PENDING"); expect(a["verificationReason"]).toMatch(/does not match vehicle/); expect(a["reviewedBy"]).toBeNull(); }, 90000);
   it("wrong kind", async () => { const a = await run("wrongkind", "MH12AB1234", "PUC"); expect(a["status"]).toBe("PENDING"); }, 90000);
   it("non-image bytes fail closed to PENDING review", async () => { const a = await run("blank", "MH12AB1234", "INSURANCE", "image/png", Buffer.from("not an image")); expect(a["status"]).toBe("PENDING"); expect(a["verificationMode"]).toBe("review"); expect(a["reviewedBy"]).toBeNull(); }, 90000);
+  it("edit with a new photo resets a VERIFIED paper to review, then finalize re-checks the new bytes", async () => {
+    const u = `ocr-cust-edit-${Date.now()}`; const auth = { uid: u, token: { role: "customer", tenantId: T, studioId: null } };
+    const vid = `ocr-veh-edit-${Date.now()}`;
+    await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: u, tenantId: T, registrationNumber: "MH12AB1234" });
+    const sub = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "INSURANCE", reference: "SYN-EDIT", contentType: "image/png" }, auth } as never) as { id: string };
+    const land = async (bytes: Buffer) => { const p = (await db.collection("papers").doc(sub.id).get()).data()!; await getStorage().bucket().file(p["evidencePath"]).save(bytes, { metadata: { contentType: "image/png", metadata: { customerId: u } } }); };
+    await land(img); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
+    expect((await db.collection("papers").doc(sub.id).get()).data()!["status"]).toBe("VERIFIED");
+    // owner edits the document and replaces the photo: back to review until the new bytes are checked
+    const upd = await updateMyPaper.run({ data: { paperId: sub.id, reference: "SYN-EDIT-2", contentType: "image/png" }, auth } as never) as { uploadUrl: string | null };
+    expect(upd.uploadUrl).toBeTruthy();
+    const mid = (await db.collection("papers").doc(sub.id).get()).data()!;
+    expect(mid["status"]).toBe("PENDING"); expect(mid["verificationMode"]).toBe("review"); expect(mid["reviewedBy"]).toBeNull();
+    // non-image bytes after the edit fail closed to review
+    await land(Buffer.from("not an image")); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
+    const bad = (await db.collection("papers").doc(sub.id).get()).data()!;
+    expect(bad["status"]).toBe("PENDING"); expect(bad["reference"]).toBe("SYN-EDIT-2");
+    // matching bytes after another photo replacement verify again
+    await updateMyPaper.run({ data: { paperId: sub.id, contentType: "image/png" }, auth } as never);
+    await land(img); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
+    const after = (await db.collection("papers").doc(sub.id).get()).data()!;
+    expect(after["status"]).toBe("VERIFIED"); expect(after["verificationMode"]).toBe("automatic"); expect(after["reference"]).toBe("SYN-EDIT-2");
+  }, 120000);
 });
