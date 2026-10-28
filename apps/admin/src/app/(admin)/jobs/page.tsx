@@ -1,4 +1,5 @@
 "use client";
+import { useMinuteNow } from "@autodeck/ui/clock";
 import { membershipCoveredLabel, visitTiming } from "@autodeck/core";
 
 import { useEffect, useMemo, useState } from "react";
@@ -26,6 +27,7 @@ export default function JobsPage() {
   const { claims } = useAdminAuth();
   const router = useRouter();
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
+  const minuteNow = useMinuteNow();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,7 +101,7 @@ export default function JobsPage() {
   const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
   const awaiting = activeToday.filter((j) => j.status === "PENDING_VEHICLE").length;
 
-  const timingOf = (j: ServiceJob) => { const t = visitTiming(j); return t.phase === "closed" || j.status === "STANDBY" ? undefined : { label: t.label, tone: t.tone, attention: t.needsAttention }; };
+  const timingOf = (j: ServiceJob) => { const t = visitTiming(j, minuteNow); return t.phase === "closed" || j.status === "STANDBY" ? undefined : { label: t.label, tone: t.tone, attention: t.needsAttention }; };
   const toBoard = (j: ServiceJob): BoardJob => ({
     timing: timingOf(j),
     id: j.id,

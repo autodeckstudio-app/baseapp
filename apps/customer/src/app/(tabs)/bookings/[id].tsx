@@ -1,4 +1,5 @@
-import { membershipCoveredLabel, visitTiming } from "@autodeck/core";
+import { useMinuteNow } from "@autodeck/ui/clock";
+import { membershipCoveredLabel, visitTiming, customerTimingLine } from "@autodeck/core";
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
 import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
@@ -101,6 +102,7 @@ export default function BookingDetailScreen() {
   const [payingNow, setPayingNow] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const minuteNow = useMinuteNow();
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
@@ -279,8 +281,8 @@ export default function BookingDetailScreen() {
 
   const scheduledAt = new Date(booking.scheduledAt);
   // Plain, factual timing against the planned slot. No ETA beyond the planned end.
-  const vt = job && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? visitTiming(job) : null;
-  const timingLine = !vt || vt.phase === "closed" ? "" : vt.phase === "overrun" ? `Taking longer than planned: ${vt.label.replace("Over planned end by", "planned end passed")} ago` : vt.phase === "not_arrived" ? "Your slot has ended and your car has not been checked in" : vt.label;
+  const vt = job && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? visitTiming(job, minuteNow) : null;
+  const timingLine = vt ? customerTimingLine(vt) : "";
   const displayDate = scheduledAt.toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
     weekday: "long",

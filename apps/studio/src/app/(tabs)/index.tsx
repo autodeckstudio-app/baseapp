@@ -1,3 +1,4 @@
+import { useMinuteNow } from "@autodeck/ui/clock";
 import { bayOccupancy } from "../../lib/bay-holders";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
@@ -21,6 +22,7 @@ function todayIST(): string {
 export default function TodaysJobsScreen() {
   const router = useRouter();
   const authState = useAuth();
+  const minuteNow = useMinuteNow();
   const [standby, setStandby] = useState<ServiceJob[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ export default function TodaysJobsScreen() {
     <View style={{ width: wide ? 340 : "100%", gap: spacing.sm }}>
       <Text style={{ ...typography.title, color: colors.textPrimary }}>Bays</Text>
       {bayIds.map((id) => {
-        const occ = bayOccupancy(activeJobs, id);
+        const occ = bayOccupancy(activeJobs, id, minuteNow);
         const j = occ.jobs[0];
         const plate = occ.conflict ? occ.jobs.map((x) => x.vehicleSnapshot?.registrationNumber).filter(Boolean).join(" + ") : j?.vehicleSnapshot?.registrationNumber;
         return (

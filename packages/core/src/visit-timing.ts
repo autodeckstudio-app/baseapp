@@ -1,3 +1,4 @@
+import type { JobStatus } from "./types/job.js";
 // One shared answer to "where is this visit against its planned time?", so Customer, Admin and Studio agree.
 // Pure and display only: it never closes, cancels, moves or messages anything. Existing missed-booking handling
 // (close-of-day auto-cancel) is unchanged; until it runs, a car that has not arrived keeps showing, never disappears.
@@ -10,7 +11,9 @@ export type VisitPhase =
   | "running" // car arrived, within planned time
   | "overrun" // car arrived, past planned end
   | "ready" // work done, waiting for pickup
-  | "closed"; // delivered, cancelled or otherwise nothing to time
+  | "standby" // arrived, waiting for a bay: no reserved window to time against
+  | "unknown" // still open but the stored times are unreadable: never shown as finished
+  | "closed"; // delivered or cancelled: nothing to time
 
 export type VisitTone = "neutral" | "accent" | "warning" | "error" | "success";
 
@@ -36,7 +39,6 @@ export interface VisitTimingOptions {
 
 export const RECOMMENDED_SOON_MINUTES = 120;
 
-const STARTED = ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"];
 
 export function formatSpan(minutes: number): string {
   const m = Math.max(0, Math.round(minutes));
@@ -49,33 +51,58 @@ export function formatSpan(minutes: number): string {
 }
 
 export function visitTiming(
-  v: { status: string; scheduledAt: string; estimatedEndAt: string },
+  v: { status: JobStatus; scheduledAt: string; estimatedEndAt: string },
   now: number = Date.now(),
   opts: VisitTimingOptions = {},
 ): VisitTiming {
+  const base = { soon: false, needsAttention: false, minutes: 0 };
+  // Statuses that are over: nothing to time.
+  if (v.status === "DELIVERED" || v.status === "CANCELLED") return { ...base, phase: "closed", label: "", tone: "neutral" };
+  // Arrived and waiting for a bay: no window is reserved, so no countdown or lateness applies.
+  if (v.status === "STANDBY") return { ...base, phase: "standby", label: "Arrived, waiting for a bay", tone: "accent" };
+  if (v.status === "READY_FOR_DELIVERY") return { ...base, phase: "ready", label: "Ready, waiting for pickup", tone: "success" };
   const start = Date.parse(v.scheduledAt);
   const end = Date.parse(v.estimatedEndAt);
-  const base = { soon: false, needsAttention: false, minutes: 0 };
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return { ...base, phase: "closed", label: "", tone: "neutral" };
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return { ...base, phase: "unknown", label: "", tone: "neutral" };
   const min = (ms: number) => Math.floor(ms / 60000);
 
-  if (v.status === "READY_FOR_DELIVERY") return { ...base, phase: "ready", label: "Ready, waiting for pickup", tone: "success" };
-  if (STARTED.includes(v.status)) {
-    if (now > end) return { ...base, phase: "overrun", label: `Over planned end by ${formatSpan(min(now - end))}`, tone: "error", needsAttention: true, minutes: min(now - end) };
-    return { ...base, phase: "running", label: `Planned end in ${formatSpan(min(end - now))}`, tone: "accent", minutes: min(end - now) };
-  }
-  if (v.status === "PENDING_VEHICLE" || v.status === "STANDBY") {
-    if (now < start) {
-      const until = min(start - now);
-      const soon = until <= (opts.soonMinutes ?? 0);
-      return { ...base, phase: "upcoming", label: `In ${formatSpan(until)}`, tone: soon ? "warning" : "neutral", soon, minutes: until };
+  switch (v.status) {
+    case "VEHICLE_RECEIVED":
+    case "IN_PROGRESS":
+    case "QUALITY_CHECK":
+      if (now > end) return { ...base, phase: "overrun", label: `Over planned end by ${formatSpan(min(now - end))}`, tone: "error", needsAttention: true, minutes: min(now - end) };
+      return { ...base, phase: "running", label: `Planned end in ${formatSpan(min(end - now))}`, tone: "accent", minutes: min(end - now) };
+    case "PENDING_VEHICLE": {
+      if (now < start) {
+        const until = min(start - now);
+        const soon = until <= (opts.soonMinutes ?? 0);
+        return { ...base, phase: "upcoming", label: `In ${formatSpan(until)}`, tone: soon ? "warning" : "neutral", soon, minutes: until };
+      }
+      if (now < end) {
+        const since = min(now - start);
+        const late = opts.lateAfterMinutes !== undefined && since >= opts.lateAfterMinutes;
+        return { ...base, phase: "due", label: late ? `Late, ${formatSpan(since)} past start` : since === 0 ? "Due now" : `Due now, ${formatSpan(since)} since start`, tone: late ? "error" : "warning", needsAttention: true, minutes: since };
+      }
+      return { ...base, phase: "not_arrived", label: `Not arrived, slot ended ${formatSpan(min(now - end))} ago`, tone: "error", needsAttention: true, minutes: min(now - end) };
     }
-    if (now < end) {
-      const since = min(now - start);
-      const late = opts.lateAfterMinutes !== undefined && since >= opts.lateAfterMinutes;
-      return { ...base, phase: "due", label: late ? `Late, ${formatSpan(since)} past start` : since === 0 ? "Due now" : `Due now, ${formatSpan(since)} since start`, tone: late ? "error" : "warning", needsAttention: true, minutes: since };
+    default: {
+      const unreachable: never = v.status; // a new JobStatus must be handled above
+      return unreachable;
     }
-    return { ...base, phase: "not_arrived", label: `Not arrived, slot ended ${formatSpan(min(now - end))} ago`, tone: "error", needsAttention: true, minutes: min(now - end) };
   }
-  return { ...base, phase: "closed", label: "", tone: "neutral" };
+}
+
+/** Customer-facing line, built from the structured phase. Factual and neutral; no ETA beyond the planned end. Empty = show nothing. */
+export function customerTimingLine(t: Pick<VisitTiming, "phase" | "minutes" | "label">): string {
+  switch (t.phase) {
+    case "upcoming": return t.label;
+    case "due": return "Your slot has started";
+    case "not_arrived": return "Your slot has ended and your car has not been checked in";
+    case "running": return `Planned end in ${formatSpan(t.minutes)}`;
+    case "overrun": return `Taking longer than planned: the planned end passed ${formatSpan(t.minutes)} ago`;
+    case "ready": return "Ready for pickup";
+    case "standby": return "Your car has arrived and is waiting for a bay";
+    case "unknown":
+    case "closed": return "";
+  }
 }

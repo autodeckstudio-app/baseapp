@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { visitTiming, formatSpan } from "./visit-timing.js";
+import { visitTiming, formatSpan, customerTimingLine } from "./visit-timing.js";
+import type { JobStatus } from "./types/job.js";
 
 const T = (s: string) => Date.parse(`2026-10-29T${s}:00+05:30`);
 const slot = { scheduledAt: "2026-10-29T15:00:00+05:30", estimatedEndAt: "2026-10-29T15:45:00+05:30" };
@@ -30,9 +31,26 @@ describe("visitTiming", () => {
   });
   it("ready, and closed states carry no timing", () => {
     expect(visitTiming({ status: "READY_FOR_DELIVERY", ...slot }, T("16:00")).phase).toBe("ready");
-    for (const s of ["DELIVERED", "CANCELLED"]) expect(visitTiming({ status: s, ...slot }, T("16:00"))).toMatchObject({ phase: "closed", label: "", needsAttention: false });
+    for (const s of (["DELIVERED", "CANCELLED"] as const)) expect(visitTiming({ status: s, ...slot }, T("16:00"))).toMatchObject({ phase: "closed", label: "", needsAttention: false });
   });
   it("formats spans", () => {
     expect([0, 59, 60, 125, 1440, 1500].map(formatSpan)).toEqual(["0 min", "59 min", "1h", "2h 5m", "1d", "1d 1h"]);
+  });
+  it("standby is its own state: never not-arrived, never needs attention, any time of day", () => {
+    for (const at of ["12:00", "15:10", "23:00"]) expect(visitTiming({ status: "STANDBY", ...slot }, T(at))).toMatchObject({ phase: "standby", needsAttention: false, label: "Arrived, waiting for a bay" });
+    expect(customerTimingLine(visitTiming({ status: "STANDBY", ...slot }, T("23:00")))).toBe("Your car has arrived and is waiting for a bay");
+  });
+  it("every real JobStatus gives a defined phase; open jobs with unreadable times are unknown, not closed", () => {
+    const all: JobStatus[] = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
+    const bad = { scheduledAt: "garbage", estimatedEndAt: "" };
+    const phases = all.map((s) => visitTiming({ status: s, ...bad }, T("12:00")).phase);
+    expect(phases).toEqual(["unknown", "standby", "unknown", "unknown", "unknown", "ready", "closed", "closed"]);
+  });
+  it("customer lines come from phase and minutes", () => {
+    const old = { scheduledAt: "2026-10-26T14:00:00+05:30", estimatedEndAt: "2026-10-26T14:45:00+05:30" };
+    expect(customerTimingLine(visitTiming({ status: "IN_PROGRESS", ...old }, T("04:50")))).toBe("Taking longer than planned: the planned end passed 2d 14h ago");
+    expect(customerTimingLine(visitTiming({ status: "PENDING_VEHICLE", ...slot }, T("18:00")))).toBe("Your slot has ended and your car has not been checked in");
+    expect(customerTimingLine(visitTiming({ status: "PENDING_VEHICLE", ...slot }, T("15:20")))).toBe("Your slot has started");
+    expect(customerTimingLine(visitTiming({ status: "DELIVERED", ...slot }, T("15:20")))).toBe("");
   });
 });

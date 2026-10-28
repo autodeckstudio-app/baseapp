@@ -13,6 +13,7 @@ import { listenToPendingApprovalsForStudio, getActiveServices } from "../../lib/
 import { jobHoldsBay, visitTiming } from "@autodeck/core";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, ErrorState, jobStatusLabel } from "@autodeck/ui";
+import { useMinuteNow } from "@autodeck/ui/clock";
 import { useAuth } from "../../hooks/useAuth";
 import { bayOccupancy } from "../../lib/bay-holders";
 
@@ -29,8 +30,7 @@ function todayIST(): string {
 
 export default function BayBoardScreen() {
   // Re-check bay occupancy every minute: a no-show frees its bay when the slot end passes.
-  const [, setTick] = useState(0);
-  useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 60000); return () => clearInterval(t); }, []);
+  const tickNow = useMinuteNow();
   const auth = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState<StudioConfig | null>(null);
@@ -136,7 +136,7 @@ export default function BayBoardScreen() {
               {BAY_TYPE_LABELS[bayType] ?? bayType} ({bays.length})
             </Text>
             {bays.map((bay) => {
-              const occupancy = bayOccupancy(jobs, bay.id);
+              const occupancy = bayOccupancy(jobs, bay.id, tickNow);
               const job = occupancy.jobs[0];
 
               if (!bay.active) {
@@ -207,7 +207,7 @@ export default function BayBoardScreen() {
                           <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
                             <StatusBadge label={jobStatusLabel(j.status)} tone={statusTone(j.status)} />
                             <StatusBadge label={j.paymentStatus} tone={statusTone(j.paymentStatus)} />
-                            {visitTiming(j).phase !== "closed" && <StatusBadge label={visitTiming(j).label} tone={visitTiming(j).tone} />}
+                            {visitTiming(j, tickNow).phase !== "closed" && <StatusBadge label={visitTiming(j, tickNow).label} tone={visitTiming(j, tickNow).tone} />}
                       {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
                           </View>
                         </View>

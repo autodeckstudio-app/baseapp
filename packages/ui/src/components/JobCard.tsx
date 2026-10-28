@@ -3,6 +3,7 @@ import type { ViewStyle } from "react-native";
 import { floatCard } from "../theme/float.js";
 import { isNightPalette } from "../tokens/colors.js";
 import { visitTiming } from "@autodeck/core";
+import { useMinuteNow } from "../clock/useMinuteNow.js";
 import type { ServiceJob } from "@autodeck/core";
 import { colors } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
@@ -48,7 +49,7 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName,
   const isMultiDay = job.scheduledDate !== job.estimatedEndDate;
   const isOngoingFromEarlierDay = viewDate !== undefined && viewDate !== job.scheduledDate;
   // Where the visit stands against its planned time. Display only; an unarrived or overrunning job stays listed.
-  const timing = visitTiming(job);
+  const timing = visitTiming(job, useMinuteNow());
 
   return (
     <Card onPress={onPress} padding="md" flat style={Platform.OS === "web" ? (floatCard(isNightPalette) as unknown as ViewStyle) : undefined}>
