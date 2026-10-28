@@ -45,23 +45,26 @@ describe("razorpayWebhook HTTP entry (real emulator, signature on)", () => {
     expect((await db.collection("paymentEvents").doc("HI1" + s.pid).get()).exists).toBe(false);
     expect((await call(raw, { eid: "HI3" + s.pid, method: "GET" })).status).toBe(405);
   });
-  it("pending: 200 (no 503) and no event record; after projection the SAME signed event returns 200 refund_processed, then 200 duplicate", async () => {
+  it("outbox-owned refund event before projection: 200 outbox_owned, recorded, and projected through the outbox (never the generic path); replay is a 200 duplicate", async () => {
+    // Contract: 5205613d (25 Oct) - an outbox-owned refund event is "recorded but never generically projected";
+    // money moves only through the outbox projection on exact provider "processed" evidence (was pending_correlation,
+    // no event record, replay re-projected).
     const { runRefundOutbox } = await import("../../lib/refund-outbox.js");
     const s = await seed(); const raw = s.body("rfnd_http_" + s.pid, s.requestId); const eid = "HP" + s.pid;
     const r1 = await call(raw, { eid });
-    expect(r1.status).toBe(200); expect(r1.body.outcome).toBe("pending_correlation");
-    expect((await db.collection("paymentEvents").doc(eid).get()).exists).toBe(false);
+    expect(r1.status).toBe(200); expect(r1.body.outcome).toBe("outbox_owned");
+    expect((await db.collection("paymentEvents").doc(eid).get()).exists).toBe(true);
     await runRefundOutbox(db, { initiateRefund: async () => ({ providerRefundId: "rfnd_http_" + s.pid }) } as never);
-    const r2 = await call(raw, { eid });
-    expect(r2.status).toBe(200); expect(r2.body.outcome).toBe("refund_processed");
     expect((await db.collection("bookings").doc(s.bid).get()).data()!["refundStatus"]).toBe("processed");
     const r3 = await call(raw, { eid });
     expect(r3.status).toBe(200); expect(r3.body.outcome).toBe("duplicate");
   });
-  it("explicit conflict: 200 (terminal) refund_unmatched, no booking write", async () => {
+  it("explicit conflict: 200 (terminal) ownership_mismatch, no booking write", async () => {
+    // Contract: 5205613d (25 Oct) - an rr_-namespaced receipt with no persisted request is recognised ownership
+    // evidence with a missing binding: recorded as ownership_mismatch, held, zero writes (was refund_unmatched).
     const s = await seed();
     const r = await call(s.body("rfnd_c", "rr_other_request"), { eid: "HC" + s.pid });
-    expect(r.status).toBe(200); expect(r.body.outcome).toBe("refund_unmatched");
+    expect(r.status).toBe(200); expect(r.body.outcome).toBe("ownership_mismatch");
     expect((await db.collection("bookings").doc(s.bid).get()).data()!["refundStatus"]).toBeUndefined();
   });
   it("an ignored event type still returns 200", async () => {

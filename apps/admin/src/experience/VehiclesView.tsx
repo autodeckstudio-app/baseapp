@@ -3,7 +3,7 @@
 // Vehicles: find a car by plate, see its papers (insurance, FASTag, PUC, RC,
 // warranty) with how long each has left, and add or verify records.
 import { useState } from "react";
-import type { Vehicle, Protection, ProtectionKind, ProtectionStatus } from "@autodeck/core";
+import type { Vehicle, Protection, ProtectionKind, ProtectionStatus, PaperVerification, PaperKind, PaperStatus } from "@autodeck/core";
 import { PageHead } from "./Office";
 import { formatDate } from "../lib/format";
 
@@ -16,6 +16,24 @@ export const KIND_LABEL: Record<ProtectionKind, string> = {
   other: "Other",
 };
 const KINDS = Object.keys(KIND_LABEL) as ProtectionKind[];
+
+const DOC_KIND_LABEL: Record<PaperKind, string> = {
+  RC: "Registration (RC)",
+  INSURANCE: "Insurance",
+  PUC: "PUC certificate",
+  FASTAG: "FASTag",
+  OTHER: "Other",
+};
+
+const DOC_STATUS_LABEL: Record<PaperStatus, string> = {
+  PENDING: "Under review",
+  VERIFIED: "Verified",
+  REJECTED: "Rejected",
+};
+
+function docTitle(d: PaperVerification): string {
+  return d.kind === "OTHER" && d.title ? d.title : DOC_KIND_LABEL[d.kind];
+}
 
 export interface ProtectionDraft {
   kind: ProtectionKind;
@@ -45,6 +63,7 @@ export function VehiclesView(p: {
   searching: boolean;
   vehicle: Vehicle | null;
   protections: Protection[];
+  documents: PaperVerification[];
   error: string | null;
   message: string | null;
   fleet: Vehicle[];
@@ -82,8 +101,9 @@ export function VehiclesView(p: {
               <p className="ax-hero-sub">{[p.vehicle.make, p.vehicle.model, p.vehicle.color].filter(Boolean).join(" ")}{p.vehicle.ownerId ? <> · Owner: <button type="button" className="ax-linkbtn" onClick={() => p.onOpenOwner(p.vehicle!.ownerId)}>{p.ownerNames[p.vehicle.ownerId] ?? "Open customer"}</button></> : null}</p>
             </div>
             <div className="ax-kpis">
-              <div><span className="ax-kpi-v">{p.protections.length}</span><span className="ax-label">Papers on file</span></div>
-              <div><span className={`ax-kpi-v${expiring ? " ax-kpi-v--accent" : ""}`}>{expiring}</span><span className="ax-label">Due within 30 days</span></div>
+              <div><span className="ax-kpi-v">{p.protections.length}</span><span className="ax-label">Studio papers</span></div>
+              <div><span className="ax-kpi-v">{p.documents.length}</span><span className="ax-label">Customer documents</span></div>
+              <div><span className={`ax-kpi-v${expiring ? " ax-kpi-v--accent" : ""}`}>{expiring}</span><span className="ax-label">Studio papers due in 30 days</span></div>
             </div>
           </div>
 
@@ -91,25 +111,45 @@ export function VehiclesView(p: {
             <div className="ax-detail-main">
               <section className="ax-panel">
                 <span className="ax-label">Papers</span>
-                {p.protections.length === 0 ? (
+                {p.protections.length === 0 && p.documents.length === 0 ? (
                   <p className="ax-note">Nothing on file for this car yet.</p>
                 ) : (
-                  <ul className="ax-papers">
-                    {p.protections.map((x) => (
-                      <li key={x.id} className="ax-paper">
-                        <div className="ax-paper-main">
-                          <span className="ax-person-name">{KIND_LABEL[x.kind]}</span>
-                          <span className="ax-sub">{[x.provider, x.policyNumber].filter(Boolean).join(" · ") || "No provider details"}</span>
-                          <Expiry date={x.expiryDate} today={p.today} />
-                        </div>
-                        <select value={x.status} onChange={(e) => p.onStatus(x, e.target.value as ProtectionStatus)} aria-label={`Status of ${KIND_LABEL[x.kind]}`}>
-                          <option value="unverified">Not checked</option>
-                          <option value="verified">Checked</option>
-                          <option value="expired">Expired</option>
-                        </select>
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    {p.protections.length > 0 && (
+                      <ul className="ax-papers">
+                        {p.protections.map((x) => (
+                          <li key={x.id} className="ax-paper">
+                            <div className="ax-paper-main">
+                              <span className="ax-person-name">{KIND_LABEL[x.kind]}</span>
+                              <span className="ax-sub">{[x.provider, x.policyNumber].filter(Boolean).join(" · ") || "No provider details"}</span>
+                              <Expiry date={x.expiryDate} today={p.today} />
+                            </div>
+                            <select value={x.status} onChange={(e) => p.onStatus(x, e.target.value as ProtectionStatus)} aria-label={`Status of ${KIND_LABEL[x.kind]}`}>
+                              <option value="unverified">Not checked</option>
+                              <option value="verified">Checked</option>
+                              <option value="expired">Expired</option>
+                            </select>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {p.documents.length > 0 && (
+                      <>
+                        <span className="ax-label" style={{ marginTop: 12 }}>Customer documents</span>
+                        <ul className="ax-papers">
+                          {p.documents.map((d) => (
+                            <li key={d.id} className="ax-paper">
+                              <div className="ax-paper-main">
+                                <span className="ax-person-name">{docTitle(d)}</span>
+                                <span className="ax-sub">{[d.reference, DOC_STATUS_LABEL[d.status]].filter(Boolean).join(" · ")}</span>
+                                <Expiry date={d.expiresOn} today={p.today} />
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </>
                 )}
               </section>
             </div>

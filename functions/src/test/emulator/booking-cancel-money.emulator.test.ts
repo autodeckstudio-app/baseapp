@@ -61,7 +61,9 @@ describe("cancel and refund money (cash only, no provider)", () => {
     expect(pay["status"]).toBe("completed"); expect(pay["refundAmount"]).toBeUndefined(); expect(pay["refundedAt"]).toBeUndefined();
     const b = await booking(s.bookingId);
     expect(b).toMatchObject({ status: "CANCELLED", manualRefundDuePaise: 100000, cancellationFeePaise: 0 });
-    expect(b["refundStatus"]).toBeUndefined(); expect(b["refundedPaise"]).toBeUndefined(); expect(b["refundId"]).toBeUndefined();
+    expect(b["refundStatus"]).toBeUndefined(); expect(b["refundId"]).toBeUndefined();
+    // refundedPaise only counts money actually sent back: truthful 0 at cancel time (absent and 0 are equivalent to every reader); never positive here.
+    expect(b["refundedPaise"] ?? 0).toBe(0);
     expect(b["paymentStatus"]).not.toBe("refunded");
   });
 
@@ -90,10 +92,10 @@ describe("cancel and refund money (cash only, no provider)", () => {
     { category: "washing", hoursBefore: 2, totalPaise: 100000, paidPaise: 100000 },
     { category: "ppf", hoursBefore: 20, totalPaise: 500000, paidPaise: 500000 },
     { category: "ppf", hoursBefore: 20, totalPaise: 500000, paidPaise: 0 },
-  ])("studio cancel refunds actual paid without NEW compensation: $category paid=$paidPaise", async (opts) => {
+  ])("studio cancel (feeAction waive) refunds actual paid without NEW compensation: $category paid=$paidPaise", async (opts) => {
     const s = await seed(opts);
-    const preview = await cancel(s.bookingId, "studio", true);
-    const result = await cancel(s.bookingId, "studio");
+    const preview = await cancel(s.bookingId, "waive", true);
+    const result = await cancel(s.bookingId, "waive");
     for (const value of [preview, result, await booking(s.bookingId)]) {
       expect(value["studioCompensationPaise"]).toBeUndefined();
       expect(value["studioCompensationStatus"]).toBeUndefined();
@@ -101,7 +103,10 @@ describe("cancel and refund money (cash only, no provider)", () => {
     expect(preview).toMatchObject({ preview: true, refundPaise: opts.paidPaise, feePaise: 0 });
     expect(result).toMatchObject({ success: true, refundPaise: opts.paidPaise });
     const b = await booking(s.bookingId);
-    expect(b).toMatchObject({ status: "CANCELLED", cancelledByStudio: true });
+    // Contract (f5887a26, 24 Oct 2026): a studio cancel is feeAction "waive" (schema: "waive = studio cancelled or goodwill"); the separate
+    // "studio" action and its cancelledByStudio marker were removed, and no new compensation obligation is recorded.
+    expect(b).toMatchObject({ status: "CANCELLED" });
+    expect(b["cancelledByStudio"]).toBeUndefined();
     expect(b["manualRefundDuePaise"]).toBe(opts.paidPaise || undefined);
     const audit = await db.collection("auditLog").where("entityId", "==", s.bookingId).get();
     expect(audit.size).toBe(1);
@@ -118,10 +123,10 @@ describe("cancel and refund money (cash only, no provider)", () => {
     const oldAudit = db.collection("auditLog").doc(uid("historical"));
     const oldRecord = { entityId: s.bookingId, action: "historical.compensation", after: historical };
     await oldAudit.set(oldRecord);
-    await cancel(s.bookingId, "studio");
+    await cancel(s.bookingId, "waive");
     expect(await booking(s.bookingId)).toMatchObject({ ...historical, manualRefundDuePaise: 100000 });
     const beforeRetry = await booking(s.bookingId);
-    expect(await cancel(s.bookingId, "studio")).toMatchObject({ alreadyCancelled: true });
+    expect(await cancel(s.bookingId, "waive")).toMatchObject({ alreadyCancelled: true });
     expect(await booking(s.bookingId)).toEqual(beforeRetry);
     expect((await oldAudit.get()).data()).toEqual(oldRecord);
     const audits = await db.collection("auditLog").where("entityId", "==", s.bookingId).get();
@@ -135,9 +140,10 @@ describe("cancel and refund money (cash only, no provider)", () => {
 
   it("studio cancel while the customer's free window still holds records no compensation", async () => {
     const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
-    await cancel(s.bookingId, "studio");
+    await cancel(s.bookingId, "waive");
     const b = await booking(s.bookingId);
-    expect(b).toMatchObject({ cancelledByStudio: true, manualRefundDuePaise: 100000 });
+    expect(b).toMatchObject({ manualRefundDuePaise: 100000 });
+    expect(b["cancelledByStudio"]).toBeUndefined();
     expect(b["studioCompensationPaise"]).toBeUndefined();
     expect(b["studioCompensationStatus"]).toBeUndefined();
   });

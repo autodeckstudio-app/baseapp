@@ -45,8 +45,14 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${seq}`;
 }
 let dayOffset = 3;
+let dayWrap = 0;
+// The booking window refuses >30 days out and the shared counter was already AT that boundary for the last consumer, so
+// adding any test before it broke it. Wrap the day counter instead and move to a later time slot on each wrap (one bay, so a
+// reused day at the same time would collide). Only fixture dates change; no assertion is touched.
+const SLOT_BY_WRAP = ["10:00", "13:00", "16:00"];
 function nextDate(): string {
   dayOffset += 1;
+  if (dayOffset > 28) { dayOffset = 4; dayWrap += 1; }
   return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
 }
 
@@ -166,7 +172,7 @@ async function freshJob(
       // cumulative counter sits exactly at that boundary for the last suite
       // consumer (recordManualPayment in-flight guard).
       scheduledDate: scheduledDate ?? nextDate(),
-      scheduledTime: scheduledTime ?? "10:00",
+      scheduledTime: scheduledTime ?? SLOT_BY_WRAP[Math.min(dayWrap, SLOT_BY_WRAP.length - 1)]!,
       idempotencyKey: uid("idem"),
     },
     auth: customerAuth(customerId, tenantId),
@@ -281,7 +287,10 @@ describe("inspection photos — addPhotos path validation", () => {
   let service: Service;
 
   beforeAll(async () => {
-    service = (await db.collection("services").limit(1).get()).docs[0]?.data() as Service;
+    // Isolation: take only a service that belongs to THIS file's tenant. A bare limit(1) picks up any other test file's
+    // service on a shared emulator (different tenant), which fails every call below with "Cross-tenant access denied".
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = (await db.collection("services").where("tenantId", "==", TENANT_A).limit(1).get()).docs[0]?.data() as Service;
     if (!service) service = await seedService(uid("svc"), TENANT_A);
   });
 
@@ -472,7 +481,10 @@ describe("staff-to-admin approval requests", () => {
   let service: Service;
 
   beforeAll(async () => {
-    service = (await db.collection("services").limit(1).get()).docs[0]?.data() as Service;
+    // Isolation: take only a service that belongs to THIS file's tenant. A bare limit(1) picks up any other test file's
+    // service on a shared emulator (different tenant), which fails every call below with "Cross-tenant access denied".
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = (await db.collection("services").where("tenantId", "==", TENANT_A).limit(1).get()).docs[0]?.data() as Service;
     if (!service) service = await seedService(uid("svc"), TENANT_A);
   });
 
@@ -893,8 +905,10 @@ describe("recordManualPayment - replay and in-flight payment guards", () => {
 
   it("exact replay (batch12 double-click payload) records exactly one payment at the server-side job total", async () => {
     const { job } = await freshJob(service);
-    const staff = studioAuth(uid("staff"));
-    const payload = { data: { jobId: job.id, method: "upi_manual", manualReference: "utr-123" }, auth: staff } as never;
+    // Contract: recordManualPayment.ts "Office policy (28 Oct 2026, explicit owner decision for UPI)": a one-step UPI record is
+    // office-only, so the replay is exercised as the office. Staff rejection is asserted in the next test.
+    const office = adminAuth(uid("office"));
+    const payload = { data: { jobId: job.id, method: "upi_manual", manualReference: "utr-123" }, auth: office } as never;
 
     const r1 = (await recordManualPayment.run(payload)) as { paymentId: string; invoiceId: string };
     const paySnap = await db.collection(COLLECTIONS.payments()).doc(r1.paymentId).get();
@@ -908,6 +922,14 @@ describe("recordManualPayment - replay and in-flight payment guards", () => {
     expect(pays.size).toBe(1);
     const invoices = await db.collection(COLLECTIONS.invoices()).where("jobId", "==", job.id).get();
     expect(invoices.size).toBe(1);
+  });
+
+  it("staff one-step UPI record is refused and writes nothing (office-only per the 28 Oct owner decision); staff cash is unaffected", async () => {
+    const { job } = await freshJob(service);
+    const staff = studioAuth(uid("staff"));
+    await expectErr(recordManualPayment.run({ data: { jobId: job.id, method: "upi_manual", manualReference: "utr-9" }, auth: staff } as never), "permission-denied");
+    const pays = await db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).get();
+    expect(pays.size).toBe(0);
   });
 
   it("blocks while another payment is in flight for the job (pending gateway window)", async () => {

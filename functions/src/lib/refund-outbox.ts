@@ -99,7 +99,7 @@ export type ReservePlan =
 export async function planReserveInTx(
   tx: FirebaseFirestore.Transaction,
   db: Firestore,
-  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string; expectedBookingId?: string | null; expectedJobId?: string | null },
+  i: { payment: Payment; amountPaise: number; reason: string; createdBy: string; expectedBookingId?: string | null; expectedJobId?: string | null; completingInThisTx?: boolean },
 ): Promise<ReservePlan> {
   const amount = Math.round(i.amountPaise);
   if (!Number.isInteger(amount) || amount <= 0) return { ok: false, reason: "refund amount must be a positive integer (paise)", code: "invalid" };
@@ -108,7 +108,11 @@ export async function planReserveInTx(
   // read before another refund projected) must never size a reservation.
   const freshSnap = await tx.get(db.collection(COLLECTIONS.payments()).doc(i.payment.id));
   if (!freshSnap.exists) return { ok: false, code: "invalid", reason: `payment ${i.payment.id} not found` };
-  const payment = freshSnap.data() as Payment;
+  const stored = freshSnap.data() as Payment;
+  // completingInThisTx: the caller marks this payment completed in the SAME transaction (verified
+  // capture arriving for a waiting cancel). Only a stored pending/processing payment may be sized
+  // as completed; any other stored status keeps its real (zero) refundable amount.
+  const payment: Payment = i.completingInThisTx && (stored.status === "pending" || stored.status === "processing") ? { ...stored, status: "completed" } : stored;
   if (payment.tenantId !== i.payment.tenantId) {
     return { ok: false, code: "invalid", reason: `payment ${i.payment.id} tenant does not match the caller's payment` };
   }

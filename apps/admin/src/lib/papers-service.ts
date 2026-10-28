@@ -33,6 +33,17 @@ export function listenToPapers(
   );
 }
 
+/** Customer-uploaded documents (papers collection) for one vehicle, newest first; superseded rows excluded. */
+export async function getVehiclePapers(tenantId: string, vehicleId: string): Promise<PaperVerification[]> {
+  // tenantId is required by the papers read rule (ownTenant(resource.data)); a vehicleId-only query is denied.
+  const q = query(collection(db, COLLECTIONS.papers()), where("tenantId", "==", tenantId), where("vehicleId", "==", vehicleId));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => d.data() as PaperVerification)
+    .filter((x) => !x.supersededAt)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
 /** Plate lookup so staff never type a document id. */
 export async function findVehicleByPlate(
   tenantId: string,

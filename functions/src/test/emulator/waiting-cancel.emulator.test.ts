@@ -37,9 +37,10 @@ describe("waiting cancel retained-slot workflow (emulator fixtures)",()=>{
   const ev=event(s.id);await processProviderEvent(db,ev);expect(await doc("bookings",s.id)).toMatchObject({status:"CANCELLED",refundStatus:"reserved",cancelIntent:{state:"resolved"}});const rs=await db.collection("refundRequests").where("paymentId","==",s.id).get();expect(rs.docs.filter(d=>d.id.startsWith("rr_")).map(d=>d.data().amountPaise)).toEqual([100000]);
   expect((await processProviderEvent(db,ev)).outcome).toBe("duplicate");await processProviderEvent(db,event(s.id,"payment.captured"));await processProviderEvent(db,event(s.id,"payment_link.expired"));expect((await doc("payments",s.id)).status).toBe("completed");
  });
- it("verified terminal cancels without refund, failed/incorrect link does not",async()=>{
+ // Changed 28 Oct (user: "okay make the safer flow"): a terminal link no longer cancels without refund - it only blocks NEW attempts and an attempt already at the bank can still capture (Razorpay late authorisation, 3 days). Retain + needs_review; a later capture resolves it (see waiting-cancel-processing).
+ it("link terminal retains the booking for Admin review (never cancels without refund); failed/incorrect link does not",async()=>{
   const s=await seed();await req(s);await processProviderEvent(db,{...event(s.id,"payment_link.expired"),providerPaymentLinkId:"wrong"});expect((await doc("bookings",s.id)).status).toBe("PENDING");
-  await processProviderEvent(db,event(s.id,"payment_link.cancelled"));expect((await doc("bookings",s.id)).status).toBe("CANCELLED");expect((await doc("payments",s.id)).status).toBe("cancelled");expect((await db.collection("refundRequests").where("paymentId","==",s.id).get()).empty).toBe(true);
+  await processProviderEvent(db,event(s.id,"payment_link.cancelled"));expect(await doc("bookings",s.id)).toMatchObject({status:"PENDING",cancelIntent:{state:"needs_review"}});expect((await doc("payments",s.id)).status).toBe("pending");expect((await db.collection("refundRequests").where("paymentId","==",s.id).get()).empty).toBe(true);
  });
  it("missing/mismatched amount/currency refuses resolution",async()=>{for(const patch of [{amount:0},{currency:"USD"},{providerPaymentId:"other"}]){const s=await seed();await req(s);await processProviderEvent(db,{...event(s.id),...patch});expect((await doc("bookings",s.id)).status).toBe("PENDING");}});
  it("reservation conflict records capture but NEVER cancels; retry cannot claim success",async()=>{

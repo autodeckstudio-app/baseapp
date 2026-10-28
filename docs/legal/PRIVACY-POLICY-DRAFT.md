@@ -7,7 +7,7 @@ Not published. Not wired into the app. Have it reviewed by a lawyer before use.
 **What we collect.**
 - Your Google account name and email, used to sign you in.
 - Your phone number, if you give it, so the studio can reach you about a booking.
-- Your cars: make, model, year, colour, plate number, kilometres, photos you add, and a photo of the registration certificate (RC) if you upload one.
+- Your cars: make, model, year, colour, plate number, kilometres, photos you add, and documents you upload for your car, like the RC, insurance or PUC.
 - Your bookings, job progress, photos taken of your car during service, messages about a job, invoices, warranty records and Club plan use.
 - If you list a car for sale: the listing details, photos, and your name and phone, which only the studio sees.
 - Notification settings, and a device token if you allow notifications.

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createBooking as current } from "../../functions/booking/createBooking.js";
@@ -53,6 +53,8 @@ describe("real nonmember booking baseline vs covered diff", () => {
       const a = (await db.collection("jobs").doc("fx-nonmember-byte").get()).data()!;
       expect("membershipWashUsed" in a).toBe(false);
       expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+      // Evidence output only (after the assertions above); the harness creates its own directory.
+      mkdirSync("/downloads/evidence", { recursive: true });
       writeFileSync("/downloads/evidence/nonmember-baseline-job.json", JSON.stringify(b, null, 2));
       writeFileSync("/downloads/evidence/nonmember-current-job.json", JSON.stringify(a, null, 2));
     } finally {

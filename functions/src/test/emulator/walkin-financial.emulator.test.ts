@@ -334,9 +334,12 @@ describe("Walk-in financial flow", () => {
     } as never);
     const job = jobResult.job as ServiceJob;
 
+    // Contract: recordManualPayment.ts "Office policy (28 Oct 2026, explicit owner decision for UPI)": a one-step UPI record is
+    // office-only; staff one-step records are cash-only (staff UPI goes through a claim the office confirms, see
+    // payment-confirm / membership-upi-claim tests). This test is about invoice linkage, so the office records it.
     const recorded = await recordManualPayment.run({
       data: { jobId: job.id, method: "upi_manual" },
-      auth: studioAuth(studioUid),
+      auth: adminAuth(`${studioUid}-office`),
     } as never);
 
     const invoiceSnap = await db.collection("invoices").doc(recorded.invoiceId).get();

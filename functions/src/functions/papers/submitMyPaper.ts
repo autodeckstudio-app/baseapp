@@ -74,13 +74,8 @@ export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) =
     createdAt: now,
     updatedAt: now,
   };
-  // Both writes in one transaction with lock documents: two concurrent submits for the same number, or two RCs on one car, cannot both succeed.
-  await db.runTransaction(async (tx) => {
-    const claims = await readClaims(tx, db, { tenantId: vehicle.tenantId, customerId: user.uid, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
-    tx.set(ref, paper);
-    for (const c of claims) tx.set(c.ref, c.data);
-  });
-
+  // Mint the upload URL BEFORE any write. If signing fails, nothing has been created: no orphan
+  // PENDING paper and no number held by a submission the customer was told failed.
   let uploadUrl: string | null = null;
   let requiredHeaders: Record<string, string> | null = null;
   if (path && data.contentType) {
@@ -93,6 +88,14 @@ export const submitMyPaper = onCall({ region: "asia-south1" }, async (request) =
     });
     requiredHeaders = { "Content-Type": data.contentType, "x-goog-meta-ownerId": vehicle.ownerId };
   }
+
+  // Both writes in one transaction with lock documents: two concurrent submits for the same number, or two RCs on one car, cannot both succeed.
+  await db.runTransaction(async (tx) => {
+    const claims = await readClaims(tx, db, { tenantId: vehicle.tenantId, customerId: user.uid, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
+    tx.set(ref, paper);
+    for (const c of claims) tx.set(c.ref, c.data);
+  });
+
   return { id: ref.id, uploadUrl, requiredHeaders };
 });
 

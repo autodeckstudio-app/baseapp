@@ -32,6 +32,9 @@ const TENANT_A = "pc-tenant-a";
 const TENANT_B = "pc-tenant-b";
 const STUDIO_A = "pc-studio-a";
 const STUDIO_B = "pc-studio-b";
+// The office-only policy group runs in its own studio, so its bookings never compete with the earlier groups for A's slots
+// and the shared date horizon below is not exhausted by the time it runs (28 Oct 2026 fixture fix; no assertion changed).
+const STUDIO_C = "pc-studio-c";
 
 let seq = 0;
 function uid(prefix: string): string {
@@ -46,9 +49,11 @@ function uid(prefix: string): string {
 const FIRST_OFFSET_DAYS = 2;
 const LAST_OFFSET_DAYS = 29;
 let dateCalls = 0;
-function nextDate(): string {
-  const offset = FIRST_OFFSET_DAYS + dateCalls;
-  dateCalls += 1;
+let dateCallsC = 0;
+function nextDate(studioId?: string): string {
+  const own = studioId === STUDIO_C;
+  const offset = FIRST_OFFSET_DAYS + (own ? dateCallsC : dateCalls);
+  if (own) dateCallsC += 1; else dateCalls += 1;
   if (offset > LAST_OFFSET_DAYS) {
     throw new Error(`nextDate(): fixture needs more distinct days than the ${LAST_OFFSET_DAYS}-day booking horizon allows`);
   }
@@ -158,7 +163,7 @@ async function makeBookingAndJob(
       vehicleId: vehicle.id,
       vehicleCategory: "hatchback",
       studioId,
-      scheduledDate: nextDate(),
+      scheduledDate: nextDate(studioId),
       scheduledTime: "10:00",
       idempotencyKey: uid("idem"),
     },
@@ -1090,24 +1095,24 @@ describe("office-only confirmation of account payments (28 Oct 2026 policy)", ()
   let vehicle2: Vehicle;
 
   beforeAll(async () => {
-    await seedStudio(STUDIO_A, TENANT_A);
+    await seedStudio(STUDIO_C, TENANT_A);
     service2 = await seedService(uid("svc"), TENANT_A);
     customerId2 = uid("customer");
     vehicle2 = await seedVehicle(uid("veh"), TENANT_A, customerId2);
   });
 
   it("staff cannot confirm a pending UPI payment; admin confirms it", async () => {
-    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_A);
+    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_C);
     // Staff claims the customer paid by UPI (the QR claim flow creates a pending payment)
     const init = (await initiatePayment.run({
       data: { jobId: job.id, method: "upi_manual" },
-      auth: studioAuth(uid("staff"), STUDIO_A),
+      auth: studioAuth(uid("staff"), STUDIO_C),
     } as never)) as { paymentId: string; status: string };
     expect(init.status).toBe("pending");
 
     await expect(confirmManualPayment.run({
       data: { paymentId: init.paymentId },
-      auth: studioAuth(uid("staff"), STUDIO_A),
+      auth: studioAuth(uid("staff"), STUDIO_C),
     } as never)).rejects.toThrow(/office/i);
 
     const done = (await confirmManualPayment.run({
@@ -1120,10 +1125,10 @@ describe("office-only confirmation of account payments (28 Oct 2026 policy)", ()
   });
 
   it("staff cannot one-step record a UPI payment; admin can", async () => {
-    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_A);
+    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_C);
     await expect(recordManualPayment.run({
       data: { jobId: job.id, method: "upi_manual", manualReference: "UTR123456" },
-      auth: studioAuth(uid("staff"), STUDIO_A),
+      auth: studioAuth(uid("staff"), STUDIO_C),
     } as never)).rejects.toThrow(/office/i);
 
     const recorded = (await recordManualPayment.run({
@@ -1136,10 +1141,10 @@ describe("office-only confirmation of account payments (28 Oct 2026 policy)", ()
   });
 
   it("staff can still record and confirm cash (unchanged)", async () => {
-    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_A);
+    const { job } = await makeBookingAndJob(customerId2, service2, vehicle2, STUDIO_C);
     const recorded = (await recordManualPayment.run({
       data: { jobId: job.id, method: "cash" },
-      auth: studioAuth(uid("staff"), STUDIO_A),
+      auth: studioAuth(uid("staff"), STUDIO_C),
     } as never)) as { paymentId: string };
     expect(((await db.collection(COLLECTIONS.payments()).doc(recorded.paymentId).get()).data() as Payment).status).toBe("completed");
   });

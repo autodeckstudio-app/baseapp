@@ -1,3 +1,4 @@
+import { requestWaitingCancel, unresolvedCancel } from "../../lib/waiting-cancel.js";
 // Admin-only cancel for a booking, with the fee and any refund decided here on the server.
 // Cancel and refund are admin-only for now (owner decision); studio staff have no cancel.
 //  - adminCancelBooking: preview=true returns the numbers and writes nothing. Otherwise it cancels in one go:
@@ -67,6 +68,32 @@ export async function runCancel(
       ? await db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).where("status", "in", ["pending", "processing", "completed"]).limit(10).get()
       : null;
     const payDocs = paySnap?.docs ?? [];
+    // Owner rulings: 24 Oct #2 (cancel while payment is in progress waits for the gateway result, then cancels and
+    // records the refund) and 28 Oct 18:03 "okay make the safer flow" (an unpaid online link is closed but the
+    // booking is RETAINED until the payment resolves or the Admin verifies). Closing a link only blocks NEW attempts;
+    // an attempt already at the bank can still capture (Razorpay late authorisation, up to 3 days), and a link's
+    // payments[] shows captured payments only - so provider link-cancel success never proves nothing is in flight.
+    const onlineOpen = payDocs.filter((d) => d.data()["method"] === "razorpay_payment_link" && ["pending", "processing"].includes(String(d.data()["status"])));
+    // An open online payment next to an already-completed one cannot be closed safely either (the open link may still
+    // capture): fail closed, never instant-cancel with a late-capture hole (28 Oct reviewer finding).
+    if (onlineOpen.length && !unresolvedCancel(booking) && payDocs.some((d) => d.data()["status"] === "completed")) {
+      throw new HttpsError("failed-precondition", "This booking has a completed payment and another online payment that is still open. A manual payment check is needed. The booking is NOT cancelled.");
+    }
+    if (unresolvedCancel(booking) || (onlineOpen.length && !payDocs.some((d) => d.data()["status"] === "completed"))) {
+      if (onlineOpen.length !== 1 && !unresolvedCancel(booking)) throw new HttpsError("failed-precondition", "A manual payment check is needed before cancellation.");
+      if (data.preview) return { preview: true, cancellationPending: true };
+      const open = onlineOpen[0];
+      if (open && !unresolvedCancel(booking) && open.data()["status"] === "pending") {
+        const lp = open.data() as Payment;
+        if (!lp.razorpayPaymentLinkId) throw new HttpsError("failed-precondition", "This booking's unpaid payment link is missing its provider link id, so it cannot be closed safely. The booking is NOT cancelled.");
+        const lo = await getPaymentProvider().cancelPaymentLink(lp.razorpayPaymentLinkId);
+        if (lo.outcome === "already_paid") throw new HttpsError("failed-precondition", "A payment just arrived on this booking's payment link. The booking is NOT cancelled - refresh and check the payment before cancelling.");
+        if (lo.outcome === "in_progress") throw new HttpsError("unavailable", "The payment provider is still updating this booking's payment link. The booking is NOT cancelled - try again in a moment.");
+        // "cancelled" / "already_inactive": no NEW attempts can start. The booking is still retained below.
+      }
+      if (!open) throw new HttpsError("failed-precondition", "A manual payment check is needed before cancellation.");
+      return requestWaitingCancel(db, booking, open.data() as Payment, user, data.reason);
+    }
     if (payDocs.some((d) => d.data()["status"] === "processing")) {
       throw new HttpsError("failed-precondition", "A payment is still processing on this booking. Wait for it to settle, then cancel.");
     }
@@ -115,9 +142,12 @@ export async function runCancel(
     // 2b. Kill unpaid payment links BEFORE cancelling the booking: a live
     // link would let the customer pay into a cancelled booking. The provider
     // must confirm the link is dead first - a paid/partially paid link refuses
-    // cancellation (verified Razorpay API semantics, 28 Oct 2026), which is the
-    // fail-closed race signal. The booking is never cancelled on an
-    // unconfirmed link. Never runs on preview (preview returns above).
+    // cancellation, which is the fail-closed race signal. LIMIT: a link cancel
+    // only blocks NEW attempts; an attempt already in flight (e.g. late
+    // authorisation) can still capture afterwards. That capture is recorded on
+    // the cancelled job and flagged into the office refund-review queue
+    // (invoiceReviewNeeded), never silently kept. The booking is never
+    // cancelled on an unconfirmed link. Never runs on preview (preview returns above).
     const pendingLinks = payDocs.filter((d) => {
       const pmt = d.data() as Payment;
       return pmt.status === "pending" && pmt.method === "razorpay_payment_link";
@@ -182,6 +212,13 @@ export async function runCancel(
       const txPayDocs = pays?.docs ?? [];
       if (txPayDocs.some((d) => d.data()["status"] === "processing")) {
         throw new HttpsError("failed-precondition", "A payment is still processing on this booking. Wait for it to settle, then cancel.");
+      }
+      // 28 Oct 18:03 "okay make the safer flow": a booking with an open online link is never instant-cancelled (it waits). The
+      // pre-transaction snapshot found none, so an online link that is pending HERE appeared after the snapshot (e.g. the customer
+      // opened checkout meanwhile). It was never closed at the provider, so fail closed and let the caller retry through the
+      // waiting path. Links this call already closed are excluded; they cannot reach this point (they divert above).
+      if (txPayDocs.some((d) => d.data()["method"] === "razorpay_payment_link" && d.data()["status"] === "pending" && !cancelledLinkPaymentIds.includes(d.id))) {
+        throw new HttpsError("failed-precondition", "An online payment was just started on this booking. The booking is NOT cancelled - try again so the payment can be handled safely.");
       }
       const txCompleted = txPayDocs.filter((d) => d.data()["status"] === "completed");
       if (txCompleted.length > 1) {

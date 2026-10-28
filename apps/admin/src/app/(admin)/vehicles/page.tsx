@@ -16,11 +16,14 @@ import {
   createProtection,
   updateProtection,
 } from "../../../lib/protection-service";
+import { getVehiclePapers } from "../../../lib/papers-service";
+import type { PaperVerification } from "@autodeck/core";
 
 export default function VehicleLookupPage() {
   const { claims } = useAdminAuth();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [protections, setProtections] = useState<Protection[]>([]);
+  const [documents, setDocuments] = useState<PaperVerification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -37,7 +40,9 @@ export default function VehicleLookupPage() {
   }
 
   async function refreshProtections(vehicleId: string) {
-    setProtections(await getVehicleProtections(vehicleId));
+    const [prots, docs] = await Promise.all([getVehicleProtections(claims!.tenantId, vehicleId), getVehiclePapers(claims!.tenantId, vehicleId)]);
+    setProtections(prots);
+    setDocuments(docs);
   }
 
   async function handleSearch(plate: string) {
@@ -52,6 +57,7 @@ export default function VehicleLookupPage() {
         await refreshProtections(found.id);
       } else {
         setProtections([]);
+        setDocuments([]);
         setError(`No car with plate ${plate.trim()} is on file.`);
       }
     } catch {
@@ -103,6 +109,7 @@ export default function VehicleLookupPage() {
       onOpenOwner={(id) => router.push(`/customers/${id}`)}
       vehicle={vehicle}
       protections={protections}
+      documents={documents}
       error={error}
       message={status}
       onSearch={(plate) => void handleSearch(plate)}

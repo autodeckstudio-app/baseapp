@@ -16,6 +16,7 @@ export function useStaffAlerts(): StaffAlert[] {
 
 /** Count only: no customer details. Persistent, read-only. */
 const TEXT: Record<string, (n: number) => string> = {
+  waiting_cancel_link_terminal_processing: (n) => `${n} cancellation request(s) have a closed payment link, but a payment already started may still arrive. Booked times remain held and cancel automatically if a payment arrives. Check the link in the Razorpay dashboard.`,
   waiting_cancel_review: (n) => `${n} cancellation request(s) still await the online payment. Booked times remain held; a manual check is needed.`,
   waiting_cancel_refund_not_reserved: (n) => `${n} payment(s) arrived for a waiting cancellation but the full refund was NOT reserved. Booked times remain held; manual action is required.`,
   ambiguous_payment_link: (n) => `${n === 1 ? "1 online payment notice matched" : `${n} online payment notices matched`} more than one payment, so ${n === 1 ? "it was" : "they were"} not applied automatically. A manual check is needed.`,

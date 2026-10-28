@@ -22,4 +22,9 @@ describe("backend availability gates (customer)", () => {
     const c = src("../app/(tabs)/cars/[id].tsx");
     expect(c).toContain("LISTING_PHOTO_EDIT_ENABLED && car.mine");
   });
+  it("choosing RC with one already on file never opens the edit form while updateMyPaper is absent, and never adds a second RC", () => {
+    const g = src("../app/(tabs)/garage/[id].tsx");
+    expect(g).toContain("if (PAPER_EDIT_ENABLED) { openDocEdit(existingRc); return; }");
+    expect(g).toContain("This car already has an RC on file. Editing documents is not available yet.");
+  });
 });

@@ -150,8 +150,14 @@ export default function VehicleDetailScreen() {
   }
   function pickDocKind(k: MyPaper["kind"]) {
     // One active RC per car: choosing RC when the car already has one edits that RC.
+    // The edit path needs updateMyPaper, so while document editing is not released we
+    // refuse the second RC instead of opening a form whose save would fail.
     const existingRc = k === "RC" ? papers.find((p) => p.kind === "RC") : undefined;
-    if (existingRc) { openDocEdit(existingRc); return; }
+    if (existingRc) {
+      if (PAPER_EDIT_ENABLED) { openDocEdit(existingRc); return; }
+      setDocError("This car already has an RC on file. Editing documents is not available yet.");
+      return;
+    }
     setDocEditing(null); setNumberError(null);
     setDocForm((f) => ({ ...f, kind: k }));
   }

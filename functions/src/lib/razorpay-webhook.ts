@@ -1,3 +1,4 @@
+import { resolveWaitingCancel } from "./waiting-cancel.js";
 // Applies a verified payment-provider event to Firestore. Pure of HTTP: the
 // onRequest wrapper verifies the signature and calls processProviderEvent().
 //
@@ -9,6 +10,7 @@
 //    nothing is marked paid and the event is recorded for review.
 import type { Firestore } from "firebase-admin/firestore";
 import type { Booking, Gift, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
+import { planReserveInTx, applyReserveInTx } from "./refund-outbox.js";
 import { planGiftActivation } from "./gift-activate.js";
 import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
@@ -22,6 +24,8 @@ import { getPaymentProvider } from "./razorpay-provider.js";
 
 export type WebhookOutcome =
   | "completed"
+  | "link_expired"
+  | "link_cancelled"
   | "failed"
   | "refunded"
   | "duplicate"
@@ -117,6 +121,9 @@ export async function processProviderEvent(
     // (https://razorpay.com/docs/webhooks/payment-links); "payment.link.paid" is kept so any
     // endpoint already subscribed to the legacy name keeps working.
     "payment.captured", "payment.link.paid", "payment_link.paid", "payment.failed", "refund.created", "refund.processed",
+    // Link terminal events are routed so a waiting cancel can see them; they never act on their own
+    // (see below): a link expiring/cancelling is not proof that an in-progress payment cannot capture.
+    "payment_link.expired", "payment_link.cancelled",
   ];
   if (!handled.includes(ev.eventType)) {
     await eventRef.set({ eventType: ev.eventType, outcome: "ignored", processedAt: new Date().toISOString() }).catch(() => undefined);
@@ -148,13 +155,52 @@ export async function processProviderEvent(
     const record = (o: WebhookOutcome) =>
       tx.set(eventRef, { eventType: ev.eventType, paymentId: payment.id, outcome: o, processedAt: now });
 
+    // A cancel requested while this payment was in progress (24 Oct ruling #2) is resolved
+    // by the verified provider result before any ordinary handling.
+    const waiting = await resolveWaitingCancel(tx, db, payment, ev, now);
+    if (waiting) { record(waiting); return waiting; }
+    if (ev.eventType === "payment_link.expired" || ev.eventType === "payment_link.cancelled") { record("ignored"); return "ignored"; }
+
     if (isPaid) {
+      if (payment.status === "completed" && payment.targetType === "membership" && payment.membershipId) {
+        // Mixed-vintage rollout repair (same 24 Oct ruling #5 scope as the late-capture reservation below): an OLDER instance can
+        // complete a capture for a cancelled/expired membership with no reservation and no alert, and this newer code would then
+        // see "already final" and leave the money stranded. Only a payment PROVEN late is repaired: it completed AFTER the
+        // membership was cancelled (cancelledAt), or after an expired membership's end date. A payment that completed first and
+        // was cancelled/expired later is a normal paid membership and is never touched. Missing/unparseable evidence = no repair.
+        const mRef0 = db.collection(COLLECTIONS.memberships()).doc(payment.membershipId);
+        const [m0, a0] = await Promise.all([tx.get(mRef0), tx.get(db.collection(COLLECTIONS.staffAlerts()).doc(`late_membership_payment_${payment.id}`))]);
+        const m = m0.exists ? (m0.data() as Membership) : null;
+        const doneAt = Date.parse(payment.completedAt ?? "");
+        const provenLate = !!m && Number.isFinite(doneAt) && !a0.exists && payment.tenantId === m.tenantId && (
+          (m.status === "cancelled" && !!m.cancelledAt && Number.isFinite(Date.parse(m.cancelledAt)) && doneAt > Date.parse(m.cancelledAt)) ||
+          (m.status === "expired" && !!m.endDate && Number.isFinite(Date.parse(m.endDate)) && doneAt > Date.parse(m.endDate) + 86400000));
+        const plan = provenLate ? await planReserveInTx(tx, db, { payment, amountPaise: payment.amount, reason: "late_membership_payment", createdBy: "system" }) : null;
+        record("already_final");
+        if (plan) {
+          const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`late_membership_payment_${payment.id}`);
+          if (plan.ok) applyReserveInTx(tx, plan);
+          tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+            kind: plan.ok ? "late_membership_payment" : plan.code === "same_reservation" ? "late_membership_already_reserved" : "late_membership_refund_not_reserved",
+            paymentId: payment.id, createdAt: now, repairedAfterCompletion: true,
+            ...(plan.ok ? {} : { reservationOutcome: plan.code, reason: "late_membership_payment", owedAmountPaise: payment.amount > 0 ? payment.amount : null, currency: payment.currency ?? null }) });
+        }
+        return "already_final";
+      }
       if (payment.status === "completed" || payment.status === "refunded") { record("already_final"); return "already_final"; }
       if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
 
       if (payment.targetType === "membership") {
         const mRef = payment.membershipId ? db.collection(COLLECTIONS.memberships()).doc(payment.membershipId) : null;
         const mSnap = mRef ? await tx.get(mRef) : null;
+        // Late capture (owner ruling 24 Oct 2026 #5, user "5 - you suggest" 09:53:57 IST, pick "Auto-refund + alert" 09:54:23, go 10:37:38):
+        // a payment captured for a membership that is already cancelled or expired never activates it. A FULL refund RESERVATION is
+        // planned here (reads) and committed in THIS transaction with the payment completion and the event doc, so they land together
+        // or not at all, plus a staff alert. Reservation only: no provider call here; the outbox runner submits it as for any refund.
+        const lateMembership = !!(mSnap?.exists && ["cancelled", "expired"].includes((mSnap.data() as Membership).status));
+        const reservePlan = lateMembership
+          ? await planReserveInTx(tx, db, { payment, amountPaise: payment.amount, reason: "late_membership_payment", createdBy: "system", completingInThisTx: true })
+          : null;
         const upgradeSrc = mSnap?.exists && (mSnap.data() as Membership).status === "pending" ? await readUpgradeSource(tx, db, mSnap.data() as Membership) : null;
         record("completed");
         tx.update(paymentRef, {
@@ -163,6 +209,17 @@ export async function processProviderEvent(
         });
         writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: null,
           after: { status: "completed", targetType: "membership", membershipId: payment.membershipId, via: "razorpay_webhook" } });
+        if (reservePlan) {
+          const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`late_membership_payment_${payment.id}`);
+          if (reservePlan.ok) applyReserveInTx(tx, reservePlan);
+          // A deterministic refusal (e.g. an active reservation already exists) is flagged, never retried by redelivery.
+          tx.set(alertRef, { id: alertRef.id, tenantId: payment.tenantId, studioId: payment.studioId ?? null,
+            kind: reservePlan.ok ? "late_membership_payment" : reservePlan.code === "same_reservation" ? "late_membership_already_reserved" : "late_membership_refund_not_reserved",
+            paymentId: payment.id, createdAt: now,
+            // Private obligation evidence. The amount is the STORED payment amount only when it is positive; never invented.
+            ...(reservePlan.ok ? {} : { reservationOutcome: reservePlan.code, reason: "late_membership_payment",
+              owedAmountPaise: payment.amount > 0 ? payment.amount : null, currency: payment.currency ?? null }) });
+        }
         if (mRef && mSnap?.exists && (mSnap.data() as Membership).status === "pending") {
           const startDate = now.slice(0, 10);
           const endDate = new Date(Date.parse(now) + MEMBERSHIP_DURATION_DAYS * 86400000).toISOString().slice(0, 10);

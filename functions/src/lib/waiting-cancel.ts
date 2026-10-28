@@ -55,11 +55,22 @@ export async function resolveWaitingCancel(tx: Transaction, db: Firestore, p: Pa
   if (!paid && ev.providerPaymentLinkId !== p.razorpayPaymentLinkId) return "amount_mismatch";
   // Captured events need a stored-payment match; link events need the exact link as well.
   if (paid && (!Number.isSafeInteger(ev.amount) || ev.amount <= 0 || ev.amount !== p.amount || !p.currency || ev.currency !== p.currency || !ev.providerPaymentId || (p.razorpayPaymentId && p.razorpayPaymentId !== ev.providerPaymentId) || (ev.eventType !== "payment.captured" && ev.providerPaymentLinkId !== p.razorpayPaymentLinkId) || (ev.eventType === "payment.captured" && p.razorpayPaymentId !== ev.providerPaymentId && ev.providerPaymentLinkId !== p.razorpayPaymentLinkId))) return "amount_mismatch";
-  if (!paid && p.status !== "pending" && p.status !== "processing") return null;
+  // A link expiring/cancelling does not prove an IN-PROGRESS payment can no longer capture: keep waiting
+  // (the review sweep escalates to staff) until a capture/failed result or manual review settles it.
+  if (!paid) {
+    // Razorpay: an attempt can authorise late and auto-capture within days; link terminal only blocks NEW attempts,
+    // and a link's payments[] lists only CAPTURED payments - so a terminal link (pending or processing) never proves
+    // nothing is in flight. Retain booking/slot/payment, flag staff, and let a later capture resolve it.
+    const next = { ...i, state: "needs_review" as const };
+    tx.update(iRef, { state: next.state, linkTerminalWhileProcessing: ev.eventType });
+    tx.update(bRef, { cancelIntent: publicIntent(next), updatedAt: now });
+    tx.set(db.collection("staffAlerts").doc(`waiting_cancel_${b.id}`), alert(i, "waiting_cancel_link_terminal_processing", now));
+    return null;
+  }
   if (paid && !["pending", "processing", "completed"].includes(p.status)) return "amount_mismatch";
   if (!["PENDING", "CONFIRMED"].includes(b.status) || !["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED"].includes(j.status)) return "amount_mismatch";
   const reads = await readCancelReads(tx, db, b, b.id);
-  const plan = paid ? await planReserveInTx(tx, db, { payment: { ...p, status: "completed" }, amountPaise: p.amount, reason: "waiting_cancel_capture", createdBy: "system" }) : null;
+  const plan = paid ? await planReserveInTx(tx, db, { payment: { ...p, status: "completed" }, amountPaise: p.amount, reason: "waiting_cancel_capture", createdBy: "system", completingInThisTx: true }) : null;
   const prior = plan && !plan.ok && plan.code === "same_reservation" ? await tx.get(db.collection("refundRequests").where("paymentId", "==", p.id)) : null;
   const same = prior?.docs.map(d => d.data()).find(r => r.amountPaise === p.amount && r.reason === "waiting_cancel_capture" && ["reserved", "submitted", "accepted"].includes(r.status));
   const pRef = db.collection("payments").doc(p.id);
