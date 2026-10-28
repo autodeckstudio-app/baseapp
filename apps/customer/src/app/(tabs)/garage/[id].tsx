@@ -28,7 +28,7 @@ import { listenToVehicleWarranties } from "../../../lib/warranty-service";
 import { listenToVehiclePapers, listenToCustomerPapers, submitMyPaper, updateMyPaper, deleteMyPaper, daysUntil, type MyPaper } from "../../../lib/paper-service";
 import { PAPER_EDIT_ENABLED, VEHICLE_IMAGE_REMOVE_ENABLED } from "../../../lib/backend-features";
 import { paperName, numberClash, buildDocumentList } from "../../../lib/documents";
-import { limitRegistrationInput } from "../../../lib/registration-input";
+import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
 import { IconAction } from "../../../ui/IconAction";
 import { invoiceHref } from "../../../lib/invoice-display";
 import { listenToInvoicesForVehicle } from "../../../lib/invoice-service";
@@ -501,7 +501,7 @@ export default function VehicleDetailScreen() {
                 ))}
               </View>
               {docForm.kind === "OTHER" ? <Field label="Document name" placeholder="e.g. Warranty card" value={docForm.title} maxLength={80} onChangeText={(v: string) => setDocForm((f) => ({ ...f, title: v }))} /> : null}
-              <Field placeholder={docForm.kind==="RC"?"e.g. MH02AB1234":"Enter number"} label={docForm.kind==="RC"?"Registration number":"Document or policy number"} value={docForm.reference} maxLength={docForm.kind==="RC"?10:120} autoCapitalize={docForm.kind==="RC"?"characters":"none"} error={numberError ?? undefined} onChangeText={changeDocReference} />
+              <Field placeholder={docForm.kind==="RC"?"e.g. MH02AB1234":"Enter number"} label={docForm.kind==="RC"?"Registration number":"Document or policy number"} value={docForm.reference} maxLength={docForm.kind==="RC"?REG_RAW_MAX:120} autoCapitalize={docForm.kind==="RC"?"characters":"none"} error={numberError ?? undefined} onChangeText={changeDocReference} />
               <DateField label="Expiry date (optional)" value={docForm.expiresOn} onChange={(v: string) => setDocForm((f) => ({ ...f, expiresOn: v }))} />
               {Platform.OS === "web" ? (
                 <View style={{ gap: space.hair }}>

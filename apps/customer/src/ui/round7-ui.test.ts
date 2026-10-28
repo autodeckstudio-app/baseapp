@@ -53,3 +53,17 @@ describe("round7 points 5-12 (car page)", () => {
     expect(car).toContain('label="Document name" placeholder="e.g. Warranty card"');
   });
 });
+describe("round7 p4: paste of spaced RC text is normalised before the 10-char cap", () => {
+  it("limitRegistrationInput strips spaces first, then caps at 10", async () => {
+    const { limitRegistrationInput, REG_RAW_MAX } = await import("../lib/registration-input");
+    expect(limitRegistrationInput("mh 12 cd 5678 99")).toBe("MH12CD5678");
+    expect(limitRegistrationInput("gj 01-ab.12/34!")).toBe("GJ01-AB.12");
+    expect(REG_RAW_MAX).toBeGreaterThan(16);
+  });
+  it("the RC and add-car inputs do not clip raw text at 10 natively", () => {
+    const rc = read("src/app/(tabs)/garage/[id].tsx"); const add = read("src/app/(tabs)/garage/add.tsx");
+    expect(rc).toContain('maxLength={docForm.kind==="RC"?REG_RAW_MAX:120}');
+    expect(add).toContain('key === "registrationNumber" ? REG_RAW_MAX');
+    expect(rc).not.toContain('docForm.kind==="RC"?10:120'); expect(add).not.toMatch(/registrationNumber" \? 10/);
+  });
+});

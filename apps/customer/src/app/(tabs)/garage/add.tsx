@@ -11,7 +11,7 @@ import { Button, Field, Kicker, Notice, Screen, T } from "../../../ui/kit";
 import { ModalCard } from "../../../ui/ModalCard";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
-import { limitRegistrationInput } from "../../../lib/registration-input";
+import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
 import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
 
 type FormState = {
@@ -293,7 +293,7 @@ export default function AddVehicleScreen() {
               onBlur={() => { if (form[key] !== "") checkField(key); }}
               autoCapitalize={autoCapitalize}
               keyboardType={keyboardType}
-              maxLength={key === "registrationNumber" ? 10 : key === "year" ? 4 : 50}
+              maxLength={key === "registrationNumber" ? REG_RAW_MAX : key === "year" ? 4 : 50}
             />
           ))}
         </View>
