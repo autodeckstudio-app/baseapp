@@ -3,6 +3,8 @@
 export const SUB_ROOTS: Record<string, string> = {
   studio: "/(tabs)", membership: "/(tabs)/profile", notifications: "/(tabs)", cars: "/(tabs)", help: "/(tabs)", gifts: "/(tabs)",
 };
+// Route folders with no index screen: a cold load of their child must not fall back to a route that does not exist.
+export const NO_INDEX_ROOTS: Record<string, string> = { book: "/(tabs)/catalogue", approvals: "/(tabs)/bookings", invoice: "/(tabs)/bookings" };
 // Top-level routes outside the tab group that are drill-downs from the tabs.
 export const OUTSIDE_TAB_ROOTS: Record<string, string> = { sell: "/(tabs)/cars", services: "/(tabs)/catalogue", shop: "/(tabs)" };
 
@@ -12,5 +14,5 @@ export function backFallback(segs: string[]): string | null {
   const root = segs[1] ?? "";
   const deep = segs.length >= 3 && segs[2] !== "index";
   if (!(deep || root in SUB_ROOTS)) return null;
-  return SUB_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
+  return SUB_ROOTS[root] ?? NO_INDEX_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
 }

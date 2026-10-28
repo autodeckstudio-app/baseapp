@@ -8,7 +8,10 @@ describe("back navigation coverage", () => {
   it("shows Back on drill-downs and secondary roots, including gifts", () => {
     expect(backFallback(["(tabs)", "garage", "[id]"])).toBe("/(tabs)/garage");
     expect(backFallback(["(tabs)", "bookings", "[id]"])).toBe("/(tabs)/bookings");
-    expect(backFallback(["(tabs)", "invoice", "[number]"])).toBe("/(tabs)/invoice");
+    expect(backFallback(["(tabs)", "invoice", "[number]"])).toBe("/(tabs)/bookings");
+    expect(backFallback(["(tabs)", "book", "[serviceId]"])).toBe("/(tabs)/catalogue");
+    expect(backFallback(["(tabs)", "book", "confirm"])).toBe("/(tabs)/catalogue");
+    expect(backFallback(["(tabs)", "approvals", "[id]"])).toBe("/(tabs)/bookings");
     expect(backFallback(["(tabs)", "membership"])).toBe("/(tabs)/profile");
     expect(backFallback(["(tabs)", "gifts"])).toBe("/(tabs)");
     expect(backFallback(["(tabs)", "help"])).toBe("/(tabs)");
@@ -28,5 +31,17 @@ describe("garage history Back to garage", () => {
     const s = readFileSync(join(__dirname, "../app/(tabs)/garage/history.tsx"), "utf8");
     expect(s).toContain('router.canGoBack() ? router.back() : router.replace("/(tabs)/garage")');
     expect(s).not.toContain('router.push("/(tabs)/garage")');
+  });
+});
+
+describe("cold-load fallbacks point at routes that exist", () => {
+  it("every fallback target has an index screen or is a tab root", () => {
+    const base = join(__dirname, "../app/(tabs)");
+    const { existsSync } = require("node:fs");
+    for (const segs of [["(tabs)", "book", "[serviceId]"], ["(tabs)", "approvals", "[id]"], ["(tabs)", "invoice", "[number]"], ["(tabs)", "garage", "[id]"], ["(tabs)", "bookings", "[id]"], ["(tabs)", "membership", "current"], ["(tabs)", "catalogue", "[id]"], ["(tabs)", "gifts"], ["(tabs)", "notifications"], ["(tabs)", "cars", "[id]"]]) {
+      const t = backFallback(segs)!.replace("/(tabs)/", "").replace("/(tabs)", "");
+      const ok = t === "" || existsSync(join(base, t, "index.tsx")) || existsSync(join(base, `${t}.tsx`));
+      expect(ok, `${segs.join("/")} -> ${t}`).toBe(true);
+    }
   });
 });
