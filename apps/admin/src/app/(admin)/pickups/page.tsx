@@ -5,6 +5,8 @@ import Link from "next/link";
 import { listenToPickupRequests, setPickupStatus, type PickupRequestRow } from "../../../lib/pickup-service";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { doneLegLines, outstandingLegNote } from "../../../lib/pickup-leg-display";
+import { listenToBookings, BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
+import { pickupRowState } from "../../../lib/pickup-booking-state";
 import { StatusBadge } from "../../../components/StatusBadge";
 
 type Status = PickupRequestRow["status"];
@@ -42,6 +44,13 @@ export default function PickupsPage() {
     if (!claims) return;
     setLoadError(null);
     return listenToPickupRequests(claims.tenantId, setRows, () => { setLoadError("Couldn't load pickup requests."); setRows([]); });
+  }, [claims]);
+
+  // Booking status per request, so a request for a cancelled booking is flagged instead of looking approvable.
+  const [bookingStatus, setBookingStatus] = useState<Record<string, string> | null>(null);
+  useEffect(() => {
+    if (!claims) return;
+    return listenToBookings(claims.tenantId, (bs) => setBookingStatus(Object.fromEntries(bs.map((b) => [b.id, b.status]))), () => setBookingStatus(null));
   }, [claims]);
 
   const counts = useMemo(() => {
@@ -117,6 +126,8 @@ export default function PickupsPage() {
         <div className="ax-pu-grid">
           {shown.map((r) => {
             const open = r.status === "REQUESTED" || r.status === "CONFIRMED";
+            const bookingNote = open ? pickupRowState(r, r.bookingId, bookingStatus, BOOKINGS_LIST_LIMIT) : { actionable: true, note: null };
+            const blocked = !bookingNote.actionable;
             const askedPickup = r.requestedPickupTime || r.preferredTime;
             const asked: [string, string][] = [];
             if (r.kind !== "drop" && askedPickup) asked.push([r.kind === "both" ? "Pickup" : "Time", askedPickup]);
@@ -183,14 +194,15 @@ export default function PickupsPage() {
                   <textarea rows={1} aria-label="Note for the customer" placeholder="Note for the customer" value={notes[r.id] ?? r.staffNote} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300} className="ax-pu-note" />
                 ) : r.staffNote ? <p className="ax-pu-staffnote">{r.staffNote}</p> : null}
 
+                {bookingNote.note ? <p className="ax-pu-staffnote" role="note">{bookingNote.note}</p> : null}
                 <div className="ax-pu-foot">
                   <Link href={`/bookings/${r.bookingId}`} className="ax-linkbtn">Open booking</Link>
                   {open ? (
                     <div className="ax-pu-actions">
                       <button type="button" className="ax-button" disabled={busy !== null} onClick={() => void act(r, "DECLINED")}>Decline</button>
                       {r.status === "REQUESTED"
-                        ? <button type="button" className="ax-button ax-button--primary" disabled={busy !== null} onClick={() => void act(r, "CONFIRMED")}>Approve</button>
-                        : <button type="button" className="ax-button ax-button--primary" disabled={busy !== null} onClick={() => void act(r, "DONE")}>Mark done</button>}
+                        ? <button type="button" className="ax-button ax-button--primary" disabled={busy !== null || blocked} onClick={() => void act(r, "CONFIRMED")}>Approve</button>
+                        : <button type="button" className="ax-button ax-button--primary" disabled={busy !== null || blocked} onClick={() => void act(r, "DONE")}>Mark done</button>}
                     </div>
                   ) : null}
                 </div>

@@ -12,7 +12,7 @@ import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, StudioConfig, Service, Booking } from "@autodeck/core";
 import { dayRangeIST } from "./calendar-bookings";
-import { mergeFloorJobs, OPEN_FLOOR_STATUSES } from "./floor-jobs";
+import { mergeFloorJobs, OPEN_FLOOR_STATUSES } from "@autodeck/core";
 import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
 
 // Returns "YYYY-MM-DD" for N days after/before the given local date string.

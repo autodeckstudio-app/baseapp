@@ -7,8 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { initializeTestEnvironment, assertFails, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { FIRST_TENANT_ID } from "@autodeck/core";
-import { mergeFloorJobs, OPEN_FLOOR_STATUSES } from "../../../../apps/studio/src/lib/floor-jobs";
+import { FIRST_TENANT_ID, mergeFloorJobs, OPEN_FLOOR_STATUSES } from "@autodeck/core";
 
 let env: RulesTestEnvironment;
 const STUDIO = "studio-ahmedabad";

@@ -1,3 +1,4 @@
+import { pickupEligibility } from "@autodeck/core";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { floatCard } from "@autodeck/ui/theme";
@@ -57,7 +58,8 @@ export default function PickupsScreen() {
       } catch { found[r.id] = null; }
     }));
     setBookings(found);
-    const real = list.filter((r) => { const b = found[r.id]; return b && !["CANCELLED", "COMPLETED", "NO_SHOW"].includes(b.status); });
+    // Same eligibility matrix as Admin: a COMPLETED booking still shows while a return (drop) is owed or the request just needs closing.
+    const real = list.filter((r) => pickupEligibility(r, found[r.id]?.status ?? null).actionable);
     setHidden(list.length - real.length);
     setRows(real);
   }, [tenantId, studioId]);
@@ -111,7 +113,7 @@ export default function PickupsScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
-      ListFooterComponent={hidden > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginTop: spacing.md }}>{hidden} request{hidden === 1 ? "" : "s"} hidden because {hidden === 1 ? "its booking was" : "their bookings were"} cancelled or completed.</Text> : null}
+      ListFooterComponent={hidden > 0 ? <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: "center", marginTop: spacing.md }}>{hidden} request{hidden === 1 ? "" : "s"} hidden (booking cancelled, expired, missing, or nothing left to do).</Text> : null}
       ListEmptyComponent={<View style={{ backgroundColor: colors.surface, ...(wide ? floatCard(nightMaterial) : {}), borderRadius: 28, padding: spacing.xl, alignItems: "center" }}><Text style={{ ...typography.body, color: colors.textMuted }}>No pickup or drop requests right now.</Text></View>}
       renderItem={({ item: r }) => {
         const asked = r.kind !== "drop" ? (r.requestedPickupTime || r.preferredTime) : r.requestedDropTime;

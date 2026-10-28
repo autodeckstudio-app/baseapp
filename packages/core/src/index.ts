@@ -23,3 +23,5 @@ export * from "./duration.js";
 // shop-fixture is a labelled test fixture. Import it from "@autodeck/core/shop-fixture" in dev and tests only, never through this barrel (production bundles must not carry it).
 
 export * from "./settlement-display.js";
+export * from "./floor-jobs.js";
+export * from "./pickup-eligibility.js";

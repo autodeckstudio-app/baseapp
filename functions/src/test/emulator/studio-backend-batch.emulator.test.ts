@@ -992,3 +992,50 @@ describe("photo object create-only semantics (the signed URL's x-goog-if-generat
     expect(buf.toString()).toBe("first");
   });
 });
+
+describe("updatePickupRequest - booking eligibility (Admin/Studio parity)", () => {
+  let service: Service;
+  beforeAll(async () => {
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = await seedService(uid("svc"), TENANT_A);
+  });
+
+  async function pricedRequest(kind: "pickup" | "drop" | "both") {
+    const { booking, customerId } = await freshJob(service);
+    await requestPickupDrop.run({
+      data: { bookingId: booking.id, kind, address: "12, Test Society, Ahmedabad 380006" },
+      auth: customerAuth(customerId),
+    } as never);
+    await updatePickupRequest.run({ data: { requestId: booking.id, status: "REQUESTED", feePaise: 0 }, auth: adminAuth(uid("admin")) } as never);
+    return booking;
+  }
+  const confirmData = (id: string, kind: "pickup" | "drop" | "both") => ({
+    requestId: id,
+    status: "CONFIRMED",
+    ...(kind !== "drop" ? { agreedPickupAt: `${nextDate()} 10:30` } : {}),
+    ...(kind !== "pickup" ? { agreedDropAt: `${nextDate()} 18:00` } : {}),
+  });
+
+  for (const status of ["CANCELLED", "EXPIRED", "NO_SHOW"]) {
+    it(`${status} booking: confirm is refused, decline still closes the request`, async () => {
+      const booking = await pricedRequest("both");
+      await db.collection(COLLECTIONS.bookings()).doc(booking.id).update({ status });
+      await expectErr(updatePickupRequest.run({ data: confirmData(booking.id, "both"), auth: studioAuth(uid("staff")) } as never), "failed-precondition", "can only be declined");
+      const declined = (await updatePickupRequest.run({ data: { requestId: booking.id, status: "DECLINED" }, auth: studioAuth(uid("staff")) } as never)) as { status: string };
+      expect(declined.status).toBe("DECLINED");
+    });
+  }
+
+  it("missing booking (orphan): confirm is refused", async () => {
+    const booking = await pricedRequest("pickup");
+    await db.collection(COLLECTIONS.bookings()).doc(booking.id).delete();
+    await expectErr(updatePickupRequest.run({ data: confirmData(booking.id, "pickup"), auth: studioAuth(uid("staff")) } as never), "failed-precondition", "No booking was found");
+  });
+
+  it("COMPLETED booking with a drop still owed can still be confirmed (legitimate return)", async () => {
+    const booking = await pricedRequest("drop");
+    await db.collection(COLLECTIONS.bookings()).doc(booking.id).update({ status: "COMPLETED" });
+    const ok = (await updatePickupRequest.run({ data: confirmData(booking.id, "drop"), auth: studioAuth(uid("staff")) } as never)) as { status: string };
+    expect(ok.status).toBe("CONFIRMED");
+  });
+});
