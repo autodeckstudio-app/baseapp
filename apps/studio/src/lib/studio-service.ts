@@ -12,11 +12,16 @@ import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, StudioConfig, Service, Booking } from "@autodeck/core";
 import { dayRangeIST } from "./calendar-bookings";
+import { mergeFloorJobs, OPEN_FLOOR_STATUSES } from "./floor-jobs";
 import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
 
 // Returns "YYYY-MM-DD" for N days after/before the given local date string.
 // Mirrors functions/src/lib/schedule.ts's addDays (kept separate — this is
 // client code, not a shared package).
+function todayLocalIST(): string {
+  return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
 function addDaysLocal(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
@@ -129,17 +134,31 @@ export function listenToJobsByDate(
     where("scheduledDate", ">=", rangeStart),
     where("scheduledDate", "<=", date),
   );
-  return onSnapshot(
+  const carry = date <= todayLocalIST();
+  let windowJobs: ServiceJob[] = [];
+  let openJobs: ServiceJob[] = [];
+  let gotWindow = false;
+  let gotOpen = !carry;
+  const emit = () => { if (gotWindow && gotOpen) onData(mergeFloorJobs(windowJobs, openJobs, date, carry)); };
+  const unsubWindow = onSnapshot(
     q,
-    (snap) => {
-      const jobs = snap.docs
-        .map((d) => d.data() as ServiceJob)
-        .filter((j) => j.estimatedEndDate >= date)
-        .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
-      onData(jobs);
-    },
+    (snap) => { windowJobs = snap.docs.map((d) => d.data() as ServiceJob); gotWindow = true; emit(); },
     onError,
   );
+  // Carry-over: every still-open job of this studio, whatever its scheduled date (Admin lists these).
+  const unsubOpen = carry
+    ? onSnapshot(
+        query(
+          collection(db, COLLECTIONS.jobs()),
+          where("tenantId", "==", tenantId),
+          where("studioId", "==", studioId),
+          where("status", "in", [...OPEN_FLOOR_STATUSES]),
+        ),
+        (snap) => { openJobs = snap.docs.map((d) => d.data() as ServiceJob); gotOpen = true; emit(); },
+        onError,
+      )
+    : () => undefined;
+  return () => { unsubWindow(); unsubOpen(); };
 }
 
 export async function getServiceById(serviceId: string): Promise<Service | null> {
