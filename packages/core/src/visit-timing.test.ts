@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { visitTiming, formatSpan, customerTimingLine } from "./visit-timing.js";
+import { visitTiming, formatSpan, customerTimingLine, hasTimingLabel } from "./visit-timing.js";
 import type { JobStatus } from "./types/job.js";
 
 const T = (s: string) => Date.parse(`2026-10-29T${s}:00+05:30`);
@@ -59,5 +59,10 @@ describe("visitTiming", () => {
       expect(t).toMatchObject({ phase: "unknown", label: "", needsAttention: false });
       expect(customerTimingLine(t)).toBe("");
     }
+  });
+  it("no screen draws a blank pill: unknown and closed have no label", () => {
+    expect(hasTimingLabel(visitTiming({ status: "ON_HOLD" as unknown as JobStatus, ...slot }, T("16:00")))).toBe(false);
+    expect(hasTimingLabel(visitTiming({ status: "DELIVERED", ...slot }, T("16:00")))).toBe(false);
+    expect(hasTimingLabel(visitTiming({ status: "IN_PROGRESS", ...slot }, T("15:30")))).toBe(true);
   });
 });

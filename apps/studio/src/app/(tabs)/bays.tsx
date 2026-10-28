@@ -10,7 +10,7 @@ import { db } from "../../lib/firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import { listenToJobsByDate, getStudioConfig } from "../../lib/studio-service";
 import { listenToPendingApprovalsForStudio, getActiveServices } from "../../lib/approval-service";
-import { jobHoldsBay, visitTiming } from "@autodeck/core";
+import { jobHoldsBay, visitTiming, hasTimingLabel } from "@autodeck/core";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, ErrorState, jobStatusLabel } from "@autodeck/ui";
 import { useMinuteNow } from "@autodeck/ui/clock";
@@ -207,7 +207,7 @@ export default function BayBoardScreen() {
                           <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
                             <StatusBadge label={jobStatusLabel(j.status)} tone={statusTone(j.status)} />
                             <StatusBadge label={j.paymentStatus} tone={statusTone(j.paymentStatus)} />
-                            {visitTiming(j, tickNow).phase !== "closed" && <StatusBadge label={visitTiming(j, tickNow).label} tone={visitTiming(j, tickNow).tone} />}
+                            {hasTimingLabel(visitTiming(j, tickNow)) && <StatusBadge label={visitTiming(j, tickNow).label} tone={visitTiming(j, tickNow).tone} />}
                       {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
                           </View>
                         </View>

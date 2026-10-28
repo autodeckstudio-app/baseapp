@@ -310,12 +310,12 @@ export default function BookingDetailScreen() {
             <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && booking.payMode === "online") ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && booking.payMode === "online" ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
-            {timingLine ? <T role="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>{timingLine}</T> : null}
             <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
           </View>
         </View>
       }
     >
+      {timingLine ? <Pane pad="gap"><T tone="secondary">{timingLine}</T></Pane> : null}
       {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" ? (
         <Notice
           title="Request sent"

@@ -96,6 +96,9 @@ export function visitTiming(
   }
 }
 
+/** One rule for every screen: draw a timing badge only when there is text to show (never a blank pill). */
+export const hasTimingLabel = (t: Pick<VisitTiming, "label">): boolean => t.label !== "";
+
 /** Customer-facing line, built from the structured phase. Factual and neutral; no ETA beyond the planned end. Empty = show nothing. */
 export function customerTimingLine(t: Pick<VisitTiming, "phase" | "minutes" | "label">): string {
   switch (t.phase) {

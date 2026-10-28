@@ -2,7 +2,7 @@ import { View, Text, Platform } from "react-native";
 import type { ViewStyle } from "react-native";
 import { floatCard } from "../theme/float.js";
 import { isNightPalette } from "../tokens/colors.js";
-import { visitTiming } from "@autodeck/core";
+import { visitTiming, hasTimingLabel } from "@autodeck/core";
 import { useMinuteNow } from "../clock/useMinuteNow.js";
 import type { ServiceJob } from "@autodeck/core";
 import { colors } from "../tokens/colors.js";
@@ -62,7 +62,7 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName,
       {carName ? <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }} numberOfLines={1}>{carName}</Text> : null}
       {customerName ? <Text style={{ ...typography.caption, color: colors.textSecondary }} numberOfLines={1}>{customerName}</Text> : null}
       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{job.status === "STANDBY" ? "No bay reserved" : bayName ?? "Bay"}</Text>
-      {timing.phase !== "closed" && !(job.status === "STANDBY") ? (
+      {hasTimingLabel(timing) && !(job.status === "STANDBY") ? (
         <View style={{ flexDirection: "row", marginTop: spacing.xs }}>
           <StatusBadge label={timing.label} tone={timing.tone} />
         </View>

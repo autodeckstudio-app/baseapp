@@ -1,7 +1,7 @@
 "use client";
 import { parseSavedJobsView, JOBS_VIEW_KEY, type SavedJobsView } from "../../../lib/jobs-view-state";
 import { useMinuteNow } from "@autodeck/ui/clock";
-import { membershipCoveredLabel, visitTiming } from "@autodeck/core";
+import { membershipCoveredLabel, visitTiming, hasTimingLabel } from "@autodeck/core";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -108,7 +108,7 @@ export default function JobsPage() {
   const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
   const awaiting = activeToday.filter((j) => j.status === "PENDING_VEHICLE").length;
 
-  const timingOf = (j: ServiceJob) => { const t = visitTiming(j, minuteNow); return t.phase === "closed" || j.status === "STANDBY" ? undefined : { label: t.label, tone: t.tone, attention: t.needsAttention }; };
+  const timingOf = (j: ServiceJob) => { const t = visitTiming(j, minuteNow); return !hasTimingLabel(t) || j.status === "STANDBY" ? undefined : { label: t.label, tone: t.tone, attention: t.needsAttention }; };
   const toBoard = (j: ServiceJob): BoardJob => ({
     timing: timingOf(j),
     id: j.id,
