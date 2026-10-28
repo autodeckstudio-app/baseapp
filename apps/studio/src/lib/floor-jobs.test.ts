@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergeFloorJobs } from "./floor-jobs";
+import { mergeFloorJobs, closedOnDate } from "./floor-jobs";
 import type { ServiceJob } from "@autodeck/core";
 
 const job = (id: string, status: string, scheduledDate: string, estimatedEndDate: string): ServiceJob =>
@@ -42,5 +42,14 @@ describe("mergeFloorJobs (Studio floor must show what Admin shows as open)", () 
     const holding = merged.filter((j) => jobHoldsBay({ status: j.status, estimatedEndAt: "2026-10-28T10:00:00.000Z" })).map((j) => j.id);
     expect(holding.sort()).toEqual(["a", "b"]);
     expect(merged.map((j) => j.id)).toContain("s");
+  });
+  it("a job delivered today after overrunning stays in today's history; one delivered earlier does not", () => {
+    const closed = (id: string, status: string, at: string) =>
+      ({ ...job(id, status, "2026-10-26", "2026-10-26"), statusHistory: [{ status, changedAt: at, changedBy: "x", notes: null }] }) as unknown as ServiceJob;
+    const today1 = closed("t", "DELIVERED", "2026-10-28T09:30:00.000Z"); // 15:00 IST, 28 Oct
+    const earlier = closed("e", "DELIVERED", "2026-10-27T09:30:00.000Z");
+    const cancelledToday = closed("c", "CANCELLED", "2026-10-27T19:00:00.000Z"); // 00:30 IST 28 Oct
+    expect(closedOnDate(today1)).toBe("2026-10-28");
+    expect(mergeFloorJobs([today1, earlier, cancelledToday], [], "2026-10-28", true).map((j) => j.id).sort()).toEqual(["c", "t"]);
   });
 });
