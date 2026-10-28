@@ -6,7 +6,7 @@ import { listenToPickupRequests, setPickupStatus, type PickupRequestRow } from "
 import { useAdminAuth } from "../../../lib/auth-context";
 import { doneLegLines, outstandingLegNote } from "../../../lib/pickup-leg-display";
 import { listenToBookings, BOOKINGS_LIST_LIMIT } from "../../../lib/bookings-service";
-import { pickupRowState } from "../../../lib/pickup-booking-state";
+import { pickupRowState, pickupCounts } from "../../../lib/pickup-booking-state";
 import { StatusBadge } from "../../../components/StatusBadge";
 
 type Status = PickupRequestRow["status"];
@@ -53,18 +53,8 @@ export default function PickupsPage() {
     return listenToBookings(claims.tenantId, (bs) => setBookingStatus(Object.fromEntries(bs.map((b) => [b.id, b.status]))), () => setBookingStatus(null));
   }, [claims]);
 
-  const counts = useMemo(() => {
-    // REQUESTED/CONFIRMED count only requests that can still be acted on; open requests whose booking is
-    // closed or missing are counted separately as needsClosure (still listed under their tab and All).
-    const c: Record<Tab, number> & { needsClosure: number } = { REQUESTED: 0, CONFIRMED: 0, DONE: 0, DECLINED: 0, ALL: 0, needsClosure: 0 };
-    for (const r of rows ?? []) {
-      c.ALL += 1;
-      const isOpen = r.status === "REQUESTED" || r.status === "CONFIRMED";
-      if (isOpen && !pickupRowState(r, r.bookingId, bookingStatus, BOOKINGS_LIST_LIMIT).actionable) { c.needsClosure += 1; continue; }
-      c[r.status] += 1;
-    }
-    return c;
-  }, [rows, bookingStatus]);
+  const counts = useMemo(() => pickupCounts(rows ?? [], bookingStatus, BOOKINGS_LIST_LIMIT), [rows, bookingStatus]);
+  const needsClosure = counts.closeRequested + counts.closeConfirmed;
   const shown = (rows ?? []).filter((r) => tab === "ALL" || r.status === tab);
 
   async function act(r: PickupRequestRow, status: Status) {
@@ -110,14 +100,14 @@ export default function PickupsPage() {
           <div><span className="ax-kpi-v ax-kpi-v--accent">{counts.REQUESTED}</span><span className="ax-label">Waiting</span></div>
           <div><span className="ax-kpi-v">{counts.CONFIRMED}</span><span className="ax-label">Approved</span></div>
           <div><span className="ax-kpi-v ax-kpi-v--premium">{counts.DONE}</span><span className="ax-label">Done</span></div>
-          {counts.needsClosure > 0 ? <div><span className="ax-kpi-v">{counts.needsClosure}</span><span className="ax-label">Needs closure</span></div> : null}
+          {needsClosure > 0 ? <div><span className="ax-kpi-v">{needsClosure}</span><span className="ax-label">Needs closure</span></div> : null}
         </div>
       </header>
 
       <div className="ax-toolbar">
         <div className="ax-seg" role="group" aria-label="Show">
           {TABS.map((t) => (
-            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {t.id === "ALL" ? counts.ALL : counts[t.id]}{(t.id === "REQUESTED" || t.id === "CONFIRMED") && counts.needsClosure > 0 && t.id === "REQUESTED" ? ` (+${counts.needsClosure} to close)` : ""}</button>
+            <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>{t.label} {t.id === "ALL" ? counts.ALL : counts[t.id]}{t.id === "REQUESTED" && counts.closeRequested > 0 ? ` +${counts.closeRequested} to close` : ""}{t.id === "CONFIRMED" && counts.closeConfirmed > 0 ? ` +${counts.closeConfirmed} to close` : ""}</button>
           ))}
         </div>
         <p className="ax-pu-policy">Under 3 km is Rs 100 per leg, from 3 km is Rs 150 per leg (pickup and drop each, so both is two legs). Collected at the studio. Requests without a shared location need the distance and fee confirmed by phone.</p>

@@ -16,3 +16,28 @@ export function pickupRowState(
   if (status === undefined && Object.keys(bookings).length >= feedCap) return { actionable: true, note: null };
   return pickupEligibility(r, status ?? null);
 }
+
+export type PickupCounts = {
+  REQUESTED: number; CONFIRMED: number; DONE: number; DECLINED: number; ALL: number;
+  /** Open requests whose booking no longer allows action, by their own status. */
+  closeRequested: number; closeConfirmed: number;
+};
+
+/** REQUESTED/CONFIRMED count only actionable requests; stale open ones are counted by their own status. Rows stay listed. */
+export function pickupCounts(
+  rows: (PickupEligibilityInput & { bookingId: string })[],
+  bookings: Record<string, string> | null,
+  feedCap: number,
+): PickupCounts {
+  const c: PickupCounts = { REQUESTED: 0, CONFIRMED: 0, DONE: 0, DECLINED: 0, ALL: 0, closeRequested: 0, closeConfirmed: 0 };
+  for (const r of rows) {
+    c.ALL += 1;
+    const open = r.status === "REQUESTED" || r.status === "CONFIRMED";
+    if (open && !pickupRowState(r, r.bookingId, bookings, feedCap).actionable) {
+      if (r.status === "REQUESTED") c.closeRequested += 1; else c.closeConfirmed += 1;
+      continue;
+    }
+    c[r.status as "REQUESTED" | "CONFIRMED" | "DONE" | "DECLINED"] += 1;
+  }
+  return c;
+}
