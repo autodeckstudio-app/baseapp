@@ -14,7 +14,6 @@ import type { ServiceJob, Booking } from "@autodeck/core";
 // V1 is explicitly single-studio-per-tenant (seeded once) — FIRST_STUDIO_ID
 // is the correct, intentional value here, unlike tenantId which must always
 // come from the authenticated user's own claims (see Phase 3G HANDOFF).
-import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { colors, spacing, radius, typography, EmptyState, ErrorState, LoadingState, JobCard } from "@autodeck/ui";
 
 function addDays(dateStr: string, days: number): string {
@@ -45,7 +44,7 @@ export default function CalendarScreen() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [show, setShow] = useState<"active" | "done" | "cancelled">("active");
-  const labels = useJobLabels(auth.status === "ready" ? FIRST_STUDIO_ID : null);
+  const labels = useJobLabels(auth.status === "ready" ? auth.claims.studioId : null);
   const people = useJobPeople(jobs);
 
   const isCancelled = (j: ServiceJob) => j.status === "CANCELLED";
@@ -58,10 +57,12 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     if (auth.status !== "ready") return undefined;
+    const studioId = auth.claims.studioId;
+    if (!studioId) return undefined;
     setLoading(true); setError(null);
     const unsub = listenToJobsByDate(
       auth.claims.tenantId,
-      FIRST_STUDIO_ID,
+      studioId,
       selectedDate,
       (data) => {
         setJobs(data);
@@ -73,7 +74,7 @@ export default function CalendarScreen() {
       },
     );
     // Future bookings have no job until the car arrives, so read them directly; failure here only hides this section.
-    const unsubBookings = listenToBookingsByDate(auth.claims.tenantId, FIRST_STUDIO_ID, selectedDate, setBookings, () => setBookings([]));
+    const unsubBookings = listenToBookingsByDate(auth.claims.tenantId, studioId, selectedDate, setBookings, () => setBookings([]));
     return () => { unsub(); unsubBookings(); };
   }, [selectedDate, auth.status, attempt]);
 
