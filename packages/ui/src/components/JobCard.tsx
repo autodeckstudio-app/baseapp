@@ -2,6 +2,7 @@ import { View, Text, Platform } from "react-native";
 import type { ViewStyle } from "react-native";
 import { floatCard } from "../theme/float.js";
 import { isNightPalette } from "../tokens/colors.js";
+import { visitTiming } from "@autodeck/core";
 import type { ServiceJob } from "@autodeck/core";
 import { colors } from "../tokens/colors.js";
 import { spacing } from "../tokens/spacing.js";
@@ -46,6 +47,8 @@ export interface JobCardProps {
 export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName, customerName }: JobCardProps) {
   const isMultiDay = job.scheduledDate !== job.estimatedEndDate;
   const isOngoingFromEarlierDay = viewDate !== undefined && viewDate !== job.scheduledDate;
+  // Where the visit stands against its planned time. Display only; an unarrived or overrunning job stays listed.
+  const timing = visitTiming(job);
 
   return (
     <Card onPress={onPress} padding="md" flat style={Platform.OS === "web" ? (floatCard(isNightPalette) as unknown as ViewStyle) : undefined}>
@@ -58,6 +61,11 @@ export function JobCard({ job, onPress, viewDate, bayName, serviceName, carName,
       {carName ? <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }} numberOfLines={1}>{carName}</Text> : null}
       {customerName ? <Text style={{ ...typography.caption, color: colors.textSecondary }} numberOfLines={1}>{customerName}</Text> : null}
       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{serviceName ? `${serviceName} · ` : ""}{job.status === "STANDBY" ? "No bay reserved" : bayName ?? "Bay"}</Text>
+      {timing.phase !== "closed" && !(job.status === "STANDBY") ? (
+        <View style={{ flexDirection: "row", marginTop: spacing.xs }}>
+          <StatusBadge label={timing.label} tone={timing.tone} />
+        </View>
+      ) : null}
       <View style={{ flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs }}>
         {job.isWalkIn && <Tag label="WALK-IN" />}
         {isMultiDay && <Tag label={`MULTI-DAY · until ${shortDate(job.estimatedEndDate)}`} />}

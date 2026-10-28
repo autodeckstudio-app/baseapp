@@ -1,5 +1,5 @@
 "use client";
-import { membershipCoveredLabel } from "@autodeck/core";
+import { membershipCoveredLabel, visitTiming } from "@autodeck/core";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -99,7 +99,9 @@ export default function JobsPage() {
   const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
   const awaiting = activeToday.filter((j) => j.status === "PENDING_VEHICLE").length;
 
+  const timingOf = (j: ServiceJob) => { const t = visitTiming(j); return t.phase === "closed" || j.status === "STANDBY" ? undefined : { label: t.label, tone: t.tone, attention: t.needsAttention }; };
   const toBoard = (j: ServiceJob): BoardJob => ({
+    timing: timingOf(j),
     id: j.id,
     status: j.status,
     plate: vehicleRegs[j.vehicleId] ?? "-",
@@ -187,7 +189,7 @@ export default function JobsPage() {
             {filtered.map((j) => (
               <tr key={j.id} className="row-link" tabIndex={0} role="link" aria-label={`Open job for ${vehicleRegs[j.vehicleId] ?? "vehicle"}`} onKeyDown={e=>{if(e.key==="Enter")open(j.id);}} onClick={() => open(j.id)}>
                 <td>{formatDateTime(j.scheduledAt)}{j.isWalkIn ? <span className="ax-muted"> · Walk-in</span> : null}</td>
-                <td><StatusBadge label={j.status} /></td>
+                <td><StatusBadge label={j.status} />{timingOf(j) ? <div className={`ax-jc-timing ax-jc-timing--${timingOf(j)!.tone}`} data-attention={timingOf(j)!.attention ? "true" : "false"}>{timingOf(j)!.label}</div> : null}</td>
                 <td className="ax-data">{vehicleRegs[j.vehicleId] ?? "-"}</td>
                 <td>{customerNames[j.customerId] ?? "-"}</td>
                 <td>{serviceNames[j.serviceId] ?? "-"}</td>

@@ -10,7 +10,7 @@ import { db } from "../../lib/firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import { listenToJobsByDate, getStudioConfig } from "../../lib/studio-service";
 import { listenToPendingApprovalsForStudio, getActiveServices } from "../../lib/approval-service";
-import { jobHoldsBay } from "@autodeck/core";
+import { jobHoldsBay, visitTiming } from "@autodeck/core";
 import type { ServiceJob, StudioConfig, Bay, ApprovalRequest, Vehicle, Customer, BayType } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, statusTone, LoadingState, ErrorState, jobStatusLabel } from "@autodeck/ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -178,7 +178,7 @@ export default function BayBoardScreen() {
                     <View style={{ paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm }}>
                       <StatusBadge label={`${occupancy.jobs.length} jobs in this bay`} tone="warning" />
                       <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xxs }}>
-                        More than one car is marked as in this bay. Open each job to check. Nothing was changed automatically.
+                        More than one job is marked as in this bay. Open each job to check. Nothing was changed automatically.
                       </Text>
                     </View>
                   )}
@@ -207,7 +207,8 @@ export default function BayBoardScreen() {
                           <View style={{ alignItems: "flex-end", gap: spacing.xxs }}>
                             <StatusBadge label={jobStatusLabel(j.status)} tone={statusTone(j.status)} />
                             <StatusBadge label={j.paymentStatus} tone={statusTone(j.paymentStatus)} />
-                            {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
+                            {visitTiming(j).phase !== "closed" && <StatusBadge label={visitTiming(j).label} tone={visitTiming(j).tone} />}
+                      {hasPendingApproval && <StatusBadge label="Approval pending" tone="warning" />}
                           </View>
                         </View>
                       </TouchableOpacity>

@@ -1,3 +1,4 @@
+import { bayOccupancy } from "../../lib/bay-holders";
 import { isNightPalette as nightMaterial } from "@autodeck/ui";
 import { Platform as NightPlatform } from "react-native";
 import { floatCard } from "@autodeck/ui/theme";
@@ -94,8 +95,9 @@ export default function TodaysJobsScreen() {
     <View style={{ width: wide ? 340 : "100%", gap: spacing.sm }}>
       <Text style={{ ...typography.title, color: colors.textPrimary }}>Bays</Text>
       {bayIds.map((id) => {
-        const j = activeJobs.find((x) => x.bayId === id);
-        const plate = j?.vehicleSnapshot?.registrationNumber;
+        const occ = bayOccupancy(activeJobs, id);
+        const j = occ.jobs[0];
+        const plate = occ.conflict ? occ.jobs.map((x) => x.vehicleSnapshot?.registrationNumber).filter(Boolean).join(" + ") : j?.vehicleSnapshot?.registrationNumber;
         return (
           <View key={id} style={{ ...glass, borderRadius: 20, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md }}>
             <View style={{ flex: 1 }}>
@@ -103,7 +105,7 @@ export default function TodaysJobsScreen() {
               <Text style={{ ...typography.caption, color: colors.textMuted }} numberOfLines={1}>{j ? [plate, labels.services[j.serviceId]].filter(Boolean).join(" · ") || "In use" : "Free"}</Text>
             </View>
             <View style={{ paddingVertical: 4, paddingHorizontal: 12, borderRadius: 999, backgroundColor: j ? "rgba(236,134,56,0.18)" : "rgba(120,200,140,0.16)" }}>
-              <Text style={{ ...typography.caption, color: j ? colors.accent : "#8fd4a0", fontWeight: "600" }}>{j ? STATE[j.status] ?? "Busy" : "Free"}</Text>
+              <Text style={{ ...typography.caption, color: j ? colors.accent : "#8fd4a0", fontWeight: "600" }}>{occ.conflict ? `${occ.jobs.length} jobs` : j ? STATE[j.status] ?? "Busy" : "Free"}</Text>
             </View>
           </View>
         );

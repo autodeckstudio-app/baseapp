@@ -17,8 +17,8 @@ export interface BayOccupancy {
 export function bayOccupancy(jobs: ServiceJob[], bayId: string, now: number = Date.now()): BayOccupancy {
   const holders = jobs.filter((j) => j.bayId === bayId && jobHoldsBay(j, now));
   const arrived = holders.filter((j) => j.status !== "PENDING_VEHICLE");
-  const shown = (arrived.length > 0 ? arrived : holders.slice(0, 1)).slice().sort((a, b) =>
-    a.scheduledAt < b.scheduledAt ? -1 : a.scheduledAt > b.scheduledAt ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
-  );
+  // Parse before comparing: stored values are ISO strings but may carry different offsets, so text order is not time order.
+  const at = (j: ServiceJob): number => { const t = Date.parse(j.scheduledAt); return Number.isFinite(t) ? t : Number.MAX_SAFE_INTEGER; };
+  const shown = (arrived.length > 0 ? arrived : holders.slice(0, 1)).slice().sort((a, b) => at(a) - at(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return { jobs: shown, conflict: arrived.length > 1 };
 }

@@ -1,4 +1,4 @@
-import { membershipCoveredLabel } from "@autodeck/core";
+import { membershipCoveredLabel, visitTiming } from "@autodeck/core";
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
 import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
@@ -278,6 +278,9 @@ export default function BookingDetailScreen() {
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
   const scheduledAt = new Date(booking.scheduledAt);
+  // Plain, factual timing against the planned slot. No ETA beyond the planned end.
+  const vt = job && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? visitTiming(job) : null;
+  const timingLine = !vt || vt.phase === "closed" ? "" : vt.phase === "overrun" ? `Taking longer than planned: ${vt.label.replace("Over planned end by", "planned end passed")} ago` : vt.phase === "not_arrived" ? "Your slot has ended and your car has not been checked in" : vt.label;
   const displayDate = scheduledAt.toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
     weekday: "long",
@@ -305,6 +308,7 @@ export default function BookingDetailScreen() {
             <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && booking.payMode === "online") ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && booking.payMode === "online" ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
+            {timingLine ? <T role="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>{timingLine}</T> : null}
             <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
           </View>
         </View>

@@ -43,4 +43,9 @@ describe("bayOccupancy", () => {
     expect(r.jobs).toHaveLength(1);
     expect(r.conflict).toBe(false);
   });
+  it("orders by real time, not text, when offsets differ", () => {
+    const a = job("a", "IN_PROGRESS", "2026-10-29T09:00:00+05:30", "2026-10-29T09:45:00+05:30"); // 03:30Z
+    const b = job("b", "IN_PROGRESS", "2026-10-29T05:00:00Z", "2026-10-29T05:45:00Z"); // later in time, earlier as text
+    expect(bayOccupancy([b, a], "b1", NOW).jobs.map((j) => j.id)).toEqual(["a", "b"]);
+  });
 });

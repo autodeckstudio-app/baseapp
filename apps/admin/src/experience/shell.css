@@ -814,3 +814,10 @@ html[data-theme="night"] .ax-due { color: #F5A15C; }
 .ax-roster-stats div { display: grid; gap: 2px; }
 .ax-roster-stats dt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ad-text-secondary); }
 .ax-roster-stats dd { margin: 0; font-size: 15px; font-weight: 600; color: var(--ad-text-primary); font-variant-numeric: tabular-nums; }
+
+/* Visit timing line: where a job stands against its planned time. Attention states are bold, never hidden. */
+.ax-jc-timing { display: block; font-size: 12px; margin-top: 4px; color: var(--ad-text-secondary, #4A4655); }
+.ax-jc-timing--warning { color: var(--color-warning, #8a5a00); font-weight: 600; }
+.ax-jc-timing--error { color: var(--color-error, #b3261e); font-weight: 600; }
+.ax-jc-timing--success { color: var(--color-success, #1b6e3c); }
+.ax-jc-timing[data-attention="true"] { font-weight: 700; }

@@ -13,6 +13,7 @@ export interface BoardJob {
   service: string;
   bay?: string | undefined;
   when: string;
+  timing?: { label: string; tone: string; attention: boolean } | undefined;
   walkIn: boolean;
   payment: string;
 }
@@ -58,6 +59,7 @@ export function JobBoard({ jobs, loading, onOpen }: { jobs: BoardJob[]; loading?
                     {j.walkIn ? <span className="ax-jc-chip ax-jc-chip--walk">Walk-in</span> : null}
                     <span className="ax-jc-time">{j.when}</span>
                   </span>
+                  {j.timing ? <span className={`ax-jc-timing ax-jc-timing--${j.timing.tone}`} data-attention={j.timing.attention ? "true" : "false"}>{j.timing.label}</span> : null}
                 </button>
               ))
             )}
