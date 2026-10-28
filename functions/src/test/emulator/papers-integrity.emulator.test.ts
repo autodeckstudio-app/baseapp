@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { submitMyPaper } from "../../functions/papers/submitMyPaper.js";
 import { updateMyPaper, deleteMyPaper } from "../../functions/papers/myPaperEdits.js";
 
@@ -121,5 +122,59 @@ describe("document integrity (emulator)", () => {
     await del(me, first.id);
     expect((await db.collection("papers").doc(first.id).get()).exists).toBe(false);
     expect((await db.collection("vehicles").doc(v).get()).exists).toBe(true);
+  });
+
+  // Needs the Storage emulator (FIREBASE_STORAGE_EMULATOR_HOST). The photo is a real object in the emulator bucket.
+  it("delete removes the paper's own Storage photo, and never an object outside its own path", async () => {
+    const me = uid("cust"); const v = await car(me);
+    await submit(me, { vehicleId: v, kind: "INSURANCE", reference: "PHOTO-1" });
+    const paper = (await papersOf(me))[0]!;
+    const bucket = getStorage().bucket();
+    const own = `${TENANT}/vehicles/${v}/paper-${paper.id}.jpg`;
+    const other = `${TENANT}/vehicles/${v}/paper-someone-else.jpg`;
+    await bucket.file(own).save(Buffer.from("own-bytes"), { metadata: { contentType: "image/jpeg" } });
+    await bucket.file(other).save(Buffer.from("other-bytes"), { metadata: { contentType: "image/jpeg" } });
+    await db.collection("papers").doc(paper.id).update({ evidencePath: own });
+    expect((await bucket.file(own).exists())[0]).toBe(true);
+    await del(me, paper.id);
+    expect((await bucket.file(own).exists())[0]).toBe(false);
+    expect((await bucket.file(other).exists())[0]).toBe(true);
+    expect((await db.collection("papers").doc(paper.id).get()).exists).toBe(false);
+    await bucket.file(other).delete({ ignoreNotFound: true });
+  });
+
+  it("a paper whose stored photo path points outside its own folder deletes the record but leaves that object", async () => {
+    const me = uid("cust"); const v = await car(me);
+    await submit(me, { vehicleId: v, kind: "PUC", reference: "PHOTO-2" });
+    const paper = (await papersOf(me))[0]!;
+    const bucket = getStorage().bucket();
+    const foreign = `${TENANT}/vehicles/other-car/paper-foreign.jpg`;
+    await bucket.file(foreign).save(Buffer.from("foreign"), { metadata: { contentType: "image/jpeg" } });
+    await db.collection("papers").doc(paper.id).update({ evidencePath: foreign });
+    await del(me, paper.id).catch(() => undefined);
+    expect((await bucket.file(foreign).exists())[0]).toBe(true);
+    await bucket.file(foreign).delete({ ignoreNotFound: true });
+  });
+
+  it("editing only the expiry with the SAME number does not flag itself, in each kind (self-exclusion)", async () => {
+    const me = uid("cust"); const v = await car(me);
+    const specs: Array<[string, string, string | undefined]> = [["INSURANCE", "SAME-I1", undefined], ["PUC", "SAME-P1", undefined], ["OTHER", "SAME-O1", "Warranty card"]];
+    for (const [kind, reference, title] of specs) await submit(me, { vehicleId: v, kind, reference, ...(title ? { title } : {}) });
+    for (const p of await papersOf(me)) {
+      await update(me, { paperId: p.id, reference: p.reference, expiresOn: "2029-03-03" });
+      expect((await db.collection("papers").doc(p.id).get()).data()!.expiresOn).toBe("2029-03-03");
+    }
+  });
+
+  it("deleting a document leaves the car's bookings in place", async () => {
+    const me = uid("cust"); const v = await car(me);
+    const bookingId = uid("bk");
+    await db.collection("bookings").doc(bookingId).set({ id: bookingId, tenantId: TENANT, customerId: me, vehicleId: v, status: "CONFIRMED" });
+    await submit(me, { vehicleId: v, kind: "INSURANCE", reference: "BK-DOC-1" });
+    const paper = (await papersOf(me))[0]!;
+    await del(me, paper.id);
+    const b = await db.collection("bookings").doc(bookingId).get();
+    expect(b.exists).toBe(true);
+    expect(b.data()!.status).toBe("CONFIRMED");
   });
 });
