@@ -13,7 +13,7 @@ export default function TabsLayout() {
   const { colors } = useExperienceTheme();
   return (
     <View style={{ flex: 1 }}>
-    <Tabs
+    <Tabs backBehavior="history"
       tabBar={(props) => <RaisedTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} />}
       screenOptions={() => ({
         headerShown: false,

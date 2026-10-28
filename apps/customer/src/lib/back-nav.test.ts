@@ -45,3 +45,10 @@ describe("cold-load fallbacks point at routes that exist", () => {
     }
   });
 });
+
+describe("tab navigator history", () => {
+  it("Tabs uses backBehavior=history so Back returns to the page the user came from, not the first tab", () => {
+    const s = readFileSync(join(__dirname, "../app/(tabs)/_layout.tsx"), "utf8");
+    expect(s).toMatch(/<Tabs backBehavior="history"/);
+  });
+});
