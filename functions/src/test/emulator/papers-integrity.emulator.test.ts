@@ -100,4 +100,26 @@ describe("document integrity (emulator)", () => {
     const audits = await db.collection("auditLog").where("entityId", "==", rc.id).get();
     expect(audits.docs.some((d) => d.data().action === "paper.deleted")).toBe(true);
   });
+
+  it.each([
+    ["RC", "GJ01AB9999", "GJ01AB8888", undefined],
+    ["INSURANCE", "POL-K1", "POL-K2", undefined],
+    ["PUC", "PUC-K1", "PUC-K2", undefined],
+    ["OTHER", "OTH-K1", "OTH-K2", "Warranty card"],
+  ])("per kind %s: edit changes number and expiry, returns a verified paper to review, then delete removes only it", async (kind, ref1, ref2, title) => {
+    const me = uid("cust"); const v = await car(me);
+    await submit(me, { vehicleId: v, kind, reference: ref1, ...(title ? { title } : {}) });
+    const first = (await papersOf(me))[0]!;
+    await db.collection("papers").doc(first.id).update({ status: "VERIFIED" });
+    await update(me, { paperId: first.id, reference: ref2, expiresOn: "2028-02-02", ...(title ? { title: "Updated name" } : {}) });
+    const after = (await db.collection("papers").doc(first.id).get()).data()!;
+    expect(after.reference).toBe(ref2);
+    expect(after.expiresOn).toBe("2028-02-02");
+    expect(after.status).not.toBe("VERIFIED");
+    expect(after.kind).toBe(kind);
+    if (title) expect(after.title).toBe("Updated name");
+    await del(me, first.id);
+    expect((await db.collection("papers").doc(first.id).get()).exists).toBe(false);
+    expect((await db.collection("vehicles").doc(v).get()).exists).toBe(true);
+  });
 });
