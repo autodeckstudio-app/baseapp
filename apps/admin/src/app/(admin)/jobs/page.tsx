@@ -31,10 +31,17 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<JobStatus | "">("");
-  const [when, setWhen] = useState<"" | "today" | "upcoming">("today");
-  const [view, setView] = useState<"board" | "list">("board");
-  const [source, setSource] = useState<"" | "booking" | "walkin">("");
+  // Board/List, day and source filters are kept for this tab, so Back from a job returns to the same view.
+  const saved = (): Partial<{ status: JobStatus | ""; when: "" | "today" | "upcoming"; view: "board" | "list"; source: "" | "booking" | "walkin" }> => {
+    try { return typeof window === "undefined" ? {} : JSON.parse(window.sessionStorage.getItem("ax-jobs-view") ?? "{}"); } catch { return {}; }
+  };
+  const [status, setStatus] = useState<JobStatus | "">(() => saved().status ?? "");
+  const [when, setWhen] = useState<"" | "today" | "upcoming">(() => saved().when ?? "today");
+  const [view, setView] = useState<"board" | "list">(() => saved().view ?? "board");
+  const [source, setSource] = useState<"" | "booking" | "walkin">(() => saved().source ?? "");
+  useEffect(() => {
+    try { window.sessionStorage.setItem("ax-jobs-view", JSON.stringify({ status, when, view, source })); } catch { /* storage unavailable: view just resets */ }
+  }, [status, when, view, source]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -97,7 +104,8 @@ export default function JobsPage() {
 
   if (loading) return <div className="ax-panel" role="status">Loading the studio floor...</div>;
   const activeToday = jobs.filter((j) => j.scheduledDate <= today && j.estimatedEndDate >= today);
-  const inStudio = activeToday.filter((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)).length;
+  // Every started job counts, whatever day it was booked for: an older unfinished job is still in the studio.
+  const inStudio = jobs.filter((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK"].includes(j.status)).length;
   const ready = jobs.filter((j) => j.status === "READY_FOR_DELIVERY").length;
   const awaiting = activeToday.filter((j) => j.status === "PENDING_VEHICLE").length;
 
