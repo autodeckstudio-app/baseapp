@@ -1,10 +1,10 @@
 /**
  * Round 7 document invariants against the real Firestore emulator (no mocks for Firestore):
  * account-wide number uniqueness and one active RC per car under CONCURRENT writes, in-place RC replacement,
- * ownership denial, delete scope and idempotent retry. Storage is not started in this setup, so photo
- * deletion and Storage-failure retry are covered in unit tests (my-paper-edits.test.ts).
+ * ownership denial, delete scope and idempotent retry. The photo cases need the Storage emulator
+ * (FIREBASE_STORAGE_EMULATOR_HOST); URL signing is stubbed there. Storage-failure retry is covered in unit tests (my-paper-edits.test.ts).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { submitMyPaper } from "../../functions/papers/submitMyPaper.js";
@@ -178,5 +178,30 @@ describe("document integrity (emulator)", () => {
     const b = await db.collection("bookings").doc(bookingId).get();
     expect(b.exists).toBe(true);
     expect(b.data()!.status).toBe("CONFIRMED");
+  });
+
+  // Photo replace: the real emulator bucket holds the old object and the real function deletes/keeps objects.
+  // Only URL signing is stubbed (the emulator has no signing key); the bytes upload itself is a client step.
+  it("replacing the photo with another file type removes the old own object, repoints the record and returns an upload URL", async () => {
+    const sign = vi.spyOn(Object.getPrototypeOf(getStorage().bucket().file("x")), "getSignedUrl").mockResolvedValue(["https://signed.example/put"] as never);
+    try {
+      const me = uid("cust"); const v = await car(me);
+      await submit(me, { vehicleId: v, kind: "INSURANCE", reference: "REPL-1" });
+      const paper = (await papersOf(me))[0]!;
+      const bucket = getStorage().bucket();
+      const oldPath = `${TENANT}/vehicles/${v}/paper-${paper.id}.jpg`;
+      const sibling = `${TENANT}/vehicles/${v}/paper-sibling.jpg`;
+      await bucket.file(oldPath).save(Buffer.from("old"), { metadata: { contentType: "image/jpeg" } });
+      await bucket.file(sibling).save(Buffer.from("sib"), { metadata: { contentType: "image/jpeg" } });
+      await db.collection("papers").doc(paper.id).update({ evidencePath: oldPath });
+      const res = (await update(me, { paperId: paper.id, contentType: "image/png" })) as { uploadUrl: string | null };
+      expect(res.uploadUrl).toBe("https://signed.example/put");
+      const after = (await db.collection("papers").doc(paper.id).get()).data()!;
+      expect(after.evidencePath).toBe(`${TENANT}/vehicles/${v}/paper-${paper.id}.png`);
+      expect(after.status).toBe("PENDING");
+      expect((await bucket.file(oldPath).exists())[0]).toBe(false);
+      expect((await bucket.file(sibling).exists())[0]).toBe(true);
+      await bucket.file(sibling).delete({ ignoreNotFound: true });
+    } finally { sign.mockRestore(); }
   });
 });
