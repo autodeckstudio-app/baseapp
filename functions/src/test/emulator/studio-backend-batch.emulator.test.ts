@@ -25,6 +25,8 @@ import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, AdminApproval
 import { COLLECTIONS } from "@autodeck/database";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
+import { cancelBooking } from "../../functions/booking/cancelBooking.js";
+import { mergeFloorJobs } from "@autodeck/core";
 import { requestPickupDrop, updatePickupRequest } from "../../functions/booking/pickupRequests.js";
 import { startInspection } from "../../functions/inspection/startInspection.js";
 import { updateInspection } from "../../functions/inspection/updateInspection.js";
@@ -1037,5 +1039,36 @@ describe("updatePickupRequest - booking eligibility (Admin/Studio parity)", () =
     await db.collection(COLLECTIONS.bookings()).doc(booking.id).update({ status: "COMPLETED" });
     const ok = (await updatePickupRequest.run({ data: confirmData(booking.id, "drop"), auth: studioAuth(uid("staff")) } as never)) as { status: string };
     expect(ok.status).toBe("CONFIRMED");
+  });
+});
+
+describe("booking -> job -> Studio listing -> cancel lifecycle (one record across Customer, Admin, Studio)", () => {
+  let service: Service;
+  beforeAll(async () => {
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = await seedService(uid("svc"), TENANT_A);
+  });
+
+  it("createBooking makes the booking and its job together, bound to the same tenant, studio and bay; Studio's merge lists it on its day; cancel closes both", async () => {
+    const { booking, job, customerId } = await freshJob(service);
+    expect(job).toBeTruthy();
+    expect(job.bookingId).toBe(booking.id);
+    expect(job.tenantId).toBe(booking.tenantId);
+    expect(job.studioId).toBe(booking.studioId);
+    expect(job.status).toBe("PENDING_VEHICLE");
+    expect(job.bayId).toBeTruthy();
+
+    // Studio, on the booking's own day: window leg returns it, open-status leg returns it.
+    const day = job.scheduledDate;
+    expect(mergeFloorJobs([job], [job], day, true).map((j) => j.id)).toEqual([job.id]);
+
+    await cancelBooking.run({ data: { bookingId: booking.id, reason: "lifecycle test", customerContext: true }, auth: customerAuth(customerId) } as never);
+    const b2 = (await db.collection(COLLECTIONS.bookings()).doc(booking.id).get()).data() as Booking;
+    const j2 = (await db.collection(COLLECTIONS.jobs()).doc(job.id).get()).data() as ServiceJob;
+    expect(b2.status).toBe("CANCELLED");
+    expect(j2.status).toBe("CANCELLED");
+    // Cancelled jobs are no longer "open" for Studio's carry-over, and they show in the cancelled history of the day they were cancelled.
+    const open = mergeFloorJobs([], [j2], day, true);
+    expect(open).toEqual([]);
   });
 });
