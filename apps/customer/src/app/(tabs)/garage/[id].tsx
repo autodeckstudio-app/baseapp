@@ -489,7 +489,7 @@ export default function VehicleDetailScreen() {
             </Pane>
           )}
           {deleteId ? (
-            <Notice title="Delete this document?" body="This removes the document and its photo. Your car and bookings are not affected." action={<View style={{ gap: space.breath }}><Button label="Delete" busy={docBusy} onPress={() => void handleDeleteDoc(deleteId)} /><Button label="Cancel" kind="quiet" onPress={() => setDeleteId(null)} /></View>} />
+            <Notice title="Delete this document?" body={`${(() => { const t = papers.find((x) => x.id === deleteId); return t ? `${paperName(t)}${t.reference ? ` · ${t.reference}` : ""}. ` : ""; })()}This removes the document and its photo. Your car and bookings are not affected.`} action={<View style={{ gap: space.breath }}><Button label="Delete" busy={docBusy} onPress={() => void handleDeleteDoc(deleteId)} /><Button label="Cancel" kind="quiet" onPress={() => setDeleteId(null)} /></View>} />
           ) : null}
           {docOpen ? (
             <View style={{ gap: space.breath }}>

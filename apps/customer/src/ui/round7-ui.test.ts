@@ -47,6 +47,7 @@ describe("round7 points 5-12 (car page)", () => {
   it("p5/p6/p8/p12: edit and delete per row, delete confirm, RC edit-in-place, number error, OTHER name", () => {
     expect(car).toContain('kind="edit"'); expect(car).toContain('kind="delete"');
     expect(car).toContain("Delete this document?");
+    expect(car).toContain("papers.find((x) => x.id === deleteId)"); // names the target in the confirm body
     expect(car).toContain("papers.find((p) => p.kind === \"RC\")");
     expect(car).toContain("numberClash(allPapers");
     expect(car).toContain('label="Document name" placeholder="e.g. Warranty card"');
