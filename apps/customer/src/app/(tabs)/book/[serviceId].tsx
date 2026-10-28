@@ -19,7 +19,7 @@ import { SERVICE_INCLUDES, servicesOverlap, CAR_SEGMENTS, FIRST_STUDIO_ID, norma
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { calculateServicePrice, getServiceCatalogue } from "../../../lib/catalogue-service";
-import { applyBundleUpgrade, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
+import { applyBundleUpgrade, bundleUpgradeNote, eligibleExtras, extrasFromParam, extrasToParam, offeredExtras, toggleExtra } from "../../../lib/visit-extras";
 import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Plate, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
@@ -67,7 +67,7 @@ export default function BookServiceScreen() {
     const next = toggleExtra(extraIds, id);
     const up = applyBundleUpgrade(serviceId ?? "", next);
     if (!up.upgradedTo) { setUpgradeNote(null); setExtraIds(next); return; }
-    setUpgradeNote("Full detail wash already covers both. We switched you to it.");
+    setUpgradeNote(bundleUpgradeNote(serviceId ?? "", up));
     if (up.primaryId !== serviceId) router.replace({ pathname: "/(tabs)/book/[serviceId]", params: { serviceId: up.primaryId, ...(up.extras.length ? { extras: extrasToParam(up.extras) } : {}) } });
     else setExtraIds(up.extras);
   };

@@ -45,7 +45,7 @@ describe("a bundle and the services it includes are never in one visit", () => {
   });
 });
 
-import { applyBundleUpgrade } from "./visit-extras";
+import { applyBundleUpgrade, bundleUpgradeNote } from "./visit-extras";
 describe("Exterior + Interior becomes the Full detail wash", () => {
   it("main Exterior + extra Interior: Full becomes the main service, other extras stay", () => {
     expect(applyBundleUpgrade("menu-wash-exterior", ["menu-wash-interior", "menu-wash-foam"])).toEqual({ primaryId: "menu-wash-full", extras: ["menu-wash-foam"], upgradedTo: "menu-wash-full" });
@@ -56,5 +56,21 @@ describe("Exterior + Interior becomes the Full detail wash", () => {
   it("one part alone, or Full already present, changes nothing", () => {
     expect(applyBundleUpgrade("menu-wash-foam", ["menu-wash-exterior"]).upgradedTo).toBeNull();
     expect(applyBundleUpgrade("menu-wash-full", []).upgradedTo).toBeNull();
+  });
+});
+
+describe("bundle upgrade note", () => {
+  it("says switched only when the main service changes", () => {
+    const sw = applyBundleUpgrade("menu-wash-exterior", ["menu-wash-interior"]);
+    expect(bundleUpgradeNote("menu-wash-exterior", sw)).toContain("switched you");
+  });
+  it("says added when the bundle is only added as an extra, and never says switched", () => {
+    const add = applyBundleUpgrade("menu-wash-foam", ["menu-wash-exterior", "menu-wash-interior"]);
+    expect(add.primaryId).toBe("menu-wash-foam");
+    expect(bundleUpgradeNote("menu-wash-foam", add)).toContain("added it to your visit");
+    expect(bundleUpgradeNote("menu-wash-foam", add)).not.toContain("switched");
+  });
+  it("has no note when no bundle applies", () => {
+    expect(bundleUpgradeNote("menu-wash-full", applyBundleUpgrade("menu-wash-full", []))).toBeNull();
   });
 });

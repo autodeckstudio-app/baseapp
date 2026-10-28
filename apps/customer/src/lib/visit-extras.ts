@@ -43,3 +43,11 @@ export function applyBundleUpgrade(primaryId: string, extras: string[]): { prima
   const rest = extras.filter((x) => !parts.includes(x));
   return parts.includes(primaryId) ? { primaryId: big, extras: rest, upgradedTo: big } : { primaryId, extras: [...rest, big], upgradedTo: big };
 }
+
+/** Note shown after a bundle upgrade. Says "switched" only when the main service really changed; otherwise the bundle was added to the visit. */
+export function bundleUpgradeNote(fromPrimaryId: string, up: { primaryId: string; upgradedTo: string | null }): string | null {
+  if (!up.upgradedTo) return null;
+  return up.primaryId !== fromPrimaryId
+    ? "Full detail wash already covers both. We switched you to it."
+    : "Full detail wash covers both. We added it to your visit.";
+}
