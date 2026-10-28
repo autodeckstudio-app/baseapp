@@ -151,19 +151,21 @@ describe("document integrity (emulator)", () => {
     const foreign = `${TENANT}/vehicles/other-car/paper-foreign.jpg`;
     await bucket.file(foreign).save(Buffer.from("foreign"), { metadata: { contentType: "image/jpeg" } });
     await db.collection("papers").doc(paper.id).update({ evidencePath: foreign });
-    await del(me, paper.id).catch(() => undefined);
+    await expect(del(me, paper.id)).resolves.toMatchObject({ deleted: true });
+    expect((await db.collection("papers").doc(paper.id).get()).exists).toBe(false);
     expect((await bucket.file(foreign).exists())[0]).toBe(true);
     await bucket.file(foreign).delete({ ignoreNotFound: true });
   });
 
   it("editing only the expiry with the SAME number does not flag itself, in each kind (self-exclusion)", async () => {
     const me = uid("cust"); const v = await car(me);
-    const specs: Array<[string, string, string | undefined]> = [["INSURANCE", "SAME-I1", undefined], ["PUC", "SAME-P1", undefined], ["OTHER", "SAME-O1", "Warranty card"]];
+    const specs: Array<[string, string, string | undefined]> = [["RC", "GJ01AB7777", undefined], ["INSURANCE", "SAME-I1", undefined], ["PUC", "SAME-P1", undefined], ["OTHER", "SAME-O1", "Warranty card"]];
     for (const [kind, reference, title] of specs) await submit(me, { vehicleId: v, kind, reference, ...(title ? { title } : {}) });
     for (const p of await papersOf(me)) {
       await update(me, { paperId: p.id, reference: p.reference, expiresOn: "2029-03-03" });
       expect((await db.collection("papers").doc(p.id).get()).data()!.expiresOn).toBe("2029-03-03");
     }
+    expect((await papersOf(me)).map((p) => p.kind).sort()).toEqual(["INSURANCE", "OTHER", "PUC", "RC"]);
   });
 
   it("deleting a document leaves the car's bookings in place", async () => {
