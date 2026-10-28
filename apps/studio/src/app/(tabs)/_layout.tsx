@@ -16,6 +16,7 @@ export default function StudioTabsLayout() {
   const wide = NightPlatform.OS === "web" && width >= 900;
   return (
     <Tabs
+      backBehavior="history"
       tabBar={(props) => wide ? <SideRail state={props.state as never} navigation={props.navigation as never} /> : <PillTabBar state={props.state as never} descriptors={props.descriptors as never} navigation={props.navigation as never} icons={TAB_ICON} labels={TAB_LABEL} activeColor={colors.accent} inactiveColor={colors.textMuted} dark={isNightPalette} floating />}
       screenOptions={() => ({
         tabBarActiveTintColor: colors.accent,
