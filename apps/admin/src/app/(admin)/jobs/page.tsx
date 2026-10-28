@@ -1,4 +1,5 @@
 "use client";
+import { parseSavedJobsView, JOBS_VIEW_KEY, type SavedJobsView } from "../../../lib/jobs-view-state";
 import { useMinuteNow } from "@autodeck/ui/clock";
 import { membershipCoveredLabel, visitTiming } from "@autodeck/core";
 
@@ -32,15 +33,13 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Board/List, day and source filters are kept for this tab, so Back from a job returns to the same view.
-  const saved = (): Partial<{ status: JobStatus | ""; when: "" | "today" | "upcoming"; view: "board" | "list"; source: "" | "booking" | "walkin" }> => {
-    try { return typeof window === "undefined" ? {} : JSON.parse(window.sessionStorage.getItem("ax-jobs-view") ?? "{}"); } catch { return {}; }
-  };
+  const saved = (): SavedJobsView => (typeof window === "undefined" ? {} : (() => { try { return parseSavedJobsView(window.sessionStorage.getItem(JOBS_VIEW_KEY)); } catch { return {}; } })());
   const [status, setStatus] = useState<JobStatus | "">(() => saved().status ?? "");
   const [when, setWhen] = useState<"" | "today" | "upcoming">(() => saved().when ?? "today");
   const [view, setView] = useState<"board" | "list">(() => saved().view ?? "board");
   const [source, setSource] = useState<"" | "booking" | "walkin">(() => saved().source ?? "");
   useEffect(() => {
-    try { window.sessionStorage.setItem("ax-jobs-view", JSON.stringify({ status, when, view, source })); } catch { /* storage unavailable: view just resets */ }
+    try { window.sessionStorage.setItem(JOBS_VIEW_KEY, JSON.stringify({ status, when, view, source })); } catch { /* storage unavailable: view just resets */ }
   }, [status, when, view, source]);
   const [search, setSearch] = useState("");
 

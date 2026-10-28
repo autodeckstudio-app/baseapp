@@ -1,7 +1,10 @@
 import { useSyncExternalStore } from "react";
 
 // One shared clock for every timing label: a single timer for the whole app, ticking on the minute,
-// running only while something is subscribed and (on web) while the page is visible.
+// running only while something is subscribed. While a web page is hidden the timer keeps re-arming (one cheap
+// timeout a minute) but nobody is notified; becoming visible again notifies at once with the fresh time.
+// Timing text is only rendered after data has loaded on the client, so the server snapshot is never shown;
+// it returns the same module value only to satisfy React.
 // Elapsed/countdown text refreshes without a reload; nothing is written anywhere.
 let now = Date.now();
 const subs = new Set<() => void>();

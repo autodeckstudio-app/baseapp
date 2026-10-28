@@ -86,8 +86,12 @@ export function visitTiming(
       return { ...base, phase: "not_arrived", label: `Not arrived, slot ended ${formatSpan(min(now - end))} ago`, tone: "error", needsAttention: true, minutes: min(now - end) };
     }
     default: {
-      const unreachable: never = v.status; // a new JobStatus must be handled above
-      return unreachable;
+      // Compile time: adding a JobStatus without handling it above fails the build (this assignment).
+      // Run time: stored data can still hold a status this build does not know. Report it as unknown timing,
+      // never closed and never a raw status string.
+      const _exhaustive: never = v.status;
+      void _exhaustive;
+      return { ...base, phase: "unknown", label: "", tone: "neutral" };
     }
   }
 }

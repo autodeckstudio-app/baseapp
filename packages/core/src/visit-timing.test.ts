@@ -53,4 +53,11 @@ describe("visitTiming", () => {
     expect(customerTimingLine(visitTiming({ status: "PENDING_VEHICLE", ...slot }, T("15:20")))).toBe("Your slot has started");
     expect(customerTimingLine(visitTiming({ status: "DELIVERED", ...slot }, T("15:20")))).toBe("");
   });
+  it("a malformed stored status at run time gives unknown timing, not closed and not a raw string", () => {
+    for (const bad of ["ON_HOLD", "", undefined, 7]) {
+      const t = visitTiming({ status: bad as unknown as JobStatus, ...slot }, T("16:00"));
+      expect(t).toMatchObject({ phase: "unknown", label: "", needsAttention: false });
+      expect(customerTimingLine(t)).toBe("");
+    }
+  });
 });
