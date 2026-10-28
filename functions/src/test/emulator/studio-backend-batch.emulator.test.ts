@@ -26,7 +26,7 @@ import { COLLECTIONS } from "@autodeck/database";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
-import { mergeFloorJobs } from "@autodeck/core";
+import { mergeFloorJobs, closedOnDate } from "@autodeck/core";
 import { requestPickupDrop, updatePickupRequest } from "../../functions/booking/pickupRequests.js";
 import { startInspection } from "../../functions/inspection/startInspection.js";
 import { updateInspection } from "../../functions/inspection/updateInspection.js";
@@ -1068,8 +1068,13 @@ describe("booking -> job -> Studio listing -> cancel lifecycle (one record acros
     expect(b2.status).toBe("CANCELLED");
     expect(j2.status).toBe("CANCELLED");
     // Cancelled jobs are no longer "open" for Studio's carry-over, and they show in the cancelled history of the day they were cancelled.
-    const open = mergeFloorJobs([], [j2], day, true);
-    expect(open).toEqual([]);
+    expect(mergeFloorJobs([], [j2], day, true)).toEqual([]);
+    // ...and the real cancelled job (its real statusHistory) lands in the Cancelled history of the day it was cancelled, even if its estimate ended earlier.
+    const closedDay = closedOnDate(j2);
+    expect(closedDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const overrunCancelled = { ...j2, estimatedEndDate: "2000-01-01" } as ServiceJob;
+    expect(mergeFloorJobs([overrunCancelled], [], closedDay as string, true).map((j) => j.id)).toEqual([j2.id]);
+    expect(mergeFloorJobs([overrunCancelled], [], "2999-01-01", true)).toEqual([]);
   });
 });
 
