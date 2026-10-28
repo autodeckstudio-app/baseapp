@@ -1072,3 +1072,41 @@ describe("booking -> job -> Studio listing -> cancel lifecycle (one record acros
     expect(open).toEqual([]);
   });
 });
+
+describe("updatePickupRequest - COMPLETED booking and member free-pickup credit", () => {
+  let service: Service;
+  beforeAll(async () => {
+    await seedStudio(STUDIO_A, TENANT_A);
+    service = await seedService(uid("svc"), TENANT_A);
+  });
+
+  async function memberRequest(kind: "pickup" | "drop") {
+    const { booking, customerId } = await freshJob(service);
+    const mid = uid("mem");
+    const now = new Date().toISOString();
+    await db.collection(COLLECTIONS.memberships()).doc(mid).set({
+      id: mid, tenantId: TENANT_A, customerId, planId: "p", tier: "silver", status: "active",
+      washesTotal: 6, washesUsed: 0, discountPercent: 0, pickupsTotal: 3, pickupsUsed: 0,
+      startDate: now.slice(0, 10), endDate: null, activatedAt: now, activatedBy: "a",
+      cancelledAt: null, cancelledBy: null, cancellationReason: null, createdAt: now, updatedAt: now,
+    });
+    await requestPickupDrop.run({ data: { bookingId: booking.id, kind, address: "12, Test Society, Ahmedabad 380006" }, auth: customerAuth(customerId) } as never);
+    await updatePickupRequest.run({ data: { requestId: booking.id, status: "REQUESTED", feePaise: 20000 }, auth: adminAuth(uid("admin")) } as never);
+    await db.collection(COLLECTIONS.bookings()).doc(booking.id).update({ status: "COMPLETED" });
+    return { booking, mid };
+  }
+  const used = async (mid: string) => ((await db.collection(COLLECTIONS.memberships()).doc(mid).get()).data() as { pickupsUsed?: number }).pickupsUsed ?? 0;
+
+  it("stale pickup-only request on a COMPLETED booking is refused and takes no credit", async () => {
+    const { booking, mid } = await memberRequest("pickup");
+    await expectErr(updatePickupRequest.run({ data: { requestId: booking.id, status: "CONFIRMED", agreedPickupAt: `${nextDate()} 10:30` }, auth: studioAuth(uid("staff")) } as never), "failed-precondition", "nothing is owed");
+    expect(await used(mid)).toBe(0);
+  });
+
+  it("a legitimate return (drop owed) on a COMPLETED booking confirms and uses one credit", async () => {
+    const { booking, mid } = await memberRequest("drop");
+    const ok = (await updatePickupRequest.run({ data: { requestId: booking.id, status: "CONFIRMED", agreedDropAt: `${nextDate()} 18:00` }, auth: studioAuth(uid("staff")) } as never)) as { status: string };
+    expect(ok.status).toBe("CONFIRMED");
+    expect(await used(mid)).toBe(1);
+  });
+});

@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { pickupBlockedByBooking } from "../../lib/pickup-booking-guard";
+import { pickupBlockedForRequest } from "../../lib/pickup-booking-guard";
 import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
@@ -164,7 +164,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
     const curFeePaise = data.feePaise ?? cur.feePaise ?? null;
     if ((data.status === "CONFIRMED" || data.status === "DONE") && cur.bookingId) {
       const bk = (await tx.get(db.collection(COLLECTIONS.bookings()).doc(cur.bookingId))).data() as Booking | undefined;
-      if (pickupBlockedByBooking(bk?.status)) throw new HttpsError("failed-precondition", bk ? "This booking is closed, so the request can only be declined." : "No booking was found for this request, so it can only be declined.");
+      if (pickupBlockedForRequest(cur, bk?.status)) throw new HttpsError("failed-precondition", bk ? bk.status === "COMPLETED" ? "This booking is completed and nothing is owed on this request, so it can only be declined." : "This booking is closed, so the request can only be declined." : "No booking was found for this request, so it can only be declined.");
     }
 
     // Agreed timing comes from the phone call with the customer. Confirming

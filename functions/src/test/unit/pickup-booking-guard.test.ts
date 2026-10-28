@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { pickupBlockedByBooking } from "../../lib/pickup-booking-guard";
+import { pickupBlockedByBooking, pickupBlockedForRequest } from "../../lib/pickup-booking-guard";
 
 describe("pickup request vs booking status (server guard)", () => {
   it("blocks approve/mark-done once the booking is cancelled or expired", () => {
@@ -17,6 +17,13 @@ describe("pickup request vs booking status (server guard)", () => {
   });
   it("updatePickupRequest applies the guard to CONFIRMED and DONE only, so DECLINED can still close a stale request", () => {
     const src = readFileSync(join(__dirname, "../../functions/booking/pickupRequests.ts"), "utf8");
-    expect(src).toMatch(/data\.status === "CONFIRMED" \|\| data\.status === "DONE"\) && cur\.bookingId[\s\S]{0,400}pickupBlockedByBooking\(bk\?\.status\)/);
+    expect(src).toMatch(/data\.status === "CONFIRMED" \|\| data\.status === "DONE"\) && cur\.bookingId[\s\S]{0,400}pickupBlockedForRequest\(cur, bk\?\.status\)/);
+  });
+  it("COMPLETED: stale pickup-only blocked, drop owed or closable allowed; cancelled stays blocked with a leg owed", () => {
+    expect(pickupBlockedForRequest({ kind: "pickup", status: "REQUESTED" }, "COMPLETED")).toBe(true);
+    expect(pickupBlockedForRequest({ kind: "drop", status: "REQUESTED" }, "COMPLETED")).toBe(false);
+    expect(pickupBlockedForRequest({ kind: "both", status: "CONFIRMED", pickupCompletedAt: "t" }, "COMPLETED")).toBe(false);
+    expect(pickupBlockedForRequest({ kind: "both", status: "CONFIRMED", pickupCompletedAt: "t", dropCompletedAt: "t" }, "COMPLETED")).toBe(false);
+    expect(pickupBlockedForRequest({ kind: "both", status: "CONFIRMED", pickupCompletedAt: "t" }, "CANCELLED")).toBe(true);
   });
 });
