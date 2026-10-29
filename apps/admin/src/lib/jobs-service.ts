@@ -5,6 +5,8 @@ import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, Warranty, AuditLog, Inspection } from "@autodeck/core";
 
+import { OPEN_STARTED_STATUSES, mergeJobFeeds } from "./jobs-merge";
+
 const LIST_LIMIT = 300;
 
 /** Live, tenant-wide job feed - newest first. Status/bay/studio/walk-in/customer
@@ -14,13 +16,25 @@ export function listenToJobs(
   onData: (jobs: ServiceJob[]) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(
-    collection(db, COLLECTIONS.jobs()),
-    where("tenantId", "==", tenantId),
-    orderBy("createdAt", "desc"),
-    limit(LIST_LIMIT),
-  );
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as ServiceJob)), onError);
+  const jobsCol = collection(db, COLLECTIONS.jobs());
+  let recent: ServiceJob[] | null = null;
+  const open: (ServiceJob[] | null)[] = OPEN_STARTED_STATUSES.map(() => null);
+  const emit = () => {
+    // Wait for every feed before showing anything, so the board never flashes a partial list.
+    if (recent === null || open.some((o) => o === null)) return;
+    onData(mergeJobFeeds(recent, open as ServiceJob[][]));
+  };
+  const toList = (snap: { docs: { data: () => unknown }[] }) => snap.docs.map((d) => d.data() as ServiceJob);
+  const unsubs: Unsubscribe[] = [
+    onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"), limit(LIST_LIMIT)),
+      (snap) => { recent = toList(snap); emit(); }, onError),
+    // Equality-only queries (no orderBy): Firestore serves these from single-field indexes, so no new
+    // composite index is needed. If this ever fails, the error is surfaced through onError, not hidden.
+    ...OPEN_STARTED_STATUSES.map((status, i) =>
+      onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), where("status", "==", status)),
+        (snap) => { open[i] = toList(snap); emit(); }, onError)),
+  ];
+  return () => unsubs.forEach((u) => u());
 }
 
 export function listenToJob(
