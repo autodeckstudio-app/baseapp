@@ -7,6 +7,7 @@ import { useStaffAlerts } from "../../../components/StaffAlertsNotice";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { listenToBookings } from "../../../lib/bookings-service";
+import { BoundedJobsNotice } from "../../../components/BoundedJobsNotice";
 import { listenToJobs } from "../../../lib/jobs-service";
 import { listenToPayments } from "../../../lib/payments-service";
 import { listenToPendingApprovals, listenToExpiringMemberships, listenToTodayAttendance, listenToLowStock, listenToPendingPapers } from "../../../lib/dashboard-service";
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const [loaded, setLoaded] = useState({bookings: false, jobs: false, payments: false, approvals: false});
   const staffAlerts = useStaffAlerts();
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [boundedNote, setBoundedNote] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -35,7 +37,7 @@ export default function DashboardPage() {
     if (!claims) return undefined;
     const unsubs = [
       listenToBookings(claims.tenantId, data => {setBookings(data);setLoaded(l => ({...l, bookings: true}));}, err => setLoadError(err.message)),
-      listenToJobs(claims.tenantId, data => {setJobs(data);setLoaded(l => ({...l, jobs: true}));}, err => setLoadError(err.message)),
+      listenToJobs(claims.tenantId, data => {setJobs(data);setLoaded(l => ({...l, jobs: true}));}, err => setLoadError(err.message), setBoundedNote),
       listenToPayments(claims.tenantId, data => {setPayments(data);setLoaded(l => ({...l, payments: true}));}, err => setLoadError(err.message)),
       listenToPendingApprovals(claims.tenantId, data => {setPendingApprovals(data);setLoaded(l => ({...l, approvals: true}));}, err => setLoadError(err.message)),
       listenToExpiringMemberships(claims.tenantId, setExpiringMemberships, () => undefined),
@@ -99,6 +101,8 @@ export default function DashboardPage() {
   if (!Object.values(loaded).every(Boolean)) return <div className="ax-panel" role="status">Loading today's studio and payments...</div>;
 
   return (
+    <>
+    <BoundedJobsNotice note={boundedNote} />
     <DashboardView
       today={today}
       now={new Date()}
@@ -119,5 +123,6 @@ export default function DashboardPage() {
       }}
       onOpen={(href) => router.push(href)}
     />
+    </>
   );
 }

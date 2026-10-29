@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Customer, Vehicle } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
+import { BoundedJobsNotice } from "../../../components/BoundedJobsNotice";
 import { listenToJobs } from "../../../lib/jobs-service";
 import type { ServiceJob } from "@autodeck/core";
 import { listenToCustomers, listenToTenantVehicles, findCustomerIdByRegistration } from "../../../lib/customers-service";
@@ -15,6 +16,7 @@ export default function CustomersPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [boundedNote, setBoundedNote] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[] | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!claims) return undefined;
-    return listenToJobs(claims.tenantId, setJobs, () => setJobs(undefined));
+    return listenToJobs(claims.tenantId, setJobs, () => setJobs(undefined), setBoundedNote);
   }, [claims]);
 
   async function handlePlate(reg: string) {
@@ -64,6 +66,8 @@ export default function CustomersPage() {
   }
 
   return (
+    <>
+    <BoundedJobsNotice note={boundedNote} />
     <CustomersView
       customers={customers}
       loading={loading}
@@ -76,5 +80,6 @@ export default function CustomersPage() {
       plateMessage={plateMessage}
       onOpen={(id) => router.push(`/customers/${id}`)}
     />
+    </>
   );
 }

@@ -9,6 +9,7 @@ import type { ServiceJob, JobStatus } from "@autodeck/core";
 import { useAdminAuth } from "../../../lib/auth-context";
 import { getStudioConfig } from "../../../lib/studio-service";
 import { bayLabel } from "../../../lib/bay-label";
+import { BoundedJobsNotice } from "../../../components/BoundedJobsNotice";
 import { listenToJobs } from "../../../lib/jobs-service";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { formatPaise, formatDateTime } from "../../../lib/format";
@@ -31,6 +32,7 @@ export default function JobsPage() {
   const minuteNow = useMinuteNow();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [boundedNote, setBoundedNote] = useState<string | null>(null);
 
   // Board/List, day and source filters are kept for this tab, so Back from a job returns to the same view.
   const saved = (): SavedJobsView => (typeof window === "undefined" ? {} : (() => { try { return parseSavedJobsView(window.sessionStorage.getItem(JOBS_VIEW_KEY)); } catch { return {}; } })());
@@ -56,6 +58,7 @@ export default function JobsPage() {
         setError(err.message);
         setLoading(false);
       },
+      setBoundedNote,
     );
   }, [claims]);
 
@@ -125,6 +128,7 @@ export default function JobsPage() {
 
   return (
     <div className="ax-page">
+      <BoundedJobsNotice note={boundedNote} />
       <header className="ax-page-head">
         <div>
           <p className="ax-label">Studio floor</p>

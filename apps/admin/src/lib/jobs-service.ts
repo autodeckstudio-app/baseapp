@@ -9,35 +9,63 @@ import { OPEN_JOB_STATUSES, mergeJobFeeds } from "./jobs-merge";
 
 const LIST_LIMIT = 300;
 
-/** Live, tenant-wide job feed - newest first. Status/bay/studio/walk-in/customer
- * filters are applied client-side (see bookings-service for the same rationale). */
-export function listenToJobs(
-  tenantId: string,
-  onData: (jobs: ServiceJob[]) => void,
-  onError: (err: Error) => void,
-  /** Called when the open-job reads fail but the newest-300 feed works: the list is then bounded to the newest 300. */
-  onBounded: (note: string) => void = (n) => console.warn(n),
-): Unsubscribe {
+type Sub = { onData: (jobs: ServiceJob[]) => void; onError: (err: Error) => void; onBounded: (note: string | null) => void };
+type Hub = { subs: Set<Sub>; stop: () => void; data: ServiceJob[] | null; error: Error | null; note: string | null };
+const hubs = new Map<string, Hub>();
+
+function startHub(tenantId: string, hub: Hub): void {
   const jobsCol = collection(db, COLLECTIONS.jobs());
   let recent: ServiceJob[] | null = null;
   const open: (ServiceJob[] | null)[] = OPEN_JOB_STATUSES.map(() => null);
+  const failed = new Set<string>();
   const emit = () => {
     // Wait for every feed before showing anything, so the board never flashes a partial list.
     if (recent === null || open.some((o) => o === null)) return;
-    onData(mergeJobFeeds(recent, open as ServiceJob[][]));
+    hub.data = mergeJobFeeds(recent, open as ServiceJob[][]);
+    hub.note = failed.size
+      ? `Showing only the newest ${LIST_LIMIT} jobs: reading open jobs failed (${[...failed].join(", ")}). Older open jobs may be missing.`
+      : null;
+    hub.subs.forEach((s) => { s.onData(hub.data!); s.onBounded(hub.note); });
   };
   const toList = (snap: { docs: { data: () => unknown }[] }) => snap.docs.map((d) => d.data() as ServiceJob);
   const unsubs: Unsubscribe[] = [
     onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"), limit(LIST_LIMIT)),
-      (snap) => { recent = toList(snap); emit(); }, onError),
-    // Equality-only queries (no orderBy): Firestore serves these from single-field indexes, so no new
-    // composite index is needed. If this ever fails, the error is surfaced through onError, not hidden.
+      (snap) => { recent = toList(snap); emit(); },
+      (err) => { hub.error = err; hub.subs.forEach((s) => s.onError(err)); }),
+    // Equality-only queries (no orderBy). Whether the project's Firestore serves these without a new
+    // composite index is NOT proven; a failure is shown to the user as a bounded-list notice.
     ...OPEN_JOB_STATUSES.map((status, i) =>
       onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), where("status", "==", status)),
-        (snap) => { open[i] = toList(snap); emit(); },
-        (err) => { open[i] = open[i] ?? []; onBounded(`Open-job read for ${status} failed (${err.message}); showing the newest ${LIST_LIMIT} jobs only.`); emit(); })),
+        (snap) => { open[i] = toList(snap); failed.delete(status); emit(); },
+        () => { open[i] = open[i] ?? []; failed.add(status); emit(); })),
   ];
-  return () => unsubs.forEach((u) => u());
+  hub.stop = () => unsubs.forEach((u) => u());
+}
+
+/** Live, tenant-wide job feed - newest 300 plus every open job. One set of listeners is shared by all
+ * Admin screens (ref-counted), so opening more pages does not add reads. onBounded(note) is called with
+ * a message when the open-job reads fail (list limited to newest 300) and with null when it is complete. */
+export function listenToJobs(
+  tenantId: string,
+  onData: (jobs: ServiceJob[]) => void,
+  onError: (err: Error) => void,
+  onBounded: (note: string | null) => void = () => undefined,
+): Unsubscribe {
+  let hub = hubs.get(tenantId);
+  if (!hub) {
+    hub = { subs: new Set(), stop: () => undefined, data: null, error: null, note: null };
+    hubs.set(tenantId, hub);
+    startHub(tenantId, hub);
+  }
+  const sub: Sub = { onData, onError, onBounded };
+  hub.subs.add(sub);
+  if (hub.data) { onData(hub.data); onBounded(hub.note); }
+  if (hub.error) onError(hub.error);
+  const h = hub;
+  return () => {
+    h.subs.delete(sub);
+    if (h.subs.size === 0) { h.stop(); if (hubs.get(tenantId) === h) hubs.delete(tenantId); }
+  };
 }
 
 export function listenToJob(
