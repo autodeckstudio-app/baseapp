@@ -153,7 +153,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     // only while its own staging is still current; a submit-flow finalize applies only while no edit has
     // staged a replacement and the evidence is untouched. Otherwise an older finalize would overwrite the
     // newer edit's review state or promote the wrong photo - so it writes nothing at all.
-    if (pending ? current.pendingEvidencePath !== pending : current.pendingEvidencePath != null || current.evidencePath !== paper.evidencePath) return;
+    if (pending ? current.pendingEvidencePath !== pending : Boolean(current.pendingEvidencePath) || current.evidencePath !== paper.evidencePath) return;
     promoted = !!pending;
     const now = new Date().toISOString();
     tx.update(ref, {
