@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,copyFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {spawnSync,execFileSync} from 'node:child_process';
+const script=resolve('scripts/vercel-ignore.sh');
+function fixture(run){const dir=mkdtempSync(join(tmpdir(),'site-ignore-'));const git=(...args)=>execFileSync('git',args,{cwd:dir,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();mkdirSync(join(dir,'apps/site'),{recursive:true});mkdirSync(join(dir,'apps/customer'),{recursive:true});git('init','-q');git('config','user.name','Test');git('config','user.email','test@example.invalid');const put=(p,s)=>writeFileSync(join(dir,p),s);const commit=()=>{git('add','.');git('commit','-qm','fixture');return git('rev-parse','HEAD')};put('apps/site/index.html','old');put('apps/customer/index.html','old');const base=commit();const check=(app='site',sha=base)=>spawnSync('bash',[script,app],{cwd:dir,env:{...process.env,VERCEL_GIT_PREVIOUS_SHA:sha},encoding:'utf8'});try{run({dir,git,put,commit,base,check})}finally{rmSync(dir,{recursive:true,force:true})}}
+test('missing and invalid site base skip, unchanged app fallback still builds',()=>fixture(({check})=>{assert.equal(check('site','').status,0);assert.equal(check('site','bad').status,0);assert.equal(check('customer','').status,1)}));
+test('unavailable exact base skips without parent guessing',()=>fixture(({check})=>assert.equal(check('site','a'.repeat(40)).status,0)));
+test('app-only changes skip site and build changed app',()=>fixture(({put,commit,check})=>{put('apps/customer/index.html','new');commit();assert.equal(check().status,0);assert.equal(check('customer').status,1)}));
+test('multi-commit site change cannot be hidden by final app-only commit',()=>fixture(({put,commit,check})=>{put('apps/site/index.html','new');commit();put('apps/customer/index.html','new');commit();assert.equal(check().status,1)}));
+test('site markdown and test-only changes skip',()=>fixture(({put,commit,check})=>{put('apps/site/readme.md','doc');put('apps/site/example.test.ts','test');commit();assert.equal(check().status,0)}));
+test('shallow clone can fetch exact successful base',()=>fixture(({dir,git,put,commit,base})=>{put('apps/site/index.html','new');commit();const clone=mkdtempSync(join(tmpdir(),'site-shallow-'));try{execFileSync('git',['clone','-q','--depth=1','file://'+dir,clone]);const r=spawnSync('bash',[script,'site'],{cwd:clone,env:{...process.env,VERCEL_GIT_PREVIOUS_SHA:base},encoding:'utf8'});assert.equal(r.status,1,r.stdout+r.stderr);assert.match(r.stdout,/verified website changes/)}finally{rmSync(clone,{recursive:true,force:true})}}));
+test('git root failure skips site',()=>{const dir=mkdtempSync(join(tmpdir(),'site-no-git-'));try{assert.equal(spawnSync('bash',[script,'site'],{cwd:dir,env:{...process.env,VERCEL_GIT_PREVIOUS_SHA:'a'.repeat(40)}}).status,0)}finally{rmSync(dir,{recursive:true,force:true})}});
