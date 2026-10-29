@@ -31,4 +31,10 @@ describe("recordManualPayment needs a valid job amount", () => {
     const w = await writes(id);
     expect(w.payments).toBe(1); expect(w.invoices).toBe(1); expect(w.job["paymentStatus"]).toBe("paid");
   });
+  it("control: a zero-amount job still records (0 is allowed, as before)", async () => {
+    const id = await seed(0);
+    await record(id);
+    const w = await writes(id);
+    expect(w.payments).toBe(1); expect(w.invoices).toBe(1); expect(w.job["paymentStatus"]).toBe("paid");
+  });
 });
