@@ -5,7 +5,7 @@ import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, Warranty, AuditLog, Inspection } from "@autodeck/core";
 
-import { OPEN_STARTED_STATUSES, mergeJobFeeds } from "./jobs-merge";
+import { OPEN_JOB_STATUSES, mergeJobFeeds } from "./jobs-merge";
 
 const LIST_LIMIT = 300;
 
@@ -15,10 +15,12 @@ export function listenToJobs(
   tenantId: string,
   onData: (jobs: ServiceJob[]) => void,
   onError: (err: Error) => void,
+  /** Called when the open-job reads fail but the newest-300 feed works: the list is then bounded to the newest 300. */
+  onBounded: (note: string) => void = (n) => console.warn(n),
 ): Unsubscribe {
   const jobsCol = collection(db, COLLECTIONS.jobs());
   let recent: ServiceJob[] | null = null;
-  const open: (ServiceJob[] | null)[] = OPEN_STARTED_STATUSES.map(() => null);
+  const open: (ServiceJob[] | null)[] = OPEN_JOB_STATUSES.map(() => null);
   const emit = () => {
     // Wait for every feed before showing anything, so the board never flashes a partial list.
     if (recent === null || open.some((o) => o === null)) return;
@@ -30,9 +32,10 @@ export function listenToJobs(
       (snap) => { recent = toList(snap); emit(); }, onError),
     // Equality-only queries (no orderBy): Firestore serves these from single-field indexes, so no new
     // composite index is needed. If this ever fails, the error is surfaced through onError, not hidden.
-    ...OPEN_STARTED_STATUSES.map((status, i) =>
+    ...OPEN_JOB_STATUSES.map((status, i) =>
       onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), where("status", "==", status)),
-        (snap) => { open[i] = toList(snap); emit(); }, onError)),
+        (snap) => { open[i] = toList(snap); emit(); },
+        (err) => { open[i] = open[i] ?? []; onBounded(`Open-job read for ${status} failed (${err.message}); showing the newest ${LIST_LIMIT} jobs only.`); emit(); })),
   ];
   return () => unsubs.forEach((u) => u());
 }

@@ -1,8 +1,8 @@
 import type { ServiceJob } from "@autodeck/core";
 
-/** Statuses of a job that has started and is not finished. These are read in full (equality
+/** Every status a job holds while it is still open (not DELIVERED or CANCELLED). These are read in full (equality
  *  filters only) alongside the newest-300 feed, so an old job stuck open is not cut off. */
-export const OPEN_STARTED_STATUSES = ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"] as const;
+export const OPEN_JOB_STATUSES = ["PENDING_VEHICLE", "STANDBY", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"] as const;
 
 /** Union by id (the open-status copy and the newest copy are the same document), newest first. */
 export function mergeJobFeeds(recent: ServiceJob[], openByStatus: ServiceJob[][]): ServiceJob[] {

@@ -315,7 +315,7 @@ export default function BookingDetailScreen() {
         </View>
       }
     >
-      {timingLine ? <Pane pad="gap"><T tone="secondary">{timingLine}</T></Pane> : null}
+      {timingLine ? <Pane pad="gap"><T role="bodyStrong" tone="primary">{timingLine}</T></Pane> : null}
       {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" ? (
         <Notice
           title="Request sent"
