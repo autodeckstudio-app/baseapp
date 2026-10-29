@@ -75,4 +75,22 @@ describe("purgeTestBookings endpoint shape (source pins)", () => {
   it("defaults to dry-run when dryRun is not passed", () => {
     expect(fn).toContain("data.dryRun ?? true");
   });
+  it("runs payment and invoice discovery INSIDE the transaction - no preflight race window", () => {
+    expect(fn).toContain("tx.get(db.collection(COLLECTIONS.payments())");
+    expect(fn).toContain("tx.get(db.collection(COLLECTIONS.invoices())");
+    expect(fn).not.toContain("await db.collection(COLLECTIONS.payments()).where");
+    expect(fn).not.toContain("await db.collection(COLLECTIONS.invoices()).where");
+  });
+  it("tags the recovery snapshot with tenantId so the admin-only rules read applies", () => {
+    expect(fn).toContain("tenantId: user.claims.tenantId");
+  });
+  it("cleanupSnapshots rules mirror auditLog: admin read only, no client writes", () => {
+    const rules = readFileSync(`${__dirname}/../../../../firestore.rules`, "utf8");
+    expect(rules).toContain("match /cleanupSnapshots/{snapshotId}");
+    const block = rules.split("match /cleanupSnapshots/{snapshotId}")[1]!.split("match /")[0]!;
+    expect(block).toContain("isAdminOrAbove()");
+    expect(block).toContain("allow create: if false");
+    expect(block).toContain("allow update: if false");
+    expect(block).toContain("allow delete: if false");
+  });
 });

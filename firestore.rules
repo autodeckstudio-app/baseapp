@@ -337,6 +337,16 @@ service cloud.firestore {
       allow delete: if false; // Immutable
     }
 
+    // /cleanupSnapshots/{snapshotId} - recovery snapshots from purgeTestBookings.
+    // Same posture as auditLog: admin read only, writes exclusively via Admin SDK.
+    match /cleanupSnapshots/{snapshotId} {
+      allow read: if isAdminOrAbove()
+                  && (isSuperadmin() || ownTenant(resource.data));
+      allow create: if false; // Admin SDK / Cloud Function system account only
+      allow update: if false; // Immutable
+      allow delete: if false; // Immutable
+    }
+
     // âââ /notifications/{notificationId} ââââââââââââââââââââââââââââââââââââ
     match /notifications/{notificationId} {
       // Studio/admin read tenant notifications too: the admin Customer 360

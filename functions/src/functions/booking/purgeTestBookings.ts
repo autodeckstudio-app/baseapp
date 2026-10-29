@@ -14,18 +14,25 @@ import { planTestBookingPurge, type PurgeCandidate } from "../../lib/test-bookin
  * Scoped test-data cleanup, built for the owner-approved removal of named
  * test bookings (29 Oct owner approval). NOT a generalized delete endpoint:
  * admin role only, a strict exact booking-id list, and every booking must
- * re-prove (at call time AND again inside the delete transaction) that it
- * is a cancelled, payment-free, invoice-free record on the one named test
- * customer account with only cancelled jobs - any surprise aborts the whole
- * call with nothing deleted. Before any delete, the full JSON of every doc
- * about to be removed is written to cleanupSnapshots (recovery record),
- * and each removed booking leaves a booking.test_purged auditLog entry.
+ * re-prove that it is a cancelled, payment-free, invoice-free record on the
+ * one named test customer account with only cancelled jobs - any surprise
+ * aborts the whole call with nothing deleted.
  *
- * Default is a dry run: with dryRun omitted the call only validates and
- * reports what WOULD be deleted. Payment/invoice discovery runs just before
- * the transaction (Firestore cannot query inside one); the in-transaction
- * re-check then re-validates booking/job/intent/pickup state, so anything
- * that changed under us aborts the commit.
+ * Every discovery read (booking, jobs, payments by bookingId AND by jobId,
+ * invoices, bookingIntents, pickupRequests) runs INSIDE one Firestore
+ * transaction. Server-side transactions are serializable: a payment,
+ * invoice, or reference document created concurrently makes the commit
+ * fail and the callback retried, and the retried read sees the new
+ * document and fails validation. There is no preflight window: validation
+ * and deletion are one atomic unit. (Transaction.get(query) is supported
+ * by the Admin SDK - see @google-cloud/firestore Transaction typings.)
+ *
+ * Before any delete, the full JSON of every doc about to be removed is
+ * written to cleanupSnapshots (admin-read-only per firestore.rules), and
+ * each removed booking leaves a booking.test_purged auditLog entry.
+ *
+ * Default is a dry run: with dryRun omitted the call runs the identical
+ * in-transaction read + validation and reports what WOULD be deleted.
  */
 
 const purgeSchema = z
@@ -42,16 +49,13 @@ interface DocBit {
   data: FirebaseFirestore.DocumentData;
 }
 
-interface Collected {
+interface BookingWorld {
   bookingId: string;
   bookingRef: FirebaseFirestore.DocumentReference;
-  exists: boolean;
-  booking?: FirebaseFirestore.DocumentData | undefined;
+  booking: FirebaseFirestore.DocumentData;
   jobs: DocBit[];
   intents: DocBit[];
   pickups: DocBit[];
-  paymentCount: number;
-  invoiceCount: number;
 }
 
 export const purgeTestBookings = onCall(
@@ -66,147 +70,101 @@ export const purgeTestBookings = onCall(
 
     const db = getFirestore();
     const ids = [...new Set(data.bookingIds)];
-    const collected: Collected[] = [];
-
-    for (const bookingId of ids) {
-      const bookingRef = db.collection(COLLECTIONS.bookings()).doc(bookingId);
-      const snap = await bookingRef.get();
-      const booking = snap.exists ? (snap.data() as Booking) : undefined;
-      if (booking) {
-        assertTenant(user, booking.tenantId);
-        assertStudio(user, booking.studioId, "Booking");
-      }
-      const jobsSnap = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", bookingId).get();
-      const jobs: DocBit[] = jobsSnap.docs.map((d) => ({ ref: d.ref, data: d.data() }));
-      const payByBooking = await db.collection(COLLECTIONS.payments()).where("bookingId", "==", bookingId).limit(5).get();
-      let paymentCount = payByBooking.size;
-      for (const j of jobs) {
-        const payByJob = await db.collection(COLLECTIONS.payments()).where("jobId", "==", j.ref.id).limit(5).get();
-        paymentCount += payByJob.size;
-      }
-      const invoicesSnap = await db.collection(COLLECTIONS.invoices()).where("bookingId", "==", bookingId).limit(5).get();
-      const intentsSnap = await db.collection(COLLECTIONS.bookingIntents()).where("bookingId", "==", bookingId).get();
-      const pickupsSnap = await db.collection(COLLECTIONS.pickupRequests()).where("bookingId", "==", bookingId).get();
-      collected.push({
-        bookingId,
-        bookingRef,
-        exists: snap.exists,
-        booking,
-        jobs,
-        intents: intentsSnap.docs.map((d) => ({ ref: d.ref, data: d.data() })),
-        pickups: pickupsSnap.docs.map((d) => ({ ref: d.ref, data: d.data() })),
-        paymentCount,
-        invoiceCount: invoicesSnap.size,
-      });
-    }
-
-    for (const c of collected) {
-      const verdict = planTestBookingPurge(candidateFrom(c), data.customerId);
-      if (!verdict.ok) throw new HttpsError("failed-precondition", `${verdict.reason}. Nothing was deleted.`);
-    }
-
-    if (dryRun) {
-      return {
-        dryRun: true,
-        validated: collected.map((c) => ({
-          bookingId: c.bookingId,
-          jobs: c.jobs.map((j) => j.ref.id),
-          bookingIntents: c.intents.map((i) => i.ref.id),
-          pickupRequests: c.pickups.map((p) => p.ref.id),
-        })),
-        totalDocs: collected.reduce((n, c) => n + 1 + c.jobs.length + c.intents.length + c.pickups.length, 0),
-      };
-    }
-
     const now = new Date().toISOString();
     const snapshotRef = db.collection(COLLECTIONS.cleanupSnapshots()).doc();
-    let deletedDocs = 0;
-    await db.runTransaction(async (tx) => {
-      // Fresh re-read and full re-validation of every target inside the
-      // transaction: anything that changed since the discovery reads aborts
-      // the commit with nothing deleted.
-      const fresh: { c: Collected; booking: FirebaseFirestore.DocumentData; jobs: DocBit[]; intents: DocBit[]; pickups: DocBit[] }[] = [];
-      for (const c of collected) {
-        const snap = await tx.get(c.bookingRef);
-        const booking = snap.exists ? snap.data() : undefined;
-        const jobs: DocBit[] = [];
-        for (const j of c.jobs) {
-          const js = await tx.get(j.ref);
-          if (js.exists) jobs.push({ ref: j.ref, data: js.data()! });
+
+    return db.runTransaction(async (tx) => {
+      // ALL reads first (Firestore requires reads before writes in a tx).
+      const worlds: BookingWorld[] = [];
+      for (const bookingId of ids) {
+        const bookingRef = db.collection(COLLECTIONS.bookings()).doc(bookingId);
+        const snap = await tx.get(bookingRef);
+        const booking = snap.exists ? (snap.data() as Booking) : undefined;
+        if (booking) {
+          assertTenant(user, booking.tenantId);
+          assertStudio(user, booking.studioId, "Booking");
         }
-        const intents: DocBit[] = [];
-        for (const i of c.intents) {
-          const is = await tx.get(i.ref);
-          if (is.exists) intents.push({ ref: i.ref, data: is.data()! });
+        const jobsSnap = await tx.get(db.collection(COLLECTIONS.jobs()).where("bookingId", "==", bookingId));
+        const jobs: DocBit[] = jobsSnap.docs.map((d) => ({ ref: d.ref, data: d.data() }));
+        // Payment evidence checked both ways it is linked: directly by
+        // bookingId and via each job. In-transaction query reads close the
+        // concurrency race - a payment/invoice committed concurrently aborts
+        // the commit and the retry sees it.
+        const payByBooking = await tx.get(db.collection(COLLECTIONS.payments()).where("bookingId", "==", bookingId).limit(5));
+        let paymentCount = payByBooking.size;
+        for (const j of jobs) {
+          const payByJob = await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", j.ref.id).limit(5));
+          paymentCount += payByJob.size;
         }
-        const pickups: DocBit[] = [];
-        for (const p of c.pickups) {
-          const ps = await tx.get(p.ref);
-          if (ps.exists) pickups.push({ ref: p.ref, data: ps.data()! });
-        }
-        const verdict = planTestBookingPurge(
-          {
-            bookingId: c.bookingId,
-            bookingExists: snap.exists,
-            bookingStatus: booking ? String((booking as Booking).status) : undefined,
-            bookingCustomerId: booking ? String((booking as Booking).customerId) : undefined,
-            jobs: jobs.map((j) => ({ id: j.ref.id, status: String((j.data as ServiceJob).status) })),
-            paymentCount: c.paymentCount,
-            invoiceCount: c.invoiceCount,
-            intentIds: intents.map((i) => i.ref.id),
-            pickupRequestIds: pickups.map((p) => p.ref.id),
-          },
-          data.customerId,
-        );
-        if (!verdict.ok) throw new HttpsError("failed-precondition", `Re-check just before delete failed: ${verdict.reason}. Nothing was deleted.`);
-        fresh.push({ c, booking: booking!, jobs, intents, pickups });
+        const invoicesSnap = await tx.get(db.collection(COLLECTIONS.invoices()).where("bookingId", "==", bookingId).limit(5));
+        const intentsSnap = await tx.get(db.collection(COLLECTIONS.bookingIntents()).where("bookingId", "==", bookingId));
+        const pickupsSnap = await tx.get(db.collection(COLLECTIONS.pickupRequests()).where("bookingId", "==", bookingId));
+        const intents: DocBit[] = intentsSnap.docs.map((d) => ({ ref: d.ref, data: d.data() }));
+        const pickups: DocBit[] = pickupsSnap.docs.map((d) => ({ ref: d.ref, data: d.data() }));
+        const candidate: PurgeCandidate = {
+          bookingId,
+          bookingExists: snap.exists,
+          bookingStatus: booking ? String(booking.status) : undefined,
+          bookingCustomerId: booking ? String(booking.customerId) : undefined,
+          jobs: jobs.map((j) => ({ id: j.ref.id, status: String((j.data as ServiceJob).status) })),
+          paymentCount,
+          invoiceCount: invoicesSnap.size,
+          intentIds: intents.map((i) => i.ref.id),
+          pickupRequestIds: pickups.map((p) => p.ref.id),
+        };
+        const verdict = planTestBookingPurge(candidate, data.customerId);
+        if (!verdict.ok) throw new HttpsError("failed-precondition", `${verdict.reason}. Nothing was deleted.`);
+        if (!booking) throw new HttpsError("failed-precondition", `booking ${bookingId} does not exist. Nothing was deleted.`);
+        worlds.push({ bookingId, bookingRef, booking, jobs, intents, pickups });
+      }
+
+      if (dryRun) {
+        return {
+          dryRun: true,
+          validated: worlds.map((w) => ({
+            bookingId: w.bookingId,
+            jobs: w.jobs.map((j) => j.ref.id),
+            bookingIntents: w.intents.map((i) => i.ref.id),
+            pickupRequests: w.pickups.map((p) => p.ref.id),
+          })),
+          totalDocs: worlds.reduce((n, w) => n + 1 + w.jobs.length + w.intents.length + w.pickups.length, 0),
+        };
       }
 
       // Recovery snapshot BEFORE any delete: full JSON of every removed doc.
+      // tenantId is set so the firestore.rules ownTenant admin read applies.
       tx.set(snapshotRef, {
         id: snapshotRef.id,
         createdAt: now,
+        tenantId: user.claims.tenantId,
         requestedBy: user.uid,
         reason: data.reason,
-        bookings: fresh.map((f) => ({ id: f.c.bookingId, data: f.booking })),
-        jobs: fresh.flatMap((f) => f.jobs.map((j) => ({ id: j.ref.id, data: j.data }))),
-        bookingIntents: fresh.flatMap((f) => f.intents.map((i) => ({ id: i.ref.id, data: i.data }))),
-        pickupRequests: fresh.flatMap((f) => f.pickups.map((p) => ({ id: p.ref.id, data: p.data }))),
+        bookings: worlds.map((w) => ({ id: w.bookingId, data: w.booking })),
+        jobs: worlds.flatMap((w) => w.jobs.map((j) => ({ id: j.ref.id, data: j.data }))),
+        bookingIntents: worlds.flatMap((w) => w.intents.map((i) => ({ id: i.ref.id, data: i.data }))),
+        pickupRequests: worlds.flatMap((w) => w.pickups.map((p) => ({ id: p.ref.id, data: p.data }))),
       });
 
-      for (const f of fresh) {
-        const bookingRef = f.c.bookingRef;
+      let deletedDocs = 0;
+      for (const w of worlds) {
+        const bookingRef = w.bookingRef;
         writeAuditLog(tx, {
           action: "booking.test_purged",
           entityType: "Booking",
-          entityId: f.c.bookingId,
+          entityId: w.bookingId,
           user,
-          studioId: (f.booking as Booking).studioId,
-          before: f.booking,
+          studioId: (w.booking as Booking).studioId,
+          before: w.booking,
           after: { snapshotId: snapshotRef.id, reason: data.reason },
         });
         tx.delete(bookingRef);
         deletedDocs += 1;
-        for (const j of f.jobs) { tx.delete(j.ref); deletedDocs += 1; }
-        for (const i of f.intents) { tx.delete(i.ref); deletedDocs += 1; }
-        for (const p of f.pickups) { tx.delete(p.ref); deletedDocs += 1; }
+        for (const j of w.jobs) { tx.delete(j.ref); deletedDocs += 1; }
+        for (const i of w.intents) { tx.delete(i.ref); deletedDocs += 1; }
+        for (const p of w.pickups) { tx.delete(p.ref); deletedDocs += 1; }
       }
-    });
 
-    return { success: true, snapshotId: snapshotRef.id, bookingsPurged: collected.length, deletedDocs };
+      return { success: true, snapshotId: snapshotRef.id, bookingsPurged: worlds.length, deletedDocs };
+    });
   },
 );
-
-function candidateFrom(c: Collected): PurgeCandidate {
-  return {
-    bookingId: c.bookingId,
-    bookingExists: c.exists,
-    bookingStatus: c.booking ? String((c.booking as Booking).status) : undefined,
-    bookingCustomerId: c.booking ? String((c.booking as Booking).customerId) : undefined,
-    jobs: c.jobs.map((j) => ({ id: j.ref.id, status: String((j.data as ServiceJob).status) })),
-    paymentCount: c.paymentCount,
-    invoiceCount: c.invoiceCount,
-    intentIds: c.intents.map((i) => i.ref.id),
-    pickupRequestIds: c.pickups.map((p) => p.ref.id),
-  };
-}
