@@ -8,6 +8,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
+import { captureAuthReturn, consumeAuthReturn } from "../lib/auth-return";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { T } from "../ui/kit";
 import { ConnectionBanner } from "../ui/ConnectionBanner";
@@ -40,12 +41,18 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 
     if (auth.status === "unauthenticated") {
       const browsingCars = (group === "(tabs)" && segs[1] === "cars" && segs[2] !== "sell") || group === "shop";
-      if (!browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) router.replace("/(auth)/login");
+      if (!browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) {
+        // Remember where this signed-out visitor was heading (web deep link,
+        // e.g. a website service CTA) so sign-in can return them there.
+        const loc = (globalThis as { window?: { location?: { pathname: string; search: string } } }).window?.location;
+        if (loc) captureAuthReturn(loc.pathname + loc.search);
+        router.replace("/(auth)/login");
+      }
     } else if (auth.status === "authenticated_no_claims") {
       if (!inAuth || segs[1] !== "setup") router.replace("/(auth)/setup");
 
     } else if (inAuth) {
-      router.replace("/(tabs)");
+      router.replace(consumeAuthReturn() ?? "/(tabs)");
     }
   }, [auth, segments, router]);
 
