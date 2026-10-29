@@ -81,3 +81,53 @@ describe("Ceramic coating + Full detail wash under current rules", () => {
     expect(await count(x.cust)).toEqual({ bookings: 2, jobs: 2 });
   });
 });
+
+// Round-7 point 15: the Full detail wash (menu-wash-full) is a fixed bundle and is booked as the primary service with NO extras.
+// This is what the Customer app sends for a combo (no extraServiceIds). Current rules observed, nothing new asserted about overlap policy.
+describe("Full detail wash booked as the combo itself (no extras)", () => {
+  const FULL = "menu-wash-full";
+  async function fullSeed(bays = 1) {
+    const x = await seed(["combo-unused"], `full${bays}-${Date.now()}`);
+    const m = MENU_SEED.find((e) => e.id === FULL)!; const now = new Date().toISOString();
+    await db.collection("services").doc(FULL).set({ id: FULL, tenantId: T, name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: null, warrantyDurationValue: null, warrantyDurationUnit: null, vehicleCategoryPricing: [], requiredBayType: m.bay, membershipWashEligible: false, active: true, displayOrder: 0, createdAt: now, updatedAt: now });
+    const cfg = db.collection("studioConfig").doc(x.studio); const c = (await cfg.get()).data() as any;
+    await cfg.update({ bays: c.bays.slice(0, bays).map((b: any, i: number) => ({ ...b, id: `${x.studio}-w${i}`, bayType: "wash" })) });
+    return x;
+  }
+  const authOf = (x: { cust: string }) => ({ uid: x.cust, token: { role: "customer", tenantId: T, studioId: null } });
+  it("availability slot length is the bundle's own 300 min, and createBooking books it with no add-ons", async () => {
+    const x = await fullSeed();
+    const av: any = await getAvailability.run({ data: { serviceId: FULL, studioId: x.studio, startDate: monday }, auth: authOf(x) } as never);
+    const first = av.slots.find((s: any) => s.date === monday && s.startTime === "09:00");
+    expect(first).toBeTruthy();
+    const mins = (Date.parse(first.estimatedEndAt) - Date.parse(first.startAt)) / 60000;
+    expect(mins).toBe(300);
+    const { booking } = await book(x, FULL, []);
+    expect(booking.priceBreakdown.addOns).toEqual([]);
+    expect(booking.priceBreakdown.basePrice).toBe(MENU_SEED.find((e) => e.id === FULL)!.rupees * 100);
+    expect(booking.estimatedEndTime).toBe("14:00");
+    expect(await count(x.cust)).toEqual({ bookings: 1, jobs: 1 });
+  });
+  it("Full detail as primary with Exterior or Interior as an extra is refused (already included), nothing written", async () => {
+    const x = await fullSeed();
+    for (const id of ["menu-wash-exterior", "menu-wash-interior"]) {
+      const now = new Date().toISOString();
+      await db.collection("services").doc(id).set({ id, tenantId: T, name: id === "menu-wash-exterior" ? "Exterior detail wash" : "Interior deep clean", category: "washing", brand: null, description: "x", basePrice: 100000, currency: "INR", estimatedDurationMinutes: 120, warrantyLabel: null, warrantyDurationValue: null, warrantyDurationUnit: null, vehicleCategoryPricing: [], requiredBayType: "wash", membershipWashEligible: false, active: true, displayOrder: 1, createdAt: now, updatedAt: now });
+      await expect(book(x, FULL, [id])).rejects.toMatchObject({ code: "failed-precondition", message: expect.stringContaining("already includes") });
+    }
+    expect(await count(x.cust)).toEqual({ bookings: 0, jobs: 0 });
+  });
+  it("a second customer asking for the same 09:00 slot on a one-bay wash studio does not get it", async () => {
+    const x = await fullSeed(1);
+    await book(x, FULL, []);
+    const y = { ...x, cust: uid("cust2"), veh: uid("veh2") };
+    const now = new Date().toISOString();
+    await db.collection("customers").doc(y.cust).set({ id: y.cust, tenantId: T, authUid: y.cust, name: "C2", phone: "+919876543211", notificationPrefs: { push: false, quietMode: false }, createdAt: now, updatedAt: now, deletedAt: null });
+    await db.collection("vehicles").doc(y.veh).set({ id: y.veh, tenantId: T, ownerId: y.cust, registrationNumber: "GJ01CB9999", make: "T", model: "F", year: 2023, color: "B", category: "suv", photoUrl: null, odometer: null, createdAt: now, updatedAt: now, deletedAt: null });
+    await db.collection("memberships").doc(`prio-${y.cust}`).set({ id: `prio-${y.cust}`, tenantId: T, customerId: y.cust, status: "active", prioritySlot: true, endDate: null });
+    const av: any = await getAvailability.run({ data: { serviceId: FULL, studioId: x.studio, startDate: monday }, auth: authOf(y) } as never);
+    expect(av.slots.some((s: any) => s.date === monday && s.startTime === "09:00")).toBe(false);
+    await expect(book(y, FULL, [])).rejects.toMatchObject({ code: "resource-exhausted", message: "No bays available for the requested time slot. Please choose another time." });
+    expect((await db.collection("bookings").where("customerId", "==", y.cust).get()).size).toBe(0);
+  });
+});
