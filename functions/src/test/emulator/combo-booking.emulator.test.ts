@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
+import { MENU_SEED } from "@autodeck/core";
 import { createBooking } from "../../functions/booking/createBooking.js";
+import { getAvailability } from "../../functions/booking/getAvailability.js";
 // Combo = one main service plus extraServiceIds in a single createBooking call (real callable, Firestore emulator).
 const db = getFirestore(); const T = "combo-tenant"; const S = "combo-studio"; let n = 0;
 const uid = (p: string) => `${p}-${Date.now()}-${++n}`;
@@ -22,7 +24,7 @@ const book = (x: { studio: string; cust: string; veh: string }, serviceId: strin
 const count = async (cust: string) => ({ bookings: (await db.collection("bookings").where("customerId", "==", cust).get()).size, jobs: (await db.collection("jobs").where("customerId", "==", cust).get()).size });
 
 describe("combo booking through createBooking", () => {
-  it("main + one extra: one booking, one job, extra priced and timed", async () => {
+  it("main + one extra: one booking, one job, extra priced and totals match", async () => {
     const x = await seed(["combo-main", "combo-extra"], "ok");
     const { booking } = await book(x, "combo-main", ["combo-extra"]);
     const pb = booking.priceBreakdown;
@@ -41,7 +43,41 @@ describe("combo booking through createBooking", () => {
   });
   it("the same service twice is refused and writes nothing", async () => {
     const x = await seed(["combo-main2"], "dupe");
-    await expect(book(x, "combo-main2", ["combo-main2"])).rejects.toBeTruthy();
+    await expect(book(x, "combo-main2", ["combo-main2"])).rejects.toMatchObject({ code: "failed-precondition", message: "Each service can be added once." });
     expect(await count(x.cust)).toEqual({ bookings: 0, jobs: 0 });
+  });
+});
+
+// The real catalogue entries, under the rules as they are now. This records current behaviour; it does not say whether the pair SHOULD overlap.
+describe("Ceramic coating + Full detail wash under current rules", () => {
+  const CER = "menu-coat-fireball-1", FULL = "menu-wash-full";
+  async function realSeed() {
+    const x = await seed(["combo-unused"], "real");
+    for (const id of [CER, FULL]) {
+      const m = MENU_SEED.find((e) => e.id === id)!; const now = new Date().toISOString();
+      await db.collection("services").doc(id).set({ id, tenantId: T, name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: null, warrantyDurationValue: null, warrantyDurationUnit: null, vehicleCategoryPricing: [], requiredBayType: m.bay, membershipWashEligible: false, active: true, displayOrder: 0, createdAt: now, updatedAt: now });
+    }
+    const cfg = db.collection("studioConfig").doc(x.studio); const c = (await cfg.get()).data() as any;
+    await cfg.update({ bays: [{ ...c.bays[0], id: `${x.studio}-w`, bayType: "wash" }, { ...c.bays[1], id: `${x.studio}-p`, bayType: "protection" }] });
+    return x;
+  }
+  const MSG = "These services use different bays. Book them separately.";
+  it("catalogue: Ceramic is 480 min on a protection bay, Full detail is 300 min on a wash bay", () => {
+    expect(MENU_SEED.find((e) => e.id === CER)).toMatchObject({ minutes: 480, bay: "protection" });
+    expect(MENU_SEED.find((e) => e.id === FULL)).toMatchObject({ minutes: 300, bay: "wash" });
+  });
+  for (const [main, extra] of [[CER, FULL], [FULL, CER]] as const) {
+    it(`getAvailability and createBooking both refuse ${main} + ${extra} (different bays), no combined duration, no writes`, async () => {
+      const x = await realSeed();
+      await expect(getAvailability.run({ data: { serviceId: main, extraServiceIds: [extra], studioId: x.studio, startDate: monday }, auth: { uid: x.cust, token: { role: "customer", tenantId: T, studioId: null } } } as never)).rejects.toMatchObject({ code: "failed-precondition", message: MSG });
+      await expect(book(x, main, [extra])).rejects.toMatchObject({ code: "failed-precondition", message: MSG });
+      expect(await count(x.cust)).toEqual({ bookings: 0, jobs: 0 });
+    });
+  }
+  it("each service alone books: the visit is one service, so no 780 min combined slot exists", async () => {
+    const x = await realSeed();
+    const a = await book(x, CER, []); const b = await book(x, FULL, []);
+    expect(a.booking.estimatedEndTime).not.toBe(b.booking.estimatedEndTime);
+    expect(await count(x.cust)).toEqual({ bookings: 2, jobs: 2 });
   });
 });
