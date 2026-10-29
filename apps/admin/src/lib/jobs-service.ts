@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, query, where, orderBy, limit, doc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
-import { db } from "./firebase";
+import { auth, db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { ServiceJob, Warranty, AuditLog, Inspection } from "@autodeck/core";
 
@@ -10,8 +10,11 @@ import { OPEN_JOB_STATUSES, mergeJobFeeds } from "./jobs-merge";
 const LIST_LIMIT = 300;
 
 type Sub = { onData: (jobs: ServiceJob[]) => void; onError: (err: Error) => void; onBounded: (note: string | null) => void };
-type Hub = { subs: Set<Sub>; stop: () => void; data: ServiceJob[] | null; error: Error | null; note: string | null };
+type Hub = { key: string; subs: Set<Sub>; stop: () => void; data: ServiceJob[] | null; error: Error | null; note: string | null; dead: boolean };
 const hubs = new Map<string, Hub>();
+
+// A callback that throws must not stop the other screens from being updated.
+const safe = (fn: () => void) => { try { fn(); } catch (e) { console.error("jobs feed subscriber failed", e); } };
 
 function startHub(tenantId: string, hub: Hub): void {
   const jobsCol = collection(db, COLLECTIONS.jobs());
@@ -19,21 +22,29 @@ function startHub(tenantId: string, hub: Hub): void {
   const open: (ServiceJob[] | null)[] = OPEN_JOB_STATUSES.map(() => null);
   const failed = new Set<string>();
   const emit = () => {
+    if (hub.dead) return;
     // Wait for every feed before showing anything, so the board never flashes a partial list.
     if (recent === null || open.some((o) => o === null)) return;
     hub.data = mergeJobFeeds(recent, open as ServiceJob[][]);
     hub.note = failed.size
-      ? `Showing only the newest ${LIST_LIMIT} jobs: reading open jobs failed (${[...failed].join(", ")}). Older open jobs may be missing.`
+      ? `Could not read all open jobs (${[...failed].join(", ")}). Jobs in those statuses that are older than the newest ${LIST_LIMIT} may be missing here.`
       : null;
-    hub.subs.forEach((s) => { s.onData(hub.data!); s.onBounded(hub.note); });
+    hub.subs.forEach((s) => safe(() => { s.onData(hub.data!.slice()); s.onBounded(hub.note); }));
   };
   const toList = (snap: { docs: { data: () => unknown }[] }) => snap.docs.map((d) => d.data() as ServiceJob);
   const unsubs: Unsubscribe[] = [
     onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"), limit(LIST_LIMIT)),
-      (snap) => { recent = toList(snap); hub.error = null; emit(); },
-      (err) => { hub.error = err; hub.data = null; recent = null; hub.subs.forEach((s) => s.onError(err)); }),
+      (snap) => { recent = toList(snap); emit(); },
+      (err) => {
+        // The main feed is finished once it errors. Tell everyone, close the rest and forget this hub, so the
+        // next listenToJobs starts a fresh one. No automatic retry (a permission error will not fix itself).
+        hub.dead = true; hub.stop();
+        if (hubs.get(hub.key) === hub) hubs.delete(hub.key);
+        const subs = [...hub.subs]; hub.subs.clear();
+        subs.forEach((s) => safe(() => s.onError(err)));
+      }),
     // Equality-only queries (no orderBy). Whether the project's Firestore serves these without a new
-    // composite index is NOT proven; a failure is shown to the user as a bounded-list notice.
+    // composite index is NOT proven; a failure is shown to the user as a notice.
     ...OPEN_JOB_STATUSES.map((status, i) =>
       onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), where("status", "==", status)),
         (snap) => { open[i] = toList(snap); failed.delete(status); emit(); },
@@ -42,29 +53,29 @@ function startHub(tenantId: string, hub: Hub): void {
   hub.stop = () => unsubs.forEach((u) => u());
 }
 
-/** Live, tenant-wide job feed - newest 300 plus every open job. One set of listeners is shared by all
- * Admin screens (ref-counted), so opening more pages does not add reads. onBounded(note) is called with
- * a message when the open-job reads fail (list limited to newest 300) and with null when it is complete. */
+/** Live, tenant-wide job feed - newest 300 plus every open job. One set of listeners is shared by the Admin
+ * screens of the same signed-in user and tenant (ref-counted). onBounded(note) gets a message when some open-job
+ * reads fail and null when the list is complete. */
 export function listenToJobs(
   tenantId: string,
   onData: (jobs: ServiceJob[]) => void,
   onError: (err: Error) => void,
   onBounded: (note: string | null) => void = () => undefined,
 ): Unsubscribe {
-  let hub = hubs.get(tenantId);
+  const key = `${auth.currentUser?.uid ?? "anon"}:${tenantId}`;
+  let hub = hubs.get(key);
   if (!hub) {
-    hub = { subs: new Set(), stop: () => undefined, data: null, error: null, note: null };
-    hubs.set(tenantId, hub);
+    hub = { key, subs: new Set(), stop: () => undefined, data: null, error: null, note: null, dead: false };
+    hubs.set(key, hub);
     startHub(tenantId, hub);
   }
   const sub: Sub = { onData, onError, onBounded };
   hub.subs.add(sub);
-  if (hub.data) { onData(hub.data); onBounded(hub.note); }
-  if (hub.error) onError(hub.error);
+  if (hub.data) { const d = hub.data.slice(), n = hub.note; safe(() => { onData(d); onBounded(n); }); }
   const h = hub;
   return () => {
-    h.subs.delete(sub);
-    if (h.subs.size === 0) { h.stop(); if (hubs.get(tenantId) === h) hubs.delete(tenantId); }
+    if (!h.subs.delete(sub)) return;
+    if (h.subs.size === 0) { h.dead = true; h.stop(); if (hubs.get(key) === h) hubs.delete(key); }
   };
 }
 
