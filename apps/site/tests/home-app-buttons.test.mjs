@@ -1,18 +1,3 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-
-const home = readFileSync(new URL("../src/pages/index.astro", import.meta.url), "utf8");
-
-test("Home does not repeat the Open the app button inside the app story", () => {
-  // Meet: repeated app buttons on the home page. One in the hero and one in the install card is enough.
-  const links = home.match(/Open the app/g) ?? [];
-  assert.ok(links.length <= 2, `Open the app appears ${links.length} times in index.astro`);
-  const story = home.slice(home.indexOf('id="app"'), home.indexOf('class="app-install'));
-  assert.doesNotMatch(story, /Open the app/);
-});
-
-test("Home shows the app showcase above the studio menu", () => {
-  const x = readFileSync(new URL("../src/pages/index.astro", import.meta.url), "utf8");
-  assert.ok(x.indexOf('id="app"') < x.indexOf('id="services"'));
-});
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';const h=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
+test('app story has one dedicated handoff rather than repeated buttons',()=>{const story=h.slice(h.indexOf('id="app"'),h.indexOf('id="cars"'));assert.equal((story.match(/Explore the app/g)||[]).length,1);assert(!story.includes('Open the app'));});
+test('latest approved hierarchy places six services before app, then cars and store',()=>{for(const [a,b] of [['services','app'],['app','cars'],['cars','store']]){assert(h.indexOf('id="'+a+'"')>=0);assert(h.indexOf('id="'+a+'"')<h.indexOf('id="'+b+'"'))}});

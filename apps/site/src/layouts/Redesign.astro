@@ -1,0 +1,57 @@
+---
+import header from '../data/redesign/header.html?raw';
+import footer from '../data/redesign/footer.html?raw';
+import {createHash} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+const cssV=createHash('sha1').update(readFileSync('public/assets/redesign/site.css')).digest('hex').slice(0,10);
+interface Props {
+  title: string;
+  description: string;
+  page?: string;
+}
+const { title, description, page = '' } = Astro.props;
+const isProduction = process.env.VERCEL_ENV === 'production';
+const ogImage = 'https://www.autodeck.in/assets/og.png';
+const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', 'https://www.autodeck.in').href;
+const localBusiness = {
+  '@context': 'https://schema.org',
+  '@type': 'AutoRepair',
+  name: 'AutoDeck',
+  url: 'https://www.autodeck.in',
+  image: ogImage,
+  telephone: '+91 98986 79711',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Sunbeam Complex, Old Sharda Mandir Rd, Ellisbridge',
+    addressLocality: 'Ahmedabad',
+    postalCode: '380006',
+    addressCountry: 'IN',
+  },
+  openingHoursSpecification: [
+    { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '10:00', closes: '21:00' },
+    { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Sunday', opens: '10:00', closes: '19:00' },
+  ],
+  sameAs: ['https://instagram.com/autodeck.studio'],
+};
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="robots" content={isProduction ? "index, follow" : "noindex, nofollow"} />
+  <meta name="description" content={description} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:url" content={canonical} />
+  <script type="application/ld+json" set:html={JSON.stringify(localBusiness)} />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="stylesheet" href={`/assets/redesign/site.css?v=${cssV}`} />
+</head>
+<body><noscript><style>[data-inventory-message],[data-inventory-count]{display:none!important}</style></noscript><a class="skip-link" href="#content">Skip to content</a><div class="autodeck"><Fragment set:html={header}/><main id="content"><slot /></main><Fragment set:html={footer}/></div><script>import '../scripts/redesign.ts';</script></body></html>

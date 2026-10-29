@@ -1,24 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-const read = (p) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
-test("departments come first as three tiles, ahead of the collection", () => {
-  const x = read("src/pages/shop.astro");
-  for (const d of ["Scent", "Clothing", "Car accessories"]) assert.match(x, new RegExp(`data-department="${d}"`));
-  assert.ok(x.indexOf("store-departments") < x.indexOf('id="collection"'));
-  assert.doesNotMatch(x, /edition-statement|store-promise|store-bar|store-filters/);
-});
-test("no dummy controls, no prices, no products on the store", () => {
-  const x = read("src/pages/shop.astro");
-  assert.doesNotMatch(x, /type="search"|<select|cart|checkout|Add to bag|price/i);
-  assert.deepEqual(JSON.parse(read("src/data/shop.json")).products, []);
-});
-test("store says plainly it is not taking orders", () => {
-  assert.match(read("src/pages/shop.astro"), /Not taking orders yet/);
-});
-test("selecting a department retitles the collection and keeps the empty state truthful", () => {
-  const js = read("src/scripts/store.js");
-  assert.match(js, /data-collection-title/);
-  assert.match(js, /department === 'All' \? 'All products' : department/);
-  assert.doesNotMatch(read("src/pages/shop.astro"), /Browse <Arrow/);
-});
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8'),h=read('dist/shop/index.html'),js=read('src/scripts/redesign.ts');
+test('latest design preserves concepts with working department filters',()=>{for(const d of ['Scent','Clothing','Accessories'])assert(h.includes('>'+d+'</button>'));assert.equal((h.match(/class="merch-card /g)||[]).length,12);assert(js.includes('merch-departments'));assert(js.includes('c.hidden='))});
+test('no order-taking or fabricated availability',()=>{assert.match(h,/Not available to order/);assert.doesNotMatch(h,/Add to cart|Buy now|Limited edition|Only \d|type="search"/);assert.deepEqual(JSON.parse(read('src/data/shop.json')).products,[])});
+test('scroller is manual only, ends at content and keeps eager images',()=>{assert(!h.includes('merch-pause'));assert(!h.includes('Play motion'));assert(js.includes('Manual-only product browsing'));assert(js.includes("e.key==='End'"));assert(js.includes("attributeFilter:['hidden']"));assert(js.includes('ArrowRight'));});

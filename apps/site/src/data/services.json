@@ -1,0 +1,168 @@
+[
+  {
+    "slug": "paint-protection-film",
+    "title": "Paint protection film",
+    "description": "Film coverage for high-impact panels, the full front or the full body.",
+    "image": "/assets/redesign/service-paint-protection.jpg",
+    "heading": "Choose the coverage first.",
+    "intro": "The catalogue separates film by coverage. Start with the area you want covered, then confirm the exact product with the studio.",
+    "choices": [
+      [
+        "High-impact kit",
+        "For selected impact-prone areas. Ask the studio to mark the exact panels on your car."
+      ],
+      [
+        "Full front",
+        "A front-coverage option. Confirm the panel list before the quote."
+      ],
+      [
+        "Full body",
+        "A whole-car coverage option. Confirm which surfaces and edges are included."
+      ]
+    ],
+    "question": "Bring your car for a paint inspection before the final quote. Ask for the exact film, finish, coverage and written warranty terms. No brand or warranty duration is promised here.",
+    "related": "ceramic-coating",
+    "relatedLabel": "Explore ceramic coating instead",
+    "source": "Oct12 approved catalogue restructure; current menu coverage groups; prices and brands excluded; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "PPF"
+  },
+  {
+    "slug": "ceramic-coating",
+    "title": "Ceramic coating",
+    "description": "Ceramic and graphene coatings for your car.",
+    "image": "/assets/redesign/service-ceramic-coating.jpg",
+    "heading": "Which surface needs care?",
+    "intro": "The catalogue separates paint coatings from surface-specific protection. These are different choices, not one blanket treatment.",
+    "choices": [
+      [
+        "Paint",
+        "Explore ceramic or graphene coating for painted surfaces. Paint condition is checked before the final quote."
+      ],
+      [
+        "Glass & wheels",
+        "Ask about glass or wheel coating separately. Do not assume these are included in a paint coating."
+      ],
+      [
+        "Cabin materials",
+        "Leather and fabric coatings are separate catalogue options. Dashboard and trim treatment is enquiry-only. Confirm the surface and product with the studio."
+      ]
+    ],
+    "question": "Confirm the exact product, preparation, surfaces and aftercare with the studio. Brand sourcing and warranty terms are not fixed by this preview.",
+    "related": "paint-protection-film",
+    "relatedLabel": "Compare film coverage options",
+    "source": "Oct18 owner-approved surface-type expansion; current menu brand-neutral groups only; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Coatings"
+  },
+  {
+    "slug": "detailing",
+    "title": "Detailing",
+    "description": "Care for the paint, cabin and the details between.",
+    "image": "/assets/redesign/service-detailing.jpg",
+    "heading": "Choose the area to focus on.",
+    "intro": "Start with the part of the car that needs attention. Cleaning, paint work and protective coatings are separate catalogue choices.",
+    "choices": [
+      [
+        "Interior deep clean",
+        "For a cabin-focused visit. Confirm the materials and areas to be cleaned."
+      ],
+      [
+        "Full detail wash",
+        "The combined option covers exterior and interior. Do not book the same exterior and interior work again."
+      ],
+      [
+        "Paint & finishing / Enquiry",
+        "Polish, paint correction and decontamination are enquiry-only types. Call for an assessment and quote; they do not have a direct booking option here."
+      ]
+    ],
+    "question": "Tell the studio which areas concern you and ask for the work list before approving. A coating or film is a separate decision, not an automatic part of detailing.",
+    "related": "washing",
+    "relatedLabel": "Compare the wash choices",
+    "source": "Oct18 owner full/exterior/interior bundle clarification plus approved services-type scope; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Washing & detailing"
+  },
+  {
+    "slug": "washing",
+    "title": "Washing",
+    "description": "From a foam wash to a full detail wash.",
+    "image": "/assets/redesign/service-wash-and-care.jpg",
+    "heading": "Outside, inside, or both?",
+    "intro": "Choose the right scope before opening the app. Full detail wash already combines exterior and interior care.",
+    "choices": [
+      [
+        "Foam wash",
+        "An exterior-wash starting point in the catalogue. Review its work list in the app."
+      ],
+      [
+        "Exterior detail wash",
+        "Choose an exterior-focused visit when the outside is your priority."
+      ],
+      [
+        "Interior deep clean",
+        "Choose cabin-focused care when the interior is your priority."
+      ],
+      [
+        "Full detail wash",
+        "Choose this for exterior and interior together. Do not add the same exterior and interior services on top."
+      ]
+    ],
+    "question": "Need both exterior and interior? Start with Full detail wash. For paint correction or surface protection, explore Detailing or Ceramic coating rather than assuming a wash includes it.",
+    "related": "detailing",
+    "relatedLabel": "Explore detailing for focused care",
+    "source": "Oct18 original owner bundle approval; current menu wash group. No prices/durations published; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Washing"
+  },
+  {
+    "slug": "garage",
+    "title": "Garage",
+    "description": "Car health checks and repairs, starting with an inspection.",
+    "image": "/assets/redesign/service-garage.jpg",
+    "heading": "Start with the concern.",
+    "intro": "Garage work is inspection-led. Choose a check for a known concern, or discuss repairs before approving parts and labour.",
+    "choices": [
+      [
+        "Checks & diagnostics",
+        "Multi-point inspection, AC check and battery check are catalogue starting points."
+      ],
+      [
+        "Wheels & tyres",
+        "Wheel alignment and balancing are listed separately from a general inspection."
+      ],
+      [
+        "Repairs & other work",
+        "Book an inspection or speak to the studio first. The parts and labour quote follows the assessment."
+      ]
+    ],
+    "question": "Describe symptoms when you call. Confirm the diagnosis, parts and labour before approving repairs. Do not assume a check includes replacement parts or a blanket garage warranty.",
+    "related": "washing",
+    "relatedLabel": "Looking for care rather than repairs?",
+    "source": "Owner-updated Garage pre-list, excluding stale pickup/prices/durations; approved consult-first menu; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Garage"
+  },
+  {
+    "slug": "modifications",
+    "title": "Modifications",
+    "description": "Tint, wraps and styling, quoted after we see your car.",
+    "image": "/assets/redesign/service-modifications.jpg",
+    "heading": "Start with the change you want.",
+    "intro": "Modifications are quote-led. Your car and the intended fitment matter more than a generic package.",
+    "choices": [
+      [
+        "Wraps & colour change",
+        "Discuss vinyl wraps or graphics with the studio, then confirm finish and coverage."
+      ],
+      [
+        "Accessories & styling",
+        "Choose the change first, then confirm the exact accessory and fitment."
+      ],
+      [
+        "Interior & fitment / Enquiry",
+        "Audio, cameras, mats and upholstery are enquiry-only types. Call to discuss the job; these are not stocked packages or direct booking choices."
+      ]
+    ],
+    "question": "Call before booking to confirm compatibility, scope and the final quote. No accessory stock, compliance claim or product brand is promised by this preview.",
+    "related": "garage",
+    "relatedLabel": "Need repairs instead? Explore Garage",
+    "source": "Oct18 owner all-services/type expansion and approved consult-only modifications menu; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
+    "appChoice": "Modifications"
+  }
+]

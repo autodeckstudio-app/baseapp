@@ -1,27 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-
-const css = readFileSync(new URL("../src/styles/studio.css", import.meta.url), "utf8");
-const rules = [...css.matchAll(/([^{}]*\.phone-shell[^{}]*)\{([^}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
-
-test("the pinned app story phone is never clamped by its container width", () => {
-  // Safari sizes the shrink-to-fit column from its content, so max-width:100% on the phone collapsed it to the dot row width
-  // and cropped the app screenshot left and right. The phone's width must come from its height and aspect ratio only.
-  const pinned = rules.filter((r) => r.sel.includes(".app-story-enhanced") && /--ph\s*:/.test(r.body));
-  assert.ok(pinned.length >= 4, "every breakpoint sets the phone height through --ph");
-  const main = pinned.find((r) => /height\s*:\s*var\(--ph\)/.test(r.body));
-  assert.ok(main, "the phone height comes from --ph");
-  assert.match(main.body, /width\s*:\s*calc\(var\(--ph\)\*390\/844\)/);
-  assert.match(main.body, /max-width\s*:\s*none/);
-  assert.match(main.body, /box-sizing\s*:\s*border-box/);
-  for (const r of pinned) assert.doesNotMatch(r.body, /max-width\s*:\s*100%/);
-  for (const r of pinned) assert.doesNotMatch(r.body, /(^|;)\s*height\s*:\s*(?!var)/);
-});
-
-test("the phone keeps the real screen proportions", () => {
-  const base = rules.find((r) => r.sel === ".phone-shell" && r.body.includes("aspect-ratio"));
-  assert.ok(base);
-  assert.match(base.body, /aspect-ratio\s*:\s*390\s*\/\s*844/);
-  assert.match(readFileSync(new URL("../src/pages/index.astro", import.meta.url), "utf8"), /width="390" height="844"/);
-});
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+test('phone image keeps native proportions without a fixed-height crop',()=>{const c=read('public/assets/redesign/site.css');assert.match(c,/\.phone img\{width:100%;display:block/);assert.match(c,/\.page-app-story\.app-walkthrough\{height:auto;overflow:visible/);assert.match(c,/\.page-app-story \.walk-phone-column\{align-self:stretch/);for(const [p,count] of [['home',5],['app',5]])assert.equal((read('src/data/redesign/'+p+'.html').match(/class="walk-step[ "]/g)||[]).length,count)});
+test('all five image assets are local and present',()=>{for(const f of ['home','bookings','garage-stories','buysell','profile'])assert(fs.existsSync(new URL('../public/assets/redesign/'+f+'.webp',import.meta.url)))});

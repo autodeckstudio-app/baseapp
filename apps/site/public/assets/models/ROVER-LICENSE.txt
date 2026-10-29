@@ -1,0 +1,5 @@
+Range Rover Sport 2018 by diw3d. CC BY 4.0.
+Original: https://sketchfab.com/3d-models/range-rover-sport-2018-d1fe581b3baf4af89275e9aa9a1392e2
+License: http://creativecommons.org/licenses/by/4.0/
+Adapted source: https://www.jaxautoshipping.com/3d/sketchfab/range_rover_sport_2018.glb
+Retrieved 29 October 2026. Geometry unchanged. Embedded WebP textures converted losslessly to PNG and linked through core glTF texture sources for browser compatibility. Display lighting, orientation and material roughness adjusted. Poster rendered from same asset. Illustrative model, not an AutoDeck customer car or inventory item.

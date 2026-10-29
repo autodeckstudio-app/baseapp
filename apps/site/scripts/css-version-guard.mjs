@@ -1,5 +1,1 @@
-import fs from 'node:fs';
-// The home stylesheet is cached immutable for a year: its link must carry a content hash.
-const html = fs.readFileSync('dist/index.html', 'utf8');
-if (!/home\.css\?v=[0-9a-f]{10}/.test(html)) { console.error('css-version-guard FAIL: home.css link has no content hash'); process.exit(1); }
-console.log('css-version ok');
+import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';const c=fs.readFileSync('public/assets/redesign/site.css');const hash=createHash('sha1').update(c).digest('hex').slice(0,10);const h=fs.readFileSync('dist/index.html','utf8');assert(h.includes('/assets/redesign/site.css?v='+hash));console.log('active CSS content-hash guard passed');

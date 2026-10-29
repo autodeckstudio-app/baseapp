@@ -2,18 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
-      "source": "/services",
-      "destination": "/#services",
-      "statusCode": 301
-    },
-    {
       "source": "/gallery",
-      "destination": "/#studio",
-      "statusCode": 301
-    },
-    {
-      "source": "/app",
-      "destination": "/#app",
+      "destination": "/#services",
       "statusCode": 301
     },
     {
@@ -100,6 +90,11 @@
       "source": "/profile",
       "destination": "https://app.autodeck.in/profile",
       "permanent": false
+    },
+    {
+      "source": "/store",
+      "destination": "/shop",
+      "statusCode": 301
     }
   ],
   "headers": [
@@ -108,7 +103,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://asia-south1-autodeck-studio.cloudfunctions.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self'; connect-src 'self' blob: https://asia-south1-autodeck-studio.cloudfunctions.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         },
         {
           "key": "X-Content-Type-Options",

@@ -7,21 +7,5 @@ test('no invented public cars',()=>assert.deepEqual(validatePublicCars(JSON.pars
 test('private fields are rejected, not hidden',()=>{for(const field of ['price','askingPrice','plate','registrationNumber','owner','owners','sellerName','sellerPhone','description','adminNotes','photoUrls'])assert.throws(()=>validatePublicCars([{[field]:'private'}]),/Not an allowed public/);});
 test('photo requires safe local path and explicit redaction approval',()=>{const base={id:'unit',make:'Make',model:'Model',photo:'/assets/inventory/unit.webp',photoAlt:'Approved car photograph'};assert.throws(()=>validatePublicCars([base]),/approval/);assert.throws(()=>validatePublicCars([{...base,publicPhotoApproved:true,photo:'https://example.com/original.jpg'}]),/approved local/);assert.equal(validatePublicCars([{...base,publicPhotoApproved:true}]).length,1);});
 test('plate-like identifiers rejected from safe text',()=>assert.throws(()=>validatePublicCars([{id:'unit',make:'Make',model:'MH 02 AB 1234',photo:'/assets/inventory/unit.webp',photoAlt:'Car',publicPhotoApproved:true}]),/identifier/));
-test('no public raw listing API or stock imagery',()=>{const p=source('src/pages/cars.astro');assert.doesNotMatch(p,/stock-water|stock-blackcar|askingPrice|sellerName|registrationNumber/);assert.match(p,/https:\/\/app.autodeck.in/);assert.match(p,/No cars are listed on this page yet/);});
-
-test('Cars page reads the public listing endpoint, spec text only: no photo, price, plate or area', () => {
-  const src = readFileSync(new URL('../src/pages/cars.astro', import.meta.url), 'utf8');
-  assert.ok(src.includes('listPublicCarListings'));
-  const script = src.slice(src.indexOf('<script is:inline>'));
-  assert.ok(script.includes('textContent'));
-  assert.ok(!/innerHTML|\.area|price|photoUrls|registration/i.test(script.replace('Price requests continue in the app.', '').replace('for price and details', '')));
-});
-
-test('Home service tiles each have a photo that exists, with neutral file names', async () => {
-  const { existsSync } = await import('node:fs');
-  const page = source('src/pages/index.astro');
-  const names = [...page.matchAll(/'(paint-protection|ceramic-coating|detailing|wash-and-care|garage|modifications)'\]/g)].map(m => m[1]);
-  assert.equal(names.length, 6);
-  for (const n of names) assert.ok(existsSync(new URL(`../public/assets/img/service-${n}.jpg`, import.meta.url)), n);
-  assert.ok(page.includes('class="service-photo"'));
-});
+test('active car page uses safe live endpoint with honest fallback',()=>{const h=source('dist/cars/index.html'),js=source('src/scripts/redesign.ts');assert(h.includes('https://app.autodeck.in'));assert(h.includes('noscript'));assert(js.includes('listPublicCarListings'));assert(js.includes('textContent'));assert(!/askingPrice|sellerName|sellerPhone|registrationNumber|photoUrls|innerHTML/.test(js));assert(js.includes('AbortController'));assert(js.includes("['live','reserved']"));assert(js.includes('No cars listed right now.'));assert(js.includes('Listings could not load.'))});
+test('six real service categories retain present local illustrative photos',()=>{const h=source('dist/services/index.html');for(const f of ['paint-protection','ceramic-coating','detailing','wash-and-care','garage','modifications']){assert(h.includes('service-'+f+'.jpg'));assert(fsExists('public/assets/redesign/service-'+f+'.jpg'))}});function fsExists(p){try{readFileSync(new URL('../'+p,import.meta.url));return true}catch{return false}}

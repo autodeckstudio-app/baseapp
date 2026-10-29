@@ -1,26 +1,5 @@
 ---
-import Base from '../layouts/Base.astro';
-import Arrow from '../components/Arrow.astro';
-import '../styles/store.css';
-import collection from '../data/shop.json';
-interface Product {
-  id: string; name: string; department: 'Scent' | 'Clothing' | 'Car accessories'; description: string;
-  image: string; imageAlt: string; detailImage?: string; detailImageAlt?: string;
-  provenance?: 'Made for AutoDeck' | 'Selected by AutoDeck'; maker?: string;
-  details: { label: string; value: string }[];
-}
-interface Edition { title: string; description: string; image: string; imageAlt: string }
-const products = (collection.products as Product[]).filter(p => p.id && p.name && p.image && p.imageAlt);
-const edition = collection.edition as Edition | null;
+import Redesign from '../layouts/Redesign.astro';
+import content from '../data/redesign/store.html?raw';
 ---
-<Base title="Store · AutoDeck" description="The AutoDeck edit. Scent, clothing and car accessories, with the collection still taking shape." page="shop">
-<section class="store-head wrap" aria-labelledby="store-heading"><div><p class="eyebrow"><i></i> AutoDeck Store</p><h1 id="store-heading">The AutoDeck Store.</h1><p class="intro">Scent, clothing and car accessories, chosen or made by us.</p></div><p class="store-status"><i></i> Opening soon. Not taking orders yet.</p></section>
-{edition && <section class="store-opening wrap"><figure class="edition-feature"><img src={edition.image} alt={edition.imageAlt} fetchpriority="high"/><figcaption><p class="eyebrow">AutoDeck Editions</p><h2>{edition.title}</h2><p>{edition.description}</p></figcaption></figure></section>}
-<section class="store-departments wrap" aria-label="Shop by department"><a href="#collection" data-department="Scent" class="dept dept-0"><span class="dept-mark" aria-hidden="true"></span><div><h2>Scent</h2><p>A new direction for AutoDeck.</p></div><span class="dept-go">View <Arrow /></span></a><a href="#collection" data-department="Clothing" class="dept dept-1"><span class="dept-mark" aria-hidden="true"></span><div><h2>Clothing</h2><p>Beyond the badge.</p></div><span class="dept-go">View <Arrow /></span></a><a href="#collection" data-department="Car accessories" class="dept dept-2"><span class="dept-mark" aria-hidden="true"></span><div><h2>Car accessories</h2><p>Covers, key chains and more for people who love cars.</p></div><span class="dept-go">View <Arrow /></span></a></section>
-<section class="store-collection wrap" id="collection" aria-labelledby="collection-heading"><div class="collection-head"><div><h2 id="collection-heading" data-collection-title>All products</h2></div></div>
-<div class="store-products">{products.map(p=><article class="store-product" data-store-category={p.department}><button class="product-open" data-open-product={`product-${p.id}`} aria-haspopup="dialog"><div class="store-product-photo"><img src={p.image} alt={p.imageAlt} loading="lazy" />{p.detailImage && <img class="store-product-detail-photo" src={p.detailImage} alt="" loading="lazy"/>}<span>Quick view <Arrow /></span></div><div class="store-product-name"><p>{p.department}{p.provenance && ` · ${p.provenance}`}</p><h3>{p.name}</h3></div></button><noscript><p>{p.description}</p><dl>{p.details.map(d=><div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl></noscript><dialog id={`product-${p.id}`} class="product-dialog" aria-labelledby={`title-${p.id}`}><button class="dialog-close" type="button" data-close-product aria-label="Close product details"><Arrow close /></button><div class="product-dialog-grid"><div class="dialog-photos"><img src={p.image} alt={p.imageAlt} loading="lazy"/>{p.detailImage && <img src={p.detailImage} alt={p.detailImageAlt || p.imageAlt} loading="lazy"/>}</div><div class="dialog-copy"><p class="eyebrow">{p.department}</p><h2 id={`title-${p.id}`}>{p.name}</h2><p>{p.description}</p>{p.provenance && <p class="provenance">{p.provenance}{p.maker && ` · ${p.maker}`}</p>}<dl>{p.details.map(d=><div><dt>{d.label}</dt><dd>{d.value}</dd></div>)}</dl><p class="store-small">Preview only. Ordering is not open.</p></div></div></dialog></article>)}</div>
-<div class="collection-empty" hidden={products.length>0}><span class="empty-mark" aria-hidden="true"><Arrow /></span><div><h3 data-empty-title>Collection in the making.</h3><p data-empty-copy>Products and details will appear here when they are ready. Nothing is available to order yet.</p></div></div>
-<p class="store-small collection-footnote">Scent, clothing and car accessories are the starting point. Product details are still being finalised.</p>
-</section>
-<script>import '../scripts/store.js';</script>
-</Base>
+<Redesign title="Store \u00b7 AutoDeck" description="Scent, clothing and accessories. The AutoDeck collection is coming soon." page="shop"><Fragment set:html={content}/></Redesign>
