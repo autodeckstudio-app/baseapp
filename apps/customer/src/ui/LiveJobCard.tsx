@@ -7,8 +7,9 @@ import { Button, Kicker, Pane, T, rupees } from "./kit";
 import { STAGES, jobStage } from "./job-stage";
 
 /** The one card a customer reads while the car is in the studio: where it is, when it is ready, and anything waiting on them. */
-export function LiveJobCard({ status, readyText, approvals, busyId, error, onDecide }: {
+export function LiveJobCard({ status, slotStarted = false, readyText, approvals, busyId, error, onDecide }: {
   status: string;
+  slotStarted?: boolean;
   readyText: string | null;
   approvals: ApprovalRequest[];
   busyId: string | null;
@@ -16,7 +17,7 @@ export function LiveJobCard({ status, readyText, approvals, busyId, error, onDec
   onDecide: (id: string, decision: "approved" | "rejected") => void;
 }) {
   const { colors } = useExperienceTheme();
-  const stage = jobStage(status);
+  const stage = jobStage(status, slotStarted);
   if (!stage) return null;
   return (
     <View style={{ gap: metrics.sectionGap }}>
