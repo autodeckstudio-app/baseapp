@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { backFallback } from "./back-nav";
+import { backFallback, collapseStaleBookEntries } from "./back-nav";
 
 describe("back navigation coverage", () => {
   it("shows no Back on tab roots", () => {
@@ -50,5 +50,22 @@ describe("tab navigator history", () => {
   it("Tabs uses backBehavior=history so Back returns to the page the user came from, not the first tab", () => {
     const s = readFileSync(join(__dirname, "../app/(tabs)/_layout.tsx"), "utf8");
     expect(s).toMatch(/<Tabs backBehavior="history"/);
+  });
+});
+
+describe("stale Book entries", () => {
+  const r = (name: string, key: string) => ({ name, key });
+  it("keeps only the new page when it opens over an older Book page (Ceramic over Full detail wash)", () => {
+    const out = collapseStaleBookEntries({ index: 1, routes: [r("[serviceId]", "full"), r("[serviceId]", "ceramic")] });
+    expect(out).toEqual({ index: 0, routes: [r("[serviceId]", "ceramic")] });
+  });
+  it("also drops an older Confirm left under a new Book page", () => {
+    const out = collapseStaleBookEntries({ index: 2, routes: [r("[serviceId]", "a"), r("confirm", "c"), r("[serviceId]", "b")] });
+    expect(out?.routes).toEqual([r("[serviceId]", "b")]);
+  });
+  it("does nothing for a clean stack, for Confirm on top, or for a missing state", () => {
+    expect(collapseStaleBookEntries({ index: 0, routes: [r("[serviceId]", "a")] })).toBeNull();
+    expect(collapseStaleBookEntries({ index: 1, routes: [r("[serviceId]", "a"), r("confirm", "c")] })).toBeNull();
+    expect(collapseStaleBookEntries(undefined)).toBeNull();
   });
 });

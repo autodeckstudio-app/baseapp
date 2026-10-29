@@ -2,7 +2,8 @@ import { CarThumb } from "../../../ui/CarThumb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { collapseStaleBookEntries } from "../../../lib/back-nav";
 import { doc, getDoc} from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { pickDay, comboFor } from "../../../lib/booking-ideas";
@@ -32,6 +33,8 @@ export default function BookServiceScreen() {
   const { serviceId, extras: extrasParam, day, upgraded } = useLocalSearchParams<{ serviceId: string; extras?: string; day?: string; upgraded?: string }>();
   const [dayMissed, setDayMissed] = useState(false);
   const router = useRouter();
+  const navigation = useNavigation();
+  useEffect(() => { const reset = collapseStaleBookEntries(navigation.getState() as never); if (reset) navigation.dispatch({ type: "RESET", payload: reset } as never); }, []);
   const auth = useAuth();
 
   const [service, setService] = useState<Service | null>(null);

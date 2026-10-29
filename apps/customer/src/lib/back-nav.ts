@@ -16,3 +16,19 @@ export function backFallback(segs: string[]): string | null {
   if (!(deep || root in SUB_ROOTS)) return null;
   return SUB_ROOTS[root] ?? NO_INDEX_ROOTS[root] ?? (root ? `/(tabs)/${root}` : "/(tabs)");
 }
+
+type StackLike = { index: number; routes: ReadonlyArray<{ key: string; name: string }> };
+/**
+ * The Book pages live in one hidden stack that survives tab switches. A page opened earlier stays under the next one,
+ * so Back from a freshly opened Book page returned to that old page (Ceramic wash Back showed Full detail wash).
+ * When a Book page opens on top of other Book pages, keep only the new page: Back then leaves the stack and returns
+ * to wherever the customer really came from (service detail, Home, Bookings). Runs once when a "[serviceId]" page opens, so
+ * Book -> Confirm -> Back (Confirm is opened later, on top) is untouched.
+ * Returns the reset target, or null when the stack is already clean.
+ */
+export function collapseStaleBookEntries(state: StackLike | undefined, pageName = "[serviceId]"): { index: 0; routes: Array<{ key: string; name: string }> } | null {
+  if (!state || state.routes.length < 2) return null;
+  const top = state.routes[state.index];
+  if (!top || top.name !== pageName || state.index !== state.routes.length - 1) return null;
+  return { index: 0, routes: [top] };
+}
