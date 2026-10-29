@@ -184,7 +184,8 @@ export { markNotificationRead } from "./functions/notification/markNotificationR
 export { healthCheck } from "./functions/health.js";
 
 // âââ Cars for sale (studio stock + customer submissions behind approval) âââ
-export { issueListingPhotoUploadUrl, adminSaveListing, submitMyListing, reviewListing, markMyListingSold, removeMyListingPhoto, replaceMyListingPhoto, listCarListings, listPublicCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
+export { issueListingPhotoUploadUrl, adminSaveListing, approveListingPhoto, submitMyListing, reviewListing, markMyListingSold, removeMyListingPhoto, replaceMyListingPhoto, listCarListings, listPublicCarListings, expressInterest, listCarLeads, setCarLeadStatus } from "./functions/carsale/carsale.js";
+export { publicListingPhoto } from "./functions/carsale/listing-photo.js";
 
 // âââ Push (web, OFF until PUSH_ENABLED=true) ââââââââââââââââââââââââââââââââââ
 export { registerPushToken } from "./functions/push/registerPushToken.js";

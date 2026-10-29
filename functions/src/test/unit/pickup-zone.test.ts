@@ -31,7 +31,10 @@ describe("pickup rule v3: under 3 km Rs 100, 3 km and above Rs 150, per leg, no 
   it("one source: no old 7 km or Rs 100 rule left in app code or Terms", () => {
     const core = readFileSync(`${__dirname}/../../../../packages/core/src/pickup-zone.ts`, "utf8");
     expect(core).not.toContain("PICKUP_MAX_KM");
-    const terms = readFileSync(`${__dirname}/../../../../apps/site/src/pages/terms.astro`, "utf8");
-    expect(terms).toContain("Rs 100"); expect(terms).toContain("Rs 150"); expect(terms).not.toContain("every km"); expect(terms).not.toContain("7 km"); expect(terms).not.toContain("free within");
+    // The public Terms page carries only the approved neutral sentence (imported terms.html);
+    // pickup fees are shown config-driven in the app, so NO pickup numbers belong on the page.
+    const terms = readFileSync(`${__dirname}/../../../../apps/site/src/data/redesign/terms.html`, "utf8");
+    expect(terms).toContain("For cancellation, refund, pickup, warranty or membership terms, please contact AutoDeck before confirming your booking.");
+    expect(terms).not.toContain("Rs 100"); expect(terms).not.toContain("Rs 150"); expect(terms).not.toContain("every km"); expect(terms).not.toContain("7 km"); expect(terms).not.toContain("free within");
   });
 });

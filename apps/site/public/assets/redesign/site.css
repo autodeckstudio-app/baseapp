@@ -436,3 +436,45 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 @media(max-width:700px){.autodeck #app .app-five-stage{top:calc(-1 * var(--app-stage-overflow,0px))}}
 .guide-action-row>.guide-swipe-hint{font-size:9px;max-width:none;white-space:nowrap;letter-spacing:.03em}
 @media(max-width:350px){.guide-action-row>.guide-swipe-hint{font-size:8px}}
+
+/* Reviewed full-frame listing photographs only. Never crop away a review boundary. */
+.inventory-photo{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;background:#111214;border-radius:12px;margin:0 0 18px}
+
+/* iPhone hardware, with unchanged Day app screens in a separate safe display area. */
+.autodeck .phone{position:relative;overflow:visible;border:3px solid #8c8985;border-radius:32px;background:#f7f6f6;padding:24px 4px 12px!important;box-shadow:0 0 0 2px #171819,0 0 0 3px #4d4b48,0 22px 46px #0008;aspect-ratio:390/920}
+.autodeck .phone::before{content:'9:41';position:absolute;top:6px;left:14px;color:#171719;font:600 7px/12px Arial,sans-serif;letter-spacing:-.2px}
+.autodeck .phone::after{content:'';position:absolute;top:7px;left:50%;transform:translateX(-50%);width:29%;height:12px;border-radius:10px;background:#080809;box-shadow:0 0 0 1px #000}
+.autodeck .phone img{border-radius:15px!important;object-fit:contain;width:100%;height:100%;background:#f7f6f6}
+.autodeck .phone{background-image:linear-gradient(#171719,#171719);background-size:28% 3px;background-repeat:no-repeat;background-position:center calc(100% - 4px)}
+/* Edge-to-edge approved photograph, compact copy beneath a continuous lower shade. */
+.autodeck .inventory-card.has-reviewed-photo{position:relative;overflow:hidden;padding:194px 18px 12px;isolation:isolate;background:#0e1011}
+.autodeck #cars .inventory-card.has-reviewed-photo{padding:194px 18px 12px}
+.autodeck .has-reviewed-photo .inventory-photo{position:absolute;top:0;left:0;width:100%;height:210px;aspect-ratio:auto;object-fit:cover;object-position:center 50%;border-radius:0;margin:0;z-index:-2;background:none}
+.autodeck .has-reviewed-photo::after{content:'';position:absolute;inset:130px 0 0;background:linear-gradient(transparent,#0e1011 83px);z-index:-1;pointer-events:none}
+.autodeck .has-reviewed-photo .inventory-top{position:absolute;top:12px;left:14px;right:14px;margin:0;align-items:center}
+.autodeck .has-reviewed-photo .inventory-number{font-size:12px;color:#fff;text-shadow:0 1px 4px #000;background:#0007;padding:3px 7px;border-radius:8px}
+.autodeck .has-reviewed-photo .inventory-status{color:#fff;background:#0009;border-color:#ffffff30}
+.autodeck .has-reviewed-photo h3{font-size:25px;margin:3px 0}
+.autodeck .has-reviewed-photo .inventory-variant{font-size:11px;min-height:0;margin:0}
+.autodeck .has-reviewed-photo dl{margin:6px 0!important;gap:8px}
+.autodeck .has-reviewed-photo dl>div{padding:2px 0}
+.autodeck .has-reviewed-photo .inventory-enquire{padding-top:5px;min-height:38px;font-size:12px}
+@media(max-width:767px){
+ .autodeck .inventory-card.has-reviewed-photo,.autodeck #cars .inventory-card.has-reviewed-photo{padding-top:154px}
+ .autodeck .has-reviewed-photo .inventory-photo{height:170px}
+ .autodeck .has-reviewed-photo::after{inset:122px 0 0;background:linear-gradient(transparent,#0e1011 55px)}
+}
+@media(max-width:350px){
+ .autodeck .inventory-card.has-reviewed-photo,.autodeck #cars .inventory-card.has-reviewed-photo{padding-top:122px}
+ .autodeck .has-reviewed-photo .inventory-photo{height:138px}
+ .autodeck .has-reviewed-photo::after{inset:98px 0 0;background:linear-gradient(transparent,#0e1011 46px)}
+}
+
+/* Cars-page mode choice: one balanced row, with equal space before the inventory. */
+.autodeck main>.cars-mode-switch{width:calc(100% - 48px);max-width:1072px;padding:5px;margin:0 auto 24px;display:grid;grid-template-columns:1fr 1fr;gap:5px;border:1px solid #ffffff21;border-radius:17px;background:#ffffff04}
+.autodeck .cars-mode-switch button{width:100%;min-height:44px;margin:0;border:0;border-radius:12px;padding:10px 14px;text-align:center;font-size:13px}
+.autodeck .cars-page-inventory .inventory-label{margin-bottom:20px;gap:6px}
+.autodeck .cars-page-inventory>.fine.centered{font-size:12px!important;line-height:1.5;margin:16px 0 0!important;text-align:left;white-space:nowrap}
+.autodeck .cars-page-inventory .inventory-actions{margin-top:20px}
+@media(min-width:768px){.autodeck main>.cars-mode-switch{max-width:420px;margin-left:var(--canvas-pad);margin-right:auto}}
+.autodeck main:has(>.cars-mode-switch)>.page-intro{padding-bottom:24px}

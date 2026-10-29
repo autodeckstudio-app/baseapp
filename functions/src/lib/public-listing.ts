@@ -13,3 +13,35 @@ export function publicListingView(l: CarListing): Record<string, unknown> {
   out.mine = false;
   return out;
 }
+
+/** One admin-reviewed cover photo per listing, served revocably through publicListingPhoto (never a public storage object). */
+export const PUBLIC_LISTING_PHOTOS = "publicListingPhotos";
+
+export type PublicListingPhotoReview = {
+  tenantId: string;
+  sourcePath: string;
+  sourceGeneration: string;
+  contentSha256: string;
+  contentType: string;
+  byteSize: number;
+  reviewedBy: string;
+  reviewedAt: string;
+};
+
+/**
+ * Every gate that must hold before a reviewed photo may be shown or served, re-checked on EVERY request:
+ * the listing is live/reserved and unexpired, the review belongs to the same tenant, and the reviewed
+ * object is still one of the listing's current photos. Storage generation is checked separately by the
+ * handler (a replaced or removed photo bumps/deletes it), so a stale review can never serve old bytes.
+ */
+export function canServePublicPhoto(
+  listing: Pick<CarListing, "status" | "expiresAt" | "tenantId" | "photoPaths">,
+  review: Pick<PublicListingPhotoReview, "tenantId" | "sourcePath"> | null | undefined,
+  now: number,
+): boolean {
+  if (!review) return false;
+  if (listing.status !== "live" && listing.status !== "reserved") return false;
+  if (listing.expiresAt && Date.parse(listing.expiresAt) <= now) return false;
+  if (review.tenantId !== listing.tenantId) return false;
+  return listing.photoPaths.includes(review.sourcePath);
+}

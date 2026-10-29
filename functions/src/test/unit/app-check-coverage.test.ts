@@ -104,6 +104,7 @@ const EXCLUDED_NON_CALLABLE = [
   "notification/expiryRemindersScheduled.ts",
   "push/onNotificationPush.ts",
   "auth/processAccountDeletionsScheduled.ts",
+  "carsale/listing-photo.ts", // public onRequest (anonymous photo GETs), like razorpayWebhook: App Check cannot apply
   "payment/razorpayWebhook.ts",
 ].sort();
 

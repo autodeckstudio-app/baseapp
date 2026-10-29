@@ -40,10 +40,16 @@ describe("cancellation policy", () => {
     expect(run).toContain("the booking is NOT cancelled");
     expect(src).toContain("Work on your car has already started");
   });
-  it("the Terms page states the same numbers as the config", () => {
-    const terms = readFileSync(`${__dirname}/../../../../apps/site/src/pages/terms.astro`, "utf8");
-    expect(terms).toContain(`${CANCEL_SHORT.freeUntilHours} hours before the start; after that, Rs ${CANCEL_SHORT.feePaise / 100}`);
-    expect(terms).toContain(`${CANCEL_BIGGER.freeUntilHours} hours before the start; after that, ${CANCEL_BIGGER.feePercent}%`);
+  it("the Terms page carries the approved neutral terms sentence, not numeric bands", () => {
+    // The public Terms page deliberately states the approved contact-before-confirm sentence
+    // (apps/site/src/data/redesign/terms.html, imported by terms.astro); numeric bands live only in
+    // the app's config-driven cancellation display. Pinning numbers here would resurrect superseded terms.
+    const terms = readFileSync(`${__dirname}/../../../../apps/site/src/data/redesign/terms.html`, "utf8");
+    expect(terms).toContain("For cancellation, refund, pickup, warranty or membership terms, please contact AutoDeck before confirming your booking.");
+    expect(terms).not.toContain(`${CANCEL_SHORT.freeUntilHours} hours`);
+    expect(terms).not.toContain(`${CANCEL_BIGGER.freeUntilHours} hours`);
+    expect(terms).not.toContain(`Rs ${CANCEL_SHORT.feePaise / 100}`);
+    expect(terms).not.toContain(`${CANCEL_BIGGER.feePercent}%`);
     expect(terms).not.toContain("working days");
     expect(terms).not.toContain("\u2014");
   });

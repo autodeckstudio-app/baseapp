@@ -28,6 +28,10 @@ export default function StudioLoginScreen() {
     try {
       await signInWithPopup(auth, provider);
       router.replace("/(tabs)");
+      // Stay busy until this screen is replaced so login does not flash back;
+      // the timer releases the button if navigation never happens.
+      setTimeout(() => setLoading(false), 10000);
+      return;
     } catch (e) {
       const code = (e as FirebaseError).code ?? "";
       if (/popup-closed|cancelled-popup/.test(code)) {
@@ -43,9 +47,8 @@ export default function StudioLoginScreen() {
       } else {
         setProblem(`Could not sign in with Google (${code || "unknown"}).`);
       }
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }
 
   async function handleLogin() {

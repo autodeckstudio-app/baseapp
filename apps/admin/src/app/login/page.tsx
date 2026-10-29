@@ -26,12 +26,16 @@ export default function LoginPage() {
     setSubmitting(true);
     setLocalError(null);
     try {
-      await signIn();
+      const outcome = await signIn();
+      // Signed in: stay busy until the redirect replaces this page, so the
+      // sign-in screen does not flash back. A safety release stops a stuck
+      // navigation from leaving the button disabled for good.
+      if (outcome === "signed-in") window.setTimeout(() => setSubmitting(false), 10000);
+      else setSubmitting(false);
       // "signed-in" is handled by the effect above; "mfa" shows the code
       // form; "redirect" leaves the page.
     } catch {
       // auth-context sets the precise message (or none for a closed popup)
-    } finally {
       setSubmitting(false);
     }
   }
@@ -101,7 +105,7 @@ export default function LoginPage() {
                   style={{ height: AUTH.buttonHeight, borderRadius: AUTH.buttonRadius, background: "#F3F1EC", color: "#0C0D0F", border: 0, fontFamily: "inherit", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, opacity: submitting || loading ? 0.6 : 1 }}
                 >
                   <GoogleMark />
-                  {submitting ? "Opening Google…" : "Continue with Google"}
+                  {submitting && user && claims ? "Opening admin…" : submitting ? "Opening Google…" : "Continue with Google"}
                 </button>
                 {message && (
                   <p className="ax-alert" role="alert">

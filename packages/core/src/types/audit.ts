@@ -116,6 +116,7 @@ export type AuditAction =
   | "carListing.reviewed"
   | "carListing.sold"
   | "carListing.photoRemoved"
+  | "carListing.photoApproved"
   | "carListing.photoReplaced"
   | "carLead.created";
 

@@ -1,10 +1,10 @@
 // Cars for sale: studio stock plus customer submissions behind admin approval.
 // Everything goes through callables so private seller data never reaches a buyer.
-import { publicListingView } from "../../lib/public-listing.js";
+import { canServePublicPhoto, PUBLIC_LISTING_PHOTOS, publicListingView, type PublicListingPhotoReview } from "../../lib/public-listing.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { FIRST_STUDIO_ID, FIRST_TENANT_ID, type CarLead, type CarListing, type CarListingView } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -21,6 +21,7 @@ import {
   removeMyListingPhotoSchema,
   replaceMyListingPhotoSchema,
   noContactInText,
+  approveListingPhotoSchema,
   reviewListingSchema,
   setLeadStatusSchema,
   submitMyListingSchema,
@@ -229,6 +230,47 @@ export const reviewListing = onCall({ region: "asia-south1" }, async (request) =
   return { id: ref.id };
 });
 
+// Admin: pin ONE reviewed photo as the public cover. Re-approving replaces the pin; removing or
+// replacing the photo on the listing revokes it automatically (path/generation no longer matches).
+// expectedSha256 pins an approval to exact reviewed bytes: a changed photo can never be silently approved.
+export const approveListingPhoto = onCall({ region: "asia-south1" }, async (request) => {
+  const user = extractUser(request);
+  assertRole(user, "admin", "superadmin");
+  const d = validate(approveListingPhotoSchema, request.data);
+  await enforceRateLimit(subjectFrom(user), "gallery.create");
+  const db = getFirestore();
+  const snap = await db.collection(COLLECTIONS.carListings()).doc(d.listingId).get();
+  if (!snap.exists) throw new HttpsError("not-found", "Listing not found.");
+  const listing = snap.data() as CarListing;
+  assertTenant(user, listing.tenantId);
+  if (!d.photoPath.startsWith(`${listing.tenantId}/listings/`) || d.photoPath.includes(".."))
+    throw new HttpsError("invalid-argument", "That photo does not belong to this studio.");
+  if (!listing.photoPaths.includes(d.photoPath)) throw new HttpsError("invalid-argument", "That photo is not on this listing.");
+  const file = getStorage().bucket().file(d.photoPath);
+  const [bytes] = await file.download();
+  const [meta] = await file.getMetadata();
+  const review: PublicListingPhotoReview = {
+    tenantId: listing.tenantId,
+    sourcePath: d.photoPath,
+    sourceGeneration: String(meta.generation),
+    contentSha256: createHash("sha256").update(bytes).digest("hex"),
+    contentType: typeof meta.contentType === "string" ? meta.contentType : "image/jpeg",
+    byteSize: bytes.byteLength,
+    reviewedBy: user.uid,
+    reviewedAt: new Date().toISOString(),
+  };
+  if (d.expectedSha256 && review.contentSha256 !== d.expectedSha256.toLowerCase())
+    throw new HttpsError("failed-precondition", "The photo bytes changed since review. Nothing was approved.");
+  await db.runTransaction(async (tx) => {
+    tx.set(db.collection(PUBLIC_LISTING_PHOTOS).doc(d.listingId), review);
+    writeAuditLog(tx, {
+      action: "carListing.photoApproved", entityType: "carListing", entityId: d.listingId, user, studioId: listing.studioId,
+      after: { sourcePath: d.photoPath, contentSha256: review.contentSha256, byteSize: review.byteSize },
+    });
+  });
+  return { listingId: d.listingId, contentSha256: review.contentSha256 };
+});
+
 async function view(l: CarListing, uid: string): Promise<CarListingView> {
   const bucket = getStorage().bucket();
   const photoUrls = await Promise.all(l.photoPaths.map(async (p) => (await bucket.file(p).getSignedUrl({ version: "v4", action: "read", expires: Date.now() + 3600 * 1000 }))[0]));
@@ -331,6 +373,14 @@ export const listPublicCarListings = onCall({ region: "asia-south1", cors: true 
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 60);
   // Anonymous response is an explicit allowlist (see lib/public-listing.ts): no price, owner info, description or photos.
-  const listings = keep.map(publicListingView);
+  // photoUrl is the revocable handler URL, present only while a same-tenant review of a current photo exists;
+  // the handler re-checks live state and the exact object generation on every request and 404s otherwise.
+  const reviews = keep.length
+    ? await getFirestore().getAll(...keep.map((l) => getFirestore().collection(PUBLIC_LISTING_PHOTOS).doc(l.id)))
+    : [];
+  const reviewBy = new Map(reviews.filter((r) => r.exists).map((r) => [r.id, r.data() as PublicListingPhotoReview]));
+  const now2 = Date.now();
+  const base = `https://asia-south1-${process.env.GCLOUD_PROJECT ?? "autodeck-studio"}.cloudfunctions.net/publicListingPhoto`;
+  const listings = keep.map((l) => ({ ...publicListingView(l), photoUrl: canServePublicPhoto(l, reviewBy.get(l.id), now2) ? `${base}?listingId=${l.id}` : null }));
   return { listings };
 });

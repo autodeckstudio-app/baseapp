@@ -51,9 +51,15 @@ function WebGoogleButton({ onError }: { onError: (m: string | null) => void }) {
       onPress={() => {
         setBusy(true);
         onError(null);
+        // On success keep the button busy: the navigation guard replaces this
+        // screen once the session is ready, so the login screen does not
+        // flash back. The timer releases the button if that never happens.
         signInWithGooglePopup()
-          .catch((e: unknown) => onError(friendly(e)))
-          .finally(() => setBusy(false));
+          .then(() => { setTimeout(() => setBusy(false), 10000); })
+          .catch((e: unknown) => {
+            onError(friendly(e));
+            setBusy(false);
+          });
       }}
     />
   );

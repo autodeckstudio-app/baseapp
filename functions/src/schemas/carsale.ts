@@ -66,3 +66,7 @@ export const listCarLeadsSchema = z.object({}).strict();
 export const removeMyListingPhotoSchema = z.object({ listingId: z.string().min(1).max(120), index: z.number().int().min(0).max(11), expectedCount: z.number().int().min(1).max(12) }).strict();
 export const replaceMyListingPhotoSchema = z.object({ listingId: z.string().min(1).max(120), index: z.number().int().min(0).max(11), expectedCount: z.number().int().min(1).max(12), newPath: z.string().min(1).max(300) }).strict();
 export const markMyListingSoldSchema = z.object({ listingId: z.string().min(1) }).strict();
+
+export const approveListingPhotoSchema = z
+  .object({ listingId: z.string().min(1).max(40), photoPath: z.string().min(1).max(300), expectedSha256: z.string().regex(/^[0-9a-f]{64}$/i).optional() })
+  .strict();
