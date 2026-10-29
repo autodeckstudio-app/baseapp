@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -12,7 +13,7 @@ import { assertNumberUnused, readClaims, numberLockId, rcLockId, PAPER_LOCKS } f
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const RC_PATTERN = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
-type StoredPaper = PaperVerification & { evidencePath?: string | null; submittedBy?: string };
+type StoredPaper = PaperVerification & { evidencePath?: string | null; pendingEvidencePath?: string | null; submittedBy?: string };
 
 // Load the paper and prove the signed-in customer owns it (customerId, tenant and the car's owner all match).
 async function loadOwnedPaper(user: ReturnType<typeof extractCustomerUser>, paperId: string) {
@@ -49,7 +50,24 @@ export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) =
   await assertNumberUnused(db, { tenantId: paper.tenantId, customerId: user.uid, reference, exceptPaperId: paper.id });
 
   const now = new Date().toISOString();
-  const path = data.contentType ? `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.${EXT[data.contentType]}` : null;
+  // Every staged replacement gets its own unique path (nonce inside the paper's own prefix, so all
+  // paper-<id>. prefix guards still match). Two same-extension edits can never share a staging object,
+  // and a stale finalize can never match a newer edit's staging.
+  const path = data.contentType ? `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.${randomUUID().slice(0, 8)}.${EXT[data.contentType]}` : null;
+
+  // Mint the upload URL BEFORE any write, exactly like submitMyPaper: if signing fails, nothing has
+  // changed - the record keeps pointing at the existing photo and no edit is half-applied.
+  let uploadUrl: string | null = null;
+  let requiredHeaders: Record<string, string> | null = null;
+  if (path && data.contentType) {
+    [uploadUrl] = await getStorage().bucket().file(path).getSignedUrl({ version: "v4", action: "write", expires: Date.now() + 10 * 60 * 1000, contentType: data.contentType, extensionHeaders: { "x-goog-meta-ownerId": user.uid } });
+    requiredHeaders = { "Content-Type": data.contentType, "x-goog-meta-ownerId": user.uid };
+  }
+
+  // A replacement photo is STAGED, never swapped in here: evidencePath/evidenceUrl keep pointing at the
+  // existing photo until finalizeMyPaper confirms the new object exists. A failed or abandoned upload can
+  // no longer strand a genuine document without its evidence, whatever the file types involved.
+  const previousPending = paper.pendingEvidencePath ?? null;
   const update: Record<string, unknown> = {
     reference,
     ...(data.title !== undefined ? { title: data.title } : {}),
@@ -57,12 +75,12 @@ export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) =
     ...(data.expiresOn !== undefined ? { expiresOn: data.expiresOn } : {}),
     status: "PENDING",
     verificationMode: "review",
-    verificationReason: path ? "Photo upload is awaiting automatic checks." : "Edited by the owner. Manual review needed.",
+    verificationReason: path ? "Replacement photo is uploading; automatic checks follow." : "Edited by the owner. Manual review needed.",
     reviewedBy: null,
     reviewedAt: null,
     rejectionReason: null,
     updatedAt: now,
-    ...(path ? { evidencePath: path, evidenceUrl: null } : {}),
+    pendingEvidencePath: path,
   };
   await db.runTransaction(async (tx) => {
     // Re-read inside the transaction so a concurrent edit or replacement cannot slip past the checks above.
@@ -82,17 +100,12 @@ export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) =
       metadata: { by: "customer", kind: paper.kind, vehicleId: paper.vehicleId } });
   });
 
-  // Replacing the photo with another file type leaves the old object under a different name. Remove it, only if it is this paper's own file.
-  // Best effort: the record already points at the new path, so a failure here cannot break the edit (the dedupe/cleanup script can sweep leftovers).
+  // A stillborn earlier staging (edit saved but never finalized) leaves its object unreferenced; drop only
+  // that paper's own earlier pending object, best effort. The CURRENT evidence object is never touched here:
+  // it is replaced only when finalizeMyPaper promotes a confirmed upload.
   const ownPrefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
-  if (path && paper.evidencePath && paper.evidencePath !== path && paper.evidencePath.startsWith(ownPrefix) && !paper.evidencePath.includes("..")) {
-    try { await getStorage().bucket().file(paper.evidencePath).delete({ ignoreNotFound: true }); } catch { /* leftover object only */ }
-  }
-  let uploadUrl: string | null = null;
-  let requiredHeaders: Record<string, string> | null = null;
-  if (path && data.contentType) {
-    [uploadUrl] = await getStorage().bucket().file(path).getSignedUrl({ version: "v4", action: "write", expires: Date.now() + 10 * 60 * 1000, contentType: data.contentType, extensionHeaders: { "x-goog-meta-ownerId": user.uid } });
-    requiredHeaders = { "Content-Type": data.contentType, "x-goog-meta-ownerId": user.uid };
+  if (previousPending && previousPending !== path && previousPending !== paper.evidencePath && previousPending.startsWith(ownPrefix) && !previousPending.includes("..")) {
+    try { await getStorage().bucket().file(previousPending).delete({ ignoreNotFound: true }); } catch { /* leftover object only */ }
   }
   return { id: paper.id, uploadUrl, requiredHeaders };
 });
@@ -109,6 +122,11 @@ export const deleteMyPaper = onCall({ region: "asia-south1" }, async (request) =
     // Photo first. If Storage fails the record stays, so the customer can retry and nothing is orphaned. A missing object is fine (idempotent).
     try { await getStorage().bucket().file(paper.evidencePath).delete({ ignoreNotFound: true }); }
     catch { throw new HttpsError("unavailable", "Could not remove the photo. Nothing was deleted. Try again."); }
+  }
+  // A staged replacement that was never promoted is removed with the paper too. Best effort on purpose:
+  // aborting here would leave the record pointing at the already-deleted current evidence.
+  if (paper.pendingEvidencePath && paper.pendingEvidencePath !== paper.evidencePath && paper.pendingEvidencePath.startsWith(prefix) && !paper.pendingEvidencePath.includes("..")) {
+    try { await getStorage().bucket().file(paper.pendingEvidencePath).delete({ ignoreNotFound: true }); } catch { /* leftover object only */ }
   }
   await db.runTransaction(async (tx) => {
     const locks = [db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, user.uid, paper.reference)), ...(paper.kind === "RC" ? [db.collection(PAPER_LOCKS).doc(rcLockId(paper.vehicleId))] : [])];

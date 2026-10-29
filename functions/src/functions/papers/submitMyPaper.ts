@@ -109,7 +109,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
   const ref = db.collection(COLLECTIONS.papers()).doc(paperId);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Document not found.");
-  const paper = snap.data() as PaperVerification & { evidencePath?: string; submittedBy?: string };
+  const paper = snap.data() as PaperVerification & { evidencePath?: string; pendingEvidencePath?: string | null; submittedBy?: string };
   assertTenant(user, paper.tenantId);
   if (paper.customerId !== user.uid || paper.submittedBy !== "customer") throw new HttpsError("permission-denied", "Not your document.");
   if (paper.status !== "PENDING" || paper.verificationMode === "automatic") return { status: paper.status };
@@ -117,8 +117,12 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
   const vehicle = vehicleSnap.data() as Vehicle | undefined;
   if (!vehicle || vehicle.ownerId !== user.uid || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Vehicle ownership changed.");
   const prefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
-  if (!paper.evidencePath?.startsWith(prefix) || paper.evidencePath.includes("..")) throw new HttpsError("failed-precondition", "Upload the original document photo first.");
-  const file = getStorage().bucket().file(paper.evidencePath);
+  // A replacement photo is staged on the record as pendingEvidencePath by updateMyPaper; the current
+  // evidence keeps serving until the new object is confirmed here. Fresh uploads use evidencePath directly.
+  const pending = paper.pendingEvidencePath ?? null;
+  const effectivePath = pending ?? paper.evidencePath;
+  if (!effectivePath?.startsWith(prefix) || effectivePath.includes("..")) throw new HttpsError("failed-precondition", "Upload the original document photo first.");
+  const file = getStorage().bucket().file(effectivePath);
   let decision: PaperDecision = { status: "PENDING", reason: "The photo could not be read. Please review the original.", extractedPlate: null, extractedExpiry: null };
   let evidenceUrl: string | null = null;
   try {
@@ -126,17 +130,31 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     if (Number(meta.size) > 10 * 1024 * 1024 || !/^image\/(jpeg|png|webp)$/.test(meta.contentType ?? "")) throw new Error("Unsupported image");
     const token = randomUUID();
     await file.setMetadata({ metadata: { ...(meta.metadata ?? {}), firebaseStorageDownloadTokens: token } });
-    evidenceUrl = `https://firebasestorage.googleapis.com/v0/b/${file.bucket.name}/o/${encodeURIComponent(paper.evidencePath)}?alt=media&token=${token}`;
+    evidenceUrl = `https://firebasestorage.googleapis.com/v0/b/${file.bucket.name}/o/${encodeURIComponent(effectivePath)}?alt=media&token=${token}`;
     const [image] = await file.download();
     const result = await readPaperImage(image);
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     decision = decidePaper(result.text, result.confidence, paper.kind, vehicle.registrationNumber, today);
   } catch (err) {
     logger.warn("Document OCR requires manual review", { paperId, message: err instanceof Error ? err.message : "OCR failed" });
+    if (pending) {
+      // The staged object never landed (or is unreadable): keep the existing evidence exactly as it was.
+      // The record stays in manual review; the owner can retry finalize or re-edit. Nothing is promoted,
+      // nothing is deleted, and the previous photo keeps serving.
+      return { status: "PENDING", reason: "The new photo could not be read. The previous photo is still on file." };
+    }
   }
+  let promoted = false;
   await db.runTransaction(async (tx) => {
-    const current = (await tx.get(ref)).data() as PaperVerification | undefined;
+    promoted = false; // reflects only the attempt that finally commits
+    const current = (await tx.get(ref)).data() as (PaperVerification & { evidencePath?: string | null; pendingEvidencePath?: string | null }) | undefined;
     if (!current || current.status !== "PENDING" || current.verificationMode === "manual") return;
+    // Supersede guard: this call may only write the exact state it read. A staged-photo finalize applies
+    // only while its own staging is still current; a submit-flow finalize applies only while no edit has
+    // staged a replacement and the evidence is untouched. Otherwise an older finalize would overwrite the
+    // newer edit's review state or promote the wrong photo - so it writes nothing at all.
+    if (pending ? current.pendingEvidencePath !== pending : current.pendingEvidencePath != null || current.evidencePath !== paper.evidencePath) return;
+    promoted = !!pending;
     const now = new Date().toISOString();
     tx.update(ref, {
       status: decision.status,
@@ -145,6 +163,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
       extractedPlate: decision.extractedPlate,
       extractedExpiry: decision.extractedExpiry,
       ...(decision.extractedExpiry ? { expiresOn: decision.extractedExpiry } : { expiresOn: null }),
+      ...(pending ? { evidencePath: pending, pendingEvidencePath: null } : {}),
       evidenceUrl,
       reviewedBy: decision.status === "PENDING" ? null : "system",
       reviewedAt: decision.status === "PENDING" ? null : now,
@@ -154,5 +173,10 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     writeAuditLog(tx, { action: "paper.reviewed", entityType: "paper", entityId: paperId, user: { ...user, uid: "system" }, studioId: paper.studioId,
       before: { status: current.status }, after: { status: decision.status, reason: decision.reason, kind: paper.kind, vehicleId: paper.vehicleId, registrationNumber: vehicle.registrationNumber }, metadata: { automatic: true } });
   });
+  // The previous photo is removed only after its confirmed replacement is promoted. Best effort and only
+  // ever this paper's own object; a failure leaves a leftover for the dedupe/cleanup sweep, not lost evidence.
+  if (promoted && paper.evidencePath && paper.evidencePath !== pending && paper.evidencePath.startsWith(prefix) && !paper.evidencePath.includes("..")) {
+    try { await getStorage().bucket().file(paper.evidencePath).delete({ ignoreNotFound: true }); } catch { /* leftover object only */ }
+  }
   return { status: decision.status, reason: decision.reason };
 });

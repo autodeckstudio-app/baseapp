@@ -78,10 +78,12 @@ describe("updateMyPaper (points 5, 6)", () => {
     await updateMyPaper.run(req("me", { paperId: "rc", reference: "gj 05 cd 9999" }));
     expect(h.writes[0].d.reference).toBe("GJ05CD9999");
   });
-  it("a photo edit returns a signed upload for the same finalize path and clears the old url", async () => {
+  it("a photo edit stages the replacement as pendingEvidencePath and preserves the current evidence until finalize (Oct 29 fix)", async () => {
     const r: any = await updateMyPaper.run(req("me", { paperId: "a", contentType: "image/png" }));
     expect(r.uploadUrl).toBe("https://signed.example/put");
-    expect(h.writes[0].d).toMatchObject({ evidencePath: "t/vehicles/v1/paper-a.png", evidenceUrl: null });
+    expect(h.writes[0].d.pendingEvidencePath).toMatch(/^t\/vehicles\/v1\/paper-a\.[0-9a-f]{8}\.png$/);
+    expect(h.writes[0].d).not.toHaveProperty("evidencePath");
+    expect(h.writes[0].d).not.toHaveProperty("evidenceUrl");
   });
 });
 describe("deleteMyPaper (point 12)", () => {
@@ -103,16 +105,16 @@ describe("deleteMyPaper (point 12)", () => {
     expect(h.storageDeleted).toEqual(["t/vehicles/v1/paper-a.jpg"]);
     expect(h.rows.has("papers/b")).toBe(true);
   });
-  it("replacing the photo with another file type removes the old own object; the same type overwrites in place; a cleanup failure cannot break the edit", async () => {
+  it("replacing the photo never deletes the current evidence in the edit itself; the old object is removed only when finalize promotes the confirmed upload (Oct 29 fix)", async () => {
     await updateMyPaper.run(req("me", { paperId: "a", contentType: "image/png" }));
-    expect(h.storageDeleted).toEqual(["t/vehicles/v1/paper-a.jpg"]);
-    expect(h.rows.get("papers/a").evidencePath).toBe("t/vehicles/v1/paper-a.png");
-    h.storageDeleted.length = 0;
+    expect(h.storageDeleted).toHaveLength(0); // old object survives an abandoned or failed upload
+    expect(h.rows.get("papers/a").evidencePath).toBe("t/vehicles/v1/paper-a.jpg"); // unchanged
+    expect(h.rows.get("papers/a").pendingEvidencePath).toMatch(/^t\/vehicles\/v1\/paper-a\.[0-9a-f]{8}\.png$/); // staged
     await updateMyPaper.run(req("me", { paperId: "b", contentType: "image/jpeg" }));
-    expect(h.storageDeleted).toHaveLength(0);
+    expect(h.storageDeleted).toHaveLength(0); // same-type edit also touches nothing
     h.storageFail = true;
-    await expect(updateMyPaper.run(req("me", { paperId: "a", contentType: "image/webp" }))).resolves.toBeDefined();
-    expect(h.rows.get("papers/a").evidencePath).toBe("t/vehicles/v1/paper-a.webp");
+    await expect(updateMyPaper.run(req("me", { paperId: "a", contentType: "image/webp" }))).resolves.toBeDefined(); // a stale-pending sweep failure cannot break the edit
+    expect(h.rows.get("papers/a").pendingEvidencePath).toMatch(/^t\/vehicles\/v1\/paper-a\.[0-9a-f]{8}\.webp$/);
   });
   it("never deletes an object outside this paper's own path", async () => {
     h.rows.set("papers/evil", paper("evil", { evidencePath: "t/vehicles/v2/paper-x.jpg" }));
