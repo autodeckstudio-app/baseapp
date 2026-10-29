@@ -4,7 +4,7 @@ import { nightGroundStyle, nightSurfaceStyle } from "@autodeck/ui/theme";
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput as RNTextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { listenToInspection, updateInspection, finalizeInspection } from "../../../../lib/inspection-service";
+import { listenToInspection, updateInspection, finalizeInspection, inspectionLoadMessage } from "../../../../lib/inspection-service";
 import type { Inspection, InspectionArea, InspectionRating } from "@autodeck/core";
 import { colors, spacing, radius, typography, Button, StatusBadge, LoadingState, ErrorState } from "@autodeck/ui";
 import { INSPECTION_PHOTOS_ENABLED } from "../../../../lib/backend-features";
@@ -55,7 +55,7 @@ export default function InspectionScreen() {
           return already || !!i;
         });
       },
-      (err) => setError(err.message),
+      (err) => setError(inspectionLoadMessage(err as { code?: string; message?: string })),
     );
   }, [jobId,retryTick]);
 

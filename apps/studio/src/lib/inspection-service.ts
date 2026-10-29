@@ -43,3 +43,13 @@ export async function finalizeInspection(jobId: string): Promise<FinalizeInspect
   const result = await fn({ jobId });
   return result.data;
 }
+
+/** What to tell staff when the inspection screen cannot read its document. A job whose inspection was never started has
+ *  no document, and Firestore reports that read as permission-denied (the rules read the document's own fields).
+ *  Message only: nothing is started or changed, and the rules are untouched. */
+export function inspectionLoadMessage(err: { code?: string; message?: string }): string {
+  if (err.code === "permission-denied" || /permission|Null value error/i.test(err.message ?? "")) {
+    return "This inspection has not been started yet, or you cannot open it. Go back to the job and tap Start inspection.";
+  }
+  return err.message || "Could not load the inspection.";
+}
