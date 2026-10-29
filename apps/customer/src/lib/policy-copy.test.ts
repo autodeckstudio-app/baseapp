@@ -11,9 +11,15 @@ describe("cancel bands come from one source", () => {
     expect(cancellationLine("washing")).toContain("4 hours");
     expect(cancellationLine("ceramic")).toContain("24 hours");
   });
-  it("app FAQs use the core summary, and the site FAQ and Terms say the same words", () => {
+  it("app FAQs retain the core summary while the public site uses approved contact-first terms", () => {
     for (const f of ["./studio-info.ts", "./showcase.ts"]) expect(r(f)).toContain("cancellationPolicySummary()");
-    expect(r("../../../site/src/pages/terms.astro")).toContain(cancellationPolicySummary());
-    expect(r("../../../site/src/pages/faq.astro")).toContain(cancellationPolicySummary());
+    const approved = "For cancellation, refund, pickup, warranty or membership terms, please contact AutoDeck before confirming your booking.";
+    for (const page of ["terms", "faq"]) {
+      expect(r(`../../../site/src/pages/${page}.astro`)).toContain(`../data/redesign/${page}.html?raw`);
+      const content = r(`../../../site/src/data/redesign/${page}.html`);
+      expect(content).toContain(approved);
+      expect(content).not.toContain(cancellationPolicySummary());
+      expect(content).not.toMatch(/conditions shown for your booking before confirming|Your booking shows the final terms/i);
+    }
   });
 });

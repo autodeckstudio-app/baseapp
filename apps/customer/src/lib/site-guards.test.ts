@@ -25,13 +25,25 @@ describe("public site guards", () => {
       expect(existsSync(join(site, "src/pages", `${file}.astro`)), p).toBe(true);
     }
   });
-  it("published legal text matches the approved drafts: no draft or lawyer line, no GST claim, 30-day Club plans", () => {
-    const t = readFileSync(join(site, "src/pages/terms.astro"), "utf8");
-    const pr = readFileSync(join(site, "src/pages/privacy.astro"), "utf8");
-    for (const x of [t, pr]) { expect(x).not.toMatch(/lawyer|Not published|DRAFT|Owner to confirm/i); expect(x).toContain("Shalin Sheth"); }
-    // Owner rule 18 Oct: a Club plan belongs to the account and works for any car in the garage.
-    expect(t).toContain("any car in your garage"); expect(t).not.toMatch(/car on the plan/i);
-    expect(t).not.toMatch(/include GST/i); expect(t).toContain("30 days"); expect(t).toContain("autodeckstudio@gmail.com");
+  it("published legal content keeps approved neutral Terms and privacy protections", () => {
+    for (const page of ["terms", "privacy"]) {
+      const wrapper = readFileSync(join(site, `src/pages/${page}.astro`), "utf8");
+      expect(wrapper).toContain(`../data/redesign/${page}.html?raw`);
+    }
+    const t = readFileSync(join(site, "src/data/redesign/terms.html"), "utf8");
+    const pr = readFileSync(join(site, "src/data/redesign/privacy.html"), "utf8");
+    const faq = readFileSync(join(site, "src/data/redesign/faq.html"), "utf8");
+    for (const x of [t, pr]) expect(x).not.toMatch(/lawyer|Not published|DRAFT|Owner to confirm/i);
+    expect(t).toContain("For cancellation, refund, pickup, warranty or membership terms, please contact AutoDeck before confirming your booking.");
+    expect(t).not.toMatch(/include GST|4 hours|24 hours|Rs 100|20%|30 days|guaranteed/i);
+    expect(pr).toContain("Shalin Sheth");
+    expect(pr).toContain("autodeckstudio@gmail.com");
+    expect(pr).toContain("We do not sell your data");
+    expect(pr).toContain("Card and UPI details are handled by Razorpay. We do not store them.");
+    expect(pr).toContain("your name and phone, which only the studio sees");
+    expect(faq).toContain("any car in your garage");
+    expect(faq).toContain("Club plans last 30 days");
+    expect(faq).not.toMatch(/car on the plan/i);
   });
   it("the app links Terms and Privacy to the published pages", () => {
     const info = readFileSync(join(__dirname, "studio-info.ts"), "utf8");
