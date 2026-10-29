@@ -283,6 +283,8 @@ export default function BookingDetailScreen() {
   // Plain, factual timing against the planned slot. No ETA beyond the planned end.
   const vt = job && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? visitTiming(job, minuteNow) : null;
   const timingLine = vt ? customerTimingLine(vt) : "";
+  // Once the planned end has passed without the car arriving, or while the job runs past it, that time is the plan, not a current estimate.
+  const plannedEndPassed = vt?.phase === "not_arrived" || vt?.phase === "overrun";
   const displayDate = scheduledAt.toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
     weekday: "long",
@@ -393,7 +395,7 @@ export default function BookingDetailScreen() {
       <Pane pad="gap">
         <Row detailTone="secondary" title="Time" detail={job?.status === "STANDBY" ? "Waiting - no slot reserved" : `${displayTime}`} />
         <Row detailTone="secondary" title="Duration" detail={formatServiceTime(booking.durationMinutes)} />
-        {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title="Expected ready" detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
+        {job?.status === "STANDBY" || ready ? <Row detailTone="secondary" title={plannedEndPassed ? "Planned end" : "Expected ready"} detail={job?.status === "STANDBY" ? "Set when a bay becomes available" : `${displayEndDate}, ${ready!.time}`} last={!(booking.notes !== null && booking.notes.trim() !== "")} /> : null}
         {booking.notes !== null && booking.notes.trim() !== "" ? <Row detailTone="secondary" title="Notes" detail={booking.notes} last /> : null}
       </Pane>
 
