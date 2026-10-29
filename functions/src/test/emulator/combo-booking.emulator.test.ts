@@ -1,0 +1,47 @@
+import { describe, it, expect } from "vitest";
+import { getFirestore } from "firebase-admin/firestore";
+import { createBooking } from "../../functions/booking/createBooking.js";
+// Combo = one main service plus extraServiceIds in a single createBooking call (real callable, Firestore emulator).
+const db = getFirestore(); const T = "combo-tenant"; const S = "combo-studio"; let n = 0;
+const uid = (p: string) => `${p}-${Date.now()}-${++n}`;
+const monday = (() => { let d = new Date(Date.now() + 6 * 86400000); while (d.getUTCDay() !== 1) d = new Date(d.getTime() + 86400000); return d.toISOString().slice(0, 10); })();
+const HOURS = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({ dayOfWeek, open: "09:00", close: "19:00", closed: dayOfWeek === 0 }));
+async function seed(serviceIds: string[], tag: string) {
+  const now = new Date().toISOString(); const studio = `${S}-${tag}`;
+  await db.collection("studioConfig").doc(studio).set({ id: studio, tenantId: T, studioId: studio, name: "Combo Studio", timezone: "Asia/Kolkata", currency: "INR", taxRatePercent: 18, taxDescription: "GST 18%", operatingHours: HOURS, holidays: [], vehiclePlateRegex: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$", slotIntervalMinutes: 30, maxAdvanceBookingDays: 30, cancellationWindowHours: 24, bays: [1, 2].map((i) => ({ id: `${studio}-bay-${i}`, tenantId: T, studioId: studio, name: `Bay ${i}`, bayType: "wash", active: true })), updatedAt: now });
+  const names: Record<string, string> = { "menu-wash-exterior": "Exterior detail wash", "menu-wash-interior": "Interior deep clean" };
+  for (const [i, id] of serviceIds.entries()) await db.collection("services").doc(id).set({ id, tenantId: T, name: names[id] ?? `Service ${i}`, category: "wash", brand: "x", description: "x", basePrice: 50000 + i * 10000, currency: "INR", estimatedDurationMinutes: 45 + i * 15, warrantyLabel: null, warrantyDurationValue: null, warrantyDurationUnit: null, vehicleCategoryPricing: [], requiredBayType: "wash", membershipWashEligible: false, active: true, displayOrder: i, createdAt: now, updatedAt: now });
+  const cust = uid("cust"); const veh = uid("veh");
+  await db.collection("customers").doc(cust).set({ id: cust, tenantId: T, authUid: cust, name: "Combo Customer", phone: "+919876543210", notificationPrefs: { push: false, quietMode: false }, createdAt: now, updatedAt: now, deletedAt: null });
+  await db.collection("vehicles").doc(veh).set({ id: veh, tenantId: T, ownerId: cust, registrationNumber: "GJ01CB" + String(n).padStart(4, "0"), make: "Toyota", model: "Fortuner", year: 2023, color: "Black", category: "suv", photoUrl: null, odometer: null, createdAt: now, updatedAt: now, deletedAt: null });
+  await db.collection("memberships").doc(`prio-${cust}`).set({ id: `prio-${cust}`, tenantId: T, customerId: cust, status: "active", prioritySlot: true, endDate: null });
+  return { studio, cust, veh };
+}
+const book = (x: { studio: string; cust: string; veh: string }, serviceId: string, extraServiceIds: string[]) =>
+  createBooking.run({ data: { serviceId, extraServiceIds, vehicleId: x.veh, vehicleCategory: "suv", studioId: x.studio, scheduledDate: monday, scheduledTime: "09:00", idempotencyKey: uid("idem") }, auth: { uid: x.cust, token: { role: "customer", tenantId: T, studioId: null } } } as never) as Promise<{ booking: any }>;
+const count = async (cust: string) => ({ bookings: (await db.collection("bookings").where("customerId", "==", cust).get()).size, jobs: (await db.collection("jobs").where("customerId", "==", cust).get()).size });
+
+describe("combo booking through createBooking", () => {
+  it("main + one extra: one booking, one job, extra priced and timed", async () => {
+    const x = await seed(["combo-main", "combo-extra"], "ok");
+    const { booking } = await book(x, "combo-main", ["combo-extra"]);
+    const pb = booking.priceBreakdown;
+    expect(pb.addOns.map((a: any) => a.id)).toEqual(["combo-extra"]);
+    expect(pb.subtotal).toBe(50000 + 60000);
+    expect(pb.total).toBe(pb.subtotal + pb.tax);
+    expect(booking.totalAmount).toBe(pb.total);
+    const job = (await db.collection("jobs").where("bookingId", "==", booking.id).get()).docs[0]!.data();
+    expect(job["totalAmount"]).toBe(pb.total);
+    expect(await count(x.cust)).toEqual({ bookings: 1, jobs: 1 });
+  });
+  it("Exterior + Interior extras are refused as the Full detail bundle and write nothing", async () => {
+    const x = await seed(["menu-wash-exterior", "menu-wash-interior"], "bundle");
+    await expect(book(x, "menu-wash-exterior", ["menu-wash-interior"])).rejects.toMatchObject({ message: expect.stringContaining("Full detail wash") });
+    expect(await count(x.cust)).toEqual({ bookings: 0, jobs: 0 });
+  });
+  it("the same service twice is refused and writes nothing", async () => {
+    const x = await seed(["combo-main2"], "dupe");
+    await expect(book(x, "combo-main2", ["combo-main2"])).rejects.toBeTruthy();
+    expect(await count(x.cust)).toEqual({ bookings: 0, jobs: 0 });
+  });
+});
