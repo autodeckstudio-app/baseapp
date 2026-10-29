@@ -30,14 +30,14 @@ function startHub(tenantId: string, hub: Hub): void {
   const toList = (snap: { docs: { data: () => unknown }[] }) => snap.docs.map((d) => d.data() as ServiceJob);
   const unsubs: Unsubscribe[] = [
     onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), orderBy("createdAt", "desc"), limit(LIST_LIMIT)),
-      (snap) => { recent = toList(snap); emit(); },
-      (err) => { hub.error = err; hub.subs.forEach((s) => s.onError(err)); }),
+      (snap) => { recent = toList(snap); hub.error = null; emit(); },
+      (err) => { hub.error = err; hub.data = null; recent = null; hub.subs.forEach((s) => s.onError(err)); }),
     // Equality-only queries (no orderBy). Whether the project's Firestore serves these without a new
     // composite index is NOT proven; a failure is shown to the user as a bounded-list notice.
     ...OPEN_JOB_STATUSES.map((status, i) =>
       onSnapshot(query(jobsCol, where("tenantId", "==", tenantId), where("status", "==", status)),
         (snap) => { open[i] = toList(snap); failed.delete(status); emit(); },
-        () => { open[i] = open[i] ?? []; failed.add(status); emit(); })),
+        () => { open[i] = []; failed.add(status); emit(); })),  // a dead feed is cleared, never kept as if current
   ];
   hub.stop = () => unsubs.forEach((u) => u());
 }
