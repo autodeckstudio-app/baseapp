@@ -31,7 +31,7 @@ async function loadOwnedPaper(user: ReturnType<typeof extractCustomerUser>, pape
 }
 
 // Customer edit: number, expiry, name and photo only. The change goes back to review. Reuses finalizeMyPaper for the photo.
-export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) => {
+export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public" }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(updateMyPaperSchema, request.data);
@@ -111,7 +111,7 @@ export const updateMyPaper = onCall({ region: "asia-south1" }, async (request) =
 });
 
 // Customer delete: only their own paper record and its photo. Never the car. Rules stay function-only.
-export const deleteMyPaper = onCall({ region: "asia-south1" }, async (request) => {
+export const deleteMyPaper = onCall({ region: "asia-south1", invoker: "public" }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(deleteMyPaperSchema, request.data);
