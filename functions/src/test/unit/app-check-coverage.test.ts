@@ -56,6 +56,7 @@ function listTsFilesRecursive(dir: string): string[] {
 const ENFORCED = [
   "approval/expireStaleApprovals.ts",
   "booking/adminCancelBooking.ts",
+  "booking/purgeTestBookings.ts",
   "employee/addStaffMember.ts",
   "employee/deactivateStaffMember.ts",
   "employee/updateStaffRole.ts",

@@ -106,6 +106,7 @@ export type AuditAction =
   | "gift.restored"
   | "gift.restore_skipped"
   | "booking.cancel_fee_settled"
+  | "booking.test_purged"
   | "gift.voided"
   | "gift.cancel_requested"
   | "offer.created"

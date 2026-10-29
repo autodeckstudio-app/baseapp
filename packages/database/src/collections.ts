@@ -52,6 +52,8 @@ export const COLLECTIONS = {
   carListings: () => "carListings",
   carLeads: () => "carLeads",
   studioConfig: () => "studioConfig",
+  // Recovery snapshots written by purgeTestBookings BEFORE any test-data delete: full JSON of every removed doc. Server only.
+  cleanupSnapshots: () => "cleanupSnapshots",
   auditLog: () => "auditLog",
   notifications: () => "notifications",
   // reviews/{bookingId} — one customer rating per completed booking (Cloud Function write only)

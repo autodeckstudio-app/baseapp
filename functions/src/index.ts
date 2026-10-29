@@ -33,6 +33,7 @@ export { getStudioInfo } from "./functions/studio/getStudioInfo.js";
 export { createBooking } from "./functions/booking/createBooking.js";
 export { cancelBooking } from "./functions/booking/cancelBooking.js";
 export { adminCancelBooking, settleCancellationFee } from "./functions/booking/adminCancelBooking.js";
+export { purgeTestBookings } from "./functions/booking/purgeTestBookings.js";
 export { getNoShowResolution, recordNoShowContact, previewNoShowResolution, resolveNoShow } from "./functions/booking/noShowReview.js";
 export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
 
