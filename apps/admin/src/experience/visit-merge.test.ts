@@ -25,7 +25,7 @@ describe("visit: booking panels live on the Job page", () => {
   });
   it("the booking page uses the same panels and hands over to the job once it exists", () => {
     expect(booking).toContain("<BookingPanels");
-    expect(booking).toContain("router.replace(`/jobs/${job.id}`)");
+    expect(booking).toContain("replaceWithoutCounting(router, `/jobs/${job.id}`)");
   });
   it("the quote, slot and price sections all exist exactly once in the panels", () => {
     for (const label of [">Slot<", ">Quote<", ">Price<"]) expect(panels.split(label).length - 1).toBe(1);

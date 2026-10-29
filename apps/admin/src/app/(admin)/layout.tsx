@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdminAuth } from "../../lib/auth-context";
-import { notePageView } from "../../lib/go-back";
+import { clearReturning, notePageView, replaceWithoutCounting } from "../../lib/go-back";
+import { BOOKINGS_VIEW_KEY, dropListView, viewStillRelevant } from "../../lib/list-view-state";
 import { canSeeOffice, canVisit, homeFor } from "../../lib/staff-access";
 import { Ambient } from "../../experience/Ambient";
 import { StaffShell } from "../../experience/StaffShell";
@@ -21,14 +22,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname() ?? "/";
 
-  useEffect(() => { notePageView(); }, [pathname]);
+  useEffect(() => { notePageView(); if (!viewStillRelevant(pathname)) { dropListView(BOOKINGS_VIEW_KEY); clearReturning(); } }, [pathname]);
 
   useEffect(() => {
     if (loading) return;
     if (!user || !claims) {
       router.replace("/login");
     } else if (!canVisit(claims.role, pathname)) {
-      router.replace(homeFor(claims.role));
+      replaceWithoutCounting(router, homeFor(claims.role));
     }
   }, [loading, user, claims, pathname, router]);
 

@@ -158,7 +158,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/jobs")}>‹ Studio floor</button>
+      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/jobs")}>‹ Back</button>
 
       <header className="ax-hero">
         <div>

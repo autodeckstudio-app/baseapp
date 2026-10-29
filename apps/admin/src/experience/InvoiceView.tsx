@@ -45,7 +45,7 @@ export function InvoiceView(p: {
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back ax-noprint" onClick={p.onBack} style={{ background: "none", border: "none", padding: 0, minHeight: 0 }}>‹ Invoices</button>
+      <button type="button" className="ax-back ax-noprint" onClick={p.onBack} style={{ background: "none", border: "none", padding: 0, minHeight: 0 }}>‹ Back</button>
       {p.message && <p className="ax-status-msg ax-noprint">{p.message}</p>}
       <div className="ax-detail" style={{ marginTop: 16 }}>
         <div className="ax-detail-main ax-invoice-doc">

@@ -1,8 +1,8 @@
 "use client";
 import { membershipCoveredLabel } from "@autodeck/core";
 
-import { goBackOrTo } from "../../../../lib/go-back";
-import { useEffect, useState } from "react";
+import { goBackOrTo, replaceWithoutCounting } from "../../../../lib/go-back";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { bookingCode, isBookingMissed, type Booking, type ServiceJob, type Payment, type Invoice, type ApprovalRequest, type Customer, type Vehicle, type Service } from "@autodeck/core";
 import { useAdminAuth } from "../../../../lib/auth-context";
@@ -74,13 +74,14 @@ export default function BookingDetailPage() {
     void getStudioConfig(booking.studioId).then(c=>setBayName(c?.bays.find(b=>b.id===booking.bayId)?.name??"")).catch(()=>setBayName(""));
   },[booking?.studioId,booking?.bayId,attempt]);
 
+  const redirected = useRef(false); // the redirect (and its page-count adjustment) happens once, even if job snapshots repeat
   // One detail page per visit: once the car is checked in, the Job page shows the booking too.
   useEffect(() => {
     // Redirect only once the car is at the studio (checked in or later):
     // pre-arrival bookings and cancelled no-shows keep this page, where
     // contact, quotes, reschedules and the no-show review live.
     const LIVE_STATUSES = ["STANDBY", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY", "DELIVERED"];
-    if (job && LIVE_STATUSES.includes(job.status)) router.replace(`/jobs/${job.id}`);
+    if (job && LIVE_STATUSES.includes(job.status) && !redirected.current) { redirected.current = true; replaceWithoutCounting(router, `/jobs/${job.id}`); }
   }, [job, router]);
 
   if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
@@ -99,7 +100,7 @@ export default function BookingDetailPage() {
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/bookings")}>‹ Bookings</button>
+      <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/bookings")}>‹ Back</button>
 
       <header className="ax-hero">
         <div>

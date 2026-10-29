@@ -139,7 +139,7 @@ export function CustomerView({ d, services, onBack, onOpen, onSave, onSaveVehicl
 
   return (
     <div className="ax-page">
-      <button type="button" className="ax-back" onClick={onBack} style={{ background: "none", border: "none", padding: 0, minHeight: 0 }}>‹ Customers</button>
+      <button type="button" className="ax-back" onClick={onBack} style={{ background: "none", border: "none", padding: 0, minHeight: 0 }}>‹ Back</button>
       <div className="ax-hero">
         <div>
           <p className="ax-label">Customer since {formatDate(d.customer.createdAt)}</p>

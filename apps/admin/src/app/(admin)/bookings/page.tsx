@@ -14,6 +14,8 @@ import { formatPaise, formatDateTime, formatTime, formatDayLong, shiftDay, studi
 import { statusLabel } from "../../../lib/status-label";
 import { DayAgenda, type AgendaItem } from "../../../experience/DayAgenda";
 import { useLabels } from "../../../lib/use-labels";
+import { BOOKINGS_VIEW_KEY, dropListView, loadReturnedListView, saveListView } from "../../../lib/list-view-state";
+import { clearReturning } from "../../../lib/go-back";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Customer, Vehicle, Service } from "@autodeck/core";
 
@@ -26,11 +28,14 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<BookingStatus | "">("");
+  // Back from a booking returns to the list view the person left. Opening Bookings any other way starts at the default.
+  const savedView = () => loadReturnedListView(BOOKINGS_VIEW_KEY, ["status", "date", "serviceId", "search"]);
+  const [status, setStatus] = useState<BookingStatus | "">(() => { const s = savedView().status; return s && (STATUSES as string[]).includes(s) ? (s as BookingStatus) : ""; });
   const today = studioToday();
-  const [date, setDate] = useState(today);
-  const [serviceId, setServiceId] = useState("");
-  const [search, setSearch] = useState("");
+  const [date, setDate] = useState(() => { const d = savedView().date; return d !== undefined && (d === "" || /^\d{4}-\d{2}-\d{2}$/.test(d)) ? d : today; });
+  const [serviceId, setServiceId] = useState(() => savedView().serviceId ?? "");
+  const [search, setSearch] = useState(() => savedView().search ?? "");
+  useEffect(() => { clearReturning(); dropListView(BOOKINGS_VIEW_KEY); }, []);
 
   useEffect(() => {
     if (!claims) return undefined;
@@ -49,6 +54,8 @@ export default function BookingsPage() {
   }, [claims]);
 
   const serviceIds = useMemo(() => Array.from(new Set(bookings.map((b) => b.serviceId))).sort(), [bookings]);
+  // A service that no longer has bookings cannot stay selected (it would show an empty list with no way to see why).
+  useEffect(() => { if (!loading && serviceId && !serviceIds.includes(serviceId)) setServiceId(""); }, [loading, serviceId, serviceIds]);
   const [bays, setBays] = useState<Array<{ id: string; name: string }>>([]);
   const studioKey = Array.from(new Set(bookings.map((b) => b.studioId))).sort().join(",");
   useEffect(() => {
@@ -99,7 +106,7 @@ export default function BookingsPage() {
   const pending = bookings.filter((b) => b.status === "PENDING").length;
   const upcoming = bookings.filter((b) => b.scheduledDate > today && (b.status === "CONFIRMED" || b.status === "PENDING")).length;
   const owedBadge = (b: Booking) => (b.status === "CANCELLED" && typeof b.manualRefundDuePaise === "number" && b.manualRefundDuePaise > 0 ? `Refund owed ${formatPaise(b.manualRefundDuePaise)}` : undefined);
-  const open = (id: string) => router.push(`/bookings/${id}`);
+  const open = (id: string) => { saveListView(BOOKINGS_VIEW_KEY, { status, date, serviceId, search }); router.push(`/bookings/${id}`); };
   const toItem = (b: Booking): AgendaItem => ({
     id: b.id,
     time: formatTime(b.scheduledAt),
