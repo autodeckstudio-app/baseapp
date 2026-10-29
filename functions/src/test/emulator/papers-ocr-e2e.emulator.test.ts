@@ -30,6 +30,10 @@ describe.skipIf(!process.env["TEST_SIGN_PRIVATE_KEY"])("synthetic doc through su
   it("match", async () => { const a = await run("match", "MH12AB1234", "INSURANCE"); expect(a["status"]).toBe("VERIFIED"); expect(a["verificationMode"]).toBe("automatic"); expect(a["extractedPlate"]).toBe("MH12AB1234"); expect(a["extractedExpiry"]).toBe("2027-12-31"); }, 90000);
   it("wrong plate", async () => { const a = await run("wrongplate", "MH12CD9999", "INSURANCE"); expect(a["status"]).toBe("PENDING"); expect(a["verificationReason"]).toMatch(/does not match vehicle/); expect(a["reviewedBy"]).toBeNull(); }, 90000);
   it("wrong kind", async () => { const a = await run("wrongkind", "MH12AB1234", "PUC"); expect(a["status"]).toBe("PENDING"); }, 90000);
+  // PUC flip: a synthetic PUC certificate (src/test/fixtures/synthetic-puc.png, generated, no real data) filed as PUC verifies automatically; the same image filed as INSURANCE does not.
+  const puc = readFileSync(resolve(__dirname, "../fixtures/synthetic-puc.png"));
+  it("PUC match flips to VERIFIED", async () => { const a = await run("pucmatch", "MH12AB1234", "PUC", "image/png", puc); expect(a["status"]).toBe("VERIFIED"); expect(a["verificationMode"]).toBe("automatic"); expect(a["extractedPlate"]).toBe("MH12AB1234"); expect(a["extractedExpiry"]).toBe("2027-10-19"); }, 90000);
+  it("PUC image filed as INSURANCE stays PENDING", async () => { const a = await run("puckind", "MH12AB1234", "INSURANCE", "image/png", puc); expect(a["status"]).toBe("PENDING"); }, 90000);
   it("non-image bytes fail closed to PENDING review", async () => { const a = await run("blank", "MH12AB1234", "INSURANCE", "image/png", Buffer.from("not an image")); expect(a["status"]).toBe("PENDING"); expect(a["verificationMode"]).toBe("review"); expect(a["reviewedBy"]).toBeNull(); }, 90000);
   it("edit with a new photo resets a VERIFIED paper to review, then finalize re-checks the new bytes", async () => {
     const u = `ocr-cust-edit-${Date.now()}`; const auth = { uid: u, token: { role: "customer", tenantId: T, studioId: null } };
