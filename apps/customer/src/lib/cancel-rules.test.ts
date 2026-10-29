@@ -75,7 +75,7 @@ describe("booking hero chips stay readable on the dark hero in Day mode", () => 
 describe("booking page text stays readable in Night", () => {
   const src = readFileSync(`${__dirname}/../app/(tabs)/bookings/[id].tsx`, "utf8");
   it("Time, Duration, Expected ready and Payment rows use the stronger detail tone", () => {
-    for (const t of ["Time", "Duration", "Expected ready", "Payment"]) expect(src).toMatch(new RegExp(t === "Expected ready" ? `<Row detailTone="secondary" title=\\{plannedEndPassed \\? "Planned end" : "Expected ready"\\}` : `<Row detailTone="secondary" title="${t}"`));
+    for (const t of ["Time", "Duration", "Expected ready", "Payment"]) expect(src).toMatch(new RegExp(t === "Expected ready" ? `<Row detailTone="secondary" title=\\{readyRowTitle\\(vt\\?\\.phase\\)\\}` : `<Row detailTone="secondary" title="${t}"`));
   });
   it("the reschedule explanation is not tertiary", () => {
     expect(src).not.toMatch(/tone="tertiary">\{rescheduleEligibility\.reason\}/);

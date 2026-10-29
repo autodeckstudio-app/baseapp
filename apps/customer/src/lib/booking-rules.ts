@@ -78,3 +78,9 @@ export function nextStepLine(o: { giftCovered: boolean; jobStatus?: string | nul
   if (o.giftCovered) return atStudio ? "Your gift covers this wash." : `Next: bring your car at ${o.time}. Your gift covers this wash.`;
   return atStudio ? "You pay at the studio, and the team marks it paid once you do." : `Next: bring your car at ${o.time}. You pay at the studio, and the team marks it paid once you do.`;
 }
+
+/** Title of the time row under the booking details. The time is the plan, not a current estimate, once the planned end has
+ *  passed without arrival or the job runs past it. Same time value either way; no new estimate is made. */
+export function readyRowTitle(phase: string | undefined | null): "Planned end" | "Expected ready" {
+  return phase === "not_arrived" || phase === "overrun" ? "Planned end" : "Expected ready";
+}
