@@ -7,8 +7,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS} from "../../../lib/brands";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { GROUP_PHOTO_CATEGORY, overviewGroups } from "../../../lib/catalogue-overview";
+import { soleServiceRedirect } from "../../../lib/catalogue-sole-redirect";
 import { COATING_BRANDS, PPF_BRANDS, MENU_GROUPS, COVERAGE_LEVELS, PAINT_INSPECTION_NOTE, GST_ENABLED, menuGroupOf, PICKUP_TILE_TEXT, needsInspectionNote, garageSectionOf, GARAGE_SECTIONS, type MenuGroup, type Service } from "@autodeck/core";
 import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -44,6 +45,9 @@ export default function CatalogueScreen() {
   const pricingVehicle = usePricingVehicle();
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState<string | null>(null);
+  // This screen stays mounted underneath pushed pages; only auto-redirect while it is the focused screen.
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const fromRoute = catParam ?? (need ? NEED_TO_GROUP[need] : undefined);
   // A chip opens that group's brands or products directly, never a card for the group you just picked.
   const cat = fromRoute ?? undefined; // a menu group key; the filter pills (grp) only narrow level 1
@@ -86,7 +90,7 @@ export default function CatalogueScreen() {
   const level: 1 | 2 = !catGroup ? 1 : 2;
   const soleLeaf = nodes.length === 1 && nodes[0]!.kind === "leaf" ? nodes[0]!.service.id : undefined;
   // A category with exactly one service has nothing to choose from: open it directly.
-  const soleId = !searching && !!fromRoute && catGroup && !!soleLeaf ? soleLeaf : undefined;
+  const soleId = soleServiceRedirect({ focused, searching, fromRoute, catGroup: catGroup?.key, soleLeaf });
   useEffect(() => { if (soleId) router.replace(`/(tabs)/catalogue/${soleId}`); }, [soleId, router]);
 
   const tile = (key: string, title: string, _sub: string | undefined, meta: string | undefined, _icon: IconName, onPress: () => void, image?: ImageSourcePropType) => (
