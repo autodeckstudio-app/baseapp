@@ -15,6 +15,17 @@
     <meta name="apple-mobile-web-app-title" content="Studio" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#F3EEFB" />
+    <style id="ios-input-zoom">
+      /* iOS Safari zooms the page when a focused field is under 16px and does not zoom back. Phone widths only;
+         pinch zoom stays allowed (the viewport meta is untouched). */
+      @media (max-width: 820px) {
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
+      }
+    </style>
     <style id="expo-reset">
       html,
       body {
