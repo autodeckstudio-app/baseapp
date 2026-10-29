@@ -14,6 +14,14 @@ describe("round7 points 1-2", () => {
     expect(src).toContain("if (!pinned || !trailing) return row;");
     expect(src).toContain("flex: 1, minWidth: 0");
   });
+  it("point 2: Garage keeps All fixed (only the car chips scroll); Services does not opt in, so it is unchanged", () => {
+    const src = read("src/ui/FilterPills.tsx");
+    expect(src).toContain("fixedFirst = false");
+    expect(src).toContain("const scrolled = lockFirst ? items.slice(1) : items;");
+    expect(src).toContain("{lockFirst ? pill(items[0]!) : null}");
+    expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills fixedFirst items=");
+    expect(read("src/app/(tabs)/catalogue/index.tsx")).not.toContain("fixedFirst");
+  });
 });
 describe("round7 points 3-4", () => {
   it("point 4: registration input is upper-cased, space-free and capped at 10; stored plates are not rewritten", async () => {
