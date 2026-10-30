@@ -14,7 +14,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { getJobIdForBooking } from "../../../lib/job-service";
 import { initiatePayment } from "../../../lib/payment-service";
-import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
+import { payOnline } from "../../../lib/razorpay-checkout";
 import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking, listenToJobById, bookingFromJob } from "../../../lib/job-service";
 import { listenToPaymentForJob } from "../../../lib/payment-service";
@@ -231,12 +231,13 @@ export default function BookingDetailScreen() {
     setPayingNow(true);
     setActionError(null);
     try {
-      if (!checkoutSupported) throw new Error("no checkout");
       const jobId = await getJobIdForBooking(booking.id, authB.claims.tenantId, authB.user.uid);
       if (!jobId) throw new Error("no job");
       const pay = await initiatePayment(jobId, "razorpay_payment_link");
-      const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: "Booking" }) : "failed";
+      const out = pay.paymentId ? await payOnline({ paymentId: pay.paymentId, paymentUrl: pay.paymentUrl, name: "AutoDeck Studio", description: "Booking" }) : "failed";
       if (out === "failed") setActionError("Payment failed, please retry.");
+      else if (out === "refunded") setActionError("This payment was refunded in full. Call the studio about this booking.");
+      else if (out === "partially_refunded") setActionError("Part of this payment was refunded. Call the studio about this booking.");
     } catch {
       setActionError("We could not open the payment. Please retry, or call the studio.");
     } finally {

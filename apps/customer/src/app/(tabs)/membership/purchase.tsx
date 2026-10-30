@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Linking, Modal } from "react-native";
+import { View, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
@@ -10,7 +10,8 @@ import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from ".
 import { db } from "../../../lib/firebase";
 import { purchaseMembership, upgradeMembership, generateIdempotencyKey } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
-import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
+import { payOnline, type OnlinePayOutcome } from "../../../lib/razorpay-checkout";
+import { MembershipDoneNotice } from "../../../ui/membership-done-notice";
 import { useAuth } from "../../../hooks/useAuth";
 import { carryOverLine } from "../../../lib/membership-rules";
 import { pickupsLine } from "../../../lib/membership-view";
@@ -30,6 +31,7 @@ export default function PurchaseMembershipScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"online" | "studio" | null>(null);
+  const [payOutcome, setPayOutcome] = useState<OnlinePayOutcome | null>(null);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   const uid = auth.status === "ready" ? auth.user.uid : null;
@@ -82,8 +84,9 @@ export default function PurchaseMembershipScreen() {
     setError(null);
     try {
       const result = await upgradeMembership(plan.id, method, idempotencyKey);
-      if (method === "razorpay_payment_link" && checkoutSupported && result.paymentId) {
-        try { await payWithCheckout(result.paymentId, { name: "AutoDeck Studio", description: `${plan.name} upgrade` }); } catch { /* payment link fallback below */ }
+      if (method === "razorpay_payment_link" && result.paymentId) {
+        const out = await payOnline({ paymentId: result.paymentId, paymentUrl: result.paymentUrl ?? null, name: "AutoDeck Studio", description: `${plan.name} upgrade` });
+        setPayOutcome(out);
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {
@@ -100,17 +103,9 @@ export default function PurchaseMembershipScreen() {
     try {
       // A pending upgrade is paid again through the same call (the server replays it, never makes a second one).
       const result = pendingIsUpgrade ? await upgradeMembership(plan.id, method, idempotencyKey) : await purchaseMembership(plan.id, method, idempotencyKey);
-      if (method === "razorpay_payment_link") {
-        let opened = false;
-        if (checkoutSupported && result.paymentId) {
-          try {
-            await payWithCheckout(result.paymentId, { name: "AutoDeck Studio", description: plan.name });
-            opened = true;
-          } catch {
-            opened = false; // checkout unavailable: fall back to the payment link below
-          }
-        }
-        if (!opened && result.paymentUrl) void Linking.openURL(result.paymentUrl).catch(() => undefined);
+      if (method === "razorpay_payment_link" && result.paymentId) {
+        const out = await payOnline({ paymentId: result.paymentId, paymentUrl: result.paymentUrl ?? null, name: "AutoDeck Studio", description: plan.name });
+        setPayOutcome(out);
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {
@@ -165,23 +160,16 @@ export default function PurchaseMembershipScreen() {
   }
 
   if (done || existing?.status === "pending") {
-    const isStudio = done === "studio";
     return (
       <Screen>
-        <Notice
-          title={isStudio ? "Pay at the studio to activate" : "Almost done"}
-          body={
-            isStudio
-              ? "Request saved. Pay at the studio front desk - benefits unlock once payment is confirmed. Unpaid requests are cancelled automatically."
-              : "Complete payment to activate. Closed the payment window? Tap Pay online to reopen it. Membership activates on its own once verified - benefits stay locked until then."
-          }
-          action={
-            <View style={{ gap: space.hair }}>
-              {!isStudio ? <Button label="Pay online" busy={purchasing} onPress={() => void handlePurchase("razorpay_payment_link")} /> : null}
-              <Button label="View status" kind="quiet" onPress={() => router.replace("/(tabs)/membership")} />
-              {error ? <T role="caption" tone="tertiary">{error}</T> : null}
-            </View>
-          }
+        <MembershipDoneNotice
+          studio={done === "studio"}
+          payOutcome={payOutcome}
+          activeTier={active?.tier ?? null}
+          error={error}
+          purchasing={purchasing}
+          onPayOnline={() => void handlePurchase("razorpay_payment_link")}
+          onViewStatus={() => router.replace("/(tabs)/membership")}
         />
       </Screen>
     );

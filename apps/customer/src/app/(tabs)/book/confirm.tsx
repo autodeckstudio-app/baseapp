@@ -13,7 +13,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID, bookingPayment } from "@autodeck/core";
 import { getJobIdForBooking } from "../../../lib/job-service";
 import { initiatePayment } from "../../../lib/payment-service";
-import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
+import { payOnline } from "../../../lib/razorpay-checkout";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
@@ -218,14 +218,14 @@ export default function BookingConfirmScreen() {
     setBooking(true);
     setBookError(null);
     try {
-      if (!h.paymentJobId || !checkoutSupported) throw new Error("no checkout");
+      if (!h.paymentJobId) throw new Error("no job");
       const pay = await initiatePayment(h.paymentJobId, "razorpay_payment_link");
-      const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: service.name }) : "failed";
+      const out = pay.paymentId ? await payOnline({ paymentId: pay.paymentId, paymentUrl: pay.paymentUrl, name: "AutoDeck Studio", description: service.name }) : "failed";
       if (out === "paid") {
         router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
         return;
       }
-      setBookError(out === "failed" ? "Payment failed, please retry." : "Payment not completed. Your slot is held for a few more minutes.");
+      setBookError(out === "failed" ? "Payment failed, please retry." : out === "refunded" ? "This payment was refunded in full. Call the studio about this booking." : out === "partially_refunded" ? "Part of this payment was refunded. Call the studio about this booking." : "Payment not completed. Your slot is held for a few more minutes.");
     } catch {
       setBookError("We could not open the payment. Please retry.");
     } finally {

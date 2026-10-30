@@ -1,6 +1,10 @@
 import { Platform } from "react-native";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "./firebase";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import * as WebBrowser from "expo-web-browser";
+import type { Payment } from "@autodeck/core";
+import { COLLECTIONS } from "@autodeck/database";
+import { db, functions } from "./firebase";
 
 type OrderOut = { orderId: string; amount: number; currency: string; keyId: string };
 type RzpResponse = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
@@ -46,4 +50,69 @@ export async function payWithCheckout(paymentId: string, opts: { name: string; d
     rzp.on("payment.failed", () => { try { (rzp as unknown as { close?: () => void }).close?.(); } catch { /* already closed */ } resolve("failed"); });
     rzp.open();
   });
+}
+
+import { terminalPayOutcome, type OnlinePayOutcome } from "./native-pay-core";
+export type { OnlinePayOutcome } from "./native-pay-core";
+
+async function paymentUrlFor(paymentId: string): Promise<string | null> {
+  const snap = await getDoc(doc(db, COLLECTIONS.payments(), paymentId));
+  return snap.exists() ? ((snap.data() as Payment).paymentUrl ?? null) : null;
+}
+
+/**
+ * Native (iOS/Android) online pay: open the Razorpay hosted payment page, then wait
+ * for the SERVER to settle the payment. The browser's return is never trusted: the
+ * only "paid" comes from the Payment doc, which the Razorpay webhook flips after
+ * signature-verified capture. If the customer closes the browser or the webhook is
+ * slow, the outcome is "pending" - the payment may still complete, and the UI must
+ * say so rather than claim success or failure.
+ */
+export async function payWithPaymentLink(paymentId: string, paymentUrl: string | null): Promise<OnlinePayOutcome> {
+  const url = paymentUrl ?? (await paymentUrlFor(paymentId).catch(() => null));
+  if (!url) return "failed";
+  return new Promise<OnlinePayOutcome>((resolve) => {
+    let settled = false;
+    let grace: ReturnType<typeof setTimeout> | null = null;
+    let cap: ReturnType<typeof setTimeout> | null = null;
+    const finish = (outcome: OnlinePayOutcome) => {
+      if (settled) return;
+      settled = true;
+      if (grace) clearTimeout(grace);
+      if (cap) clearTimeout(cap);
+      unsub();
+      resolve(outcome);
+    };
+    // Attached before the browser opens; onSnapshot also delivers the current doc
+    // immediately, so an already-reconciled payment resolves at once.
+    const unsub = onSnapshot(
+      doc(db, COLLECTIONS.payments(), paymentId),
+      (snap) => {
+        const terminal = snap.exists() ? terminalPayOutcome((snap.data() as Payment).status) : null;
+        if (terminal) finish(terminal);
+      },
+      () => finish("pending"),
+    );
+    cap = setTimeout(() => finish("pending"), 180_000);
+    void (async () => {
+      try {
+        await WebBrowser.openBrowserAsync(url);
+        // Browser closed with no terminal status yet: give the webhook a short grace window.
+        grace = setTimeout(() => finish("pending"), 20_000);
+      } catch {
+        finish("failed");
+      }
+    })();
+  });
+}
+
+/**
+ * One entry point for online pay on every platform. Web keeps Razorpay Standard
+ * Checkout (payWithCheckout); native uses the hosted payment link above.
+ */
+export async function payOnline(p: { paymentId: string; paymentUrl: string | null; name: string; description: string }): Promise<OnlinePayOutcome> {
+  if (Platform.OS === "web") {
+    return payWithCheckout(p.paymentId, { name: p.name, description: p.description });
+  }
+  return payWithPaymentLink(p.paymentId, p.paymentUrl);
 }

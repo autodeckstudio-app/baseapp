@@ -21,6 +21,7 @@ import type { Payment, ServiceJob, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import type { PaymentProvider } from "./payment-provider.js";
 import { verifyRefundAccounting } from "./refund-accounting.js";
+import { readMembershipForRefund, deactivateRefundedMembershipInTx, alertMembershipPartialRefundInTx } from "./membership-refund.js";
 
 // ambiguous = the submit outcome is UNKNOWN (response lost / provider cannot
   // confirm). It is an unresolved hold, NOT a failure: the reservation stays
@@ -394,6 +395,9 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       const booking = bookingSnap.data() as Booking;
       if (booking.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: booking ${fresh.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`);
     }
+    // Owner policy 30 Oct 2026: full refund of a membership payment ends that
+    // membership's benefits - read BEFORE any write in this transaction.
+    const membershipRefund = await readMembershipForRefund(tx, db, payment);
     // Cross-vintage tombstone lifecycle: read BEFORE any write in this
     // transaction. The tombstone exists to exclude the legacy producer while
     // this reservation is ACTIVE; once the projection commits, the payment's
@@ -462,6 +466,13 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
         amountPaise: fresh.amountPaise, currency: payment.currency,
         source: "outbox", requestId: fresh.id, createdAt: now,
       });
+    }
+    // Membership policy (Meet, 30 Oct 2026): FULL refund ends that membership's
+    // benefits; only this payment's own membership is touched. Partial (not
+    // offered for memberships) changes no membership and alerts staff.
+    if (membershipRefund) {
+      if (check.label === "refunded") deactivateRefundedMembershipInTx(tx, membershipRefund, payment, now);
+      else alertMembershipPartialRefundInTx(tx, db, payment, now);
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });
     if (releaseActiveGuard) tx.delete(activeGuardRef);

@@ -1,0 +1,1 @@
+export const AppBar = () => null;
