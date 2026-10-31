@@ -440,12 +440,13 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 /* Reviewed full-frame listing photographs only. Never crop away a review boundary. */
 .inventory-photo{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;background:#111214;border-radius:12px;margin:0 0 18px}
 
-/* iPhone hardware, with unchanged Day app screens in a separate safe display area. */
-.autodeck .phone{position:relative;overflow:visible;border:3px solid #8c8985;border-radius:32px;background:#f7f6f6;padding:24px 4px 12px!important;box-shadow:0 0 0 2px #171819,0 0 0 3px #4d4b48,0 22px 46px #0008;aspect-ratio:390/920}
-.autodeck .phone::before{content:'9:41';position:absolute;top:6px;left:14px;color:#171719;font:600 7px/12px Arial,sans-serif;letter-spacing:-.2px}
-.autodeck .phone::after{content:'';position:absolute;top:7px;left:50%;transform:translateX(-50%);width:29%;height:12px;border-radius:10px;background:#080809;box-shadow:0 0 0 1px #000}
-.autodeck .phone img{border-radius:15px!important;object-fit:contain;width:100%;height:100%;background:#f7f6f6}
-.autodeck .phone{background-image:linear-gradient(#171719,#171719);background-size:28% 3px;background-repeat:no-repeat;background-position:center calc(100% - 4px)}
+/* Coherent iPhone frame (edge-to-edge 390/933 day screen, OS chrome overlaid). The day screen fills the device edge-to-edge; the bezel is an outer ring and the iOS status bar, Dynamic Island and home indicator overlay the screen instead of separate hardware bands. */
+.autodeck .phone{position:relative;overflow:visible;border:0;background:#080809;padding:0;box-shadow:0 0 0 3px #17181a,0 0 0 4.5px #5a5c60,0 22px 46px #0009;aspect-ratio:390/933}
+.autodeck .phone img{border-radius:inherit!important;object-fit:cover;width:100%;height:100%;background:transparent}
+.autodeck .phone-os{position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+.autodeck .phone-statusbar{position:absolute;top:0;left:0;width:100%;max-width:none;max-height:none;display:block}
+.autodeck .phone-island{position:absolute;top:1.22%;left:50%;transform:translateX(-50%);width:32.3%;aspect-ratio:126/37;border-radius:999px;background:#080809}
+.autodeck .phone-home{position:absolute;bottom:.9%;left:50%;transform:translateX(-50%);width:35.4%;aspect-ratio:139/5;border-radius:999px;background:#171719}
 /* Edge-to-edge approved photograph, compact copy beneath a continuous lower shade. */
 .autodeck .inventory-card.has-reviewed-photo{position:relative;overflow:hidden;padding:194px 18px 12px;isolation:isolate;background:#0e1011}
 .autodeck #cars .inventory-card.has-reviewed-photo{padding:194px 18px 12px}
@@ -478,3 +479,44 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 .autodeck .cars-page-inventory .inventory-actions{margin-top:20px}
 @media(min-width:768px){.autodeck main>.cars-mode-switch{max-width:420px;margin-left:var(--canvas-pad);margin-right:auto}}
 .autodeck main:has(>.cars-mode-switch)>.page-intro{padding-bottom:24px}
+/* Service-page interactive Rover coverage zones (regions illustrative; glass/trim never tint) */
+.service-rover{position:relative;width:100%;aspect-ratio:4/3.2;margin-top:14px;border-radius:24px;border:1px solid #ffffff14;background:radial-gradient(120% 90% at 50% 82%,#f38a3514,transparent 62%),#0b0b0d;overflow:hidden;touch-action:pan-y}
+.service-rover .rover-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .4s}
+.service-rover.rover-ready .rover-poster{opacity:0}
+.service-rover .rover-canvas{position:absolute;inset:0}
+.service-rover .rover-canvas canvas{width:100%!important;height:100%!important;display:block}
+.service-rover:focus-visible{outline:2px solid #c99b71;outline-offset:2px}
+.zone-chips{display:flex;gap:10px;margin:16px 0 4px;flex-wrap:wrap}
+.zone-chips button{min-height:44px;padding:10px 18px;border-radius:999px;border:1px solid #ffffff2a;background:#ffffff08;color:#e8e6e2;font-size:14px;cursor:pointer}
+.zone-chips button[aria-pressed="true"]{border-color:#c99b71;background:#c99b711f;color:#f0d9c2}
+.zone-chips button:focus-visible{outline:2px solid #c99b71;outline-offset:2px}
+.service-enquiry-note{padding:18px 0;border-top:1px solid #ffffff24;margin-top:22px}
+.service-enquiry-note>span{display:block;font-weight:700;margin-bottom:8px}
+.service-enquiry-note p{font-size:14px}
+/* Option-tile depth + sheen */
+.visual-options details{box-shadow:0 1px 2px rgba(0,0,0,.35),0 10px 26px rgba(0,0,0,.22);transition:border-color .25s,box-shadow .25s,transform .25s}
+.visual-options details:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,.4),0 16px 34px rgba(0,0,0,.3)}
+.visual-options summary{position:relative;overflow:hidden}
+.visual-options summary::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,#ffffff14 48%,transparent 62%);transform:translateX(-120%);transition:transform .7s ease;pointer-events:none}
+.visual-options details:hover summary::after{transform:translateX(120%)}
+.scope-art i{box-shadow:7px 8px 0 #c99b7112,0 6px 14px rgba(0,0,0,.35)}
+
+/* App-capture safe area: the five real app captures are full-bleed 390x933 with
+   no reserved iOS strips, so a full-cover render hides each screen's top header
+   row behind the status/island overlay and the home indicator. Reserve the 59px
+   status strip and 30px home strip inside the frame and fit the entire capture
+   between them, aspect preserved, over the app's own Day background gradient so
+   the inset blends with the capture edges. Geometry is pinned with !important so
+   no breakpoint override can reintroduce the collision. */
+.autodeck .phone{background:linear-gradient(180deg,#f3f4fd 0%,#fdfdfb 50%,#f9f2f2 100%)}
+.phone img{position:absolute!important;left:0!important;top:6.3237%!important;width:100%!important;height:90.4609%!important;object-fit:contain!important;background:transparent}
+
+/* The app-five section head sits directly above the bordered panel; the generic
+   36px cinema-reveal entrance offset visibly crosses the panel border. Keep the
+   fade, drop the translate for this head only. */
+.autodeck.cinema-ready .app-five-stage .source-head.cinema-reveal:not(.is-seen){transform:none}
+
+/* /app walkthrough: .autodeck p{margin:0} out-specifies .walk-counter's own
+   margin, leaving the step counter flush under the phone where the frame's
+   outer bezel shadow clips it. Restore the designed caption spacing. */
+.autodeck .walk-phone-sticky .walk-counter{margin:18px 0 8px}

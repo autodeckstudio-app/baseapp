@@ -5,26 +5,32 @@
     "description": "Film coverage for high-impact panels, the full front or the full body.",
     "image": "/assets/redesign/service-paint-protection.jpg",
     "heading": "Choose the coverage first.",
-    "intro": "The catalogue separates film by coverage. Start with the area you want covered, then confirm the exact product with the studio.",
+    "intro": "Paint protection film (PPF) is a transparent urethane layer applied over painted panels. The film is designed to absorb and spread the force of stone chips and everyday scuffs, so less reaches the paint. Films differ in quality and properties, so the studio confirms which film and which coverage suit your car before quoting.",
     "choices": [
       [
         "High-impact kit",
-        "For selected impact-prone areas. Ask the studio to mark the exact panels on your car."
+        "Selected impact-prone areas. The studio confirms the exact panels on your car.",
+        1
       ],
       [
         "Full front",
-        "A front-coverage option. Confirm the panel list before the quote."
+        "The whole front end. The studio confirms the exact panels on your car.",
+        2
       ],
       [
         "Full body",
-        "A whole-car coverage option. Confirm which surfaces and edges are included."
+        "Every painted panel, not just the front.",
+        3
       ]
     ],
     "question": "Bring your car for a paint inspection before the final quote. Ask for the exact film, finish, coverage and written warranty terms. No brand or warranty duration is promised here.",
     "related": "ceramic-coating",
     "relatedLabel": "Explore ceramic coating instead",
     "source": "Oct12 approved catalogue restructure; current menu coverage groups; prices and brands excluded; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
-    "appChoice": "PPF"
+    "appChoice": "PPF",
+    "headline": "Takes the hit before your paint does.",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
   },
   {
     "slug": "ceramic-coating",
@@ -36,22 +42,28 @@
     "choices": [
       [
         "Paint",
-        "Explore ceramic or graphene coating for painted surfaces. Paint condition is checked before the final quote."
+        "Explore ceramic or graphene coating for painted surfaces. Paint condition is checked before the final quote.",
+        3
       ],
       [
         "Glass & wheels",
-        "Ask about glass or wheel coating separately. Do not assume these are included in a paint coating."
+        "Ask about glass or wheel coating separately. Do not assume these are included in a paint coating.",
+        4
       ],
       [
         "Cabin materials",
-        "Leather and fabric coatings are separate catalogue options. Dashboard and trim treatment is enquiry-only. Confirm the surface and product with the studio."
+        "Leather and fabric coatings are separate catalogue options. Dashboard and trim treatment is enquiry-only. Confirm the surface and product with the studio.",
+        0
       ]
     ],
     "question": "Confirm the exact product, preparation, surfaces and aftercare with the studio. Brand sourcing and warranty terms are not fixed by this preview.",
     "related": "paint-protection-film",
     "relatedLabel": "Compare film coverage options",
     "source": "Oct18 owner-approved surface-type expansion; current menu brand-neutral groups only; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
-    "appChoice": "Coatings"
+    "appChoice": "Coatings",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa",
+    "zonesNote": "Coverage shown is illustrative, not an exact panel map. The glass highlight represents the separate glass-coating option; interior coatings are not shown on the exterior model."
   },
   {
     "slug": "detailing",
@@ -63,22 +75,27 @@
     "choices": [
       [
         "Interior deep clean",
-        "For a cabin-focused visit. Confirm the materials and areas to be cleaned."
+        "For a cabin-focused visit. Confirm the materials and areas to be cleaned.",
+        0
       ],
       [
         "Full detail wash",
-        "The combined option covers exterior and interior. Do not book the same exterior and interior work again."
+        "The combined option covers exterior and interior. Do not book the same exterior and interior work again.",
+        3
       ],
       [
         "Paint & finishing / Enquiry",
-        "Polish, paint correction and decontamination are enquiry-only types. Call for an assessment and quote; they do not have a direct booking option here."
+        "Polish, paint correction and decontamination are enquiry-only types. Call for an assessment and quote; they do not have a direct booking option here.",
+        3
       ]
     ],
     "question": "Tell the studio which areas concern you and ask for the work list before approving. A coating or film is a separate decision, not an automatic part of detailing.",
     "related": "washing",
     "relatedLabel": "Compare the wash choices",
     "source": "Oct18 owner full/exterior/interior bundle clarification plus approved services-type scope; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
-    "appChoice": "Washing & detailing"
+    "appChoice": "Washing & detailing",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
   },
   {
     "slug": "washing",
@@ -90,26 +107,32 @@
     "choices": [
       [
         "Foam wash",
-        "An exterior-wash starting point in the catalogue. Review its work list in the app."
+        "An exterior-wash starting point in the catalogue. Review its work list in the app.",
+        3
       ],
       [
         "Exterior detail wash",
-        "Choose an exterior-focused visit when the outside is your priority."
+        "Choose an exterior-focused visit when the outside is your priority.",
+        3
       ],
       [
         "Interior deep clean",
-        "Choose cabin-focused care when the interior is your priority."
+        "Choose cabin-focused care when the interior is your priority.",
+        0
       ],
       [
         "Full detail wash",
-        "Choose this for exterior and interior together. Do not add the same exterior and interior services on top."
+        "Choose this for exterior and interior together. Do not add the same exterior and interior services on top.",
+        3
       ]
     ],
     "question": "Need both exterior and interior? Start with Full detail wash. For paint correction or surface protection, explore Detailing or Ceramic coating rather than assuming a wash includes it.",
     "related": "detailing",
     "relatedLabel": "Explore detailing for focused care",
     "source": "Oct18 original owner bundle approval; current menu wash group. No prices/durations published; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
-    "appChoice": "Washing"
+    "appChoice": "Washing",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
   },
   {
     "slug": "garage",
@@ -136,7 +159,11 @@
     "related": "washing",
     "relatedLabel": "Looking for care rather than repairs?",
     "source": "Owner-updated Garage pre-list, excluding stale pickup/prices/durations; approved consult-first menu; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
-    "appChoice": "Garage"
+    "appChoice": "Garage",
+    "zones": true,
+    "markers": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa",
+    "zonesNote": "Markers show typical first-check areas on an illustrative model. They are not coverage, not a diagnosis, and not a quote."
   },
   {
     "slug": "modifications",
@@ -148,21 +175,62 @@
     "choices": [
       [
         "Wraps & colour change",
-        "Discuss vinyl wraps or graphics with the studio, then confirm finish and coverage."
+        "Discuss vinyl wraps or graphics with the studio, then confirm finish and coverage.",
+        3
       ],
       [
         "Accessories & styling",
-        "Choose the change first, then confirm the exact accessory and fitment."
+        "Choose the change first, then confirm the exact accessory and fitment.",
+        0
       ],
       [
         "Interior & fitment / Enquiry",
-        "Audio, cameras, mats and upholstery are enquiry-only types. Call to discuss the job; these are not stocked packages or direct booking choices."
+        "Audio, cameras, mats and upholstery are enquiry-only types. Call to discuss the job; these are not stocked packages or direct booking choices.",
+        0
       ]
     ],
     "question": "Call before booking to confirm compatibility, scope and the final quote. No accessory stock, compliance claim or product brand is promised by this preview.",
     "related": "garage",
     "relatedLabel": "Need repairs instead? Explore Garage",
     "source": "Oct18 owner all-services/type expansion and approved consult-only modifications menu; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
-    "appChoice": "Modifications"
+    "appChoice": "Modifications",
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa"
+  },
+  {
+    "slug": "paint-protection-spray",
+    "title": "Paint protection spray",
+    "description": "A spray-applied paint protection coating. Enquiry only, not yet in the booking catalogue.",
+    "image": "/assets/redesign/service-paint-protection-spray.jpg",
+    "heading": "Spray-on protection, discussed first.",
+    "intro": "Paint protection spray is a spray-applied coating intended to protect painted surfaces. Whether it suits your car, and which exact product would be used, is not confirmed yet, so this service starts with an enquiry rather than a booking.",
+    "choices": [
+      [
+        "Full car enquiry",
+        "Ask whether spray-on protection suits your car and its finish. The studio confirms the exact product before any quote.",
+        3
+      ],
+      [
+        "Front-end enquiry",
+        "Ask about protecting the more exposed front end against road grime and debris. Coverage and product are confirmed with the studio.",
+        1
+      ],
+      [
+        "Colour change enquiry",
+        "Some spray-applied coatings can also change the car's colour while leaving the original paint underneath unaffected, depending on the product. Discuss options with the studio.",
+        3
+      ]
+    ],
+    "question": "Ask for the exact product, whether it can be removed cleanly, which surfaces are covered and the aftercare before agreeing to anything. No brand, price or warranty duration is promised here, and availability is not confirmed.",
+    "related": "paint-protection-film",
+    "relatedLabel": "Compare film coverage options",
+    "source": "Oct30 category research from official manufacturer pages ngenco.com and ngencodubai.com (spray-applied removable coating category); brand identity and local availability unconfirmed; enquiryOnly per catalogue",
+    "appChoice": "the studio",
+    "enquiry": true,
+    "zones": true,
+    "poster": "/assets/models/rover-poster.png?v=5683da12fa",
+    "zonesEyebrow": "THE SPRAYED LAYER, EXPLAINED SIMPLY",
+    "zonesNote": "The highlight builds like a sprayed layer being applied and shows where such a layer would be discussed, not a panel map. Tap the choice again to replay. The exact product, the surfaces it would cover and whether it can be removed cleanly are all confirmed with the studio before any quote.",
+    "layerBuild": true
   }
 ]
