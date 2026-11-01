@@ -124,7 +124,6 @@ export default function AddVehicleScreen() {
     setJournal(j);
     setProtectionFailed(true);
     setError(PROTECTION_SAVE_UNCONFIRMED);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -283,11 +282,11 @@ export default function AddVehicleScreen() {
    * stage marked so retry resumes exactly there; already-saved declarations
    * are deduped server-side by their declarationId, so a retry never doubles.
    */
-  async function runPendingStages(vehicleId: string, journal: PendingJournal, seq: number, plate: string): Promise<boolean> {
+  async function runPendingStages(vehicleId: string, pendingJournal: PendingJournal, seq: number, plate: string): Promise<boolean> {
     // Runner semantics (per-entry progress, staleness gates before and after
     // every write) live in lib/add-car-journal.ts with unit coverage; the
     // messages and failure flags here are the unchanged screen contract.
-    const ok = await runAddCarJournal(vehicleId, journal, {
+    const ok = await runAddCarJournal(vehicleId, pendingJournal, {
       saveDeclaration: async (vid, { kind, entry }) => {
         await createMyProtection({
           vehicleId: vid,
@@ -316,12 +315,12 @@ export default function AddVehicleScreen() {
     });
     // A stale/inactive run publishes nothing: no state writes, no navigation.
     if (isStale(seq, plate)) return false;
-    setJournal({ ...journal });
+    setJournal({ ...pendingJournal });
     // Truthful stage flags: a stage that succeeded on this run no longer
     // shows as failed (a resumed declaration success followed by a photo
     // failure must not leave both flags set).
-    if (journal.entriesDone >= journal.entries.length) setProtectionFailed(false);
-    if (journal.photoDone) setPhotoFailed(false);
+    if (pendingJournal.entriesDone >= pendingJournal.entries.length) setProtectionFailed(false);
+    if (pendingJournal.photoDone) setPhotoFailed(false);
     return ok;
   }
 

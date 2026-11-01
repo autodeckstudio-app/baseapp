@@ -151,7 +151,7 @@ export function VehiclesView(p: {
       startDate: x.startDate ?? "",
       expiryDate: x.expiryDate ?? "",
       notes: x.notes ?? "",
-      warrantyYears: x.warrantyYears != null ? String(x.warrantyYears) : "",
+      warrantyYears: (x.warrantyYears !== null && x.warrantyYears !== undefined) ? String(x.warrantyYears) : "",
     });
     setScopeChoice(null);
   }

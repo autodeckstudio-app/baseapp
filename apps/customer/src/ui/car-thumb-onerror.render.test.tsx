@@ -13,7 +13,7 @@ import { CarThumb } from "./CarThumb";
 
 function textOf(el: any): string {
   const walk = (n: any): string => {
-    if (n == null || typeof n === "boolean") return "";
+    if (n === null || n === undefined || typeof n === "boolean") return "";
     if (typeof n === "string") return n;
     if (Array.isArray(n)) return n.map(walk).join(" ");
     return walk(n.children);

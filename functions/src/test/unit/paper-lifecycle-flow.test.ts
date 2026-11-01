@@ -24,7 +24,7 @@ vi.mock("firebase-admin/storage", () => ({
       // The seam mirrors production: the generation rides on the FILE HANDLE, and a pinned
       // handle whose version is not live behaves like real GCS without versioning: 404.
       file: (p: string, opts?: { generation?: string | number }) => {
-        const pinned = opts?.generation != null ? String(opts.generation) : null;
+        const pinned = (opts?.generation !== null && opts?.generation !== undefined) ? String(opts.generation) : null;
         const live = () => h.generations.get(p) ?? null;
         const stale = () => pinned !== null && pinned !== live();
         return {

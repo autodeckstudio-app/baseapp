@@ -483,7 +483,7 @@ export default function VehicleDetailScreen() {
             vehicleId: vid,
             protectionId: editTarget.id,
             expectedRevision: editTarget.revision ?? null,
-            ...(editTarget.revision == null ? { legacyBaseUpdatedAt: editTarget.updatedAt } : {}),
+            ...((editTarget.revision === null || editTarget.revision === undefined) ? { legacyBaseUpdatedAt: editTarget.updatedAt } : {}),
             provider: protForm.brand.trim() === "" ? null : protForm.brand.trim(),
             warrantyYears: years === "" ? null : Number(years),
             startDate: applied === "" ? null : applied,

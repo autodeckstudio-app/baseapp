@@ -1,3 +1,5 @@
+import type * as ProtectionService from "../../../lib/protection-service";
+import type * as PaperService2 from "../../../lib/paper-service";
 // Mounted-screen proof for the protection editor orchestration: the REAL
 // VehicleDetailScreen rendered through react-test-renderer (react-native-web
 // alias), with only the IO seams mocked (firestore, auth, services, router).
@@ -46,7 +48,7 @@ vi.mock("../../../lib/vehicle-service", () => ({
 vi.mock("../../../lib/metrics", () => ({ metrics: { heroTall: 200, heroCompact: 120 } }));
 vi.mock("../../../lib/job-service", () => ({ listenToJobsForVehicle: () => () => {} }));
 vi.mock("../../../lib/protection-service", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/protection-service")>();
+  const actual = await importOriginal<typeof ProtectionService>();
   return {
     ...actual,
     listenToVehicleProtections: (_id: string, _t: string, _c: string, onData: (l: unknown[]) => void) => { h.protectionsCb = onData; return () => {}; },
@@ -56,7 +58,7 @@ vi.mock("../../../lib/protection-service", async (importOriginal) => {
 });
 vi.mock("../../../lib/warranty-service", () => ({ listenToVehicleWarranties: () => () => {} }));
 vi.mock("../../../lib/paper-service", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/paper-service")>();
+  const actual = await importOriginal<typeof PaperService2>();
   return { ...actual, listenToVehiclePapers: () => () => {}, listenToCustomerPapers: () => () => {}, submitMyPaper: vi.fn(), updateMyPaper: vi.fn(), deleteMyPaper: vi.fn(), resolvePaperEvidenceUrl: vi.fn(async () => ({ url: null, failure: null })) };
 });
 vi.mock("../../../lib/invoice-service", () => ({ listenToInvoicesForVehicle: () => () => {} }));
@@ -71,7 +73,7 @@ const existingProt = { id: "p1", tenantId: "t", vehicleId: "v1", customerId: "me
 
 function textOf(el: ReactTestRenderer): string {
   const walk = (n: unknown): string => {
-    if (n == null || typeof n === "boolean") return "";
+    if (n === null || n === undefined || typeof n === "boolean") return "";
     if (typeof n === "string") return n;
     if (Array.isArray(n)) return n.map(walk).join(" ");
     return walk((n as { children?: unknown }).children);

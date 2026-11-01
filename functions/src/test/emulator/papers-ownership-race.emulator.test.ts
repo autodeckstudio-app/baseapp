@@ -139,7 +139,6 @@ describe("document writes refuse a transferred, archived, or foreign car (emulat
 });
 
 describe("submit replay by operation id (emulator)", () => {
-  const OP = () => `3b6f6c3e-2f6a-4c1a-9b7d-${String(++n).padStart(12, "0")}`;
   it("a retry after a lost acknowledgement returns the SAME record id with a fresh upload URL; one record, one lock", async () => {
     const sign = vi.spyOn(Object.getPrototypeOf(getStorage().bucket().file("x")), "getSignedUrl").mockResolvedValue(["https://signed.example/put"] as never);
     try {

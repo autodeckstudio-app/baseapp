@@ -13,7 +13,7 @@ import { FilterPills } from "./FilterPills";
 
 function textOf(el: any): string {
   const walk = (n: any): string => {
-    if (n == null || typeof n === "boolean") return "";
+    if (n === null || n === undefined || typeof n === "boolean") return "";
     if (typeof n === "string") return n;
     if (Array.isArray(n)) return n.map(walk).join(" ");
     return walk(n.children);
@@ -54,7 +54,7 @@ describe("five-item visual wiring", () => {
     // outer row View children: [row pressable(title/detail), trailing IconAction, chevron]
     const kids = json.children as any[];
     expect(kids.length).toBe(3);
-    const sub = (n: any): string => n == null || typeof n === "boolean" ? "" : typeof n === "string" ? n : Array.isArray(n) ? n.map(sub).join(" ") : sub(n.children);
+    const sub = (n: any): string => n === null || n === undefined || typeof n === "boolean" ? "" : typeof n === "string" ? n : Array.isArray(n) ? n.map(sub).join(" ") : sub(n.children);
     expect(sub(kids[0])).toContain("Insurance"); // press target holds title/detail
     expect(sub(kids[0])).not.toContain("✎");    // trailing action is NOT inside it
     expect(sub(kids[1])).toContain("✎");

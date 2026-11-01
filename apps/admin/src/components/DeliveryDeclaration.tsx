@@ -130,7 +130,6 @@ export function DeliveryDeclaration({ job, onDelivered, onCancel }: { job: Servi
   // Kick the first records load once auth is verified and the context frozen.
   useEffect(() => {
     if (frozen.current && loading && protections.length === 0 && !loadError && !integrityError) void load(frozen.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, load]);
 
   // The live job or the operator context moved under the pane: drop what was

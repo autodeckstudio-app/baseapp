@@ -32,7 +32,7 @@ const flush = () => act(async () => { await Promise.resolve(); await Promise.res
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const click = (el: any, label: string) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const textOf = (n: any): string => { const w = (x: any): string => x == null || typeof x === "boolean" ? "" : typeof x === "string" ? x : Array.isArray(x) ? x.map(w).join(" ") : w(x.children); return w(n).replace(/\s+/g, " ").trim(); };
+  const textOf = (n: any): string => { const w = (x: any): string => x === null || x === undefined || typeof x === "boolean" ? "" : typeof x === "string" ? x : Array.isArray(x) ? x.map(w).join(" ") : w(x.children); return w(n).replace(/\s+/g, " ").trim(); };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hit = el.root.findAll((n: any) => typeof n.props.onClick === "function" && textOf({ children: [n] }) === label);
   if (hit.length === 0) throw new Error(`no clickable ${label}`);

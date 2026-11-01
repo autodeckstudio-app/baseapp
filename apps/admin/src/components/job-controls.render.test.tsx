@@ -52,7 +52,7 @@ const job = (o: Partial<ServiceJob> = {}): ServiceJob => ({ id: "jA", vehicleId:
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const textOf = (el: any): string => {
   const walk = (n: any): string => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    if (n == null || typeof n === "boolean") return "";
+    if (n === null || n === undefined || typeof n === "boolean") return "";
     if (typeof n === "string") return n;
     if (Array.isArray(n)) return n.map(walk).join(" ");
     return walk(n.children);

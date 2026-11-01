@@ -116,7 +116,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
       if (!existingPath0) throw new HttpsError("aborted", "The stored photo no longer matches the checked upload. Check the saved record in your documents, or close this form and start a new entry.");
       try {
         const [m0] = await getStorage().bucket().file(existingPath0).getMetadata();
-        const live0 = m0.generation != null ? String(m0.generation) : null;
+        const live0 = (m0.generation !== null && m0.generation !== undefined) ? String(m0.generation) : null;
         if (live0 !== recordedGeneration) throw new HttpsError("aborted", "The stored photo no longer matches the checked upload. Check the saved record in your documents, or close this form and start a new entry.");
       } catch (e) {
         if (e instanceof HttpsError) throw e;
@@ -311,7 +311,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     // guarantees a single successful write at this path via any URL we minted; the observed
     // generation is recorded with the decision so any LATER reader can prove the bytes are
     // still the exact object the checks ran against.
-    observedGeneration = meta.generation != null ? String(meta.generation) : null;
+    observedGeneration = (meta.generation !== null && meta.generation !== undefined) ? String(meta.generation) : null;
     // No generation means the object's version identity cannot be established: fail closed
     // rather than check unpinned bytes.
     if (!observedGeneration) throw new HttpsError("failed-precondition", "Could not confirm the uploaded photo's version. Upload it again.");

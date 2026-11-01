@@ -52,9 +52,9 @@ export function reconcileProtectionReadback(args: {
 function strictlyNewer(a: Protection, b: Protection): boolean {
   const ra = (a as { revision?: number }).revision ?? null;
   const rb = (b as { revision?: number }).revision ?? null;
-  if (ra != null && rb != null) return ra > rb;
-  if (ra != null) return true;
-  if (rb != null) return false;
+  if (ra !== null && ra !== undefined && rb !== null && rb !== undefined) return ra > rb;
+  if (ra !== null && ra !== undefined) return true;
+  if (rb !== null && rb !== undefined) return false;
   return (a.updatedAt ?? "") > (b.updatedAt ?? "");
 }
 

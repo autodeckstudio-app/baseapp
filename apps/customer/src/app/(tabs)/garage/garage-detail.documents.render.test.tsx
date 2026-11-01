@@ -1,3 +1,4 @@
+import type * as PaperService from "../../../lib/paper-service";
 // Mounted-screen proof for the document-add retry path: the REAL
 // VehicleDetailScreen with only IO seams mocked. A submit whose acknowledgement
 // is lost AFTER the server committed leaves an orphan PENDING record carrying
@@ -51,7 +52,7 @@ vi.mock("../../../lib/job-service", () => ({ listenToJobsForVehicle: () => () =>
 vi.mock("../../../lib/protection-service", () => ({ listenToVehicleProtections: () => () => {}, createMyProtection: vi.fn(), updateMyProtection: vi.fn() }));
 vi.mock("../../../lib/warranty-service", () => ({ listenToVehicleWarranties: () => () => {} }));
 vi.mock("../../../lib/paper-service", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../lib/paper-service")>();
+  const actual = await importOriginal<typeof PaperService>();
   return {
     ...actual,
     listenToVehiclePapers: (_v: string, _t: string, _c: string, onData: (l: unknown[]) => void) => { h.vehiclePapersCb = onData; return () => {}; },
@@ -80,7 +81,7 @@ const orphan = (submissionId: string | null) => ({
 
 function textOf(el: ReactTestRenderer): string {
   const walk = (n: unknown): string => {
-    if (n == null || typeof n === "boolean") return "";
+    if (n === null || n === undefined || typeof n === "boolean") return "";
     if (typeof n === "string") return n;
     if (Array.isArray(n)) return n.map(walk).join(" ");
     return walk((n as { children?: unknown }).children);

@@ -1,3 +1,4 @@
+import type * as FormatModule from "../../../lib/format";
 // Mounts the REAL VehicleLookupPage (parent) + REAL VehiclesView with the
 // service/auth/router boundaries mocked, and drives the interaction paths
 // source tests cannot: the correction payload names the FROZEN viewed
@@ -21,7 +22,7 @@ const draft = { provider: "X", policyNumber: null, startDate: null, expiryDate: 
 let authValue: AuthValue = { user: { uid: "a1" }, claims: { role: "admin", tenantId: "t", studioId: null }, loading: false };
 vi.mock("../../../lib/auth-context", () => ({ useAdminAuth: () => authValue }));
 vi.mock("../../../lib/use-labels", () => ({ useLabels: () => ({}) }));
-vi.mock("../../../lib/format", async (importOriginal) => ({ ...(await importOriginal<typeof import("../../../lib/format")>()), studioToday: () => "2026-10-31" }));
+vi.mock("../../../lib/format", async (importOriginal) => ({ ...(await importOriginal<typeof FormatModule>()), studioToday: () => "2026-10-31" }));
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const listenFleet = vi.fn<any>(() => () => {});
 vi.mock("../../../lib/customers-service", () => ({
@@ -49,7 +50,7 @@ const prot = (id: string, vehicleId: string, o: Partial<Protection> = {}): Prote
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const textOf = (n: any): string => {
-  if (n == null || typeof n === "boolean") return "";
+  if (n === null || n === undefined || typeof n === "boolean") return "";
   if (typeof n === "string") return n;
   if (Array.isArray(n)) return n.map(textOf).join(" ");
   return textOf(n.children ?? n.props?.children);

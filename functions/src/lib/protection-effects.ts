@@ -175,7 +175,7 @@ export function planProtectionEvents(params: {
     const t = target!;
     if (!isCurrent(t)) throw new Error(`Declared replacement target ${t.id} is already history.`);
     if ((t.revision ?? 0) !== ev.expectedRevision) throw new Error(`Declared replacement target ${t.id} has changed since it was reviewed. Refresh the car's protection records and declare again.`);
-    if (t.coverage == null) {
+    if (t.coverage === null || t.coverage === undefined) {
       throw new Error(`Declared replacement target ${t.id} has no recorded coverage scope - its scope is unknown, and unknown is never assumed. Remove it explicitly and install the new record, or repair the record's scope first.`);
     }
     if (t.kind !== ev.kind || t.coverage !== ev.coverage) {

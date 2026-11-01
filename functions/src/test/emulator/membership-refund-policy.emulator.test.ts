@@ -550,12 +550,12 @@ describe("membership refund policy: upgrade restoration (approved 30 Oct 2026)",
     for (const bid of bids) {
       expect(((await db.collection(COLLECTIONS.bookings()).doc(bid).get()).data() as Record<string, unknown>)["membershipId"]).toBe(oldMid);
     }
-    const seq: number[] = [];
+    const washSeq: number[] = [];
     for (const bid of bids) {
       await cancelBooking.run({ data: { bookingId: bid, reason: "changed plans" }, auth: customerAuthC1 } as never);
-      seq.push((await membership(oldMid)).washesUsed as number);
+      washSeq.push((await membership(oldMid)).washesUsed as number);
     }
-    expect(seq).toEqual([6, 5, 4]); // only the THIRD cancel drops below the plan's 5 - no credit minted from overflow
+    expect(washSeq).toEqual([6, 5, 4]); // only the THIRD cancel drops below the plan's 5 - no credit minted from overflow
     const restoredAudits = (await audits(oldMid)).filter((x) => x["action"] === "membership.wash_restored");
     expect(restoredAudits.length).toBe(3);
   });

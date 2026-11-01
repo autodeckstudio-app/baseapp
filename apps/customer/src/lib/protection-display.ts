@@ -22,7 +22,7 @@ export function isSelfDeclared(p: Protection): boolean {
  * FORMER owner of this car is never presented to the current owner as
  * "Added by you" (or editable by them) - it stays a neutral "On record". */
 export function isOwnSelfDeclared(p: Protection, uid: string | null | undefined): boolean {
-  return isSelfDeclared(p) && uid != null && p.customerId === uid;
+  return isSelfDeclared(p) && (uid !== null && uid !== undefined) && p.customerId === uid;
 }
 
 /** Lifecycle: absent means "current" (all older records). Superseded and

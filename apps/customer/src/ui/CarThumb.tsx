@@ -53,9 +53,9 @@ export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undef
   const gen = attemptGen.current; // bound at render: every callback of this render carries THIS attempt
   const liveRef = useRef({ key, uri, retriedKey, gen: 0 });
   liveRef.current = { key, uri, retriedKey, gen };
-  const onImgError = (failedUri: string, gen: number) => {
+  const onImgError = (failedUri: string, failedGen: number) => {
     const live = liveRef.current;
-    if (!mountedRef.current || !live.uri || failedUri !== live.uri || live.key !== key || gen !== live.gen) return; // stale element, generation, or unmounted
+    if (!mountedRef.current || !live.uri || failedUri !== live.uri || live.key !== key || failedGen !== live.gen) return; // stale element, generation, or unmounted
     if (live.retriedKey !== live.key) { attemptGen.current += 1; setRetriedKey(live.key); setNonce((n) => n + 1); return; }
     setImgFailedKey(live.key);
   };

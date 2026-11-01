@@ -1,3 +1,4 @@
+import type { ProtectionStatus } from "@autodeck/core";
 // Mounts the REAL VehiclesView correction form: a correction binds to the
 // FULL frozen identity (viewed car + record) captured at open, disarms
 // PERMANENTLY across an A->B->A navigation, enforces the explicit scope
@@ -25,7 +26,7 @@ const carB = { id: "vB", tenantId: "t", ownerId: "c2", registrationNumber: "GJ02
 type Props = {
   vehicle: Vehicle | null; protections: Protection[]; authorityKey: string;
   onCorrect: (v: Vehicle, p: Protection, d: CorrectionDraft) => void;
-  onStatus: (v: Vehicle, p: Protection, s: import("@autodeck/core").ProtectionStatus) => void;
+  onStatus: (v: Vehicle, p: Protection, s: ProtectionStatus) => void;
 };
 function mountProps(over: Partial<Props> = {}) {
   return {
@@ -43,7 +44,7 @@ function mount(over: Partial<Props> = {}) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const textOf = (n: any): string => {
-  if (n == null || typeof n === "boolean") return "";
+  if (n === null || n === undefined || typeof n === "boolean") return "";
   if (typeof n === "string") return n;
   if (Array.isArray(n)) return n.map(textOf).join(" ");
   return textOf(n.children ?? n.props?.children);

@@ -47,7 +47,7 @@ const OP_ID = "00000000-0000-4000-8000-000000000001"; // first id the expo-crypt
 
 function textOf(el: ReactTestRenderer): string {
   const walk = (n: unknown): string => {
-    if (n == null || typeof n === "boolean") return "";
+    if (n === null || n === undefined || typeof n === "boolean") return "";
     if (typeof n === "string") return n;
     if (Array.isArray(n)) return n.map(walk).join(" ");
     return walk((n as { children?: unknown }).children);

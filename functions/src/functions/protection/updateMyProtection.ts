@@ -58,7 +58,7 @@ export const updateMyProtection = onCall({ region: "asia-south1", enforceAppChec
     // record without a revision requires the explicit null election: the
     // client may only send null after re-reading and confirming the latest
     // details, and the write then stamps revision 1 (the repair).
-    if (existing.revision == null) {
+    if (existing.revision === null || existing.revision === undefined) {
       if (data.expectedRevision !== null) throw new HttpsError("failed-precondition", "This record predates versioning. Reload it and confirm the latest details before editing.");
       // Freshness proof for the repair election: the fingerprint must be
       // the updatedAt of the legacy record the client actually edited
@@ -72,7 +72,7 @@ export const updateMyProtection = onCall({ region: "asia-south1", enforceAppChec
     }
 
     const now = new Date().toISOString();
-    const update: Partial<Protection> = { updatedAt: now, revision: existing.revision == null ? 1 : existing.revision + 1 };
+    const update: Partial<Protection> = { updatedAt: now, revision: (existing.revision === null || existing.revision === undefined) ? 1 : existing.revision + 1 };
     // The legacy repair election is also the explicit normalization: stamp
     // the identity fields the legacy record predates, alongside revision 1.
     if (existing.id === undefined) update.id = ref.id;

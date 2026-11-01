@@ -27,7 +27,7 @@ vi.mock("firebase-admin/storage", () => ({
       // (bucket.file(name, { generation })), not on download() options. A pinned handle
       // whose version is no longer live behaves like real GCS without versioning: 404.
       file: (p: string, opts?: { generation?: string | number }) => {
-        const pinned = opts?.generation != null ? String(opts.generation) : null;
+        const pinned = (opts?.generation !== null && opts?.generation !== undefined) ? String(opts.generation) : null;
         const live = () => ((h as any).generationOverride?.[p]) ?? "1730000000000123";
         const stale = () => pinned !== null && pinned !== live();
         return {

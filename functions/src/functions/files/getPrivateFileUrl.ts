@@ -83,7 +83,7 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
   // path-only URL would silently open different bytes if the object were ever replaced. A
   // checked mismatch and an uploaded mismatch say different things, so their wordings differ.
   const pinnedGeneration = data.kind === "paper" ? (checkedPaperGeneration ?? uploadedPaperGeneration) : null;
-  const pinnedIsChecked = data.kind === "paper" && checkedPaperGeneration != null;
+  const pinnedIsChecked = data.kind === "paper" && (checkedPaperGeneration !== null && checkedPaperGeneration !== undefined);
   let file = getStorage().bucket().file(path);
   if (pinnedGeneration) {
     const [meta] = await file.getMetadata().catch((e: { code?: number }) => {
@@ -91,7 +91,7 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
       if (e?.code === 404) throw new HttpsError("not-found", "The stored file is gone.");
       throw new HttpsError("unavailable", "Could not confirm the stored file. Try again.");
     });
-    const live = meta.generation != null ? String(meta.generation) : null;
+    const live = (meta.generation !== null && meta.generation !== undefined) ? String(meta.generation) : null;
     if (live !== pinnedGeneration) {
       throw new HttpsError("failed-precondition", pinnedIsChecked
         ? "The checked photo is no longer available in its verified form. Ask the customer to upload the document again."

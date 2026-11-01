@@ -24,7 +24,6 @@ beforeAll(async () => {
   await deleteApp(getApp());
   initializeApp({ projectId: "autodeck-dev", storageBucket: "autodeck-dev.appspot.com" });
   const { getFirestore } = await import("firebase-admin/firestore");
-  const { getStorage } = await import("firebase-admin/storage");
   db = getFirestore(); bucket = getStorage().bucket();
   const papers = await import("../../functions/papers/myPaperEdits.js");
   const sub = await import("../../functions/papers/submitMyPaper.js");

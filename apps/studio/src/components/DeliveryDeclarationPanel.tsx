@@ -42,7 +42,7 @@ function Chip({ label, selected, disabled, onPress }: { label: string; selected:
  * staff or left null - never inherited from the old record. */
 export function DeliveryDeclarationPanel({ protections, disabled = false, onValidChange }: { protections: Protection[]; disabled?: boolean; onValidChange: (events: ProtectionWorkEvent[] | null) => void }) {
   const [draft, setDraft] = useState<DeclarationDraft>({ choice: null });
-  useEffect(() => { onValidChange(buildProtectionWork(draft, protections)); }, [draft, protections]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { onValidChange(buildProtectionWork(draft, protections)); }, [draft, protections]);
   const targets = targetableRecords(protections);
   const setEvents = (events: DraftEvent[]) => setDraft({ choice: "work", events });
   const updateEvent = (i: number, ev: DraftEvent) => setDraft({ choice: "work", events: draft.choice === "work" ? draft.events.map((e, j) => (j === i ? ev : e)) : [] });
