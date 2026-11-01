@@ -7,10 +7,11 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const schema = z.object({ serviceId: z.string().min(1) }).strict();
 
-export const getServiceReviews = onCall({ region: "asia-south1" }, async (request) => {
+export const getServiceReviews = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(schema, request.data);

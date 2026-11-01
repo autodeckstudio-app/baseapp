@@ -74,6 +74,7 @@ export type RateLimitAction =
   | "inventory.read"
   | "paper.submit"
   | "paper.review"
+  | "file.read"
   | "paper.update"
   | "paper.read"
   | "dailyClose.perform"
@@ -200,6 +201,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "inventory.read": { limit: 120, windowMs: 60_000 },
   "paper.submit": { limit: 30, windowMs: 60_000 },
   "paper.review": { limit: 30, windowMs: 60_000 },
+  "file.read": { limit: 60, windowMs: 60_000 },
   "paper.update": { limit: 30, windowMs: 60_000 },
   "paper.read": { limit: 120, windowMs: 60_000 },
   "dailyClose.perform": { limit: 30, windowMs: 60_000 },

@@ -28,6 +28,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import type { Firestore, QueryDocumentSnapshot, Timestamp, DocumentSnapshot } from "firebase-admin/firestore";
 import type { Payment, Invoice } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { readMembershipForRefund, deactivateRefundedMembershipInTx, readUpgradePredecessorForRefund, restoreUpgradedPredecessorInTx } from "./membership-refund.js";
 import { writeAuditLog } from "../middleware/audit.js";
 import type { AuthorizedUser } from "@autodeck/auth";
 import type { PaymentProvider } from "./payment-provider.js";
@@ -130,6 +131,11 @@ export async function projectLegacyRefund(
     const bookingSnap = payment.bookingId
       ? await tx.get(db.collection(COLLECTIONS.bookings()).doc(payment.bookingId))
       : null;
+    // Membership read joins the all-reads-first phase: a full refund of a
+    // membership payment ends that membership's benefits (owner policy 30 Oct
+    // 2026). Only the payment's OWN membership is ever touched.
+    const membership = await readMembershipForRefund(tx, db, payment);
+    const upgradePredecessor = await readUpgradePredecessorForRefund(tx, db, membership);
     const linkErr = (what: string) => new HttpsError(
       "unavailable",
       `Linked ${what} failed tenant/linkage verification; held for reconciliation with zero financial writes. The refund claim is retained.`,
@@ -189,6 +195,13 @@ export async function projectLegacyRefund(
           after: { status: "void", reason },
         });
       }
+    }
+    // This projection is full-only by construction (refundAmount: fresh.amount),
+    // so a membership payment landing here always deactivates. Partial provider
+    // evidence never reaches this path (the claim holds for reconciliation).
+    if (membership) {
+      deactivateRefundedMembershipInTx(tx, membership, fresh, now);
+      restoreUpgradedPredecessorInTx(tx, db, upgradePredecessor, { id: membership.ref.id, tenantId: membership.data.tenantId, customerId: membership.data.customerId, washesUsed: membership.data.washesUsed }, fresh, now);
     }
     if (payment.jobId) {
       tx.update(db.collection(COLLECTIONS.jobs()).doc(payment.jobId), { paymentStatus: "refunded", updatedAt: now });

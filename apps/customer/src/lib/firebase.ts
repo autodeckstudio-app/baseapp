@@ -1,11 +1,11 @@
 import { getApps, initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import { initializeAuth, getReactNativePersistence, connectAuthEmulator } from "firebase/auth";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
-import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
+import { emulatorConnectionsVerified, emulatorTargets, resolveUseEmulator, type EmulatorConnectionProof } from "./emulator-flag";
 
 // metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
 // the "react-native" package-exports condition so Metro picks @firebase/auth's RN build
@@ -61,18 +61,32 @@ export const useEmulator = resolveUseEmulator({
   EXPO_PUBLIC_USE_FIREBASE_EMULATOR: process.env["EXPO_PUBLIC_USE_FIREBASE_EMULATOR"],
 });
 
+const emulatorEnv = {
+  FIREBASE_EMULATOR_HOST: process.env["FIREBASE_EMULATOR_HOST"],
+  EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
+  EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: process.env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"],
+  EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT: process.env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"],
+  EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
+};
+
 if (useEmulator) {
-  const targets = emulatorTargets({
-    FIREBASE_EMULATOR_HOST: process.env["FIREBASE_EMULATOR_HOST"],
-    EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
-    EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: process.env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"],
-    EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT: process.env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"],
-    EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
-  });
+  const targets = emulatorTargets(emulatorEnv);
   try {
     connectFirestoreEmulator(db, targets.host, targets.firestorePort);
     connectFunctionsEmulator(functions, targets.host, targets.functionsPort);
+    connectAuthEmulator(auth, targets.authUrl, { disableWarnings: true });
   } catch {
-    // Already connected (React Native fast refresh)
+    // Already connected (React Native fast refresh). Never trust the
+    // catch - verify below.
   }
 }
+
+// Fail-closed: true only when the flag is on AND every client provably
+// points at the local emulators. A missed or partial connection leaves
+// this false, so dev-only affordances never run against a real backend.
+const emulatorProof: EmulatorConnectionProof = {
+  firestoreHost: (db as unknown as { _settings?: { host?: string } })._settings?.host ?? null,
+  functionsOrigin: (functions as unknown as { emulatorOrigin?: string | null }).emulatorOrigin ?? null,
+  authEmulatorUrl: (auth as unknown as { config?: { emulator?: { url?: string } } }).config?.emulator?.url ?? null,
+};
+export const emulatorBackend = useEmulator && emulatorConnectionsVerified(emulatorProof, emulatorEnv);

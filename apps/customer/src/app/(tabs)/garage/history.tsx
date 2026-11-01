@@ -10,7 +10,8 @@ import { doc, getDoc } from "firebase/firestore";
 import type { Invoice, ServiceJob, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
-import { Button, Kicker, LinkAction, Loading, Notice, Pane, Row, Screen, T } from "../../../ui/kit";
+import { Button, Kicker, LinkAction, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
+import { HistoryVisitRow } from "../../../ui/HistoryVisitRow";
 import { db } from "../../../lib/firebase";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToJobsForVehicle, listenToMyJobs } from "../../../lib/job-service";
@@ -68,7 +69,7 @@ export default function ServiceHistoryScreen() {
   if (auth.status !== "ready" || jobs === null) return <Loading label="Opening service history" />;
 
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Service history</Kicker><T role="title">{!vehicleId?"All your visits":vehicle ? `${vehicle.make} ${vehicle.model}` : "Removed car"}</T></View>}>
+    <Screen header={<View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.hair }}><View style={{ gap: space.hair, flex: 1, minWidth: 0 }}><Kicker tone="accent">Service history</Kicker><T role="title">{!vehicleId?"All your visits":vehicle ? `${vehicle.make} ${vehicle.model}` : "Removed car"}</T></View><T role="caption" tone="secondary">{jobs.length === 1 ? "1 visit" : `${jobs.length} visits`}</T></View>}>
       {jobs.length === 0 ? (
         <Notice title="No service history" body="No visits are on record for this car." />
       ) : (
@@ -78,20 +79,16 @@ export default function ServiceHistoryScreen() {
             const svc = visitServices(job, invoice, names);
             const also = visitAlso(svc);
             return (
-              <View key={job.id}>
-                <Row
-                  title={visitTitle(svc)}
-                  detail={[fmt(job.sealedAt ?? job.createdAt),also,!vehicleId?((job as unknown as {vehicleSnapshot?:{make:string;model:string;registrationNumber:string}}).vehicleSnapshot?.registrationNumber??"Recorded visit"):null].filter(Boolean).join(" · ")}
-                  trailing={<T role="caption" tone="tertiary" style={{ textTransform: "capitalize" }}>{job.status.replace(/_/g, " ").toLowerCase()}</T>}
-                  onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
-                  last={i === jobs.length - 1 && !invoice}
-                />
-                {invoice ? (
-                  <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-                    <LinkAction label={`View invoice ${invoice.invoiceNumber}`} testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} />
-                  </View>
-                ) : null}
-              </View>
+              <HistoryVisitRow
+                key={job.id}
+                at={job.sealedAt ?? job.createdAt}
+                title={visitTitle(svc)}
+                caption={[fmt(job.sealedAt ?? job.createdAt),also,!vehicleId?((job as unknown as {vehicleSnapshot?:{make:string;model:string;registrationNumber:string}}).vehicleSnapshot?.registrationNumber??"Recorded visit"):null].filter(Boolean).join(" · ")}
+                status={job.status}
+                first={i === 0}
+                onPress={job.bookingId ? () => router.push(`/(tabs)/bookings/${job.bookingId}`) : undefined}
+                extra={invoice ? <LinkAction label={`View invoice ${invoice.invoiceNumber}`} testID={`history-invoice-${invoice.id}`} onPress={() => router.push(invoiceHref(invoice.id))} /> : null}
+              />
             );
           })}
         </Pane>

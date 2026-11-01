@@ -11,8 +11,9 @@ import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { markNotificationReadSchema } from "../../schemas/notification.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const markNotificationRead = onCall({ region: "asia-south1" }, async (request) => {
+export const markNotificationRead = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
 

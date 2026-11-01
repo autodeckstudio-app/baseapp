@@ -4,12 +4,13 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole } from "../../middleware/auth.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 /**
  * Customer cancels their own account deletion request, allowed for 7 days after it was made.
  * New and additive: it only flips the status on the customer's own request record.
  */
-export const cancelAccountDeletion = onCall({ region: "asia-south1" }, async (request) => {
+export const cancelAccountDeletion = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   await enforceRateLimit(subjectFrom(user), "account.deletion.cancel");

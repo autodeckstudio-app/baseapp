@@ -60,4 +60,14 @@ if (process.env.NODE_ENV === "production") {
   config.resolver.blockList = [...(Array.isArray(prior) ? prior : prior ? [prior] : []), ...devOnly];
 }
 
+
+// Test files must never enter the app bundle: expo-router's require.context
+// picks up every file under src/app (including *.test.*), which would drag
+// vitest/chai into the shipped web bundle. Same fix as apps/studio/metro.config.js.
+{
+  const existing = config.resolver.blockList;
+  const asArray = Array.isArray(existing) ? existing : existing ? [existing] : [];
+  config.resolver.blockList = [...asArray, /\.test\.tsx?$/];
+}
+
 module.exports = config;

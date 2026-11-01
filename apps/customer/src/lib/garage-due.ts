@@ -5,7 +5,7 @@ export function dueChip(jobs: Array<FinishedJob & { vehicleId?: string }>, vehic
   const d = nextDue(jobs.filter((j) => j.vehicleId === vehicleId), services, now);
   if (!d) return null;
   const days = Math.round((d.dueAt.getTime() - now) / 86_400_000);
-  if (days < 0) return `${d.label} overdue ${-days} d`;
+  if (days < 0) return `${d.label} overdue ${-days} day${-days === 1 ? "" : "s"}`;
   if (days === 0) return `${d.label} due today`;
-  return `${d.label} due in ${days} d`;
+  return `${d.label} due in ${days} day${days === 1 ? "" : "s"}`;
 }

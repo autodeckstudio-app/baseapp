@@ -8,9 +8,10 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateExpenseSchema } from "../../schemas/expense.js";
 import { assertValidMinorUnits } from "../../lib/pricing.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: correct an expense entry. Changing the date re-derives month.
-export const updateExpense = onCall({ region: "asia-south1" }, async (request) => {
+export const updateExpense = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(updateExpenseSchema, request.data);

@@ -7,11 +7,12 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getStudioAttendanceSchema } from "../../schemas/attendance.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio attendance board for one day (defaults to today, studio TZ).
 // Studio staff can only read their own studio; admins read any studio in
 // their tenant.
-export const getStudioAttendance = onCall({ region: "asia-south1" }, async (request) => {
+export const getStudioAttendance = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getStudioAttendanceSchema, request.data);

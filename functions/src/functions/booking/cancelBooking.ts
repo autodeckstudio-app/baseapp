@@ -10,8 +10,9 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelBookingSchema } from "../../schemas/booking.js";
 import { runCancel } from "./adminCancelBooking.js";
 import { readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (request) => {
+export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const data = validate(cancelBookingSchema, request.data);
   const user = data.customerContext ? extractCustomerUser(request) : extractUser(request);
   await enforceRateLimit(subjectFrom(user), "booking.cancel");

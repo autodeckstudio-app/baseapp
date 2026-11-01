@@ -8,11 +8,12 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getOfficeReportSchema } from "../../schemas/office.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
 import { refundsOwed } from "../../lib/refunds-owed.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: monthly Office report. Revenue by method and by day,
 // expenses by category, job throughput — one call per month, computed from
 // the same payment/expense sources as Daily Close so numbers always agree.
-export const getOfficeReport = onCall({ region: "asia-south1" }, async (request) => {
+export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getOfficeReportSchema, request.data);

@@ -8,9 +8,10 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createCheckoutOrderSchema } from "../../schemas/payment.js";
 import { createRazorpayOrder, findRazorpayOrderByReceipt } from "../../lib/razorpay-checkout.js";
 import { obtainCheckoutOrder, CheckoutOrderError } from "../../lib/checkout-order.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Step 1 of Standard Checkout: the customer opens checkout for their own pending payment.
-export const createCheckoutOrder = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] }, async (request) => {
+export const createCheckoutOrder = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(createCheckoutOrderSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.createOrder");

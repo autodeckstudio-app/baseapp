@@ -20,6 +20,15 @@ config.resolver.unstable_conditionsByPlatform = {
   android: ["react-native"],
 };
 
+// Test files must never enter the app bundle: expo-router's require.context
+// picks up every file under src/app (including *.test.*), which would drag
+// vitest/chai into the shipped web bundle.
+{
+  const existing = config.resolver.blockList;
+  const asArray = Array.isArray(existing) ? existing : existing ? [existing] : [];
+  config.resolver.blockList = [...asArray, /\.test\.tsx?$/];
+}
+
 // Workspace packages use NodeNext-style "./x.js" specifiers that point at
 // .ts sources. Retry a failed relative ".js" import without the extension.
 const upstream = config.resolver.resolveRequest;

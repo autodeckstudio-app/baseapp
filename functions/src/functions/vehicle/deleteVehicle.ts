@@ -8,6 +8,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deleteVehicleSchema } from "../../schemas/vehicle.js";
 import { permanentlyDeleteVehicle, deleteVehiclePhotos, recordVehiclePhotoCleanup, VehicleDeleteError } from "../../lib/vehicle-delete.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Permanently deletes ONE vehicle record (owner or admin, same tenant) after copying
 // its details onto that car's bookings, jobs and invoices. History is kept.
@@ -15,7 +16,7 @@ import { permanentlyDeleteVehicle, deleteVehiclePhotos, recordVehiclePhotoCleanu
 // Storage; inspection photos live under the job prefix and are always kept,
 // and the RC photo plus paper-* documents are records, not pictures, so they
 // are kept too.
-export const deleteVehicle = onCall({ region: "asia-south1" }, async (request) => {
+export const deleteVehicle = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "admin", "superadmin");
 

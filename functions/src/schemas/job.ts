@@ -25,10 +25,37 @@ export const standbyBookingSchema = z.object({
   bayId: z.string().min(1).optional(),
 }).strict();
 
+// Staff-declared ACTUAL protection events performed on the job, recorded at
+// delivery. Purchasing a protection service is not performing it, so nothing
+// here is inferred from the catalog: no declaration, no lifecycle effect, and
+// no record is superseded or removed unless a declared event names it. No
+// arbitrary count cap - performed work must never be dropped by a limit.
+const installSpec = {
+  kind: z.enum(["ppf", "ceramic"]),
+  coverage: z.enum(["full_body", "full_front", "high_impact"]),
+  brand: z.string().trim().min(1).max(80).nullable().optional(),
+  warrantyYears: z.number().int().min(0).max(30).nullable().optional(),
+};
+// Targeted events carry expectedRevision: the revision of the record the
+// staff member was looking at when they declared the work. The delivery
+// fails closed if the record has moved on since (a stale read must never
+// become a lifecycle write), so callers must read the current record before
+// declaring. Legacy records without a revision field are revision 0.
+const expectedRevision = { expectedRevision: z.number().int().min(0) };
+export const protectionWorkEventSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("install"), ...installSpec }).strict(),
+  z.object({ action: z.literal("replace"), targetProtectionId: z.string().min(1), ...expectedRevision, ...installSpec }).strict(),
+  z.object({ action: z.literal("remove"), targetProtectionId: z.string().min(1), ...expectedRevision }).strict(),
+]);
+
 export const advanceJobStatusSchema = z.object({
   jobId: z.string().min(1),
   rework: z.boolean().optional(),
   notes: z.string().max(500).optional(),
+  // REQUIRED on the DELIVERED transition, rejected on every other (both
+  // enforced in the function): [] means "reviewed - no protection work of
+  // any kind", an absent field means the choice was never made.
+  protectionWork: z.array(protectionWorkEventSchema).optional(),
 }).strict();
 
 export const cancelWalkinJobSchema = z.object({

@@ -13,8 +13,9 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { startInspectionSchema } from "../../schemas/inspection.js";
 import { buildInspectionChecklist } from "../../lib/inspection-builder.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const startInspection = onCall({ region: "asia-south1" }, async (request) => {
+export const startInspection = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["studio", "admin", "superadmin"].includes(user.claims.role)) {

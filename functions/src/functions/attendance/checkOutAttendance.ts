@@ -9,11 +9,12 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { attendanceCheckSchema } from "../../schemas/attendance.js";
 import { rosterRecordFor } from "../../lib/roster.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Self check-out for the current studio day. Computes workedMinutes
 // server-side from check-in minus completed break time. Requires any open
 // break to be ended first so the worked total is never understated silently.
-export const checkOutAttendance = onCall({ region: "asia-south1" }, async (request) => {
+export const checkOutAttendance = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(attendanceCheckSchema, request.data);

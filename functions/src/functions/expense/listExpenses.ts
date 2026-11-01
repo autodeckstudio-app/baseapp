@@ -6,10 +6,11 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listExpensesSchema } from "../../schemas/expense.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: expenses for one studio, optionally one month and/or
 // one category. Ordered by date desc; capped at 200 rows per call.
-export const listExpenses = onCall({ region: "asia-south1" }, async (request) => {
+export const listExpenses = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(listExpensesSchema, request.data);

@@ -3,14 +3,16 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   query,
   where,
   onSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db, functions } from "./firebase";
-import { COLLECTIONS } from "@autodeck/database";
-import type { ServiceJob, StudioConfig, Service, Booking } from "@autodeck/core";
+import { onIdTokenChanged, type User } from "firebase/auth";
+import { auth, db, functions } from "./firebase";
+import { COLLECTIONS, SUBCOLLECTIONS } from "@autodeck/database";
+import type { Protection, ProtectionWorkEvent, ServiceJob, StudioConfig, Service, Booking } from "@autodeck/core";
 import { dayRangeIST } from "./calendar-bookings";
 import { mergeFloorJobs, OPEN_FLOOR_STATUSES } from "@autodeck/core";
 import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
@@ -31,7 +33,7 @@ function addDaysLocal(dateStr: string, days: number): string {
 type GetStudioJobsInput = { studioId: string; date?: string };
 type GetStudioJobsOutput = { jobs: ServiceJob[]; date: string };
 
-type AdvanceJobStatusInput = { jobId: string; notes?: string; rework?: boolean };
+type AdvanceJobStatusInput = { jobId: string; notes?: string; rework?: boolean; protectionWork?: ProtectionWorkEvent[] };
 type AdvanceJobStatusOutput = { jobId: string; previousStatus: string; newStatus: string };
 
 type CreateWalkinJobInput = {
@@ -65,6 +67,7 @@ export async function advanceJobStatus(
   jobId: string,
   notes?: string,
   rework?: boolean,
+  protectionWork?: ProtectionWorkEvent[],
 ): Promise<AdvanceJobStatusOutput> {
   const fn = httpsCallable<AdvanceJobStatusInput, AdvanceJobStatusOutput>(
     functions,
@@ -72,8 +75,96 @@ export async function advanceJobStatus(
   );
   const input: AdvanceJobStatusInput = notes !== undefined ? { jobId, notes } : { jobId };
   if (rework) input.rework = true;
+  // The staff-declared protection-work declaration. Sent ONLY on the
+  // READY_FOR_DELIVERY -> DELIVERED advance (the backend rejects it on any
+  // other transition and requires it on that one).
+  if (protectionWork !== undefined) input.protectionWork = protectionWork;
   const result = await fn(input);
   return result.data;
+}
+
+/** Current-cycle protection records for one car, for the delivery
+ * declaration panel. The tenantId equality filter is required: the
+ * /vehicles/{id}/protections rule applies ownTenant(resource.data) to every
+ * read, so Firestore must be able to verify it statically. Lifecycle is NOT
+ * filtered in the query - legacy records predate the lifecycle field and are
+ * current by default, so a where("lifecycle","==","current") would silently
+ * hide them; the declaration builder treats a missing lifecycle as current. */
+/** The verified operator fingerprint for a delivery declaration: the uid
+ * PLUS the custom-claim scope (role/tenant/studio) read from the ID token
+ * itself. A uid alone is not enough - the same account can be re-scoped
+ * (new role, moved to another studio or tenant) while staying signed in,
+ * and a declaration affirmed under the old scope must never ship under the
+ * new one. Null means signed out. */
+export type StaffAuth = {
+  uid: string;
+  role: string | null;
+  tenantId: string | null;
+  studioId: string | null;
+};
+
+async function staffAuthOf(u: User): Promise<StaffAuth> {
+  const token = await u.getIdTokenResult();
+  const c = token.claims as Record<string, unknown>;
+  return {
+    uid: u.uid,
+    role: typeof c.role === "string" ? c.role : null,
+    tenantId: typeof c.tenantId === "string" ? c.tenantId : null,
+    studioId: typeof c.studioId === "string" ? c.studioId : null,
+  };
+}
+
+/** The current operator fingerprint, or null when signed out. Resolves the
+ * ID token, so the claims are the verified ones, not a cached profile. */
+export function currentStaffAuth(): Promise<StaffAuth | null> {
+  const u = auth.currentUser;
+  return u ? staffAuthOf(u) : Promise.resolve(null);
+}
+
+/** Fires on sign-in, sign-out AND on every ID-token refresh - including a
+ * refresh whose custom claims changed under the SAME uid (re-scoped role,
+ * tenant or studio). Subscribers must treat any change as a new operator
+ * context.
+ * Sequenced: token resolution is async, so events are numbered and only the
+ * LATEST event's resolution is delivered - a slow token fetch for an older
+ * event can never publish after a newer sign-in/sign-out, and nothing is
+ * delivered after unsubscribe. Every non-null token event FIRST delivers
+ * `undefined` (verifying), synchronously, before its claims resolve - the
+ * previously affirmed identity is not serviceable in that window. A
+ * claims-read failure fails CLOSED (null: no affirmation context), never
+ * silently keeps the previous identity. */
+export function onStaffAuthChanged(cb: (a: StaffAuth | null | undefined) => void): Unsubscribe {
+  let gen = 0;
+  let active = true;
+  const inner = onIdTokenChanged(auth, (u) => {
+    const my = ++gen;
+    if (!u) { if (active) cb(null); return; }
+    // IMMEDIATE verifying: a prior affirmed identity is never serviceable
+    // while the newer token's claims are still being read.
+    if (active) cb(undefined);
+    void staffAuthOf(u).then(
+      (a) => { if (active && my === gen) cb(a); },
+      () => { if (active && my === gen) cb(null); },
+    );
+  });
+  return () => { active = false; inner(); };
+}
+
+/** Fingerprint of an operator scope for affirmation binding: uid + role +
+ * tenant + studio. The same uid re-scoped to another role, tenant or studio
+ * is a DIFFERENT fingerprint, so an affirmation armed under one scope can
+ * never ride onto another. Absent or unverified identity is "none". */
+export function staffAuthFingerprint(a: StaffAuth | null | undefined): string {
+  return a ? `${a.uid}|${a.role ?? ""}|${a.tenantId ?? ""}|${a.studioId ?? ""}` : "none";
+}
+
+export async function getCurrentProtections(vehicleId: string, tenantId: string): Promise<Protection[]> {
+  const q = query(
+    collection(db, SUBCOLLECTIONS.vehicleProtections(vehicleId)),
+    where("tenantId", "==", tenantId),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Protection);
 }
 
 export async function cancelWalkinJob(jobId: string, reason: string): Promise<{ jobId: string; alreadyCancelled: boolean }> {

@@ -7,10 +7,11 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deleteGalleryImageSchema } from "../../schemas/gallery.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: permanently remove a gallery image. Audited with the URL so a
 // mistaken delete can be re-added from the audit record.
-export const deleteGalleryImage = onCall({ region: "asia-south1" }, async (request) => {
+export const deleteGalleryImage = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(deleteGalleryImageSchema, request.data);

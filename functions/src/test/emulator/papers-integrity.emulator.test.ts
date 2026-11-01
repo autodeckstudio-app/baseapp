@@ -7,10 +7,14 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { submitMyPaper } from "../../functions/papers/submitMyPaper.js";
+import { submitMyPaper, finalizeMyPaper } from "../../functions/papers/submitMyPaper.js";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { updateMyPaper, deleteMyPaper } from "../../functions/papers/myPaperEdits.js";
 
 const db = getFirestore();
+// Base64 MD5 of src/test/fixtures/synthetic-policy.png - the bytes these tests actually upload.
+const FIXTURE_MD5 = "+u1VOWA2mKyFM0wEptyqZw==";
 const TENANT = "papers-tenant";
 let n = 0;
 const uid = (p: string) => `${p}-${Date.now()}-${++n}`;
@@ -18,6 +22,7 @@ const auth = (u: string, tenantId = TENANT) => ({ uid: u, token: { role: "custom
 const submit = (u: string, data: Record<string, unknown>) => submitMyPaper.run({ data: { studioId: "s", ...data }, auth: auth(u) } as never);
 const update = (u: string, data: Record<string, unknown>) => updateMyPaper.run({ data, auth: auth(u) } as never);
 const del = (u: string, paperId: string) => deleteMyPaper.run({ data: { paperId }, auth: auth(u) } as never);
+const fin = (u: string, paperId: string) => finalizeMyPaper.run({ data: { paperId }, auth: auth(u) } as never);
 async function car(owner: string) { const id = uid("veh"); await db.collection("vehicles").doc(id).set({ id, ownerId: owner, tenantId: TENANT, registrationNumber: "GJ01AB1234" }); return id; }
 const papersOf = async (owner: string) => (await db.collection("papers").where("customerId", "==", owner).get()).docs.map((d) => d.data());
 
@@ -194,14 +199,53 @@ describe("document integrity (emulator)", () => {
       await bucket.file(oldPath).save(Buffer.from("old"), { metadata: { contentType: "image/jpeg" } });
       await bucket.file(sibling).save(Buffer.from("sib"), { metadata: { contentType: "image/jpeg" } });
       await db.collection("papers").doc(paper.id).update({ evidencePath: oldPath });
-      const res = (await update(me, { paperId: paper.id, contentType: "image/png" })) as { uploadUrl: string | null };
+      const res = (await update(me, { paperId: paper.id, contentType: "image/png", contentMd5: FIXTURE_MD5 })) as { uploadUrl: string | null };
       expect(res.uploadUrl).toBe("https://signed.example/put");
       const after = (await db.collection("papers").doc(paper.id).get()).data()!;
-      expect(after.evidencePath).toBe(`${TENANT}/vehicles/${v}/paper-${paper.id}.png`);
+      // Staged replacement: the current evidence keeps serving until finalize confirms the new object.
+      expect(after.evidencePath).toBe(oldPath);
       expect(after.status).toBe("PENDING");
-      expect((await bucket.file(oldPath).exists())[0]).toBe(false);
-      expect((await bucket.file(sibling).exists())[0]).toBe(true);
+      const staged = after.pendingEvidencePath as string;
+      expect(staged).toMatch(new RegExp(`^${TENANT}/vehicles/${v}/paper-${paper.id}\\.[a-f0-9]{8}\\.png$`));
+      expect((await bucket.file(oldPath).exists())[0]).toBe(true); // old object kept until finalize
+      // Client upload step: the real fixture bytes, whose MD5 matches the declared digest.
+      await bucket.file(staged).save(readFileSync(resolve(__dirname, "../fixtures/synthetic-policy.png")), { metadata: { contentType: "image/png" } });
+      await fin(me, paper.id); // finalize promotes the confirmed staged replacement
+      const done = (await db.collection("papers").doc(paper.id).get()).data()!;
+      expect(done.evidencePath).toBe(staged);
+      expect(done.pendingEvidencePath ?? null).toBeNull();
+      expect(done.pendingContentMd5 ?? null).toBeNull();
+      expect((await bucket.file(oldPath).exists())[0]).toBe(false); // old own object removed after promotion
+      expect((await bucket.file(sibling).exists())[0]).toBe(true); // sibling untouched throughout
+      await bucket.file(staged).delete({ ignoreNotFound: true });
       await bucket.file(sibling).delete({ ignoreNotFound: true });
+    } finally { sign.mockRestore(); }
+  });
+
+  it("a staged replacement whose upload never lands: finalize refuses and the previous photo stays", async () => {
+    const sign = vi.spyOn(Object.getPrototypeOf(getStorage().bucket().file("x")), "getSignedUrl").mockResolvedValue(["https://signed.example/put"] as never);
+    try {
+      const me = uid("cust"); const v = await car(me);
+      await submit(me, { vehicleId: v, kind: "INSURANCE", reference: "REPL-NOUP" });
+      const paper = (await papersOf(me))[0]!;
+      const bucket = getStorage().bucket();
+      const oldPath = `${TENANT}/vehicles/${v}/paper-${paper.id}.jpg`;
+      await bucket.file(oldPath).save(Buffer.from("old"), { metadata: { contentType: "image/jpeg" } });
+      await db.collection("papers").doc(paper.id).update({ evidencePath: oldPath });
+      await update(me, { paperId: paper.id, contentType: "image/png", contentMd5: FIXTURE_MD5 });
+      const stagedDoc = (await db.collection("papers").doc(paper.id).get()).data()!;
+      expect(stagedDoc.pendingEvidencePath).toBeTruthy();
+      // No bytes ever land at the staged path: finalize must promote nothing, delete nothing.
+      const res = (await fin(me, paper.id)) as { status: string; reason?: string };
+      expect(res.status).toBe("PENDING");
+      expect(res.reason ?? "").toContain("previous photo is still on file");
+      const after = (await db.collection("papers").doc(paper.id).get()).data()!;
+      expect(after.evidencePath).toBe(oldPath);
+      expect(after.pendingEvidencePath).toBe(stagedDoc.pendingEvidencePath);
+      expect(after.status).toBe("PENDING");
+      expect(after.reviewedBy ?? null).toBeNull();
+      expect((await bucket.file(oldPath).exists())[0]).toBe(true);
+      await bucket.file(oldPath).delete({ ignoreNotFound: true });
     } finally { sign.mockRestore(); }
   });
 });

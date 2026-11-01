@@ -7,9 +7,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { addInventoryItemSchema } from "../../schemas/inventory.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: register a new stockable item at a studio.
-export const addInventoryItem = onCall({ region: "asia-south1" }, async (request) => {
+export const addInventoryItem = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(addInventoryItemSchema, request.data);

@@ -7,10 +7,11 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listPapersSchema } from "../../schemas/paper.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: papers for one studio with expiry flags computed
 // server-side (expired / expiring within 30 days, Asia/Kolkata today).
-export const listPapers = onCall({ region: "asia-south1" }, async (request) => {
+export const listPapers = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(listPapersSchema, request.data);

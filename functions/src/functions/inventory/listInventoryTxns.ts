@@ -6,9 +6,10 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listInventoryTxnsSchema } from "../../schemas/inventory.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: stock movement history, newest first, capped at 200.
-export const listInventoryTxns = onCall({ region: "asia-south1" }, async (request) => {
+export const listInventoryTxns = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(listInventoryTxnsSchema, request.data);

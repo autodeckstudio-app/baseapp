@@ -16,8 +16,9 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { rescheduleBookingSchema } from "../../schemas/booking.js";
 import { buildOccupiedInterval, generateDaySlots, type OccupiedInterval } from "../../lib/availability.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const rescheduleBooking = onCall({ region: "asia-south1" }, async (request): Promise<{ booking: Booking }> => {
+export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request): Promise<{ booking: Booking }> => {
   const data = validate(rescheduleBookingSchema, request.data);
   const user = data.customerContext ? extractCustomerUser(request) : extractUser(request);
   await enforceRateLimit(subjectFrom(user), "booking.reschedule");

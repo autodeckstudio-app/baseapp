@@ -6,8 +6,9 @@ import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getMembershipUsageSchema } from "../../schemas/membership.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const getMembershipUsage = onCall({ region: "asia-south1" }, async (request) => {
+export const getMembershipUsage = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(getMembershipUsageSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "read.membershipUsage");

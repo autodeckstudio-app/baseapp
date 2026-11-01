@@ -8,10 +8,11 @@ import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const schema = z.object({ bookingId: z.string().min(1) }).strict();
 
-export const respondToBookingQuote = onCall({ region: "asia-south1" }, async (request) => {
+export const respondToBookingQuote = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(schema, request.data);

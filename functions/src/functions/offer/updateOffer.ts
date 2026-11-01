@@ -7,9 +7,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateOfferSchema, MAX_OFFER_DAYS } from "../../schemas/offer.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: edit the words, end it early or extend it, hide or show. Nothing is deleted.
-export const updateOffer = onCall({ region: "asia-south1" }, async (request) => {
+export const updateOffer = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(updateOfferSchema, request.data);

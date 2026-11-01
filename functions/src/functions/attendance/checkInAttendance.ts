@@ -9,12 +9,13 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { attendanceCheckSchema } from "../../schemas/attendance.js";
 import { rosterRecordFor } from "../../lib/roster.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio staff self check-in for the current studio day. One record per
 // employee per day: the deterministic document id makes a duplicate check-in
 // impossible even under retries or double taps. Studio-scoped staff check in
 // to their own studio; tenant admins use markAttendance for other employees.
-export const checkInAttendance = onCall({ region: "asia-south1" }, async (request) => {
+export const checkInAttendance = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(attendanceCheckSchema, request.data);

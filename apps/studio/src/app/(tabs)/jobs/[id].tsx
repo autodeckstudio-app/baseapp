@@ -13,7 +13,8 @@ import { Platform, View, Text, ScrollView, TouchableOpacity } from "react-native
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db, functions } from "../../../lib/firebase";
-import { updateStandby, advanceJobStatus, cancelWalkinJob, assignBay, getStudioConfig, getReslotOptions, reslotBooking, type ReslotOption } from "../../../lib/studio-service";
+import { updateStandby, advanceJobStatus, cancelWalkinJob, assignBay, getStudioConfig, getReslotOptions, reslotBooking, onStaffAuthChanged, staffAuthFingerprint, type ReslotOption, type StaffAuth } from "../../../lib/studio-service";
+import { DeliveryConfirmPane } from "../../../components/DeliveryConfirmPane";
 import {
   recordManualPayment,
   confirmManualPayment,
@@ -105,7 +106,18 @@ export default function JobDetailScreen() {
   const [reassignPick,setReassignPick] = useState<{id:string;name:string}|null>(null);
   const [actionError,setActionError] = useState<string|null>(null);
   const [reassigning, setReassigning] = useState(false);
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [paymentRetryTick, setPaymentRetryTick] = useState(0);
+  // ReadSnapshot: the payment read state TOGETHER WITH the exact scope that
+  // produced it (job id + tenant + retry generation + subscription epoch).
+  // Ambient "ready/null" authenticates nothing: a render under a changed
+  // job/tenant/retry sees the old snapshot's scope no longer matches and
+  // treats the read as still loading - synchronously, before any effect.
+  type ReadSnap = { jobId: string; tenantId: string; retry: number; epoch: number; read: "ready" | "error"; record: Payment | null };
+  const [paySnap, setPaySnap] = useState<ReadSnap | null>(null);
+  // Monotonic epoch for the payment listener: a late callback from an older
+  // subscription (pre-retry, pre-route, pre-tenant-change) must never write
+  // into the current read state. Mirrors the advanceConfirm epoch pattern.
+  const paymentEpoch = useRef(0);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [paymentActionLoading, setPaymentActionLoading] = useState(false);
   const [bookingMembership, setBookingMembership] = useState<{
@@ -125,6 +137,10 @@ export default function JobDetailScreen() {
 
   useEffect(() => {
     if (!id) {setLoading(false);return;}
+    // Route change: clear the previous job and any open confirm pane FIRST -
+    // until this route's listener delivers, nothing from the old job may
+    // stay on screen (a delivery declaration is about exactly one job).
+    setJob(null);setAdvanceConfirm(null);setStaffAction(null);
     setFeedError(null);setLoading(true);
     const unsub = onSnapshot(
       doc(db, COLLECTIONS.jobs(), id),
@@ -150,20 +166,41 @@ export default function JobDetailScreen() {
     return unsub;
   }, [id,attempt]);
 
+  // A live stage change under an open advance confirm must RESET it: the
+  // confirm was affirmed for the stage it named, and a stage move never
+  // transforms it into a different action's confirm.
+  useEffect(() => { setAdvanceConfirm(null); }, [job?.status]);
+
   useEffect(() => {
     if (!job) {
-      setPayment(null);
+      paymentEpoch.current += 1;
+      setPaySnap(null);
       setInvoice(null);
       return;
     }
     const jobId = job.id;
-    const unsubPayment = listenToPaymentForJob(jobId, job.tenantId, setPayment, () => undefined);
-    const unsubInvoice = listenToInvoiceForJob(jobId, job.tenantId, setInvoice, () => undefined);
+    const tenantId = job.tenantId;
+    const retry = paymentRetryTick;
+    const epoch = ++paymentEpoch.current;
+    // Restarting the subscription invalidates the previous snapshot: never
+    // let the old scope's (or an older attempt's) read survive into this one.
+    setPaySnap(null);
+    const unsubPayment = listenToPaymentForJob(jobId, tenantId,
+      (rec) => { if (paymentEpoch.current !== epoch) return; setPaySnap({ jobId, tenantId, retry, epoch, read: "ready", record: rec }); },
+      () => { if (paymentEpoch.current !== epoch) return; setPaySnap({ jobId, tenantId, retry, epoch, read: "error", record: null }); });
+    const unsubInvoice = listenToInvoiceForJob(jobId, tenantId,
+      (inv) => { if (paymentEpoch.current !== epoch) return; setInvoice(inv); },
+      () => undefined);
     return () => {
+      // Retire the epoch BEFORE unsubscribing: a late callback racing the
+      // teardown (or firing after unmount) finds a dead epoch and drops its
+      // delivery instead of publishing into the next subscription or a
+      // mounted-new screen.
+      paymentEpoch.current += 1;
       unsubPayment();
       unsubInvoice();
     };
-  }, [job?.id]);
+  }, [job?.id, job?.tenantId, paymentRetryTick]);
 
   // Live booking for this job: drives the covered-settlement gate and label.
   useEffect(() => {
@@ -264,31 +301,118 @@ export default function JobDetailScreen() {
   }
 
   const payBusyRef = useRef(false);
-  const [cashConfirm, setCashConfirm] = useState<"record" | "confirm" | null>(null);
+  // Identity-bound payment confirmation: the panel captures a FROZEN target
+  // at open (mode + job id + tenant + payment id + read epoch). A same-job
+  // record swap (p1 -> p2), a tenant/route change, a retry, or a status/
+  // method flip can never retarget an armed panel - the binding is compared
+  // synchronously against the current render context AND re-checked against
+  // the latest-state ref inside the handler before any mutation.
+  type CashBinding = { mode: "record" | "confirm"; armId: number; jobId: string; tenantId: string; paymentId: string | null; epoch: number; gen: number };
+  // Monotonic arm identity: every click arms a NEW id, even for the same
+  // record. A retained callback from an older arm can never match the
+  // currently armed identity.
+  const payArmSeq = useRef(0);
+  const [cashConfirm, setCashConfirm] = useState<CashBinding | null>(null);
   const [cashError, setCashError] = useState<string | null>(null);
   const [payMethod, setPayMethod] = useState<RecordMethod>("cash");
   const [payVerified, setPayVerified] = useState(false);
   const [payRef, setPayRef] = useState("");
 
+  // Latest-state ref: updated synchronously during render so the mutation
+  // handler checks CURRENT state, never a stale render closure.
+  // The read state is ONLY the snapshot whose producing scope exactly matches
+  // the current render's expected scope (job id + tenant + retry + live
+  // subscription epoch). Anything else - including a one-render window before
+  // the resubscribe effect lands - is "loading", never the old scope's ready.
+  const snapLive = paySnap !== null && job !== null
+    && paySnap.jobId === job.id && paySnap.tenantId === job.tenantId
+    && paySnap.retry === paymentRetryTick && paySnap.epoch === paymentEpoch.current
+    ? paySnap : null;
+  const payment: Payment | null = snapLive?.record ?? null;
+  const paymentRead: "loading" | "ready" | "error" = snapLive?.read ?? "loading";
+
+  const payLatestRef = useRef<{ job: ServiceJob | null; payment: Payment | null; read: "loading" | "ready" | "error"; epoch: number }>({ job: null, payment: null, read: "loading", epoch: 0 });
+  payLatestRef.current = { job, payment, read: paymentRead, epoch: paymentEpoch.current };
+  // The CURRENTLY armed binding, updated synchronously at render: a handler
+  // invoked through a retained callback (post-Cancel, post-kill, post-unmount)
+  // must never act on the binding its own render closure captured.
+  const payBindingRef = useRef<CashBinding | null>(null);
+  payBindingRef.current = cashConfirm;
+
+  // Mounted/live flag: false before mount effects run and after unmount.
+  const payMountedRef = useRef(false);
+  useEffect(() => { payMountedRef.current = true; return () => { payMountedRef.current = false; }; }, []);
+
+  // Scope generation: a synchronous, render-time counter that bumps whenever
+  // ANY value that could authenticate a payment binding changes - job id,
+  // tenant, retry generation, read state, the record's identity/status/
+  // method, the job's paid flag and stage. An A -> B -> A round-trip mints a
+  // NEW generation, so a binding killed by any mismatch is dead permanently:
+  // returning to the old values can never revive it; a fresh click binds a
+  // fresh generation. The read state (including ready/null) is only valid
+  // under the exact scope that produced it - an unscoped null authenticates
+  // nothing.
+  const payScopeKey = `${job?.id ?? "none"}|${job?.tenantId ?? ""}|${paymentRetryTick}|${paymentRead}|${payment?.id ?? "null"}|${payment?.status ?? ""}|${payment?.method ?? ""}|${job?.paymentStatus ?? ""}|${job?.status ?? ""}`;
+  const payGenRef = useRef({ n: 0, key: "" });
+  if (payGenRef.current.key !== payScopeKey) { payGenRef.current = { n: payGenRef.current.n + 1, key: payScopeKey }; }
+  const payGen = payGenRef.current.n;
+
+  // Synchronous binding check, evaluated at render: an invalid binding never
+  // reaches the screen, even on the render before any effect could run.
+  function cashBindingLive(b: CashBinding | null, j: ServiceJob | null, pay: Payment | null, read: "loading" | "ready" | "error", epoch: number, gen: number): b is CashBinding {
+    if (!b || !j) return false;
+    // Generation equality subsumes every scope input: any change (including
+    // an A -> B -> A return) has minted a new generation.
+    if (b.gen !== gen) return false;
+    if (b.jobId !== j.id || b.tenantId !== j.tenantId || b.epoch !== epoch) return false;
+    if (read !== "ready" || j.status === "CANCELLED" || j.paymentStatus === "paid") return false;
+    if (b.mode === "record") return pay === null;
+    return pay !== null
+      && pay.id === b.paymentId
+      && pay.jobId === j.id
+      && pay.tenantId === j.tenantId
+      && (pay.status === "pending" || pay.status === "processing")
+      && pay.method === "cash";
+  }
+  const cashConfirmLive = cashBindingLive(cashConfirm, job, payment, paymentRead, paymentEpoch.current, payGen);
+
+
   function handleRecordCashPayment() {
     if (!job?.id) return;
-    setCashError(null); setPayMethod("cash"); setPayVerified(false); setPayRef(""); setCashConfirm("record");
+    setCashError(null); setPayMethod("cash"); setPayVerified(false); setPayRef("");
+    setCashConfirm({ mode: "record", armId: ++payArmSeq.current, jobId: job.id, tenantId: job.tenantId, paymentId: null, epoch: paymentEpoch.current, gen: payGen });
   }
 
   function handleConfirmCashPayment() {
-    if (!payment) return;
-    setCashError(null); setCashConfirm("confirm");
+    if (!job || !payment) return;
+    setCashError(null);
+    setCashConfirm({ mode: "confirm", armId: ++payArmSeq.current, jobId: job.id, tenantId: job.tenantId, paymentId: payment.id, epoch: paymentEpoch.current, gen: payGen });
   }
 
-  async function performCashAction() {
-    const mode = cashConfirm;
-    const jobId = job?.id;
-    if (!mode || paymentActionLoading || payBusyRef.current) return;
+  async function performCashAction(armedId: number) {
+    // Immutable affirmation identity: the onPress captured its arm's id at
+    // render. A retained callback from an older arm - after Cancel, after a
+    // kill, after a fresh arm of ANY record including the same one - names a
+    // different id than the currently armed binding and stops here.
+    const binding = payBindingRef.current;
+    if (!binding || binding.armId !== armedId) return;
+    const mode = binding.mode;
+    const jobId = binding.jobId;
+    if (paymentActionLoading || payBusyRef.current) return;
+    // Revalidate against CURRENT state before any mutation: the panel may
+    // have been armed against a record/job that has since changed. Never
+    // record or confirm against a stale record, a cancelled job, or a job
+    // already marked paid.
+    if (!payMountedRef.current) { setCashConfirm(null); return; }
+    const cur = payLatestRef.current;
+    // Live epoch, not a saved value: a retained callback after Cancel sees no
+    // binding, and after unmount this handler has already returned above.
+    if (!cashBindingLive(binding, cur.job, cur.payment, cur.read, paymentEpoch.current, payGenRef.current.n)) { setCashConfirm(null); return; }
     payBusyRef.current = true;
     setPaymentActionLoading(true); setCashError(null);
     try {
       if (mode === "record") { if (!jobId) return; { if (UPI_RECORD_ENABLED) { if (payMethod === "upi_manual") { await claimUpiPayment(jobId); } else { const bad = canRecordPayment({ method: payMethod, verified: payVerified, reference: payRef }); if (bad) { setCashError(bad); return; } await recordManualPayment(recordInput(jobId, { method: payMethod, reference: payRef })); } } else await recordManualPayment({ jobId, method: "cash" }); } }
-      else if (payment) await confirmManualPayment(payment.id);
+      else if (binding.paymentId) await confirmManualPayment(binding.paymentId);
       setCashConfirm(null);
     } catch (err) {
       setCashError(payErrorNote(err, mode));
@@ -317,7 +441,30 @@ export default function JobDetailScreen() {
   }
 
   const [staffAction, setStaffAction] = useState<"enqueue" | "admit" | "rework" | null>(null);
-  const [advanceConfirm,setAdvanceConfirm] = useState(false);
+  // The armed advance confirm is an IDENTITY TOKEN, not a flag: it names the
+  // job, the stage and the operator it was affirmed for. The confirm UI below
+  // renders ONLY while all three still match - synchronously, at render time -
+  // so a route move, a live stage flip or an account switch can never let an
+  // old affirmation ride onto a different action (not even for one render).
+  const [advanceConfirm,setAdvanceConfirm] = useState<{ route: string; jobId: string; status: string; epoch: number } | null>(null);
+  const [advanceAuth, setAdvanceAuth] = useState<StaffAuth | null | undefined>(undefined);
+  useEffect(() => onStaffAuthChanged(setAdvanceAuth), []);
+  // Monotonic operator-scope epoch: bumps on EVERY verified-fingerprint
+  // change, either direction - including a same-uid re-scope (A -> B -> A) -
+  // so an affirmation armed under an earlier scope can NEVER revive. The
+  // fingerprint binds uid + role + tenant + studio, not the uid alone.
+  const advanceFpPrev = useRef<string | undefined>(undefined);
+  const advanceEpoch = useRef(0);
+  const advanceFp = staffAuthFingerprint(advanceAuth);
+  if (advanceFpPrev.current !== advanceFp) { advanceFpPrev.current = advanceFp; advanceEpoch.current += 1; }
+  // Kill a stale armed confirmation BEFORE the loading/error/not-found early
+  // returns below can skip the check: wrong route, superseded operator-scope
+  // epoch, or a live job/status move - including a terminal round-trip such
+  // as READY -> DELIVERED -> READY after a correction - disarms it on THIS
+  // render, not one effect later.
+  if (advanceConfirm && (advanceConfirm.route !== (id ?? "") || advanceConfirm.epoch !== advanceEpoch.current || (job !== null && (advanceConfirm.jobId !== job.id || advanceConfirm.status !== job.status)))) {
+    setAdvanceConfirm(null);
+  }
   const [standbyBay, setStandbyBay] = useState("");
   async function performStaffAction() {
     if (!id || !staffAction || advancing) return;
@@ -335,7 +482,7 @@ export default function JobDetailScreen() {
     try {
       const steps = job.status === "PENDING_VEHICLE" || job.status === "IN_PROGRESS" ? 2 : 1;
       for (let i = 0; i < steps; i++) await advanceJobStatus(id);
-      setAdvanceConfirm(false);
+      setAdvanceConfirm(null);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to advance status.");
     } finally {
@@ -487,11 +634,24 @@ export default function JobDetailScreen() {
       </Section> : null}
       <Text style={sectionTitle}>Payment</Text>
       <Section>
-        <Row label="Status" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : "Not yet initiated")} />
+        <Row label="Status" value={membershipCoveredLabel(job) ?? (booking ? membershipCoveredLabel(booking) : null) ?? (paymentRead === "loading" ? "Checking payment status..." : paymentRead === "error" ? "Payment status unavailable" : payment ? PAYMENT_STATUS_LABELS[payment.status] ?? payment.status : job.paymentStatus === "paid" ? "No payment record found" : "Not yet initiated")} />
+        {paymentRead === "error" && (
+          <>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+              The payment record could not be loaded. Do not record or collect a payment until the real status loads - the job may already be paid.
+            </Text>
+            <Button label="Retry payment status" size="md" variant="secondary" style={{ marginTop: spacing.xs }} onPress={() => setPaymentRetryTick((t) => t + 1)} />
+          </>
+        )}
+        {paymentRead === "ready" && !payment && job.paymentStatus === "paid" && (
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+            This job is marked paid, but no payment record was found. Do not collect again - ask the office to reconcile the payment record.
+          </Text>
+        )}
         <Row label="Amount" value={formatPaise(job.totalAmount)} />
         {invoice && <Row label="Invoice" value={invoice.invoiceNumber} />}
 
-        {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && !payment && job.status !== "CANCELLED" && (
+        {!(MEMBERSHIP_SETTLEMENT_ENABLED && (membershipCoveredLabel(job) || (booking && membershipCoveredLabel(booking)))) && paymentRead === "ready" && !payment && job.paymentStatus !== "paid" && job.status !== "CANCELLED" && (
           <Button
             label={UPI_RECORD_ENABLED ? "Record payment" : "Record cash payment"}
             onPress={() => void handleRecordCashPayment()}
@@ -500,7 +660,10 @@ export default function JobDetailScreen() {
             style={{ marginTop: spacing.xs }}
           />
         )}
-        {payment &&
+        {paymentRead === "ready" && payment &&
+          payment.jobId === job.id &&
+          payment.tenantId === job.tenantId &&
+          job.paymentStatus !== "paid" &&
           (payment.status === "pending" || payment.status === "processing") &&
           payment.method === "cash" && (
             <Button
@@ -511,7 +674,8 @@ export default function JobDetailScreen() {
               style={{ marginTop: spacing.xs }}
             />
           )}
-        {payment &&
+        {paymentRead === "ready" && payment &&
+          payment.jobId === job.id &&
           (payment.status === "pending" || payment.status === "processing") &&
           payment.method !== "cash" &&
           payment.method !== "razorpay_payment_link" && (
@@ -519,7 +683,7 @@ export default function JobDetailScreen() {
               UPI payment claimed. Waiting for the office to check the account and confirm.
             </Text>
           )}
-        {payment && payment.status === "pending" && payment.method === "razorpay_payment_link" && (
+        {paymentRead === "ready" && payment && payment.jobId === job.id && payment.status === "pending" && payment.method === "razorpay_payment_link" && (
           <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
             Awaiting online payment confirmation from the payment provider.
           </Text>
@@ -640,19 +804,22 @@ export default function JobDetailScreen() {
       {job.status === "PENDING_VEHICLE" && job.bookingId ? <Button label="Arrived - standby" variant="secondary" disabled={Date.parse(job.scheduledAt) > Date.now()} onPress={() => setStaffAction("enqueue")} style={{marginBottom: spacing.lg}} /> : null}
       {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
       {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
-      {cashConfirm ? <Section>
-        {UPI_RECORD_ENABLED && cashConfirm === "record" && job ? <RecordPaymentFields totalPaise={job.totalAmount} method={payMethod} onMethod={setPayMethod} verified={payVerified} onVerified={setPayVerified} reference={payRef} onReference={setPayRef} /> : null}
+      {cashConfirm && cashConfirmLive ? <Section>
+        {UPI_RECORD_ENABLED && cashConfirm.mode === "record" && job ? <RecordPaymentFields totalPaise={job.totalAmount} method={payMethod} onMethod={setPayMethod} verified={payVerified} onVerified={setPayVerified} reference={payRef} onReference={setPayRef} /> : null}
 
-        <Text style={{color: colors.textPrimary}}>{cashConfirm === "record" ? (UPI_RECORD_ENABLED && payMethod === "upi_manual" ? "Payment claimed? Sends the full amount to the office to check the account and mark paid. The job stays unpaid until then." : "Record cash payment? Confirms the customer paid in full at the studio.") : "Confirm cash received? Marks this payment complete and issues the invoice."}</Text>
+        <Text style={{color: colors.textPrimary}}>{cashConfirm.mode === "record" ? (UPI_RECORD_ENABLED && payMethod === "upi_manual" ? "Payment claimed? Sends the full amount to the office to check the account and mark paid. The job stays unpaid until then." : "Record cash payment? Confirms the customer paid in full at the studio.") : "Confirm cash received? Marks this payment complete and issues the invoice."}</Text>
         {cashError ? <Text accessibilityRole="alert" style={{color: colors.textPrimary}}>{cashError}</Text> : null}
-        <Button label="Confirm" onPress={() => void performCashAction()} loading={paymentActionLoading} />
+        <Button label="Confirm" onPress={() => void performCashAction(cashConfirm.armId)} loading={paymentActionLoading} />
         <Button label="Cancel" variant="secondary" disabled={paymentActionLoading} onPress={() => { setCashConfirm(null); setCashError(null); }} />
       </Section> : null}
-      {advanceConfirm ? <Section><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(false)}/></Section> : null}
+      {advanceConfirm && job ? <Section>{job.status === "READY_FOR_DELIVERY" ? <DeliveryConfirmPane key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={()=>setAdvanceConfirm(null)} onCancel={()=>setAdvanceConfirm(null)}/> : <><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(null)}/></>}</Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>{MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</Text> : null}
-      {canAdvance && (
-        <Button label={advanceLabel} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => (job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm(true) : void handleAdvance())} loading={advancing} style={{ marginBottom: spacing.lg }} />
-      )}
+      {/* While a confirmation is open the original advance control stays
+          hidden: only the confirmation's Confirm/Cancel may act - no second
+          arm/reset path competing with it. */}
+      {canAdvance && !advanceConfirm ? (
+        <Button label={advanceLabel} variant={job.status === "READY_FOR_DELIVERY" ? "secondary" : "primary"} disabled={job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid"} onPress={() => (job.status === "READY_FOR_DELIVERY" ? setAdvanceConfirm({ route: id ?? "", jobId: job.id, status: job.status, epoch: advanceEpoch.current }) : void handleAdvance())} loading={advancing} style={{ marginBottom: spacing.lg }} />
+      ) : null}
 
       {job.status === "PENDING_VEHICLE" && job.bookingId ? (
         <Section>

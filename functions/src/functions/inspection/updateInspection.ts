@@ -12,6 +12,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateInspectionSchema } from "../../schemas/inspection.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Same allowlist as issueInspectionPhotoUploadUrl.
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -19,7 +20,7 @@ const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 // typically well under 5 MB. Adjust here if larger evidence photos are needed.
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
-export const updateInspection = onCall({ region: "asia-south1" }, async (request) => {
+export const updateInspection = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["studio", "admin", "superadmin"].includes(user.claims.role)) {

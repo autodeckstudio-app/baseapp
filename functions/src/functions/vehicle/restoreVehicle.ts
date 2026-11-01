@@ -8,9 +8,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { restoreVehicleSchema } from "../../schemas/vehicle.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Brings an archived car back with all its details. Same ownership rules as archiveVehicle.
-export const restoreVehicle = onCall({ region: "asia-south1" }, async (request) => {
+export const restoreVehicle = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(restoreVehicleSchema, request.data);

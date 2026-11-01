@@ -4,12 +4,13 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 /**
  * Customer asks to delete their account. This only RECORDS the request; nothing is erased here.
  * Erasure follows the retention rules the owner decides (invoices and warranties may need to be kept). New, additive.
  */
-export const requestAccountDeletion = onCall({ region: "asia-south1" }, async (request) => {
+export const requestAccountDeletion = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   assertTenant(user, user.claims.tenantId);

@@ -7,8 +7,9 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getStudioJobsSchema } from "../../schemas/job.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const getStudioJobs = onCall({ region: "asia-south1" }, async (request) => {
+export const getStudioJobs = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getStudioJobsSchema, request.data);

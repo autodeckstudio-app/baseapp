@@ -8,9 +8,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deleteStorySchema } from "../../schemas/story.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: remove a story for good (record and file). Hiding is the soft option; this is the real delete.
-export const deleteStory = onCall({ region: "asia-south1" }, async (request) => {
+export const deleteStory = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(deleteStorySchema, request.data);

@@ -45,11 +45,18 @@ export async function createProtection(input: CreateProtectionInput): Promise<Pr
 export interface UpdateProtectionInput {
   vehicleId: string;
   protectionId: string;
-  provider?: string | undefined;
-  policyNumber?: string | undefined;
-  startDate?: string | undefined;
-  expiryDate?: string | undefined;
-  notes?: string | undefined;
+  /** Revision the admin reviewed; the callable rejects stale corrections. */
+  expectedRevision: number;
+  /** Legacy unversioned records: updatedAt of the exact record reviewed. */
+  legacyBaseUpdatedAt?: string | undefined;
+  coverage?: "full_body" | "full_front" | "high_impact" | null | undefined;
+  // null CLEARS the field on the record; omitting the key leaves it untouched.
+  provider?: string | null | undefined;
+  policyNumber?: string | null | undefined;
+  startDate?: string | null | undefined;
+  expiryDate?: string | null | undefined;
+  warrantyYears?: number | null | undefined;
+  notes?: string | null | undefined;
   status?: ProtectionStatus | undefined;
 }
 

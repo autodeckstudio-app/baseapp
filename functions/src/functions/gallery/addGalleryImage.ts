@@ -7,9 +7,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { addGalleryImageSchema } from "../../schemas/gallery.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: publish an image to the studio's public gallery.
-export const addGalleryImage = onCall({ region: "asia-south1" }, async (request) => {
+export const addGalleryImage = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(addGalleryImageSchema, request.data);

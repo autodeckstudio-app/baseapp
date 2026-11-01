@@ -25,11 +25,11 @@ describe("submitMyPaper when upload-URL signing fails (emulator)", () => {
   it("writes no paper and holds no number; a retry with the same number succeeds", async () => {
     await db.collection("vehicles").doc(`veh-sign-${uid}`).set({ id: `veh-sign-${uid}`, ownerId: uid, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
     h.signFails = true;
-    await expect(submit({ vehicleId: `veh-sign-${uid}`, kind: "INSURANCE", reference: "POL 4242", contentType: "image/png" })).rejects.toThrow();
+    await expect(submit({ vehicleId: `veh-sign-${uid}`, kind: "INSURANCE", reference: "POL 4242", contentType: "image/png", contentMd5: "+u1VOWA2mKyFM0wEptyqZw==" })).rejects.toThrow();
     expect(await papers()).toHaveLength(0);
 
     h.signFails = false;
-    const ok = await submit({ vehicleId: `veh-sign-${uid}`, kind: "INSURANCE", reference: "POL 4242", contentType: "image/png" }) as { id: string; uploadUrl: string | null };
+    const ok = await submit({ vehicleId: `veh-sign-${uid}`, kind: "INSURANCE", reference: "POL 4242", contentType: "image/png", contentMd5: "+u1VOWA2mKyFM0wEptyqZw==" }) as { id: string; uploadUrl: string | null };
     expect(ok.uploadUrl).toBe("https://signed.example/put");
     expect(await papers()).toHaveLength(1);
   });
@@ -37,7 +37,7 @@ describe("submitMyPaper when upload-URL signing fails (emulator)", () => {
   it("a failed RC submit does not claim the car's RC slot", async () => {
     await db.collection("vehicles").doc(`veh-sign-rc-${uid}`).set({ id: `veh-sign-rc-${uid}`, ownerId: uid, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
     h.signFails = true;
-    await expect(submit({ vehicleId: `veh-sign-rc-${uid}`, kind: "RC", reference: "GJ01AB1234", contentType: "image/png" })).rejects.toThrow();
+    await expect(submit({ vehicleId: `veh-sign-rc-${uid}`, kind: "RC", reference: "GJ01AB1234", contentType: "image/png", contentMd5: "+u1VOWA2mKyFM0wEptyqZw==" })).rejects.toThrow();
     h.signFails = false;
     await expect(submit({ vehicleId: `veh-sign-rc-${uid}`, kind: "RC", reference: "GJ01AB1234" })).resolves.toMatchObject({ id: expect.any(String) });
   });

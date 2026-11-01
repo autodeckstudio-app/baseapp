@@ -7,9 +7,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { deleteExpenseSchema } from "../../schemas/expense.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: remove a wrongly-recorded expense. Audited with full before-state.
-export const deleteExpense = onCall({ region: "asia-south1" }, async (request) => {
+export const deleteExpense = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(deleteExpenseSchema, request.data);

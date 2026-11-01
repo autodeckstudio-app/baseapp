@@ -11,16 +11,28 @@ export interface SessionHealDeps<Claims> {
   resolveClaims: (idToken: string) => Promise<{ changed: boolean } | null>;
   exchangeIdToken: (idToken: string) => Promise<Claims | null>;
   refreshIdToken: () => Promise<string>;
+  /** Liveness gate supplied by the caller's event sequencing: checked after
+   * EVERY await, so a superseded event never performs an external auth
+   * MUTATION (a stale resolve/exchange POST must never hit the server after
+   * a newer token event has arrived). */
+  shouldContinue?: () => boolean;
 }
 
 export async function claimsForSignedInUser<Claims>(deps: SessionHealDeps<Claims>): Promise<Claims | null> {
+  const ok = () => !deps.shouldContinue || deps.shouldContinue();
   const existing = await deps.fetchSessionClaims();
+  if (!ok()) return null;
   if (existing) return existing;
   try {
     let idToken = await deps.getIdToken();
+    if (!ok()) return null;
     const resolved = await deps.resolveClaims(idToken);
+    if (!ok()) return null;
     if (!resolved) return null;
-    if (resolved.changed) idToken = await deps.refreshIdToken();
+    if (resolved.changed) {
+      idToken = await deps.refreshIdToken();
+      if (!ok()) return null;
+    }
     return await deps.exchangeIdToken(idToken);
   } catch {
     return null;

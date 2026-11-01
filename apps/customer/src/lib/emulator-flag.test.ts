@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emulatorTargets, resolveUseEmulator } from "./emulator-flag";
+import { emulatorConnectionsVerified, emulatorTargets, resolveUseEmulator } from "./emulator-flag";
 
 // The emulator flag decides whether the app talks to local emulators or the
 // real backend. A production build sets neither variable, so the default
@@ -46,5 +46,30 @@ describe("local-test notice wiring", () => {
     // Documented limitation: the no-flag export still contains the notice string (never rendered).
     // Separation is proven at runtime: no emulator connections, no strip in the DOM.
     expect(layout).toContain(": null;");
+  });
+});
+
+describe("emulatorConnectionsVerified", () => {
+  const env = {
+    EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: "8099",
+  };
+  const good = {
+    firestoreHost: "localhost:8099",
+    functionsOrigin: "http://localhost:5001",
+    authEmulatorUrl: "http://localhost:9099",
+  };
+  it("accepts only when every client provably points at the emulator targets", () => {
+    expect(emulatorConnectionsVerified(good, env)).toBe(true);
+  });
+  it("fails closed when any client missed the connection", () => {
+    expect(emulatorConnectionsVerified({ ...good, firestoreHost: null }, env)).toBe(false);
+    expect(emulatorConnectionsVerified({ ...good, functionsOrigin: null }, env)).toBe(false);
+    expect(emulatorConnectionsVerified({ ...good, authEmulatorUrl: null }, env)).toBe(false);
+  });
+  it("fails closed when any client points anywhere else", () => {
+    expect(emulatorConnectionsVerified({ ...good, firestoreHost: "localhost:8080" }, env)).toBe(false);
+    expect(emulatorConnectionsVerified({ ...good, functionsOrigin: "http://localhost:9999" }, env)).toBe(false);
+    expect(emulatorConnectionsVerified({ ...good, authEmulatorUrl: "http://127.0.0.1:9099" }, env)).toBe(false);
+    expect(emulatorConnectionsVerified(good, {})).toBe(false);
   });
 });

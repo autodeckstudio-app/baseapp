@@ -295,28 +295,34 @@ export function Row({
 }) {
   const { colors, name } = useExperienceTheme();
   const night = name === "night";
+  // Never nest interactive elements: the row's press target closes before any
+  // trailing content renders, so trailing IconAction buttons (edit/delete) are
+  // siblings of the row pressable, never children (invalid nested <button> on web).
   return (
-    <Pressable
-      disabled={!onPress}
-      onPress={onPress}
-      accessibilityRole={onPress ? "button" : undefined}
-      style={({ pressed }) => ({
+    <View
+      style={{
         flexDirection: "row",
         alignItems: "center",
         gap: space.line,
         paddingVertical: space.line,
         borderBottomWidth: last ? 0 : 1,
         borderBottomColor: colors.borderSubtle,
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
-      <View style={{ flex: 1, gap: 2 }}>
-        {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
-        {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
-      </View>
+      <Pressable
+        disabled={!onPress}
+        onPress={onPress}
+        accessibilityRole={onPress ? "button" : undefined}
+        style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", gap: space.line, opacity: pressed ? 0.7 : 1 })}
+      >
+        <View style={{ flex: 1, gap: 2 }}>
+          {typeof title === "string" ? <T role="bodyStrong">{title}</T> : title}
+          {detail ? typeof detail === "string" ? <T role="caption" tone={detailTone}>{detail}</T> : detail : null}
+        </View>
+      </Pressable>
       {trailing}
       {onPress ? <View style={{ width: 28, height: 28, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: night ? "rgba(255,255,255,0.07)" : "rgba(20,22,26,0.06)" }}><T tone="secondary">›</T></View> : null}
-    </Pressable>
+    </View>
   );
 }
 
@@ -437,8 +443,12 @@ export function Field({
   maxLength,
   error,
   onBlur,
+  editable,
 }: {
   onBlur?: (() => void) | undefined;
+  /** Forwarded to the underlying TextInput: false blocks keyboard input on
+   *  an already-focused field, which pointer-events alone cannot. */
+  editable?: boolean | undefined;
   error?: string | undefined;
   maxLength?: number;
   label: string;
@@ -454,6 +464,7 @@ export function Field({
     <View style={{ gap: space.breath }}>
       <T role="label" tone="tertiary">{label}</T>
       <TextInput
+        editable={editable}
         accessibilityLabel={label}
         value={value}
         onChangeText={onChangeText}

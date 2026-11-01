@@ -7,6 +7,7 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { calculatePriceSchema } from "../../schemas/service.js";
 import { calculatePrice, taxFor } from "../../lib/pricing.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Server-authoritative price calculation.
 // The client MUST call this and use the returned breakdown — it must never compute
@@ -18,7 +19,7 @@ import { calculatePrice, taxFor } from "../../lib/pricing.js";
 // browsing/booking confirm/garage, studio walk-in price preview, admin service
 // pricing preview). Restored verbatim plus rate limiting, which every other
 // active read/preview callable already has.
-export const calculateServicePrice = onCall({ region: "asia-south1" }, async (request) => {
+export const calculateServicePrice = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertTenant(user, user.claims.tenantId);
 

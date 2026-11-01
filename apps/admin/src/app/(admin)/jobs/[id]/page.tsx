@@ -54,6 +54,9 @@ export default function JobDetailPage() {
   useEffect(() => {
     setError(null);
     if (!id) {setJob(null);return undefined;}
+    // Route change: clear the previous job FIRST - until this route's
+    // listener delivers, nothing from the old job may stay on screen.
+    setJob(undefined);
     return listenToJob(id, value=>{setJob(value);setError(null);}, (err) => setError(err.message));
   }, [id,attempt]);
 
@@ -174,7 +177,7 @@ export default function JobDetailPage() {
       </header>
 
       <StageTrack current={job.status} />
-      <JobControls job={job} />
+      <JobControls job={job} routeId={id} />
       <MembershipSettlement job={job} booking={booking ?? null} />
 
       <div className="ax-detail">

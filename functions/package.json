@@ -33,6 +33,7 @@
     "@firebase/rules-unit-testing": "^3.0.4",
     "esbuild": "^0.21.5",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "firebase": "^10.14.1"
   }
 }

@@ -90,6 +90,17 @@ async function seed() {
     valueRedeemed: 100000,
     usedAt: now,
   });
+  await db.collection("vehicles").doc(id).set({
+    id,
+    tenantId: "covered",
+    ownerId: "c",
+    registrationNumber: "GJ01CD5678",
+    make: "Maruti",
+    model: "Swift",
+    year: 2022,
+    color: "white",
+    photoUrl: null,
+  });
   await db.collection("services").doc(id).set({
     id,
     tenantId: "covered",
@@ -117,7 +128,7 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       alreadySettled: true,
       invoiceId: result.invoiceId,
     });
-    await advanceJobStatus.run({ data: { jobId: id }, auth: auth() } as never);
+    await advanceJobStatus.run({ data: { jobId: id, protectionWork: [] }, auth: auth() } as never);
     expect((await get("jobs", id)).status).toBe("DELIVERED");
   });
   it("denies customer/accountant/other tenant/other studio", async () => {
@@ -188,7 +199,7 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
       .doc(id)
       .set({ jobId: id, tenantId: "covered", status: "issued" });
     await expect(
-      advanceJobStatus.run({ data: { jobId: id }, auth: auth() } as never),
+      advanceJobStatus.run({ data: { jobId: id, protectionWork: [] }, auth: auth() } as never),
     ).rejects.toMatchObject({ code: "failed-precondition" });
   });
   it("late capture remains real receipt+anomaly without changing covered invoice/job", async () => {
@@ -268,7 +279,7 @@ describe("membership-covered zero settlement (synthetic linkage fixtures)", () =
   });
   it("covered delivery rejects unpaid first and paid with void invoice linkage", async () => {
     const id = await seed();
-    const invoke = () => advanceJobStatus.run({ data: { jobId: id }, auth: auth() } as never);
+    const invoke = () => advanceJobStatus.run({ data: { jobId: id, protectionWork: [] }, auth: auth() } as never);
     await expect(invoke()).rejects.toMatchObject({
       code: "failed-precondition",
       message: "Collect and confirm full payment before delivering this vehicle.",

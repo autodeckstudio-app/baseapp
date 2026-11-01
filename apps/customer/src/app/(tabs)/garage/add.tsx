@@ -1,8 +1,8 @@
-import { FileUploader, SelectField } from "../../../ui/inputs";
+import { DateField, FileUploader, SelectField } from "../../../ui/inputs";
 import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
-import { createElement, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { space } from "@autodeck/ui/theme";
 import { COLLECTIONS } from "@autodeck/database";
@@ -13,6 +13,8 @@ import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
 import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
 import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { createMyProtection, isCalendarDate, type MyProtectionKind } from "../../../lib/protection-service";
+import { addCarAbandonAllowed, addCarEditsFrozen, createAddCarJournal, journalPending, runAddCarJournal, type AddCarJournal } from "../../../lib/add-car-journal";
 
 type FormState = {
   registrationNumber: string;
@@ -40,6 +42,33 @@ const FIELDS: FieldDef[] = [
 
 const GARAGE_ROUTE = "/(tabs)/garage";
 
+type ProtectionEntry = { declared: "" | "yes" | "no"; brand: string; years: string; applied: string; declarationId: string };
+function emptyProtection(): ProtectionEntry {
+  // Stable per form instance: a retry of the same save reuses this id, so the
+  // server dedups instead of duplicating the declaration.
+  return { declared: "", brand: "", years: "", applied: "", declarationId: `decl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}` };
+}
+// Unknown-ack copy: the declaration may or may not have landed. Only the
+// Resume retry (same declarationId, exact server replay) may claim it cannot
+// duplicate; "continue and add later" is a NEW operation and must tell the
+// user to check what is already there first.
+const PROTECTION_SAVE_UNCONFIRMED = "We could not confirm whether the protection details were saved. Resume to retry the same save - the retry replays the same declaration and cannot duplicate it. If you continue to the car, check its page first and add the details there only if they are missing.";
+const PROTECTION_BLOCKS: { kind: MyProtectionKind; label: string; question: string }[] = [
+  { kind: "ppf", label: "Paint protection film (PPF)", question: "Does this car have PPF?" },
+  { kind: "ceramic", label: "Ceramic coating", question: "Does this car have ceramic coating?" },
+];
+
+/** Empty, or a whole-year count 1-50. Years alone never become an expiry. */
+function validYears(v: string): boolean {
+  if (v.trim() === "") return true;
+  const n = Number(v.trim());
+  return /^\d+$/.test(v.trim()) && n >= 1 && n <= 50;
+}
+function validApplied(v: string): boolean {
+  const t = v.trim();
+  return t === "" || isCalendarDate(t);
+}
+
 export default function AddVehicleScreen() {
   const router = useRouter();
   const auth = useAuth();
@@ -57,15 +86,106 @@ export default function AddVehicleScreen() {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [archivedMatch, setArchivedMatch] = useState<{ vehicleId: string; label: string } | null>(null);
   const [photoFailed, setPhotoFailed] = useState(false);
+  // Stage journal: frozen at submit time with BOTH stages pending from the
+  // outset. Retries run whatever the journal still marks pending - never a
+  // re-snapshot of the editable form, and never "photo only if a photo
+  // failure was already observed" (a declaration failure used to drop the
+  // photo silently because it had not been attempted yet).
+  type PendingJournal = AddCarJournal;
+  const [journal, setJournal] = useState<PendingJournal | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
   const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
+  const [protection, setProtection] = useState<Record<MyProtectionKind, ProtectionEntry>>(() => ({ ppf: emptyProtection(), ceramic: emptyProtection() }));
+  const [protectionError, setProtectionError] = useState<string | null>(null);
+  const [protectionFailed, setProtectionFailed] = useState(false);
+
+  // Dev-only visual harness (preview route, ?mockpending=1): seeds the exact
+  // pending state - declaration stage failed before the photo attempt - so
+  // the Resume/Continue/Start-over UI can be reviewed as real pixels.
+  // Never runs outside __DEV__ and never touches the network.
+  const params = useLocalSearchParams<{ mockpending?: string }>();
+  const mockPending = __DEV__ && params.mockpending === "1";
+  useEffect(() => {
+    if (!mockPending) return;
+    // Seeds the exact pending state (declaration stage failed before the
+    // photo attempt) with a coherent submitted snapshot, purely as pixels:
+    // the pending actions are rendered disabled below, so nothing in this
+    // mode can invoke the real pipeline against the fake car id.
+    const blob = new Blob(["x"], { type: "image/png" } as BlobOptions);
+    const j = createAddCarJournal(
+      [{ kind: "ppf", entry: { brand: "Garware", years: "5", applied: "2024-01-15", declarationId: "decl-mockpending1" } }],
+      { blob, contentType: "image/png" },
+    );
+    setForm({ registrationNumber: "GJ01AB1234", make: "Honda", model: "City", year: "2022", color: "White" });
+    setProtection({ ppf: { declared: "yes", brand: "Garware", years: "5", applied: "2024-01-15", declarationId: "decl-mockpending1" }, ceramic: emptyProtection() });
+    setPhoto({ blob, contentType: "image/png", previewUrl: URL.createObjectURL(blob) });
+    setSavedId("mock-saved-car");
+    setJournal(j);
+    setProtectionFailed(true);
+    setError(PROTECTION_SAVE_UNCONFIRMED);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * While a submit is in flight or a journal still has pending stages, the
+   * saved target owns the pending work: form, protection and photo edits
+   * are frozen (handlers no-op) so an ordinary edit can never drop pending
+   * uploads/declarations. The user resolves the pending work explicitly:
+   * retry it, continue to the saved car, or discard via the explicit
+   * "Start over with a new car" action below.
+   */
+  function editsFrozen(): boolean {
+    return addCarEditsFrozen(loading, journal);
+  }
+
+  /**
+   * Explicit, user-owned abandon (the "Start over with a new car" action
+   * only - never triggered by an ordinary edit, and refused while a write
+   * is in flight with unknown outcome). Resets the journal WITH the saved
+   * id and failure flags (never a stranded invisible journal), mints fresh
+   * declarationIds for the entries still marked yes (the old ids may
+   * already be dedup-bound to the saved car - reusing them could attach a
+   * declaration to the wrong vehicle), and states truthfully what happens
+   * to the unsaved stages. Whatever already committed stays committed.
+   */
+  function abandonPendingJournal() {
+    if (!addCarAbandonAllowed(loading, journal)) return;
+    setJournal(null);
+    setSavedId(null);
+    setPhotoFailed(false);
+    setProtectionFailed(false);
+    setProtection((prev) => {
+      const next = { ...prev };
+      for (const { kind } of PROTECTION_BLOCKS) {
+        if (next[kind].declared === "yes") next[kind] = { ...next[kind], declarationId: emptyProtection().declarationId };
+      }
+      return next;
+    });
+    setError("Your car was saved before this edit. Anything that had not finished saving for it will not resume here - you can add it from that car's page.");
+  }
+
+  function updateProtection(kind: MyProtectionKind, field: keyof ProtectionEntry, value: string) {
+    if (editsFrozen()) return; // a pending journal owns the saved target; edits resume after it resolves
+    setProtectionError(null);
+    setProtectionFailed(false);
+    setProtection((prev) => ({ ...prev, [kind]: { ...prev[kind], [field]: value } }));
+  }
+
+  /** Frozen at submit time: a save in flight always works on the entries the
+   * user actually submitted, never a reopened or edited form. */
+  function snapshotProtectionEntries(): { kind: MyProtectionKind; entry: ProtectionEntry }[] {
+    return PROTECTION_BLOCKS
+      .map(({ kind }) => ({ kind, entry: { ...protection[kind] } }))
+      .filter(({ entry }) => entry.declared === "yes");
+  }
   // Stale-response guard: every submission bumps the sequence and captures the
   // plate it was for; async answers from an older submission or plate are dropped.
   const submitSeq = useRef(0);
   const currentPlate = useRef("");
 
   function pickPhoto(file: { blob: Blob; type: string } | null) {
+    if (editsFrozen()) return;
     if (!file) { setPhoto(null); setError(null); return; } // the uploader's Remove badge sends no file
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setError("Photos work as JPEG, PNG or WebP.");
@@ -78,6 +198,7 @@ export default function AddVehicleScreen() {
   function update(field: keyof FormState, value: string) {
     // Any edit invalidates an earlier lookup: archived-match popup, duplicate
     // error target and saved/restore state all belong to the old values.
+    if (editsFrozen()) return;
     setArchivedMatch(null);
     setSavedId(null);
     setError(null);
@@ -105,8 +226,18 @@ export default function AddVehicleScreen() {
     setFieldErrors((f) => ({ ...f, [key]: msg }));
   }
 
+  // Unmount must stop the run too: seq/plate alone still let an unmounted
+  // screen dispatch the next write, set state, and navigate.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   function isStale(seq: number, plate: string) {
-    return seq !== submitSeq.current || currentPlate.current !== plate;
+    return !mounted.current || seq !== submitSeq.current || currentPlate.current !== plate;
   }
 
   /**
@@ -131,16 +262,81 @@ export default function AddVehicleScreen() {
     }
   }
 
-  async function retryPhoto() {
-    if (!savedId || !photo) return;
+  /**
+   * Save the optional self-declared protection entries for a car that already
+   * exists. Returns true when there is nothing blocking navigation (no
+   * entries, or all saved); false when it showed an error and the caller must
+   * stop. Never throws for a failed save - the car itself is already safe.
+   */
+  function protectionEntriesValid(): boolean {
+    const entries = PROTECTION_BLOCKS.map(({ kind }) => protection[kind]);
+    if (entries.some((entry) => entry.declared === "yes" && (!validYears(entry.years) || !validApplied(entry.applied)))) {
+      setProtectionError("Check the protection details: whole warranty years (1-50) and a valid date, or leave them empty.");
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Run the stages still pending after the car exists, in order: protection
+   * declarations first, then the photo. A failed stage stops the run with the
+   * stage marked so retry resumes exactly there; already-saved declarations
+   * are deduped server-side by their declarationId, so a retry never doubles.
+   */
+  async function runPendingStages(vehicleId: string, journal: PendingJournal, seq: number, plate: string): Promise<boolean> {
+    // Runner semantics (per-entry progress, staleness gates before and after
+    // every write) live in lib/add-car-journal.ts with unit coverage; the
+    // messages and failure flags here are the unchanged screen contract.
+    const ok = await runAddCarJournal(vehicleId, journal, {
+      saveDeclaration: async (vid, { kind, entry }) => {
+        await createMyProtection({
+          vehicleId: vid,
+          kind,
+          declarationId: entry.declarationId,
+          ...(entry.brand.trim() !== "" ? { provider: entry.brand.trim() } : {}),
+          ...(entry.years.trim() !== "" ? { warrantyYears: Number(entry.years.trim()) } : {}),
+          ...(entry.applied.trim() !== "" ? { startDate: entry.applied.trim() } : {}),
+        });
+      },
+      uploadPhoto: async (vid, p) => {
+        await uploadVehiclePhoto(vid, p.blob, p.contentType);
+      },
+      isStale: () => isStale(seq, plate),
+      onProtectionFailed: () => {
+        // The car is saved; the declarations may or may not have landed - a
+        // retry is safe (declarationId dedup), so ask for one honestly.
+        setProtectionFailed(true);
+        setError(PROTECTION_SAVE_UNCONFIRMED);
+      },
+      onPhotoFailed: () => {
+        // Stay on this screen so the message is actually seen.
+        setPhotoFailed(true);
+        setError("Your car is saved, but the photo could not be uploaded. Try again, or tap Done to continue without it.");
+      },
+    });
+    // A stale/inactive run publishes nothing: no state writes, no navigation.
+    if (isStale(seq, plate)) return false;
+    setJournal({ ...journal });
+    // Truthful stage flags: a stage that succeeded on this run no longer
+    // shows as failed (a resumed declaration success followed by a photo
+    // failure must not leave both flags set).
+    if (journal.entriesDone >= journal.entries.length) setProtectionFailed(false);
+    if (journal.photoDone) setPhotoFailed(false);
+    return ok;
+  }
+
+  async function retryPendingStages() {
+    if (!savedId || loading || !journal) return;
+    const seq = ++submitSeq.current;
+    const plate = currentPlate.current;
     setLoading(true);
+    setError(null);
     try {
-      await uploadVehiclePhoto(savedId, photo.blob, photo.contentType);
-      router.replace(GARAGE_ROUTE);
-    } catch {
-      setError("The photo still could not be uploaded. Try again, or tap Done to continue without it.");
+      if (await runPendingStages(savedId, journal, seq, plate)) {
+        router.replace(`/(tabs)/garage/${savedId}`);
+      }
     } finally {
-      setLoading(false);
+      if (!isStale(seq, plate)) setLoading(false);
     }
   }
 
@@ -153,7 +349,7 @@ export default function AddVehicleScreen() {
     const fe = validate(form);
     setFieldErrors(fe);
     setSizeError(!size);
-    if (!size || Object.keys(fe).length > 0) {
+    if (!size || Object.keys(fe).length > 0 || !protectionEntriesValid()) {
       setError(null);
       return;
     }
@@ -193,17 +389,9 @@ export default function AddVehicleScreen() {
       });
       if (isStale(seq, plate)) return;
       setSavedId(vehicle.id);
-      if (photo) {
-        try {
-          await uploadVehiclePhoto(vehicle.id, photo.blob, photo.contentType);
-        } catch {
-          if (isStale(seq, plate)) return;
-          // Stay on this screen so the message is actually seen.
-          setPhotoFailed(true);
-          setError("Your car is saved, but the photo could not be uploaded. Try again, or tap Done to continue without it.");
-          return;
-        }
-      }
+      const j = createAddCarJournal(snapshotProtectionEntries(), photo ? { blob: photo.blob, contentType: photo.contentType } : null);
+      setJournal(j);
+      if (!(await runPendingStages(vehicle.id, j, seq, plate))) return;
       router.replace(GARAGE_ROUTE);
     } catch (err) {
       if (isStale(seq, plate)) return;
@@ -268,6 +456,15 @@ export default function AddVehicleScreen() {
       }
       await restoreVehicle(verified.id);
       if (isStale(seq, plate)) return;
+      // The restored car is the car this form describes (fresh ownership /
+      // tenant / archive / plate check above), so the pending declarations
+      // and photo belong to it: run the same journal instead of silently
+      // dropping what the user entered before the restore prompt. Their
+      // declarationIds were minted by this form session for this submission.
+      const j = createAddCarJournal(snapshotProtectionEntries(), photo ? { blob: photo.blob, contentType: photo.contentType } : null);
+      setJournal(j);
+      setSavedId(verified.id);
+      if (!(await runPendingStages(verified.id, j, seq, plate))) return;
       router.replace(GARAGE_ROUTE);
     } catch {
       if (isStale(seq, plate)) return;
@@ -281,7 +478,11 @@ export default function AddVehicleScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Garage</Kicker><T role="title">Add a car</T></View>}>
-        <View style={{ gap: space.line }}>
+        {/* Frozen while a save is in flight or a journal has pending stages:
+            pointer events blocked for EVERY input path (fields, selects,
+            date, photo) and the handlers no-op too, so no path can bypass
+            the freeze and strand pending work. */}
+        <View style={{ gap: space.line, opacity: editsFrozen() ? 0.6 : 1 }} pointerEvents={editsFrozen() ? "none" : "auto"}>
           {FIELDS.map(({ key, label, placeholder, autoCapitalize = "sentences", keyboardType = "default" }) => (
             <Field
               key={key}
@@ -303,6 +504,52 @@ export default function AddVehicleScreen() {
           <T role="caption" tone="secondary">Saved with your car. Only PPF prices change with car size.</T>
           <SelectField label="Car size" value={size ?? ""} placeholder="Choose size" options={VEHICLE_SIZES} onChange={v=>{setSize(v as VehicleCategory);setSizeError(false);}}/>
           {sizeError?<T role="caption" tone="danger">Choose your car's size.</T>:null}
+        </View>
+
+        <View style={{ gap: space.breath }}>
+          <Kicker>Existing protection (optional)</Kicker>
+          <T role="caption" tone="secondary">If this car already has PPF or ceramic coating, add what you know. It shows as added by you - AutoDeck has not verified it. Warranty years alone do not create an expiry date.</T>
+          {PROTECTION_BLOCKS.map(({ kind, label, question }) => (
+            <View key={kind} style={{ gap: space.hair }}>
+              {/* SelectField renders no visible label on web (native-only);
+                  render the question here like DateField's label pattern. */}
+              <T role="label" tone="tertiary">{question}</T>
+              <SelectField
+                label={question}
+                value={protection[kind].declared}
+                placeholder="Choose"
+                options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
+                onChange={(v: string) => updateProtection(kind, "declared", v)}
+              />
+              {protection[kind].declared === "yes" ? (
+                <>
+                  <T role="caption" tone="tertiary">{label} - every detail is optional; add what you know.</T>
+                  <Field
+                    label="Brand or installer (optional)"
+                    placeholder="e.g. Garware, LLumar"
+                    value={protection[kind].brand}
+                    onChangeText={(v: string) => updateProtection(kind, "brand", v)}
+                    maxLength={200}
+                  />
+                  <Field
+                    label="Reported warranty in years (optional)"
+                    placeholder="e.g. 5"
+                    value={protection[kind].years}
+                    onChangeText={(v: string) => updateProtection(kind, "years", v)}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                  <DateField
+                    label="Applied on (optional)"
+                    value={protection[kind].applied}
+                    onChange={(v: string) => updateProtection(kind, "applied", v)}
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
+                </>
+              ) : null}
+            </View>
+          ))}
+          {protectionError ? <T role="caption" tone="danger">{protectionError}</T> : null}
         </View>
 
         {Platform.OS === "web" ? (
@@ -340,9 +587,16 @@ export default function AddVehicleScreen() {
           />
         ) : null}
 
-        {error ? <Notice title={photoFailed ? "Photo not uploaded" : "Can't add this car"} body={error} /> : null}
+        {error ? <Notice title={photoFailed ? "Photo not uploaded" : protectionFailed ? "Protection save unconfirmed" : "Can't add this car"} body={error} /> : null}
 
-        {savedId && !photoFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPhoto()} /><Button label="Done" kind="quiet" onPress={() => router.replace(GARAGE_ROUTE)} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
+        {savedId && journal && journalPending(journal) ? (
+          <View style={{ gap: space.breath }}>
+            <T role="caption" tone="tertiary">This save is not finished. Resume it, continue to the saved car and finish there, or start over - editing here stays locked until you choose.</T>
+            <Button label="Resume unfinished save" busy={loading} onPress={() => void retryPendingStages()} />
+            <Button label="Continue to your car" kind="quiet" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} />
+            <Button label="Start over with a new car" kind="quiet" busy={loading} onPress={() => abandonPendingJournal()} />
+          </View>
+        ) : savedId && !photoFailed && !protectionFailed ? <Button label="View saved car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /> : photoFailed ? <View style={{ gap: space.breath }}><Button label="Try the photo again" busy={loading} onPress={() => void retryPendingStages()} /><Button label="Done" kind="quiet" onPress={() => router.replace(GARAGE_ROUTE)} /></View> : protectionFailed && savedId ? <View style={{ gap: space.breath }}><Button label="Continue to your car" onPress={() => router.replace(`/(tabs)/garage/${savedId}`)} /><Button label="Try the protection details again" kind="quiet" busy={loading} onPress={() => void retryPendingStages()} /></View> : <Button label="Add car" busy={loading || auth.status !== "ready" || !!archivedMatch} onPress={() => void handleAdd()} />}
       </Screen>
     </KeyboardAvoidingView>
   );

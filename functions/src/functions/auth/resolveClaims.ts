@@ -4,6 +4,7 @@ import { getAuth } from "firebase-admin/auth";
 import { extractRawAuth } from "../../middleware/auth.js";
 import { enforceRateLimit } from "../../middleware/rateLimit.js";
 import { resolveClaims as resolve } from "../../lib/roleResolver.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 /**
  * Google sign-in step 2 for the mobile apps: sets this account's AutoDeck
@@ -14,7 +15,7 @@ import { resolveClaims as resolve } from "../../lib/roleResolver.js";
  * The admin web app does the same thing in /api/auth/resolve-claims so it
  * works before Functions are deployed (Blaze).
  */
-export const resolveClaims = onCall({ region: "asia-south1" }, async (request) => {
+export const resolveClaims = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const raw = extractRawAuth(request);
   await enforceRateLimit({ uid: raw.uid, tenantId: null, role: null }, "auth.resolveClaims");
   const token = request.auth!.token as Record<string, unknown>;

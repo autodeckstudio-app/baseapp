@@ -8,11 +8,12 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { performDailyCloseSchema } from "../../schemas/dailyClose.js";
 import { dayAggregates } from "../../lib/dayAggregates.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: close the day for one studio. Expected figures are recomputed
 // server-side at close time; the admin supplies the counted drawer cash.
 // Re-closing a closed date requires reclose: true and is audited separately.
-export const performDailyClose = onCall({ region: "asia-south1" }, async (request) => {
+export const performDailyClose = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(performDailyCloseSchema, request.data);

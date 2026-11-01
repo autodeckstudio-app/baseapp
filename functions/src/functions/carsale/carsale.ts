@@ -26,6 +26,7 @@ import {
   setLeadStatusSchema,
   submitMyListingSchema,
 } from "../../schemas/carsale.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const SIXTY_DAYS = 60 * 24 * 3600 * 1000;
@@ -41,7 +42,7 @@ function checkText(description: string | null | undefined): void {
 }
 
 // Admin or customer: short-lived signed PUT URL for one listing photo.
-export const issueListingPhotoUploadUrl = onCall({ region: "asia-south1" }, async (request) => {
+export const issueListingPhotoUploadUrl = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "admin", "superadmin");
   const data = validate(issueListingPhotoUploadUrlSchema, request.data);
@@ -52,7 +53,7 @@ export const issueListingPhotoUploadUrl = onCall({ region: "asia-south1" }, asyn
 });
 
 // Admin: create or edit a listing (studio stock, or fix up a customer's), set draft/live/reserved/sold.
-export const adminSaveListing = onCall({ region: "asia-south1" }, async (request) => {
+export const adminSaveListing = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const d = validate(adminSaveListingSchema, request.data);
@@ -96,7 +97,7 @@ export const adminSaveListing = onCall({ region: "asia-south1" }, async (request
 });
 
 // Customer: submit (or edit) their own car. Always lands PENDING; the owner comes from the login, not the client.
-export const submitMyListing = onCall({ region: "asia-south1" }, async (request) => {
+export const submitMyListing = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(submitMyListingSchema, request.data);
@@ -125,7 +126,7 @@ export const submitMyListing = onCall({ region: "asia-south1" }, async (request)
 });
 
 // Customer: mark their own car as sold. It leaves the buyer list at once and shows as Sold to the seller and in admin.
-export const markMyListingSold = onCall({ region: "asia-south1" }, async (request) => {
+export const markMyListingSold = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(markMyListingSoldSchema, request.data);
@@ -147,7 +148,7 @@ export const markMyListingSold = onCall({ region: "asia-south1" }, async (reques
 // Admin: approve (goes live for 60 days) or reject with a reason the seller can read.
 // Seller removes one photo from their own listing. Owner only, one photo and its own object, never the listing or other photos.
 // Photos are addressed by position (the seller sees signed URLs, not paths); expectedCount guards against a stale view.
-export const removeMyListingPhoto = onCall({ region: "asia-south1" }, async (request) => {
+export const removeMyListingPhoto = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(removeMyListingPhotoSchema, request.data);
@@ -179,7 +180,7 @@ export const removeMyListingPhoto = onCall({ region: "asia-south1" }, async (req
 // Seller replaces one photo on their own listing. The new file is uploaded first through issueListingPhotoUploadUrl; this call swaps it in
 // at that position inside a transaction (owner, expectedCount and the old path are re-checked, so a concurrent edit cannot be overwritten), then
 // removes the old object. Old-object removal is best effort: if Storage fails the listing already shows the new photo and a leftover file may remain.
-export const replaceMyListingPhoto = onCall({ region: "asia-south1" }, async (request) => {
+export const replaceMyListingPhoto = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(replaceMyListingPhotoSchema, request.data);
@@ -209,7 +210,7 @@ export const replaceMyListingPhoto = onCall({ region: "asia-south1" }, async (re
   return { id: ref.id, oldRemoved };
 });
 
-export const reviewListing = onCall({ region: "asia-south1" }, async (request) => {
+export const reviewListing = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const d = validate(reviewListingSchema, request.data);
@@ -233,7 +234,7 @@ export const reviewListing = onCall({ region: "asia-south1" }, async (request) =
 // Admin: pin ONE reviewed photo as the public cover. Re-approving replaces the pin; removing or
 // replacing the photo on the listing revokes it automatically (path/generation no longer matches).
 // expectedSha256 pins an approval to exact reviewed bytes: a changed photo can never be silently approved.
-export const approveListingPhoto = onCall({ region: "asia-south1" }, async (request) => {
+export const approveListingPhoto = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const d = validate(approveListingPhotoSchema, request.data);
@@ -284,7 +285,7 @@ export function gatePrice(v: CarListingView, who: { role: string; uid: string; s
 }
 
 // Customers: live and reserved listings (not expired), plus their own in any status. Staff with includeAll get private fields too.
-export const listCarListings = onCall({ region: "asia-south1" }, async (request) => {
+export const listCarListings = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const d = validate(listCarListingsSchema, request.data ?? {});
@@ -316,7 +317,7 @@ export const listCarListings = onCall({ region: "asia-south1" }, async (request)
 });
 
 // Customer: "I'm interested" or "Report this listing". Goes to the admin inbox; seller details are never shared.
-export const expressInterest = onCall({ region: "asia-south1" }, async (request) => {
+export const expressInterest = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const d = validate(expressInterestSchema, request.data);
@@ -339,7 +340,7 @@ export const expressInterest = onCall({ region: "asia-south1" }, async (request)
   return { id: ref.id };
 });
 
-export const listCarLeads = onCall({ region: "asia-south1" }, async (request) => {
+export const listCarLeads = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   validate(listCarLeadsSchema, request.data ?? {});
@@ -349,7 +350,7 @@ export const listCarLeads = onCall({ region: "asia-south1" }, async (request) =>
   return { leads };
 });
 
-export const setCarLeadStatus = onCall({ region: "asia-south1" }, async (request) => {
+export const setCarLeadStatus = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const d = validate(setLeadStatusSchema, request.data);
@@ -363,7 +364,7 @@ export const setCarLeadStatus = onCall({ region: "asia-south1" }, async (request
 });
 
 // Public browsing: anyone, signed in or not, can see live and reserved cars. Public fields only, never seller details.
-export const listPublicCarListings = onCall({ region: "asia-south1", cors: true }, async (request) => {
+export const listPublicCarListings = onCall({ region: "asia-south1", cors: true , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const ip = String(request.rawRequest?.headers?.["x-forwarded-for"] ?? request.rawRequest?.ip ?? "anon").split(",")[0]?.trim() ?? "anon";
   await enforceRateLimit({ uid: `ip:${ip}`, tenantId: "public", role: null }, "gallery.read");
   const snap = await col().where("tenantId", "==", FIRST_TENANT_ID).limit(300).get();

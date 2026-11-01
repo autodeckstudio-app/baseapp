@@ -8,9 +8,10 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelWalkinJobSchema } from "../../schemas/job.js";
 import { walkinCancelBlock } from "../../lib/walkin-cancel.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 /** Cancel a walk-in that was started by mistake: unpaid, not started. Frees the bay and leaves an audit entry. */
-export const cancelWalkinJob = onCall({ region: "asia-south1" }, async (request) => {
+export const cancelWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(cancelWalkinJobSchema, request.data);

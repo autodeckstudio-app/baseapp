@@ -67,9 +67,10 @@ export function listenToCustomerVehicles(
     collection(db, COLLECTIONS.vehicles()),
     where("ownerId", "==", customerId),
     where("tenantId", "==", tenantId),
-    where("deletedAt", "==", null),
   );
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Vehicle)), onError);
+  // Archived cars are dropped client-side: a null-equality filter would hide
+  // legacy records that predate the deletedAt field.
+  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Vehicle).filter((v) => !v.deletedAt)), onError);
 }
 
 export function listenToCustomerBookings(
@@ -282,6 +283,6 @@ export function listenToProtectionsForVehicles(
 
 /** Live feed of every car on file (not deleted) for the studio. */
 export function listenToTenantVehicles(tenantId: string, onData: (v: Vehicle[]) => void, onError: (e: Error) => void): Unsubscribe {
-  const q = query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", tenantId), where("deletedAt", "==", null));
-  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Vehicle)), onError);
+  const q = query(collection(db, COLLECTIONS.vehicles()), where("tenantId", "==", tenantId));
+  return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Vehicle).filter((v) => !v.deletedAt)), onError);
 }

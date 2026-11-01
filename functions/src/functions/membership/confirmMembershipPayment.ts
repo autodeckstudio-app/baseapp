@@ -15,8 +15,9 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmMembershipPaymentSchema } from "../../schemas/membership.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const confirmMembershipPayment = onCall({ region: "asia-south1" }, async (request) => {
+export const confirmMembershipPayment = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
 

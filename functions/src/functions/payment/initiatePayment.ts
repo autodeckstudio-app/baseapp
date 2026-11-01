@@ -8,11 +8,12 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { initiatePaymentSchema } from "../../schemas/payment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Keyed by jobId — the payable operational job — so the same flow works for a
 // booking-sourced job or a walk-in job. bookingId (nullable) is carried onto
 // the Payment record purely as a cross-reference, never as the lookup key.
-export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (request) => {
+export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(initiatePaymentSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.initiate");

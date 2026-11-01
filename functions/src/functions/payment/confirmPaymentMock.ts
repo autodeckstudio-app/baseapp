@@ -24,8 +24,9 @@ import { readUpgradeSource, endUpgradedMembership } from "../../lib/membership-u
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { prepareJobInvoice } from "../../lib/job-invoice.js";
 import { isProductionProject } from "../../lib/environment.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const confirmPaymentMock = onCall({ region: "asia-south1" }, async (request) => {
+export const confirmPaymentMock = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const isEmulator =
     process.env["FUNCTIONS_EMULATOR"] === "true" || process.env["USE_PAYMENT_MOCK"] === "true";
 

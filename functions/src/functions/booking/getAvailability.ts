@@ -16,10 +16,11 @@ import {
   type OccupiedInterval,
 } from "../../lib/availability.js";
 import { addDays } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const MAX_RETURNED_SLOTS = 60;
 
-export const getAvailability = onCall({ region: "asia-south1" }, async (request) => {
+export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(getAvailabilitySchema, request.data);
   await enforceRateLimit(subjectFrom(user), "read.availability");

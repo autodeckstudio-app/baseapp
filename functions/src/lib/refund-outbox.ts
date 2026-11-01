@@ -21,6 +21,7 @@ import type { Payment, ServiceJob, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import type { PaymentProvider } from "./payment-provider.js";
 import { verifyRefundAccounting } from "./refund-accounting.js";
+import { readMembershipForRefund, deactivateRefundedMembershipInTx, alertMembershipPartialRefundInTx, readUpgradePredecessorForRefund, restoreUpgradedPredecessorInTx } from "./membership-refund.js";
 
 // ambiguous = the submit outcome is UNKNOWN (response lost / provider cannot
   // confirm). It is an unresolved hold, NOT a failure: the reservation stays
@@ -129,6 +130,17 @@ export async function planReserveInTx(
   const refundable = refundablePaise(payment);
   if (amount > refundable) {
     return { ok: false, code: "invalid", reason: `refund of ${amount} exceeds the refundable ${refundable} on payment ${i.payment.id}` };
+  }
+  // Owner policy (Meet, 30 Oct 2026, iMessage): membership refunds are FULL only -
+  // "no half membership". A partial reservation against a membership payment is
+  // refused at initiation, at the single authority every producer funnels through
+  // (requestBookingRefund, adminCancelBooking, noShowReview, late-capture). A
+  // membership payment that already carries refund money is anomalous; the
+  // refundable-balance check above already caps it, and refusing anything below
+  // the full original amount fails closed for staff review. Booking/job refunds
+  // keep partial sizing (cancellation fees, no-show resolutions).
+  if (payment.targetType === "membership" && amount !== payment.amount) {
+    return { ok: false, code: "invalid", reason: `membership refunds are full only: refund of ${amount} on payment ${payment.id} must equal the full ${payment.amount}` };
   }
   // Related-record preflight INSIDE the reservation transaction: refuse to
   // open a reservation whose job/booking records are missing, foreign-tenant,
@@ -394,6 +406,10 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
       const booking = bookingSnap.data() as Booking;
       if (booking.tenantId !== payment.tenantId) throw new Error(`refund projection rejected: booking ${fresh.bookingId} tenant ${booking.tenantId} != payment tenant ${payment.tenantId}`);
     }
+    // Owner policy 30 Oct 2026: full refund of a membership payment ends that
+    // membership's benefits - read BEFORE any write in this transaction.
+    const membershipRefund = await readMembershipForRefund(tx, db, payment);
+    const upgradePredecessor = await readUpgradePredecessorForRefund(tx, db, membershipRefund);
     // Cross-vintage tombstone lifecycle: read BEFORE any write in this
     // transaction. The tombstone exists to exclude the legacy producer while
     // this reservation is ACTIVE; once the projection commits, the payment's
@@ -462,6 +478,15 @@ async function projectRefund(db: Firestore, request: RefundRequest & { ref: Fire
         amountPaise: fresh.amountPaise, currency: payment.currency,
         source: "outbox", requestId: fresh.id, createdAt: now,
       });
+    }
+    // Membership policy (Meet, 30 Oct 2026): FULL refund ends that membership's
+    // benefits; only this payment's own membership is touched. Partial (not
+    // offered for memberships) changes no membership and alerts staff.
+    if (membershipRefund) {
+      if (check.label === "refunded") {
+        deactivateRefundedMembershipInTx(tx, membershipRefund, payment, now);
+        restoreUpgradedPredecessorInTx(tx, db, upgradePredecessor, { id: membershipRefund.ref.id, tenantId: membershipRefund.data.tenantId, customerId: membershipRefund.data.customerId, washesUsed: membershipRefund.data.washesUsed }, payment, now);
+      } else alertMembershipPartialRefundInTx(tx, db, payment, now);
     }
     tx.update(request.ref, { status: "projected", projectionNeeded: false, updatedAt: now });
     if (releaseActiveGuard) tx.delete(activeGuardRef);

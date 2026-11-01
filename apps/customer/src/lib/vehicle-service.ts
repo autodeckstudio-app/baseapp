@@ -78,7 +78,8 @@ export async function archiveVehicle(vehicleId: string): Promise<void> {
 
 /**
  * Real-time listener for the authenticated customer's vehicles.
- * Only returns non-archived vehicles (deletedAt == null).
+ * Only returns non-archived vehicles. Legacy records predate the deletedAt
+ * field: a missing field counts as active (never filtered out).
  * Firestore rules enforce that customers can only read their own vehicles.
  */
 export function listenToMyVehicles(
@@ -91,7 +92,6 @@ export function listenToMyVehicles(
     collection(db, COLLECTIONS.vehicles()),
     where("ownerId", "==", uid),
     where("tenantId", "==", tenantId),
-    where("deletedAt", "==", null),
   );
 
   return onSnapshot(
@@ -100,7 +100,9 @@ export function listenToMyVehicles(
     (snap: QuerySnapshot) => {
       // Deliver cached snapshots too: a freshly added or restored car must
       // appear immediately, and the listener reconciles with the server next.
-      const vehicles = snap.docs.map((doc) => doc.data() as Vehicle);
+      // A null-equality deletedAt filter would hide legacy cars whose records
+      // predate the field, so archived cars are dropped client-side instead.
+      const vehicles = snap.docs.map((doc) => doc.data() as Vehicle).filter((v) => !v.deletedAt);
       onData(vehicles);
     },
     onError,

@@ -1,18 +1,22 @@
-import type { getStorage } from "firebase-admin/storage";
+import { getStorage } from "firebase-admin/storage";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 /**
  * Round 7 photo handling against the REAL local Firestore + Storage emulators (success path). Failure paths are unit-tested with mocks.
  * Proves objects are actually removed from Storage, only the intended one, and records match. Fixtures only, emulator only.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { deleteApp, getApp, initializeApp } from "firebase-admin/app";
 
 const TENANT = "storage-tenant";
+// Base64 MD5 of src/test/fixtures/synthetic-policy.png - the bytes these tests actually upload.
+const FIXTURE_MD5 = "+u1VOWA2mKyFM0wEptyqZw==";
 let n = 0;
 const uid = (p: string) => `${p}-${Date.now()}-${++n}`;
 const auth = (u: string) => ({ uid: u, token: { role: "customer", tenantId: TENANT, studioId: null } });
 let db: FirebaseFirestore.Firestore;
 let bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>;
-let fns: { deleteMyPaper: any; updateMyPaper: any; removeMyVehicleImage: any; removeMyListingPhoto: any; replaceMyListingPhoto: any };
+let fns: { deleteMyPaper: any; updateMyPaper: any; finalizeMyPaper: any; removeMyVehicleImage: any; removeMyListingPhoto: any; replaceMyListingPhoto: any };
 const put = (p: string) => bucket.file(p).save(Buffer.from("x"), { contentType: "image/jpeg" });
 const has = async (p: string) => (await bucket.file(p).exists())[0];
 
@@ -23,9 +27,10 @@ beforeAll(async () => {
   const { getStorage } = await import("firebase-admin/storage");
   db = getFirestore(); bucket = getStorage().bucket();
   const papers = await import("../../functions/papers/myPaperEdits.js");
+  const sub = await import("../../functions/papers/submitMyPaper.js");
   const veh = await import("../../functions/vehicle/removeMyVehicleImage.js");
   const sale = await import("../../functions/carsale/carsale.js");
-  fns = { deleteMyPaper: papers.deleteMyPaper, updateMyPaper: papers.updateMyPaper, removeMyVehicleImage: veh.removeMyVehicleImage, removeMyListingPhoto: sale.removeMyListingPhoto, replaceMyListingPhoto: sale.replaceMyListingPhoto };
+  fns = { deleteMyPaper: papers.deleteMyPaper, updateMyPaper: papers.updateMyPaper, finalizeMyPaper: sub.finalizeMyPaper, removeMyVehicleImage: veh.removeMyVehicleImage, removeMyListingPhoto: sale.removeMyListingPhoto, replaceMyListingPhoto: sale.replaceMyListingPhoto };
 });
 
 describe("Storage success path (emulator)", () => {
@@ -43,15 +48,25 @@ describe("Storage success path (emulator)", () => {
 
   it("updateMyPaper with another file type removes the old own photo object", async () => {
     const me = uid("c"); const v = uid("v"); const pid = uid("p");
-    await db.collection("vehicles").doc(v).set({ id: v, ownerId: me, tenantId: TENANT });
+    await db.collection("vehicles").doc(v).set({ id: v, ownerId: me, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
     const old = `${TENANT}/vehicles/${v}/paper-${pid}.jpg`;
     await put(old);
-    await db.collection("papers").doc(pid).set({ id: pid, tenantId: TENANT, studioId: "s", vehicleId: v, customerId: me, kind: "INSURANCE", reference: "R-" + pid, status: "VERIFIED", evidencePath: old });
-    // The emulator has no credentials to mint the upload URL (getSignedUrl), which happens AFTER the record update and old-object cleanup,
-    // so that final step may throw here. Signed-URL minting is therefore NOT covered by this test.
-    await fns.updateMyPaper.run({ data: { paperId: pid, contentType: "image/png" }, auth: auth(me) }).catch((e: Error) => { if (!/credentials/i.test(e.message)) throw e; });
-    expect(await has(old)).toBe(false);
-    expect((await db.collection("papers").doc(pid).get()).data()?.evidencePath).toBe(`${TENANT}/vehicles/${v}/paper-${pid}.png`);
+    await db.collection("papers").doc(pid).set({ id: pid, tenantId: TENANT, studioId: "s", vehicleId: v, customerId: me, kind: "INSURANCE", reference: "R-" + pid, status: "VERIFIED", evidencePath: old, submittedBy: "customer" });
+    // URL signing is stubbed (the emulator has no signing key); the bytes upload is the client step.
+    const sign = vi.spyOn(Object.getPrototypeOf(getStorage().bucket().file("x")), "getSignedUrl").mockResolvedValue(["https://signed.example/put"] as never);
+    try {
+      await fns.updateMyPaper.run({ data: { paperId: pid, contentType: "image/png", contentMd5: FIXTURE_MD5 }, auth: auth(me) });
+      const stagedDoc = (await db.collection("papers").doc(pid).get()).data()!;
+      expect(stagedDoc.evidencePath).toBe(old); // staged: repoint only at finalize
+      const stagedPath = stagedDoc.pendingEvidencePath as string;
+      expect(stagedPath).toMatch(new RegExp(`^${TENANT}/vehicles/${v}/paper-${pid}\\.[a-f0-9]{8}\\.png$`));
+      expect(await has(old)).toBe(true); // old object removed only after promotion
+      await bucket.file(stagedPath).save(readFileSync(resolve(__dirname, "../fixtures/synthetic-policy.png")), { metadata: { contentType: "image/png" } });
+      await fns.finalizeMyPaper.run({ data: { paperId: pid }, auth: auth(me) });
+      expect(await has(old)).toBe(false); // finalize removed the old own object
+      expect((await db.collection("papers").doc(pid).get()).data()?.evidencePath).toBe(stagedPath);
+      await bucket.file(stagedPath).delete({ ignoreNotFound: true });
+    } finally { sign.mockRestore(); }
   });
 
   it("removeMyVehicleImage removes the cover object and clears only that field", async () => {

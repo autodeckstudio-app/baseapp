@@ -10,10 +10,11 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { standbyBookingSchema } from "../../schemas/job.js";
 import { buildOccupiedInterval, hasConflict } from "../../lib/availability.js";
 import { computeScheduleEnd, utcToLocalDate, utcToLocalTime, getDayOfWeek } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // A standby car owns neither a slot nor a bay until admission. The common
 // studio lock serializes FIFO admission; bay locks also serialize bookings.
-export const standbyBooking = onCall({ region: "asia-south1" }, async (request) => {
+export const standbyBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(standbyBookingSchema, request.data);

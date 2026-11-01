@@ -7,6 +7,7 @@ import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const schema = z.object({
   customerId: z.string().min(1),
@@ -20,7 +21,7 @@ const schema = z.object({
  * Name and email can be corrected. A phone can only be ADDED when none is on
  * file: an existing phone is the customer's login identity and is never changed here.
  */
-export const updateCustomerContact = onCall({ region: "asia-south1" }, async (request) => {
+export const updateCustomerContact = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   assertTenant(user, user.claims.tenantId);

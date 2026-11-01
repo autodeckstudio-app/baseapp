@@ -7,8 +7,9 @@ import { validate } from "../../middleware/validate.js";
 import { assertTenant } from "../../middleware/auth.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getServiceCatalogueSchema } from "../../schemas/service.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const getServiceCatalogue = onCall({ region: "asia-south1" }, async (request) => {
+export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   // Any authenticated user of the correct tenant can browse the catalogue
   assertTenant(user, user.claims.tenantId);

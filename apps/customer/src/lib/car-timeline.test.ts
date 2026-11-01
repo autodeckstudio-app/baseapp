@@ -46,9 +46,10 @@ describe("car detail lower sections use one timeline, not stacked blocks", () =>
     expect(src).not.toContain('<Kicker>Care plan</Kicker>');
     expect(src).not.toContain("Warranty certificate");
   });
-  it("keeps invoice links, the PDF download and the add-document flow", () => {
+  it("keeps invoice links and the add-document flow; the PDF download control is removed (history records stay)", () => {
     expect(src).toContain("history-invoice-");
-    expect(src).toContain("Download service history (PDF)");
+    expect(src).not.toContain("Download service history");
+    expect(src).not.toContain("historyReportHtml");
     expect(src).toContain("Submit for verification");
   });
   it("the orange dot is only for soon items", () => {
@@ -67,7 +68,7 @@ describe("car room shows only the latest 3 visits", () => {
   });
   it("the car page passes only the preview to the timeline and links to the full history screen", () => {
     const page = readFileSync(`${__dirname}/../app/(tabs)/garage/[id].tsx`, "utf8");
-    expect(page).toContain("items={latestVisits(past)}");
+    expect(page).toContain("latestVisits(past).map");
     expect(page).not.toContain("items={past}");
     expect(page).toContain("history-see-all");
     expect(page).toContain('pathname: "/(tabs)/garage/history", params: { vehicleId: id }');

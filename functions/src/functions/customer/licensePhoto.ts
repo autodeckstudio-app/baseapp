@@ -12,6 +12,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
@@ -41,7 +42,7 @@ async function loadCustomer(user: ReturnType<typeof extractUser>, requested: str
   return { ref, customer, customerId };
 }
 
-export const issueLicensePhotoUploadUrl = onCall({ region: "asia-south1" }, async (request) => {
+export const issueLicensePhotoUploadUrl = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(issueSchema, request.data);
@@ -59,7 +60,7 @@ export const issueLicensePhotoUploadUrl = onCall({ region: "asia-south1" }, asyn
   return { uploadUrl, path, requiredHeaders: { "Content-Type": data.contentType, "x-goog-meta-ownerId": customerId } };
 });
 
-export const publishLicensePhoto = onCall({ region: "asia-south1" }, async (request) => {
+export const publishLicensePhoto = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(publishSchema, request.data);
@@ -74,11 +75,9 @@ export const publishLicensePhoto = onCall({ region: "asia-south1" }, async (requ
   const [exists] = await file.exists();
   if (!exists) throw new HttpsError("not-found", "Photo not found. Upload it again.");
 
-  const [meta] = await file.getMetadata();
-  const existing = (meta.metadata as Record<string, string> | undefined)?.["firebaseStorageDownloadTokens"];
-  const token = data.publish || !existing ? randomUUID() : existing.split(",")[0]!;
-  if (token !== existing) await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: token } });
-  const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(data.path)}?alt=media&token=${token}`;
+  // P4: no standing download token. The immediate display uses a 10-minute
+  // signed read URL; later views go through getPrivateFileUrl.
+  const [url] = await file.getSignedUrl({ version: "v4", action: "read", expires: Date.now() + UPLOAD_WINDOW_MS });
 
   if (data.publish) await ref.update({ licensePhotoUrl: data.path, updatedAt: new Date().toISOString() });
   return { path: data.path, url };

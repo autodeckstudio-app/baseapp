@@ -8,11 +8,12 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getOfficeDashboardSchema } from "../../schemas/office.js";
 import { dayAggregates } from "../../lib/dayAggregates.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: one-call Office dashboard for today (Asia/Kolkata).
 // Aggregates jobs, revenue, attendance, approvals, low stock and pending
 // papers into a single response so the dashboard is not six client queries.
-export const getOfficeDashboard = onCall({ region: "asia-south1" }, async (request) => {
+export const getOfficeDashboard = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getOfficeDashboardSchema, request.data);

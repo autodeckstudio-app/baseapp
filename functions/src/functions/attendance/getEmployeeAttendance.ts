@@ -7,10 +7,11 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getEmployeeAttendanceSchema } from "../../schemas/attendance.js";
 import { rosterRecordFor, rosterRecordById } from "../../lib/roster.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // One employee's attendance for a calendar month ("YYYY-MM"). Staff may read
 // their own history; reading anyone else's requires admin (or superadmin).
-export const getEmployeeAttendance = onCall({ region: "asia-south1" }, async (request) => {
+export const getEmployeeAttendance = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getEmployeeAttendanceSchema, request.data);

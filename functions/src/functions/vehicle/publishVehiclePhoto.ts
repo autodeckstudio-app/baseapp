@@ -7,7 +7,6 @@
 // object (after checking the caller owns the car and the path is that car's
 // own cover file), optionally points the vehicle at it, and returns the URL.
 // A new token per upload also changes the URL, so caches never serve the old photo.
-import { randomUUID } from "node:crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -16,8 +15,9 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { publishVehiclePhotoSchema } from "../../schemas/vehicle.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const publishVehiclePhoto = onCall({ region: "asia-south1" }, async (request) => {
+export const publishVehiclePhoto = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(publishVehiclePhotoSchema, request.data);
@@ -41,13 +41,9 @@ export const publishVehiclePhoto = onCall({ region: "asia-south1" }, async (requ
   const [exists] = await file.exists();
   if (!exists) throw new HttpsError("not-found", "Photo not found. Upload it again.");
 
-  const [meta] = await file.getMetadata();
-  const existing = (meta.metadata as Record<string, string> | undefined)?.["firebaseStorageDownloadTokens"];
-  const token = data.publish || !existing ? randomUUID() : existing.split(",")[0]!;
-  if (token !== existing) {
-    await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: token } });
-  }
-  const url = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(data.path)}?alt=media&token=${token}`;
+  // P4: no standing download token. The immediate display uses a 10-minute
+  // signed read URL; later views go through getPrivateFileUrl.
+  const [url] = await file.getSignedUrl({ version: "v4", action: "read", expires: Date.now() + 10 * 60 * 1000 });
 
   if (data.publish) {
     await ref.update({ [isRc ? "rcPhotoUrl" : "photoUrl"]: data.path, updatedAt: new Date().toISOString() });

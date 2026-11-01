@@ -8,9 +8,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createOfferSchema } from "../../schemas/offer.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: publish an uploaded image as an offer banner for a date range. Words come from the studio, never from us.
-export const createOffer = onCall({ region: "asia-south1" }, async (request) => {
+export const createOffer = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(createOfferSchema, request.data);

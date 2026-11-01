@@ -6,13 +6,14 @@ import { z } from "zod";
 import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const schema = z.object({ studioId: z.string().min(1) }).strict();
 
 // Read-only public subset of the studio config for signed-in customers, so the
 // Help page and booking copy show the same hours the availability engine uses.
 // Never returns bays, tax or anything internal.
-export const getStudioInfo = onCall({ region: "asia-south1" }, async (request) => {
+export const getStudioInfo = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(schema, request.data);
   await enforceRateLimit(subjectFrom(user), "read.studioInfo");

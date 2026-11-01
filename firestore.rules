@@ -105,9 +105,24 @@ service cloud.firestore {
       // warranty) â Phase 2D. Admin/Cloud-Function-created and -verified
       // only; customer is read-own-vehicle-only, no client write of any kind.
       match /protections/{protectionId} {
+        // Customer audience is the INTERSECTION: the record's own customer
+        // AND the car's CURRENT owner, same tenant, car present and not
+        // archived. A former owner loses access at transfer (no longer the
+        // owner); the new owner does NOT inherit the former owner's private
+        // entries (not their records). No audience is broadened. Staff/admin
+        // tenant-scoped access is unchanged.
         allow read: if isAuthenticated()
                     && (isSuperadmin() || ownTenant(resource.data))
-                    && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                    && (isStudioOrAbove()
+                        || (resource.data.customerId == request.auth.uid
+                            && exists(/databases/$(database)/documents/vehicles/$(vehicleId))
+                            && ownTenant(get(/databases/$(database)/documents/vehicles/$(vehicleId)).data)
+                            && get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.ownerId == request.auth.uid
+                            // Legacy cars may predate the deletedAt field entirely: a MISSING
+                            // field means "never archived" (schema-compatible), while a SET
+                            // timestamp still means archived and fails closed. Owner/tenant/
+                            // customer intersection is unchanged - no audience broadened.
+                            && get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.get("deletedAt", null) == null));
         allow write: if false; // Cloud Function only
       }
     }

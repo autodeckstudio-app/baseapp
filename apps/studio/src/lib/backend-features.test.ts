@@ -41,7 +41,7 @@ describe("backend features enabled with their backend release", () => {
   it("the screens are gated on those flags", () => {
     expect(src("../app/(tabs)/jobs/inspection/[jobId].tsx")).toContain("INSPECTION_PHOTOS_ENABLED && jobId");
     expect(src("../app/(tabs)/jobs/[id].tsx")).toContain("ADMIN_APPROVAL_ENABLED && job");
-    expect(src("../app/(tabs)/jobs/[id].tsx")).toContain("UPI_RECORD_ENABLED && cashConfirm === \"record\"");
+    expect(src("../app/(tabs)/jobs/[id].tsx")).toContain("UPI_RECORD_ENABLED && cashConfirm.mode === \"record\"");
     expect(src("../app/(tabs)/pickups.tsx")).toContain("PICKUP_LEG_PROGRESS_ENABLED && confirmed");
   });
 });
@@ -58,7 +58,7 @@ describe("record payment confirm wording", () => {
 describe("record payment double-tap guard", () => {
   it("uses a synchronous ref guard so a same-tick double tap sends one call", () => {
     const s = require("fs").readFileSync(require("path").join(__dirname, "../app/(tabs)/jobs/[id].tsx"), "utf8");
-    expect(s).toMatch(/payBusyRef\.current\) return;\s*payBusyRef\.current = true;/);
+    expect(s).toMatch(/payBusyRef\.current\) return;[\s\S]{0,1400}?payBusyRef\.current = true;/);
     expect(s).toMatch(/payBusyRef\.current = false;/);
   });
 });

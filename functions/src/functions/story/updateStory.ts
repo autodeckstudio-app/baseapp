@@ -7,9 +7,10 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateStorySchema } from "../../schemas/story.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: pin to Highlights (permanent), unpin, hide (soft remove) or edit the caption. Nothing is deleted.
-export const updateStory = onCall({ region: "asia-south1" }, async (request) => {
+export const updateStory = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(updateStorySchema, request.data);

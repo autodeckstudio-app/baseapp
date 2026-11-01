@@ -15,8 +15,9 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { confirmManualPaymentSchema } from "../../schemas/payment.js";
 import { prepareJobInvoice } from "../../lib/job-invoice.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const confirmManualPayment = onCall({ region: "asia-south1" }, async (request) => {
+export const confirmManualPayment = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["studio", "admin", "superadmin"].includes(user.claims.role)) {

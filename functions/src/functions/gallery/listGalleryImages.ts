@@ -6,11 +6,12 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listGalleryImagesSchema } from "../../schemas/gallery.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: management list including unpublished images.
 // The public marketing gallery reads Firestore directly (rules: public read
 // of active images) — this callable is for the admin management screen.
-export const listGalleryImages = onCall({ region: "asia-south1" }, async (request) => {
+export const listGalleryImages = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(listGalleryImagesSchema, request.data);

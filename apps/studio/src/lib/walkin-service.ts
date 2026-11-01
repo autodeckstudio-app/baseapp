@@ -24,10 +24,10 @@ export async function getVehiclesForCustomer(tenantId: string, ownerId: string):
     collection(db, COLLECTIONS.vehicles()),
     where("ownerId", "==", ownerId),
     where("tenantId", "==", tenantId),
-    where("deletedAt", "==", null),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as Vehicle);
+  // Client-side filter: null-equality would hide legacy cars predating the field.
+  return snap.docs.map((d) => d.data() as Vehicle).filter((v) => !v.deletedAt);
 }
 
 interface CreateVehicleForCustomerInput {

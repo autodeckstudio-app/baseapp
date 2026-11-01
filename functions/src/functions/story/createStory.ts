@@ -8,11 +8,12 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createStorySchema } from "../../schemas/story.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Admin-only: publish an uploaded photo/video as a 24-hour story (optionally pinned as a Highlight).
-export const createStory = onCall({ region: "asia-south1" }, async (request) => {
+export const createStory = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(createStorySchema, request.data);

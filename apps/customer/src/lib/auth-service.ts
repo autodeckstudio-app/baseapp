@@ -19,28 +19,11 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   onIdTokenChanged as firebaseOnIdTokenChanged,
-  connectAuthEmulator,
   type User,
   type Unsubscribe,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { emulatorTargets } from "./emulator-flag";
-import { auth, functions, useEmulator } from "./firebase";
-
-// Connect auth emulator (called once, here rather than firebase.ts to avoid
-// double-connection during React Native fast refresh)
-let authEmulatorConnected = false;
-if (useEmulator && !authEmulatorConnected) {
-  try {
-    connectAuthEmulator(auth, emulatorTargets({
-    EXPO_PUBLIC_FIREBASE_EMULATOR_HOST: process.env["EXPO_PUBLIC_FIREBASE_EMULATOR_HOST"],
-    EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
-  }).authUrl, { disableWarnings: true });
-    authEmulatorConnected = true;
-  } catch {
-    // Already connected
-  }
-}
+import { auth, functions, useEmulator, emulatorBackend } from "./firebase";
 
 export interface GoogleClientIds {
   webClientId?: string;
@@ -90,7 +73,9 @@ export async function signInWithGoogleIdToken(idToken: string): Promise<User> {
  * against a real project.
  */
 export async function devGoogleSignIn(email: string, name: string): Promise<User> {
-  if (!useEmulator) throw new Error("Dev sign-in is only available against the Firebase emulator.");
+  // Fail-closed: the dev credential only exists against a VERIFIED emulator
+  // backend - never just a set flag (see lib/firebase.ts emulatorBackend).
+  if (!emulatorBackend) throw new Error("Dev sign-in is only available against a verified Firebase emulator backend.");
   const fakeToken = JSON.stringify({ sub: `dev-${email}`, email, email_verified: true, name });
   return signInWithGoogleIdToken(fakeToken);
 }

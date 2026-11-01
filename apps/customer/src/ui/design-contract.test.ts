@@ -37,6 +37,32 @@ describe("unified product design contract",()=>{
     const source=read("src/lib/imagery.ts");expect(source).toContain("suv: heroAlt");expect(source).toContain("luxury: heroAlt");expect(source).not.toContain("ALL_POOL");
   });
 });
+describe("garage detail presentation contract",()=>{
+  it("labels the car documents section Documents, never Papers",()=>{
+    const source=read("src/app/(tabs)/garage/[id].tsx");
+    expect(source).toContain("<Kicker>Documents</Kicker>");
+    expect(source).not.toContain("<Kicker>Papers</Kicker>");
+  });
+  it("renders service history as compact rows, not the timeline rail, on both screens",()=>{
+    const detail=read("src/app/(tabs)/garage/[id].tsx");
+    const full=read("src/app/(tabs)/garage/history.tsx");
+    expect(detail).toContain("HistoryVisitRow");
+    expect(full).toContain("HistoryVisitRow");
+    expect(detail).not.toMatch(/<CareTimeline[^>]*title="Service history"/);
+    expect(read("src/ui/HistoryVisitRow.tsx")).not.toContain("borderRadius: 9999, marginTop: 6");
+  });
+  it("keeps the combo chevron vertically centered as a trailing slot, not a bottom-row chip",()=>{
+    const combos=read("src/ui/CombosSection.tsx");
+    expect(combos).toContain("trailing=");
+    expect(combos).not.toContain('chip=');
+    expect(read("src/ui/VisitCard.tsx")).toContain("price || chip ?");
+  });
+  it("spells out days in the garage due chip so no lone d wraps",()=>{
+    const due=read("src/lib/garage-due.ts");
+    expect(due).toContain("due in ${days} day");
+    expect(due).not.toContain("${days} d`");
+  });
+});
 describe("home and car imagery guardrails",()=>{
   it("never claims a car health score without data and never shows a stock car as the customer's car",()=>{
     const home=read("src/ui/HomeView.tsx");
@@ -590,8 +616,7 @@ describe("car detail and add car (batch 1)", () => {
     const d = read("src/app/(tabs)/garage/[id].tsx");
     expect(d).not.toContain("TabPills");
     expect(d).not.toContain('label="Book maintenance"');
-    expect(d).toContain('title="Documents"'); // round7 point 9: the expiry list is titled Documents (was Coming up)
-    expect(d).toContain("<Kicker>Papers</Kicker>");
+    expect(d).toContain("<Kicker>Documents</Kicker>"); // one consolidated Documents list (expiry timeline folded in)
     const a = read("src/app/(tabs)/garage/add.tsx");
     expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only
     expect(a).toContain("uploadVehiclePhoto");
@@ -694,13 +719,13 @@ describe("inactive tab icons are one ink",()=>{
   });
 });
 
-describe("visit history rows: plain status text and a small invoice link",()=>{
-  it("no status capsule and no full-width invoice button in history rows",()=>{
+describe("visit history rows: compact date block, subtle status badge and a small invoice link",()=>{
+  it("date-block rows with a gold status badge; no full-width invoice button",()=>{
     const car=read("src/app/(tabs)/garage/[id].tsx"), hist=read("src/app/(tabs)/garage/history.tsx"), tl=read("src/ui/CareTimeline.tsx");
     expect(car).toContain("<LinkAction label={`View invoice");
     expect(hist).toContain("<LinkAction label={`View invoice");
     expect(car+hist).not.toMatch(/<Button label=\{`View invoice/);
-    expect(hist).not.toContain("<Chip");
+    expect(read("src/ui/HistoryVisitRow.tsx")).toContain('tone="premium"');
     expect(tl).toContain("it.soon ? <Chip");
     expect(read("src/ui/kit.tsx")).toContain("export function LinkAction");
   });
@@ -734,4 +759,36 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
 it("gift-covered zero-total bookings use the shared next-step helper (behaviour tested in booking-next-step.test.ts)",()=>{
   const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("nextStepLine({ giftCovered, jobStatus: job?.status ?? null");
   const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Your slot is confirmed. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
+});
+
+describe("row press targets never nest interactive elements", () => {
+  it("kit Row renders trailing actions and the chevron as siblings of the row pressable, never children", () => {
+    const kit = read("src/ui/kit.tsx");
+    const rowStart = kit.indexOf("export function Row(");
+    const rowEnd = kit.indexOf("export function", rowStart + 10);
+    const row = kit.slice(rowStart, rowEnd);
+    // The row's own Pressable must close before trailing content renders, so a
+    // trailing IconAction (edit/delete) is never a DOM descendant of the row's
+    // press target (invalid nested <button> on web).
+    expect(row.indexOf("</Pressable>")).toBeGreaterThan(-1);
+    expect(row.indexOf("{trailing}")).toBeGreaterThan(row.indexOf("</Pressable>"));
+    expect(row).toContain("Never nest interactive elements");
+  });
+  it("IconAction buttons stop being nested inside other pressables on the papers row", () => {
+    const detail = read("src/app/(tabs)/garage/[id].tsx");
+    // Papers rows pass edit/delete IconActions via the trailing slot, which the
+    // Row contract above keeps outside the row pressable.
+    expect(detail).toContain("trailing={PAPER_EDIT_ENABLED ?");
+  });
+  it("document delete and save copy stays truthful (293311c acceptance)", () => {
+    const detail = read("src/app/(tabs)/garage/[id].tsx");
+    // Availability, never a physical-purge promise: record deletion is immediate,
+    // photo-byte deletion is best-effort with a cleanup sweep.
+    expect(detail).toContain("The document and its photo will no longer be available in the garage. Your car and bookings are not affected.");
+    expect(detail).not.toContain("This removes the document and its photo");
+    // A photo-only failure after a committed save names the photo failure.
+    expect(detail).toContain('"Photo did not upload"');
+    // Staged document photo readiness says when the upload happens.
+    expect(detail).toContain("Photo selected - it uploads when you save.");
+  });
 });

@@ -10,6 +10,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit } from "../../middleware/rateLimit.js";
 import { setupCustomerProfileSchema } from "../../schemas/customer.js";
 import { resolveClaims } from "../../lib/roleResolver.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 /**
  * Creates or restores a customer profile after sign-in (Google, or phone OTP
@@ -26,7 +27,7 @@ import { resolveClaims } from "../../lib/roleResolver.js";
  * Development uses Firebase Auth Emulator test phone numbers (FREE).
  */
 export const setupCustomerProfile = onCall(
-  { region: "asia-south1" },
+  { region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() },
   async (request) => {
     const rawAuth = extractRawAuth(request);
     const data = validate(setupCustomerProfileSchema, request.data);

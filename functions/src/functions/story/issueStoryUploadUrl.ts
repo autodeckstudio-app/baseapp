@@ -7,11 +7,12 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { issueStoryUploadUrlSchema } from "../../schemas/story.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4" };
 const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
 
-export const issueStoryUploadUrl = onCall({ region: "asia-south1" }, async (request) => {
+export const issueStoryUploadUrl = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(issueStoryUploadUrlSchema, request.data);

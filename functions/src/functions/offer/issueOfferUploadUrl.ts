@@ -6,11 +6,12 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { issueOfferUploadUrlSchema } from "../../schemas/offer.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
 
-export const issueOfferUploadUrl = onCall({ region: "asia-south1" }, async (request) => {
+export const issueOfferUploadUrl = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(issueOfferUploadUrlSchema, request.data);

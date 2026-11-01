@@ -8,6 +8,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getAccountantMoneySchema } from "../../schemas/office.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
 import { refundsOwed } from "../../lib/refunds-owed.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // READ-ONLY monthly Money projection for the dedicated "accountant" role. The role has NO Firestore rule access
 // to any collection; everything it can see is built here from an explicit, finite field allowlist. Unknown
@@ -48,7 +49,7 @@ function daysOf(month: string): string[] {
   return Array.from({ length: n }, (_, k) => `${month}-${String(k + 1).padStart(2, "0")}`);
 }
 
-export const getAccountantMoney = onCall({ region: "asia-south1" }, async (request) => {
+export const getAccountantMoney = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractAccountantUser(request);
   const data = validate(getAccountantMoneySchema, request.data);
   await enforceRateLimit(subjectFrom(user), "office.accountantMoney");

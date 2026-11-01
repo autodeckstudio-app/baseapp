@@ -32,8 +32,9 @@ import { hashGiftCode } from "../../lib/gift-code.js";
 import { findGiftByHash, giftBlockReason } from "../../lib/gift-store.js";
 import { addExtrasToBreakdown, extrasProblem, priceExtras, totalMinutes, type BookingLine } from "../../lib/booking-lines.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const createBooking = onCall({ region: "asia-south1" }, async (request) => {
+export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(createBookingSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.create");
@@ -323,9 +324,14 @@ export const createBooking = onCall({ region: "asia-south1" }, async (request) =
             jobId: jobRef.id,
             bookingId: bookingRef.id,
             valueRedeemed: usage.valueRedeemed,
-            washesRemaining: consumeWash
-              ? membership.washesTotal - (membership.washesUsed + 1)
-              : membership.washesTotal - membership.washesUsed,
+            // Entitlement-remaining (floored at 0): an over-total counter from a
+            // refund restore is true-net use, but remaining entitlement is 0.
+            washesRemaining: Math.max(
+              0,
+              consumeWash
+                ? membership.washesTotal - (membership.washesUsed + 1)
+                : membership.washesTotal - membership.washesUsed,
+            ),
           },
         });
       }

@@ -32,3 +32,32 @@ export function emulatorTargets(env: Record<string, string | undefined>): Emulat
   return { host, firestorePort, functionsPort, authUrl: `http://${host}:${authPort}` };
 }
 
+
+/**
+ * Evidence that the live SDK clients really talk to the local emulators,
+ * collected from the connected clients after the connect*Emulator calls.
+ */
+export type EmulatorConnectionProof = {
+  firestoreHost: string | null;
+  functionsOrigin: string | null;
+  authEmulatorUrl: string | null;
+};
+
+/**
+ * Fail-closed verification of the emulator connection. Never trust the
+ * catch: a swallowed "already connected" throw can hide a missed
+ * connection, so verify below instead - every client must point at exactly
+ * the emulatorTargets for this env, otherwise the backend is NOT proven to
+ * be the emulator and this returns false.
+ */
+export function emulatorConnectionsVerified(
+  proof: EmulatorConnectionProof,
+  env: Record<string, string | undefined>,
+): boolean {
+  const t = emulatorTargets(env);
+  return (
+    proof.firestoreHost === `${t.host}:${t.firestorePort}` &&
+    proof.functionsOrigin === `http://${t.host}:${t.functionsPort}` &&
+    proof.authEmulatorUrl === t.authUrl
+  );
+}

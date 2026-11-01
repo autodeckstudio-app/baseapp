@@ -7,10 +7,11 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getDailyCloseSchema } from "../../schemas/dailyClose.js";
 import { dayAggregates } from "../../lib/dayAggregates.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: the close record for a date if it exists, plus the
 // live aggregates for that date so the screen can preview before closing.
-export const getDailyClose = onCall({ region: "asia-south1" }, async (request) => {
+export const getDailyClose = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(getDailyCloseSchema, request.data);

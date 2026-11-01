@@ -40,7 +40,9 @@ describe.skipIf(!process.env["TEST_SIGN_PRIVATE_KEY"])("synthetic doc through su
     const vid = `ocr-veh-edit-${Date.now()}`;
     await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: u, tenantId: T, registrationNumber: "MH12AB1234" });
     const sub = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "INSURANCE", reference: "SYN-EDIT", contentType: "image/png" }, auth } as never) as { id: string };
-    const land = async (bytes: Buffer) => { const p = (await db.collection("papers").doc(sub.id).get()).data()!; await getStorage().bucket().file(p["evidencePath"]).save(bytes, { metadata: { contentType: "image/png", metadata: { customerId: u } } }); };
+    // land the bytes where the current record actually expects them: a staged replacement goes to
+    // pendingEvidencePath (updateMyPaper leaves evidencePath serving the old photo); a fresh upload uses evidencePath.
+    const land = async (bytes: Buffer) => { const p = (await db.collection("papers").doc(sub.id).get()).data()!; const dest = p["pendingEvidencePath"] ?? p["evidencePath"]; await getStorage().bucket().file(dest).save(bytes, { metadata: { contentType: "image/png", metadata: { customerId: u } } }); };
     await land(img); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
     expect((await db.collection("papers").doc(sub.id).get()).data()!["status"]).toBe("VERIFIED");
     // owner edits the document and replaces the photo: back to review until the new bytes are checked
@@ -48,14 +50,30 @@ describe.skipIf(!process.env["TEST_SIGN_PRIVATE_KEY"])("synthetic doc through su
     expect(upd.uploadUrl).toBeTruthy();
     const mid = (await db.collection("papers").doc(sub.id).get()).data()!;
     expect(mid["status"]).toBe("PENDING"); expect(mid["verificationMode"]).toBe("review"); expect(mid["reviewedBy"]).toBeNull();
+    // staged replacement: the new bytes target pendingEvidencePath while the old photo keeps serving
+    const stagedPath = mid["pendingEvidencePath"] as string | null;
+    expect(stagedPath).toBeTruthy(); expect(stagedPath).not.toBe(mid["evidencePath"]);
     // non-image bytes after the edit fail closed to review
     await land(Buffer.from("not an image")); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
     const bad = (await db.collection("papers").doc(sub.id).get()).data()!;
     expect(bad["status"]).toBe("PENDING"); expect(bad["reference"]).toBe("SYN-EDIT-2");
     // matching bytes after another photo replacement verify again
     await updateMyPaper.run({ data: { paperId: sub.id, contentType: "image/png" }, auth } as never);
+    const restaged = (await db.collection("papers").doc(sub.id).get()).data()!;
+    const staged2Path = restaged["pendingEvidencePath"] as string | null;
+    const previousEvidence = restaged["evidencePath"] as string | null;
+    expect(staged2Path).toBeTruthy(); expect(staged2Path).not.toBe(previousEvidence);
     await land(img); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
     const after = (await db.collection("papers").doc(sub.id).get()).data()!;
     expect(after["status"]).toBe("VERIFIED"); expect(after["verificationMode"]).toBe("automatic"); expect(after["reference"]).toBe("SYN-EDIT-2");
+    // exact promotion identity: the record now points at the second staged object, staging cleared,
+    // and the previously serving object was cleaned up (only the staged one remains)
+    expect(after["pendingEvidencePath"]).toBeNull();
+    expect(after["evidencePath"]).toBe(staged2Path);
+    if (previousEvidence && previousEvidence !== staged2Path) {
+      const [oldExists] = await getStorage().bucket().file(previousEvidence).exists();
+      const [newExists] = await getStorage().bucket().file(staged2Path as string).exists();
+      expect(oldExists).toBe(false); expect(newExists).toBe(true);
+    }
   }, 120000);
 });

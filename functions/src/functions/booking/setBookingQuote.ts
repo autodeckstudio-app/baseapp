@@ -11,13 +11,14 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { calculatePrice, taxFor } from "../../lib/pricing.js";
 import { applyPickupFees } from "../../lib/pickup-fee.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const schema = z.object({
   bookingId: z.string().min(1),
   basePricePaise: z.number().int().min(1),
 }).strict();
 
-export const setBookingQuote = onCall({ region: "asia-south1" }, async (request) => {
+export const setBookingQuote = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(schema, request.data);

@@ -7,11 +7,12 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { submitPaperSchema } from "../../schemas/paper.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above: register a customer vehicle document for verification.
 // The vehicle is loaded server-side to derive the owner (customerId) — the
 // client never supplies it.
-export const submitPaper = onCall({ region: "asia-south1" }, async (request) => {
+export const submitPaper = onCall({ region: "asia-south1", timeoutSeconds: 60, concurrency: 80, maxInstances: 20, enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(submitPaperSchema, request.data);
@@ -29,7 +30,7 @@ export const submitPaper = onCall({ region: "asia-south1" }, async (request) => 
   const ref = db.collection(COLLECTIONS.papers()).doc();
   const now = new Date().toISOString();
 
-  const paper: PaperVerification = {
+  const paper: PaperVerification & { revision: number } = {
     id: ref.id,
     tenantId: vehicle.tenantId,
     studioId: data.studioId,
@@ -48,6 +49,7 @@ export const submitPaper = onCall({ region: "asia-south1" }, async (request) => 
     createdBy: user.uid,
     createdAt: now,
     updatedAt: now,
+    revision: 0,
   };
 
   await db.runTransaction(async (tx) => {

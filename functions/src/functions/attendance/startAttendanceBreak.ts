@@ -7,10 +7,11 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { rosterRecordFor } from "../../lib/roster.js";
 import { utcToLocalDate } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Starts a break on today's self attendance record. Only one open break at a
 // time; the open break must be ended before checkout.
-export const startAttendanceBreak = onCall({ region: "asia-south1" }, async (request) => {
+export const startAttendanceBreak = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   await enforceRateLimit(subjectFrom(user), "attendance.break");

@@ -7,11 +7,12 @@ import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listStoriesSchema } from "../../schemas/story.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const READ_WINDOW_MS = 60 * 60 * 1000;
 
 // Customers get live (under 24h) and pinned stories; staff can ask for everything. Media comes back as 1-hour signed URLs.
-export const listStories = onCall({ region: "asia-south1" }, async (request) => {
+export const listStories = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(listStoriesSchema, request.data ?? {});

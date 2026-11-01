@@ -11,6 +11,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { studioLocalToIso } from "../../lib/studio-time.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Customer preference only - never a promised slot. The studio agrees the
 // actual time with the customer by phone call and enters it on approval
@@ -77,7 +78,7 @@ async function studioTimezone(db: FirebaseFirestore.Firestore, studioId: string)
 }
 
 /** Customer asks the studio to collect and/or return the car. A request only: the studio confirms or declines. New, additive. */
-export const requestPickupDrop = onCall({ region: "asia-south1" }, async (request) => {
+export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   assertTenant(user, user.claims.tenantId);
@@ -135,7 +136,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" }, async (reques
 });
 
 /** Studio or admin confirms, completes or declines a pickup request. New, additive. */
-export const updatePickupRequest = onCall({ region: "asia-south1" }, async (request) => {
+export const updatePickupRequest = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   assertTenant(user, user.claims.tenantId);
@@ -256,7 +257,17 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
       ? await tx.get(db.collection(COLLECTIONS.memberships()).where("customerId", "==", cur.customerId).where("status", "==", "active"))
       : null;
     const heldRef = memberMembershipId ? db.collection(COLLECTIONS.memberships()).doc(memberMembershipId) : null;
-    const heldSnap = heldRef && data.status === "DECLINED" ? await tx.get(heldRef) : null;
+    const heldSnap = heldRef ? await tx.get(heldRef) : null;
+    // Full membership refund ends benefits. A request already holding a free
+    // pickup from a refunded plan must not quietly go ahead free - but it is
+    // also not charged or cancelled automatically. Staff settle it: decline
+    // the request or agree the fee with the customer first.
+    if (wantFee && memberMembershipId && heldSnap?.exists) {
+      const heldPlan = heldSnap.data() as Membership;
+      if (heldPlan.status === "cancelled" && (heldPlan.cancellationReason ?? "").startsWith("refunded:")) {
+        throw new HttpsError("failed-precondition", "The membership that made this request free was refunded, so that benefit has ended. Decline this request, or settle the pickup fee with the customer, before confirming or completing it - it cannot go ahead free.");
+      }
+    }
     // Membership writes wait until every read in this transaction is done (Firestore needs reads before writes).
     let chargeMembership: { ref: FirebaseFirestore.DocumentReference; used: number } | null = null;
     if (memberRows) {
@@ -266,7 +277,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" }, async (requ
         chargeMembership = { ref: db.collection(COLLECTIONS.memberships()).doc(pick.id), used: (pick.pickupsUsed ?? 0) + 1 };
       }
     }
-    if (heldRef && heldSnap?.exists) {
+    if (data.status === "DECLINED" && heldRef && heldSnap?.exists) {
       const hm = heldSnap.data() as Membership;
       chargeMembership = { ref: heldRef, used: Math.max(0, (hm.pickupsUsed ?? 0) - 1) };
       memberMembershipId = null;

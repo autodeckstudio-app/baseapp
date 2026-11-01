@@ -8,8 +8,9 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { removeMyVehicleImageSchema } from "../../schemas/vehicle.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const removeMyVehicleImage = onCall({ region: "asia-south1" }, async (request) => {
+export const removeMyVehicleImage = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
   const data = validate(removeMyVehicleImageSchema, request.data);

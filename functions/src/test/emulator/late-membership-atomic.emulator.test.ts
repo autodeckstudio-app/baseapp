@@ -126,8 +126,13 @@ describe("late membership capture: atomic reservation (emulator)", () => {
     const s = await seed("cancelled");
     await db.collection("payments").doc(s.pid).update({ status: "completed" });
     const p = (await db.collection("payments").doc(s.pid).get()).data() as never;
-    await reserveRefund(db, { payment: p, amountPaise: 100, reason: "test", createdBy: "u" });
-    await expect(reserveRefund(db, { payment: p, amountPaise: 100, reason: "test", createdBy: "u" })).rejects.toThrow("already has an active");
+    // Membership payments are full-only (owner policy 30 Oct 2026): the wrapper
+    // accepts the FULL 29900 here; partial sizing is covered (refused) in
+    // membership-refund-policy.emulator.test.ts.
+    await reserveRefund(db, { payment: p, amountPaise: 29900, reason: "test", createdBy: "u" });
+    await expect(reserveRefund(db, { payment: p, amountPaise: 29900, reason: "test", createdBy: "u" })).rejects.toThrow("already has an active");
+    await expect(reserveRefund(db, { payment: p, amountPaise: 100, reason: "t", createdBy: "u" })).rejects.toThrow("full only");
+    // Guard order: the amount-shape refusal precedes the active-reservation check.
     await expect(reserveRefund(db, { payment: p, amountPaise: 0, reason: "t", createdBy: "u" })).rejects.toThrow("positive integer");
     await expect(reserveRefund(db, { payment: p, amountPaise: 99999999, reason: "t", createdBy: "u" })).rejects.toThrow("exceeds");
   });

@@ -18,8 +18,9 @@ import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { upgradePricePaise } from "@autodeck/core";
 import { freshGrant } from "../../lib/membership-grant.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] }, async (request) => {
+export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractCustomerUser(request);
   assertRole(user, "customer");
 
@@ -141,6 +142,13 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
     const stillActive = await tx.get(activeDoc.ref);
     if (!stillActive.exists || (stillActive.data() as Membership).status !== "active") throw new HttpsError("failed-precondition", "Your plan changed. Try again.");
 
+    // Shared per-customer claim (the same document purchaseMembership
+    // writes): a concurrent purchase, walkin creation, or a refund-restore of
+    // the plan being upgraded touches this document and conflict-retries
+    // instead of racing this creation.
+    tx.set(db.collection("membershipClaims").doc(`${user.claims.tenantId}_${user.uid}`), {
+      tenantId: user.claims.tenantId, customerId: user.uid, membershipId: membershipRef.id, updatedAt: now,
+    });
     tx.set(membershipRef, membership);
     tx.set(paymentRef, payment);
     writeAuditLog(tx, {

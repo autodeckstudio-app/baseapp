@@ -7,10 +7,11 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateInventoryItemSchema } from "../../schemas/inventory.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: edit item details or deactivate. Quantities never change here —
 // every stock movement goes through recordInventoryTxn.
-export const updateInventoryItem = onCall({ region: "asia-south1" }, async (request) => {
+export const updateInventoryItem = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(updateInventoryItemSchema, request.data);

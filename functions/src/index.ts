@@ -16,6 +16,7 @@ export { createWalkinCustomer } from "./functions/auth/createWalkinCustomer.js";
 export { updateCustomerContact } from "./functions/auth/updateCustomerContact.js";
 export { submitReview } from "./functions/booking/submitReview.js";
 export { publishVehiclePhoto } from "./functions/vehicle/publishVehiclePhoto.js";
+export { getPrivateFileUrl } from "./functions/files/getPrivateFileUrl.js";
 export { removeMyVehicleImage } from "./functions/vehicle/removeMyVehicleImage.js";
 export { issueLicensePhotoUploadUrl, publishLicensePhoto } from "./functions/customer/licensePhoto.js";
 export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhotoUploadUrl.js";
@@ -108,6 +109,8 @@ export { flagMissedBookingsScheduled } from "./functions/booking/flagMissedBooki
 // âââ Protection (Phase 2D) ââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { createProtection } from "./functions/protection/createProtection.js";
 export { updateProtection } from "./functions/protection/updateProtection.js";
+export { createMyProtection } from "./functions/protection/createMyProtection.js";
+export { updateMyProtection } from "./functions/protection/updateMyProtection.js";
 
 // âââ Inspection (Phase 4) âââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { startInspection } from "./functions/inspection/startInspection.js";

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  onAuthStateChanged,
+  onIdTokenChanged,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -80,11 +80,22 @@ interface AdminAuthState {
 
 const AdminAuthContext = createContext<AdminAuthState | undefined>(undefined);
 
-async function fetchSessionClaims(): Promise<AutoDeckClaims | null> {
+// Scope triple used to detect a session cookie that is STALE relative to the
+// refreshed ID token: the cookie alone is never proof of the latest role.
+function scopeKey(c: { role?: unknown; tenantId?: unknown; studioId?: unknown }): string {
+  return `${String(c.role ?? "")}|${String(c.tenantId ?? "")}|${String(c.studioId ?? "")}`;
+}
+
+// Server-returned session claims carry the VERIFIED principal (uid) alongside
+// the role scope - see /api/session. A session whose uid does not match the
+// current token's uid proves nothing and must be re-exchanged.
+type SessionClaims = AutoDeckClaims & { uid?: string };
+
+async function fetchSessionClaims(): Promise<SessionClaims | null> {
   try {
     const res = await fetch("/api/session", { credentials: "same-origin" });
     if (!res.ok) return null;
-    const data = (await res.json()) as { claims: AutoDeckClaims };
+    const data = (await res.json()) as { claims: SessionClaims };
     return data.claims;
   } catch {
     return null;
@@ -111,7 +122,7 @@ async function resolveClaims(idToken: string): Promise<{ changed: boolean } | nu
   }
 }
 
-async function exchangeIdTokenForSession(idToken: string): Promise<AutoDeckClaims | null> {
+async function exchangeIdTokenForSession(idToken: string): Promise<SessionClaims | null> {
   try {
     const res = await fetch("/api/session", {
       method: "POST",
@@ -120,7 +131,7 @@ async function exchangeIdTokenForSession(idToken: string): Promise<AutoDeckClaim
       credentials: "same-origin",
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as { claims: AutoDeckClaims };
+    const data = (await res.json()) as { claims: SessionClaims };
     return data.claims;
   } catch {
     return null;
@@ -143,12 +154,26 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const returningFromRedirect = takeRedirectFlag();
     if (returningFromRedirect) signingInRef.current = true;
-    // Reactive updates only (token refresh, sign-out in another tab). The
-    // AUTHORITATIVE answer to "is this session still valid" is the httpOnly
-    // session cookie, verified server-side - not whether the client SDK
-    // still has a locally-cached Firebase Auth user (that's just a cache;
+    // Reactive updates only (token refresh - INCLUDING a same-uid refresh
+    // whose custom claims changed - and sign-out in another tab). This must
+    // be onIdTokenChanged, not onAuthStateChanged: onAuthStateChanged does
+    // not fire when a refreshed token carries new role/tenant/studio claims
+    // for the same user, which would leave a stale operator scope on screen.
+    // The AUTHORITATIVE answer to "is this session still valid" is the
+    // httpOnly session cookie, verified server-side - not whether the client
+    // SDK still has a locally-cached Firebase Auth user (that's just a cache;
     // it has no way to know the cookie was revoked or never established).
-    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+    // Sequenced: every token event is numbered and only the LATEST event may
+    // publish state or sign out - a slow older resolution can never overwrite
+    // a newer sign-in/sign-out/unmount, and an old FAILED event can never
+    // firebaseSignOut a newer one. Every non-null event marks the session
+    // verifying IMMEDIATELY (loading), so prior claims are not affirmable
+    // while the newer token is being validated. Errors fail CLOSED.
+    let authGen = 0;
+    let active = true;
+    const unsubscribe = onIdTokenChanged(auth, (nextUser) => {
+      const my = ++authGen;
+      const current = () => active && my === authGen;
       setError(null);
       if (!nextUser) {
         setUser(null);
@@ -158,28 +183,87 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (signingInRef.current) return;
-      const sessionClaims = await claimsForSignedInUser<AutoDeckClaims>({
-        getIdToken: () => nextUser.getIdToken(),
-        fetchSessionClaims,
-        resolveClaims,
-        exchangeIdToken: exchangeIdTokenForSession,
-        refreshIdToken: () => nextUser.getIdToken(true),
-      });
-      if (!sessionClaims) {
-        // Client SDK still thinks it's signed in but the server session is
-        // absent/expired/revoked - bring the two back into agreement
-        // instead of leaving a dangling client-only session that can still
-        // read Firestore directly.
-        setUser(null);
-        setClaims(null);
-        setLoading(false);
-        await firebaseSignOut(auth);
-        return;
-      }
+      setLoading(true); // verifying: prior claims are not affirmable from here
+      void (async () => {
+        try {
+          let tokenScope: string | null = null;
+          try {
+            const tokenResult = await nextUser.getIdTokenResult();
+            if (!current()) return;
+            tokenScope = scopeKey(tokenResult.claims as { role?: unknown; tenantId?: unknown; studioId?: unknown });
+          } catch {
+            tokenScope = null; // token scope unreadable: the old cookie is NOT proof - see below
+          }
+          if (!current()) return;
 
-      setUser(nextUser);
-      setClaims(sessionClaims);
-      setLoading(false);
+          let effective: SessionClaims | null;
+          if (tokenScope === null) {
+            // The token's scope could not be read, so no cookie comparison is
+            // possible: BLOCK until the server binds the CURRENT token - the
+            // old cookie alone is never accepted as proof. Re-exchange the
+            // current token; on failure this fails closed below.
+            try {
+              const tok = await nextUser.getIdToken();
+              if (!current()) return;
+              effective = await exchangeIdTokenForSession(tok);
+              if (!current()) return;
+            } catch {
+              effective = null;
+            }
+          } else {
+            const sessionClaims = await claimsForSignedInUser<SessionClaims>({
+              getIdToken: () => nextUser.getIdToken(),
+              fetchSessionClaims,
+              resolveClaims,
+              exchangeIdToken: exchangeIdTokenForSession,
+              refreshIdToken: () => nextUser.getIdToken(true),
+              shouldContinue: current, // a superseded event never POSTs
+            });
+            if (!current()) return;
+            effective = sessionClaims;
+            if (effective && (effective.uid !== nextUser.uid || scopeKey(effective) !== tokenScope)) {
+              // The cookie session is STALE or bound to ANOTHER PRINCIPAL
+              // (claims without a matching uid prove nothing about which
+              // account they belong to): re-exchange a force-refreshed token
+              // and publish only what the server confirms for THIS uid.
+              try {
+                const fresh = await nextUser.getIdToken(true);
+                if (!current()) return;
+                effective = await exchangeIdTokenForSession(fresh);
+                if (!current()) return;
+              } catch {
+                effective = null;
+              }
+            }
+          }
+          // Final binding check: whatever the source, publish only claims the
+          // server bound to the CURRENT token's principal.
+          if (effective && effective.uid !== nextUser.uid) effective = null;
+          if (!effective) {
+            // Client SDK still thinks it's signed in but the server session is
+            // absent/expired/revoked - bring the two back into agreement
+            // instead of leaving a dangling client-only session that can still
+            // read Firestore directly. Only the LATEST event ever signs out.
+            if (!current()) return;
+            setUser(null);
+            setClaims(null);
+            setLoading(false);
+            await firebaseSignOut(auth);
+            return;
+          }
+
+          setUser(nextUser);
+          setClaims(effective);
+          setLoading(false);
+        } catch {
+          // Unexpected failure: fail CLOSED, current-only - never leave the
+          // session stuck verifying and never publish on a stale generation.
+          if (!current()) return;
+          setUser(null);
+          setClaims(null);
+          setLoading(false);
+        }
+      })();
     });
 
     // Returning from a redirect sign-in (in-app browsers): finish it the
@@ -207,7 +291,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       });
 
-    return unsubscribe;
+    return () => { active = false; unsubscribe(); };
   }, []);
 
   async function establishServerSession(nextUser: User): Promise<void> {

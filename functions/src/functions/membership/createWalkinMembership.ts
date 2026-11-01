@@ -18,8 +18,9 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createWalkinMembershipSchema } from "../../schemas/membership.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const createWalkinMembership = onCall({ region: "asia-south1" }, async (request) => {
+export const createWalkinMembership = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
 
@@ -58,6 +59,24 @@ export const createWalkinMembership = onCall({ region: "asia-south1" }, async (r
         "already-exists",
         "This customer already has a pending or active membership. Confirm the pending one instead of creating a duplicate.",
       );
+    }
+
+    // Same per-customer claim as purchaseMembership: serializes walkin
+    // creation against concurrent purchases, upgrades and refund-restores.
+    const claimRef = db.collection("membershipClaims").doc(`${user.claims.tenantId}_${data.customerId}`);
+    const claimSnap = await tx.get(claimRef);
+    if (claimSnap.exists) {
+      const heldId = (claimSnap.data() as { membershipId?: string }).membershipId;
+      if (heldId) {
+        const heldSnap = await tx.get(db.collection(COLLECTIONS.memberships()).doc(heldId));
+        const heldStatus = heldSnap.exists ? (heldSnap.data() as Membership).status : null;
+        if (heldStatus === "pending" || heldStatus === "active") {
+          throw new HttpsError(
+            "already-exists",
+            "This customer already has a pending or active membership. Confirm the pending one instead of creating a duplicate.",
+          );
+        }
+      }
     }
 
     const now = new Date();
@@ -119,6 +138,7 @@ export const createWalkinMembership = onCall({ region: "asia-south1" }, async (r
       updatedAt: nowIso,
     };
 
+    tx.set(claimRef, { tenantId: user.claims.tenantId, customerId: data.customerId, membershipId: membershipRef.id, updatedAt: nowIso });
     tx.set(membershipRef, membership);
     tx.set(paymentRef, payment);
     writeAuditLog(tx, {

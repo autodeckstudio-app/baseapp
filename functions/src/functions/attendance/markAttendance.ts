@@ -8,12 +8,13 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { markAttendanceSchema } from "../../schemas/attendance.js";
 import { rosterRecordById } from "../../lib/roster.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: record or correct an employee's status for a date (ABSENT /
 // ON_LEAVE / HALF_DAY / PRESENT). Never alters recorded check-in/out times —
 // a PRESENT mark on a day with no times simply records the status, which the
 // office sees as an unverified presence needing the employee's own check-in.
-export const markAttendance = onCall({ region: "asia-south1" }, async (request) => {
+export const markAttendance = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(markAttendanceSchema, request.data);

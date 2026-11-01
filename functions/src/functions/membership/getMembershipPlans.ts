@@ -4,10 +4,11 @@ import type { MembershipPlan } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant } from "../../middleware/auth.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Customers/studio browse active plans only; admin sees the full catalogue
 // (including inactive plans) to manage it.
-export const getMembershipPlans = onCall({ region: "asia-south1" }, async (request) => {
+export const getMembershipPlans = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertTenant(user, user.claims.tenantId);
   await enforceRateLimit(subjectFrom(user), "read.membershipPlans");

@@ -26,3 +26,4 @@ export * from "./settlement-display.js";
 export * from "./floor-jobs.js";
 export * from "./pickup-eligibility.js";
 export * from "./visit-timing.js";
+export * from "./protection-declaration.js";

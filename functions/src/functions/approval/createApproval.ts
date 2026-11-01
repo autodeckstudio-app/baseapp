@@ -12,8 +12,9 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createApprovalSchema } from "../../schemas/approval.js";
 import { buildApproval } from "../../lib/approval-builder.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const createApproval = onCall({ region: "asia-south1" }, async (request) => {
+export const createApproval = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
 

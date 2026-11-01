@@ -13,6 +13,7 @@ import type { Booking, Gift, Invoice, Membership, Payment, ServiceJob } from "@a
 import { planReserveInTx, applyReserveInTx } from "./refund-outbox.js";
 import { planGiftActivation } from "./gift-activate.js";
 import { readUpgradeSource, endUpgradedMembership } from "./membership-upgrade.js";
+import { readMembershipForRefund, deactivateRefundedMembershipInTx, alertMembershipPartialRefundInTx, readUpgradePredecessorForRefund, restoreUpgradedPredecessorInTx } from "./membership-refund.js";
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import type { AuthorizedUser } from "@autodeck/auth";
@@ -400,6 +401,10 @@ export async function processProviderEvent(
     const jobSnapRefund = jobRefRefund ? await tx.get(jobRefRefund) : null;
     const bookingRefRefund = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
     const bookingSnapRefund = bookingRefRefund ? await tx.get(bookingRefRefund) : null;
+    // Owner policy 30 Oct 2026: a full refund of a membership payment ends that
+    // membership's benefits - read the membership BEFORE any write (all-reads-first).
+    const membershipRefund = await readMembershipForRefund(tx, db, payment);
+    const upgradePredecessor = await readUpgradePredecessorForRefund(tx, db, membershipRefund);
     // Related documents must still be the payment's OWN records before any of
     // them is written. A doc the payment links to must exist (a dangling link
     // means the linkage drifted), must sit in the payment's tenant, and must
@@ -454,6 +459,15 @@ export async function processProviderEvent(
         voidedReason: "Refunded via payment provider", updatedAt: now });
       writeAuditLog(tx, { action: "invoice.voided", entityType: "Invoice", entityId: payment.invoiceId, user, studioId: payment.studioId,
         after: { status: "void", reason: "refund" } });
+    }
+    // Membership policy (Meet, 30 Oct 2026): FULL refund ends that membership's
+    // benefits; only this payment's own membership is touched. A partial refund
+    // (not offered for memberships) changes no membership and alerts staff.
+    if (membershipRefund) {
+      if (fullyRefunded) {
+        deactivateRefundedMembershipInTx(tx, membershipRefund, payment, now);
+        restoreUpgradedPredecessorInTx(tx, db, upgradePredecessor, { id: membershipRefund.ref.id, tenantId: membershipRefund.data.tenantId, customerId: membershipRefund.data.customerId, washesUsed: membershipRefund.data.washesUsed }, payment, now);
+      } else alertMembershipPartialRefundInTx(tx, db, payment, now);
     }
     const settledStatus = fullyRefunded ? "refunded" : "partially_refunded";
     if (jobRefRefund) tx.update(jobRefRefund, { paymentStatus: settledStatus, updatedAt: now });

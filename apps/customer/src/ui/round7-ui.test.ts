@@ -42,10 +42,9 @@ describe("round7 points 5-12 (car page)", () => {
   const car = read("src/app/(tabs)/garage/[id].tsx");
   it("p11: booking and service sections come first, all document sections last", () => {
     const at = (t: string) => { const i = car.indexOf(t); expect(i, t).toBeGreaterThan(0); return i; };
-    expect(at('title="Service due"')).toBeLessThan(at('title="Documents"'));
-    expect(at("buildHistory(")).toBeLessThan(at('title="Documents"'));
-    expect(at('title="Documents"')).toBeLessThan(at("<Kicker>Papers</Kicker>"));
-    expect(at("<Kicker>Papers</Kicker>")).toBeLessThan(at("<Kicker>Warranty</Kicker>"));
+    expect(at('title="Service due"')).toBeLessThan(at("<Kicker>Documents</Kicker>"));
+    expect(at("buildHistory(")).toBeLessThan(at("<Kicker>Documents</Kicker>"));
+    expect(at("<Kicker>Documents</Kicker>")).toBeLessThan(at("<Kicker>Warranty</Kicker>"));
   });
   it("p10: no separate Next due card or document-expiry reminders", () => {
     expect(car).toContain("const due = null;");

@@ -2,10 +2,11 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser } from "../../middleware/auth.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // A signed-in user registers (or removes) this browser's push token. Stored in
 // pushTokens/{uid}.tokens. Additive: nothing existing reads or writes this doc.
-export const registerPushToken = onCall({ region: "asia-south1" }, async (request) => {
+export const registerPushToken = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = (request.data ?? {}) as { token?: unknown; remove?: unknown };
   if (typeof data.token !== "string" || data.token.length < 20 || data.token.length > 4096) {

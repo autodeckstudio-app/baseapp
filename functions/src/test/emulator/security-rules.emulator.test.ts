@@ -1287,6 +1287,7 @@ describe("/vehicles/{vehicleId}/protections — read-own, Cloud Function writes 
   });
 
   it("Customer can read their own vehicle's protection", async () => {
+    await seedVehicle("veh-alice", "uid-alice");
     await seedProtection("veh-alice", "prot-1", "uid-alice");
     const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
     await assertSucceeds(
@@ -1329,11 +1330,55 @@ describe("/vehicles/{vehicleId}/protections — read-own, Cloud Function writes 
   });
 
   it("Cross-customer: Bob cannot read Alice's protection", async () => {
+    await seedVehicle("veh-alice", "uid-alice");
     await seedProtection("veh-alice", "prot-3", "uid-alice");
     const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
     await assertFails(
       bob.firestore().collection("vehicles").doc("veh-alice").collection("protections").doc("prot-3").get(),
     );
+  });
+
+  it("Transfer: the former owner is DENIED (no longer the car's owner), and the new owner is DENIED the former owner's private entry (not their record)", async () => {
+    // The record was entered for uid-alice; the car now belongs to uid-bob.
+    // Customer read requires being BOTH the record's customer AND the car's
+    // current owner - neither post-transfer party qualifies for this record.
+    await seedVehicle("veh-sold", "uid-bob");
+    await seedProtection("veh-sold", "prot-sold", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertFails(alice.firestore().collection("vehicles").doc("veh-sold").collection("protections").doc("prot-sold").get());
+    await assertFails(bob.firestore().collection("vehicles").doc("veh-sold").collection("protections").doc("prot-sold").get());
+  });
+
+  it("Transfer: the new owner reads their OWN entry on the car (customer AND current owner)", async () => {
+    await seedVehicle("veh-bought", "uid-bob");
+    await seedProtection("veh-bought", "prot-own", "uid-bob");
+    const bob = testEnv.authenticatedContext("uid-bob", makeCustomerClaims("uid-bob"));
+    await assertSucceeds(bob.firestore().collection("vehicles").doc("veh-bought").collection("protections").doc("prot-own").get());
+  });
+
+  it("Missing car fails closed, even for the record's own customer", async () => {
+    await seedProtection("veh-missing", "prot-missing", "uid-alice");
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("vehicles").doc("veh-missing").collection("protections").doc("prot-missing").get());
+  });
+
+  it("Archived car fails closed, even for the record's own customer", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const now = new Date().toISOString();
+      const fs = ctx.firestore(); // one call per context: a second firestore() re-runs useEmulator on the same instance and throws
+      await fs.collection("vehicles").doc("veh-arch").set({
+        id: "veh-arch", tenantId: FIRST_TENANT_ID, ownerId: "uid-alice", registrationNumber: "GJ01AB1234",
+        make: "Maruti", model: "Swift", year: 2022, color: "White", photoUrl: null, odometer: null,
+        createdAt: now, updatedAt: now, deletedAt: now, // archived
+      });
+      await fs.collection("vehicles").doc("veh-arch").collection("protections").doc("prot-arch").set({
+        id: "prot-arch", tenantId: FIRST_TENANT_ID, vehicleId: "veh-arch", customerId: "uid-alice", kind: "insurance",
+        status: "verified", createdAt: now, updatedAt: now,
+      });
+    });
+    const alice = testEnv.authenticatedContext("uid-alice", makeCustomerClaims("uid-alice"));
+    await assertFails(alice.firestore().collection("vehicles").doc("veh-arch").collection("protections").doc("prot-arch").get());
   });
 
   it("Cross-tenant: tenant A customer cannot read tenant B's protection", async () => {

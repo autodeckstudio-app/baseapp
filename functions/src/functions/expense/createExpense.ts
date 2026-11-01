@@ -8,10 +8,11 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createExpenseSchema } from "../../schemas/expense.js";
 import { assertValidMinorUnits } from "../../lib/pricing.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Admin-only: record a studio operating expense. `month` is derived
 // server-side from the business date so listExpenses is a single where().
-export const createExpense = onCall({ region: "asia-south1" }, async (request) => {
+export const createExpense = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(createExpenseSchema, request.data);

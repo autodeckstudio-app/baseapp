@@ -11,8 +11,9 @@ import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getMyMembershipsSchema } from "../../schemas/membership.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const getMyMemberships = onCall({ region: "asia-south1" }, async (request) => {
+export const getMyMemberships = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(getMyMembershipsSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "read.myMemberships");

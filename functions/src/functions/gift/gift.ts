@@ -20,6 +20,7 @@ import { planGiftActivation } from "../../lib/gift-activate.js";
 import { createGiftPurchase } from "../../lib/gift-purchase.js";
 import { hashGiftCode } from "../../lib/gift-code.js";
 import { assertNotLocked, attemptKeys, findGiftByHash, giftBlockReason, recordFailure } from "../../lib/gift-store.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const empty = z.object({}).strict();
 const codeSchema = z.object({ code: z.string().min(1).max(40) }).strict();
@@ -51,7 +52,7 @@ function view(g: Gift, now: number) {
 
 /** Buyer starts a gift. Makes the gift and its payment (both unpaid) and returns the payment id for checkout. The code is made now but
  *  is only handed out by getGiftCode after the payment is verified. A buyer who retries gets the same unpaid gift back. */
-export const createGift = onCall({ region: "asia-south1" }, async (request) => {
+export const createGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   validate(empty, request.data ?? {});
@@ -64,7 +65,7 @@ export const createGift = onCall({ region: "asia-south1" }, async (request) => {
 
 /** The buyer's code, only once the payment is verified (gift ACTIVE) and only to the buyer. This is how a buyer who closed the app
  *  after paying gets it again. An unpaid, void, used or expired gift never returns a code. */
-export const getGiftCode = onCall({ region: "asia-south1" }, async (request) => {
+export const getGiftCode = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   const data = validate(idSchema, request.data);
@@ -80,7 +81,7 @@ export const getGiftCode = onCall({ region: "asia-south1" }, async (request) => 
   return { code, expiresAt: g.expiresAt };
 });
 
-export const listMyGifts = onCall({ region: "asia-south1" }, async (request) => {
+export const listMyGifts = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   await enforceRateLimit(subjectFrom(user), "gift.read");
@@ -92,7 +93,7 @@ export const listMyGifts = onCall({ region: "asia-south1" }, async (request) => 
 });
 
 /** Recipient claims a code. It binds to this account; a second account cannot claim it. Wrong codes are counted and locked out. */
-export const redeemGift = onCall({ region: "asia-south1" }, async (request) => {
+export const redeemGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   if (!user.phone && !user.email) throw new HttpsError("failed-precondition", "Sign in with your phone number or Google account to redeem a gift.");
@@ -126,7 +127,7 @@ export const redeemGift = onCall({ region: "asia-south1" }, async (request) => {
 });
 
 /** Gifts are not refundable (Meet's decision). Kept so an older app gets a clear answer; it changes nothing. */
-export const cancelGift = onCall({ region: "asia-south1" }, async (request) => {
+export const cancelGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer");
   validate(idSchema, request.data);
@@ -134,7 +135,7 @@ export const cancelGift = onCall({ region: "asia-south1" }, async (request) => {
 });
 
 /** Studio: look a gift up by the code a customer reads out, or by id. */
-export const lookupGift = onCall({ region: "asia-south1" }, async (request) => {
+export const lookupGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(z.object({ code: z.string().max(40).optional(), giftId: z.string().max(100).optional() }).strict(), request.data);
@@ -149,7 +150,7 @@ export const lookupGift = onCall({ region: "asia-south1" }, async (request) => {
 });
 
 /** Studio voids a gift that has not been used. A voided gift never works again. */
-export const voidGift = onCall({ region: "asia-south1" }, async (request) => {
+export const voidGift = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "admin", "superadmin");
   const data = validate(voidSchema, request.data);

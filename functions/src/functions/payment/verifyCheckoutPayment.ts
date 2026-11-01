@@ -8,13 +8,14 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { verifyCheckoutPaymentSchema } from "../../schemas/payment.js";
 import { signatureMatches } from "../../lib/razorpay-checkout.js";
 import { completeVerifiedCheckout } from "../../lib/razorpay-verified-checkout.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Step 3: check the signature the checkout modal returned. A match records the
 // provider payment id and completes the payment through the same processor the
 // webhook uses (invoice, membership). The signed order_id|payment_id pair is proof
 // of payment, so activation does not depend on the webhook arriving. The webhook
 // stays as a backup: it finds the payment already completed and changes nothing.
-export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_SECRET"] }, async (request) => {
+export const verifyCheckoutPayment = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   const data = validate(verifyCheckoutPaymentSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "payment.verify");

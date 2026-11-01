@@ -44,7 +44,7 @@ export type {
 export type { AuditLog, AuditAction } from "./audit.js";
 export type { Warranty } from "./warranty.js";
 export type { Notification, NotificationType, NotificationEntityType } from "./notification.js";
-export type { Protection, ProtectionKind, ProtectionStatus } from "./protection.js";
+export type { Protection, ProtectionKind, ProtectionStatus, ProtectionCosmeticKind, ProtectionCoverageScope, ProtectionInstallSpec, ProtectionWorkEvent } from "./protection.js";
 export type {
   Inspection,
   InspectionStatus,

@@ -6,10 +6,11 @@ import { extractUser, assertRole, assertStudio } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listInventoryItemsSchema } from "../../schemas/inventory.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above read: items for one studio with a low-stock flag computed
 // server-side so the Office dashboard and Inventory screen agree.
-export const listInventoryItems = onCall({ region: "asia-south1" }, async (request) => {
+export const listInventoryItems = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(listInventoryItemsSchema, request.data);

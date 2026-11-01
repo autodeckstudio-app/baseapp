@@ -7,11 +7,12 @@ import { extractUser, assertRole } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { listOffersSchema } from "../../schemas/offer.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const READ_WINDOW_MS = 60 * 60 * 1000;
 
 // Customers get offers that are live right now (started, not ended, not hidden). Staff can ask for everything.
-export const listOffers = onCall({ region: "asia-south1" }, async (request) => {
+export const listOffers = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(listOffersSchema, request.data ?? {});

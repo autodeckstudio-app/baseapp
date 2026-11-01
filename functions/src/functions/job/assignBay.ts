@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { ServiceJob, StudioConfig, Service } from "@autodeck/core";
-import { MAX_SERVICE_SPAN_DAYS } from "@autodeck/core";
+import { jobHoldsBay } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -13,9 +13,10 @@ import {
   hasConflict,
   type OccupiedInterval,
 } from "../../lib/availability.js";
-import { addDays } from "../../lib/schedule.js";
+import { computeScheduleEnd } from "../../lib/schedule.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const assignBay = onCall({ region: "asia-south1" }, async (request) => {
+export const assignBay = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(assignBaySchema, request.data);
@@ -86,26 +87,65 @@ export const assignBay = onCall({ region: "asia-south1" }, async (request) => {
     // check at all, unlike createWalkinJob/createBooking, letting the same
     // bay be assigned to two overlapping jobs and silently corrupting the
     // one-job-per-bay invariant the availability engine depends on).
-    const rangeStartDate = addDays(job.scheduledDate, -MAX_SERVICE_SPAN_DAYS);
-    const rangeEndDate = addDays(job.scheduledDate, MAX_SERVICE_SPAN_DAYS);
+    //
+    // Two honest layers on ONE status-based query (no scheduledDate window —
+    // a job that started weeks ago and was never closed still physically
+    // holds its bay, and a date range around the target's schedule would
+    // miss it; this function is also the last guard when moving a physically
+    // present car, since the check-in guard only fires on the
+    // PENDING_VEHICLE -> VEHICLE_RECEIVED transition):
+    //  1. Physical presence: if the job being assigned is present now (its
+    //     window covers now or it is already active), any ACTIVE-status job
+    //     on the target bay blocks the move, regardless of its schedule.
+    //  2. Reservations: every other live job keeps its scheduled-interval
+    //     conflict check against the job's own window, so future
+    //     reservations are still honoured.
     const activeJobsSnap = await tx.get(
       db
         .collection(COLLECTIONS.jobs())
         .where("studioId", "==", job.studioId)
         .where("bayId", "==", data.bayId)
-        .where("scheduledDate", ">=", rangeStartDate)
-        .where("scheduledDate", "<=", rangeEndDate),
+        .where("status", "in", ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]),
     );
 
+    const others = activeJobsSnap.docs
+      .map((d) => ({ ...(d.data() as ServiceJob), id: d.id }))
+      .filter((j) => j.id !== data.jobId); // the job being reassigned never conflicts with itself
+    const nowMs = Date.parse(now);
+    const targetPresent =
+      job.status !== "PENDING_VEHICLE" ||
+      (nowMs >= Date.parse(job.scheduledAt) && nowMs <= Date.parse(job.estimatedEndAt));
+    if (targetPresent) {
+      const holder = others.find((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"].includes(j.status));
+      if (holder) {
+        throw new HttpsError(
+          "resource-exhausted",
+          `Target bay is still occupied by job ${holder.id} (${holder.status}). Close that job or select a different bay.`,
+        );
+      }
+    }
+
     const occupied: OccupiedInterval[] = [];
-    for (const doc of activeJobsSnap.docs) {
-      if (doc.id === data.jobId) continue; // the job being reassigned never conflicts with itself
-      const otherJob = doc.data() as ServiceJob;
-      if (otherJob.status === "CANCELLED" || otherJob.status === "DELIVERED") continue;
+    for (const otherJob of others) {
+      // No-show expiry: an overdue PENDING_VEHICLE reservation whose window
+      // has passed holds nothing and must not block scheduling.
+      if (otherJob.status === "PENDING_VEHICLE" && !jobHoldsBay(otherJob, nowMs)) continue;
       occupied.push(buildOccupiedInterval(otherJob.scheduledAt, otherJob.estimatedEndAt));
     }
 
-    if (hasConflict(new Date(job.scheduledAt), new Date(job.estimatedEndAt), occupied)) {
+    // A job that is physically present (active, or its window covers now)
+    // occupies the target bay from NOW for the service's full duration -
+    // same computeScheduleEnd pattern as standby admission. Its stored
+    // window may be stale (late check-in, overrun), and using it here would
+    // understate occupancy and slip a future reservation conflict. For an
+    // already-active job the full duration is a deliberate fail-safe
+    // overestimate of the remaining work. Future (not-present) targets keep
+    // pure scheduled-window semantics.
+    const conflictStart = targetPresent ? new Date(now) : new Date(job.scheduledAt);
+    const conflictEnd = targetPresent
+      ? computeScheduleEnd(new Date(now), job.estimatedDurationMinutes, config.operatingHours, config.holidays, config.timezone)
+      : new Date(job.estimatedEndAt);
+    if (hasConflict(conflictStart, conflictEnd, occupied)) {
       throw new HttpsError(
         "resource-exhausted",
         "Target bay is occupied for this job's scheduled window. Please select a different bay.",

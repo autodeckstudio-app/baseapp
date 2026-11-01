@@ -40,6 +40,7 @@ export const createProtection = onCall({ region: "asia-south1", enforceAppCheck:
     policyNumber: data.policyNumber ?? null,
     startDate: data.startDate ?? null,
     expiryDate: data.expiryDate ?? null,
+    warrantyYears: data.warrantyYears ?? null,
     documentUrl: null,
     status: "unverified",
     verifiedBy: null,

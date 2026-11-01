@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, StudioConfig, ServiceJob, Vehicle, Customer } from "@autodeck/core";
-import { MAX_SERVICE_SPAN_DAYS, jobHoldsBay } from "@autodeck/core";
+import { jobHoldsBay } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -15,8 +15,9 @@ import {
 } from "../../lib/availability.js";
 import { utcToLocalDate, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 import { calculatePrice, taxFor } from "../../lib/pricing.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const createWalkinJob = onCall({ region: "asia-south1" }, async (request) => {
+export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(createWalkinJobSchema, request.data);
@@ -115,28 +116,37 @@ export const createWalkinJob = onCall({ region: "asia-south1" }, async (request)
       .doc(`${user.claims.tenantId}__${data.studioId}__${data.bayId}`);
     await tx.get(bayLockRef);
 
-    // Transactional bay check: ensure no active job is currently occupying
-    // this bay. Widened to a MAX_SERVICE_SPAN_DAYS range so a multi-day job
-    // that started earlier but is still occupying the bay is still found
-    // (Phase 5 — multi-day booking).
-    const rangeStartDate = addDays(scheduledDate, -MAX_SERVICE_SPAN_DAYS);
-    const rangeEndDate = addDays(scheduledDate, MAX_SERVICE_SPAN_DAYS);
+    // Transactional bay check, two honest layers on ONE status-based query
+    // (no scheduledDate window — a job that started weeks ago and was never
+    // closed still physically holds its bay, and a date range around today
+    // would miss it):
+    //  1. Physical presence: any ACTIVE-status job on the bay holds it until
+    //     delivered/cancelled, regardless of its scheduled interval.
+    //  2. Reservations: a PENDING_VEHICLE booking whose slot still holds
+    //     (jobHoldsBay) keeps its scheduled-interval conflict check, so a
+    //     walk-in is not admitted over a car expected now/soon.
     const activeJobsSnap = await tx.get(
       db
         .collection(COLLECTIONS.jobs())
         .where("studioId", "==", data.studioId)
         .where("bayId", "==", data.bayId)
-        .where("scheduledDate", ">=", rangeStartDate)
-        .where("scheduledDate", "<=", rangeEndDate),
+        .where("status", "in", ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]),
     );
 
+    const bayJobs = activeJobsSnap.docs.map((d) => ({ ...(d.data() as ServiceJob), id: d.id }));
+    const holder = bayJobs.find((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"].includes(j.status));
+    if (holder) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Bay is still occupied by job ${holder.id} (${holder.status}). Close that job or select a different bay.`,
+      );
+    }
     const occupied: OccupiedInterval[] = [];
-    for (const doc of activeJobsSnap.docs) {
-      const job = doc.data() as ServiceJob;
-      if (job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+    for (const job of bayJobs) {
       // A booked car that never came and whose slot has ended no longer holds the bay.
-      if (job.status === "PENDING_VEHICLE" && !jobHoldsBay(job, now.getTime())) continue;
-      occupied.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
+      if (job.status === "PENDING_VEHICLE" && jobHoldsBay(job, now.getTime())) {
+        occupied.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
+      }
     }
 
     if (hasConflict(now, estimatedEndAt, occupied)) {

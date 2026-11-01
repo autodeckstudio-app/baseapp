@@ -69,7 +69,21 @@ export const submitMyPaperSchema = z.object({
   issuedOn: dateString.optional(),
   expiresOn: dateString.optional(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
+  // Base64 MD5 of the exact bytes the client will PUT. Required with contentType: it is signed
+  // into the upload URL as Content-MD5 (GCS itself rejects different bytes) and recorded in the
+  // immutable submission snapshot so finalize can prove the object it checks is the object the
+  // client was told to upload.
+  contentMd5: z.string().regex(/^[A-Za-z0-9+/]{22}==$/, "contentMd5 must be the base64 MD5 of the file").optional(),
+  // Client-generated operation id (one per add-document form session). Lets the server
+  // recognize a retry of the SAME submission after a lost acknowledgement and replay it
+  // against the record the first attempt created, instead of failing on the reserved number.
+  submissionId: z.string().uuid().optional(),
 }).strict().transform((v, ctx) => {
+  // A photo upload without its content digest cannot be bound: refuse the pair.
+  if (v.contentType && !v.contentMd5) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["contentMd5"], message: "contentMd5 is required with contentType" });
+    return z.NEVER;
+  }
   // An OTHER document needs a name (round 7 point 8). Existing papers without a title still render.
   if (v.kind === "OTHER" && !v.title) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["title"], message: "Give this document a name" });
@@ -97,6 +111,16 @@ export const updateMyPaperSchema = z.object({
   issuedOn: dateString.nullable().optional(),
   expiresOn: dateString.nullable().optional(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]).optional(),
-}).strict();
+  contentMd5: z.string().regex(/^[A-Za-z0-9+/]{22}==$/, "contentMd5 must be the base64 MD5 of the file").optional(),
+  removePhoto: z.boolean().optional(),
+  // Optimistic concurrency: the revision the editing form was opened on. When present, the save
+  // commits only if the record is still on exactly that revision; otherwise it aborts and the
+  // customer reopens the current state. Optional so older builds keep working unguarded.
+  expectedRevision: z.number().int().min(0).optional(),
+}).strict().superRefine((v, ctx) => {
+  if (v.contentType && !v.contentMd5) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["contentMd5"], message: "contentMd5 is required with contentType" });
+  }
+});
 
-export const deleteMyPaperSchema = z.object({ paperId: z.string().min(1).max(120) }).strict();
+export const deleteMyPaperSchema = z.object({ paperId: z.string().min(1).max(120), expectedRevision: z.number().int().min(0).optional() }).strict();

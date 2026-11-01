@@ -7,12 +7,13 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { recordInventoryTxnSchema } from "../../schemas/inventory.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // Studio-and-above: record one stock movement. The item's stockQty updates in
 // the same transaction as the txn log write, so the log is always consistent
 // with on-hand stock. Stock-outs are rejected unless type is ADJUSTMENT
 // (admin-only), which is the documented way to true-up after a stock count.
-export const recordInventoryTxn = onCall({ region: "asia-south1" }, async (request) => {
+export const recordInventoryTxn = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(recordInventoryTxnSchema, request.data);

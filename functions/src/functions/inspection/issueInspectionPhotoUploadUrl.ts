@@ -22,6 +22,7 @@ import { extractUser } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { issueInspectionPhotoUploadUrlSchema } from "../../schemas/inspection.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -31,7 +32,7 @@ const EXT: Record<string, string> = {
 
 const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
 
-export const issueInspectionPhotoUploadUrl = onCall({ region: "asia-south1" }, async (request) => {
+export const issueInspectionPhotoUploadUrl = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
 
   if (!["studio", "admin", "superadmin"].includes(user.claims.role)) {

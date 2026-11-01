@@ -1,11 +1,12 @@
 import { collection, query, where, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { fetch as expoFetch } from "expo/fetch";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { PaperVerification } from "@autodeck/core";
 import { photoContentMd5 } from "./content-md5";
 
-export type MyPaper = PaperVerification & { evidencePath?: string | null };
+export type MyPaper = PaperVerification & { evidencePath?: string | null; submissionId?: string | null };
 
 export function listenToVehiclePapers(
   vehicleId: string,
@@ -27,16 +28,49 @@ export function listenToVehiclePapers(
   );
 }
 
-async function uploadAndFinalize(res: { id: string; uploadUrl: string | null; requiredHeaders: Record<string, string> | null }, photo?: { blob: Blob; contentType: string } | null): Promise<void> {
-  if (photo && res.uploadUrl && res.requiredHeaders) {
-    const put = await fetch(res.uploadUrl, { method: "PUT", headers: res.requiredHeaders, body: photo.blob });
-    if (!put.ok) throw new Error(`Saved, but the photo did not upload (${put.status}).`);
-    const finalize = httpsCallable<{ paperId: string }, { status: string }>(functions, "finalizeMyPaper");
-    await finalize({ paperId: res.id });
+export type PaperPhotoPayload = { blob: Blob; contentType?: string } | { bytes: Uint8Array; contentType?: string };
+
+/** Signed-PUT upload: native byte arrays must go through expo/fetch (RN cannot build Blobs from bytes); web Blobs keep the global fetch path. */
+export async function putPaperPhoto(uploadUrl: string, requiredHeaders: Record<string, string>, photo: PaperPhotoPayload): Promise<void> {
+  const res = "bytes" in photo
+    ? await expoFetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: photo.bytes })
+    : await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: photo.blob });
+  if (!res.ok) throw new Error(`Saved, but the photo did not upload (${res.status}).`);
+}
+
+/** Classify an evidence-read failure: permission problems tell the owner to sign in again; everything else is a generic availability problem. */
+export function paperEvidenceFailure(err: unknown): "permission" | "unavailable" {
+  const code = (err as { code?: string } | null | undefined)?.code ?? "";
+  return code.endsWith("permission-denied") || code.endsWith("unauthenticated") ? "permission" : "unavailable";
+}
+
+/** Read URL for a saved document photo via the deployed getPrivateFileUrl callable (auth, tenant and ownership checked server-side). */
+export async function resolvePaperEvidenceUrl(paper: MyPaper): Promise<{ url: string | null; failure: "permission" | "unavailable" | null }> {
+  try {
+    const fn = httpsCallable<{ kind: "paper"; id: string }, { url: string }>(functions, "getPrivateFileUrl");
+    return { url: (await fn({ kind: "paper", id: paper.id })).data.url, failure: null };
+  } catch (err) {
+    return { url: null, failure: paperEvidenceFailure(err) };
   }
 }
 
-type UploadReply = { id: string; uploadUrl: string | null; requiredHeaders: Record<string, string> | null };
+async function uploadAndFinalize(res: UploadReply, photo?: PaperPhotoPayload | null): Promise<boolean> {
+  let uploaded = false;
+  if (photo && res.uploadUrl && res.requiredHeaders) {
+    await putPaperPhoto(res.uploadUrl, res.requiredHeaders, photo);
+    uploaded = true;
+  }
+  // Finalize when bytes are definitely at the object: either we just PUT them, or the server
+  // confirmed a replayed submission's earlier upload already landed (photoState "uploaded").
+  // Finalize is guarded and idempotent, so a replay of an already-decided record is a no-op.
+  if (photo && (uploaded || res.photoState === "uploaded")) {
+    const finalize = httpsCallable<{ paperId: string }, { status: string }>(functions, "finalizeMyPaper");
+    await finalize({ paperId: res.id });
+  }
+  return uploaded;
+}
+
+type UploadReply = { id: string; uploadUrl: string | null; requiredHeaders: Record<string, string> | null; photoState: "none" | "awaiting_upload" | "uploaded"; replayed?: boolean };
 
 export async function submitMyPaper(input: {
   studioId: string;
@@ -46,12 +80,14 @@ export async function submitMyPaper(input: {
   title?: string;
   issuedOn?: string;
   expiresOn?: string;
-  photo?: { blob: Blob; contentType: string } | null;
-}): Promise<void> {
+  photo?: PaperPhotoPayload | null;
+  submissionId?: string;
+}): Promise<{ replayed: boolean; photoUploaded: boolean }> {
   const { photo, ...rest } = input;
   const fn = httpsCallable<typeof rest & { contentType?: string; contentMd5?: string }, UploadReply>(functions, "submitMyPaper");
-  const res = (await fn({ ...rest, ...(photo ? { contentType: photo.contentType, contentMd5: await photoContentMd5(photo) } : {}) })).data;
-  await uploadAndFinalize(res, photo);
+  const res = (await fn({ ...rest, ...(photo ? { ...(photo.contentType ? { contentType: photo.contentType } : {}), contentMd5: await photoContentMd5(photo) } : {}) })).data;
+  const photoUploaded = await uploadAndFinalize(res, photo);
+  return { replayed: res.replayed === true, photoUploaded };
 }
 
 /** Edit your own document: number, name, expiry, photo. The change goes back to review. */
@@ -60,11 +96,12 @@ export async function updateMyPaper(input: {
   reference?: string;
   title?: string;
   expiresOn?: string | null;
-  photo?: { blob: Blob; contentType: string } | null;
+  photo?: PaperPhotoPayload | null;
+  removePhoto?: boolean;
 }): Promise<void> {
   const { photo, ...rest } = input;
   const fn = httpsCallable<typeof rest & { contentType?: string; contentMd5?: string }, UploadReply>(functions, "updateMyPaper");
-  const res = (await fn({ ...rest, ...(photo ? { contentType: photo.contentType, contentMd5: await photoContentMd5(photo) } : {}) })).data;
+  const res = (await fn({ ...rest, ...(photo ? { ...(photo.contentType ? { contentType: photo.contentType } : {}), contentMd5: await photoContentMd5(photo) } : {}) })).data;
   await uploadAndFinalize(res, photo);
 }
 

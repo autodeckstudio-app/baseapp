@@ -101,7 +101,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const response = NextResponse.json({ claims });
+  // Bind the response to the verified principal (see GET below).
+  const response = NextResponse.json({ claims: { ...claims, uid: decoded.uid } });
   setSessionCookie(response, sessionCookie);
   return response;
 }
@@ -129,7 +130,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "not-admin" }, { status: 403 });
   }
 
-  return NextResponse.json({ claims });
+  // Include the verified principal: claims alone (role/tenant/studio) do not
+  // prove WHICH account this session belongs to, and the client must never
+  // accept a cookie whose uid differs from the current token's uid.
+  return NextResponse.json({ claims: { ...claims, uid: decoded.uid } });
 }
 
 // Logout: revokes the account's refresh tokens server-side (so the session
