@@ -3,6 +3,7 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { PaperVerification } from "@autodeck/core";
+import { photoContentMd5 } from "./content-md5";
 
 export type MyPaper = PaperVerification & { evidencePath?: string | null };
 
@@ -48,8 +49,8 @@ export async function submitMyPaper(input: {
   photo?: { blob: Blob; contentType: string } | null;
 }): Promise<void> {
   const { photo, ...rest } = input;
-  const fn = httpsCallable<typeof rest & { contentType?: string }, UploadReply>(functions, "submitMyPaper");
-  const res = (await fn({ ...rest, ...(photo ? { contentType: photo.contentType } : {}) })).data;
+  const fn = httpsCallable<typeof rest & { contentType?: string; contentMd5?: string }, UploadReply>(functions, "submitMyPaper");
+  const res = (await fn({ ...rest, ...(photo ? { contentType: photo.contentType, contentMd5: await photoContentMd5(photo) } : {}) })).data;
   await uploadAndFinalize(res, photo);
 }
 
@@ -62,8 +63,8 @@ export async function updateMyPaper(input: {
   photo?: { blob: Blob; contentType: string } | null;
 }): Promise<void> {
   const { photo, ...rest } = input;
-  const fn = httpsCallable<typeof rest & { contentType?: string }, UploadReply>(functions, "updateMyPaper");
-  const res = (await fn({ ...rest, ...(photo ? { contentType: photo.contentType } : {}) })).data;
+  const fn = httpsCallable<typeof rest & { contentType?: string; contentMd5?: string }, UploadReply>(functions, "updateMyPaper");
+  const res = (await fn({ ...rest, ...(photo ? { contentType: photo.contentType, contentMd5: await photoContentMd5(photo) } : {}) })).data;
   await uploadAndFinalize(res, photo);
 }
 
