@@ -123,11 +123,19 @@ export async function uploadVehiclePhoto(vehicleId: string, blob: Blob, contentT
   const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType })).data;
   const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
   if (!res.ok) throw new Error(`Photo upload failed (${res.status}).`);
+  const publish = () =>
+    // Points the car at the new file (single writer) and returns a read URL.
+    httpsCallable<{ vehicleId: string; path: string; publish: boolean }, { url: string }>(
+      functions, "publishVehiclePhoto",
+    )({ vehicleId, path, publish: true });
   try {
-    // Stamps the download token the apps need and points the car at the new file.
-    await httpsCallable<{ vehicleId: string; path: string; publish: boolean }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path, publish: true });
+    await publish();
   } catch {
-    await updateVehicle({ vehicleId, photoUrl: path });
+    // One retry with the SAME issued path: publish is replay/idempotent-safe, so a
+    // retry after a lost response succeeds as a no-op. A stale-upload failure means
+    // the flow must restart - surface the error instead of re-pointing the field
+    // directly (publish is the only writer of the photo field).
+    await publish();
   }
   return path;
 }
@@ -143,8 +151,8 @@ export async function resolveVehiclePhotoUrl(path: string, version?: string | nu
     const vehicleId = path.split("/")[2] ?? "";
     url = (await httpsCallable<{ vehicleId: string; path: string }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path })).data.url;
   }
-  // A replaced photo keeps the same storage path (cover.<ext>), so the URL alone never changes.
-  // The vehicle's updatedAt busts browser and image caches so every screen shows the new picture.
+  // A replaced photo gets a fresh UUID path (cover.<uuid>.<ext>), so the resolved URL changes too.
+  // The vehicle's updatedAt version still busts browser and image caches for screens holding an older URL.
   return version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url;
 }
 

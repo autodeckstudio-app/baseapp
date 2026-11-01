@@ -45,7 +45,6 @@ export const updateVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
     if (data.color !== undefined) updates["color"] = data.color;
     if (data.odometer !== undefined) updates["odometer"] = data.odometer;
     if (data.category !== undefined) updates["category"] = data.category;
-    if (data.photoUrl !== undefined) updates["photoUrl"] = data.photoUrl;
 
     // Changing the plate to one this owner already has live is a duplicate.
     if (data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber) {

@@ -1,5 +1,5 @@
 // Issues a short-lived signed PUT URL for a vehicle cover photo.
-// The object path mirrors storage.rules: {tenantId}/vehicles/{vehicleId}/cover.<ext>,
+// The object path lives under storage.rules' {tenantId}/vehicles/{vehicleId}/ prefix as cover.<uuid>.<ext> (rc.<uuid>.<ext> for kind=rc); a fresh UUID per upload, so replaces never overwrite in place and publishVehiclePhoto deletes the superseded object,
 // with customMetadata.ownerId stamped at upload so the hardened read rule
 // (owner or studio only) applies from the first byte. See doc08 §8.8 pattern.
 import { randomUUID } from "node:crypto";
@@ -51,6 +51,9 @@ export const issueVehiclePhotoUploadUrl = onCall({ region: "asia-south1" , enfor
       contentType: data.contentType,
       extensionHeaders: { "x-goog-meta-ownerId": vehicle.ownerId },
     });
+
+  // Record the per-kind pending path; publish consumes it in its transaction.
+  await db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId).update({ [`pendingPhoto.${data.kind === "rc" ? "rc" : "cover"}`]: { path, issuedAt: new Date().toISOString() } });
 
   // The client must send these exact headers on the PUT or the signature fails.
   return {

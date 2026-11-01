@@ -46,7 +46,6 @@ export const updateVehicleSchema = z.object({
   odometer: z.number().int().min(0).optional(),
   category: vehicleCategorySchema.nullable().optional(),
   // Storage object path for the car's photo (set after upload completes).
-  photoUrl: z.string().min(1).max(500).nullable().optional(),
 }).strict();
 
 export const issueVehiclePhotoUploadUrlSchema = z.object({
