@@ -93,7 +93,7 @@ export function buildProtectionWork(draft: DeclarationDraft, protections: Protec
     const wy = years(ev.warrantyYears);
     if (wy === "invalid") return null;
     // Like-for-like: kind + coverage are the target's own, never re-asked.
-    if (target.coverage == null || (target.kind !== "ppf" && target.kind !== "ceramic")) return null;
+    if (target.coverage === null || target.coverage === undefined || (target.kind !== "ppf" && target.kind !== "ceramic")) return null;
     // Brand and warranty describe the NEW work. They are what the staff
     // member entered, or null - NEVER inherited from the old record, which
     // would silently turn the old product into evidence of the new work.
