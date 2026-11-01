@@ -9,7 +9,11 @@ export function pickTopServices(all: TopSvc[]): TopPick[] {
   const out: TopPick[] = [];
   const wash = cheapest(all.filter((x) => x.category === "washing"));
   if (wash) out.push({ key: "wash", title: "Quick wash", icon: "wash", service: wash });
-  const coat = cheapest(all.filter((x) => x.category === "ceramic" || x.category === "coating"));
+  // The card says "Ceramic coating", so it must land on a ceramic service:
+  // a ceramic-category service wins on price; otherwise only a coating-category
+  // service whose name is actually ceramic qualifies. A cheaper non-ceramic
+  // coating (e.g. Teflon) must never be picked for this card.
+  const coat = cheapest(all.filter((x) => x.category === "ceramic")) ?? cheapest(all.filter((x) => x.category === "coating" && /ceramic/i.test(x.name)));
   if (coat) out.push({ key: "coat", title: "Ceramic coating", icon: "ceramic", service: coat });
   const garage = cheapest(all.filter((x) => x.category === "garage" && x.price !== "Quote on request" && !/repair/i.test(x.name)));
   if (garage) out.push({ key: "garage", title: "Garage check", icon: "tools", service: garage });

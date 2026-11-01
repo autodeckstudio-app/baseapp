@@ -24,3 +24,29 @@ describe("pickTopServices", () => {
     expect(pickTopServices([svc("w1", "washing", "Express wash", "₹590")]).map((t) => t.key)).toEqual(["wash"]);
   });
 });
+
+describe("pickTopServices ceramic card regression", () => {
+  it("never routes the Ceramic coating card to a cheaper non-ceramic coating (Teflon)", () => {
+    const all = [
+      svc("t1", "coating", "Teflon coating", "₹4,999"),
+      svc("c1", "ceramic", "Ceramic 1-year", "₹14,750"),
+    ];
+    const coat = pickTopServices(all).find((t) => t.key === "coat");
+    expect(coat?.service.id).toBe("c1");
+  });
+  it("skips the card when only a non-ceramic coating exists", () => {
+    const all = [svc("t1", "coating", "Teflon coating", "₹4,999")];
+    expect(pickTopServices(all).find((t) => t.key === "coat")).toBeUndefined();
+  });
+  it("accepts a coating-category service whose name is actually ceramic", () => {
+    const all = [svc("m1", "coating", "Ceramic maintenance coat", "₹6,500")];
+    expect(pickTopServices(all).find((t) => t.key === "coat")?.service.id).toBe("m1");
+  });
+  it("a ceramic-category service wins over a cheaper coating-category ceramic fallback", () => {
+    const all = [
+      svc("m1", "coating", "Ceramic maintenance coat", "₹6,500"),
+      svc("c1", "ceramic", "Ceramic 1-year", "₹14,750"),
+    ];
+    expect(pickTopServices(all).find((t) => t.key === "coat")?.service.id).toBe("c1");
+  });
+});
