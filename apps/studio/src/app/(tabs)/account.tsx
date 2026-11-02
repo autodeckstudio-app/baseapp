@@ -122,7 +122,6 @@ export default function AccountScreen() {
       <Section title="My day">
         <Text style={{ ...typography.body, color: colors.textPrimary, padding: spacing.md }}>{dayState}</Text>
         <Row icon="check" label="Check in" onPress={() => void run("in", "checkInAttendance", "Checked in for today.")} disabled={busy !== null || !acts.in} />
-        <Row icon="bell" label="Start break" onPress={() => void run("bs", "startAttendanceBreak", "Break started.")} disabled={busy !== null || !acts.bs} />
         <Row icon="bell" label="End break" onPress={() => void run("be", "endAttendanceBreak", "Break ended.")} disabled={busy !== null || !acts.be} />
         <Row icon="close" label="Check out" onPress={() => void run("out", "checkOutAttendance", "Checked out. See you tomorrow.")} disabled={busy !== null || !acts.out} last />
         {note ? <Text style={{ ...typography.caption, color: colors.textMuted, padding: spacing.md }}>{note}</Text> : null}

@@ -7,7 +7,6 @@ import {
   listenToAttendance,
   checkIn,
   checkOut,
-  startBreak,
   endBreak,
   markAttendance,
 } from "../../../lib/attendance-service";
@@ -91,7 +90,6 @@ export default function AttendancePage() {
       message={message}
       onCheckIn={() => void run(checkIn, "Checked in. Have a good shift.", "Couldn't check in.")}
       onCheckOut={() => void run(checkOut, "Checked out.", "Couldn't check out.")}
-      onStartBreak={() => void run(startBreak, "Break started.", "Couldn't start the break.")}
       onEndBreak={() => void run(endBreak, "Break ended.", "Couldn't end the break.")}
       onMark={onMark}
     />

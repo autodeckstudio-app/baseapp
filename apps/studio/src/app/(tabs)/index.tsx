@@ -133,7 +133,6 @@ export default function TodaysJobsScreen() {
         {day.ready ? (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
             {day.actions.in ? <Button label="Check in" size="md" fullWidth={false} loading={day.busy === "in"} disabled={day.busy !== null} onPress={() => void day.run("in")} /> : null}
-            {day.actions.bs ? <Button label="Start break" size="md" variant="secondary" fullWidth={false} loading={day.busy === "bs"} disabled={day.busy !== null} onPress={() => void day.run("bs")} /> : null}
             {day.actions.be ? <Button label="End break" size="md" fullWidth={false} loading={day.busy === "be"} disabled={day.busy !== null} onPress={() => void day.run("be")} /> : null}
             {day.actions.out ? <Button label="Check out" size="md" variant="secondary" fullWidth={false} loading={day.busy === "out"} disabled={day.busy !== null} onPress={() => void day.run("out")} /> : null}
           </View>

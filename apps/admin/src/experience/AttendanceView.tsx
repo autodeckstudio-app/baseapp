@@ -34,7 +34,6 @@ export function AttendanceView(p: {
   message: string | null;
   onCheckIn: () => void;
   onCheckOut: () => void;
-  onStartBreak: () => void;
   onEndBreak: () => void;
   onMark: (employeeId: string, status: AttendanceStatus, notes: string) => void;
 }) {

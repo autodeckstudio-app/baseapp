@@ -24,7 +24,11 @@ import { resolve } from "node:path";
 describe("Account attendance rows use the same gating as Today (source guard only)", () => {
   it("disables each row from dayActions", () => {
     const src = readFileSync(resolve(process.cwd(), "src/app/(tabs)/account.tsx"), "utf8");
-    for (const k of ["in", "bs", "be", "out"]) expect(src).toContain(`!acts.${k}`);
+    for (const k of ["in", "be", "out"]) expect(src).toContain(`!acts.${k}`);
+    // Start break is gone from the codebase, not merely gated off (peer final UI,
+    // 2 Nov basket item 3). "End break" stays only while a break is open so a
+    // mid-break day can still be finished and checked out.
+    expect(src).not.toContain("Start break");
   });
 });
 
