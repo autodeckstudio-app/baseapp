@@ -177,6 +177,7 @@ export { listOffers } from "./functions/offer/listOffers.js";
 export { getOfficeDashboard } from "./functions/office/getOfficeDashboard.js";
 export { getOfficeReport } from "./functions/office/getOfficeReport.js";
 export { getAccountantMoney } from "./functions/office/getAccountantMoney.js";
+export { recordWebVital } from "./functions/customer/recordWebVital.js";
 
 // âââ Notifications ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { onAuditLogCreated } from "./functions/notification/onAuditLogCreated.js";

@@ -29,5 +29,16 @@
       "destination": "/index.html"
     }
   ],
-  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh customer"
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh customer",
+  "headers": [
+    {
+      "source": "/_expo/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
 }

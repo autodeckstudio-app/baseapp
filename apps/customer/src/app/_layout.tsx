@@ -10,6 +10,7 @@ import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from
 import { useAuth } from "../hooks/useAuth";
 import { captureAuthReturn, consumeAuthReturn } from "../lib/auth-return";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
+import { installWebVitals } from "../lib/web-vitals";
 import { T } from "../ui/kit";
 import { ConnectionBanner } from "../ui/ConnectionBanner";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
@@ -94,6 +95,9 @@ function PushBridge() {
 
 function ThemedRoot() {
   const { name, colors } = useExperienceTheme();
+  useEffect(() => {
+    installWebVitals();
+  }, []);
   setSurfaceMode(name);
   const GROUND_COLOR = groundFor(name);
   const COALMINE = groundImageFor(name);

@@ -7,6 +7,8 @@
 // Root collections
 export const COLLECTIONS = {
   tenants: () => "tenants",
+  /** First-party RUM beacons from the web apps. Server only (default-deny rules); never read by clients. */
+  webVitals: () => "webVitals",
   customers: () => "customers",
   vehicles: () => "vehicles",
   // Tombstones for permanently deleted cars (doc id == old vehicleId); Cloud Functions write only.

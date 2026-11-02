@@ -86,6 +86,7 @@ export type RateLimitAction =
   | "office.dashboard"
   | "office.report"
   | "office.accountantMoney"
+  | "telemetry.webVital"
   | "vehicle.create"
   | "customer.walkin"
   | "customer.update"
@@ -213,6 +214,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "office.dashboard": { limit: 120, windowMs: 60_000 },
   "office.report": { limit: 60, windowMs: 60_000 },
   "office.accountantMoney": { limit: 60, windowMs: 60_000 },
+  "telemetry.webVital": { limit: 120, windowMs: 60_000 }, // a handful of metrics per page view
   "employee.updateRole": { limit: 60, windowMs: 60_000 },
   "employee.deactivate": { limit: 30, windowMs: 60_000 },
   "vehicle.create": { limit: 20, windowMs: 60_000 },

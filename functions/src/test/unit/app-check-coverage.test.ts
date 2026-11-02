@@ -88,6 +88,7 @@ const ENFORCED = [
   "booking/submitReview.ts",
   "carsale/carsale.ts",
   "customer/licensePhoto.ts",
+  "customer/recordWebVital.ts",
   "dailyclose/getDailyClose.ts",
   "dailyclose/performDailyClose.ts",
   "employee/addStaffMember.ts",
