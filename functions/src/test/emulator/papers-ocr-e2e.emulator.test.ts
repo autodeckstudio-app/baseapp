@@ -1,17 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { submitMyPaper, finalizeMyPaper } from "../../functions/papers/submitMyPaper.js";
 import { updateMyPaper } from "../../functions/papers/myPaperEdits.js";
 const db = getFirestore(); const T = "ocr-e2e-tenant";
+const md5b64 = (b: Buffer) => createHash("md5").update(b).digest("base64");
 const img = readFileSync(resolve(__dirname, "../fixtures/synthetic-policy.png"));
 async function run(label: string, vehiclePlate: string, kind: "INSURANCE" | "PUC", ctype = "image/png", bytes: Buffer = img) {
   const u = `ocr-cust-${label}-${Date.now()}`; const auth = { uid: u, token: { role: "customer", tenantId: T, studioId: null } };
   const vid = `ocr-veh-${label}-${Date.now()}`;
   await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: u, tenantId: T, registrationNumber: vehiclePlate });
-  const sub = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind, reference: "SYN-" + label, contentType: ctype }, auth } as never) as { id: string; uploadUrl: string | null };
+  const sub = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind, reference: "SYN-" + label, contentType: ctype, contentMd5: md5b64(bytes) }, auth } as never) as { id: string; uploadUrl: string | null };
   const p = (await db.collection("papers").doc(sub.id).get()).data()!;
   // emulator cannot take the signed-URL PUT (501): land the bytes the way the PUT would (same path, content type, customerId metadata)
   await getStorage().bucket().file(p["evidencePath"]).save(bytes, { metadata: { contentType: ctype, metadata: { customerId: u } } });
@@ -39,14 +41,14 @@ describe.skipIf(!process.env["TEST_SIGN_PRIVATE_KEY"])("synthetic doc through su
     const u = `ocr-cust-edit-${Date.now()}`; const auth = { uid: u, token: { role: "customer", tenantId: T, studioId: null } };
     const vid = `ocr-veh-edit-${Date.now()}`;
     await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: u, tenantId: T, registrationNumber: "MH12AB1234" });
-    const sub = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "INSURANCE", reference: "SYN-EDIT", contentType: "image/png" }, auth } as never) as { id: string };
+    const sub = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "INSURANCE", reference: "SYN-EDIT", contentType: "image/png", contentMd5: md5b64(img) }, auth } as never) as { id: string };
     // land the bytes where the current record actually expects them: a staged replacement goes to
     // pendingEvidencePath (updateMyPaper leaves evidencePath serving the old photo); a fresh upload uses evidencePath.
     const land = async (bytes: Buffer) => { const p = (await db.collection("papers").doc(sub.id).get()).data()!; const dest = p["pendingEvidencePath"] ?? p["evidencePath"]; await getStorage().bucket().file(dest).save(bytes, { metadata: { contentType: "image/png", metadata: { customerId: u } } }); };
     await land(img); await finalizeMyPaper.run({ data: { paperId: sub.id }, auth } as never);
     expect((await db.collection("papers").doc(sub.id).get()).data()!["status"]).toBe("VERIFIED");
     // owner edits the document and replaces the photo: back to review until the new bytes are checked
-    const upd = await updateMyPaper.run({ data: { paperId: sub.id, reference: "SYN-EDIT-2", contentType: "image/png" }, auth } as never) as { uploadUrl: string | null };
+    const upd = await updateMyPaper.run({ data: { paperId: sub.id, reference: "SYN-EDIT-2", contentType: "image/png", contentMd5: md5b64(Buffer.from("not an image")) }, auth } as never) as { uploadUrl: string | null };
     expect(upd.uploadUrl).toBeTruthy();
     const mid = (await db.collection("papers").doc(sub.id).get()).data()!;
     expect(mid["status"]).toBe("PENDING"); expect(mid["verificationMode"]).toBe("review"); expect(mid["reviewedBy"]).toBeNull();
@@ -58,7 +60,7 @@ describe.skipIf(!process.env["TEST_SIGN_PRIVATE_KEY"])("synthetic doc through su
     const bad = (await db.collection("papers").doc(sub.id).get()).data()!;
     expect(bad["status"]).toBe("PENDING"); expect(bad["reference"]).toBe("SYN-EDIT-2");
     // matching bytes after another photo replacement verify again
-    await updateMyPaper.run({ data: { paperId: sub.id, contentType: "image/png" }, auth } as never);
+    await updateMyPaper.run({ data: { paperId: sub.id, contentType: "image/png", contentMd5: md5b64(img) }, auth } as never);
     const restaged = (await db.collection("papers").doc(sub.id).get()).data()!;
     const staged2Path = restaged["pendingEvidencePath"] as string | null;
     const previousEvidence = restaged["evidencePath"] as string | null;
