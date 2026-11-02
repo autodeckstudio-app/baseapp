@@ -109,6 +109,12 @@ export interface Booking {
      *  if the booking has since moved or otherwise changed, the approval is stale and rejected. */
     baseScheduledAt: string;
   } | null;
+  /** How many reschedule requests the customer has submitted for this booking (absent = 0).
+   *  The adopted premium rule is ONE request per booking; an idempotent retry of the same
+   *  submission does not increment. Declined/expired requests still count - re-requesting
+   *  after a decline is a genuine open policy question flagged for owner review, so the
+   *  strict reading (no re-request) is enforced rather than an invented repeat allowance. */
+  rescheduleRequestCount?: number;
   standbyArrivedAt?: string | null;
   standbyAdmittedAt?: string | null;
   missedAt?: string | null; // persisted by the 9pm scheduler; cleared on reschedule

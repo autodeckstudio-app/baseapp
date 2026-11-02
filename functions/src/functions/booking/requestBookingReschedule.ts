@@ -77,7 +77,10 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
       baseScheduledAt: booking.scheduledAt,
     };
 
-    tx.update(bookingRef, { rescheduleRequest, updatedAt: now.toISOString() });
+    // One request per booking: count submissions; the pending-retry path above
+    // returns before this, so an idempotent retry never double-counts.
+    const rescheduleRequestCount = (booking.rescheduleRequestCount ?? 0) + 1;
+    tx.update(bookingRef, { rescheduleRequest, rescheduleRequestCount, updatedAt: now.toISOString() });
 
     writeAuditLog(tx, {
       action: "booking.reschedule_requested",
@@ -86,9 +89,9 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
       user,
       studioId: booking.studioId,
       before: { scheduledAt: booking.scheduledAt, rescheduleRequest: existing ?? null },
-      after: { rescheduleRequest },
+      after: { rescheduleRequest, rescheduleRequestCount },
     });
 
-    return { booking: { ...booking, rescheduleRequest } as Booking };
+    return { booking: { ...booking, rescheduleRequest, rescheduleRequestCount } as Booking };
   });
 });

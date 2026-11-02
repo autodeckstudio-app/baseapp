@@ -17,7 +17,13 @@ export type RequestGuardBooking = {
   status: string;
   scheduledAt: string;
   rescheduleRequest?: RescheduleRequestState | null;
+  /** Submissions so far (absent = 0). The adopted premium rule is ONE request
+   *  per booking; a terminal request does not reset this. */
+  rescheduleRequestCount?: number;
 };
+
+/** Adopted premium rule: one reschedule request per booking (basket item 6). */
+export const PREMIUM_REQUEST_MAX_COUNT = 1;
 
 /** Premium = the pay-at-studio service groups (same banding the cancellation
  *  policy uses), so reschedule policy stays consistent with cancellation. */
@@ -42,6 +48,9 @@ export function canRequestReschedule(
   }
   if (booking.rescheduleRequest && booking.rescheduleRequest.status === "pending") {
     return { ok: false, code: "already-exists", message: "A reschedule request is already pending for this booking." };
+  }
+  if ((booking.rescheduleRequestCount ?? 0) >= PREMIUM_REQUEST_MAX_COUNT) {
+    return { ok: false, code: "failed-precondition", message: "You've already used the reschedule request for this booking. Contact the studio to change the time." };
   }
   const hoursUntil = (new Date(booking.scheduledAt).getTime() - now.getTime()) / 3600000;
   if (hoursUntil < PREMIUM_REQUEST_CUTOFF_HOURS) {

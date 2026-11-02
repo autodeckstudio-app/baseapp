@@ -29,9 +29,16 @@ describe("canRequestReschedule", () => {
     const b = confirmed({ rescheduleRequest: { status: "pending", baseScheduledAt: hoursFromNow(72) } });
     expect(canRequestReschedule(b, "ceramic", NOW)).toMatchObject({ ok: false, code: "already-exists" });
   });
-  it("allows a fresh request after the previous one was declined", () => {
-    const b = confirmed({ rescheduleRequest: { status: "declined", baseScheduledAt: hoursFromNow(72) } });
-    expect(canRequestReschedule(b, "ceramic", NOW)).toEqual({ ok: true });
+  it("rejects a fresh request after a declined one (one request per booking; decline-retry is a flagged open policy question)", () => {
+    const b = confirmed({ rescheduleRequest: { status: "declined", baseScheduledAt: hoursFromNow(72) }, rescheduleRequestCount: 1 });
+    expect(canRequestReschedule(b, "ceramic", NOW)).toMatchObject({ ok: false, code: "failed-precondition" });
+  });
+  it("rejects a fresh request after an approved one (the move already happened)", () => {
+    const b = confirmed({ rescheduleRequest: { status: "approved", baseScheduledAt: hoursFromNow(72) }, rescheduleRequestCount: 1 });
+    expect(canRequestReschedule(b, "ceramic", NOW)).toMatchObject({ ok: false, code: "failed-precondition" });
+  });
+  it("treats an absent counter as zero (pre-feature bookings)", () => {
+    expect(canRequestReschedule(confirmed({ rescheduleRequestCount: undefined }), "ceramic", NOW)).toEqual({ ok: true });
   });
   it("rejects non-CONFIRMED bookings", () => {
     expect(canRequestReschedule(confirmed({ status: "CANCELLED" }), "ceramic", NOW)).toMatchObject({ ok: false, code: "failed-precondition" });
