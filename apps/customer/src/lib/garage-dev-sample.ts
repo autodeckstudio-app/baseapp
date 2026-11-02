@@ -35,7 +35,7 @@ export function devGarageDetail(vehicleId: string) {
     { id: "dp3", tenantId: "dev", vehicleId, customerId: uid, kind: "ppf", status: "verified", source: "studio", provider: "3M", warrantyYears: 3, startDate: day(400).slice(0, 10), notes: null, revision: 2, lifecycle: "superseded", lifecycleAt: day(59).slice(0, 10), supersededByJobId: "dj1", createdAt: day(400), updatedAt: day(59) },
   ] as unknown as Protection[];
   const papers = [
-    { id: "dc1", vehicleId, customerId: uid, kind: "RC", reference: "MH40AB1234", title: "Registration Certificate", expiresOn: null, createdAt: day(400), updatedAt: day(400) },
+    { id: "dc1", vehicleId, customerId: uid, kind: "RC", reference: "RC-SAMPLE-1", title: "Registration Certificate", expiresOn: null, createdAt: day(400), updatedAt: day(400) },
     { id: "dc2", vehicleId, customerId: uid, kind: "INSURANCE", reference: "POL-882134", title: "Insurance", expiresOn: day(-40).slice(0, 10), createdAt: day(300), updatedAt: day(300) },
     { id: "dc3", vehicleId, customerId: uid, kind: "PUC", reference: "PUC-551200", title: "PUC", expiresOn: day(10).slice(0, 10), createdAt: day(180), updatedAt: day(180) },
   ] as unknown as MyPaper[];

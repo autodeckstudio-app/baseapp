@@ -7,7 +7,7 @@ import { Pressable, Text, View } from "react-native";
 import { Plate, T } from "./kit";
 import { metrics } from "../lib/metrics";
 
-export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, onNext, compact }: { compact?: boolean; photo: ReactNode; title: string; subtitle?: string; plate: string; facts: Array<{ label: string; value: string }>; next?: { title: string; detail: string } | null; onBook: () => void; onNext?: (() => void) | undefined }) {
+export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, onNext, compact }: { compact?: boolean; photo: ReactNode; title: string; subtitle?: string; plate: string | null; facts: Array<{ label: string; value: string }>; next?: { title: string; detail: string } | null; onBook: () => void; onNext?: (() => void) | undefined }) {
   const { colors: ink, name: themeName } = useExperienceTheme();
   const heroH = compact ? metrics.heroCompact + 60 : metrics.heroCover;
   const line = facts.filter((f) => f.label !== "Protection").map((f) => f.value).filter((v) => v && v !== "-").join("  \u00b7  ");
@@ -19,7 +19,7 @@ export function CarHero({ photo, title, subtitle, plate, facts, next, onBook, on
         <View style={{ position: "absolute", left: 20, right: 20, bottom: 48, gap: 8 }}>
           <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800", letterSpacing: -0.5, lineHeight: 33 }}>{title}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Plate value={plate} />
+            {plate !== null && plate !== "" ? <Plate value={plate} /> : null}
             {line ? <Text numberOfLines={1} style={{ flex: 1, color: "#E4E2DF", fontSize: 12 }}>{line}</Text> : null}
           </View>
           {subtitle ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{subtitle}</Text> : null}

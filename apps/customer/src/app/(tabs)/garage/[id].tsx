@@ -521,7 +521,7 @@ export default function VehicleDetailScreen() {
           <CarHero
             photo={newPhoto ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <CarThumb car={vehicle} height={vehicle.photoUrl ? metrics.heroTall : metrics.heroCompact} radius={0} />}
             title={`${vehicle.make} ${vehicle.model}`}
-            plate={vehicle.registrationNumber}
+            plate={mockDetail ? null : vehicle.registrationNumber}
             facts={[
               { label: "Year", value: String(vehicle.year ?? "-") },
               { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
@@ -597,7 +597,7 @@ export default function VehicleDetailScreen() {
           ) : null}
 
           {removeImage ? (
-            <Notice title="Remove this image?" body="Only the image is removed. Your car, its documents and bookings are not affected." action={<View style={{ gap: space.breath }}><Button label="Remove" busy={removeBusy} onPress={() => { setRemoveBusy(true); removeVehicleImage(vehicle.id, removeImage).then(() => setRemoveImage(null)).catch(() => setActionError("Could not remove the image. Nothing was changed. Try again.")).finally(() => setRemoveBusy(false)); }} /><Button label="Keep it" kind="quiet" onPress={() => setRemoveImage(null)} /></View>} />
+            <Notice title="Remove this image?" body="Only the image is removed. Your car, its documents and bookings are not affected." action={<View style={{ gap: space.breath }}><Button label="Remove" busy={removeBusy} onPress={() => { if (mockWriteBlocked(setActionError)) return; setRemoveBusy(true); removeVehicleImage(vehicle.id, removeImage).then(() => setRemoveImage(null)).catch(() => setActionError("Could not remove the image. Nothing was changed. Try again.")).finally(() => setRemoveBusy(false)); }} /><Button label="Keep it" kind="quiet" onPress={() => setRemoveImage(null)} /></View>} />
           ) : null}
           {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 
