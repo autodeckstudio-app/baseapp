@@ -1,9 +1,9 @@
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "./firebase";
-import { priceCache } from "./price-cache";
+import { priceCache, onPriceCacheScopeChange } from "./price-cache";
 import { rupees } from "../ui/kit";
 import { primeVisuals } from "./imagery";
-import { MENU_SEED, sizePricingForCategory } from "@autodeck/core";
+import { MENU_SEED, sizePricingForCategory, isSizePriced } from "@autodeck/core";
 import { applyBrandWarranty } from "./warranty-labels";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
@@ -16,6 +16,12 @@ const devMock = (): Service[] | null => {
 const KEY = "autodeck.catalogue.v1";
 const TTL_MS = 5 * 60 * 1000;
 let memo: { at: number; p: Promise<Service[]> } | null = null;
+// Display totals are per session AND car size, so they never enter the shared catalogue memo
+// or the device copy: they live only in the scoped price cache below. The memo key carries the
+// price-cache scope token (uid|tenant), so a sign-out or account switch makes old entries
+// unreachable; the scope listener also clears them immediately.
+const totalsMemo = new Map<string, { at: number; p: Promise<Record<string, number>> }>();
+onPriceCacheScopeChange(() => { totalsMemo.clear(); });
 
 const store = (): { getItem(k: string): string | null; setItem(k: string, v: string): void } | null => {
   try { return (globalThis as unknown as { localStorage?: { getItem(k: string): string | null; setItem(k: string, v: string): void } }).localStorage ?? null; } catch { return null; }
@@ -52,6 +58,57 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
   const p = fetchCatalogue();
   memo = { at: Date.now(), p };
   p.catch(() => { if (memo?.p === p) memo = null; });
+  return p;
+}
+
+/**
+ * One round trip pricing every active, priced catalogue service for a car size, using the
+ * server's own calculation. Results land in the scoped price cache, so tiles read exactly the
+ * totals the detail flow would compute. Falls back empty on error (tiles keep "From" prices).
+ */
+export function getCatalogueDisplayTotals(vehicleCategory: VehicleCategory): Promise<Record<string, number>> {
+  const mock = devMock();
+  if (mock) {
+    // Dev-only (?mock=1): no network. Mock services carry sizePricingForCategory rows, so the
+    // total is base + row (the same shape the server returns with GST off).
+    const totals: Record<string, number> = {};
+    for (const svc of mock) {
+      if (svc.priceOnRequest === true) continue;
+      const extra = isSizePriced(svc.category)
+        ? svc.vehicleCategoryPricing?.find((r) => r.vehicleCategory === vehicleCategory)?.additionalPricePaise ?? 0
+        : 0;
+      totals[svc.id] = svc.basePrice + extra;
+    }
+    // Seed the scoped price cache exactly like the network path does, so useVehiclePrices
+    // and cachedServiceTotal actually see the mock totals (a bare return is dead state).
+    const mockUid = auth.currentUser?.uid ?? null;
+    for (const [serviceId, total] of Object.entries(totals)) priceCache.set(mockUid, serviceId, vehicleCategory, total);
+    return Promise.resolve(totals);
+  }
+  const scope = priceCache.scopeKey();
+  const key = `${scope}:${vehicleCategory}`;
+  const hit = totalsMemo.get(key);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.p;
+  const fn = httpsCallable<{ vehicleCategory: VehicleCategory }, { displayTotals?: Record<string, number> }>(
+    functions,
+    "getServiceCatalogue",
+  );
+  const p = fn({ vehicleCategory })
+    .then((result) => {
+      // Session changed mid-flight (sign-out / account switch): never write stale totals
+      // into the new session's cache.
+      if (priceCache.scopeKey() !== scope) return {};
+      const totals = result.data.displayTotals ?? {};
+      const uid = auth.currentUser?.uid ?? null;
+      for (const [serviceId, total] of Object.entries(totals)) priceCache.set(uid, serviceId, vehicleCategory, total);
+      return totals;
+    })
+    .catch(() => {
+      // Failures are not cached: the next render retries.
+      if (totalsMemo.get(key)?.p === p) totalsMemo.delete(key);
+      return {};
+    });
+  totalsMemo.set(key, { at: Date.now(), p });
   return p;
 }
 

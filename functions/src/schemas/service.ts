@@ -94,6 +94,9 @@ export const setServiceActiveSchema = z.object({
 
 export const getServiceCatalogueSchema = z.object({
   category: serviceCategoryEnum.optional(),
+  // Optional: when set, the response carries server-computed display totals for this car size,
+  // so list tiles price in one round trip instead of one calculateServicePrice call per service.
+  vehicleCategory: vehicleCategoryEnum.optional(),
 }).strict();
 
 export const calculatePriceSchema = z.object({

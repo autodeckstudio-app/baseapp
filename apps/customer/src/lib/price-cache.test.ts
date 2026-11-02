@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createPriceCache } from "./price-cache";
+import { createPriceCache, onPriceCacheScopeChange } from "./price-cache";
 
 describe("held price totals", () => {
   it("are reused only for the same user, service and car size", () => {
@@ -37,5 +37,28 @@ describe("held price totals", () => {
     c.set("u1", "ppf", "suv", 100);
     c.setScope(null, null);
     expect(c.get("u1", "ppf", "suv")).toBeUndefined();
+  });
+});
+
+describe("scope token and listeners", () => {
+  it("scopeKey reflects the current uid|tenant scope", () => {
+    const c = createPriceCache(() => 0);
+    c.setScope("u1", "t1");
+    expect(c.scopeKey()).toBe("u1|t1");
+    c.setScope(null, null);
+    expect(c.scopeKey()).toBe("|");
+  });
+  it("notifies listeners when scope changes, not on a no-op re-set", () => {
+    const c = createPriceCache(() => 0);
+    let calls = 0;
+    const off = onPriceCacheScopeChange(() => { calls += 1; });
+    c.setScope("u1", "t1");
+    c.setScope("u1", "t1");
+    expect(calls).toBe(1);
+    c.setScope(null, null);
+    expect(calls).toBe(2);
+    off();
+    c.setScope("u2", "t1");
+    expect(calls).toBe(2);
   });
 });

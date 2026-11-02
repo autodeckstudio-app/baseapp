@@ -1,8 +1,8 @@
-import { calculateServicePrice, cachedServiceTotal, priceLabel } from "./catalogue-service";
+import { getCatalogueDisplayTotals, cachedServiceTotal, priceLabel } from "./catalogue-service";
 import { rupees } from "../ui/kit";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CAR_SEGMENTS, normalizeSegment, segmentLabel } from "@autodeck/core";
+import { CAR_SEGMENTS, isSizePriced, normalizeSegment, segmentLabel } from "@autodeck/core";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { listenToMyVehicles } from "./vehicle-service";
 import { useAuth } from "../hooks/useAuth";
@@ -23,10 +23,9 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
  useEffect(()=>{
   setPrices(seed()); if(!category || !services.length)return;
   let alive=true;
-  void Promise.all(services.filter(s=>!s.priceOnRequest&&cachedServiceTotal(s.id,category)===undefined).map(async s=>{
-   try { const {breakdown}=await calculateServicePrice(s.id,category);return [s.id,breakdown.total] as const; }
-   catch {return null;}
-  })).then(rows=>{if(alive)setPrices({...seed(),...Object.fromEntries(rows.filter(x=>x!==null))});});
+  // One batched server call fills the price cache for every visible service; seed() then
+  // picks the fresh totals up. Replaces the old per-service calculateServicePrice fan-out.
+  void getCatalogueDisplayTotals(category).then(()=>{if(alive)setPrices(seed());});
   return ()=>{alive=false;};
  },[services,category]);
  return prices;
@@ -40,6 +39,9 @@ export function servicePriceText(sv: Service, category: VehicleCategory | null, 
   if (sv.priceOnRequest) return "Quote on request";
   const from = sv.priceFrom === true ? "From " : "";
   if (!category) return from + priceLabel(sv);
+  // The server omits a display total when the service document has no row for this size;
+  // never show the flat base as the size-adjusted price - show it as the entry price.
+  if (isSizePriced(sv.category) && !sv.vehicleCategoryPricing?.some((r) => r.vehicleCategory === category)) return "From " + priceLabel(sv);
   const t = prices[sv.id] ?? cachedServiceTotal(sv.id, category);
   return t === undefined ? null : from + rupees(t);
 }
