@@ -224,11 +224,29 @@ describe("Approval / additional-work workflow", () => {
   // and notifications are asserted only within each test. The guard itself
   // and every original assertion are unchanged.
   beforeEach(async () => {
-    for (const coll of ["jobs", "bayLocks"]) {
-      const snap = await db.collection(coll).get();
-      if (snap.empty) continue;
+    // EMULATOR-ONLY cleanup. This teardown deletes documents and must NEVER
+    // run against a live backend: hard-fail unless the Firestore emulator
+    // host is set (emulator-setup.ts sets it for this suite), and scope every
+    // delete to this file's own test tenants so even a misconfigured run
+    // cannot touch another studio's data.
+    if (!process.env["FIRESTORE_EMULATOR_HOST"]) {
+      throw new Error("approval emulator teardown requires FIRESTORE_EMULATOR_HOST; refusing to clean up against a non-emulator backend.");
+    }
+    // jobs carry tenantId; bayLocks are keyed `${tenantId}__${studioId}__${bayId}`
+    // with no tenantId field, so filter those by document-id prefix instead.
+    for (const tenantId of [TENANT_A, TENANT_B]) {
+      const jobsSnap = await db.collection("jobs").where("tenantId", "==", tenantId).get();
+      if (!jobsSnap.empty) {
+        const batch = db.batch();
+        for (const doc of jobsSnap.docs) batch.delete(doc.ref);
+        await batch.commit();
+      }
+    }
+    const locksSnap = await db.collection("bayLocks").get();
+    const ours = locksSnap.docs.filter((d) => d.id.startsWith(`${TENANT_A}__`) || d.id.startsWith(`${TENANT_B}__`));
+    if (ours.length > 0) {
       const batch = db.batch();
-      for (const doc of snap.docs) batch.delete(doc.ref);
+      for (const doc of ours) batch.delete(doc.ref);
       await batch.commit();
     }
   });
