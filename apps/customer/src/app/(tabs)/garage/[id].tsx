@@ -8,6 +8,7 @@ import { validateDocument, documentReference } from "../../../lib/document-valid
 import { useState, useEffect, useRef, createElement } from "react";
 import { Alert, Image, Linking, Platform, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { devGarageDetail } from "../../../lib/dev-garage-loader";
 import * as Crypto from "expo-crypto";
 import { doc, getDocFromServer, onSnapshot } from "firebase/firestore"; // getDocFromServer: protection save read-back
 import type { VehicleCategory, Invoice, Vehicle, ServiceJob, Protection, Warranty, Booking } from "@autodeck/core";
@@ -52,7 +53,11 @@ function formatDate(iso: string): string {
 }
 
 export default function VehicleDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mock: mockQ } = useLocalSearchParams<{ id: string; mock?: string }>();
+  // Dev preview only (?mock=1, __DEV__): renders the real screen from the sample
+  // module - no Firebase session, no real data. Stripped from production bundles.
+  const mockDetail = __DEV__ && devGarageDetail && mockQ === "1" && id ? devGarageDetail(id) : null;
+  const effUid = mockDetail ? mockDetail.uid : null;
   const router = useRouter();
   const auth = useAuth();
 
@@ -144,6 +149,13 @@ export default function VehicleDetailScreen() {
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
+    if (mockDetail) {
+      const v = mockDetail.vehicle;
+      setVehicle(v);
+      setForm({ make: v.make, model: v.model, color: v.color, odometer: v.odometer?.toString() ?? "", category: (v.category ?? "") as VehicleCategory | "" });
+      setLoading(false);
+      return undefined;
+    }
     if (!id) {setLoading(false);return;}
     setFeedError(null);
     const ref = doc(db, COLLECTIONS.vehicles(), id);
@@ -168,26 +180,31 @@ export default function VehicleDetailScreen() {
 
   // Invoices live in service history: one listener per car, matched to jobs by jobId.
   useEffect(() => {
+    if (mockDetail) { setInvoices(mockDetail.invoices); return undefined; }
     if (!id || auth.status !== "ready") return undefined;
     return listenToInvoicesForVehicle(id, auth.claims.tenantId, auth.user.uid, setInvoices, () => undefined);
   }, [id, auth.status, retryTick]);
 
   useEffect(() => {
+    if (mockDetail) { setJobs(mockDetail.jobs); return undefined; }
     if (!id || auth.status !== "ready") return undefined;
     return listenToJobsForVehicle(id, auth.claims.tenantId, auth.user.uid, setJobs, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [id, auth.status,retryTick]);
 
   useEffect(() => {
+    if (mockDetail) { setProtections(mockDetail.protections); return undefined; }
     if (!id || auth.status !== "ready") return undefined;
     return listenToVehicleProtections(id, auth.claims.tenantId, auth.user.uid, setProtections, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [id, auth.status,retryTick]);
 
   useEffect(() => {
+    if (mockDetail) { setPapers(mockDetail.papers); return undefined; }
     if (!id || auth.status !== "ready") return undefined;
     return listenToVehiclePapers(id, auth.claims.tenantId, auth.user.uid, setPapers, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [id, auth.status,retryTick]);
 
   useEffect(() => {
+    if (mockDetail) { setAllPapers(mockDetail.allPapers); return undefined; }
     if (auth.status !== "ready") return undefined;
     return listenToCustomerPapers(auth.claims.tenantId, auth.user.uid, setAllPapers, () => undefined);
   }, [auth.status, retryTick]);
@@ -296,6 +313,7 @@ export default function VehicleDetailScreen() {
   }
 
   useEffect(() => {
+    if (mockDetail) { setWarranties(mockDetail.warranties); return undefined; }
     if (!id || auth.status !== "ready") return undefined;
     return listenToVehicleWarranties(id, auth.claims.tenantId, auth.user.uid, setWarranties, ()=>setFeedError("Could not load some car records. Check your connection and retry."));
   }, [id, auth.status,retryTick]);
@@ -313,6 +331,7 @@ export default function VehicleDetailScreen() {
   }, [retryTick]);
 
   useEffect(() => {
+    if (mockDetail) { setUpcomingBooking(mockDetail.upcomingBooking); return; }
     if (!id || auth.status !== "ready") return;
     void getMyBookings(auth.user.uid, auth.claims.tenantId)
       .then((bookings) => {
@@ -667,8 +686,8 @@ export default function VehicleDetailScreen() {
                       detail={protectionDetail(p, formatDate) || undefined}
                       trailing={
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          <Chip label={protectionChipFor(p, auth.status === "ready" ? auth.user.uid : null)} tone="neutral" />
-                          {isCustomerEditable(p, auth.status === "ready" ? auth.user.uid : null) ? <IconAction kind="edit" label={`Edit ${PROTECTION_KIND_LABELS[p.kind] ?? p.kind}`} onPress={() => openProtectionEdit(p)} /> : null}
+                          <Chip label={protectionChipFor(p, effUid ?? (auth.status === "ready" ? auth.user.uid : null))} tone="neutral" />
+                          {isCustomerEditable(p, effUid ?? (auth.status === "ready" ? auth.user.uid : null)) ? <IconAction kind="edit" label={`Edit ${PROTECTION_KIND_LABELS[p.kind] ?? p.kind}`} onPress={() => openProtectionEdit(p)} /> : null}
                         </View>
                       }
                       last={i === reportedProtections.length - 1}

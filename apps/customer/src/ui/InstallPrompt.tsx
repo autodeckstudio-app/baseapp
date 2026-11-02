@@ -57,7 +57,9 @@ export function InstallPrompt() {
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const ls = (globalThis as unknown as { localStorage?: LS }).localStorage;
-    if (isStandalone() || ls?.getItem(KEY)) return;
+    // Dev preview: never cover ?mock=1 sample screens with the install sheet.
+    const devMockPreview = __DEV__ && /[?&]mock=1/.test((globalThis as { window?: { location?: { search?: string } } }).window?.location?.search ?? "");
+    if (devMockPreview || isStandalone() || ls?.getItem(KEY)) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const w = globalThis as unknown as { addEventListener: (t: string, f: (e: never) => void) => void; removeEventListener: (t: string, f: (e: never) => void) => void };
     const onBip = (e: BIPEvent) => { e.preventDefault(); setEvt(e); timer = setTimeout(() => setMode("android"), 2500); };

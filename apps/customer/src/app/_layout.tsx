@@ -42,7 +42,9 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 
     if (auth.status === "unauthenticated") {
       const browsingCars = (group === "(tabs)" && segs[1] === "cars" && segs[2] !== "sell") || group === "shop";
-      if (!browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) {
+      // Dev preview only: ?mock=1 renders sample screens without a session (__DEV__ stripped in prod).
+      const devMockPreview = __DEV__ && /[?&]mock=1/.test((globalThis as { window?: { location?: { search?: string } } }).window?.location?.search ?? "");
+      if (!devMockPreview && !browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) {
         // Remember where this signed-out visitor was heading (web deep link,
         // e.g. a website service CTA) so sign-in can return them there.
         const loc = (globalThis as { window?: { location?: { pathname: string; search: string } } }).window?.location;
