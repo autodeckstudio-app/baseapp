@@ -46,7 +46,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
       // (__DEV__ stripped in prod). The bypass is deliberately narrow: navigating away
       // (Book a service, history, tabs) hits the normal signed-out gate, so a sample
       // preview can never escape into a live booking or other real screen.
-      const devMockPreview = __DEV__ && segs[1] === "garage" && /[?&]mock=1/.test((globalThis as { window?: { location?: { search?: string } } }).window?.location?.search ?? "");
+      const devMockPreview = __DEV__ && (segs[1] === "garage" || segs[1] === "bookings") && /[?&]mock=/.test((globalThis as { window?: { location?: { search?: string } } }).window?.location?.search ?? "");
       if (!devMockPreview && !browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) {
         // Remember where this signed-out visitor was heading (web deep link,
         // e.g. a website service CTA) so sign-in can return them there.

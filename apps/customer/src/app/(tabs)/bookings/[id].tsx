@@ -136,6 +136,7 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     // Dev preview only (__DEV__ is false in production builds): show sample data, no network.
     if (__DEV__ && devSample && mock === "1") { setBooking(devSample.DEV_SAMPLE_BOOKING); setSvc(devSample.DEV_SAMPLE_SERVICE); setSvcLoaded(true); setLoading(false); return; }
+    if (__DEV__ && devSample && mock === "2") { setBooking(devSample.DEV_SAMPLE_PREMIUM_BOOKING); setSvc(devSample.DEV_SAMPLE_PREMIUM_SERVICE); setSvcLoaded(true); setLoading(false); return; }
     if (!id) {setLoading(false);return;}
     setLoading(true);setFeedError(null);
     setWalkIn(false);

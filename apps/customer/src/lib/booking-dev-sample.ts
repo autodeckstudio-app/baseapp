@@ -23,3 +23,29 @@ export const DEV_SAMPLE_BOOKING = {
 } as unknown as Booking;
 
 export const DEV_SAMPLE_SERVICE = { name: "Premium Wash", category: "washing", brand: null, imageUrl: null };
+
+// Premium variant for the reschedule-request UI (item 6 preview): a CONFIRMED
+// ceramic booking with a pending request. Same dev-only ?mock=2 guard; the
+// no-evidence invariant applies (no real URLs, no real plates beyond the
+// existing internal sample pattern).
+const reqDate = new Date(Date.now() + IST_MS + 4 * 24 * 3600_000).toISOString().slice(0, 10);
+export const DEV_SAMPLE_PREMIUM_BOOKING = {
+  ...DEV_SAMPLE_BOOKING,
+  id: "devSampleBookingId0002",
+  serviceId: "svc-ceramic-dev",
+  status: "CONFIRMED",
+  payMode: "studio",
+  paymentStatus: "unpaid",
+  rescheduleRequest: {
+    requestedDate: reqDate,
+    requestedTime: "14:00",
+    requestedAt: new Date(Date.now() - 3600_000).toISOString(),
+    status: "pending",
+    note: null,
+    baseScheduledAt: startIso,
+    idempotencyKey: "dev-sample-key",
+  },
+  rescheduleRequestCount: 1,
+} as unknown as Booking;
+
+export const DEV_SAMPLE_PREMIUM_SERVICE = { name: "Ceramic Coating", category: "ceramic", brand: null, imageUrl: null };
