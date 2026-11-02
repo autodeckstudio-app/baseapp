@@ -92,7 +92,11 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
       const recheck = canDecideRescheduleRequest(fresh, pendingReq);
       if (!recheck.ok) throw new HttpsError(recheck.code as never, recheck.message);
 
-      const rescheduleRequest = { ...pendingReq, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? pendingReq.note ?? null, decisionIdempotencyKey: data.idempotencyKey };
+      // The admin's reason goes to decisionNote; the customer's note is
+      // never overwritten, and the decision-retry classifier compares
+      // decisionNote - writing the admin note into `note` would corrupt
+      // both (caught on decline-path review).
+      const rescheduleRequest = { ...pendingReq, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, decisionNote: data.note ?? null, decisionIdempotencyKey: data.idempotencyKey };
       tx.update(bookingRef, { rescheduleRequest, updatedAt: nowIso });
       writeAuditLog(tx, {
         action: "booking.reschedule_decided",

@@ -250,11 +250,11 @@ describe("Premium reschedule request flow (preview)", () => {
     const key = uid("idem-dec");
     const admin = adminAuth(uid("admin"));
     const first = (await decideBookingRescheduleRequest.run({
-      data: { bookingId: booking.id, approve: false, idempotencyKey: key },
+      data: { bookingId: booking.id, approve: false, note: "No bay that day", idempotencyKey: key },
       auth: admin,
     } as never)) as { booking: Booking };
     const second = (await decideBookingRescheduleRequest.run({
-      data: { bookingId: booking.id, approve: false, idempotencyKey: key },
+      data: { bookingId: booking.id, approve: false, note: "No bay that day", idempotencyKey: key },
       auth: admin,
     } as never)) as { booking: Booking };
     expect(second.booking.rescheduleRequest?.status).toBe("declined");
@@ -323,6 +323,8 @@ describe("Premium reschedule request flow (preview)", () => {
 
     expect(decided.booking.rescheduleRequest?.status).toBe("declined");
     expect(decided.booking.scheduledDate).toBe(originalDate);
+    // The decline reason lands in decisionNote; a customer note is never overwritten.
+    expect(decided.booking.rescheduleRequest?.decisionNote).toBe("No bay that day");
 
     // One request per booking: declined still counts (strict preview reading).
     await expect(
