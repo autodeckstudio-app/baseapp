@@ -7,7 +7,7 @@
 // rolls back atomically. Decline only marks the request; the booking never moves.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Booking, Service } from "@autodeck/core";
+import type { Booking, Service, StudioConfig } from "@autodeck/core";
 import { isBookingMissed } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertTenant, assertStudio } from "../../middleware/auth.js";
@@ -52,7 +52,7 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
 
   const configSnap = await db.collection(COLLECTIONS.studioConfig()).doc(booking.studioId).get();
   if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
-  const config = configSnap.data() as import("@autodeck/core").StudioConfig;
+  const config = configSnap.data() as StudioConfig;
   assertTenant(user, config.tenantId);
 
   // Exactly-once decision retry, checked BEFORE the pending guard: a retried

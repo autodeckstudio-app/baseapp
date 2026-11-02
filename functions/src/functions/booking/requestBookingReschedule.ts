@@ -7,7 +7,7 @@
 // ../../lib/reschedule-request.js.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Booking, Service } from "@autodeck/core";
+import type { Booking, Service, StudioConfig } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -51,7 +51,7 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
 
     const configSnap = await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(booking.studioId));
     if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
-    const config = configSnap.data() as import("@autodeck/core").StudioConfig;
+    const config = configSnap.data() as StudioConfig;
 
     const now = new Date();
 

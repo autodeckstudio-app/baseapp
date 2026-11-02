@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
+import type * as AdvancePaymentModule from "../../lib/advance-payment.js";
 
 process.env["USE_PAYMENT_MOCK"] = "true";
 
@@ -16,7 +17,7 @@ const h = vi.hoisted(() => ({ enabled: true }));
 // the REAL computation minus the disabled check. Everything else (split
 // math, studio balance, payMode/existing-advance guards) is the real code.
 vi.mock("../../lib/advance-payment.js", async (orig) => {
-  const m = await orig<typeof import("../../lib/advance-payment.js")>();
+  const m = await orig<typeof AdvancePaymentModule>();
   // R4: flag-ONLY seam override - the REAL buildAdvancePaymentRequest,
   // REAL split math, REAL guards run; only the activation flag is flipped.
   return { ...m, advancePaymentEnabled: () => h.enabled };
@@ -24,7 +25,7 @@ vi.mock("../../lib/advance-payment.js", async (orig) => {
 
 import { requestAdvancePayment } from "../../functions/payment/requestAdvancePayment.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
-import { MockPaymentProvider } from "../../lib/mock-payment-provider.js";
+import type { MockPaymentProvider } from "../../lib/mock-payment-provider.js";
 
 const db = getFirestore();
 beforeAll(() => {
