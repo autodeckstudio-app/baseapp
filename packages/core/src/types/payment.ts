@@ -40,6 +40,15 @@ export interface Payment {
   razorpayPaymentLinkId: string | null;
   razorpayPaymentId: string | null;
   razorpayOrderId: string | null;
+  /** Append-only history of SUPERSEDED provider link/order ids (advance
+   *  flow, reviewer G2): a replaced link's ids move here, never vanish, so
+   *  a late capture on an old link still resolves to this payment. */
+  priorLinkIds?: string[];
+  priorOrderIds?: string[];
+  /** A DISTINCT second capture after settlement (reviewer G3): identity and
+   *  amount of the extra capture, preserved for the office refund review.
+   *  The original razorpayPaymentId is never overwritten by this. */
+  overpayment?: { providerPaymentId: string; amount: number | null; currency: string | null; at: string } | null;
   // Set when the provider may have created an order but the response was lost.
   // While true, checkout order creation fails closed until reconciled with the provider.
   orderAmbiguous?: boolean | null;

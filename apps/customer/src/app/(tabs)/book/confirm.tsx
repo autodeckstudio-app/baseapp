@@ -1,7 +1,7 @@
 import { formatServiceTime } from "../../../lib/duration";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { extrasFromParam } from "../../../lib/visit-extras";
-import { Pressable, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -13,7 +13,7 @@ import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdow
 import { COLLECTIONS } from "@autodeck/database";
 import { FIRST_STUDIO_ID, bookingPayment } from "@autodeck/core";
 import { getJobIdForBooking } from "../../../lib/job-service";
-import { initiatePayment } from "../../../lib/payment-service";
+import { initiatePayment, requestAdvancePayment } from "../../../lib/payment-service";
 import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
@@ -262,6 +262,21 @@ export default function BookingConfirmScreen() {
       // the new booking id (round 8). The request's failure never fails the
       // booking - the booking page shows a call-the-studio note instead.
       const pickupSent = await sendPickupRequest(result.id);
+      // Pay-at-studio 20% advance (items 4/5, PREVIEW): with the flag on and
+      // the studio option chosen, a CONFIRMED booking goes straight to the
+      // advance link. manual_review NEVER yields a URL - the customer gets a
+      // retry-later notice instead of a payable link.
+      if (ADVANCE_SPLIT_ENABLED && payAtStudio && result.status === "CONFIRMED") {
+        const adv = await requestAdvancePayment(result.id);
+        if (adv.status === "manual_review" || !adv.paymentUrl) {
+          setBookError("We're confirming your advance payment link. Please try again in a few minutes.");
+          setBooking(false);
+          return;
+        }
+        void Linking.openURL(adv.paymentUrl);
+        router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(pickupSent ? {} : { pickup: "failed" }) } });
+        return;
+      }
       if (result.status === "PENDING" && auth.status === "ready") {
         // Held for 15 minutes until paid. Pay now; if it fails the customer retries on this page.
         const jobId = await getJobIdForBooking(result.id, auth.claims.tenantId, auth.user.uid).catch(() => null);
@@ -415,11 +430,12 @@ export default function BookingConfirmScreen() {
           <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
             <Row title="Pay at studio" detail={<T role="caption" tone="secondary">Your slot is confirmed now. Pay when you collect your car.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!ADVANCE_SPLIT_ENABLED} />
           </Pressable>
-          {/* Item 4/5 preview: 20% advance + no-show disclosure, DISABLED until the held
-              basis/rounding decisions, payment wiring and the final review gate land. */}
+          {/* Items 4/5 preview: 20% advance + the OWNER-APPROVED no-show disclosure
+              (2 Nov 21:32:50), DISABLED until the final review gate. */}
           {ADVANCE_SPLIT_ENABLED ? (
             <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}>
               <T role="caption" tone="secondary">{advanceDisclosureLines().split}</T>
+              <T role="caption" tone="secondary">{advanceDisclosureLines().noShow}</T>
             </View>
           ) : null}
         </Pane>
@@ -431,7 +447,7 @@ export default function BookingConfirmScreen() {
       {heldOver ? <Notice title="Time ran out" body="Payment was not completed in 15 minutes, so the slot was released. Pick a time again." action={<Button label="Pick a time" onPress={() => router.back()} />} /> : null}
 
       <View style={{ gap: space.breath }}>
-        {heldOver ? null : <Button label={service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : "Confirm booking"} busy={booking} disabled={booking} onPress={() => void handleConfirm()} />}
+        {heldOver ? null : <Button label={service?.priceOnRequest === true ? "Request quote" : payNow || held ? "Pay & confirm" : ADVANCE_SPLIT_ENABLED && payAtStudio ? "Pay 20% advance" : "Confirm booking"} busy={booking} disabled={booking} onPress={() => void handleConfirm()} />}
         {held && !heldOver ? <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>Your booking is pending until the payment goes through.</T> : <Button label="Go back" kind="quiet" onPress={() => router.back()} />}
       </View>
     </Screen>

@@ -28,7 +28,11 @@ export type FetchedLink = { id: string; amount: number; currency: string; paymen
 export type AdvanceLinkDeps = {
   fetchLink(providerPaymentLinkId: string): Promise<FetchedLink | null>;
   createLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult>;
-  patch(patch: { paymentUrl: string | null; razorpayPaymentLinkId: string; razorpayOrderId: string | null }): Promise<void>;
+  patch(patch: { paymentUrl: string | null; razorpayPaymentLinkId: string; razorpayOrderId: string | null;
+    /** Ids of the link/order THIS patch replaces. The persistence layer
+     *  appends them to priorLinkIds/priorOrderIds (append-only, reviewer
+     *  G2) so a late capture on the old link still resolves. */
+    superseded?: { linkId: string | null; orderId: string | null } }): Promise<void>;
   markAmbiguous(ambiguous: boolean): Promise<void>;
   flagManualReview(reason: string): Promise<void>;
 };
@@ -113,7 +117,9 @@ export async function ensureAdvanceLink(
   }
 
   // Fresh create. ANY failure after this point is ambiguous by definition:
-  // the provider may have created the link.
+  // the provider may have created the link. The replaced link/order ids
+  // (when any) ride along so persistence appends them to the history.
+  const superseded = { linkId: payment.razorpayPaymentLinkId, orderId: payment.razorpayOrderId };
   let result: PaymentLinkResult;
   try {
     result = await deps.createLink({ ...linkParams, amount: payment.amount, currency: payment.currency });
@@ -122,7 +128,7 @@ export async function ensureAdvanceLink(
     throw e;
   }
   try {
-    await deps.patch({ paymentUrl: result.paymentUrl, razorpayPaymentLinkId: result.providerPaymentLinkId, razorpayOrderId: result.providerOrderId });
+    await deps.patch({ paymentUrl: result.paymentUrl, razorpayPaymentLinkId: result.providerPaymentLinkId, razorpayOrderId: result.providerOrderId, superseded });
   } catch (e) {
     // The provider link EXISTS (we have its id) but the record did not take
     // it. Ambiguous WITH a reference: the next retry reconciles via fetch.
@@ -130,7 +136,7 @@ export async function ensureAdvanceLink(
     // Best-effort: keep the provider id so reconciliation is possible. If
     // even this write fails we are in the unrecoverable-reference branch.
     try {
-      await deps.patch({ paymentUrl: result.paymentUrl, razorpayPaymentLinkId: result.providerPaymentLinkId, razorpayOrderId: result.providerOrderId });
+      await deps.patch({ paymentUrl: result.paymentUrl, razorpayPaymentLinkId: result.providerPaymentLinkId, razorpayOrderId: result.providerOrderId, superseded });
     } catch { /* stays ambiguous; manual review path covers it */ }
     throw e;
   }

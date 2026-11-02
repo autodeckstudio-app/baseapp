@@ -10,9 +10,14 @@ import { createHmac } from "node:crypto";
 import { getFirestore } from "firebase-admin/firestore";
 
 const SECRET = "whsec_local_test";
+const h = vi.hoisted(() => ({ cancelCalls: [] as string[], cancelOutcome: { outcome: "cancelled" } as { outcome: string } }));
 vi.mock("../../lib/razorpay-provider.js", async (orig) => {
   const m = await orig<typeof RazorpayProviderModule>();
-  return { ...m, getPaymentProvider: () => new m.RazorpayProvider("rzp_test_x", "k", SECRET) };
+  return { ...m, getPaymentProvider: () => {
+    const p = new m.RazorpayProvider("rzp_test_x", "k", SECRET);
+    (p as { cancelPaymentLink: unknown }).cancelPaymentLink = async (id: string) => { h.cancelCalls.push(id); return h.cancelOutcome; };
+    return p;
+  } };
 });
 import { razorpayWebhook } from "../../functions/payment/razorpayWebhook.js";
 
@@ -141,6 +146,50 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
     const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
     expect(pay.invoiceReviewNeeded).toBe(true);
     expect((await db.collection("bookings").doc(s.bookingId).get()).data()!.advancePaidAt ?? null).toBeNull();
+  });
+
+  it("G3: a LATE capture on a SUPERSEDED link completes with the actual capture identity, flags review, does NOT mark advancePaidAt, and provider-cancels the current link", async () => {
+    const s = await seed();
+    // The link was replaced: current ids on the doc, old ids in the append-only history.
+    await db.collection("payments").doc(s.payDocId).update({
+      razorpayPaymentLinkId: "plink_CURRENT", razorpayOrderId: "order_CURRENT",
+      priorLinkIds: [s.linkId], priorOrderIds: [s.orderId],
+    });
+    h.cancelCalls.length = 0; h.cancelOutcome = { outcome: "cancelled" };
+    // Late-settling capture against the OLD order (authorized before expiry).
+    const raw = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { id: "pay_OLD", order_id: s.orderId, amount: 23600, currency: "INR", status: "captured" } } } });
+    const r = await call(raw, "ADVO" + s.payDocId);
+    expect(r.body.outcome).toBe("old_link_capture");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.status).toBe("completed");
+    expect(pay.razorpayPaymentId).toBe("pay_OLD"); // ACTUAL capture identity preserved
+    expect(pay.invoiceReviewNeeded).toBe(true);
+    const bk = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
+    expect(bk.advancePaidAt ?? null).toBeNull(); // a human verifies which payment stands
+    expect(h.cancelCalls).toEqual(["plink_CURRENT"]); // current link cancelled post-commit: no double collection
+    const alert = await db.collection("staffAlerts").doc(`advance_old_link_capture_${s.payDocId}`).get();
+    expect(alert.exists).toBe(true);
+    expect(alert.data()!["cancelOutcome"]).toBe("cancelled");
+  });
+
+  it("G3: a DISTINCT second capture on a settled advance is overpayment review - identities preserved, never flattened to already_final", async () => {
+    const s = await seed();
+    await call(captured(s.orderId, 23600, "pay_FIRST"), "ADVP1" + s.payDocId);
+    const r = await call(captured(s.orderId, 23600, "pay_SECOND"), "ADVP2" + s.payDocId);
+    expect(r.body.outcome).toBe("overpayment_review");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.razorpayPaymentId).toBe("pay_FIRST"); // original completion untouched
+    expect(pay.overpayment).toMatchObject({ providerPaymentId: "pay_SECOND", amount: 23600, currency: "INR" });
+    expect(pay.invoiceReviewNeeded).toBe(true);
+  });
+
+  it("G3: redelivery of the SAME capture (same providerPaymentId, new event id) stays idempotent already_final - no overpayment flag", async () => {
+    const s = await seed();
+    await call(captured(s.orderId, 23600, "pay_SAME"), "ADVR1" + s.payDocId);
+    const r = await call(captured(s.orderId, 23600, "pay_SAME"), "ADVR2" + s.payDocId);
+    expect(r.body.outcome).toBe("already_final");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.overpayment ?? null).toBeNull();
   });
 
   it("a second capture for an already advance-paid booking flags review instead of double-marking", async () => {

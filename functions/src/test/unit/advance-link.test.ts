@@ -10,11 +10,11 @@ const fetched = (over: Partial<FetchedLink> = {}): FetchedLink =>
   ({ id: "plink_1", amount: 23600, currency: "INR", paymentUrl: "https://pay/1", status: "created", ...over });
 
 function deps(over: Partial<AdvanceLinkDeps> = {}) {
-  const calls = { create: 0, fetch: 0, patch: 0, ambiguous: 0, review: [] as string[] };
+  const calls = { create: 0, fetch: 0, patch: 0, ambiguous: 0, review: [] as string[], patches: [] as unknown[] };
   const d: AdvanceLinkDeps = {
     createLink: async () => { calls.create++; return { providerPaymentLinkId: "plink_new", providerOrderId: "order_new", paymentUrl: "https://pay/new" }; },
     fetchLink: async () => { calls.fetch++; return fetched(); },
-    patch: async () => { calls.patch++; },
+    patch: async (pt) => { calls.patch++; calls.patches.push(pt); },
     markAmbiguous: async () => { calls.ambiguous++; },
     flagManualReview: async (r) => { calls.review.push(r); },
     ...over,
@@ -94,6 +94,13 @@ describe("ensureAdvanceLink (reviewer: reconcile-first, never a blind payable UR
     const r = await ensureAdvanceLink({ ...base, razorpayPaymentLinkId: "plink_1" }, params, d);
     expect(r).toEqual({ outcome: "link_ready", paymentUrl: "https://pay/1" });
     expect(calls.create).toBe(0); expect(calls.patch).toBe(1);
+  });
+
+  it("replacement create carries the superseded link+order ids for append-only history (G2)", async () => {
+    const { d, calls } = deps({ fetchLink: async () => { calls.fetch++; return fetched({ status: "expired" }); } });
+    await ensureAdvanceLink({ ...base, razorpayPaymentLinkId: "plink_1", razorpayOrderId: "order_1" }, params, d);
+    const last = calls.patches[calls.patches.length - 1] as { superseded?: { linkId: string | null; orderId: string | null } };
+    expect(last.superseded).toEqual({ linkId: "plink_1", orderId: "order_1" });
   });
 
   it("ambiguous + referenced link ACTIVE and matching: reconciles, patches, clears ambiguity, no create", async () => {

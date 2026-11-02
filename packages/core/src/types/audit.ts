@@ -14,6 +14,8 @@ export type AuditAction =
   | "booking.confirmed"
   | "booking.advance_paid"
   | "payment.advance_link_expired"
+  | "payment.overpayment_flagged"
+  | "payment.advance_old_link_capture"
   | "booking.expired"
   | "booking.cancelled"
   | "booking.noshow_resolved"

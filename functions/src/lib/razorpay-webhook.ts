@@ -17,7 +17,7 @@ import { readMembershipForRefund, deactivateRefundedMembershipInTx, alertMembers
 import { MEMBERSHIP_DURATION_DAYS } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import type { AuthorizedUser } from "@autodeck/auth";
-import type { ProviderWebhookEvent } from "./payment-provider.js";
+import type { ProviderWebhookEvent, CancelPaymentLinkResult } from "./payment-provider.js";
 import { writeAuditLog } from "../middleware/audit.js";
 import { prepareJobInvoice } from "./job-invoice.js";
 import { runRefundOutbox, adoptProcessedRefundEvidence } from "./refund-outbox.js";
@@ -34,6 +34,8 @@ export type WebhookOutcome =
   | "unknown_payment"
   | "amount_mismatch"
   | "outbox_owned"
+  | "overpayment_review"
+  | "old_link_capture"
   | "ownership_mismatch"
   | "refund_pending"
   | "related_mismatch"
@@ -57,6 +59,18 @@ async function findPayment(db: Firestore, ev: ProviderWebhookEvent): Promise<Pay
   for (const [field, value] of tries) {
     if (!value) continue;
     const q = await col.where(field, "==", value).limit(1).get();
+    if (!q.empty) return q.docs[0]!.data() as Payment;
+  }
+  // ADDITIVE fallback (reviewer G2/G3): a late capture on a SUPERSEDED
+  // advance link/order still resolves to its payment via the append-only
+  // history. Only runs when every current-binding lookup missed, so
+  // existing membership/gift/job resolution is unchanged.
+  if (ev.providerPaymentLinkId) {
+    const q = await col.where("priorLinkIds", "array-contains", ev.providerPaymentLinkId).limit(1).get();
+    if (!q.empty) return q.docs[0]!.data() as Payment;
+  }
+  if (ev.providerOrderId) {
+    const q = await col.where("priorOrderIds", "array-contains", ev.providerOrderId).limit(1).get();
     if (!q.empty) return q.docs[0]!.data() as Payment;
   }
   return null;
@@ -115,6 +129,7 @@ async function evaluateOutboxOwnership(
 export async function processProviderEvent(
   db: Firestore,
   ev: ProviderWebhookEvent,
+  hooks?: { cancelLink?: (providerPaymentLinkId: string) => Promise<CancelPaymentLinkResult> },
 ): Promise<{ outcome: WebhookOutcome; paymentId: string | null }> {
   const eventRef = db.collection(COLLECTIONS.paymentEvents()).doc(ev.providerEventId);
   const handled: ProviderWebhookEvent["eventType"][] = [
@@ -147,6 +162,7 @@ export async function processProviderEvent(
   const isPaid =
     ev.eventType === "payment.captured" || ev.eventType === "payment.link.paid" || ev.eventType === "payment_link.paid";
 
+  let cancelLinkId: string | null = null;
   const outcome = await db.runTransaction(async (tx): Promise<WebhookOutcome> => {
     // ---- reads ----
     const evSnap = await tx.get(eventRef);
@@ -204,6 +220,23 @@ export async function processProviderEvent(
             ...(plan.ok ? {} : { reservationOutcome: plan.code, reason: "late_membership_payment", owedAmountPaise: payment.amount > 0 ? payment.amount : null, currency: payment.currency ?? null }) });
         }
         return "already_final";
+      }
+      if (payment.targetType === "booking" && (payment.status === "completed" || payment.status === "refunded")
+          && !!ev.providerPaymentId && !!payment.razorpayPaymentId && ev.providerPaymentId !== payment.razorpayPaymentId) {
+        // DISTINCT second capture on a settled advance (reviewer G3): real
+        // extra money, NOT provider redelivery - a redelivered SAME capture
+        // keeps the same providerPaymentId and stays on the idempotent
+        // already_final path below. Keep the original completion and its
+        // capture identity intact, record the extra capture's own identity
+        // and amount, flag the office review queue. Never flattened into a
+        // silent already_final.
+        record("overpayment_review");
+        tx.update(paymentRef, { invoiceReviewNeeded: true,
+          overpayment: { providerPaymentId: ev.providerPaymentId, amount: ev.amount ?? null, currency: ev.providerPaymentEntityCurrency ?? null, at: now },
+          updatedAt: now });
+        writeAuditLog(tx, { action: "payment.overpayment_flagged", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
+          after: { overpaymentProviderPaymentId: ev.providerPaymentId, originalProviderPaymentId: payment.razorpayPaymentId } });
+        return "overpayment_review";
       }
       if (payment.status === "completed" || payment.status === "refunded") { record("already_final"); return "already_final"; }
       if (ev.amount && ev.amount !== payment.amount) { record("amount_mismatch"); return "amount_mismatch"; }
@@ -287,6 +320,29 @@ export async function processProviderEvent(
         // missing currency. Missing or mismatched fails CLOSED.
         if (!ev.providerPaymentEntityCurrency || ev.providerPaymentEntityCurrency !== payment.currency) {
           record("amount_mismatch"); return "amount_mismatch";
+        }
+        // Money arriving on a SUPERSEDED link/order (reviewer G3): the
+        // capture references a prior link/order id than the currently
+        // payable one. Complete THIS payment with the ACTUAL capture
+        // identity (money is received), flag the office review queue, do
+        // NOT mark the booking advance-paid (a human verifies which payment
+        // stands), and hand the current payable link id out for a
+        // post-commit provider cancel so the customer cannot ALSO pay it
+        // (no blind silent double collection).
+        const staleRef =
+          (!!ev.providerPaymentLinkId && !!payment.razorpayPaymentLinkId && ev.providerPaymentLinkId !== payment.razorpayPaymentLinkId) ||
+          (!!ev.providerOrderId && !!payment.razorpayOrderId && ev.providerOrderId !== payment.razorpayOrderId);
+        if (staleRef) {
+          record("old_link_capture");
+          cancelLinkId = payment.razorpayPaymentLinkId;
+          tx.update(paymentRef, { status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
+            providerEventId: ev.providerEventId, completedAt: now, invoiceReviewNeeded: true, updatedAt: now });
+          writeAuditLog(tx, { action: "payment.advance_old_link_capture", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
+            after: { status: "completed", via: "razorpay_webhook" },
+            metadata: { needsReview: "old_link_capture", captureProviderPaymentId: ev.providerPaymentId ?? null,
+              captureProviderLinkId: ev.providerPaymentLinkId ?? null, captureProviderOrderId: ev.providerOrderId ?? null,
+              currentProviderLinkId: payment.razorpayPaymentLinkId ?? null } });
+          return "old_link_capture";
         }
         const bRef = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
         const bSnap = bRef ? await tx.get(bRef) : null;
@@ -613,5 +669,24 @@ export async function processProviderEvent(
     }
   }
 
+  // Post-commit (reviewer G3): money arrived on a superseded link while a
+  // CURRENT link may still be payable - cancel it at the provider now so
+  // nothing double-collects. The cancel OUTCOME is recorded on a staff
+  // alert either way (including already_paid, which means double money and
+  // needs the office queue, and in_progress, which needs a retry eyeball).
+  // Never silent. Outside the transaction: no provider calls inside a tx.
+  if (outcome === "old_link_capture" && cancelLinkId && hooks?.cancelLink) {
+    const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`advance_old_link_capture_${found.id}`);
+    try {
+      const res = await hooks.cancelLink(cancelLinkId);
+      await alertRef.set({ id: alertRef.id, tenantId: found.tenantId, studioId: found.studioId ?? null,
+        kind: "advance_old_link_capture", paymentId: found.id, cancelledProviderLinkId: cancelLinkId,
+        cancelOutcome: res.outcome, createdAt: new Date().toISOString() });
+    } catch (e) {
+      await alertRef.set({ id: alertRef.id, tenantId: found.tenantId, studioId: found.studioId ?? null,
+        kind: "advance_old_link_capture_cancel_failed", paymentId: found.id, cancelledProviderLinkId: cancelLinkId,
+        error: e instanceof Error ? e.message : String(e), createdAt: new Date().toISOString() });
+    }
+  }
   return { outcome, paymentId: found.id };
 }

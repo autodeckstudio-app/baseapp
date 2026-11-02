@@ -12,7 +12,7 @@
 // gate; the no-show retention disclosure (confirmed) must be shown BEFORE the
 // customer reaches this call (customer app gate).
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import type { Booking, Payment, Customer } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, assertTenant, assertStudio } from "../../middleware/auth.js";
@@ -26,11 +26,12 @@ import {
   ADVANCE_ROUNDING_POLICY,
   buildAdvancePaymentRequest,
 } from "../../lib/advance-payment.js";
+import { ensureAdvanceLink, type AdvanceLinkDeps } from "../../lib/advance-link.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 export const requestAdvancePayment = onCall(
-  { region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() },
+  { region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"], enforceAppCheck: shouldEnforceAppCheck() },
   async (request): Promise<{ paymentId: string; paymentUrl: string | null; status: string }> => {
     if (!ADVANCE_PAYMENT_ENABLED) {
       throw new HttpsError(
@@ -124,34 +125,83 @@ export const requestAdvancePayment = onCall(
       return { created: true as const, existing: null, advance };
     });
 
-    if (!claim.created) {
-      const existing = claim.existing as Payment;
-      if (existing.status === "completed") {
-        throw new HttpsError("already-exists", "The advance for this booking is already paid.");
-      }
-      return { paymentId: existing.id, paymentUrl: existing.paymentUrl ?? null, status: existing.status };
+    const existing = claim.created ? null : (claim.existing as Payment);
+    if (existing?.status === "completed") {
+      throw new HttpsError("already-exists", "The advance for this booking is already paid.");
     }
 
-    // Exclusive claim held: call the provider exactly once, then patch the
-    // committed record. A provider failure leaves a pending link-less record
-    // a retry can resume from (same deterministic id).
+    // Exclusive claim held (or the same record found on retry). ALL provider
+    // interaction goes through ensureAdvanceLink (reviewer A/G-series):
+    // reconcile-first, never a blind stored URL, never a blind second link,
+    // ambiguity persisted and resolved via the provider or manual review.
     const customerSnap = await db.collection(COLLECTIONS.customers()).doc(booking.customerId).get();
     const customer = customerSnap.exists ? (customerSnap.data() as Customer) : null;
-    const result = await getPaymentProvider().createPaymentLink({
-      amount: claim.advance!.amountPaise,
-      currency: claim.advance!.currency,
-      bookingId: booking.id,
-      description: claim.advance!.description,
-      customerName: customer?.name || "Customer",
-      customerPhone: customer?.phone ?? "",
-      referenceId: claim.advance!.referenceId,
-    });
-    await paymentRef.update({
-      paymentUrl: result.paymentUrl,
-      razorpayPaymentLinkId: result.providerPaymentLinkId,
-      razorpayOrderId: result.providerOrderId,
-      updatedAt: new Date().toISOString(),
-    });
-    return { paymentId: paymentRef.id, paymentUrl: result.paymentUrl, status: "pending" };
+    const provider = getPaymentProvider();
+    const deps: AdvanceLinkDeps = {
+      fetchLink: async (id) => {
+        const r = await provider.fetchPaymentLink(id);
+        return r ? { id: r.providerPaymentLinkId, amount: r.amount, currency: r.currency, paymentUrl: r.paymentUrl, status: r.status } : null;
+      },
+      createLink: (params) => provider.createPaymentLink(params),
+      patch: async (pt) => {
+        await paymentRef.update({
+          paymentUrl: pt.paymentUrl,
+          razorpayPaymentLinkId: pt.razorpayPaymentLinkId,
+          razorpayOrderId: pt.razorpayOrderId,
+          // Append-only history (reviewer G2): replaced link/order ids stay
+          // resolvable for late captures; never overwritten away.
+          ...(pt.superseded?.linkId ? { priorLinkIds: FieldValue.arrayUnion(pt.superseded.linkId) } : {}),
+          ...(pt.superseded?.orderId ? { priorOrderIds: FieldValue.arrayUnion(pt.superseded.orderId) } : {}),
+          updatedAt: new Date().toISOString(),
+        });
+      },
+      // W1: ambiguity is PERSISTED on the payment record.
+      markAmbiguous: async (b) => {
+        await paymentRef.update({ orderAmbiguous: b, updatedAt: new Date().toISOString() });
+      },
+      // W1: manual review lands on the REAL ops surface (staffAlerts), with
+      // a deterministic id so repeated failures update one alert.
+      flagManualReview: async (reason) => {
+        const alertRef = db.collection(COLLECTIONS.staffAlerts()).doc(`advance_review_${paymentRef.id}`);
+        await alertRef.set({
+          id: alertRef.id, tenantId: booking.tenantId, studioId: booking.studioId ?? null,
+          kind: "advance_manual_review", paymentId: paymentRef.id, bookingId: booking.id,
+          reason, createdAt: new Date().toISOString(),
+        });
+      },
+    };
+
+    const state = existing ?? ((await paymentRef.get()).data() as Payment);
+    let outcome;
+    try {
+      outcome = await ensureAdvanceLink(
+        {
+          id: state.id,
+          amount: state.amount,
+          currency: state.currency,
+          paymentUrl: state.paymentUrl ?? null,
+          razorpayPaymentLinkId: state.razorpayPaymentLinkId ?? null,
+          razorpayOrderId: state.razorpayOrderId ?? null,
+          orderAmbiguous: state.orderAmbiguous ?? null,
+        },
+        {
+          bookingId: booking.id,
+          description: "Advance for your AutoDeck booking (balance payable at the studio)",
+          customerName: customer?.name || "Customer",
+          customerPhone: customer?.phone ?? "",
+          referenceId: paymentRef.id,
+        },
+        deps,
+      );
+    } catch (e) {
+      // Provider unreachable mid-reconciliation or create failed: ambiguity
+      // is already persisted where relevant. Surface a retryable error.
+      throw new HttpsError("unavailable", e instanceof Error ? e.message : "Payment provider is unavailable. Please try again shortly.");
+    }
+
+    if (outcome.outcome === "manual_review") {
+      return { paymentId: paymentRef.id, paymentUrl: null, status: "manual_review" };
+    }
+    return { paymentId: paymentRef.id, paymentUrl: outcome.paymentUrl, status: "pending" };
   },
 );

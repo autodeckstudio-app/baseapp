@@ -13,6 +13,18 @@ type InitiatePaymentOutput = { paymentId: string; paymentUrl: string | null; sta
 // "completed" once studio/admin confirms it (confirmManualPayment /
 // recordManualPayment) - the customer app never has access to a function
 // that can mark its own payment successful.
+export type RequestAdvanceOutput = { paymentId: string; paymentUrl: string | null; status: string };
+
+/** Pay-at-studio 20% advance (basket item 4, PREVIEW - reachable only when
+ *  ADVANCE_SPLIT_ENABLED is on). The server claims the booking's advance
+ *  slot, reconciles with the provider and returns a payable URL, or
+ *  status "manual_review" (never a URL) when a human must reconcile. */
+export async function requestAdvancePayment(bookingId: string): Promise<RequestAdvanceOutput> {
+  const fn = httpsCallable<{ bookingId: string }, RequestAdvanceOutput>(functions, "requestAdvancePayment");
+  const result = await fn({ bookingId });
+  return result.data;
+}
+
 export async function initiatePayment(jobId: string, method: PaymentMethod): Promise<InitiatePaymentOutput> {
   const fn = httpsCallable<InitiatePaymentInput, InitiatePaymentOutput>(functions, "initiatePayment");
   const result = await fn({ jobId, method });

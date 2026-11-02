@@ -98,7 +98,7 @@ export class RazorpayProvider implements PaymentProvider {
     };
   }
 
-  async fetchPaymentLink(providerPaymentLinkId: string): Promise<PaymentLinkResult & { status: string } | null> {
+  async fetchPaymentLink(providerPaymentLinkId: string): Promise<(PaymentLinkResult & { status: string; amount: number; currency: string }) | null> {
     // GET /v1/payment_links/:id (official API reference). Reconciliation
     // only - never a creation path.
     const response = await fetch(`${this.baseUrl}/payment_links/${providerPaymentLinkId}`, {
@@ -108,12 +108,16 @@ export class RazorpayProvider implements PaymentProvider {
     if (!response.ok) {
       throw new Error(`Razorpay fetchPaymentLink failed: ${response.status}`);
     }
-    const data = (await response.json()) as RazorpayPaymentLinkResponse & { status?: string };
+    const data = (await response.json()) as RazorpayPaymentLinkResponse & { status?: string; amount?: number; currency?: string };
     return {
       providerPaymentLinkId: data.id,
       providerOrderId: data.order_id ?? null,
       paymentUrl: data.short_url,
       status: data.status ?? "unknown",
+      // Reconciliation compares these against the stored payment, so a
+      // missing field must FAIL the compare, never pass by default.
+      amount: data.amount ?? -1,
+      currency: data.currency ?? "",
     };
   }
 

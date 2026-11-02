@@ -39,7 +39,7 @@ unrelated payment/refund rules.
   request/review/copy/tick flow is CANCELLED. Negative pins (email-alone
   grants sign-in, no Aadhaar gate) are retained as regression guards.
 
-## 4. No-show retention 20% - NOT OWNER-CONFIRMED (decision required)
+## 4. No-show retention 20% - OWNER-CONFIRMED 2 Nov 21:32:50 IST
 - Origin (Gauri only): i2i 1 Nov 17:49:30 IST
   (wamid.HBgMOTE4OTc1MTI4ODE2FQIAEhgWM0VCMDk5RDI3RjAzQjNEMURCODI4MwA=),
   restated 2 Nov 13:59:52
@@ -73,17 +73,33 @@ unrelated payment/refund rules.
   agent as "retain the full payment" on no-contact no-shows; a dead code
   citation ("WhatsApp 22 Oct 21:22", messages do not exist) claiming
   "Rs 100 or 20%"; Gauri's basket "retain 20% of total service cost".
-  Do NOT act on any of these. A single recommendation is prepared below.
+  None of these was acted on.
 
-## 5. No-show money policy - RECOMMENDATION for the owner (draft, UNDECIDED)
+- APPROVAL CHAIN (iMessage, owner channel): the precise proposal
+  (phonemsg-01M6EFFJ34NCEHMR4DB7MHS9MY, 21:24:06) -> Meet "Yes"
+  (phonemsg-01M6EFWZEG7P3FH87AGW87AWYS, 21:31:25, attached to an earlier
+  thread) -> clarification re-ask naming the exact rule
+  (phonemsg-01M6EFX7WNKMRH55MPKW10QXT4, 21:31:35) -> Meet "Yes to the no
+  show rule" (phonemsg-01M6EFZJ3S6BG0DGV4VRH52WCE, 21:32:50). The
+  clarification makes the "Yes" bind to the 21:24 proposal, not the stray
+  thread.
+- APPROVED RULE (prospective only): retain 20% of the discounted service
+  price incl GST, EXCLUDING unused pickup/drop. Pay-at-studio: keep the
+  advance, no further charge. Full-online: keep the same service amount;
+  the remainder (incl unused pickup/drop and its GST) goes to Meet for
+  refund APPROVAL - never auto-executed. Late cancellations and the old
+  Rs 1800-class captured cases stay SEPARATE and undecided. This approval
+  is policy only: NOT production activation, NOT refund execution, NOT
+  the old cases.
+
+## 5. No-show money policy - ADOPTED by the owner 2 Nov 21:32:50 (see section 4 for the approval chain)
 Full-online payment EXISTS today and is unchanged: bookings with
 payMode "online" hold as PENDING, the customer pays 100% by payment link,
 and the verified webhook confirms the booking. Nothing in this proposal
 changes that flow, and no change to full-online happens without the
 owner's specific approval.
 
-Recommended single rule (NOT confirmed, presented for the owner's
-decision): on a no-show the studio retains exactly the advance basis -
+Adopted rule: on a no-show the studio retains exactly the advance basis -
 20% of the discounted service price including GST, EXCLUDING pickup/drop
 fees and their GST - and nothing more.
 
@@ -113,8 +129,8 @@ pay-at-studio flow, and treats both payment modes identically in effect.
 Historical sources conflict (a 20 Oct voice note recited as "retain the
 full payment"; a dead citation claiming "Rs 100 or 20%"; Gauri's "retain
 20% of total service cost") - none is actionable owner authority, and
-this proposal is not built on any of them. Nothing here is confirmed
-until the owner says so.
+this proposal was not built on any of them. The owner approved exactly
+this rule on 2 Nov 21:32:50 (section 4).
 
 ## Explicitly still NOT decided / out of scope
 - Refund terms (full-online refunds, late-cancel refunds, and any

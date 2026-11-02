@@ -23,7 +23,7 @@ export const razorpayWebhook = onRequest({ region: "asia-south1", maxInstances: 
     const ev = provider.parseWebhookEvent(raw);
     const headerId = String(req.header("x-razorpay-event-id") ?? "");
     if (headerId) ev.providerEventId = headerId;
-    const result = await processProviderEvent(getFirestore(), ev);
+    const result = await processProviderEvent(getFirestore(), ev, { cancelLink: (id) => provider.cancelPaymentLink(id) });
     res.status(200).json(result);
   } catch (err) {
     console.error("razorpayWebhook failed", err instanceof Error ? err.message : err);
