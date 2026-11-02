@@ -10,7 +10,7 @@
  * directly, cross-customer/cross-tenant read denial) live in
  * security-rules.emulator.test.ts alongside every other collection.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, ApprovalRequest, Notification } from "@autodeck/core";
 
@@ -178,6 +178,12 @@ async function advanceOnce(jobId: string, studioUid: string, tenantId = TENANT_A
   await advanceJobStatus.run({ data: { jobId }, auth: studioAuth(studioUid, tenantId) } as never);
 }
 
+// The DELIVERED transition requires an explicit protection-work declaration;
+// [] records "reviewed - no protection work of any kind" (advanceJobStatus).
+async function advanceToDelivered(jobId: string, studioUid: string, tenantId = TENANT_A) {
+  await advanceJobStatus.run({ data: { jobId, protectionWork: [] }, auth: studioAuth(studioUid, tenantId) } as never);
+}
+
 async function findAuditLog(action: string, entityId: string) {
   const snap = await db
     .collection("auditLog")
@@ -208,6 +214,23 @@ describe("Approval / additional-work workflow", () => {
     originalService = await seedService(uid("svc"), TENANT_A);
     adminUid = uid("admin");
     studioUid = uid("studio");
+  });
+
+  // Bay-occupancy teardown: the check-in guard (advanceJobStatus) correctly
+  // refuses a check-in while ANY physically-arrived job holds the bay,
+  // regardless of its scheduled date. Tests leave jobs IN_PROGRESS /
+  // READY_FOR_DELIVERY, which would exhaust the 5 seeded bays and fail later
+  // check-ins. Clear jobs and bay locks between tests; bookings, audit logs
+  // and notifications are asserted only within each test. The guard itself
+  // and every original assertion are unchanged.
+  beforeEach(async () => {
+    for (const coll of ["jobs", "bayLocks"]) {
+      const snap = await db.collection(coll).get();
+      if (snap.empty) continue;
+      const batch = db.batch();
+      for (const doc of snap.docs) batch.delete(doc.ref);
+      await batch.commit();
+    }
   });
 
   async function setupInProgressJob(
@@ -257,7 +280,7 @@ describe("Approval / additional-work workflow", () => {
       const jobDoc = await jobForBooking(booking.id);
       for (let i = 0; i < 4; i++) await advanceOnce(jobDoc.id, studioUid);
       await payInFull(jobDoc.id, studioUid);
-      await advanceOnce(jobDoc.id, studioUid);
+      await advanceToDelivered(jobDoc.id, studioUid);
 
       const addSvc = await seedAdditionalService(uid("svc-add"), TENANT_A, "Extra", 50000);
       await expect(
@@ -597,7 +620,7 @@ describe("Approval / additional-work workflow", () => {
       } as never);
 
       await payInFull(jobId, studioUid);
-      await advanceOnce(jobId, studioUid); // -> DELIVERED, should now succeed
+      await advanceToDelivered(jobId, studioUid); // -> DELIVERED, should now succeed
       const job = (await db.collection("jobs").doc(jobId).get()).data() as ServiceJob;
       expect(job.status).toBe("DELIVERED");
     });
