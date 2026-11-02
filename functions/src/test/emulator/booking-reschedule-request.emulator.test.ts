@@ -2,10 +2,10 @@
  * Emulator integration tests for the premium reschedule REQUEST flow
  * (basket item 6, stage 1+2 - preview, not activated).
  *
- * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
- * CI-gated: this suite cannot run in the worktree environment.
+ * Run with: pnpm test:emulator against the local emulator stack
+ * (firestore 8099 / auth 9099 / storage 9199, see firebase.json).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -144,6 +144,12 @@ describe("Premium reschedule request flow (preview)", () => {
   beforeAll(async () => {
     await seedStudio();
     service = await seedPremiumService(uid("svc-ceramic"));
+  });
+
+  // Fresh customer (and vehicle) per test: callables rate-limit per uid, so a
+  // shared customer trips booking.create / booking.rescheduleRequest limits
+  // partway through the file against the shared emulator instance.
+  beforeEach(async () => {
     customerId = uid("cust");
     vehicle = await seedVehicle(uid("veh"), customerId);
   });

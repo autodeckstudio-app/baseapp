@@ -198,11 +198,12 @@ describe("Customer booking reschedule", () => {
     const soon = new Date(Date.now() + 12 * 3600000);
     await db.collection("bookings").doc(booking.id).update({ scheduledAt: soon.toISOString() });
 
+    const targetDate = nextDate();
     const result = await rescheduleBooking.run({
-      data: { bookingId: booking.id, newDate: nextDate(), newTime: "12:00", idempotencyKey: uid("idem") },
+      data: { bookingId: booking.id, newDate: targetDate, newTime: "12:00", idempotencyKey: uid("idem") },
       auth: customerAuth(customerId),
     } as never);
-    expect(result.booking.scheduledDate).toBe(nextDate());
+    expect(result.booking.scheduledDate).toBe(targetDate);
     expect(result.booking.rescheduleCount).toBe(1);
   });
 

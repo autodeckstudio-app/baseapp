@@ -54,19 +54,12 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
     const config = configSnap.data() as import("@autodeck/core").StudioConfig;
 
     const now = new Date();
-    const guard = canRequestReschedule(booking, service.category, now);
-    if (!guard.ok) throw new HttpsError(guard.code as never, guard.message);
 
-    const requestedStart = localToUTC(data.newDate, data.newTime, config.timezone);
-    if (requestedStart <= now) {
-      throw new HttpsError("invalid-argument", "The requested new time must be in the future.");
-    }
-
-    // Exactly-once retry, checked BEFORE the guards so a retry is not mistaken
-    // for a second request (reviewer defect: this check was dead code behind
-    // the already-exists guard, and the key was never stored or compared).
-    // Runs inside the transaction, so concurrent retries serialize: the loser
-    // re-reads, sees the committed request and classifies against it.
+    // Exactly-once retry, classified BEFORE the pending/one-per-booking guards
+    // so a retry is not mistaken for a second request. Runs inside the
+    // transaction, so concurrent retries serialize: the loser re-reads, sees
+    // the committed request and classifies against it. Classification needs
+    // only the booking; ownership checks above have already run.
     const existing = booking.rescheduleRequest;
     if (existing) {
       const cls = classifyRequestRetry(existing, data);
@@ -78,6 +71,14 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
       if (cls === "conflict") {
         throw new HttpsError("aborted", "This request key was already used with a different time. Submit with a new key.");
       }
+    }
+
+    const guard = canRequestReschedule(booking, service.category, now);
+    if (!guard.ok) throw new HttpsError(guard.code as never, guard.message);
+
+    const requestedStart = localToUTC(data.newDate, data.newTime, config.timezone);
+    if (requestedStart <= now) {
+      throw new HttpsError("invalid-argument", "The requested new time must be in the future.");
     }
 
     const rescheduleRequest = {
