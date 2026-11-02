@@ -6,8 +6,8 @@ import { auth, functions } from "./firebase";
 // recordWebVital callable as ONE coalesced beacon per flush (at most two
 // flushes per page view: an early one ~15s in, and a final one when the page
 // is hidden). Best-effort: failures are swallowed. Signed-out sessions are
-// queued on-device (max 3, 24h) and sent once signed in - the callable
-// requires authentication, so nothing is ever sent unauthenticated.
+// simply not covered - the callable requires authentication, and anonymous
+// metrics must never be re-attributed to a later signed-in account.
 type MetricName = "CLS" | "FCP" | "INP" | "LCP" | "TTFB";
 type MetricValue = { value: number; rating: string };
 type Beacon = {
@@ -17,9 +17,6 @@ type Beacon = {
   metrics: Partial<Record<MetricName, MetricValue>>;
 };
 
-const QUEUE_KEY = "ad.vitalsq";
-const QUEUE_MAX = 3;
-const QUEUE_TTL_MS = 24 * 60 * 60 * 1000;
 const EARLY_FLUSH_MS = 15_000;
 
 let installed = false;
@@ -33,24 +30,6 @@ function normalizePath(pathname: string): string {
     .map((seg) => (/^\d+$/.test(seg) || /^[0-9a-f]{8,}$/i.test(seg) || /^[0-9a-f-]{16,}$/i.test(seg) ? ":id" : seg))
     .join("/");
   return (norm || "/").slice(0, 200);
-}
-
-function readQueue(): (Beacon & { queuedAt: number })[] {
-  try {
-    const raw = (globalThis as { localStorage?: { getItem(k: string): string | null } }).localStorage?.getItem(QUEUE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as (Beacon & { queuedAt: number })[]) : [];
-    return Array.isArray(parsed) ? parsed.filter((b) => Date.now() - b.queuedAt < QUEUE_TTL_MS) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeQueue(items: (Beacon & { queuedAt: number })[]): void {
-  try {
-    (globalThis as { localStorage?: { setItem(k: string, v: string): void } }).localStorage?.setItem(QUEUE_KEY, JSON.stringify(items));
-  } catch {
-    // storage full/unavailable: telemetry is best-effort
-  }
 }
 
 export function installWebVitals(): void {
@@ -67,12 +46,10 @@ export function installWebVitals(): void {
   const sent = new Set<MetricName>();
 
   const deliver = (beacon: Beacon) => {
-    if (!auth.currentUser) {
-      const q = readQueue();
-      q.push({ ...beacon, queuedAt: Date.now() });
-      writeQueue(q.slice(-QUEUE_MAX));
-      return;
-    }
+    // Signed-out beacons are dropped, never queued: attaching an anonymous
+    // visitor's metrics to the next signed-in account would be wrong
+    // attribution. Known gap: cold anonymous page loads are not covered.
+    if (!auth.currentUser) return;
     void report(beacon).catch(() => {
       // Telemetry must never surface to the user or break the app.
     });
@@ -90,12 +67,6 @@ export function installWebVitals(): void {
       const beacon: Beacon = { app: "customer", page, metrics: fresh };
       if (navigationType !== undefined) beacon.navigationType = navigationType;
       deliver(beacon);
-    }
-    // Anything a signed-out visitor left queued goes out once we are signed in.
-    const q = readQueue();
-    if (q.length > 0 && auth.currentUser) {
-      writeQueue([]);
-      for (const { queuedAt: _t, ...beacon } of q) void report(beacon).catch(() => {});
     }
   };
 
