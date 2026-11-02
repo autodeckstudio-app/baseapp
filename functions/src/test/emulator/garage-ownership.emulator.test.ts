@@ -164,7 +164,10 @@ async function deliverJob(jobId: string, studioUid: string, tenantId = TENANT_A)
 // Delivery now needs the visit paid in full with a live invoice (advanceJobStatus), so the studio records the payment before the last step.
   for (let i = 0; i < 5; i++) {
     if (i === 4) await recordManualPayment.run({ data: { jobId, method: "cash" }, auth: studioAuth(studioUid, tenantId) } as never);
-    await advanceJobStatus.run({ data: { jobId }, auth: studioAuth(studioUid, tenantId) } as never);
+    // The DELIVERED transition requires an explicit protection-work
+    // declaration; [] records "reviewed - no protection work" (rejected on
+    // every other transition, so only the final advance carries it).
+    await advanceJobStatus.run({ data: i === 4 ? { jobId, protectionWork: [] } : { jobId }, auth: studioAuth(studioUid, tenantId) } as never);
   }
 }
 
@@ -227,7 +230,7 @@ describe("Garage / Vehicle Ownership system", () => {
     // READY_FOR_DELIVERY (bypassing the function) so advanceJobStatus's
     // transition guard allows a second DELIVERED transition to be attempted.
     await db.collection("jobs").doc(jobDoc.id).update({ status: "READY_FOR_DELIVERY" });
-    await advanceJobStatus.run({ data: { jobId: jobDoc.id }, auth: studioAuth(studioUid) } as never);
+    await advanceJobStatus.run({ data: { jobId: jobDoc.id, protectionWork: [] }, auth: studioAuth(studioUid) } as never);
 
     const allWarranties = await db.collection("warranties").where("jobId", "==", jobDoc.id).get();
     expect(allWarranties.docs.length).toBe(1);
