@@ -29,7 +29,11 @@ const auth = {
   token: { role: "admin", tenantId: "zero-control", studioId: null },
 };
 async function seed(delivery: boolean, error: boolean) {
-  for (const c of cols) {
+  // vehicles is cleaned but NOT compared: the delivery case seeds a live
+  // vehicle for the protection-declaration guard, and a leftover from a
+  // previous run must never leak into the link/cash captures (the baseline
+  // was generated vehicle-free).
+  for (const c of [...cols, "vehicles"]) {
     const q = await db.collection(c).where("tenantId", "==", "zero-control").get();
     for (const d of q.docs) await d.ref.delete();
   }
@@ -76,7 +80,23 @@ async function seed(delivery: boolean, error: boolean) {
     .collection("services")
     .doc(id)
     .set({ id, tenantId: "zero-control", name: "Zero ordinary service" });
-  if (delivery)
+  if (delivery) {
+    // The DELIVERED path now verifies the car's live record before recording
+    // the (possibly empty) protection-work declaration: seed a matching
+    // vehicle owned by the job's customer.
+    await db.collection("vehicles").doc("v").set({
+      id: "v",
+      tenantId: "zero-control",
+      ownerId: "c",
+      registrationNumber: "GJ01ZZ0000",
+      make: "Test",
+      model: "Car",
+      year: 2024,
+      color: "White",
+      photoUrl: null,
+      createdAt: now,
+      updatedAt: now,
+    });
     await db.collection("invoices").doc("fx-zero-existing").set({
       id: "fx-zero-existing",
       jobId: id,
@@ -84,6 +104,7 @@ async function seed(delivery: boolean, error: boolean) {
       status: "paid",
       total: 0,
     });
+  }
 }
 async function capture(fn: any, kind: string, error: boolean) {
   const delivery = kind === "delivery";
@@ -106,7 +127,10 @@ async function capture(fn: any, kind: string, error: boolean) {
         result: await fn.run({
           data: {
             jobId: id,
-            ...(delivery ? {} : { method: kind === "cash" ? "cash" : "razorpay_payment_link" }),
+            // The DELIVERED transition now (0a493cf8/2f79a469, reviewed)
+            // requires an explicit protection-work declaration; this fixture
+            // job has none, so the honest declaration is the empty list.
+            ...(delivery ? { protectionWork: [] } : { method: kind === "cash" ? "cash" : "razorpay_payment_link" }),
           },
           auth,
         } as never),
@@ -141,7 +165,7 @@ describe("noncovered zero functions baseline0d73f895 comparison", () => {
               readFileSync(resolve(__dirname, "../fixtures/noncovered-zero-baseline.json"), "utf8"),
             )[kind + "-" + (error ? "error" : "success")],
             a = await capture(after, kind, error);
-          expect(a).toEqual(b);
+          // Evidence first: on a mismatch these files are the diagnosis.
           mkdirSync("/downloads/evidence", { recursive: true });
           writeFileSync(
             `/downloads/evidence/noncovered-zero-${kind}-${error ? "error" : "success"}-baseline.json`,
@@ -151,6 +175,7 @@ describe("noncovered zero functions baseline0d73f895 comparison", () => {
             `/downloads/evidence/noncovered-zero-${kind}-${error ? "error" : "success"}-current.json`,
             JSON.stringify(a, null, 2),
           );
+          expect(a).toEqual(b);
           console.log(
             "BASE VS CURRENT",
             kind,

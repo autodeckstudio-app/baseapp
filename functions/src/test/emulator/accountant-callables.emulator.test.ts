@@ -19,6 +19,11 @@ const VALID: Record<string, unknown> = {
   cancelBooking: { bookingId: "b", reason: "r" },
   rescheduleBooking: { bookingId: "b", newDate: "2026-12-01", newTime: "10:00", idempotencyKey: "k" },
   confirmPaymentMock: { paymentId: "p" },
+  // Premium reschedule request flow validates input before reading the caller
+  // (same pattern as rescheduleBooking above): supply schema-valid payloads so
+  // the accountant caller check is what is exercised.
+  requestBookingReschedule: { bookingId: "b", newDate: "2026-12-01", newTime: "10:00", idempotencyKey: "k" },
+  decideBookingRescheduleRequest: { bookingId: "b", approve: true, idempotencyKey: "k" },
 };
 const OPEN = new Set(["getAccountantMoney", "placeGuestOrder", "listPublicCarListings"]);
 

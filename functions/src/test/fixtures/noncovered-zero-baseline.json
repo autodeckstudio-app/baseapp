@@ -579,7 +579,8 @@
               }
             ],
             "sealedAt": "2026-10-24T09:00:00.000Z",
-            "status": "DELIVERED"
+            "status": "DELIVERED",
+            "protectionWork": []
           }
         }
       ],
