@@ -107,7 +107,7 @@ beforeEach(() => {
 });
 
 describe("mounted protection editor orchestration", () => {
-  it("superseded records render as HISTORY with end provenance - never current, never editable, kind re-reportable", async () => {
+  it("superseded records render as HISTORY with end provenance - never current, never editable, no add affordances", async () => {
     const el = await mount();
     act(() => { h.protectionsCb?.([
       existingProt,
@@ -123,15 +123,16 @@ describe("mounted protection editor orchestration", () => {
     const edits = el.root.findAll((n) => typeof n.props?.label === "string" && n.props.label.startsWith("Edit ") && typeof n.props?.onPress === "function").map((n) => n.props.label as string);
     expect(edits.filter((l) => l.includes("Paint Protection Film"))).toEqual(["Edit Paint Protection Film"]);
     expect(edits.some((l) => l.includes("Ceramic"))).toBe(false);
-    // Ceramic is no longer current: the kind can be reported again.
-    expect(text).toContain("Add ceramic coating");
+    // The self-report ADD UI is removed (2 Nov basket, item 11): no add
+    // affordances remain for any kind, current or superseded.
+    expect(text).not.toContain("Add ceramic coating");
     expect(text).not.toContain("Add PPF");
     // History rows link out to the car's service history, not to a fabricated
     // per-job screen.
     expect(text).toContain("View service history");
   });
 
-  it("a REMOVED current record leaves the current lists entirely and its kind becomes addable", async () => {
+  it("a REMOVED current record leaves the current lists entirely and stays history-only (no re-add UI)", async () => {
     const el = await mount();
     act(() => { h.protectionsCb?.([
       { ...existingProt, lifecycle: "removed", lifecycleAt: "2026-10-21", removedByJobId: "j8" },
@@ -140,17 +141,18 @@ describe("mounted protection editor orchestration", () => {
     expect(text).toContain("Protection history");
     expect(text).toContain("Removed · 21 Oct 2026");
     expect(text).not.toContain("Edit Paint Protection Film"); // history is never editable
-    expect(text).toContain("Add PPF"); // kind free again
+    expect(text).not.toContain("Add PPF"); // ADD UI removed (2 Nov basket, item 11)
+    expect(text).not.toContain("Add ceramic coating");
   });
 
   it("StrictMode mount cycle: the flow survives the probe cleanup and a save still closes the editor", async () => {
     const el = await mount(true);
-    // accepted gating: PPF already reported in this fixture, ceramic is the addable kind; });
-    await act(async () => { press(el, "Add ceramic coating"); });
+    await act(async () => { press(el, "Edit Paint Protection Film"); });
     expect(editorOpen(el)).toBe(true);
-    h.createMyProtection.mockResolvedValue({});
+    h.updateMyProtection.mockResolvedValue({});
+    h.getDocFromServer.mockResolvedValue({ exists: () => true, id: "p1", data: () => ({ ...existingProt, revision: 4, updatedAt: "u4" }) });
     await act(async () => { press(el, "Save"); await Promise.resolve(); });
-    expect(h.createMyProtection).toHaveBeenCalledTimes(1);
+    expect(h.updateMyProtection).toHaveBeenCalledTimes(1);
     expect(editorOpen(el)).toBe(false);
   });
 
@@ -163,28 +165,43 @@ describe("mounted protection editor orchestration", () => {
     expect(count("Added by you")).toBe(1);
   });
 
+  it("contract: the self-report ADD UI and the customer Warranty section are hidden (2 Nov basket, item 11 + 15:45:51)", async () => {
+    const el = await mount();
+    const text = textOf(el);
+    expect(text).not.toContain("Add PPF");
+    expect(text).not.toContain("Add ceramic coating");
+    // Warranty certificates section hidden from the customer Garage. Records
+    // and issuance are untouched - only the render is gone (flagged constant).
+    expect(text).not.toContain("certificate");
+    expect(text).not.toContain("Warranties are issued automatically");
+    // Reported records stay visible and editable.
+    expect(text).toContain("Reported by you");
+    const edits = el.root.findAll((n) => typeof n.props?.label === "string" && n.props.label.startsWith("Edit ") && typeof n.props?.onPress === "function").map((n) => n.props.label as string);
+    expect(edits).toContain("Edit Paint Protection Film");
+  });
+
   it("busy in-flight: fields go inert (editable=false) and a second Save does not double-call", async () => {
     const el = await mount();
-    // accepted gating: PPF already reported in this fixture, ceramic is the addable kind; });
-    await act(async () => { press(el, "Add ceramic coating"); });
+    await act(async () => { press(el, "Edit Paint Protection Film"); });
     const d = h.d<unknown>();
-    h.createMyProtection.mockReturnValue(d.promise);
+    h.updateMyProtection.mockReturnValue(d.promise);
+    h.getDocFromServer.mockReturnValue(new Promise(() => {}));
     await act(async () => { press(el, "Save"); });
     const inputs = el.root.findAllByType(TextInput).filter((n) => n.props.editable === false);
     expect(inputs.length).toBeGreaterThanOrEqual(3); // brand, years, notes
     const dateInputs = el.root.findAll((n) => n.type === "input" && n.props?.disabled === true);
     expect(dateInputs.length).toBeGreaterThanOrEqual(1); // the DateField web input is disabled too
     await act(async () => { press(el, "Save"); }); // guard: busy
-    expect(h.createMyProtection).toHaveBeenCalledTimes(1);
+    expect(h.updateMyProtection).toHaveBeenCalledTimes(1);
     await act(async () => { d.resolve({}); await Promise.resolve(); });
   });
 
   it("ready-to-ready account change during an in-flight save closes the editor synchronously and the late resolve publishes nothing", async () => {
     const el = await mount();
-    // accepted gating: PPF already reported in this fixture, ceramic is the addable kind; });
-    await act(async () => { press(el, "Add ceramic coating"); });
+    await act(async () => { press(el, "Edit Paint Protection Film"); });
     const d = h.d<unknown>();
-    h.createMyProtection.mockReturnValue(d.promise);
+    h.updateMyProtection.mockReturnValue(d.promise);
+    h.getDocFromServer.mockReturnValue(new Promise(() => {}));
     await act(async () => { press(el, "Save"); });
     expect(editorOpen(el)).toBe(true);
     // Same status "ready", different identity: the render-time invalidation must fire.
@@ -198,8 +215,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("route change to another car closes the old car's editor before any effect could run", async () => {
     const el = await mount();
-    // accepted gating: PPF already reported in this fixture, ceramic is the addable kind; });
-    await act(async () => { press(el, "Add ceramic coating"); });
+    await act(async () => { press(el, "Edit Paint Protection Film"); });
     expect(editorOpen(el)).toBe(true);
     __params.current = { id: "v2" };
     await act(async () => { el.update(createElement(VehicleDetailScreen)); });

@@ -24,7 +24,7 @@ export function useVehiclePrices(services: Service[], category: VehicleCategory 
   setPrices(seed()); if(!category || !services.length)return;
   let alive=true;
   // One batched server call fills the price cache for every visible service; seed() then
-  // picks the fresh totals up. Replaces the old per-service calculateServicePrice fan-out.
+  // picks the fresh totals up. Replaces the old per-service pricing fan-out.
   void getCatalogueDisplayTotals(category).then(()=>{if(alive)setPrices(seed());});
   return ()=>{alive=false;};
  },[services,category]);

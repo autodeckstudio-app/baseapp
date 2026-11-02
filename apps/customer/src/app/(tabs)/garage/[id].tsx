@@ -22,7 +22,7 @@ import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
-import { isCalendarDate, listenToVehicleProtections, createMyProtection, updateMyProtection } from "../../../lib/protection-service";
+import { isCalendarDate, listenToVehicleProtections, updateMyProtection } from "../../../lib/protection-service";
 import { reconcileProtectionReadback, upsertProtection } from "../../../lib/protection-readback";
 import { ProtectionSaveFlow } from "../../../lib/protection-save-flow";
 import { PROTECTION_KIND_LABELS, protectionChip, protectionChipFor,
@@ -42,6 +42,9 @@ import { CarOverview } from "../../../ui/CarOverview";
 import { CareTimeline } from "../../../ui/CareTimeline";
 import { HistoryVisitRow } from "../../../ui/HistoryVisitRow";
 import { buildUpcoming, buildHistory, countLabel, latestVisits, HISTORY_PREVIEW } from "../../../lib/car-timeline";
+
+/** Customer Garage warranty certificates section: hidden per the 2 Nov basket; data/backend unchanged. */
+const SHOW_CUSTOMER_WARRANTY_SECTION = false;
 
 
 function formatDate(iso: string): string {
@@ -77,7 +80,10 @@ export default function VehicleDetailScreen() {
   // One operation id per add-document form session: kept across failed saves so a retry is
   // provably the same submission (the server replays it), regenerated on close/success.
   const [docSubmissionId, setDocSubmissionId] = useState(() => Crypto.randomUUID());
-  const [protEdit, setProtEdit] = useState<null | { mode: "create"; kind: "ppf" | "ceramic"; declarationId: string; ctx: string } | { mode: "edit"; protection: Protection; ctx: string }>(null);
+  // Self-reported PPF/ceramic ADD UI removed (Gauri 2 Nov 15:48 confirmed basket, item 11;
+  // Meet 16:25 "Accept gauris changes"). Existing reported records stay editable; saved
+  // records, backend rules and Staff/Admin surfaces are unchanged. The editor is edit-only.
+  const [protEdit, setProtEdit] = useState<null | { mode: "edit"; protection: Protection; ctx: string }>(null);
   // Generation guard for the protection save + read-back: a response from an
   // older attempt, a closed editor or a different car must never publish
   // over the current target. Bumped on every save attempt and editor change.
@@ -396,21 +402,6 @@ export default function VehicleDetailScreen() {
   // CURRENT record yet. Mock preview hides these (no backend behind the buttons).
   const reportedProtections = currentProtections.filter((p) => p.source === "customer");
   const documentProtections = currentProtections.filter((p) => p.source !== "customer");
-  const presentKinds = new Set(reportedProtections.map((p) => p.kind));
-  // ASSEMBLY-REPAIR (recovery): the 6:44 writer op references a mock-preview
-  // flag for this screen but no harvested op defines it (harvest gap). No
-  // mock seed exists for the detail screen, so the flag is pinned false -
-  // behavior equals the plain kind-presence check.
-  const mock = false;
-  const showProtectionAdd = !mock && (!presentKinds.has("ppf") || !presentKinds.has("ceramic"));
-
-  function openProtectionCreate(kind: "ppf" | "ceramic") {
-    setProtForm({ brand: "", years: "", applied: "", notes: "" });
-    // Stable for this form instance: a retried save dedups server-side.
-    protFlow.current?.invalidate();
-    setProtBusy(false);
-    setProtEdit({ mode: "create", kind, declarationId: `decl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`, ctx: contextKey });
-  }
   function openProtectionEdit(pr: Protection) {
     setProtForm({
       brand: pr.provider ?? "",
@@ -444,15 +435,12 @@ export default function VehicleDetailScreen() {
       return;
     }
     setActionError(null);
-    const mode = protEdit.mode;
-    const editTarget = protEdit.mode === "edit" ? protEdit.protection : null;
+    const editTarget = protEdit.protection;
     const vid = vehicle.id;
     const uid = auth.user.uid;
     const tenantId = auth.claims.tenantId;
-    const declarationId = protEdit.mode === "create" ? protEdit.declarationId : null;
-    const kind = protEdit.mode === "create" ? protEdit.kind : null;
     await protFlow.current?.run({
-      mode,
+      mode: "edit",
       target: editTarget,
       vehicleId: vid,
       uid,
@@ -468,17 +456,7 @@ export default function VehicleDetailScreen() {
       // or account.
       contextCurrent: () => ctxRef.current === contextKey,
       save: async () => {
-        if (mode === "create" && kind && declarationId) {
-          await createMyProtection({
-            vehicleId: vid,
-            kind,
-            declarationId,
-            ...(protForm.brand.trim() !== "" ? { provider: protForm.brand.trim() } : {}),
-            ...(years !== "" ? { warrantyYears: Number(years) } : {}),
-            ...(applied !== "" ? { startDate: applied } : {}),
-            ...(protForm.notes.trim() !== "" ? { notes: protForm.notes.trim() } : {}),
-          });
-        } else if (editTarget) {
+        {
           await updateMyProtection({
             vehicleId: vid,
             protectionId: editTarget.id,
@@ -674,7 +652,7 @@ export default function VehicleDetailScreen() {
               ))}
             </Pane>
           )}
-          {reportedProtections.length > 0 || showProtectionAdd ? (
+          {reportedProtections.length > 0 ? (
             <View style={{ gap: space.breath }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
                 <Kicker>Reported by you</Kicker>
@@ -700,12 +678,6 @@ export default function VehicleDetailScreen() {
               ) : null}
             </View>
           ) : null}
-          {showProtectionAdd ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.gap }}>
-              {!presentKinds.has("ppf") ? <LinkAction label="Add PPF" testID="protection-add-ppf" onPress={() => openProtectionCreate("ppf")} /> : null}
-              {!presentKinds.has("ceramic") ? <LinkAction label="Add ceramic coating" testID="protection-add-ceramic" onPress={() => openProtectionCreate("ceramic")} /> : null}
-            </View>
-          ) : null}
           {historyProtections.length > 0 ? (
             <View style={{ gap: space.breath }}>
               <Kicker>Protection history</Kicker>
@@ -725,9 +697,7 @@ export default function VehicleDetailScreen() {
           ) : null}
           {protEdit ? (
             <Pane pad="gap">
-              <T role="label" tone="tertiary">
-                {protEdit.mode === "create" ? `Add ${PROTECTION_KIND_LABELS[protEdit.kind] ?? protEdit.kind}` : `Edit ${PROTECTION_KIND_LABELS[protEdit.protection.kind] ?? protEdit.protection.kind}`}
-              </T>
+              <T role="label" tone="tertiary">{`Edit ${PROTECTION_KIND_LABELS[protEdit.protection.kind] ?? protEdit.protection.kind}`}</T>
               <T role="caption" tone="secondary">Marked as added by you - AutoDeck has not verified it. Warranty years alone do not create an expiry date.</T>
               <View pointerEvents={protBusy ? "none" : "auto"} accessibilityState={{ busy: protBusy }} style={protBusy ? { opacity: 0.6 } : undefined}>
                 {/* Handlers are guarded too: pointer-events alone does not
@@ -788,6 +758,11 @@ export default function VehicleDetailScreen() {
         </>
       ) : null}
 
+      {/* Customer Garage warranty UI hidden for now (Gauri 2 Nov 15:45:51 "remove warranty
+          thing for now form UI", confirmed basket; Meet 16:25 "Accept gauris changes").
+          Records, issuance, backend rules and Staff/Admin surfaces are unchanged; the
+          listener above still feeds the care plan. Flip to restore the section. */}
+      {SHOW_CUSTOMER_WARRANTY_SECTION ? (<>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
         <Kicker>Warranty</Kicker>
         <T role="caption" tone="tertiary">{warranties.length === 0 ? "None yet" : countLabel(warranties.length, "certificate", "certificates")}</T>
@@ -816,6 +791,7 @@ export default function VehicleDetailScreen() {
           })}
         </Pane>
       )}
+      </>) : null}
       {!editing ? (
         <View style={{ gap: space.breath }}>
           <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />

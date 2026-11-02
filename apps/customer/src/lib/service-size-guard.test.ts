@@ -41,7 +41,17 @@ describe("service detail uses the saved car type only", () => {
   it("list screens do not ask the server again for prices they already hold (120 calls/min per user limit)", () => {
     const vs = readFileSync(join(__dirname, "./vehicle-size.ts"), "utf8");
     const cs = readFileSync(join(__dirname, "./catalogue-service.ts"), "utf8");
-    expect(vs).toMatch(/!s\.priceOnRequest&&cachedServiceTotal\(s\.id,category\)===undefined/);
+    // Tiles read held totals from the scoped price cache, never a fresh per-service
+    // calculateServicePrice fan-out (that was the 120 calls/min per user risk).
+    expect(vs).not.toMatch(/calculateServicePrice/);
+    expect(vs).toMatch(/cachedServiceTotal\(sv\.id, category\)/);
+    // Refills come from ONE batched getServiceCatalogue call, memoized per
+    // uid|tenant|category scope, failures never cached.
+    expect(vs).toContain("getCatalogueDisplayTotals(category)");
+    expect(cs).toContain("totalsMemo.get(key)");
+    // A size-priced service with no row for the saved size must never show the flat
+    // base as the size-adjusted price - it shows the entry price instead.
+    expect(vs).toContain('"From " + priceLabel(sv)');
     expect(cs).toContain("auth.currentUser?.uid");
     expect(cs).toContain("priceCache.set(");
   });
