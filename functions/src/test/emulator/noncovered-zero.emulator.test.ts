@@ -29,14 +29,19 @@ const auth = {
   token: { role: "admin", tenantId: "zero-control", studioId: null },
 };
 async function seed(delivery: boolean, error: boolean) {
-  // vehicles is cleaned but NOT compared: the delivery case seeds a live
-  // vehicle for the protection-declaration guard, and a leftover from a
-  // previous run must never leak into the link/cash captures (the baseline
-  // was generated vehicle-free).
+  // vehicles and rateLimits are cleaned but NOT compared: the delivery case
+  // seeds a live vehicle for the protection-declaration guard, and rate-limit
+  // buckets are stamped with the fake fixed Date, so without cleanup they
+  // accumulate across runs into the same never-sliding window and every
+  // later run is permanently exhausted. Neither may leak into the vehicle-
+  // free baseline conditions. (Rate-limit docs carry no tenantId field; the
+  // tenant is the doc-id prefix.)
   for (const c of [...cols, "vehicles"]) {
     const q = await db.collection(c).where("tenantId", "==", "zero-control").get();
     for (const d of q.docs) await d.ref.delete();
   }
+  const rl = await db.collection("rateLimits").get();
+  for (const d of rl.docs) if (d.id.startsWith("zero-control__")) await d.ref.delete();
   await db.collection("invoiceCounters").doc("zero-control_2026").delete();
   const now = new Date().toISOString(),
     pb = {
