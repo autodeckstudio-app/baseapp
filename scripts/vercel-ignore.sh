@@ -11,6 +11,23 @@ if [ "$app" = site ]; then
   site_skip() { printf 'site: SKIP (%s)\n' "$1"; exit 0; }
   root="$(git rev-parse --show-toplevel 2>/dev/null)" || site_skip 'git root unavailable'
   cd "$root" || site_skip 'git root inaccessible'
+  # One-shot audited site release: a committed marker scripts/site-release-<full-sha>
+  # fires a build only when it names HEAD's exact parent commit AND that commit
+  # changes nothing but scripts/vercel-ignore.sh and the marker itself. When the
+  # marker exists but anything is in doubt (diff failure, unexpected path) it
+  # skips; without a marker the fail-closed base check below runs unchanged.
+  # Every resolution failure falls through to that check; nothing here may exit
+  # nonzero by accident, because a nonzero exit means BUILD.
+  head_sha="$(git rev-parse HEAD 2>/dev/null || true)"
+  parent_sha="$(git rev-parse HEAD~1 2>/dev/null || true)"
+  marker="scripts/site-release-$parent_sha"
+  if [ -n "$head_sha" ] && [ -n "$parent_sha" ] && [ -f "$marker" ]; then
+    changed="$(git diff --name-only "$parent_sha" "$head_sha" 2>/dev/null)" || site_skip 'release-marker: diff failed'
+    unexpected="$(printf '%s\n' "$changed" | grep -Fvx -e 'scripts/vercel-ignore.sh' -e "$marker" | grep -v '^$' || true)"
+    [ -z "$unexpected" ] || site_skip "release-marker: unexpected changed paths: $unexpected"
+    printf 'site: BUILD (audited one-shot release marker for parent %s)\n' "$parent_sha"
+    exit 1
+  fi
   base="${VERCEL_GIT_PREVIOUS_SHA:-}"
   [[ "$base" =~ ^[0-9a-fA-F]{40}$ ]] || site_skip 'previous successful SHA missing or invalid'
   if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
