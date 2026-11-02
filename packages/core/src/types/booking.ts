@@ -130,6 +130,10 @@ export interface Booking {
    *  advance Payment id (advance-<bookingId>) once an advance link exists.
    *  Never set while ADVANCE_PAYMENT_ENABLED is false. */
   advancePaymentId?: string | null;
+  /** Set by the verified webhook when the advance payment completes
+   *  (targetType "booking"). Marker only - it never flips booking status;
+   *  the job/invoice lifecycle is unchanged. Null while unpaid. */
+  advancePaidAt?: string | null;
   standbyArrivedAt?: string | null;
   standbyAdmittedAt?: string | null;
   missedAt?: string | null; // persisted by the 9pm scheduler; cleared on reschedule

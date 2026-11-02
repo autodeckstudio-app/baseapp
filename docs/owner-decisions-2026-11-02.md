@@ -54,19 +54,48 @@ unrelated payment/refund rules.
   Maps failure handling still need settling". No no-show line.
 - User-channel sweep of 2 Nov (iMessage bodies ILIKE no-show / no show /
   retain / retention): ZERO owner-facing mentions of the retention rule.
-- "Accept gauris changes" (phonemsg-01M6DYC2Y7Y37546Z0W2VMM0C7, 16:25:06)
-  therefore covers only what was presented at 15:48 - NOT no-show
-  retention. "All 3" (19:44) covered exactly the 3 groups quoted at 19:42
-  and neither confirms nor revokes no-show.
+- "Accept gauris changes" (phonemsg-01M6DYC2Y7Y37546Z0W2VMM0C7, 16:25:06):
+  no owner-channel presentation of no-show retention is found in the
+  record, so it stays UNCONFIRMED. Whether "Accept" was meant more broadly
+  than the 15:48 ask is unresolved - it is not proof the retention line was
+  covered, and it is not proof of absence either. "All 3" (19:44) covered
+  exactly the 3 groups quoted at 19:42 and neither confirms nor revokes
+  no-show. The premium 24h cutoff IS settled independently: the 19:42 offer
+  said "Keep the agreed 24-hour cutoff" and "All 3" accepted it.
 - My earlier "confirmed" label traced to my own 16:25:47 basket summary,
   relayed to GAURI over i2i, never presented to Meet. That was my error;
   i2i content and agent summaries are not owner authority.
 - Consequence: customer-facing disclosure MUST NOT state any retention /
   forfeiture rule until the owner decides. The noShow line is removed from
   advanceDisclosureLines; the flow stays disabled (flag absent everywhere).
-- Open provenance check for next pass: premium 24h cutoff and wash rule
-  "already accepted at 16:25" need the same presentation verification
-  against the 15:48 ask contents.
+- Historical sources conflict and none is actionable owner authority: a
+  20 Oct voice note (transcript unrecoverable) recited by the previous
+  agent as "retain the full payment" on no-contact no-shows; a dead code
+  citation ("WhatsApp 22 Oct 21:22", messages do not exist) claiming
+  "Rs 100 or 20%"; Gauri's basket "retain 20% of total service cost".
+  Do NOT act on any of these. A single recommendation is prepared below.
+
+## 5. No-show money policy - RECOMMENDATION for the owner (draft, undecided)
+Recommended single rule: a no-show forfeits exactly the 20% advance, for
+BOTH payment modes, disclosed before payment.
+- Pay-at-studio advance (the adopted flow): the studio keeps the 20%
+  advance already paid; nothing more is charged; the balance is cancelled
+  with the booking. Execution: no money movement needed - the advance
+  payment is already completed; booking closes as no-show.
+- Full-online prepayment (if ever offered): retain 20% of the service
+  price incl GST and refund the rest through the normal refund route
+  (outbox reservation, office review). Execution: refund reservation of
+  (paid - 20% of service incl GST); never automatic without review.
+- Late cancellation is a SEPARATE event with its own terms (still
+  unsettled); no-show is never silently treated as a late cancel and this
+  rule introduces no cancellation fee.
+- Why this one: one uniform 20% number matches the advance the owner
+  already adopted, is simple to disclose in one sentence, needs no new
+  money movement in the adopted pay-at-studio flow, and avoids the
+  voice-note "retain full payment" outcome, which is harsher than the
+  advance itself and was never confirmed.
+- If the owner picks something else, the disclosure copy and the admin
+  no-show review candidates change, nothing else is pre-built on this.
 
 ## Explicitly still NOT decided / out of scope
 - Refund terms (full-online refunds, late-cancel refunds, and any

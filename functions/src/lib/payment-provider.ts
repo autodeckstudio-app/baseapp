@@ -113,6 +113,12 @@ export interface ProviderWebhookEvent {
 export interface PaymentProvider {
   readonly name: string;
   createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult>;
+  /** Fetch a payment link we created, by OUR stored provider link id.
+   *  Used ONLY for reconciliation after an ambiguous create/persist: a link
+   *  is never re-created while its predecessor's state is unknown; the
+   *  caller compares amount/currency before reusing it (advance-link.ts).
+   *  Returns null when the provider has no such link. */
+  fetchPaymentLink(providerPaymentLinkId: string): Promise<PaymentLinkResult & { status: string } | null>;
   verifyWebhookSignature(params: VerifyWebhookParams): boolean;
   parseWebhookEvent(rawBody: string): ProviderWebhookEvent;
   initiateRefund(params: InitiateRefundParams): Promise<RefundResult>;

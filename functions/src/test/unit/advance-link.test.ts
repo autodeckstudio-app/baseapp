@@ -5,7 +5,7 @@ const base: AdvanceLinkState = {
   id: "pay-1", amount: 23600, currency: "INR",
   paymentUrl: null, razorpayPaymentLinkId: null, razorpayOrderId: null, orderAmbiguous: null,
 };
-const params = { bookingId: "b-1", referenceId: "advance-b-1", description: "d", customerName: "n" };
+const params = { bookingId: "b-1", referenceId: "advance-b-1", description: "d", customerName: "n", customerPhone: "" };
 
 function deps(over: Partial<AdvanceLinkDeps> = {}) {
   const calls = { create: 0, fetch: 0, patch: 0, ambiguous: 0, review: [] as string[] };

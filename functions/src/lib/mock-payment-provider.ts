@@ -35,10 +35,24 @@ export class MockPaymentProvider implements PaymentProvider {
   }
 
   async createPaymentLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult> {
+    this.createdLinks.set(this.mockPaymentLinkId(params.referenceId), { amount: params.amount, currency: params.currency, referenceId: params.referenceId });
     return {
       providerPaymentLinkId: this.mockPaymentLinkId(params.referenceId),
       providerOrderId: `mock_order_${params.referenceId}`,
       paymentUrl: `https://mock-razorpay.local/pay/${params.referenceId}?amount=${params.amount}`,
+    };
+  }
+
+  private readonly createdLinks = new Map<string, { amount: number; currency: string; referenceId: string }>();
+
+  async fetchPaymentLink(providerPaymentLinkId: string): Promise<(PaymentLinkResult & { status: string }) | null> {
+    const found = this.createdLinks.get(providerPaymentLinkId);
+    if (!found) return null;
+    return {
+      providerPaymentLinkId,
+      providerOrderId: `mock_order_${found.referenceId}`,
+      paymentUrl: `https://mock-razorpay.local/pay/${found.referenceId}?amount=${found.amount}`,
+      status: "created",
     };
   }
 

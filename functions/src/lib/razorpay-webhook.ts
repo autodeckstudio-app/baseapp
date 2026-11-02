@@ -251,6 +251,41 @@ export async function processProviderEvent(
         return "completed";
       }
 
+      if (payment.targetType === "booking") {
+        // Pay-at-studio ADVANCE (basket item 4, PREVIEW - no such Payment can
+        // exist while ADVANCE_PAYMENT_ENABLED is false). Money arrived
+        // against a booking, not a job: complete the payment and mark the
+        // booking advance-paid. Deliberately NO status flip, no invoice, no
+        // job - the studio still does the work and settles the balance via
+        // the existing job/invoice lifecycle. Duplicates and amount
+        // mismatches are already stopped above (already_final /
+        // amount_mismatch). Anomalies (booking gone or cancelled, advance
+        // already marked) still complete the payment - the money IS
+        // received - but touch nothing else and go to the office
+        // refund-review queue, never silent retention.
+        const bRef = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
+        const bSnap = bRef ? await tx.get(bRef) : null;
+        const bk = bSnap?.exists ? (bSnap.data() as Booking) : undefined;
+        const anomaly = !bk ? "booking_missing"
+          : bk.status === "CANCELLED" ? "booking_cancelled"
+          : bk.advancePaidAt ? "advance_already_paid"
+          : null;
+        record("completed");
+        tx.update(paymentRef, { status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
+          providerEventId: ev.providerEventId, completedAt: now,
+          ...(anomaly ? { invoiceReviewNeeded: true } : {}),
+          updatedAt: now });
+        writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
+          after: { status: "completed", targetType: "booking", bookingId: payment.bookingId, via: "razorpay_webhook" },
+          ...(anomaly ? { metadata: { needsReview: anomaly } } : {}) });
+        if (!anomaly && bRef) {
+          tx.update(bRef, { advancePaidAt: now, updatedAt: now });
+          writeAuditLog(tx, { action: "booking.advance_paid", entityType: "Booking", entityId: bRef.id, user, studioId: payment.studioId,
+            after: { advancePaidAt: now, paymentId: payment.id, via: "razorpay_webhook" } });
+        }
+        return "completed";
+      }
+
       if (!payment.jobId) { record("ignored"); return "ignored"; }
       const jobRef = db.collection(COLLECTIONS.jobs()).doc(payment.jobId);
       const jobSnap = await tx.get(jobRef);

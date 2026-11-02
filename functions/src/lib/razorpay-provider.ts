@@ -97,6 +97,25 @@ export class RazorpayProvider implements PaymentProvider {
     };
   }
 
+  async fetchPaymentLink(providerPaymentLinkId: string): Promise<PaymentLinkResult & { status: string } | null> {
+    // GET /v1/payment_links/:id (official API reference). Reconciliation
+    // only - never a creation path.
+    const response = await fetch(`${this.baseUrl}/payment_links/${providerPaymentLinkId}`, {
+      headers: { Authorization: this.authHeader },
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`Razorpay fetchPaymentLink failed: ${response.status}`);
+    }
+    const data = (await response.json()) as RazorpayPaymentLinkResponse & { status?: string };
+    return {
+      providerPaymentLinkId: data.id,
+      providerOrderId: data.order_id ?? null,
+      paymentUrl: data.short_url,
+      status: data.status ?? "unknown",
+    };
+  }
+
   verifyWebhookSignature(params: VerifyWebhookParams): boolean {
     // An unset secret must never validate: HMAC with an empty key is guessable.
     if (!this.webhookSecret || !params.signature) return false;
