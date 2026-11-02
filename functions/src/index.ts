@@ -38,6 +38,7 @@ export { purgeTestBookings } from "./functions/booking/purgeTestBookings.js";
 export { getNoShowResolution, recordNoShowContact, previewNoShowResolution, resolveNoShow } from "./functions/booking/noShowReview.js";
 export { rescheduleBooking } from "./functions/booking/rescheduleBooking.js";
 export { requestBookingReschedule } from "./functions/booking/requestBookingReschedule.js";
+export { decideBookingRescheduleRequest } from "./functions/booking/decideBookingRescheduleRequest.js";
 
 // âââ Studio Jobs ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { createWalkinJob } from "./functions/job/createWalkinJob.js";
