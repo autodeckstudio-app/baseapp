@@ -126,6 +126,10 @@ export interface Booking {
    *  after a decline is a genuine open policy question flagged for owner review, so the
    *  strict reading (no re-request) is enforced rather than an invented repeat allowance. */
   rescheduleRequestCount?: number;
+  /** Pay-at-studio advance (basket item 4, PREVIEW): the deterministic
+   *  advance Payment id (advance-<bookingId>) once an advance link exists.
+   *  Never set while ADVANCE_PAYMENT_ENABLED is false. */
+  advancePaymentId?: string | null;
   standbyArrivedAt?: string | null;
   standbyAdmittedAt?: string | null;
   missedAt?: string | null; // persisted by the 9pm scheduler; cleared on reschedule

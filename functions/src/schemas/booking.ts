@@ -45,6 +45,12 @@ export const cancelBookingSchema = z.object({
   reason: z.string().min(1).max(500),
 }).strict();
 
+export const requestAdvancePaymentSchema = z
+  .object({
+    bookingId: z.string().min(1),
+  })
+  .strict();
+
 export const rescheduleBookingSchema = z.object({
   customerContext: z.boolean().optional(),
   bookingId: z.string().min(1),

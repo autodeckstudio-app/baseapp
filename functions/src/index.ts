@@ -49,6 +49,7 @@ export { assignBay } from "./functions/job/assignBay.js";
 
 // âââ Payments ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { initiatePayment } from "./functions/payment/initiatePayment.js";
+export { requestAdvancePayment } from "./functions/payment/requestAdvancePayment.js";
 export { createCheckoutOrder } from "./functions/payment/createCheckoutOrder.js";
 export { verifyCheckoutPayment } from "./functions/payment/verifyCheckoutPayment.js";
 export { confirmPaymentMock } from "./functions/payment/confirmPaymentMock.js";

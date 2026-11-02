@@ -1,12 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { buildAdvancePaymentRequest, ADVANCE_PAYMENT_ENABLED, type AdvanceBookingShape } from "../../lib/advance-payment.js";
+import { buildAdvancePaymentRequest, computeAdvanceSplitFromBreakdown, ADVANCE_PAYMENT_ENABLED, type AdvanceBookingShape } from "../../lib/advance-payment.js";
 
+// A real snapshotted breakdown: service subtotal Rs 1,000.00 + pickup Rs 50.00
+// + drop Rs 30.00 folded into subtotal by applyPickupFees; 18% GST.
 const booking: AdvanceBookingShape = {
   id: "b-1",
   payMode: "studio",
   currency: "INR",
-  priceBreakdown: { total: 100000 }, // Rs 1,000.00 in paise
-  pickupTotalPaise: 5000,
+  priceBreakdown: {
+    subtotal: 108000,
+    pickupFee: 5000,
+    dropFee: 3000,
+    membershipDiscount: null,
+    taxRatePercent: 18,
+  },
 };
 
 describe("buildAdvancePaymentRequest (preview, disabled)", () => {
@@ -21,18 +28,49 @@ describe("buildAdvancePaymentRequest (preview, disabled)", () => {
     expect(buildAdvancePaymentRequest.length).toBe(3);
   });
 
-  it("core split math stays exact for the provisional recommendation (service total incl. tax, excl. pickup, ceil)", async () => {
-    const { advanceSplit } = await import("@autodeck/core");
-    const split = advanceSplit(100000, 5000, "service_total_only", "ceil");
-    expect(split.advancePaise).toBe(20000); // exactly 20% of the service total
-    expect(split.dueAtStudioPaise).toBe(80000); // exact remainder, pickup untouched
-    expect(split.advancePaise + split.dueAtStudioPaise).toBe(100000);
+  it("derives the adopted base from a REAL breakdown: discounted service incl GST, excl pickup AND its GST", () => {
+    // service 100000, discounted by 0, taxed at 18% -> base 118000.
+    // The snapshot's total would be 108000 + round(108000*0.18)=19440 -> 127440;
+    // naive total - pickup - drop = 119440 wrongly keeps the pickup GST (1440).
+    const split = computeAdvanceSplitFromBreakdown(booking.priceBreakdown, "service_total_only", "ceil");
+    expect(split.advancePaise).toBe(23600); // ceil(20% of 118000)
+    expect(split.dueAtStudioPaise).toBe(94400); // exact remainder of the SERVICE total
+    expect(split.advancePaise + split.dueAtStudioPaise).toBe(118000);
   });
 
-  it("core split includes pickup only under the explicit plus_pickup basis", async () => {
-    const { advanceSplit } = await import("@autodeck/core");
-    const split = advanceSplit(100000, 5000, "service_total_plus_pickup", "ceil");
-    expect(split.advancePaise).toBe(21000);
-    expect(split.dueAtStudioPaise).toBe(84000);
+  it("membership discount reduces the base before tax, matching applyMembershipBenefit", () => {
+    const split = computeAdvanceSplitFromBreakdown(
+      { ...booking.priceBreakdown, membershipDiscount: 10000 },
+      "service_total_only",
+      "ceil",
+    );
+    // (100000 - 10000) = 90000, tax 16200, base 106200, advance ceil 20% = 21240
+    expect(split.advancePaise).toBe(21240);
+    expect(split.dueAtStudioPaise).toBe(84960);
+  });
+
+  it("a fully covered wash yields a zero advance (nothing remains to advance)", () => {
+    const split = computeAdvanceSplitFromBreakdown(
+      { ...booking.priceBreakdown, membershipDiscount: 100000 },
+      "service_total_only",
+      "ceil",
+    );
+    expect(split.advancePaise).toBe(0);
+    expect(split.dueAtStudioPaise).toBe(0);
+  });
+
+  it("GST-disabled snapshot (rate 0) advances on the discounted service alone", () => {
+    const split = computeAdvanceSplitFromBreakdown(
+      { ...booking.priceBreakdown, taxRatePercent: 0 },
+      "service_total_only",
+      "ceil",
+    );
+    expect(split.advancePaise).toBe(20000);
+    expect(split.dueAtStudioPaise).toBe(80000);
+  });
+
+  it("plus_pickup remains available only as an explicit non-adopted basis", () => {
+    const split = computeAdvanceSplitFromBreakdown(booking.priceBreakdown, "service_total_plus_pickup", "ceil");
+    expect(split.advancePaise).toBeGreaterThan(23600); // pickup fees join the base
   });
 });

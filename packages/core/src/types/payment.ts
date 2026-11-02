@@ -15,7 +15,10 @@ export type PaymentStatus =
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 
-export type PaymentTargetType = "job" | "membership" | "gift";
+// "booking" is the pay-at-studio ADVANCE (basket item 4, owner-adopted policy
+// 2 Nov 2026). No such record can exist while ADVANCE_PAYMENT_ENABLED is
+// false; readers compare with === and fall through safely.
+export type PaymentTargetType = "job" | "membership" | "gift" | "booking";
 
 export interface Payment {
   id: string;

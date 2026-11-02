@@ -29,6 +29,12 @@ const auth = {
   token: { role: "admin", tenantId: "zero-control", studioId: null },
 };
 async function seed(delivery: boolean, error: boolean) {
+  // Hard guard (same rule as 57fd6f67): this cleanup is destructive, so it
+  // may only ever run against an emulator backend - a fake tenant name is
+  // not safety proof.
+  if (!process.env["FIRESTORE_EMULATOR_HOST"]) {
+    throw new Error("noncovered-zero seed cleanup requires FIRESTORE_EMULATOR_HOST; refusing to clean up against a non-emulator backend.");
+  }
   // vehicles and rateLimits are cleaned but NOT compared: the delivery case
   // seeds a live vehicle for the protection-declaration guard, and rate-limit
   // buckets are stamped with the fake fixed Date, so without cleanup they

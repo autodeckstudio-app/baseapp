@@ -63,6 +63,7 @@ export type AuditAction =
   | "job.walkin_cancelled"
   | "job.bay_reassigned"
   | "payment.initiated"
+  | "payment.advance_initiated"
   | "payment.completed"
   | "payment.failed"
   | "payment.cancelled"
