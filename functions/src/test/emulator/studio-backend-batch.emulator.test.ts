@@ -603,7 +603,11 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
   beforeAll(async () => {
     storageEnv = await initializeTestEnvironment({
       projectId: TEST_PROJECT_ID,
-      storage: { rules: readFileSync(resolve(__dirname, "../../../../storage.rules"), "utf8"), host: "localhost", port: 9199 },
+      storage: {
+        rules: readFileSync(resolve(__dirname, "../../../../storage.rules"), "utf8"),
+        host: process.env["FIREBASE_STORAGE_EMULATOR_HOST"]?.split(":")[0] ?? "localhost",
+        port: Number(process.env["FIREBASE_STORAGE_EMULATOR_HOST"]?.split(":")[1] ?? 9199),
+      },
     });
     await seedStudio(STUDIO_A, TENANT_A);
     service = await seedService(uid("svc"), TENANT_A);
