@@ -3,17 +3,18 @@
 Source: Meet Sheth, iMessage "All 3" (phonemsg-01M6E9RW910BVRC0PJTQ3AG0M5,
 19:44 IST), replying to the exact three-choice summary
 (phonemsg-01M6E9P6J8SPHJ6MDE59Q215V0) sent 19:42. Earlier same-day
-confirmations (no-show retention 20%, premium 24h cutoff) were not re-asked.
-These settle POLICY ONLY - not production release, not unrelated
-payment/refund rules.
+confirmations (premium 24h cutoff) were not re-asked. See section 4 for
+no-show retention: re-checked on reviewer challenge, it is NOT
+owner-confirmed. These settle POLICY ONLY - not production release, not
+unrelated payment/refund rules.
 
 ## 1. Pay-at-studio 20% advance
 - Basis: 20% of the **discounted service price including GST, excluding
   pickup/drop**.
 - Rounding: advance **rounds up** to the next whole rupee; balance is the
   exact remainder.
-- No-show: advance is **retained** on no-show, disclosed **before** payment
-  (confirmed earlier the same day).
+- No-show: NOT owner-confirmed - see section 4. No retention or forfeiture
+  wording is disclosed to customers until the owner decides.
 - Late-cancel terms: NOT decided - no cancellation wording is introduced.
 - Activation still gated on the advance payment mechanism (Razorpay wiring)
   and the final review gate. Code remains disabled until then.
@@ -38,8 +39,38 @@ payment/refund rules.
   request/review/copy/tick flow is CANCELLED. Negative pins (email-alone
   grants sign-in, no Aadhaar gate) are retained as regression guards.
 
+## 4. No-show retention 20% - NOT OWNER-CONFIRMED (decision required)
+- Origin (Gauri only): i2i 1 Nov 17:49:30 IST
+  (wamid.HBgMOTE4OTc1MTI4ODE2FQIAEhgWM0VCMDk5RDI3RjAzQjNEMURCODI4MwA=),
+  restated 2 Nov 13:59:52
+  (wamid.HBgMOTE4OTc1MTI4ODE2FQIAEhgWM0VEMUM2MEZCMzk0Q0VBMUU0MTgyNwA=)
+  point 5: retain 20% of total service cost on no-show, disclosed before
+  payment.
+- Presentation check (recovered 2 Nov 21:04 on reviewer challenge): the only
+  native ask presenting Gauri's basket to Meet was
+  phonemsg-01M6DW99ANRYZWJ1VCX9CTXZ7Z (15:48:38, agent-authored). It
+  presented pickup/drop tiers (first 3 road km free per leg, then Rs25/km),
+  Garage warranty hiding, and "advance calculation, distance rounding and
+  Maps failure handling still need settling". No no-show line.
+- User-channel sweep of 2 Nov (iMessage bodies ILIKE no-show / no show /
+  retain / retention): ZERO owner-facing mentions of the retention rule.
+- "Accept gauris changes" (phonemsg-01M6DYC2Y7Y37546Z0W2VMM0C7, 16:25:06)
+  therefore covers only what was presented at 15:48 - NOT no-show
+  retention. "All 3" (19:44) covered exactly the 3 groups quoted at 19:42
+  and neither confirms nor revokes no-show.
+- My earlier "confirmed" label traced to my own 16:25:47 basket summary,
+  relayed to GAURI over i2i, never presented to Meet. That was my error;
+  i2i content and agent summaries are not owner authority.
+- Consequence: customer-facing disclosure MUST NOT state any retention /
+  forfeiture rule until the owner decides. The noShow line is removed from
+  advanceDisclosureLines; the flow stays disabled (flag absent everywhere).
+- Open provenance check for next pass: premium 24h cutoff and wash rule
+  "already accepted at 16:25" need the same presentation verification
+  against the 15:48 ask contents.
+
 ## Explicitly still NOT decided / out of scope
-- Refund terms (incl. full-online x no-show retention interaction).
+- Refund terms (full-online refunds, late-cancel refunds, and any
+  interaction with no-show retention).
 - Automatic road-distance pickup pricing: stays OFF. Google's per-use billing
   would require enabling paid APIs, which the standing no-paid-services
   instruction rules out. The existing tiered-distance pickup pricing and the

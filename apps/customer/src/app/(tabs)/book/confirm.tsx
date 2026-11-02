@@ -420,7 +420,6 @@ export default function BookingConfirmScreen() {
           {ADVANCE_SPLIT_ENABLED ? (
             <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}>
               <T role="caption" tone="secondary">{advanceDisclosureLines().split}</T>
-              <T role="caption" tone="secondary">{advanceDisclosureLines().noShow}</T>
             </View>
           ) : null}
         </Pane>

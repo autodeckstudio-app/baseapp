@@ -27,6 +27,9 @@ export type AdvancePriceBreakdown = {
   dropFee: number;
   membershipDiscount: number | null;
   taxRatePercent: number;
+  /** Snapshotted grand total (applyPickupFees: subtotal - discount + tax,
+   *  pickup GST included). The studio balance derives from this. */
+  total: number;
 };
 
 export type AdvanceBookingShape = {
@@ -65,9 +68,29 @@ export function computeAdvanceSplitFromBreakdown(
 ): AdvanceSplit {
   const serviceSubtotal = pb.subtotal - pb.pickupFee - pb.dropFee;
   const discountedService = serviceSubtotal - (pb.membershipDiscount ?? 0);
+  // Fail CLOSED on a negative base (reviewer D): a discount exceeding the
+  // service subtotal is a broken snapshot, never a negative or zero-clamped
+  // charge. The pricing contract (assertValidMinorUnits) rejects negative
+  // money; we do the same here before any split math.
+  if (discountedService < 0) {
+    throw new Error(`Advance base is negative (${discountedService} paise): the snapshot's discount exceeds its service subtotal - refusing to compute an advance.`);
+  }
   const serviceTax = calculateTax(discountedService, pb.taxRatePercent);
   const serviceTotal = discountedService + serviceTax;
   return advanceSplit(serviceTotal, pb.pickupFee + pb.dropFee, basis, rounding);
+}
+
+/** What the customer still owes AT THE STUDIO (reviewer E): the booking's
+ *  snapshotted grand total - which already includes pickup/drop fees AND
+ *  their GST and the membership discount exactly once - minus the advance.
+ *  The service-portion remainder alone would under-charge by the pickup
+ *  fees and their GST; the disclosure must reconcile to this figure. */
+export function studioBalancePaise(pb: AdvancePriceBreakdown & { total: number }, advancePaise: number): number {
+  const due = pb.total - advancePaise;
+  if (due < 0) {
+    throw new Error(`Advance ${advancePaise} exceeds the booking total ${pb.total} - refusing to compute a negative studio balance.`);
+  }
+  return due;
 }
 
 export type AdvancePaymentRequest = {
@@ -104,6 +127,6 @@ export function buildAdvancePaymentRequest(
     description: "Advance for your AutoDeck booking (balance payable at the studio)",
     referenceId: `advance-${booking.id}`,
     advancePaise: split.advancePaise,
-    dueAtStudioPaise: split.dueAtStudioPaise,
+    dueAtStudioPaise: studioBalancePaise(booking.priceBreakdown, split.advancePaise),
   };
 }

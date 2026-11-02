@@ -10,9 +10,9 @@ describe("advance split disclosure (items 4/5, preview)", () => {
     expect(split).toContain("20%");
     expect(split).not.toMatch(/₹|rs\.?|paise/i);
   });
-  it("no-show disclosure comes before payment and avoids cancellation wording", () => {
-    const { noShow } = advanceDisclosureLines();
-    expect(noShow).toContain("20%");
-    expect(noShow.toLowerCase()).not.toContain("cancel");
+  it("exposes NO no-show retention wording while item 5 is not owner-confirmed", () => {
+    const lines = advanceDisclosureLines();
+    expect("noShow" in lines).toBe(false);
+    expect(JSON.stringify(lines).toLowerCase()).not.toMatch(/no[- ]show|forfeit|retain|kept/);
   });
 });

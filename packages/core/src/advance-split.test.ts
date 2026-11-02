@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceSplit, ADVANCE_PERCENT, NO_SHOW_ADVANCE_DISCLOSURE } from "./advance-split.js";
+import { advanceSplit, ADVANCE_PERCENT } from "./advance-split.js";
 
 describe("advanceSplit", () => {
   it("adopted percent is 20", () => {
@@ -31,9 +31,5 @@ describe("advanceSplit", () => {
   it("rejects non-integer or negative inputs", () => {
     expect(() => advanceSplit(-1, 0, "service_total_only", "round")).toThrow();
     expect(() => advanceSplit(100.5, 0, "service_total_only", "round")).toThrow();
-  });
-  it("no-show disclosure mentions the 20% advance without calling it a cancellation", () => {
-    expect(NO_SHOW_ADVANCE_DISCLOSURE).toContain("20%");
-    expect(NO_SHOW_ADVANCE_DISCLOSURE.toLowerCase()).not.toContain("cancel");
   });
 });

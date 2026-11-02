@@ -39,9 +39,14 @@ export function advanceSplit(
   return { advancePaise, dueAtStudioPaise: basePaise - advancePaise, basis, rounding };
 }
 
-// Basket item 5 (PREVIEW copy - wording pending review): no-show keeps the
-// advance. Disclosure must be shown BEFORE payment. A no-show is NOT
-// automatically a late cancellation - it is a separate state and this copy
-// must not conflate them.
-export const NO_SHOW_ADVANCE_DISCLOSURE =
-  "If you don't show up for your appointment, the 20% advance is kept by the studio.";
+// Basket item 5 is NOT OWNER-CONFIRMED (re-checked 2 Nov 2026 21:04 on
+// reviewer challenge): the retention rule was presented to the owner only
+// via i2i and agent summaries, never on an owner channel. Three conflicting
+// no-show candidates exist (20 Oct voice-note recital: retain FULL payment;
+// a stale code comment: Rs 100 or 20%; Gauri basket: retain 20% of service
+// cost). Until the owner decides, NO customer-facing retention or
+// forfeiture copy may exist - not even behind the disabled flag - so this
+// constant is intentionally REMOVED. When the owner decides, add decided
+// wording here, shown BEFORE payment. A no-show is NOT automatically a late
+// cancellation - it is a separate state and any future copy must not
+// conflate them.

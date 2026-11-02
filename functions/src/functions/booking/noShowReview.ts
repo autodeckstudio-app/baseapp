@@ -3,11 +3,17 @@
 // captured money still held — this flow resolves it EXPLICITLY:
 //
 //  - recordNoShowContact: appends a validated, rate-limited contact note.
-//  - previewNoShowResolution: computes the candidate charges under the
-//    owner-delegated policy direction (Rs 100 or 20% on no-shows, rest
-//    refunded — WhatsApp 22 Oct 21:22:57/21:23:58). WHICH of the two applies
-//    is NOT settled, so this returns both candidates plus waiver and never
-//    picks one.
+//  - previewNoShowResolution: computes candidate charges. The no-show money
+//    policy is NOT owner-confirmed (2 Nov 2026 re-check): a previous comment
+//    cited "WhatsApp 22 Oct 21:22:57/21:23:58" as owner-delegated direction,
+//    but those messages DO NOT EXIST in the observation record - the
+//    citation was wrong. The nearest real source is an agent's 22 Oct
+//    15:02:43 recital of a 20 Oct owner voice note (transcript unavailable)
+//    whose no-show line was "retain the full payment" on no-contact
+//    no-shows, and the owner then asked for ONE final recommended policy,
+//    which was never delivered or approved. WHICH rule applies is therefore
+//    unsettled, so this returns all candidates plus waiver and never picks
+//    one.
 //  - resolveNoShow: the admin passes the exact chargePaise (one of the
 //    preview candidates or another explicit value) with a reason. Money moves
 //    only through the refund outbox reservation — never inline.
