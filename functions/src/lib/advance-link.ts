@@ -21,7 +21,7 @@ export type AdvanceLinkState = {
 };
 
 export type AdvanceLinkDeps = {
-  fetchLink(providerPaymentLinkId: string): Promise<{ id: string; amount: number; currency: string; paymentUrl: string } | null>;
+  fetchLink(providerPaymentLinkId: string): Promise<{ id: string; amount: number; currency: string; paymentUrl: string; status: string } | null>;
   createLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult>;
   patch(patch: { paymentUrl: string; razorpayPaymentLinkId: string; razorpayOrderId: string | null }): Promise<void>;
   markAmbiguous(ambiguous: boolean): Promise<void>;
@@ -37,15 +37,51 @@ export async function ensureAdvanceLink(
   linkParams: Omit<CreatePaymentLinkParams, "amount" | "currency">,
   deps: AdvanceLinkDeps,
 ): Promise<AdvanceLinkOutcome> {
-  // 1. Already linked: idempotent replay, no provider call.
+  // 1. Already linked: idempotent replay, no provider call. (The webhook
+  //    clears paymentUrl on payment_link.expired/cancelled, so a stored URL
+  //    here is a LIVE link, not a dead one.)
   if (payment.paymentUrl && payment.razorpayPaymentLinkId) {
     return { outcome: "link_ready", paymentUrl: payment.paymentUrl };
+  }
+
+  // 1b. URL was cleared (expired/cancelled) but we hold the provider id and
+  //     are NOT ambiguous: reconcile with the provider before ANY create.
+  if (!payment.paymentUrl && payment.razorpayPaymentLinkId && !payment.orderAmbiguous) {
+    let found: { id: string; amount: number; currency: string; paymentUrl: string; status: string } | null;
+    try {
+      found = await deps.fetchLink(payment.razorpayPaymentLinkId);
+    } catch {
+      throw new Error("We are confirming your earlier payment link. Please try again in a few minutes.");
+    }
+    if (found) {
+      const st = found.status;
+      if (st === "created" || st === "issued" || st === "partially_paid") {
+        // Still active: re-store the URL, no create.
+        await deps.patch({ paymentUrl: found.paymentUrl, razorpayPaymentLinkId: found.id, razorpayOrderId: payment.razorpayOrderId });
+        return { outcome: "link_ready", paymentUrl: found.paymentUrl };
+      }
+      if (st === "paid") {
+        // Provider says PAID but our record is pending: money may have
+        // arrived without our webhook. Never create over it.
+        await deps.flagManualReview("advance link paid provider-side while our record is pending");
+        return { outcome: "manual_review" };
+      }
+      if (st === "expired" || st === "cancelled") {
+        // Provider CONFIRMS the old link is inactive: a fresh create below
+        // cannot duplicate a payable link.
+      } else {
+        await deps.flagManualReview(`advance link in unknown provider state "${st}"`);
+        return { outcome: "manual_review" };
+      }
+    } else {
+      // Provider has no such link: nothing payable exists, safe to create.
+    }
   }
 
   // 2. Ambiguous state: reconcile, never blind-create.
   if (payment.orderAmbiguous) {
     if (payment.razorpayPaymentLinkId) {
-      let found: { id: string; amount: number; currency: string; paymentUrl: string } | null;
+      let found: { id: string; amount: number; currency: string; paymentUrl: string; status: string } | null;
       try {
         found = await deps.fetchLink(payment.razorpayPaymentLinkId);
       } catch {

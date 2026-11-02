@@ -5,7 +5,7 @@
  * anomaly paths stay closed. Real emulator, signature on, mock-free provider.
  */
 import type * as RazorpayProviderModule from "../../lib/razorpay-provider.js";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { createHmac } from "node:crypto";
 import { getFirestore } from "firebase-admin/firestore";
 
@@ -17,6 +17,13 @@ vi.mock("../../lib/razorpay-provider.js", async (orig) => {
 import { razorpayWebhook } from "../../functions/payment/razorpayWebhook.js";
 
 const db = getFirestore();
+beforeAll(() => {
+  // Hard guard (reviewer F3): this suite WRITES. Without an emulator host
+  // those writes would hit a real backend - refuse loudly instead.
+  if (!process.env["FIRESTORE_EMULATOR_HOST"]) {
+    throw new Error("advance-webhook tests write to Firestore; refusing to run without FIRESTORE_EMULATOR_HOST (never a real backend).");
+  }
+});
 let n = 0;
 const sign = (raw: string) => createHmac("sha256", SECRET).update(raw).digest("hex");
 async function call(raw: string, eid: string) {
@@ -44,7 +51,7 @@ async function seed(o: { bookingStatus?: string; advancePaidAt?: string | null; 
     id: bookingId, tenantId: "adv-t", studioId: "st1", status: o.bookingStatus ?? "CONFIRMED",
     paymentStatus: "unpaid", advancePaymentId: payDocId, advancePaidAt: o.advancePaidAt ?? null,
   });
-  return { payDocId, bookingId, orderId, payId };
+  return { payDocId, bookingId, orderId, payId, linkId: `plink_${id}` };
 }
 
 describe("advance webhook (targetType booking, reviewer B)", () => {
@@ -86,6 +93,18 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
     expect(pay.invoiceReviewNeeded).toBe(true);
     const bk = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
     expect(bk.advancePaidAt ?? null).toBeNull(); // untouched
+  });
+
+  it("payment_link.expired on a pending advance clears the dead stored URL; payment stays pending (reviewer W3)", async () => {
+    const s = await seed();
+    const raw = JSON.stringify({ event: "payment_link.expired", payload: { payment_link: { entity: { id: s.linkId, status: "expired" } } } });
+    // findPayment matches on razorpayPaymentLinkId from the link entity
+    const r = await call(raw, "ADVX" + s.payDocId);
+    expect(r.body.outcome).toBe("link_expired");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.paymentUrl ?? null).toBeNull(); // dead URL cleared
+    expect(pay.status).toBe("pending"); // no money moved
+    expect(pay.razorpayPaymentLinkId).toBeTruthy(); // kept for reconciliation
   });
 
   it("a second capture for an already advance-paid booking flags review instead of double-marking", async () => {

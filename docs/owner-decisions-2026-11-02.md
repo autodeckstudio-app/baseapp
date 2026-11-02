@@ -75,27 +75,46 @@ unrelated payment/refund rules.
   "Rs 100 or 20%"; Gauri's basket "retain 20% of total service cost".
   Do NOT act on any of these. A single recommendation is prepared below.
 
-## 5. No-show money policy - RECOMMENDATION for the owner (draft, undecided)
-Recommended single rule: a no-show forfeits exactly the 20% advance, for
-BOTH payment modes, disclosed before payment.
-- Pay-at-studio advance (the adopted flow): the studio keeps the 20%
-  advance already paid; nothing more is charged; the balance is cancelled
-  with the booking. Execution: no money movement needed - the advance
-  payment is already completed; booking closes as no-show.
-- Full-online prepayment (if ever offered): retain 20% of the service
-  price incl GST and refund the rest through the normal refund route
-  (outbox reservation, office review). Execution: refund reservation of
-  (paid - 20% of service incl GST); never automatic without review.
+## 5. No-show money policy - RECOMMENDATION for the owner (draft, UNDECIDED)
+Full-online payment EXISTS today and is unchanged: bookings with
+payMode "online" hold as PENDING, the customer pays 100% by payment link,
+and the verified webhook confirms the booking. Nothing in this proposal
+changes that flow, and no change to full-online happens without the
+owner's specific approval.
+
+Recommended single rule (NOT confirmed, presented for the owner's
+decision): on a no-show the studio retains exactly the advance basis -
+20% of the discounted service price including GST, EXCLUDING pickup/drop
+fees and their GST - and nothing more.
+
+Actual effect per payment mode:
+- Pay-at-studio advance (basket item 4, once enabled): the customer has
+  paid only the advance. The studio keeps it; the balance is cancelled
+  with the booking. Zero money movement needed - no charge, no refund.
+- Full-online (existing flow, customer paid 100%): the studio retains the
+  SAME amount the advance would have been (20% of the discounted service
+  incl GST, excl pickup/drop and their GST) and refunds the rest. The
+  refund therefore returns the full 80% service remainder PLUS all unused
+  pickup/drop fees and their GST. It is NOT 20% of the entire paid
+  amount. Execution: the retained/refund split goes to the office review
+  queue; a human approves, then the existing refund outbox moves the
+  money. Office review is a decision point, not a completed refund.
 - Late cancellation is a SEPARATE event with its own terms (still
-  unsettled); no-show is never silently treated as a late cancel and this
-  rule introduces no cancellation fee.
-- Why this one: one uniform 20% number matches the advance the owner
-  already adopted, is simple to disclose in one sentence, needs no new
-  money movement in the adopted pay-at-studio flow, and avoids the
-  voice-note "retain full payment" outcome, which is harsher than the
-  advance itself and was never confirmed.
-- If the owner picks something else, the disclosure copy and the admin
-  no-show review candidates change, nothing else is pre-built on this.
+  unsettled); a no-show is never silently treated as a late cancel, and
+  this rule introduces no cancellation fee. Premium categories keep the
+  already-settled 24h cutoff; this rule does not change rescheduling.
+- Pre-existing captured-money cases (e.g. cancelled bookings with money
+  already received, the Rs 1800-class cases in the review queue) are a
+  SEPARATE decision and are not covered by this proposal.
+
+Why this one: one uniform basis matches the advance already adopted, is
+disclosable in one sentence, needs no money movement in the adopted
+pay-at-studio flow, and treats both payment modes identically in effect.
+Historical sources conflict (a 20 Oct voice note recited as "retain the
+full payment"; a dead citation claiming "Rs 100 or 20%"; Gauri's "retain
+20% of total service cost") - none is actionable owner authority, and
+this proposal is not built on any of them. Nothing here is confirmed
+until the owner says so.
 
 ## Explicitly still NOT decided / out of scope
 - Refund terms (full-online refunds, late-cancel refunds, and any

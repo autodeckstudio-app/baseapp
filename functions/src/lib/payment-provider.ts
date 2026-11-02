@@ -9,6 +9,10 @@ export interface CreatePaymentLinkParams {
   customerName: string;
   customerPhone: string;
   referenceId: string; // idempotency key for the provider
+  /** Optional link expiry (epoch seconds, provider "expire_by"). Without an
+   *  expiry a stored URL can go stale unnoticed; with one, the provider
+   *  emits payment_link.expired and the webhook clears the dead URL. */
+  expireByEpochSeconds?: number;
 }
 
 export interface PaymentLinkResult {

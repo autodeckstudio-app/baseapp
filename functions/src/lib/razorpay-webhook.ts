@@ -160,7 +160,24 @@ export async function processProviderEvent(
     // by the verified provider result before any ordinary handling.
     const waiting = await resolveWaitingCancel(tx, db, payment, ev, now);
     if (waiting) { record(waiting); return waiting; }
-    if (ev.eventType === "payment_link.expired" || ev.eventType === "payment_link.cancelled") { record("ignored"); return "ignored"; }
+    if (ev.eventType === "payment_link.expired" || ev.eventType === "payment_link.cancelled") {
+      // Advance links (targetType "booking", PREVIEW): an expired/cancelled
+      // link means the stored paymentUrl is dead. Leaving it would strand
+      // the customer on a URL that can never be paid (reviewer W3). Clear
+      // the URL so the next request reconciles with the provider (old link
+      // confirmed inactive) before any fresh link is created. The provider
+      // link id is KEPT for that reconciliation. Not a payment event: no
+      // money moved, payment stays pending.
+      const isTerminalLink = ev.eventType === "payment_link.expired" ? "link_expired" as const : "link_cancelled" as const;
+      if (payment.targetType === "booking" && (payment.status === "pending" || payment.status === "processing") && payment.paymentUrl) {
+        record(isTerminalLink);
+        tx.update(paymentRef, { paymentUrl: null, updatedAt: now });
+        writeAuditLog(tx, { action: "payment.advance_link_expired", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
+          after: { paymentUrl: null, via: "razorpay_webhook", eventType: ev.eventType } });
+        return isTerminalLink;
+      }
+      record("ignored"); return "ignored";
+    }
 
     if (isPaid) {
       if (payment.status === "completed" && payment.targetType === "membership" && payment.membershipId) {

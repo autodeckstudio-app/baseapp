@@ -76,6 +76,7 @@ export class RazorpayProvider implements PaymentProvider {
           ...(params.customerPhone ? { contact: params.customerPhone } : {}),
         },
         reference_id: params.referenceId,
+        ...(params.expireByEpochSeconds ? { expire_by: params.expireByEpochSeconds } : {}),
         notes: { bookingId: params.bookingId },
         callback_url: null, // handled via webhook
         callback_method: null,

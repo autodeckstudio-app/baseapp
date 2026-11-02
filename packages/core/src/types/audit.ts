@@ -13,6 +13,7 @@ export type AuditAction =
   | "booking.created"
   | "booking.confirmed"
   | "booking.advance_paid"
+  | "payment.advance_link_expired"
   | "booking.expired"
   | "booking.cancelled"
   | "booking.noshow_resolved"

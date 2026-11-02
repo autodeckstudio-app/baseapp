@@ -11,7 +11,7 @@ function deps(over: Partial<AdvanceLinkDeps> = {}) {
   const calls = { create: 0, fetch: 0, patch: 0, ambiguous: 0, review: [] as string[] };
   const d: AdvanceLinkDeps = {
     createLink: async () => { calls.create++; return { providerPaymentLinkId: "plink_1", providerOrderId: "order_1", paymentUrl: "https://pay/1" }; },
-    fetchLink: async () => { calls.fetch++; return { id: "plink_1", amount: 23600, currency: "INR", paymentUrl: "https://pay/1" }; },
+    fetchLink: async () => { calls.fetch++; return { id: "plink_1", amount: 23600, currency: "INR", paymentUrl: "https://pay/1", status: "created" }; },
     patch: async () => { calls.patch++; },
     markAmbiguous: async () => { calls.ambiguous++; },
     flagManualReview: async (r) => { calls.review.push(r); },
@@ -49,8 +49,28 @@ describe("ensureAdvanceLink (reviewer A: never blind-retry a payable link)", () 
     expect(r).toEqual({ outcome: "link_ready", paymentUrl: "https://pay/1" });
     expect(calls.fetch).toBe(1); expect(calls.create).toBe(0); expect(calls.patch).toBe(1);
   });
+  it("cleared URL + provider says old link EXPIRED: a fresh link is created (old confirmed inactive)", async () => {
+    let fetched = 0;
+    const { d, calls } = deps({ fetchLink: async () => { fetched++; return { id: "plink_1", amount: 23600, currency: "INR", paymentUrl: "https://pay/old", status: "expired" }; } });
+    const r = await ensureAdvanceLink({ ...base, razorpayPaymentLinkId: "plink_1" }, params, d);
+    expect(r.outcome).toBe("link_ready");
+    expect(fetched).toBe(1); expect(calls.create).toBe(1);
+  });
+  it("cleared URL + provider says old link still ACTIVE: re-stores the URL, never creates", async () => {
+    const { d, calls } = deps();
+    const r = await ensureAdvanceLink({ ...base, razorpayPaymentLinkId: "plink_1" }, params, d);
+    expect(r).toEqual({ outcome: "link_ready", paymentUrl: "https://pay/1" });
+    expect(calls.create).toBe(0); expect(calls.patch).toBe(1);
+  });
+  it("cleared URL + provider says PAID while our record is pending: manual review, no create", async () => {
+    let fetched = 0;
+    const { d, calls } = deps({ fetchLink: async () => { fetched++; return { id: "plink_1", amount: 23600, currency: "INR", paymentUrl: "https://pay/1", status: "paid" }; } });
+    const r = await ensureAdvanceLink({ ...base, razorpayPaymentLinkId: "plink_1" }, params, d);
+    expect(r.outcome).toBe("manual_review");
+    expect(calls.create).toBe(0); expect(calls.review.length).toBe(1);
+  });
   it("reconciled link with a mismatched amount goes to manual review, not to the customer", async () => {
-    const { d, calls } = deps({ fetchLink: async () => ({ id: "plink_1", amount: 99999, currency: "INR", paymentUrl: "https://pay/x" }) });
+    const { d, calls } = deps({ fetchLink: async () => { calls.fetch++; return { id: "plink_1", amount: 99999, currency: "INR", paymentUrl: "https://pay/x", status: "created" }; } });
     const r = await ensureAdvanceLink({ ...base, orderAmbiguous: true, razorpayPaymentLinkId: "plink_1" }, params, d);
     expect(r.outcome).toBe("manual_review");
     expect(calls.review.length).toBe(1);
