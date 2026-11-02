@@ -24,7 +24,7 @@ import {
   CANCELLATION_FREE_WINDOW_HOURS,
 } from "@autodeck/core";
 
-process.env["FIRESTORE_EMULATOR_HOST"] ??= "localhost:8080";
+process.env["FIRESTORE_EMULATOR_HOST"] ??= "localhost:8099"; // matches firebase.json (firestore.port 8099)
 process.env["FIREBASE_AUTH_EMULATOR_HOST"] ??= "localhost:9099";
 process.env["GCLOUD_PROJECT"] ??= "autodeck-dev";
 
