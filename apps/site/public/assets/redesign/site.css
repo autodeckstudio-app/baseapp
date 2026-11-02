@@ -520,3 +520,6 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
    margin, leaving the step counter flush under the phone where the frame's
    outer bezel shadow clips it. Restore the designed caption spacing. */
 .autodeck .walk-phone-sticky .walk-counter{margin:18px 0 8px}
+
+/* picture wrapper for responsive hero film: no box of its own */
+.hero-film>picture{display:contents}

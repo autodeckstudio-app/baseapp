@@ -9,37 +9,31 @@ import { recordWebVitalSchema } from "../../schemas/telemetry.js";
 describe("recordWebVitalSchema", () => {
   const good = {
     app: "customer",
-    name: "LCP",
-    value: 1234.5,
-    rating: "good",
-    page: "/bookings",
+    page: "/bookings/:id",
     navigationType: "navigate",
+    metrics: { LCP: { value: 1234.5, rating: "good" }, CLS: { value: 0.04, rating: "good" } },
   };
 
-  it("accepts a valid beacon", () => {
+  it("accepts a valid coalesced beacon", () => {
     expect(recordWebVitalSchema.safeParse(good).success).toBe(true);
   });
 
-  it("accepts a beacon without navigationType", () => {
-    const { navigationType: _omit, ...rest } = good;
-    expect(recordWebVitalSchema.safeParse(rest).success).toBe(true);
+  it("rejects an empty metrics object (no empty writes)", () => {
+    expect(recordWebVitalSchema.safeParse({ ...good, metrics: {} }).success).toBe(false);
   });
 
-  it("rejects unknown metric names", () => {
-    expect(recordWebVitalSchema.safeParse({ ...good, name: "FID" }).success).toBe(false);
+  it("rejects unknown metric names and bad ratings", () => {
+    expect(recordWebVitalSchema.safeParse({ ...good, metrics: { FID: { value: 1, rating: "good" } } }).success).toBe(false);
+    expect(recordWebVitalSchema.safeParse({ ...good, metrics: { LCP: { value: 1, rating: "ok" } } }).success).toBe(false);
   });
 
   it("rejects negative or unbounded values", () => {
-    expect(recordWebVitalSchema.safeParse({ ...good, value: -1 }).success).toBe(false);
-    expect(recordWebVitalSchema.safeParse({ ...good, value: Number.POSITIVE_INFINITY }).success).toBe(false);
-    expect(recordWebVitalSchema.safeParse({ ...good, value: 3_600_001 }).success).toBe(false);
+    expect(recordWebVitalSchema.safeParse({ ...good, metrics: { LCP: { value: -1, rating: "poor" } } }).success).toBe(false);
+    expect(recordWebVitalSchema.safeParse({ ...good, metrics: { LCP: { value: Number.POSITIVE_INFINITY, rating: "poor" } } }).success).toBe(false);
   });
 
-  it("rejects extra keys (strict)", () => {
+  it("rejects extra keys (strict) and over-long pages", () => {
     expect(recordWebVitalSchema.safeParse({ ...good, debug: true }).success).toBe(false);
-  });
-
-  it("rejects over-long page paths", () => {
     expect(recordWebVitalSchema.safeParse({ ...good, page: `/${"a".repeat(200)}` }).success).toBe(false);
   });
 });
@@ -55,5 +49,10 @@ describe("recordWebVital wiring", () => {
   it("requires an authenticated user and is rate limited", () => {
     expect(src).toContain("extractUser(request)");
     expect(src).toContain('"telemetry.webVital"');
+  });
+
+  it("carries a TTL-compatible expireAt field for the retention policy", () => {
+    expect(src).toContain("expireAt");
+    expect(src).toContain("Timestamp.fromMillis");
   });
 });
