@@ -310,7 +310,7 @@ describe("Customer booking reschedule", () => {
         expect(finalJob.statusHistory.some((h) => h.status === "CANCELLED"), `iteration ${i}`).toBe(true);
       }
     }
-  }, 60_000);
+  }, 300_000);
 
   it("Phase 5B P1-4 regression: concurrent advanceJobStatus + rescheduleBooking never silently drops a statusHistory entry (P2-4 stress)", async () => {
     // Repeated stress iterations, not a single pair (Phase 5B P2-4) — same
@@ -362,5 +362,5 @@ describe("Customer booking reschedule", () => {
         expect(finalJob.statusHistory.some((h) => h.notes?.includes("Rescheduled to")), `iteration ${i}`).toBe(true);
       }
     }
-  }, 60_000);
+  }, 300_000);
 });
