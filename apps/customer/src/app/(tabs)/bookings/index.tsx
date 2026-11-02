@@ -141,7 +141,7 @@ export default function BookingsScreen() {
   const todayIst = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const next = upcoming[0];
   const nextCar = next ? cars[next.vehicleId] ?? (next.vehicleSnapshot ? { ...next.vehicleSnapshot, photoUrl: null, category: next.vehicleCategory } : undefined) : undefined;
-  const nextElig = next ? getRescheduleEligibility(next) : null;
+  const nextElig = next ? getRescheduleEligibility(next, svcs[next.serviceId]?.category) : null;
   const nextCancel = next ? cancelState(next, Date.now(), svcs[next.serviceId]?.category) : null;
   const rebook = recentDistinctServices(all, 3).filter((b) => svcs[b.serviceId] && !svcs[b.serviceId]!.priceOnRequest);
   // Ideas for the empty page: only from this car's real history and the live catalogue. A block with no data is not drawn.

@@ -276,7 +276,7 @@ export default function BookingDetailScreen() {
   // booking is noise, so the section stays hidden. Opened later from the
   // bookings list (no placed param) every rule below applies exactly as before.
   const showRescheduleSection = placed !== "1" && !waitingCancel && !walkIn && booking.status !== "CANCELLED" && booking.status !== "COMPLETED" && booking.status !== "EXPIRED";
-  const rescheduleEligibility = getRescheduleEligibility(booking);
+  const rescheduleEligibility = getRescheduleEligibility(booking, svc?.category);
   const hasPendingApproval = approvals.some((a) => a.status === "pending");
 
   const scheduledAt = new Date(booking.scheduledAt);

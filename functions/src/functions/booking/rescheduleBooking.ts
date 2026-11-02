@@ -3,9 +3,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Booking, StudioConfig, ServiceJob, Service } from "@autodeck/core";
 import {
-  MAX_CUSTOMER_RESCHEDULES,
-  CANCELLATION_FREE_WINDOW_HOURS,
   isBookingMissed,
+  rescheduleRule,
   MAX_SERVICE_SPAN_DAYS,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -58,23 +57,6 @@ export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppChec
 
   // Customer reschedule rules (doc07 §7.8)
   // A missed booking (start time passed, car never came) can always be moved to a new future time.
-  if (isCustomer && !missed) {
-    if (booking.rescheduleCount >= MAX_CUSTOMER_RESCHEDULES) {
-      throw new HttpsError(
-        "failed-precondition",
-        `Maximum reschedules (${MAX_CUSTOMER_RESCHEDULES}) reached. Contact the studio to reschedule.`,
-      );
-    }
-    const scheduledAt = new Date(booking.scheduledAt);
-    const hoursUntil = (scheduledAt.getTime() - Date.now()) / 3600000;
-    if (hoursUntil < CANCELLATION_FREE_WINDOW_HOURS) {
-      throw new HttpsError(
-        "failed-precondition",
-        `Reschedules within ${CANCELLATION_FREE_WINDOW_HOURS} hours of the appointment must be made by contacting the studio directly.`,
-      );
-    }
-  }
-
   const [serviceSnap, configSnap] = await Promise.all([
     db.collection(COLLECTIONS.services()).doc(booking.serviceId).get(),
     db.collection(COLLECTIONS.studioConfig()).doc(booking.studioId).get(),
@@ -83,6 +65,28 @@ export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppChec
   if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
 
   const service = serviceSnap.data() as Service;
+
+  // Category-aware customer rules (basket item 6): wash services get one free
+  // move up to 4 hours ahead; every other category keeps the legacy 2/24h
+  // rule until the premium request-and-approve flow is reviewed and activated.
+  const rule = rescheduleRule(service.category);
+  if (isCustomer && !missed) {
+    if (booking.rescheduleCount >= rule.maxCount) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Maximum reschedules (${rule.maxCount}) reached. Contact the studio to reschedule.`,
+      );
+    }
+    const scheduledAt = new Date(booking.scheduledAt);
+    const hoursUntil = (scheduledAt.getTime() - Date.now()) / 3600000;
+    if (hoursUntil < rule.cutoffHours) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Reschedules within ${rule.cutoffHours} hours of the appointment must be made by contacting the studio directly.`,
+      );
+    }
+  }
+
   // The whole visit (primary plus extras) is what holds the bay, so use the minutes saved at booking time, not the primary service alone.
   const visitMinutes = booking.durationMinutes || service.estimatedDurationMinutes;
   const config = configSnap.data() as StudioConfig;

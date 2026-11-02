@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, getAvailability, rescheduleBooking, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { extraServiceIdsOf } from "../../../lib/booking-rules";
 import type { Booking } from "@autodeck/core";
-import { MAX_CUSTOMER_RESCHEDULES, CANCELLATION_FREE_WINDOW_HOURS, isBookingMissed } from "@autodeck/core";
+import { rescheduleRule, isBookingMissed } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
@@ -16,6 +17,7 @@ export default function RescheduleBookingScreen() {
   const { colors } = useExperienceTheme();
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [svcCategory, setSvcCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
@@ -33,7 +35,11 @@ export default function RescheduleBookingScreen() {
     setLoading(true);
     setLoadFailed(false);
     void getBookingById(bookingId)
-      .then(setBooking)
+      .then((b) => {
+        setBooking(b);
+        // Category drives the adopted wash reschedule rule (item 6); missing category keeps legacy behavior.
+        if (b) void getServiceCatalogue().then((all) => setSvcCategory(all.find((x) => x.id === b.serviceId)?.category ?? null)).catch(() => undefined);
+      })
       .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
   }, [bookingId]);
@@ -63,11 +69,12 @@ export default function RescheduleBookingScreen() {
     );
   }
 
+  const rule = rescheduleRule(svcCategory);
   const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
   const eligible =
     booking.status === "CONFIRMED" &&
-    (isBookingMissed(booking) || (booking.rescheduleCount < MAX_CUSTOMER_RESCHEDULES &&
-    hoursUntil >= CANCELLATION_FREE_WINDOW_HOURS));
+    (isBookingMissed(booking) || (booking.rescheduleCount < rule.maxCount &&
+    hoursUntil >= rule.cutoffHours));
 
   if (!eligible) {
     return (
