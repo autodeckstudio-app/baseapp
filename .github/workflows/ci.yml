@@ -3,7 +3,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # Preview incorporation branch: hosted CI on push without involving main.
+    branches: [main, preview/gauri-basket]
 
 concurrency:
   group: ci-${{ github.ref }}
