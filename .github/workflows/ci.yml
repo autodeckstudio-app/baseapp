@@ -38,3 +38,38 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      # Firestore emulator runs on Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: pnpm install --frozen-lockfile
+      # firebase-tools is CI-only, kept out of the repo's dependencies so the
+      # production install surface does not grow. Emulators run against a
+      # demo-* project: no credentials, no live backend, no billing.
+      - run: npm install --no-save firebase-tools@13
+      # Some storage tests need to exercise the signed-URL code path. They use
+      # a THROWAWAY keypair generated per run - never production credentials -
+      # purely so Admin SDK cert() signing works locally. Nothing to revoke.
+      - name: Generate throwaway signing keypair for emulator tests
+        run: |
+          openssl genrsa -out /tmp/ci-sign-key.pem 2048
+          echo "TEST_SIGN_CLIENT_EMAIL=ci-signer@demo-autodeck-ci.iam.gserviceaccount.com" >> "$GITHUB_ENV"
+          echo "TEST_SIGN_PRIVATE_KEY<<EOF_KEY" >> "$GITHUB_ENV"
+          cat /tmp/ci-sign-key.pem >> "$GITHUB_ENV"
+          echo "EOF_KEY" >> "$GITHUB_ENV"
+          rm /tmp/ci-sign-key.pem
+      - run: npx firebase emulators:exec --only auth,firestore,storage --project demo-autodeck-ci 'pnpm --filter functions test:emulator'
