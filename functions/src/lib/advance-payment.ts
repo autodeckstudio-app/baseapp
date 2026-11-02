@@ -12,6 +12,13 @@ import { calculateTax } from "./pricing.js";
 
 export const ADVANCE_PAYMENT_ENABLED = false;
 
+/** Flag-only seam (reviewer R4): every activation check goes through this
+ *  getter so a test can override JUST the flag and run the REAL builder,
+ *  never a reimplemented copy. */
+export function advancePaymentEnabled(): boolean {
+  return ADVANCE_PAYMENT_ENABLED;
+}
+
 /** Owner-adopted policy (2 Nov 2026, "All 3"): 20% of the discounted service
  *  price incl GST EXCL pickup, advance rounded UP, balance exact. Single
  *  source for every call site; the core helper still takes them as REQUIRED
@@ -109,8 +116,12 @@ export function buildAdvancePaymentRequest(
   booking: AdvanceBookingShape,
   basis: AdvanceBasis,
   rounding: AdvanceRounding,
+  /** Dependency override (reviewer R4): the caller passes the flag it
+   *  resolved through advancePaymentEnabled(), so a test flips ONE seam and
+   *  the REAL builder + split math run. Defaults to the real getter. */
+  opts?: { enabled?: boolean },
 ): AdvancePaymentRequest {
-  if (!ADVANCE_PAYMENT_ENABLED) {
+  if (!(opts?.enabled ?? advancePaymentEnabled())) {
     throw new Error("Advance split payments are disabled (ADVANCE_PAYMENT_ENABLED=false): policy is owner-adopted; the activation gate (final review) is outstanding.");
   }
   if (booking.payMode !== "studio") {

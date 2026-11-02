@@ -17,25 +17,9 @@ const h = vi.hoisted(() => ({ enabled: true }));
 // math, studio balance, payMode/existing-advance guards) is the real code.
 vi.mock("../../lib/advance-payment.js", async (orig) => {
   const m = await orig<typeof import("../../lib/advance-payment.js")>();
-  return {
-    ...m,
-    get ADVANCE_PAYMENT_ENABLED() { return h.enabled; },
-    buildAdvancePaymentRequest: (booking: Parameters<typeof m.buildAdvancePaymentRequest>[0], basis: Parameters<typeof m.buildAdvancePaymentRequest>[1], rounding: Parameters<typeof m.buildAdvancePaymentRequest>[2]) => {
-      if (!h.enabled) throw new Error("Advance split payments are disabled (ADVANCE_PAYMENT_ENABLED=false): policy is owner-adopted; the activation gate (final review) is outstanding.");
-      if (booking.payMode !== "studio") throw new Error(`Advance applies to pay-at-studio bookings only (payMode=${booking.payMode}).`);
-      if (booking.advancePaymentId) throw new Error("An advance payment is already recorded for this booking.");
-      const split = m.computeAdvanceSplitFromBreakdown(booking.priceBreakdown, basis, rounding);
-      return {
-        amountPaise: split.advancePaise,
-        currency: booking.currency,
-        bookingId: booking.id,
-        description: "Advance for your AutoDeck booking (balance payable at the studio)",
-        referenceId: `advance-${booking.id}`,
-        advancePaise: split.advancePaise,
-        dueAtStudioPaise: m.studioBalancePaise(booking.priceBreakdown, split.advancePaise),
-      };
-    },
-  };
+  // R4: flag-ONLY seam override - the REAL buildAdvancePaymentRequest,
+  // REAL split math, REAL guards run; only the activation flag is flipped.
+  return { ...m, advancePaymentEnabled: () => h.enabled };
 });
 
 import { requestAdvancePayment } from "../../functions/payment/requestAdvancePayment.js";
@@ -85,12 +69,47 @@ describe("requestAdvancePayment callable (W1, flag mocked on, mock provider)", (
     expect(r.status).toBe("pending");
     expect(r.paymentUrl).toContain("mock-razorpay.local");
     const pay = (await db.collection("payments").doc(s.paymentId).get()).data()!;
-    expect(pay.amount).toBe(23600); // ceil 20% of 118000
+    expect(pay.amount).toBe(23600); // ceil 20% of 118000 - REAL builder, pinned
     expect(pay.targetType).toBe("booking");
-    expect(pay.razorpayPaymentLinkId).toBeTruthy();
-    expect(pay.orderAmbiguous ?? null).toBeNull();
+    // R4 pins: deterministic referenceId == payment id == provider link id;
+    // exact output shape; lease + ambiguity cleared by the binding patch.
+    expect(pay.razorpayPaymentLinkId).toBe(`mock_plink_advance-${s.bookingId}`);
+    expect(pay.paymentUrl).toBe(`https://mock-razorpay.local/pay/advance-${s.bookingId}?amount=23600`);
+    expect(pay.linkCreateLeaseId ?? null).toBeNull();
+    expect(pay.orderAmbiguous).toBe(false); // pre-marked by the claim, cleared by the binding patch
+    expect(Object.keys(r).sort()).toEqual(["paymentId", "paymentUrl", "status"]);
     const bk = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
     expect(bk.advancePaymentId).toBe(s.paymentId);
+  });
+
+  it("R3: advance payable against an ACTIVE held (PENDING) booking", async () => {
+    n += 1; const id = `${Date.now()}${n}`;
+    const customerId = `ac-c-${id}`, bookingId = `ac-b-${id}`;
+    await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", name: "T", phone: "+919000000001" });
+    await db.collection("bookings").doc(bookingId).set({
+      id: bookingId, tenantId: "ac-t", studioId: "ac-s", customerId,
+      status: "PENDING", paymentStatus: "unpaid", payMode: "studio",
+      holdExpiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+      priceBreakdown: { currency: "INR", subtotal: 108000, pickupFee: 5000, dropFee: 3000, membershipDiscount: null, taxRatePercent: 18, tax: 19440, total: 127440 },
+    });
+    const r = (await requestAdvancePayment.run({ data: { bookingId }, auth: auth(customerId) } as never)) as { paymentUrl: string; status: string };
+    expect(r.status).toBe("pending");
+    expect(r.paymentUrl).toContain("amount=23600");
+  });
+
+  it("R3: an EXPIRED hold cannot be paid against - fail before any provider work", async () => {
+    n += 1; const id = `${Date.now()}${n}`;
+    const customerId = `ac-c-${id}`, bookingId = `ac-b-${id}`;
+    await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", name: "T", phone: "+919000000001" });
+    await db.collection("bookings").doc(bookingId).set({
+      id: bookingId, tenantId: "ac-t", studioId: "ac-s", customerId,
+      status: "PENDING", paymentStatus: "unpaid", payMode: "studio",
+      holdExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+      priceBreakdown: { currency: "INR", subtotal: 108000, pickupFee: 5000, dropFee: 3000, membershipDiscount: null, taxRatePercent: 18, tax: 19440, total: 127440 },
+    });
+    await expect(requestAdvancePayment.run({ data: { bookingId }, auth: auth(customerId) } as never))
+      .rejects.toThrow(/hold expired/);
+    expect((await db.collection("payments").doc(`advance-${bookingId}`).get()).exists).toBe(false);
   });
 
   it("retry reconciles FIRST: same link id and URL, no duplicate payable link", async () => {

@@ -25,14 +25,35 @@ export type AdvanceLinkState = {
 
 export type FetchedLink = { id: string; amount: number; currency: string; paymentUrl: string; status: string };
 
+export type CreateClaim =
+  /** We hold the exclusive create lease; ambiguity is pre-marked so a crash
+   *  anywhere after this point fails CLOSED, never a blind second create. */
+  | { kind: "acquired" }
+  /** Another caller holds the lease. ambiguous=true means that creator
+   *  crashed mid-create: provider state unknown, fail CLOSED to review. */
+  | { kind: "held"; ambiguous: boolean }
+  /** A link id was bound between our read and our claim: reconcile it. */
+  | { kind: "linked"; linkId: string };
+
 export type AdvanceLinkDeps = {
   fetchLink(providerPaymentLinkId: string): Promise<FetchedLink | null>;
   createLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult>;
+  /** Exclusive provider-create claim (reviewer R1): exactly one caller may
+   *  hold the lease for a payment; implemented as ONE transaction that
+   *  requires no bound link id and no live lease, and pre-marks ambiguity. */
+  claimCreate(leaseId: string, knownLinkId: string | null): Promise<CreateClaim>;
+  /** Conflict-aware binding patch (reviewer R1): binds the created ids and
+   *  clears the lease+ambiguity; if a DIFFERENT link id was bound first,
+   *  appends THIS patch's ids to the append-only prior history instead
+   *  (never an unbound payable loser) and reports the winner. */
   patch(patch: { paymentUrl: string | null; razorpayPaymentLinkId: string; razorpayOrderId: string | null;
     /** Ids of the link/order THIS patch replaces. The persistence layer
      *  appends them to priorLinkIds/priorOrderIds (append-only, reviewer
      *  G2) so a late capture on the old link still resolves. */
-    superseded?: { linkId: string | null; orderId: string | null } }): Promise<void>;
+    superseded?: { linkId: string | null; orderId: string | null } }): Promise<{ bound: true } | { bound: false; winnerLinkId: string }>;
+  /** Post-commit provider cancel for a LOST race's link (reviewer R1):
+   *  the loser must never stay payable. */
+  cancelLink(providerPaymentLinkId: string): Promise<{ outcome: string }>;
   markAmbiguous(ambiguous: boolean): Promise<void>;
   flagManualReview(reason: string): Promise<void>;
 };
@@ -116,9 +137,29 @@ export async function ensureAdvanceLink(
     return { outcome: "manual_review" };
   }
 
-  // Fresh create. ANY failure after this point is ambiguous by definition:
-  // the provider may have created the link. The replaced link/order ids
-  // (when any) ride along so persistence appends them to the history.
+  // Fresh create under the EXCLUSIVE lease (reviewer R1: double tap,
+  // provider delay, crash - never an unbound payable loser). The claim
+  // transaction pre-marks ambiguity, so a crash anywhere below fails CLOSED
+  // on the next call instead of blind-creating a second payable link.
+  const claim = await deps.claimCreate(`lease-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, payment.razorpayPaymentLinkId);
+  if (claim.kind === "linked") {
+    // Someone bound a DIFFERENT link between our read and our claim:
+    // reconcile it through the same provider-first path, never trust it
+    // blindly. Bounded recursion: each hop requires a NEW bound id.
+    if ((payment as { __hops?: number }).__hops ?? 0 >= 3) {
+      await deps.flagManualReview("advance link binding kept changing during reconciliation");
+      return { outcome: "manual_review" };
+    }
+    return ensureAdvanceLink({ ...payment, razorpayPaymentLinkId: claim.linkId, __hops: ((payment as { __hops?: number }).__hops ?? 0) + 1 } as AdvanceLinkState, linkParams, deps);
+  }
+  if (claim.kind === "held") {
+    if (claim.ambiguous) {
+      await deps.flagManualReview("concurrent advance link create interrupted; provider state unknown");
+      return { outcome: "manual_review" };
+    }
+    // A live create is in flight elsewhere: the retry reconciles.
+    throw new Error("We are confirming your earlier payment link. Please try again in a few minutes.");
+  }
   const superseded = { linkId: payment.razorpayPaymentLinkId, orderId: payment.razorpayOrderId };
   let result: PaymentLinkResult;
   try {
@@ -127,8 +168,9 @@ export async function ensureAdvanceLink(
     await deps.markAmbiguous(true);
     throw e;
   }
+  let patchRes: { bound: true } | { bound: false; winnerLinkId: string };
   try {
-    await deps.patch({ paymentUrl: result.paymentUrl, razorpayPaymentLinkId: result.providerPaymentLinkId, razorpayOrderId: result.providerOrderId, superseded });
+    patchRes = await deps.patch({ paymentUrl: result.paymentUrl, razorpayPaymentLinkId: result.providerPaymentLinkId, razorpayOrderId: result.providerOrderId, superseded });
   } catch (e) {
     // The provider link EXISTS (we have its id) but the record did not take
     // it. Ambiguous WITH a reference: the next retry reconciles via fetch.
@@ -140,5 +182,28 @@ export async function ensureAdvanceLink(
     } catch { /* stays ambiguous; manual review path covers it */ }
     throw e;
   }
-  return { outcome: "link_ready", paymentUrl: result.paymentUrl };
+  if (patchRes.bound) {
+    return { outcome: "link_ready", paymentUrl: result.paymentUrl };
+  }
+  // LOST the race (reviewer R1): the winner's link is bound; OUR ids are
+  // already in the append-only prior history (the conflict patch did it),
+  // so no payable link is unbound. Cancel our loser at the provider -
+  // failure surfaces as an actionable ops retry, never silent.
+  let cancelOutcome: string;
+  try {
+    cancelOutcome = (await deps.cancelLink(result.providerPaymentLinkId)).outcome;
+  } catch (e) {
+    cancelOutcome = `cancel_failed: ${e instanceof Error ? e.message : String(e)}`;
+  }
+  if (cancelOutcome !== "cancelled") {
+    await deps.flagManualReview(`lost advance link race: provider cancel of ${result.providerPaymentLinkId} ended "${cancelOutcome}" - retry the provider cancel (no double collection while it stays payable)`);
+    return { outcome: "manual_review" };
+  }
+  // Reconcile the WINNER provider-first and hand out only a validated URL.
+  const winner = await deps.fetchLink(patchRes.winnerLinkId);
+  if (winner && ACTIVE.has(winner.status) && winner.amount === payment.amount && winner.currency === payment.currency) {
+    return { outcome: "link_ready", paymentUrl: winner.paymentUrl };
+  }
+  await deps.flagManualReview(`lost advance link race and the winning link ${patchRes.winnerLinkId} did not validate`);
+  return { outcome: "manual_review" };
 }

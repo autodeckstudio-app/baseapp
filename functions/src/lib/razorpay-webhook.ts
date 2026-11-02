@@ -1,4 +1,5 @@
 import { resolveWaitingCancel } from "./waiting-cancel.js";
+import { isHoldExpired } from "./booking-hold.js";
 // Applies a verified payment-provider event to Firestore. Pure of HTTP: the
 // onRequest wrapper verifies the signature and calls processProviderEvent().
 //
@@ -8,7 +9,7 @@ import { resolveWaitingCancel } from "./waiting-cancel.js";
 //    second one finds the payment already completed and changes nothing;
 //  - the amount in the event must equal the stored payment amount, otherwise
 //    nothing is marked paid and the event is recorded for review.
-import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Booking, Gift, Invoice, Membership, Payment, ServiceJob } from "@autodeck/core";
 import { planReserveInTx, applyReserveInTx } from "./refund-outbox.js";
 import { planGiftActivation } from "./gift-activate.js";
@@ -231,8 +232,10 @@ export async function processProviderEvent(
         // and amount, flag the office review queue. Never flattened into a
         // silent already_final.
         record("overpayment_review");
+        // APPEND, never overwrite (main 2 Nov): operational review needs
+        // EVERY extra capture's identity, not just the latest slot.
         tx.update(paymentRef, { invoiceReviewNeeded: true,
-          overpayment: { providerPaymentId: ev.providerPaymentId, amount: ev.amount ?? null, currency: ev.providerPaymentEntityCurrency ?? null, at: now },
+          overpayments: FieldValue.arrayUnion({ providerPaymentId: ev.providerPaymentId, amount: ev.amount ?? null, currency: ev.providerPaymentEntityCurrency ?? null, at: now }),
           updatedAt: now });
         writeAuditLog(tx, { action: "payment.overpayment_flagged", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
           after: { overpaymentProviderPaymentId: ev.providerPaymentId, originalProviderPaymentId: payment.razorpayPaymentId } });
@@ -350,11 +353,18 @@ export async function processProviderEvent(
         // Tenant/studio binding (reviewer F1): a booking outside the
         // payment's tenant/studio must never be mutated by this payment.
         // Money is still recorded as received and flagged for review.
+        // R3 (main 2 Nov): the advance confirms ONLY the matching ACTIVE
+        // HELD booking. The 15-minute hold reserved capacity at creation;
+        // an EXPIRED hold means the sweep may release the slot, so money
+        // landing now is recorded but the booking is NOT confirmed - the
+        // office queue reconciles (capacity + refund), never silent.
+        const holdExpired = !!bk && bk.status === "PENDING" && isHoldExpired(bk, Date.parse(now));
         const anomaly = !bk ? "booking_missing"
           : bk.tenantId !== payment.tenantId ? "tenant_mismatch"
           : (bk.studioId ?? null) !== (payment.studioId ?? null) ? "studio_mismatch"
           : bk.status === "CANCELLED" ? "booking_cancelled"
           : bk.advancePaidAt ? "advance_already_paid"
+          : holdExpired ? "advance_hold_expired"
           : null;
         record("completed");
         tx.update(paymentRef, { status: "completed", razorpayPaymentId: ev.providerPaymentId || payment.razorpayPaymentId,
@@ -364,10 +374,20 @@ export async function processProviderEvent(
         writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: payment.studioId,
           after: { status: "completed", targetType: "booking", bookingId: payment.bookingId, via: "razorpay_webhook" },
           ...(anomaly ? { metadata: { needsReview: anomaly } } : {}) });
-        if (!anomaly && bRef) {
-          tx.update(bRef, { advancePaidAt: now, updatedAt: now });
-          writeAuditLog(tx, { action: "booking.advance_paid", entityType: "Booking", entityId: bRef.id, user, studioId: payment.studioId,
-            after: { advancePaidAt: now, paymentId: payment.id, via: "razorpay_webhook" } });
+        if (!anomaly && bRef && bk) {
+          if (bk.status === "PENDING") {
+            // Active held booking: confirm it (capacity was reserved by the
+            // hold), clear the hold, mark advance-paid - one transition.
+            tx.update(bRef, { status: "CONFIRMED", confirmedAt: now, holdExpiresAt: null, advancePaidAt: now, updatedAt: now });
+            writeAuditLog(tx, { action: "booking.confirmed", entityType: "Booking", entityId: bRef.id, user, studioId: payment.studioId,
+              before: { status: "PENDING" }, after: { status: "CONFIRMED", advancePaidAt: now, paymentId: payment.id, via: "razorpay_webhook" } });
+          } else {
+            // Pre-activation vintage (CONFIRMED without the hold): marker
+            // only, the status lifecycle is unchanged.
+            tx.update(bRef, { advancePaidAt: now, updatedAt: now });
+            writeAuditLog(tx, { action: "booking.advance_paid", entityType: "Booking", entityId: bRef.id, user, studioId: payment.studioId,
+              after: { advancePaidAt: now, paymentId: payment.id, via: "razorpay_webhook" } });
+          }
         }
         return "completed";
       }
@@ -681,10 +701,15 @@ export async function processProviderEvent(
       const res = await hooks.cancelLink(cancelLinkId);
       await alertRef.set({ id: alertRef.id, tenantId: found.tenantId, studioId: found.studioId ?? null,
         kind: "advance_old_link_capture", paymentId: found.id, cancelledProviderLinkId: cancelLinkId,
-        cancelOutcome: res.outcome, createdAt: new Date().toISOString() });
+        cancelOutcome: res.outcome,
+        // Actionable ops retry (main 2 Nov): anything but a confirmed
+        // cancel names the exact retry so the link cannot stay payable.
+        ...(res.outcome !== "cancelled" ? { retryAction: "cancel_provider_link" } : {}),
+        createdAt: new Date().toISOString() });
     } catch (e) {
       await alertRef.set({ id: alertRef.id, tenantId: found.tenantId, studioId: found.studioId ?? null,
         kind: "advance_old_link_capture_cancel_failed", paymentId: found.id, cancelledProviderLinkId: cancelLinkId,
+        retryAction: "cancel_provider_link",
         error: e instanceof Error ? e.message : String(e), createdAt: new Date().toISOString() });
     }
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceSplit, ADVANCE_PERCENT } from "./advance-split.js";
+import { advanceSplit, ADVANCE_PERCENT, NO_SHOW_ADVANCE_DISCLOSURE, NO_SHOW_FULL_ONLINE_DISCLOSURE } from "./advance-split.js";
 
 describe("advanceSplit", () => {
   it("adopted percent is 20", () => {
@@ -31,5 +31,18 @@ describe("advanceSplit", () => {
   it("rejects non-integer or negative inputs", () => {
     expect(() => advanceSplit(-1, 0, "service_total_only", "round")).toThrow();
     expect(() => advanceSplit(100.5, 0, "service_total_only", "round")).toThrow();
+  });
+});
+
+describe("no-show disclosures (item 5, OWNER-APPROVED 2 Nov 21:32:50)", () => {
+  it("pay-at-studio advance line", () => {
+    expect(NO_SHOW_ADVANCE_DISCLOSURE).toContain("20% advance");
+    expect(NO_SHOW_ADVANCE_DISCLOSURE).toContain("Nothing more is charged");
+    expect(NO_SHOW_ADVANCE_DISCLOSURE.toLowerCase()).not.toContain("cancel");
+  });
+  it("full-online line: 20% of service kept, remainder to owner refund approval, never auto-refunded", () => {
+    expect(NO_SHOW_FULL_ONLINE_DISCLOSURE).toContain("20% of the service price");
+    expect(NO_SHOW_FULL_ONLINE_DISCLOSURE).toContain("refund approval");
+    expect(NO_SHOW_FULL_ONLINE_DISCLOSURE.toLowerCase()).not.toContain("cancel");
   });
 });

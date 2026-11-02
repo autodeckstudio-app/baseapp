@@ -11,9 +11,13 @@ export const HOLD_MINUTES = 15;
 
 export type PayMode = "online" | "studio";
 
-/** Online payment holds the slot as PENDING. Free visits (gift, member wash), quotes and pay-at-studio are confirmed at once. */
-export function bookingStartState(i: { payMode: PayMode | undefined; totalPaise: number; priceOnRequest: boolean; nowMs: number }): { status: "PENDING" | "CONFIRMED"; holdExpiresAt: string | null } {
-  if (i.payMode === "online" && i.totalPaise > 0 && !i.priceOnRequest) {
+/** Online payment holds the slot as PENDING. Free visits (gift, member wash), quotes and pay-at-studio are confirmed at once.
+ *  With the advance flow enabled (PREVIEW flag), pay-at-studio REUSES the
+ *  exact same hold (reviewer R3, main 2 Nov): the 20% advance confirms the
+ *  slot inside the SAME verified 15-minute window with the SAME expiry
+ *  sweep - no new duration, no new money terms. */
+export function bookingStartState(i: { payMode: PayMode | undefined; totalPaise: number; priceOnRequest: boolean; nowMs: number; advanceEnabled?: boolean }): { status: "PENDING" | "CONFIRMED"; holdExpiresAt: string | null } {
+  if ((i.payMode === "online" || (i.advanceEnabled === true && i.payMode === "studio")) && i.totalPaise > 0 && !i.priceOnRequest) {
     return { status: "PENDING", holdExpiresAt: new Date(i.nowMs + HOLD_MINUTES * 60_000).toISOString() };
   }
   return { status: "CONFIRMED", holdExpiresAt: null };

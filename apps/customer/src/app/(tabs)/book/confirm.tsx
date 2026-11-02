@@ -266,7 +266,7 @@ export default function BookingConfirmScreen() {
       // the studio option chosen, a CONFIRMED booking goes straight to the
       // advance link. manual_review NEVER yields a URL - the customer gets a
       // retry-later notice instead of a payable link.
-      if (ADVANCE_SPLIT_ENABLED && payAtStudio && result.status === "CONFIRMED") {
+      if (ADVANCE_SPLIT_ENABLED && payAtStudio && (result.status === "CONFIRMED" || result.status === "PENDING")) {
         const adv = await requestAdvancePayment(result.id);
         if (adv.status === "manual_review" || !adv.paymentUrl) {
           setBookError("We're confirming your advance payment link. Please try again in a few minutes.");
@@ -417,7 +417,7 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : giftCode ? "Your slot is confirmed. Your gift covers this wash." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
+        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : giftCode ? "Your slot is confirmed. Your gift covers this wash." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : ADVANCE_SPLIT_ENABLED ? "Pay 20% advance online to confirm your slot. The rest at the studio when you collect your car." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
       </T>
       {washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
@@ -428,14 +428,20 @@ export default function BookingConfirmScreen() {
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
-            <Row title="Pay at studio" detail={<T role="caption" tone="secondary">Your slot is confirmed now. Pay when you collect your car.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!ADVANCE_SPLIT_ENABLED} />
+            <Row title="Pay at studio" detail={<T role="caption" tone="secondary">{ADVANCE_SPLIT_ENABLED ? "Pay 20% advance online to confirm. Slot held for 15 minutes; the rest at the studio." : "Your slot is confirmed now. Pay when you collect your car."}</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!ADVANCE_SPLIT_ENABLED} />
           </Pressable>
           {/* Items 4/5 preview: 20% advance + the OWNER-APPROVED no-show disclosure
               (2 Nov 21:32:50), DISABLED until the final review gate. */}
           {ADVANCE_SPLIT_ENABLED ? (
             <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}>
-              <T role="caption" tone="secondary">{advanceDisclosureLines().split}</T>
-              <T role="caption" tone="secondary">{advanceDisclosureLines().noShow}</T>
+              {payAtStudio ? (
+                <>
+                  <T role="caption" tone="secondary">{advanceDisclosureLines().split}</T>
+                  <T role="caption" tone="secondary">{advanceDisclosureLines().noShow}</T>
+                </>
+              ) : (
+                <T role="caption" tone="secondary">{advanceDisclosureLines().noShowFullOnline}</T>
+              )}
             </View>
           ) : null}
         </Pane>

@@ -45,10 +45,17 @@ export interface Payment {
    *  a late capture on an old link still resolves to this payment. */
   priorLinkIds?: string[];
   priorOrderIds?: string[];
-  /** A DISTINCT second capture after settlement (reviewer G3): identity and
-   *  amount of the extra capture, preserved for the office refund review.
-   *  The original razorpayPaymentId is never overwritten by this. */
-  overpayment?: { providerPaymentId: string; amount: number | null; currency: string | null; at: string } | null;
+  /** DISTINCT captures after settlement (reviewer G3 + main 2 Nov R-series):
+   *  APPEND-ONLY history of every extra capture's identity and amount for
+   *  the office refund review - events are history, operational review
+   *  needs ALL identities, so a later extra capture never overwrites an
+   *  earlier one. The original razorpayPaymentId is never touched. */
+  overpayments?: Array<{ providerPaymentId: string; amount: number | null; currency: string | null; at: string }>;
+  /** Exclusive advance-link create lease (reviewer R1): set in the claim
+   *  transaction BEFORE any provider create, cleared by the binding patch.
+   *  A held lease blocks any second create; a lease left behind by a crash
+   *  (with orderAmbiguous stuck true) fails CLOSED to manual review. */
+  linkCreateLeaseId?: string | null;
   // Set when the provider may have created an order but the response was lost.
   // While true, checkout order creation fails closed until reconciled with the provider.
   orderAmbiguous?: boolean | null;

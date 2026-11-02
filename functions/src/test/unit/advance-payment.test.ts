@@ -26,7 +26,7 @@ describe("buildAdvancePaymentRequest (preview, disabled)", () => {
   it("requires explicit basis and rounding - there is no defaulted call", () => {
     // Type-level: both params are required in the signature. Runtime proof:
     // even the disabled error path takes them, so a caller cannot omit them.
-    expect(buildAdvancePaymentRequest.length).toBe(3);
+    expect(buildAdvancePaymentRequest.length).toBe(4) // + the R4 dependency-override param (flag seam);
   });
 
   it("derives the adopted base from a REAL breakdown: discounted service incl GST, excl pickup AND its GST", () => {

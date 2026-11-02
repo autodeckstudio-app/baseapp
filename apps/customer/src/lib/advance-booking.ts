@@ -6,7 +6,7 @@
 // next whole rupee, balance exact), but activation still requires (a) payment-
 // flow wiring (Razorpay order for the advance) and (b) the final review gate.
 // While disabled nothing computes an amount and nothing here is shown.
-import { NO_SHOW_ADVANCE_DISCLOSURE } from "@autodeck/core";
+import { NO_SHOW_ADVANCE_DISCLOSURE, NO_SHOW_FULL_ONLINE_DISCLOSURE } from "@autodeck/core";
 
 export const ADVANCE_SPLIT_ENABLED = false;
 
@@ -17,9 +17,13 @@ export const ADVANCE_SPLIT_ENABLED = false;
  *  docs/owner-decisions-2026-11-02.md section 4), disclosed BEFORE payment;
  *  it deliberately avoids cancellation wording - a no-show is not a late
  *  cancellation. */
-export function advanceDisclosureLines(): { split: string; noShow: string } {
+export function advanceDisclosureLines(): { split: string; noShow: string; noShowFullOnline: string } {
   return {
     split: "You pay 20% online now to confirm; the rest at the studio when you collect your car.",
     noShow: NO_SHOW_ADVANCE_DISCLOSURE,
+    // Full-online mode gets the same owner-approved rule with its own
+    // wording: 20% of the service price kept, the remainder (incl unused
+    // pickup/drop + GST) goes to owner refund approval, never auto-refunded.
+    noShowFullOnline: NO_SHOW_FULL_ONLINE_DISCLOSURE,
   };
 }

@@ -16,4 +16,12 @@ describe("advance split disclosure (items 4/5, preview)", () => {
     expect(noShow).toContain("Nothing more is charged");
     expect(noShow.toLowerCase()).not.toContain("cancel");
   });
+  it("full-online no-show line: keeps 20% of service, remainder (incl unused pickup/drop) to owner refund approval, never auto", () => {
+    const { noShowFullOnline } = advanceDisclosureLines();
+    expect(noShowFullOnline).toContain("20% of the service price");
+    expect(noShowFullOnline).toContain("pickup and drop");
+    expect(noShowFullOnline).toContain("refund approval");
+    expect(noShowFullOnline).toContain("nothing is refunded automatically");
+    expect(noShowFullOnline.toLowerCase()).not.toContain("cancel");
+  });
 });

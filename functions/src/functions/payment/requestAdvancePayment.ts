@@ -21,11 +21,12 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { requestAdvancePaymentSchema } from "../../schemas/booking.js";
 import {
-  ADVANCE_PAYMENT_ENABLED,
   ADVANCE_BASIS_POLICY,
   ADVANCE_ROUNDING_POLICY,
+  advancePaymentEnabled,
   buildAdvancePaymentRequest,
 } from "../../lib/advance-payment.js";
+import { isHoldExpired } from "../../lib/booking-hold.js";
 import { ensureAdvanceLink, type AdvanceLinkDeps } from "../../lib/advance-link.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
@@ -33,7 +34,7 @@ import { shouldEnforceAppCheck } from "../../lib/environment.js";
 export const requestAdvancePayment = onCall(
   { region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"], enforceAppCheck: shouldEnforceAppCheck() },
   async (request): Promise<{ paymentId: string; paymentUrl: string | null; status: string }> => {
-    if (!ADVANCE_PAYMENT_ENABLED) {
+    if (!advancePaymentEnabled()) {
       throw new HttpsError(
         "failed-precondition",
         "Advance payments are not enabled yet. Pay at the studio when you collect your car.",
@@ -58,6 +59,12 @@ export const requestAdvancePayment = onCall(
     if (booking.status !== "CONFIRMED" && booking.status !== "PENDING") {
       throw new HttpsError("failed-precondition", `Cannot pay an advance for a booking with status ${booking.status}.`);
     }
+    // R3: a PENDING booking is the advance HELD state (same 15-minute
+    // machinery as online holds). An already-expired hold cannot be paid
+    // against - the sweep releases it and the customer books again.
+    if (booking.status === "PENDING" && isHoldExpired(booking, Date.now())) {
+      throw new HttpsError("failed-precondition", "The slot hold expired before the advance was paid. Please book again.");
+    }
 
     // Deterministic payment id == provider referenceId: a retry finds the
     // SAME record, and the webhook resolves it without a query.
@@ -81,6 +88,7 @@ export const requestAdvancePayment = onCall(
         },
         ADVANCE_BASIS_POLICY,
         ADVANCE_ROUNDING_POLICY,
+        { enabled: advancePaymentEnabled() },
       );
       const payment: Payment = {
         id: paymentRef.id,
@@ -143,18 +151,53 @@ export const requestAdvancePayment = onCall(
         return r ? { id: r.providerPaymentLinkId, amount: r.amount, currency: r.currency, paymentUrl: r.paymentUrl, status: r.status } : null;
       },
       createLink: (params) => provider.createPaymentLink(params),
-      patch: async (pt) => {
-        await paymentRef.update({
-          paymentUrl: pt.paymentUrl,
-          razorpayPaymentLinkId: pt.razorpayPaymentLinkId,
-          razorpayOrderId: pt.razorpayOrderId,
-          // Append-only history (reviewer G2): replaced link/order ids stay
-          // resolvable for late captures; never overwritten away.
-          ...(pt.superseded?.linkId ? { priorLinkIds: FieldValue.arrayUnion(pt.superseded.linkId) } : {}),
-          ...(pt.superseded?.orderId ? { priorOrderIds: FieldValue.arrayUnion(pt.superseded.orderId) } : {}),
-          updatedAt: new Date().toISOString(),
+      // R1: exclusive create claim - ONE transaction: no foreign lease and
+      // no NEW bound link id required; pre-marks ambiguity so a crash after
+      // this point fails CLOSED (never a blind second payable link).
+      claimCreate: async (leaseId, knownLinkId) => {
+        return db.runTransaction(async (tx) => {
+          const cur = (await tx.get(paymentRef)).data() as Payment;
+          if (cur.linkCreateLeaseId && cur.linkCreateLeaseId !== leaseId) {
+            return { kind: "held" as const, ambiguous: !!cur.orderAmbiguous };
+          }
+          if (cur.razorpayPaymentLinkId && cur.razorpayPaymentLinkId !== knownLinkId) {
+            return { kind: "linked" as const, linkId: cur.razorpayPaymentLinkId };
+          }
+          tx.update(paymentRef, { linkCreateLeaseId: leaseId, orderAmbiguous: true, updatedAt: new Date().toISOString() });
+          return { kind: "acquired" as const };
         });
       },
+      // R1: conflict-aware binding patch - ONE transaction. If a DIFFERENT
+      // link id was bound first, THIS create lost: its ids go to the
+      // append-only history (never an unbound payable loser), the winner is
+      // reported back for provider cancel + reconcile. The winning patch
+      // binds ids and clears the lease + ambiguity atomically.
+      patch: async (pt) => {
+        return db.runTransaction(async (tx) => {
+          const cur = (await tx.get(paymentRef)).data() as Payment;
+          const nowIso = new Date().toISOString();
+          if (cur.razorpayPaymentLinkId && cur.razorpayPaymentLinkId !== pt.razorpayPaymentLinkId) {
+            tx.update(paymentRef, {
+              priorLinkIds: FieldValue.arrayUnion(pt.razorpayPaymentLinkId),
+              ...(pt.razorpayOrderId ? { priorOrderIds: FieldValue.arrayUnion(pt.razorpayOrderId) } : {}),
+              linkCreateLeaseId: null, updatedAt: nowIso });
+            return { bound: false as const, winnerLinkId: cur.razorpayPaymentLinkId };
+          }
+          tx.update(paymentRef, {
+            paymentUrl: pt.paymentUrl,
+            razorpayPaymentLinkId: pt.razorpayPaymentLinkId,
+            razorpayOrderId: pt.razorpayOrderId,
+            // Append-only history (reviewer G2): replaced link/order ids stay
+            // resolvable for late captures; never overwritten away.
+            ...(pt.superseded?.linkId ? { priorLinkIds: FieldValue.arrayUnion(pt.superseded.linkId) } : {}),
+            ...(pt.superseded?.orderId ? { priorOrderIds: FieldValue.arrayUnion(pt.superseded.orderId) } : {}),
+            linkCreateLeaseId: null, orderAmbiguous: false,
+            updatedAt: nowIso });
+          return { bound: true as const };
+        });
+      },
+      // R1: post-commit provider cancel for a lost race's link.
+      cancelLink: async (id) => provider.cancelPaymentLink(id),
       // W1: ambiguity is PERSISTED on the payment record.
       markAmbiguous: async (b) => {
         await paymentRef.update({ orderAmbiguous: b, updatedAt: new Date().toISOString() });

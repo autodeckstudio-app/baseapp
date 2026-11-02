@@ -179,8 +179,40 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
     expect(r.body.outcome).toBe("overpayment_review");
     const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
     expect(pay.razorpayPaymentId).toBe("pay_FIRST"); // original completion untouched
-    expect(pay.overpayment).toMatchObject({ providerPaymentId: "pay_SECOND", amount: 23600, currency: "INR" });
+    expect(pay.overpayments).toHaveLength(1);
+    expect(pay.overpayments[0]).toMatchObject({ providerPaymentId: "pay_SECOND", amount: 23600, currency: "INR" });
     expect(pay.invoiceReviewNeeded).toBe(true);
+    // APPEND (main 2 Nov): a THIRD distinct capture appends - every identity
+    // stays for operational review, never an overwrite of the latest slot.
+    const r3 = await call(captured(s.orderId, 23600, "pay_THIRD"), "ADVP3" + s.payDocId);
+    expect(r3.body.outcome).toBe("overpayment_review");
+    const pay3 = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay3.overpayments.map((x: { providerPaymentId: string }) => x.providerPaymentId)).toEqual(["pay_SECOND", "pay_THIRD"]);
+    expect(pay3.razorpayPaymentId).toBe("pay_FIRST");
+  });
+
+  it("R3: an advance capture on an ACTIVE held (PENDING) booking confirms it and clears the hold", async () => {
+    const s = await seed({ bookingStatus: "PENDING" });
+    await db.collection("bookings").doc(s.bookingId).update({ paymentStatus: "unpaid", holdExpiresAt: new Date(Date.now() + 15 * 60_000).toISOString() });
+    const r = await call(captured(s.orderId, 23600, s.payId), "ADVR3a" + s.payDocId);
+    expect(r.body.outcome).toBe("completed");
+    const bk = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
+    expect(bk.status).toBe("CONFIRMED");
+    expect(bk.advancePaidAt).toBeTruthy();
+    expect(bk.holdExpiresAt ?? null).toBeNull();
+  });
+
+  it("R3: an advance capture on an EXPIRED hold records money + review but does NOT confirm", async () => {
+    const s = await seed({ bookingStatus: "PENDING" });
+    await db.collection("bookings").doc(s.bookingId).update({ paymentStatus: "unpaid", holdExpiresAt: new Date(Date.now() - 60_000).toISOString() });
+    const r = await call(captured(s.orderId, 23600, s.payId), "ADVR3b" + s.payDocId);
+    expect(r.body.outcome).toBe("completed");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.status).toBe("completed");
+    expect(pay.invoiceReviewNeeded).toBe(true); // advance_hold_expired -> office queue
+    const bk = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
+    expect(bk.status).toBe("PENDING"); // sweep releases it; never confirmed
+    expect(bk.advancePaidAt ?? null).toBeNull();
   });
 
   it("G3: redelivery of the SAME capture (same providerPaymentId, new event id) stays idempotent already_final - no overpayment flag", async () => {

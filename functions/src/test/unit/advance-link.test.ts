@@ -10,11 +10,13 @@ const fetched = (over: Partial<FetchedLink> = {}): FetchedLink =>
   ({ id: "plink_1", amount: 23600, currency: "INR", paymentUrl: "https://pay/1", status: "created", ...over });
 
 function deps(over: Partial<AdvanceLinkDeps> = {}) {
-  const calls = { create: 0, fetch: 0, patch: 0, ambiguous: 0, review: [] as string[], patches: [] as unknown[] };
+  const calls = { create: 0, fetch: 0, patch: 0, ambiguous: 0, claim: 0, cancel: [] as string[], review: [] as string[], patches: [] as unknown[] };
   const d: AdvanceLinkDeps = {
     createLink: async () => { calls.create++; return { providerPaymentLinkId: "plink_new", providerOrderId: "order_new", paymentUrl: "https://pay/new" }; },
     fetchLink: async () => { calls.fetch++; return fetched(); },
-    patch: async (pt) => { calls.patch++; calls.patches.push(pt); },
+    claimCreate: async () => { calls.claim++; return { kind: "acquired" as const }; },
+    patch: async (pt) => { calls.patch++; calls.patches.push(pt); return { bound: true as const }; },
+    cancelLink: async (id) => { calls.cancel.push(id); return { outcome: "cancelled" }; },
     markAmbiguous: async () => { calls.ambiguous++; },
     flagManualReview: async (r) => { calls.review.push(r); },
     ...over,
@@ -132,7 +134,7 @@ describe("ensureAdvanceLink (reviewer: reconcile-first, never a blind payable UR
   it("provider succeeded but the DB patch failed -> ambiguous WITH reference; next retry reconciles via fetch, no second create", async () => {
     let patchFails = true;
     const { d, calls } = deps({
-      patch: async () => { calls.patch++; if (patchFails) { patchFails = false; throw new Error("db down"); } },
+      patch: async () => { calls.patch++; if (patchFails) { patchFails = false; throw new Error("db down"); } return { bound: true as const }; },
     });
     await expect(ensureAdvanceLink(base, params, d)).rejects.toThrow(/db down/);
     expect(calls.ambiguous).toBe(1);
@@ -141,5 +143,61 @@ describe("ensureAdvanceLink (reviewer: reconcile-first, never a blind payable UR
     const r2 = await ensureAdvanceLink({ ...base, orderAmbiguous: true, razorpayPaymentLinkId: "plink_new" }, params, d2);
     expect(r2).toEqual({ outcome: "link_ready", paymentUrl: "https://pay/new" });
     expect(c2.create).toBe(0);
+  });
+});
+
+describe("R1: concurrent double create - exclusive lease, conflict cancel, never an unbound payable loser", () => {
+  it("double tap: the second caller sees the lease HELD (not ambiguous) and gets a retryable error - only ONE provider create", async () => {
+    const { d, calls } = deps({ claimCreate: async () => { calls.claim++; return { kind: "held" as const, ambiguous: false }; } });
+    await expect(ensureAdvanceLink(base, params, d)).rejects.toThrow(/confirming your earlier payment link/);
+    expect(calls.create).toBe(0); expect(calls.review.length).toBe(0);
+  });
+
+  it("crash mid-create (lease held, ambiguity stuck): next caller fails CLOSED to manual review, never blind-creates", async () => {
+    const { d, calls } = deps({ claimCreate: async () => { calls.claim++; return { kind: "held" as const, ambiguous: true }; } });
+    const r = await ensureAdvanceLink(base, params, d);
+    expect(r.outcome).toBe("manual_review");
+    expect(calls.create).toBe(0); expect(calls.review[0]).toMatch(/interrupted/);
+  });
+
+  it("lost race: winner bound first - loser ids bound to history, loser cancelled at the provider, winner URL returned after provider validation", async () => {
+    const { d, calls } = deps({
+      patch: async () => { calls.patch++; return { bound: false as const, winnerLinkId: "plink_win" }; },
+      fetchLink: async (id) => { calls.fetch++; return fetched({ id, paymentUrl: "https://pay/win" }); },
+    });
+    const r = await ensureAdvanceLink(base, params, d);
+    expect(r).toEqual({ outcome: "link_ready", paymentUrl: "https://pay/win" });
+    expect(calls.cancel).toEqual(["plink_new"]); // the loser, never left payable
+    expect(calls.review.length).toBe(0);
+  });
+
+  it("lost race + provider cancel fails: actionable ops retry via manual review, no URL handed out", async () => {
+    const { d, calls } = deps({
+      patch: async () => { calls.patch++; return { bound: false as const, winnerLinkId: "plink_win" }; },
+      cancelLink: async () => { calls.cancel.push("x"); throw new Error("provider timeout"); },
+    });
+    const r = await ensureAdvanceLink(base, params, d);
+    expect(r.outcome).toBe("manual_review");
+    expect(calls.review[0]).toMatch(/cancel_failed/);
+  });
+
+  it("lost race + cancel says money attached: manual review (double money), no URL", async () => {
+    const { d, calls } = deps({
+      patch: async () => { calls.patch++; return { bound: false as const, winnerLinkId: "plink_win" }; },
+      cancelLink: async () => { calls.cancel.push("x"); return { outcome: "already_paid" }; },
+    });
+    const r = await ensureAdvanceLink(base, params, d);
+    expect(r.outcome).toBe("manual_review");
+    expect(calls.review[0]).toMatch(/already_paid/);
+  });
+
+  it("a DIFFERENT link bound before our claim: reconcile the winner provider-first instead of creating", async () => {
+    const { d, calls } = deps({
+      claimCreate: async () => { calls.claim++; return { kind: "linked" as const, linkId: "plink_win" }; },
+      fetchLink: async (id) => { calls.fetch++; return fetched({ id, paymentUrl: "https://pay/win" }); },
+    });
+    const r = await ensureAdvanceLink(base, params, d);
+    expect(r).toEqual({ outcome: "link_ready", paymentUrl: "https://pay/win" });
+    expect(calls.create).toBe(0); expect(calls.fetch).toBe(1);
   });
 });

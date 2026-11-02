@@ -47,3 +47,12 @@ export function advanceSplit(
 // is NOT a late cancellation - separate state, no cancellation wording.
 export const NO_SHOW_ADVANCE_DISCLOSURE =
   "If you don't show up for your appointment, the studio keeps the 20% advance. Nothing more is charged.";
+
+// Same OWNER-APPROVED no-show rule (2 Nov 21:32:50) applied to the
+// full-online mode: the studio keeps 20% of the discounted service price
+// including GST (never the pickup/drop part); the rest of the payment -
+// including unused pickup/drop charges and their GST - goes to the OWNER's
+// refund APPROVAL. Refunds are never auto-executed. Disclosed BEFORE
+// payment, no cancellation wording (a no-show is not a late cancellation).
+export const NO_SHOW_FULL_ONLINE_DISCLOSURE =
+  "If you don't show up for your appointment, the studio keeps 20% of the service price including tax. The rest of what you paid, including unused pickup and drop charges, goes to the studio owner for refund approval. Nothing more is charged and nothing is refunded automatically.";
