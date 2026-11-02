@@ -18,6 +18,15 @@ unrelated payment/refund rules.
 - Late-cancel terms: NOT decided - no cancellation wording is introduced.
 - Activation still gated on the advance payment mechanism (Razorpay wiring)
   and the final review gate. Code remains disabled until then.
+- Slot hold for unpaid advance bookings: OWNER-CONFIRMED 2 Nov 22:01:24 IST
+  ("Yes", phonemsg-01M6EHKVGDNCZVGXVHFS8GVXBE, replying to the exact proposal
+  phonemsg-01M6EHJX0K9RQMB25685X0XW9H sent 22:00:53). An unpaid advance
+  booking holds its slot for 15 minutes (the same hold already used for
+  full-online bookings), then releases it if payment has not arrived. The
+  booking confirms only after the 20% payment succeeds. Money arriving after
+  the hold expires goes to refund review; it does NOT confirm a slot that
+  may no longer be available. POLICY ONLY - no production activation and no
+  refund execution.
 
 ## 2. Premium rescheduling (bigger jobs)
 - Scope: ceramic/coating, PPF, garage, mods, tinting

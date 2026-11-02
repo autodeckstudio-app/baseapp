@@ -154,7 +154,7 @@ export async function ensureAdvanceLink(
   }
   if (claim.kind === "held") {
     if (claim.ambiguous) {
-      await deps.flagManualReview("concurrent advance link create interrupted; provider state unknown");
+      await deps.flagManualReview("concurrent advance link create interrupted; provider state unknown. Ops: reconcile with the provider (fetch by referenceId and any prior/superseded ids) BEFORE clearing the lease; never blind reset or recreate");
       return { outcome: "manual_review" };
     }
     // A live create is in flight elsewhere: the retry reconciles.
