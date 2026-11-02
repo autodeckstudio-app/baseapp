@@ -305,8 +305,17 @@ describe("Garage / Vehicle Ownership system", () => {
     expect(createResult.protection.status).toBe("unverified");
     expect(createResult.protection.customerId).toBe(cust);
 
+    // createProtection writes an unversioned record (no revision field), so
+    // the fail-closed correction path wants base 0 PLUS the fingerprint of
+    // the exact record reviewed (its updatedAt).
     await updateProtection.run({
-      data: { vehicleId: vehicle.id, protectionId: createResult.protection.id, status: "verified" },
+      data: {
+        vehicleId: vehicle.id,
+        protectionId: createResult.protection.id,
+        status: "verified",
+        expectedRevision: 0,
+        legacyBaseUpdatedAt: createResult.protection.updatedAt,
+      },
       auth: adminAuth(adminUid),
     } as never);
 
