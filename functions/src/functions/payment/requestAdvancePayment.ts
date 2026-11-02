@@ -34,6 +34,11 @@ import { shouldEnforceAppCheck } from "../../lib/environment.js";
 export const requestAdvancePayment = onCall(
   { region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"], enforceAppCheck: shouldEnforceAppCheck() },
   async (request): Promise<{ paymentId: string; paymentUrl: string | null; status: string }> => {
+    // Role wall FIRST (pure claims check, no reads): an unauthorized caller is
+    // denied before the flag guard, so the default-deny sweep exercises this
+    // callable's caller check even while the flag is off. The flag guard stays
+    // before any schema validation, Firestore read, or provider call.
+    const user = extractCustomerUser(request);
     if (!advancePaymentEnabled()) {
       throw new HttpsError(
         "failed-precondition",
@@ -42,7 +47,6 @@ export const requestAdvancePayment = onCall(
     }
 
     const data = validate(requestAdvancePaymentSchema, request.data);
-    const user = extractCustomerUser(request);
     await enforceRateLimit(subjectFrom(user), "payment.initiate");
 
     const db = getFirestore();
