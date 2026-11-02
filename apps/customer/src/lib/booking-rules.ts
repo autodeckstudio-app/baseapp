@@ -1,6 +1,6 @@
 // Reschedule and cancel rules for a customer booking, shared by the booking page and the Bookings list.
 import type { Booking } from "@autodeck/core";
-import { rescheduleRule, isBookingMissed, cancellationTerms, cancellationLine } from "@autodeck/core";
+import { rescheduleRule, isBiggerService, isBookingMissed, cancellationTerms, cancellationLine } from "@autodeck/core";
 
 const NON_RESCHEDULABLE_STATUS_REASONS: Record<string, string> = {
   PENDING: "This booking is still awaiting studio confirmation.",
@@ -85,4 +85,19 @@ export function nextStepLine(o: { giftCovered: boolean; jobStatus?: string | nul
  *  passed without arrival or the job runs past it. Same time value either way; no new estimate is made. */
 export function readyRowTitle(phase: string | undefined | null): "Planned end" | "Expected ready" {
   return phase === "not_arrived" || phase === "overrun" ? "Planned end" : "Expected ready";
+}
+
+/** Premium reschedule-request entry state (basket item 6, PREVIEW - flow not activated).
+ *  Premium (pay-at-studio) bookings use the request-and-approve flow instead of a direct
+ *  reschedule; washes and other categories keep the direct path. */
+export function rescheduleEntry(
+  booking: Booking,
+  category?: string | null,
+): { mode: "direct" } | { mode: "request" } | { mode: "request-pending"; requestedDate: string; requestedTime: string } | { mode: "request-used" } | { mode: "none"; reason: string } {
+  if (!isBiggerService(category)) return { mode: "direct" };
+  if (booking.status !== "CONFIRMED" || isBookingMissed(booking)) return { mode: "none", reason: "This booking can't be rescheduled online - contact the studio." };
+  const req = booking.rescheduleRequest;
+  if (req?.status === "pending") return { mode: "request-pending", requestedDate: req.requestedDate, requestedTime: req.requestedTime };
+  if ((booking.rescheduleRequestCount ?? 0) >= 1) return { mode: "request-used" };
+  return { mode: "request" };
 }

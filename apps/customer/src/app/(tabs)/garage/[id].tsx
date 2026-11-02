@@ -580,7 +580,6 @@ export default function VehicleDetailScreen() {
           </View>
         </Pane>
       ) : null}
-      {true ? (
         <>
           <CarOverview
             due={due}
@@ -635,7 +634,6 @@ export default function VehicleDetailScreen() {
           {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
 
         </>
-      ) : null}
 
       {(() => {
         const svc: Record<string, { id: string; name: string; category: string }> = {};
@@ -729,7 +727,6 @@ export default function VehicleDetailScreen() {
         <Kicker>Documents</Kicker>
         <T role="caption" tone="tertiary">{countLabel(papers.length + documentProtections.length, "document", "documents")}</T>
       </View>
-      {true ? (
         <>
           {papers.length === 0 && documentProtections.length === 0 ? (
             <T role="caption" tone="secondary">No documents yet. Add your RC, insurance or PUC. We try to read the plate and expiry. Unclear details need studio review.</T>
@@ -852,7 +849,6 @@ export default function VehicleDetailScreen() {
           )}
           {docNotice ? <Notice title="Saved" body={docNotice} action={<Button label="OK" kind="quiet" onPress={() => setDocNotice(null)} />} /> : null}
         </>
-      ) : null}
 
       {/* Customer Garage warranty UI hidden for now (Gauri 2 Nov 15:45:51 "remove warranty
           thing for now form UI", confirmed basket; Meet 16:25 "Accept gauris changes").

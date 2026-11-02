@@ -30,7 +30,7 @@ import type * as BookingDevSample from "../../../lib/booking-dev-sample";
 const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof BookingDevSample) : null;
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, cancelState, cancelConfirmBody, expectedReady, nextStepLine, readyRowTitle } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, rescheduleEntry, cancelState, cancelConfirmBody, expectedReady, nextStepLine, readyRowTitle } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -501,7 +501,29 @@ export default function BookingDetailScreen() {
       {pickup === "failed" ? <Notice title="Pickup request not sent" body="Your booking stands. The pickup or drop-off request could not be sent - please call the studio to arrange it." /> : null}
 
       {showRescheduleSection ? (
-        rescheduleEligibility.eligible ? (
+        (() => {
+          // Premium bookings use the request-and-approve flow (item 6, PREVIEW);
+          // washes and others keep the direct reschedule below.
+          const entry = rescheduleEntry(booking, svc?.category);
+          if (entry.mode === "request-pending") {
+            return <T role="caption" tone="secondary">Reschedule request sent for {entry.requestedDate} at {entry.requestedTime}. Your booking stays at its current time until the studio confirms.</T>;
+          }
+          if (entry.mode === "request-used") {
+            return <T role="caption" tone="secondary">You've already used the reschedule request for this booking. Contact the studio to change the time.</T>;
+          }
+          if (entry.mode === "request") {
+            return (
+              <Button
+                label="Request reschedule"
+                kind="quiet"
+                onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })}
+              />
+            );
+          }
+          if (entry.mode === "none") {
+            return <T role="caption" tone="secondary">{entry.reason}</T>;
+          }
+          return rescheduleEligibility.eligible ? (
           <View style={{ gap: space.breath }}>
             {hasPendingApproval ? (
               <T role="caption" tone="secondary">You have a pending approval on this job - rescheduling won't affect it.</T>
@@ -517,7 +539,8 @@ export default function BookingDetailScreen() {
           </View>
         ) : (
           <T role="caption" tone="secondary">{rescheduleEligibility.reason}</T>
-        )
+        );
+        })()
       ) : null}
 
       {!walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}

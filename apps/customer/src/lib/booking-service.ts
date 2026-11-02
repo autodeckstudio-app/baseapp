@@ -130,6 +130,20 @@ export async function rescheduleBooking(
   return result.data.booking;
 }
 
+export async function requestBookingReschedule(
+  bookingId: string,
+  newDate: string,
+  newTime: string,
+  idempotencyKey: string,
+): Promise<Booking> {
+  const fn = httpsCallable<{ bookingId: string; newDate: string; newTime: string; idempotencyKey: string; customerContext: boolean }, { booking: Booking }>(
+    functions,
+    "requestBookingReschedule",
+  );
+  const result = await fn({ bookingId, newDate, newTime, idempotencyKey, customerContext: true });
+  return result.data.booking;
+}
+
 export async function getMyBookings(uid: string, tenantId: string): Promise<Booking[]> {
   const q = query(
     collection(db, COLLECTIONS.bookings()),

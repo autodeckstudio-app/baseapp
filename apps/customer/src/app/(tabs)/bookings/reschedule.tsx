@@ -2,11 +2,11 @@ import { DateField } from "../../../ui/inputs";
 import { useState, useEffect, useCallback } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getBookingById, getAvailability, rescheduleBooking, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
+import { getBookingById, getAvailability, rescheduleBooking, requestBookingReschedule, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { extraServiceIdsOf } from "../../../lib/booking-rules";
 import type { Booking } from "@autodeck/core";
-import { rescheduleRule, isBookingMissed } from "@autodeck/core";
+import { rescheduleRule, isBiggerService, isBookingMissed } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
@@ -69,12 +69,18 @@ export default function RescheduleBookingScreen() {
     );
   }
 
+  // Premium (pay-at-studio) bookings use the request-and-approve flow (item 6,
+  // PREVIEW): the customer sends a request and the studio confirms. The callable
+  // enforces the one-request and >=24h rules authoritatively.
+  const isPremiumRequest = isBiggerService(svcCategory) && !isBookingMissed(booking);
   const rule = rescheduleRule(svcCategory);
   const hoursUntil = (new Date(booking.scheduledAt).getTime() - Date.now()) / 3600000;
   const eligible =
     booking.status === "CONFIRMED" &&
-    (isBookingMissed(booking) || (booking.rescheduleCount < rule.maxCount &&
-    hoursUntil >= rule.cutoffHours));
+    (isPremiumRequest
+      ? (booking.rescheduleRequestCount ?? 0) === 0 && booking.rescheduleRequest?.status !== "pending" && hoursUntil >= 24
+      : (isBookingMissed(booking) || (booking.rescheduleCount < rule.maxCount &&
+      hoursUntil >= rule.cutoffHours)));
 
   if (!eligible) {
     return (
@@ -107,8 +113,13 @@ export default function RescheduleBookingScreen() {
     setSubmitting(true);
     setActionError(null);
     try {
-      await rescheduleBooking(booking.id, pendingSlot.date, pendingSlot.startTime, generateIdempotencyKey());
-      setDoneLabel(newDisplay);
+      if (isPremiumRequest) {
+        await requestBookingReschedule(booking.id, pendingSlot.date, pendingSlot.startTime, generateIdempotencyKey());
+        setDoneLabel(`REQUESTED:${newDisplay}`);
+      } else {
+        await rescheduleBooking(booking.id, pendingSlot.date, pendingSlot.startTime, generateIdempotencyKey());
+        setDoneLabel(newDisplay);
+      }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setPendingSlot(null);
@@ -120,11 +131,15 @@ export default function RescheduleBookingScreen() {
   }
 
   if (doneLabel) {
+    const requested = doneLabel.startsWith("REQUESTED:");
+    const when = requested ? doneLabel.slice("REQUESTED:".length) : doneLabel;
     return (
       <Screen>
         <Notice
-          title="Booking rescheduled"
-          body={`Your booking is now set for ${doneLabel}.`}
+          title={requested ? "Reschedule request sent" : "Booking rescheduled"}
+          body={requested
+            ? `You've asked for ${when}. Your booking stays at its current time until the studio confirms - one request per booking.`
+            : `Your booking is now set for ${when}.`}
           action={<Button label="Done" onPress={() => router.back()} />}
         />
       </Screen>
@@ -192,11 +207,13 @@ export default function RescheduleBookingScreen() {
 
       {pendingSlot ? (
         <Notice
-          title="Confirm reschedule"
-          body={`Move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your price stays the same.`}
+          title={isPremiumRequest ? "Confirm reschedule request" : "Confirm reschedule"}
+          body={isPremiumRequest
+            ? `Ask the studio to move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your booking stays put until the studio confirms, and your price and advance stay the same.`
+            : `Move this booking from ${currentDisplay} to ${formatSlot(new Date(pendingSlot.startAt))}. Your price stays the same.`}
           action={
             <View style={{ gap: space.breath }}>
-              <Button label="Confirm new time" busy={submitting} onPress={() => void handleConfirm()} />
+              <Button label={isPremiumRequest ? "Send request" : "Confirm new time"} busy={submitting} onPress={() => void handleConfirm()} />
               <Button label="Keep looking" kind="quiet" onPress={() => setPendingSlot(null)} />
             </View>
           }
