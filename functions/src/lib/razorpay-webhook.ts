@@ -280,10 +280,22 @@ export async function processProviderEvent(
         // already marked) still complete the payment - the money IS
         // received - but touch nothing else and go to the office
         // refund-review queue, never silent retention.
+        // Currency binding (reviewer F2, scoped to the advance branch so the
+        // membership/gift/job paths are untouched): the provider event's
+        // currency must exist and match the stored payment. Missing or
+        // mismatched fails CLOSED - nothing completes.
+        if (!ev.currency || ev.currency !== payment.currency) {
+          record("amount_mismatch"); return "amount_mismatch";
+        }
         const bRef = payment.bookingId ? db.collection(COLLECTIONS.bookings()).doc(payment.bookingId) : null;
         const bSnap = bRef ? await tx.get(bRef) : null;
         const bk = bSnap?.exists ? (bSnap.data() as Booking) : undefined;
+        // Tenant/studio binding (reviewer F1): a booking outside the
+        // payment's tenant/studio must never be mutated by this payment.
+        // Money is still recorded as received and flagged for review.
         const anomaly = !bk ? "booking_missing"
+          : bk.tenantId !== payment.tenantId ? "tenant_mismatch"
+          : (bk.studioId && payment.studioId && bk.studioId !== payment.studioId) ? "studio_mismatch"
           : bk.status === "CANCELLED" ? "booking_cancelled"
           : bk.advancePaidAt ? "advance_already_paid"
           : null;
