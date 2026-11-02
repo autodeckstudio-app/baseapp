@@ -645,7 +645,7 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
     // The client SDK's default bucket here is gs://<projectId>; the backend
     // (and production clients) use <projectId>.appspot.com, so land and read
     // the bytes on that exact bucket or the attach-time check cannot see it.
-    const bucketUrl = "gs://autodeck-dev.appspot.com";
+    const bucketUrl = `gs://${TEST_PROJECT_ID}.appspot.com`;
     await storageEnv.withSecurityRulesDisabled(async (ctx) => {
       await ctx.storage(bucketUrl).ref(issued.path).put(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
         contentType: "image/jpeg",

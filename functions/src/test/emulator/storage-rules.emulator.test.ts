@@ -8,7 +8,7 @@
  * upload time (customerId / ownerId), matching the equivalent Firestore
  * ownership pattern.
  *
- * Run with: pnpm test:emulator (requires Storage Emulator at localhost:9199)
+ * Run with: pnpm test:emulator (Storage Emulator at FIREBASE_STORAGE_EMULATOR_HOST, default localhost:9199)
  * Rules are loaded from ../../../../storage.rules (repo root)
  */
 import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
@@ -44,8 +44,8 @@ beforeAll(async () => {
     projectId: TEST_PROJECT_ID,
     storage: {
       rules: readFileSync(RULES_PATH, "utf8"),
-      host: "localhost",
-      port: 9199,
+      host: process.env["FIREBASE_STORAGE_EMULATOR_HOST"]?.split(":")[0] ?? "localhost",
+      port: Number(process.env["FIREBASE_STORAGE_EMULATOR_HOST"]?.split(":")[1] ?? 9199),
     },
   });
 });

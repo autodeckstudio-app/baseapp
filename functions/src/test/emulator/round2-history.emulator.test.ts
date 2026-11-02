@@ -1,10 +1,11 @@
 import {describe,it,expect,beforeAll,afterAll,beforeEach} from 'vitest';
 import {initializeTestEnvironment,assertFails,assertSucceeds,type RulesTestEnvironment} from '@firebase/rules-unit-testing';
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {readFileSync} from 'node:fs';import {resolve} from 'node:path';
 import {getFirestore} from 'firebase-admin/firestore';
 import {permanentlyDeleteVehicle} from '../../lib/vehicle-delete.js';
 let env:RulesTestEnvironment;
-beforeAll(async()=>{env=await initializeTestEnvironment({projectId:'autodeck-dev',firestore:{rules:readFileSync(resolve(__dirname,'../../../../firestore.rules'),'utf8'),host:'localhost',port:Number(process.env["FIRESTORE_EMULATOR_HOST"]?.split(":").at(-1)??8080)}});});
+beforeAll(async()=>{env=await initializeTestEnvironment({projectId:TEST_PROJECT_ID,firestore:{rules:readFileSync(resolve(__dirname,'../../../../firestore.rules'),'utf8'),host:'localhost',port:Number(process.env["FIRESTORE_EMULATOR_HOST"]?.split(":").at(-1)??8080)}});});
 afterAll(async()=>{await env.cleanup();});beforeEach(async()=>{await env.clearFirestore();});
 describe('Round 2 retained history on real Firestore emulator',()=>{
  it('delete keeps exact jobs/invoice amounts and owner-readable tombstone, denies other owner/tenant and client writes',async()=>{

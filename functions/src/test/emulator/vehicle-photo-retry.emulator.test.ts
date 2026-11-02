@@ -11,7 +11,7 @@ import { TEST_PROJECT_ID } from "../emulator-setup";
 
 it("retry pass on real firestore+storage", async () => {
   await deleteApp(getApp());
-  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: "autodeck-dev.appspot.com" });
+  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: `${TEST_PROJECT_ID}.appspot.com` });
   const { getFirestore } = await import("firebase-admin/firestore");
   const { getStorage } = await import("firebase-admin/storage");
   const { retryFailedVehiclePhotoCleanups } = await import("../../lib/vehicle-delete.js");

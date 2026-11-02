@@ -23,7 +23,7 @@ const has = async (p: string) => (await bucket.file(p).exists())[0];
 
 beforeAll(async () => {
   await deleteApp(getApp());
-  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: "autodeck-dev.appspot.com" });
+  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: `${TEST_PROJECT_ID}.appspot.com` });
   const { getFirestore } = await import("firebase-admin/firestore");
   db = getFirestore(); bucket = getStorage().bucket();
   const papers = await import("../../functions/papers/myPaperEdits.js");

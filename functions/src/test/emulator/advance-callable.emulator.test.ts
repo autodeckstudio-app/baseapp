@@ -53,7 +53,7 @@ async function seed(o: { status?: string; payMode?: string } = {}) {
 }
 
 describe("requestAdvancePayment callable (W1, flag mocked on, mock provider)", () => {
-  it("guard is FIRST: with the flag OFF the callable is inert (no reads, no writes, no provider)", async () => {
+  it("role wall first, flag guard second: with the flag OFF the callable is inert (no reads, no writes, no provider)", async () => {
     h.enabled = false;
     const s = await seed();
     await expect(requestAdvancePayment.run({ data: { bookingId: s.bookingId }, auth: auth(s.customerId) } as never))
