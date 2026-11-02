@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
-import { ADVANCE_SPLIT_ENABLED, advanceDisclosureLines } from "../../../lib/advance-booking";
+import { ADVANCE_SPLIT_ENABLED, advanceDisclosureLines, advancePreviewFromParts } from "../../../lib/advance-booking";
 import { createBooking, generateIdempotencyKey, getStudioInfo } from "../../../lib/booking-service";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
@@ -92,7 +92,7 @@ export default function BookingConfirmScreen() {
   }, [held]);
   // More services in the same visit. The server prices them again; this is what the customer sees first.
   const extraIds = useMemo(() => extrasFromParam(params.extras), [params.extras]);
-  const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number }>>([]);
+  const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number; subtotal: number }>>([]);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function BookingConfirmScreen() {
           const [es, ep] = await Promise.all([getDoc(doc(db, COLLECTIONS.services(), id)), calculateServicePrice(id, params.vehicleCategory)]);
           if (!es.exists()) throw new Error("Booking details unavailable");
           const e = es.data() as Service;
-          return { id, name: e.name, minutes: e.estimatedDurationMinutes, total: ep.breakdown.total };
+          return { id, name: e.name, minutes: e.estimatedDurationMinutes, total: ep.breakdown.total, subtotal: ep.breakdown.subtotal };
         }));
         setExtraRows(rows);
       } catch {
@@ -309,6 +309,7 @@ export default function BookingConfirmScreen() {
 
   const durationLabel = service ? formatServiceTime(service.estimatedDurationMinutes + extraRows.reduce((m, r) => m + r.minutes, 0)) : "-";
   const visitTotal = breakdown ? breakdown.total + extraRows.reduce((t, r) => t + r.total, 0) : null;
+  const advancePreview = ADVANCE_SPLIT_ENABLED && breakdown ? advancePreviewFromParts(breakdown, extraRows.map((r) => r.subtotal)) : null;
 
   return (
     <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Confirm</Kicker><T role="title">Review booking</T>{service?.priceOnRequest === true ? <T role="caption" tone="accent">Quote on request</T> : null}</View>}>
@@ -365,6 +366,12 @@ export default function BookingConfirmScreen() {
           {breakdown.membershipDiscount !== null && breakdown.membershipDiscount > 0 ? <SheetLine small label="Membership discount" value={`-${rupees(breakdown.membershipDiscount)}`} /> : null}
           {extraRows.map((r) => <SheetLine key={r.id} small label={r.name} value={rupees(r.total)} />)}
           {breakdown.tax > 0 ? <SheetLine small label={breakdown.taxDescription} value={rupees(breakdown.tax)} /> : null}
+          {ADVANCE_SPLIT_ENABLED && payAtStudio && advancePreview ? (
+            <>
+              <SheetLine small label="Pay now (20% advance)" value={rupees(advancePreview.advancePaise)} />
+              <SheetLine small label={pickupKind ? "Pay at the studio (before pickup/drop fees)" : "Pay at the studio"} value={rupees(advancePreview.dueAtStudioPaise)} />
+            </>
+          ) : null}
         </Sheet>
       ) : null}
 

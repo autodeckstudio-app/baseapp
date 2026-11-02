@@ -25,3 +25,58 @@ describe("advance split disclosure (items 4/5, preview)", () => {
     expect(noShowFullOnline.toLowerCase()).not.toContain("cancel");
   });
 });
+
+import { advancePreviewFromParts } from "./advance-booking";
+
+const pb = (o: Partial<Parameters<typeof advancePreviewFromParts>[0]> = {}) => ({ subtotal: 100000, pickupFee: 0, dropFee: 0, membershipDiscount: null, taxRatePercent: 18, ...o });
+
+describe("advancePreviewFromParts (display-only mirror of the server derivation)", () => {
+  it("20% of the service incl GST, balance is the exact remainder of the grand total", () => {
+    expect(advancePreviewFromParts(pb())).toEqual({ advancePaise: 23600, dueAtStudioPaise: 94400 });
+  });
+  it("GST off (rate 0): 20% of the plain service price", () => {
+    expect(advancePreviewFromParts(pb({ taxRatePercent: 0 }))).toEqual({ advancePaise: 20000, dueAtStudioPaise: 80000 });
+  });
+  it("rounds the advance UP and keeps advance + balance equal to the total", () => {
+    const r = advancePreviewFromParts(pb({ subtotal: 100001, taxRatePercent: 0 }))!;
+    expect(r.advancePaise).toBe(20001);
+    expect(r.advancePaise + r.dueAtStudioPaise).toBe(100001);
+  });
+  it("membership discount reduces the base before tax", () => {
+    // 100000 - 20000 = 80000; +18% = 94400; 20% = 18880
+    expect(advancePreviewFromParts(pb({ membershipDiscount: 20000 }))).toEqual({ advancePaise: 18880, dueAtStudioPaise: 75520 });
+  });
+  it("pickup and drop are excluded from the advance but stay in the balance (with their GST)", () => {
+    // service 100000 + pickup 10000 folded into subtotal; grand total 110000*1.18 = 129800
+    const r = advancePreviewFromParts(pb({ subtotal: 110000, pickupFee: 10000 }))!;
+    expect(r.advancePaise).toBe(23600);
+    expect(r.dueAtStudioPaise).toBe(129800 - 23600);
+  });
+  it("extra services are folded in PRE-TAX and taxed once with the main service (as addExtrasToBreakdown does)", () => {
+    // (100000 + 50000) * 1.18 = 177000; service = same; 20% = 35400
+    expect(advancePreviewFromParts(pb(), [50000])).toEqual({ advancePaise: 35400, dueAtStudioPaise: 177000 - 35400 });
+    // rounding: two extras of 1 paisa each taxed once, not per row
+    expect(advancePreviewFromParts(pb({ subtotal: 3, taxRatePercent: 18 }), [3, 3])).toEqual(advancePreviewFromParts(pb({ subtotal: 9, taxRatePercent: 18 })));
+  });
+  it("returns null (never throws, never a wrong amount) for broken or non-finite input", () => {
+    expect(advancePreviewFromParts(pb({ membershipDiscount: 200000 }))).toBeNull();
+    expect(advancePreviewFromParts(pb({ subtotal: NaN }))).toBeNull();
+    expect(advancePreviewFromParts(pb({ taxRatePercent: Infinity }))).toBeNull();
+    expect(advancePreviewFromParts(pb(), [-1])).toBeNull();
+    expect(advancePreviewFromParts(pb(), [1.5])).toBeNull();
+    expect(advancePreviewFromParts(pb({ pickupFee: 200000 }))).toBeNull();
+    expect(advancePreviewFromParts({} as never)).toBeNull();
+  });
+});
+
+import { readFileSync } from "node:fs";
+describe("confirm advance lines stay behind the flag and qualify the balance when pickup is chosen", () => {
+  const src = readFileSync("src/app/(tabs)/book/confirm.tsx", "utf8");
+  it("both money lines render only under ADVANCE_SPLIT_ENABLED", () => {
+    expect(src).toContain("ADVANCE_SPLIT_ENABLED && payAtStudio && advancePreview ?");
+    expect(src).toContain("const advancePreview = ADVANCE_SPLIT_ENABLED && breakdown ?");
+  });
+  it("balance is labelled before pickup/drop fees when a pickup is chosen", () => {
+    expect(src).toContain('pickupKind ? "Pay at the studio (before pickup/drop fees)" : "Pay at the studio"');
+  });
+});
