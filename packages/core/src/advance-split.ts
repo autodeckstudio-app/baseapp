@@ -2,13 +2,14 @@
 // Adopted: the pay-at-studio choice takes a 20% advance online and 80% at the
 // studio; the full-online path is untouched.
 //
-// Two policy inputs are HELD owner decisions and are therefore REQUIRED
-// parameters with no defaults, so no call site can silently assume them:
-//  - basis: whether pickup/drop fees are part of the advance base
-//    (held: "20% advance pickup-fee basis")
-//  - rounding: how the 20% of paise is rounded (held under financial
-//    consistency / rounding). Until these are decided, every caller must pass
-//    an explicit value and label it provisional.
+// Two policy inputs are OWNER-ADOPTED (2 Nov 2026, "All 3",
+// phonemsg-01M6E9RW910BVRC0PJTQ3AG0M5):
+//  - basis: "service_total_only" - the advance is 20% of the discounted
+//    service price including GST, EXCLUDING pickup/drop.
+//  - rounding: "ceil" - the advance rounds UP to the next whole rupee; the
+//    balance is the exact remainder.
+// Parameters stay REQUIRED with no defaults as defense-in-depth (no call site
+// can silently assume a policy), but these are the adopted values.
 
 export const ADVANCE_PERCENT = 20;
 

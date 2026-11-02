@@ -12,6 +12,7 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { rescheduleBookingSchema } from "../../schemas/booking.js";
 import { runRescheduleMove } from "../../lib/reschedule-move.js";
+import { isPremiumCategory } from "../../lib/reschedule-request.js";
 import { localToUTC, computeScheduleEnd } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
@@ -63,6 +64,18 @@ export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppChec
   if (!configSnap.exists) throw new HttpsError("not-found", "Studio not found.");
 
   const service = serviceSnap.data() as Service;
+
+  // Owner decision 2 Nov 2026 ("All 3", phonemsg-01M6E9RW910BVRC0PJTQ3AG0M5):
+  // a MISSED premium appointment goes through the studio - the legacy
+  // missed-move bypass below (doc07 §7.8) does NOT apply to premium
+  // categories. This removes the known UI/server inconsistency: the customer
+  // UI already says "contact the studio" for missed premium bookings.
+  if (isCustomer && missed && isPremiumCategory(service.category)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This appointment has already passed. Contact the studio to move a premium booking.",
+    );
+  }
 
   // Category-aware customer rules (basket item 6): wash services get one free
   // move up to 4 hours ahead; every other category keeps the legacy 2/24h

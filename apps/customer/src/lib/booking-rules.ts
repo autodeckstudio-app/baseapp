@@ -98,12 +98,11 @@ export function rescheduleEntry(
   // rather than flashing the wrong path (null = definitively unknown -> direct/legacy).
   if (category === undefined) return { mode: "loading" };
   if (!isBiggerService(category)) return { mode: "direct" };
-  // Missed premium bookings: the disclosed existing policy (booking detail copy) is
-  // "contact the studio / make a new booking". The server's missed-move bypass in
-  // rescheduleBooking predates the request flow and would allow a direct move - a
-  // genuine UI/server inconsistency now flagged for the owner batch, NOT resolved
-  // here by changing either side. The no-show-retention x missed-reschedule
-  // financial interaction is likewise an explicit open flag.
+  // Missed premium bookings (owner decision 2 Nov 2026, "All 3"): changes after a
+  // missed premium appointment go through the studio. The server's missed-move
+  // bypass no longer applies to premium categories (see rescheduleBooking), so UI
+  // and server agree. The no-show-retention x missed-reschedule financial
+  // interaction remains an explicit open flag.
   if (booking.status !== "CONFIRMED" || isBookingMissed(booking)) return { mode: "none", reason: "This booking can't be rescheduled online - contact the studio." };
   const req = booking.rescheduleRequest;
   if (req?.status === "pending") return { mode: "request-pending", requestedDate: req.requestedDate, requestedTime: req.requestedTime };

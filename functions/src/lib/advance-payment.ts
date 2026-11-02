@@ -2,9 +2,11 @@
 // This module only BUILDS the provider request for the 20% advance: it computes
 // the amount via core advanceSplit and shapes a CreatePaymentLinkParams. It makes
 // NO provider call and is never wired to a callable while
-// ADVANCE_PAYMENT_ENABLED is false. Activation additionally requires the held
-// owner decisions (advance basis + rounding - core advance-split.ts takes them
-// as REQUIRED parameters, and so does this module) plus the final review gate.
+// ADVANCE_PAYMENT_ENABLED is false. Basis and rounding are owner-adopted
+// (2 Nov 2026, "All 3": service price excl pickup, round up); core
+// advance-split.ts keeps them as REQUIRED parameters (and so does this
+// module) as defense-in-depth. Activation additionally requires the final
+// review gate.
 import { advanceSplit, type AdvanceBasis, type AdvanceRounding } from "@autodeck/core";
 
 export const ADVANCE_PAYMENT_ENABLED = false;

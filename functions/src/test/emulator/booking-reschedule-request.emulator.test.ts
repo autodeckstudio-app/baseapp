@@ -11,6 +11,7 @@ import type { StudioConfig, Service, Vehicle, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
 import { createBooking } from "../../functions/booking/createBooking.js";
+import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { requestBookingReschedule } from "../../functions/booking/requestBookingReschedule.js";
 import { decideBookingRescheduleRequest } from "../../functions/booking/decideBookingRescheduleRequest.js";
 
@@ -181,6 +182,19 @@ describe("Premium reschedule request flow (preview)", () => {
         auth: customerAuth(customerId),
       } as never),
     ).rejects.toThrow(/already pending/);
+  });
+
+  it("owner decision 2 Nov 2026: a MISSED premium booking cannot be moved directly - customer must contact the studio", async () => {
+    const booking = await makePremiumBooking(customerId, service, vehicle);
+    // Move the booking into the past so it counts as missed (start passed, car never came).
+    const past = new Date(Date.now() - 48 * 3600000).toISOString();
+    await getFirestore().collection(COLLECTIONS.bookings()).doc(booking.id).update({ scheduledAt: past });
+    await expect(
+      rescheduleBooking.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "14:00", idempotencyKey: uid("idem") },
+        auth: customerAuth(customerId),
+      } as never),
+    ).rejects.toThrow(/already passed. Contact the studio/);
   });
 
   it("same-key same-slot retry returns the existing request unchanged and counts exactly once", async () => {
