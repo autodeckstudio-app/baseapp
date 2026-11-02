@@ -17,6 +17,7 @@ import { FIRST_STUDIO_ID, segmentLabel } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, LinkAction, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
+import { TabPills } from "../../../ui/CarOverview";
 import { db } from "../../../lib/firebase";
 import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc, removeVehicleImage } from "../../../lib/vehicle-service";
 import { metrics } from "../../../lib/metrics";
@@ -42,7 +43,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { CarOverview } from "../../../ui/CarOverview";
 import { CareTimeline } from "../../../ui/CareTimeline";
 import { HistoryVisitRow } from "../../../ui/HistoryVisitRow";
-import { buildUpcoming, buildHistory, countLabel, latestVisits, HISTORY_PREVIEW } from "../../../lib/car-timeline";
+import { buildUpcoming, buildHistory, countLabel } from "../../../lib/car-timeline";
 
 /** Customer Garage warranty certificates section: hidden per the 2 Nov basket; data/backend unchanged. */
 const SHOW_CUSTOMER_WARRANTY_SECTION = false;
@@ -154,6 +155,10 @@ export default function VehicleDetailScreen() {
   const [docError, setDocError] = useState<string | null>(null);
   const [docNotice, setDocNotice] = useState<string | null>(null); // post-save note shown outside the form
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
+  const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
+  // Garage is split into three flat tabs (Gauri basket item 10, per the liked mockup):
+  // Upcoming (default), History, Documents. Nothing renders in two places.
+  const [tab, setTab] = useState<"upcoming" | "history" | "documents">("upcoming");
 
   useEffect(() => {
     if (mockDetail) {
@@ -340,13 +345,14 @@ export default function VehicleDetailScreen() {
   }, [retryTick]);
 
   useEffect(() => {
-    if (mockDetail) { setUpcomingBooking(mockDetail.upcomingBooking); return; }
+    if (mockDetail) { setUpcomingBookings(mockDetail.upcomingBookings); setUpcomingBooking(mockDetail.upcomingBookings[0] ?? null); return; }
     if (!id || auth.status !== "ready") return;
     void getMyBookings(auth.user.uid, auth.claims.tenantId)
       .then((bookings) => {
         const upcoming = bookings
           .filter((b) => b.vehicleId === id && (b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE"))
           .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+        setUpcomingBookings(upcoming);
         setUpcomingBooking(upcoming[0] ?? null);
       })
       .catch(()=>setFeedError("Could not load some car records. Check your connection and retry."));
@@ -504,6 +510,7 @@ export default function VehicleDetailScreen() {
     });
   }
   const activeWarranties = warranties.filter((w) => w.revokedAt === null);
+  const expiredDocs = papers.filter((p) => { const l = daysUntil(p.expiresOn); return l !== null && l < 0; });
   const mostRecentJob = lastFinishedJob(jobs);
   // Document and warranty expiry now live in the single Documents list; only the service nudge stays here.
   const reminders: string[] = [];
@@ -530,13 +537,39 @@ export default function VehicleDetailScreen() {
               ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
             ]}
             compact={!vehicle.photoUrl && !newPhoto}
-            next={upcomingBooking ? { title: `${formatDate(upcomingBooking.scheduledDate)} at ${upcomingBooking.scheduledTime}`, detail: upcomingBooking.membershipDiscountApplied ? "Membership benefit applies" : "Upcoming booking" } : null}
-            onNext={upcomingBooking ? () => router.push(`/(tabs)/bookings/${upcomingBooking.id}`) : undefined}
-            onBook={() => router.push("/(tabs)/catalogue")}
+            next={null}
+            onNext={undefined}
+            onBook={undefined}
           />
         </View>
       }
     >
+      <TabPills tabs={[{ key: "upcoming", label: "Upcoming" }, { key: "history", label: "History" }, { key: "documents", label: "Documents" }]} value={tab} onChange={setTab} />
+      {tab === "upcoming" ? (
+      <>
+      {expiredDocs.length > 0 ? (
+        <Notice title={`${countLabel(expiredDocs.length, "document", "documents")} expired`} body="Renew it and add the new document so the car stays covered." action={<Button label="Review" kind="quiet" onPress={() => setTab("documents")} />} />
+      ) : null}
+      {upcomingBookings.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
+            <Kicker>Bookings</Kicker>
+            <T role="caption" tone="tertiary">{countLabel(upcomingBookings.length, "booking", "bookings")}</T>
+          </View>
+          <Pane pad="gap">
+            {upcomingBookings.map((b, i) => (
+              <Row
+                key={b.id}
+                title={`${formatDate(b.scheduledDate)} at ${b.scheduledTime}`}
+                detail={(b.lines ?? []).map((l) => l.name).filter(Boolean).join(" + ") || undefined}
+                onPress={() => router.push(`/(tabs)/bookings/${b.id}`)}
+                trailing={<Chip label={b.status.replace(/_/g, " ")} tone={b.status === "CONFIRMED" || b.status === "ACTIVE" ? "premium" : "neutral"} />}
+                last={i === upcomingBookings.length - 1}
+              />
+            ))}
+          </Pane>
+        </View>
+      ) : null}
       {!vehicle.category ? (
         <Pane pad="inset">
           <View style={{ gap: space.line }}>
@@ -551,7 +584,7 @@ export default function VehicleDetailScreen() {
         <>
           <CarOverview
             due={due}
-            last={mostRecentJob ? { title: visitTitle(visitServices(mostRecentJob, invoices.find((x) => x.jobId === mostRecentJob.id), serviceNames)), detail: formatDate(mostRecentJob.sealedAt ?? mostRecentJob.createdAt), status: mostRecentJob.status.replace(/_/g, " ") } : null}
+            last={null}
             reminders={reminders}
           />
 
@@ -613,6 +646,31 @@ export default function VehicleDetailScreen() {
         return <CareTimeline title="Service due" count={countLabel(upcoming.length, "item", "items")} items={upcoming} empty="Nothing due yet. The care plan starts once the studio finishes a service on this car." />;
       })()}
 
+      <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
+      {!editing ? (
+        <View style={{ gap: space.breath }}>
+          <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />
+          {confirmingArchive ? (
+            <Notice
+              title="Remove from your garage?"
+              body="Service history stays on record."
+              action={
+                <View style={{ gap: space.breath }}>
+                  <Button label="Yes, remove" kind="danger" onPress={() => void handleArchiveConfirmed()} />
+                  <Button label="Keep it" kind="quiet" onPress={() => setConfirmingArchive(false)} />
+                </View>
+              }
+            />
+          ) : (
+            <Button label="Remove from garage" kind="danger" onPress={() => setConfirmingArchive(true)} />
+          )}
+        </View>
+      ) : null}
+      </>
+      ) : null}
+
+      {tab === "history" ? (
+      <>
       {(() => {
         const past = buildHistory(jobs.map((j) => ({ id: j.id, title: visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames)), also: [visitAlso(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames))].filter(Boolean).join(" "), at: j.sealedAt ?? j.createdAt, status: j.status })));
         const bookingOf = (jobId?: string) => jobs.find((j) => j.id === jobId)?.bookingId;
@@ -624,7 +682,7 @@ export default function VehicleDetailScreen() {
             </View>
             {past.length === 0 ? <T role="caption" tone="secondary">Service visits and updates for this car will appear here.</T> : (
                 <View>
-                  {latestVisits(past).map((it, n) => {
+                  {past.map((it, n) => {
                     const bid = bookingOf(it.jobId);
                     const invoice = invoices.find((x) => x.jobId === it.jobId);
                     return (
@@ -642,12 +700,30 @@ export default function VehicleDetailScreen() {
                   })}
                 </View>
               )}
-            {past.length > HISTORY_PREVIEW ? (
-              <Button label={`See all ${past.length} visits`} kind="quiet" testID="history-see-all" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />
-            ) : null}
           </View>
         );
       })()}
+      {historyProtections.length > 0 ? (
+        <View style={{ gap: space.breath }}>
+          <Kicker>Protection history</Kicker>
+          <Pane pad="gap">
+            {historyProtections.map((p, i) => (
+              <Row
+                key={p.id}
+                title={protectionRecordTitle(p)}
+                detail={[protectionDetail(p, formatDate), protectionLifecycleLabel(p, formatDate)].filter(Boolean).join(" · ") || undefined}
+                trailing={<Chip label="Past record" tone="neutral" />}
+                last={i === historyProtections.length - 1}
+              />
+            ))}
+          </Pane>
+        </View>
+      ) : null}
+      </>
+      ) : null}
+
+      {tab === "documents" ? (
+      <>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
         <Kicker>Documents</Kicker>
@@ -710,23 +786,11 @@ export default function VehicleDetailScreen() {
               ) : null}
             </View>
           ) : null}
-          {historyProtections.length > 0 ? (
-            <View style={{ gap: space.breath }}>
-              <Kicker>Protection history</Kicker>
-              <Pane pad="gap">
-                {historyProtections.map((p, i) => (
-                  <Row
-                    key={p.id}
-                    title={protectionRecordTitle(p)}
-                    detail={[protectionDetail(p, formatDate), protectionLifecycleLabel(p, formatDate)].filter(Boolean).join(" · ") || undefined}
-                    trailing={<Chip label="Past record" tone="neutral" />}
-                    last={i === historyProtections.length - 1}
-                  />
-                ))}
-              </Pane>
-              <LinkAction label="View service history" onPress={() => router.push({ pathname: "/(tabs)/garage/history", params: { vehicleId: id } })} />
-            </View>
-          ) : null}
+          {/* Protection save outcomes (errors, unconfirmed saves, read-back notes)
+              surface where the editor lives: the Documents tab. The same state also
+              renders in the Upcoming tab for vehicle-edit actions; only one tab is
+              visible at a time, so it never appears twice. */}
+          {actionError ? <Notice title="Could not complete that" body={actionError} /> : null}
           {protEdit ? (
             <Pane pad="gap">
               <T role="label" tone="tertiary">{`Edit ${PROTECTION_KIND_LABELS[protEdit.protection.kind] ?? protEdit.protection.kind}`}</T>
@@ -824,24 +888,7 @@ export default function VehicleDetailScreen() {
         </Pane>
       )}
       </>) : null}
-      {!editing ? (
-        <View style={{ gap: space.breath }}>
-          <Button label="Edit vehicle" kind="quiet" onPress={() => setEditing(true)} />
-          {confirmingArchive ? (
-            <Notice
-              title="Remove from your garage?"
-              body="Service history stays on record."
-              action={
-                <View style={{ gap: space.breath }}>
-                  <Button label="Yes, remove" kind="danger" onPress={() => void handleArchiveConfirmed()} />
-                  <Button label="Keep it" kind="quiet" onPress={() => setConfirmingArchive(false)} />
-                </View>
-              }
-            />
-          ) : (
-            <Button label="Remove from garage" kind="danger" onPress={() => setConfirmingArchive(true)} />
-          )}
-        </View>
+      </>
       ) : null}
 
     </Screen>

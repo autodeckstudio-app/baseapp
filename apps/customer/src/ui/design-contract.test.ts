@@ -612,10 +612,16 @@ describe("one Day background across the apps", () => {
 });
 
 describe("car detail and add car (batch 1)", () => {
-  it("car detail is one page with no tabs and one Book a service; add car has RC and photo upload", () => {
+  it("car detail has Upcoming, History and Documents tabs and one Book a service; add car has RC and photo upload", () => {
     const d = read("src/app/(tabs)/garage/[id].tsx");
-    expect(d).not.toContain("TabPills");
+    // Approved 3-tab redesign supersedes the earlier no-tabs contract (mockup 00-tabs-final;
+    // Gauri "looks nice" 2 Nov 14:44; Meet "Accept gauris changes" 16:25).
+    expect(d).toContain("TabPills");
+    expect(d).toContain('key: "upcoming"');
+    expect(d).toContain('key: "history"');
+    expect(d).toContain('key: "documents"');
     expect(d).not.toContain('label="Book maintenance"');
+    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(1); // single Book action, in the Upcoming tab
     expect(d).toContain("<Kicker>Documents</Kicker>"); // one consolidated Documents list (expiry timeline folded in)
     const a = read("src/app/(tabs)/garage/add.tsx");
     expect(a).not.toContain("uploadVehicleRc"); // round7 point 3 (adopted requirement): RC upload moved to Add Document only

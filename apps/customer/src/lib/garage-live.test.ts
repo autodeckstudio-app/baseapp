@@ -40,10 +40,13 @@ describe("garage showroom guards", () => {
 });
 describe("car detail cover guards", () => {
   const d = read("../app/(tabs)/garage/[id].tsx"); const h = read("../ui/CarHero.tsx"); const o = read("../ui/CarOverview.tsx");
-  it("has exactly one Book a service action on the page, and it lives in the cover strip", () => {
+  it("has exactly one Book a service action on the page, and it lives in the Upcoming tab", () => {
+    // Approved 3-tab redesign (mockup 00-tabs-final; Gauri 2 Nov 14:44; Meet accept 16:25):
+    // the car page's single Book action sits in the Upcoming tab; the hero strip stays for other consumers only.
     expect((h.match(/Book a service/g) ?? []).length).toBe(1);
-    expect(d).not.toContain("Book a service"); expect(o).not.toMatch(/Book a service|onBook|>Book</);
-    expect(d).not.toMatch(/label="Book/);
+    expect((d.match(/label="Book a service"/g) ?? []).length).toBe(1);
+    expect(d).toContain("onBook={undefined}");
+    expect(o).not.toMatch(/Book a service|onBook|>Book</);
   });
   it("cover photo height comes from metrics and the name sits on the photo", () => { expect(h).toContain("metrics.heroCover"); expect(h).toContain("fontSize: 30"); });
   it("empty states are one quiet line, not a block with a button", () => { expect(d).not.toContain('<Notice title="No care plan yet"'); expect(o).not.toContain("No service history yet"); });

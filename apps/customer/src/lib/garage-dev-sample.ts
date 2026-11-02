@@ -42,6 +42,16 @@ export function devGarageDetail(vehicleId: string) {
   const warranties = [
     { id: "dw1", tenantId: "dev", vehicleId, customerId: uid, jobId: "dj1", warrantyLabel: "1-year coating warranty", serviceName: "AutoDeck Care Ceramic 1-year", startDate: day(59).slice(0, 10), endDate: day(-306).slice(0, 10), revokedAt: null, coverageTerms: null, createdAt: day(59), updatedAt: day(59) },
   ] as unknown as Warranty[];
-  const upcomingBooking = { id: "db1", vehicleId, status: "CONFIRMED", scheduledAt: new Date(Date.now() + 3 * 86_400_000).toISOString(), scheduledDate: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10), scheduledTime: "10:00", lines: [{ serviceId: "menu-wash-full", name: "Full detail wash", price: 575000, durationMinutes: 300 }], createdAt: day(1), updatedAt: day(1) } as unknown as Booking;
-  return { uid, vehicle, jobs, protections, papers, allPapers: papers, warranties, invoices: [], upcomingBooking };
+  const upcomingBookings = [
+    { id: "db1", vehicleId, status: "CONFIRMED", scheduledAt: new Date(Date.now() + 3 * 86_400_000).toISOString(), scheduledDate: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10), scheduledTime: "10:00", lines: [{ serviceId: "menu-wash-full", name: "Full detail wash", price: 575000, durationMinutes: 300 }], createdAt: day(1), updatedAt: day(1) },
+    { id: "db2", vehicleId, status: "PENDING", scheduledAt: new Date(Date.now() + 7 * 86_400_000).toISOString(), scheduledDate: new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10), scheduledTime: "11:30", lines: [{ serviceId: "menu-wash-interior", name: "Interior deep clean", price: 450000, durationMinutes: 180 }], createdAt: day(0), updatedAt: day(0) },
+  ] as unknown as Booking[];
+  // Invariant (reviewer residual): sample documents must never carry evidence
+  // (evidenceUrl/evidencePath), so the read-only openDocPhoto path stays unreachable
+  // in the preview. A future fixture that adds one must make that choice deliberately.
+  for (const doc of papers) {
+    const e = doc as unknown as { evidenceUrl?: unknown; evidencePath?: unknown };
+    if (e.evidenceUrl || e.evidencePath) throw new Error("dev sample documents must not carry evidence");
+  }
+  return { uid, vehicle, jobs, protections, papers, allPapers: papers, warranties, invoices: [], upcomingBookings };
 }

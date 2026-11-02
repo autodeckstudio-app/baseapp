@@ -66,11 +66,13 @@ describe("car room shows only the latest 3 visits", () => {
     expect(latestVisits([1, 2, 3, 4, 5])).toEqual([1, 2, 3]);
     expect(latestVisits([1, 2])).toEqual([1, 2]);
   });
-  it("the car page passes only the preview to the timeline and links to the full history screen", () => {
+  it("the car page History tab lists every past visit (approved 3-tab redesign: no preview cap, no See all)", () => {
+    // Contract updated for the approved mockup (00-tabs-final; Gauri "looks nice" 2 Nov 14:44;
+    // Meet "Accept gauris changes" 16:25): the History tab shows the full list on the page itself.
     const page = readFileSync(`${__dirname}/../app/(tabs)/garage/[id].tsx`, "utf8");
-    expect(page).toContain("latestVisits(past).map");
-    expect(page).not.toContain("items={past}");
-    expect(page).toContain("history-see-all");
+    expect(page).toContain("past.map(");
+    expect(page).not.toContain("latestVisits(past).map");
+    expect(page).not.toContain("history-see-all");
     expect(page).toContain('pathname: "/(tabs)/garage/history", params: { vehicleId: id }');
   });
 });

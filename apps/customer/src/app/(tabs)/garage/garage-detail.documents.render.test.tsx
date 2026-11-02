@@ -99,6 +99,15 @@ async function mount() {
   });
   return el!;
 }
+// Approved 3-tab redesign (mockup 00-tabs-final): the documents list and its form
+// live under the Documents tab. Switch tabs exactly as a user would.
+function switchTab(el: ReactTestRenderer, label: string) {
+  const nodeText = (inst: { children: unknown[] }): string =>
+    inst.children.map((c) => (typeof c === "string" ? c : nodeText(c as { children: unknown[] }))).join(" ").replace(/\s+/g, " ").trim();
+  const node = el.root.findAll((n) => typeof n.props?.onPress === "function" && nodeText(n) === label)[0];
+  if (!node) throw new Error(`no tab labelled ${label}`);
+  node.props.onPress();
+}
 function press(el: ReactTestRenderer, label: string) {
   const node = el.root.findAll((n) => n.props?.label === label && typeof n.props?.onPress === "function")[0];
   if (!node) throw new Error(`no pressable labelled ${label}`);
@@ -129,6 +138,7 @@ beforeEach(() => {
 describe("mounted document-add retry after a lost acknowledgement", () => {
   it("the orphan from THIS form session is not a clash: the retry resubmits with the same operation id and the server replays", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Add a document"); });
     await act(async () => { typeReference(el, "POL-777"); });
     // First save: the server commits the record + number, but the acknowledgement is lost.
@@ -151,6 +161,7 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
 
   it("a replayed save where the owner had picked a NEW photo warns that the photo was not uploaded, and the notice survives the form closing", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Add a document"); });
     await act(async () => { typeReference(el, "POL-777"); });
     // First save: ack lost after the server committed; capture THIS form session's operation id.
@@ -179,6 +190,7 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
 
   it("a replayed save with a newly picked photo says the new photo was NOT uploaded, and the notice survives the form closing", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await pushPapers(el, [orphan(OP_ID)]);
     await act(async () => { press(el, "Add a document"); });
     await act(async () => { typeReference(el, "POL-777"); });
@@ -194,6 +206,7 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
 
   it("an orphan from ANOTHER origin (different operation id) still blocks as a clash before any network call", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await pushPapers(el, [orphan("ffffffff-0000-4000-8000-0000000000aa")]); // older/foreign pending submission
     await act(async () => { press(el, "Add a document"); });
     await act(async () => { typeReference(el, "POL-777"); });
@@ -204,6 +217,7 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
 
   it("a photo-only failure after the record saved says Photo did not upload, not a generic save failure", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Add a document"); });
     await act(async () => { typeReference(el, "POL-778"); });
     // putPaperPhoto failed AFTER the record committed: heading must name the photo failure, never "Can't add".

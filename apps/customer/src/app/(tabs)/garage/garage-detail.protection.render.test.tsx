@@ -96,6 +96,15 @@ function press(el: ReactTestRenderer, label: string) {
   if (!node) throw new Error(`no pressable labelled ${label}`);
   node.props.onPress();
 }
+// Approved 3-tab redesign (mockup 00-tabs-final): current records and the editor live
+// under Documents, end-dated records under History. Switch tabs exactly as a user would.
+function switchTab(el: ReactTestRenderer, label: string) {
+  const nodeText = (inst: { children: unknown[] }): string =>
+    inst.children.map((c) => (typeof c === "string" ? c : nodeText(c as { children: unknown[] }))).join(" ").replace(/\s+/g, " ").trim();
+  const node = el.root.findAll((n) => typeof n.props?.onPress === "function" && nodeText(n) === label)[0];
+  if (!node) throw new Error(`no tab labelled ${label}`);
+  node.props.onPress();
+}
 const editorOpen = (el: ReactTestRenderer) => textOf(el).includes("Marked as added by you");
 
 beforeEach(() => {
@@ -113,23 +122,28 @@ describe("mounted protection editor orchestration", () => {
       existingProt,
       { ...existingProt, id: "p2", kind: "ceramic", lifecycle: "superseded", lifecycleAt: "2026-10-20", supersededByJobId: "j9" },
     ]); });
-    const text = textOf(el);
+    // Current record + edit affordance: Documents tab.
+    act(() => { switchTab(el, "Documents"); });
+    let text = textOf(el);
     expect(text).toContain("Reported by you");
+    const edits = el.root.findAll((n) => typeof n.props?.label === "string" && n.props.label.startsWith("Edit ") && typeof n.props?.onPress === "function").map((n) => n.props.label as string);
+    expect(edits.filter((l) => l.includes("Paint Protection Film"))).toEqual(["Edit Paint Protection Film"]);
+    // The self-report ADD UI is removed (2 Nov basket, item 11): no add
+    // affordances remain for any kind, current or superseded.
+    expect(text).not.toContain("Add ceramic coating");
+    expect(text).not.toContain("Add PPF");
+    // Superseded record with end provenance: History tab.
+    act(() => { switchTab(el, "History"); });
+    text = textOf(el);
     expect(text).toContain("Protection history");
     expect(text).toContain("Replaced by newer work · 20 Oct 2026");
     expect(text).toContain("Past record");
     // The superseded record keeps no edit affordance even though it is own,
     // self-declared and unverified - only the current PPF row is editable.
-    const edits = el.root.findAll((n) => typeof n.props?.label === "string" && n.props.label.startsWith("Edit ") && typeof n.props?.onPress === "function").map((n) => n.props.label as string);
-    expect(edits.filter((l) => l.includes("Paint Protection Film"))).toEqual(["Edit Paint Protection Film"]);
-    expect(edits.some((l) => l.includes("Ceramic"))).toBe(false);
-    // The self-report ADD UI is removed (2 Nov basket, item 11): no add
-    // affordances remain for any kind, current or superseded.
-    expect(text).not.toContain("Add ceramic coating");
-    expect(text).not.toContain("Add PPF");
-    // History rows link out to the car's service history, not to a fabricated
-    // per-job screen.
-    expect(text).toContain("View service history");
+    const histEdits = el.root.findAll((n) => typeof n.props?.label === "string" && n.props.label.startsWith("Edit ") && typeof n.props?.onPress === "function").map((n) => n.props.label as string);
+    expect(histEdits.some((l) => l.includes("Ceramic"))).toBe(false);
+    // History rows carry no link to a fabricated per-job screen.
+    expect(text).not.toContain("View job");
   });
 
   it("a REMOVED current record leaves the current lists entirely and stays history-only (no re-add UI)", async () => {
@@ -137,16 +151,23 @@ describe("mounted protection editor orchestration", () => {
     act(() => { h.protectionsCb?.([
       { ...existingProt, lifecycle: "removed", lifecycleAt: "2026-10-21", removedByJobId: "j8" },
     ]); });
-    const text = textOf(el);
-    expect(text).toContain("Protection history");
-    expect(text).toContain("Removed · 21 Oct 2026");
+    // Documents tab: the removed record leaves the current lists entirely (no re-add UI).
+    act(() => { switchTab(el, "Documents"); });
+    let text = textOf(el);
     expect(text).not.toContain("Edit Paint Protection Film"); // history is never editable
     expect(text).not.toContain("Add PPF"); // ADD UI removed (2 Nov basket, item 11)
     expect(text).not.toContain("Add ceramic coating");
+    // History tab: it stays as history only.
+    act(() => { switchTab(el, "History"); });
+    text = textOf(el);
+    expect(text).toContain("Protection history");
+    expect(text).toContain("Removed · 21 Oct 2026");
+    expect(text).not.toContain("Edit Paint Protection Film");
   });
 
   it("StrictMode mount cycle: the flow survives the probe cleanup and a save still closes the editor", async () => {
     const el = await mount(true);
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Edit Paint Protection Film"); });
     expect(editorOpen(el)).toBe(true);
     h.updateMyProtection.mockResolvedValue({});
@@ -158,6 +179,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("occurrence guard: the reported-by-you section and each record render EXACTLY ONCE (anti-stacking)", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     const text = textOf(el);
     const count = (needle: string) => text.split(needle).length - 1;
     expect(count("Reported by you")).toBe(1);
@@ -167,6 +189,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("contract: the self-report ADD UI and the customer Warranty section are hidden (2 Nov basket, item 11 + 15:45:51)", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     const text = textOf(el);
     expect(text).not.toContain("Add PPF");
     expect(text).not.toContain("Add ceramic coating");
@@ -182,6 +205,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("busy in-flight: fields go inert (editable=false) and a second Save does not double-call", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Edit Paint Protection Film"); });
     const d = h.d<unknown>();
     h.updateMyProtection.mockReturnValue(d.promise);
@@ -198,6 +222,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("ready-to-ready account change during an in-flight save closes the editor synchronously and the late resolve publishes nothing", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Edit Paint Protection Film"); });
     const d = h.d<unknown>();
     h.updateMyProtection.mockReturnValue(d.promise);
@@ -215,6 +240,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("route change to another car closes the old car's editor before any effect could run", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     await act(async () => { press(el, "Edit Paint Protection Film"); });
     expect(editorOpen(el)).toBe(true);
     __params.current = { id: "v2" };
@@ -224,6 +250,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("unknown-ack edit: confirmed server read-back upserts the list, closes the editor, and says the latest is now shown", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     // accepted edit-row label from PROTECTION_KIND_LABELS, asserted by the gating-aware lineage (0391).
     await act(async () => { press(el, "Edit Paint Protection Film"); });
     expect(editorOpen(el)).toBe(true);
@@ -237,6 +264,7 @@ describe("mounted protection editor orchestration", () => {
 
   it("offline read-back keeps the draft open and never claims the display is current", async () => {
     const el = await mount();
+    act(() => { switchTab(el, "Documents"); });
     // accepted edit-row label from PROTECTION_KIND_LABELS, asserted by the gating-aware lineage (0391).
     await act(async () => { press(el, "Edit Paint Protection Film"); });
     h.updateMyProtection.mockRejectedValue(Object.assign(new Error("down"), { code: "functions/unavailable" }));
