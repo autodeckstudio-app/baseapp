@@ -1,12 +1,12 @@
 import { DateField } from "../../../ui/inputs";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getBookingById, getAvailability, rescheduleBooking, requestBookingReschedule, generateIdempotencyKey, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import { extraServiceIdsOf } from "../../../lib/booking-rules";
 import type { Booking } from "@autodeck/core";
-import { rescheduleRule, isBiggerService, isBookingMissed } from "@autodeck/core";
+import { rescheduleRule, isBiggerService, isBookingMissed, intentKey, PREMIUM_REQUEST_CUTOFF_HOURS } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Kicker, Loading, Notice, Pane, Screen, T } from "../../../ui/kit";
@@ -18,6 +18,7 @@ export default function RescheduleBookingScreen() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [svcCategory, setSvcCategory] = useState<string | null>(null);
+  const [svcLoaded, setSvcLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
@@ -26,6 +27,10 @@ export default function RescheduleBookingScreen() {
   const [selectedDate,setSelectedDate] = useState("");
   useEffect(()=>{const dates=[...new Set(slots.map(s=>s.date))].sort();setSelectedDate(prev=>dates.includes(prev)?prev:dates[0]??"");},[slots]);
   const [pendingSlot, setPendingSlot] = useState<AvailableSlot | null>(null);
+  // Exactly-once: the submission key is tied to the selected slot and survives
+  // retries and re-renders; picking a different slot mints a new key so the
+  // server never sees one key with two payloads (which it rejects as conflict).
+  const submitKeyRef = useRef<{ intent: string; key: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [doneLabel, setDoneLabel] = useState<string | null>(null);
@@ -38,7 +43,7 @@ export default function RescheduleBookingScreen() {
       .then((b) => {
         setBooking(b);
         // Category drives the adopted wash reschedule rule (item 6); missing category keeps legacy behavior.
-        if (b) void getServiceCatalogue().then((all) => setSvcCategory(all.find((x) => x.id === b.serviceId)?.category ?? null)).catch(() => undefined);
+        if (b) void getServiceCatalogue().then((all) => setSvcCategory(all.find((x) => x.id === b.serviceId)?.category ?? null)).catch(() => undefined).finally(() => setSvcLoaded(true));
       })
       .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
@@ -60,7 +65,7 @@ export default function RescheduleBookingScreen() {
 
   useEffect(loadSlots, [loadSlots]);
 
-  if (loading) return <Loading label="Opening your booking" />;
+  if (loading || !svcLoaded) return <Loading label="Opening your booking" />;
   if (loadFailed || !booking) {
     return (
       <Screen>
@@ -78,7 +83,7 @@ export default function RescheduleBookingScreen() {
   const eligible =
     booking.status === "CONFIRMED" &&
     (isPremiumRequest
-      ? (booking.rescheduleRequestCount ?? 0) === 0 && booking.rescheduleRequest?.status !== "pending" && hoursUntil >= 24
+      ? (booking.rescheduleRequestCount ?? 0) === 0 && booking.rescheduleRequest?.status !== "pending" && hoursUntil >= PREMIUM_REQUEST_CUTOFF_HOURS
       : (isBookingMissed(booking) || (booking.rescheduleCount < rule.maxCount &&
       hoursUntil >= rule.cutoffHours)));
 
@@ -113,13 +118,16 @@ export default function RescheduleBookingScreen() {
     setSubmitting(true);
     setActionError(null);
     try {
+      submitKeyRef.current = intentKey(submitKeyRef.current, pendingSlot.startAt, generateIdempotencyKey);
+      const submitKey = submitKeyRef.current.key;
       if (isPremiumRequest) {
-        await requestBookingReschedule(booking.id, pendingSlot.date, pendingSlot.startTime, generateIdempotencyKey());
+        await requestBookingReschedule(booking.id, pendingSlot.date, pendingSlot.startTime, submitKey);
         setDoneLabel(`REQUESTED:${newDisplay}`);
       } else {
-        await rescheduleBooking(booking.id, pendingSlot.date, pendingSlot.startTime, generateIdempotencyKey());
+        await rescheduleBooking(booking.id, pendingSlot.date, pendingSlot.startTime, submitKey);
         setDoneLabel(newDisplay);
       }
+      submitKeyRef.current = null;
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setPendingSlot(null);

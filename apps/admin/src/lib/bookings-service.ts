@@ -187,3 +187,19 @@ export async function resolveNoShow(input: { bookingId: string; resolution: "cha
   const res = await httpsCallable<typeof input, { refundRequestId: string | null }>(functions, "resolveNoShow")(input);
   return res.data;
 }
+
+export async function decideBookingRescheduleRequest(
+  bookingId: string,
+  approve: boolean,
+  idempotencyKey: string,
+  note?: string,
+): Promise<void> {
+  const { httpsCallable } = await import("firebase/functions");
+  const { functions } = await import("./firebase");
+  const payload: { bookingId: string; approve: boolean; idempotencyKey: string; note?: string } = { bookingId, approve, idempotencyKey };
+  if (note !== undefined) payload.note = note;
+  await httpsCallable<typeof payload, unknown>(
+    functions,
+    "decideBookingRescheduleRequest",
+  )(payload);
+}

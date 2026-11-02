@@ -4,9 +4,9 @@
 // pure guards so they can be unit-tested without the emulator. The callable and
 // the approve/decline path keep their own runtime checks; nothing here moves a
 // slot, touches payment fields, or mutates state.
-import { isBiggerService } from "@autodeck/core";
+import { isBiggerService, PREMIUM_REQUEST_CUTOFF_HOURS } from "@autodeck/core";
 
-export const PREMIUM_REQUEST_CUTOFF_HOURS = 24;
+export { PREMIUM_REQUEST_CUTOFF_HOURS };
 
 export type RescheduleRequestState = {
   status: string;

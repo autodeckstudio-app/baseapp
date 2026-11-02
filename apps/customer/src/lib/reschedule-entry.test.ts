@@ -29,4 +29,15 @@ describe("rescheduleEntry (premium request flow, preview)", () => {
     const b = { ...base, status: "CANCELLED" } as Booking;
     expect(rescheduleEntry(b, "ceramic").mode).toBe("none");
   });
+  it("undefined category is a loading state, not the legacy path", () => {
+    expect(rescheduleEntry(base, undefined)).toEqual({ mode: "loading" });
+    expect(rescheduleEntry(base, null)).toEqual({ mode: "direct" }); // definitively unknown -> legacy
+  });
+  it("missed premium bookings follow the disclosed existing policy (contact studio), flagged UI/server inconsistency NOT silently resolved", () => {
+    // Missed = past the scheduled day's studio close (19:00 Sun / 21:00 other days IST).
+    const yesterday = new Date(Date.now() - 86400000);
+    yesterday.setUTCHours(4, 30, 0, 0); // 10:00 IST yesterday
+    const missed = { ...base, status: "CONFIRMED", scheduledAt: yesterday.toISOString() } as unknown as Booking;
+    expect(rescheduleEntry(missed, "ceramic").mode).toBe("none");
+  });
 });

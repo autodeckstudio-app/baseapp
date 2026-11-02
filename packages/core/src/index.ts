@@ -12,6 +12,7 @@ export * from "./pay-online.js";
 export * from "./cancellation-policy.js";
 export * from "./reschedule-policy.js";
 export * from "./advance-split.js";
+export * from "./intent-key.js";
 export * from "./service-bundles.js";
 export * from "./winback.js";
 export * from "./gift.js";

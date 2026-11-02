@@ -135,7 +135,7 @@ export default function BookingDetailScreen() {
 
   useEffect(() => {
     // Dev preview only (__DEV__ is false in production builds): show sample data, no network.
-    if (__DEV__ && devSample && mock === "1") { setBooking(devSample.DEV_SAMPLE_BOOKING); setSvc(devSample.DEV_SAMPLE_SERVICE); setLoading(false); return; }
+    if (__DEV__ && devSample && mock === "1") { setBooking(devSample.DEV_SAMPLE_BOOKING); setSvc(devSample.DEV_SAMPLE_SERVICE); setSvcLoaded(true); setLoading(false); return; }
     if (!id) {setLoading(false);return;}
     setLoading(true);setFeedError(null);
     setWalkIn(false);
@@ -195,11 +195,12 @@ export default function BookingDetailScreen() {
     return listenToMyVehicles(authB.user.uid, authB.claims.tenantId, (vs) => setCar(vs.find((v) => v.id === booking.vehicleId) ?? null), () => {});
   }, [authB, booking?.vehicleId]);
   const [svc, setSvc] = useState<{ name: string; brand?: string | null; category: string; imageUrl?: string | null } | null>(null);
+  const [svcLoaded, setSvcLoaded] = useState(false);
   useEffect(() => {
     if (!booking) return;
     let alive = true;
     if (__DEV__ && mock === "1") return;
-    void getServiceCatalogue().then((all) => { if (alive) setSvc(all.find((x) => x.id === booking.serviceId) ?? null); }).catch(() => undefined);
+    void getServiceCatalogue().then((all) => { if (alive) { setSvc(all.find((x) => x.id === booking.serviceId) ?? null); setSvcLoaded(true); } }).catch(() => { if (alive) setSvcLoaded(true); });
     return () => { alive = false; };
   }, [booking?.serviceId]);
 
@@ -504,9 +505,13 @@ export default function BookingDetailScreen() {
         (() => {
           // Premium bookings use the request-and-approve flow (item 6, PREVIEW);
           // washes and others keep the direct reschedule below.
-          const entry = rescheduleEntry(booking, svc?.category);
+          const entry = rescheduleEntry(booking, svcLoaded ? svc?.category ?? null : undefined);
+          if (entry.mode === "loading") {
+            return null; // catalogue still loading - do not flash the wrong path
+          }
           if (entry.mode === "request-pending") {
-            return <T role="caption" tone="secondary">Reschedule request sent for {entry.requestedDate} at {entry.requestedTime}. Your booking stays at its current time until the studio confirms.</T>;
+            const when = new Date(`${entry.requestedDate}T${entry.requestedTime}:00`).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
+            return <T role="caption" tone="secondary">Reschedule request sent for {when}. Your booking stays at its current time until the studio confirms.</T>;
           }
           if (entry.mode === "request-used") {
             return <T role="caption" tone="secondary">You've already used the reschedule request for this booking. Contact the studio to change the time.</T>;

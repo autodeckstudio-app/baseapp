@@ -21,6 +21,12 @@ export const RESCHEDULE_WASH_CUTOFF_HOURS = 4;
 export const RESCHEDULE_LEGACY_MAX_COUNT = MAX_CUSTOMER_RESCHEDULES;
 export const RESCHEDULE_LEGACY_CUTOFF_HOURS = CANCELLATION_FREE_WINDOW_HOURS;
 
+/** Premium reschedule REQUEST cutoff (basket item 6): a request must be made at
+ *  least this many hours before the CURRENT appointment start. INTERPRETATION,
+ *  not final policy - flagged for owner review; shared by the server guard and
+ *  the customer UI so they cannot drift. */
+export const PREMIUM_REQUEST_CUTOFF_HOURS = 24;
+
 export type RescheduleRule = { maxCount: number; cutoffHours: number };
 
 // Only the confirmed wash category gets the new rule (menu group "wash" = ["washing"]).

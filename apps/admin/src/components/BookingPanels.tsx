@@ -4,10 +4,10 @@
 // price breakdown. Shown on the Job page (one detail page per visit) and on the slim booking page
 // before check-in. Reads come from the parent; writes are unchanged: setBookingQuote and the
 // cancel/settle callables inside CancelBookingPanel.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Booking, ServiceJob, Service } from "@autodeck/core";
-import { formatDuration } from "@autodeck/core";
-import { setBookingQuote } from "../lib/bookings-service";
+import { formatDuration, intentKey } from "@autodeck/core";
+import { setBookingQuote, decideBookingRescheduleRequest } from "../lib/bookings-service";
 import { CancelBookingPanel } from "./CancelBookingPanel";
 import { NoShowPanel } from "./NoShowPanel";
 import { NO_SHOW_REVIEW_ENABLED } from "../lib/backend-features";
@@ -17,6 +17,26 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
   const setError = onError;
   const pb = booking.priceBreakdown;
   const [quoteRupees, setQuoteRupees] = useState("");
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const [decisionNote, setDecisionNote] = useState("");
+  // Exactly-once: the decision key is tied to the approve/decline intent and
+  // survives retries and re-renders; switching intent mints a new key so one
+  // key never carries two decisions (the server rejects that as a conflict).
+  const decisionKeyRef = useRef<{ intent: string; key: string } | null>(null);
+  async function decide(approve: boolean) {
+    if (!booking || decisionBusy) return;
+    setDecisionBusy(true);
+    try {
+      decisionKeyRef.current = intentKey(decisionKeyRef.current, `${booking.id}:${approve ? "approve" : "decline"}`, () => crypto.randomUUID());
+      await decideBookingRescheduleRequest(booking.id, approve, decisionKeyRef.current.key, decisionNote.trim() || undefined);
+      setError(null);
+      decisionKeyRef.current = null;
+      window.location.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not record the decision.");
+    } finally { setDecisionBusy(false); }
+  }
+
   const [quoteBusy, setQuoteBusy] = useState(false);
   async function submitQuote() {
     if (!booking) return;
@@ -42,6 +62,25 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
         <div className="kv"><span>Bay</span><span>{bayName || "Assigned bay"}</span></div>
         {booking.rescheduleCount > 0 && <div className="kv"><span>Rescheduled</span><span>{booking.rescheduleCount} {booking.rescheduleCount === 1 ? "time" : "times"}</span></div>}
       </section>
+
+      {booking.rescheduleRequest ? (
+        <section className="ax-panel">
+          <span className="ax-label">Reschedule request</span>
+          <div className="kv"><span>Requested</span><span>{formatDayLong(booking.rescheduleRequest.requestedDate)} at {booking.rescheduleRequest.requestedTime}</span></div>
+          <div className="kv"><span>Status</span><span>{booking.rescheduleRequest.status === "pending" ? "Waiting for a decision" : booking.rescheduleRequest.status}{booking.rescheduleRequest.decidedAt ? ` · ${formatDayLong(booking.rescheduleRequest.decidedAt.slice(0, 10))}` : ""}</span></div>
+          {booking.rescheduleRequest.note ? <div className="kv"><span>Customer note</span><span>{booking.rescheduleRequest.note}</span></div> : null}
+          {booking.rescheduleRequest.status === "pending" ? (
+            <>
+              <p className="ax-note">Approving moves the booking to the requested time if a bay is free; the price and advance do not change. One request per booking.</p>
+              <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <input className="ax-input" placeholder="Note (optional)" value={decisionNote} onChange={(e) => setDecisionNote(e.target.value)} />
+                <button type="button" className="ax-button ax-button--primary" disabled={decisionBusy} onClick={() => void decide(true)}>Approve move</button>
+                <button type="button" className="ax-button" disabled={decisionBusy} onClick={() => void decide(false)}>Decline</button>
+              </div>
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       <CancelBookingPanel booking={booking} job={job} />
 

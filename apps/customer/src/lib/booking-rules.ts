@@ -93,8 +93,17 @@ export function readyRowTitle(phase: string | undefined | null): "Planned end" |
 export function rescheduleEntry(
   booking: Booking,
   category?: string | null,
-): { mode: "direct" } | { mode: "request" } | { mode: "request-pending"; requestedDate: string; requestedTime: string } | { mode: "request-used" } | { mode: "none"; reason: string } {
+): { mode: "loading" } | { mode: "direct" } | { mode: "request" } | { mode: "request-pending"; requestedDate: string; requestedTime: string } | { mode: "request-used" } | { mode: "none"; reason: string } {
+  // undefined category = the service catalogue has not loaded yet; render nothing
+  // rather than flashing the wrong path (null = definitively unknown -> direct/legacy).
+  if (category === undefined) return { mode: "loading" };
   if (!isBiggerService(category)) return { mode: "direct" };
+  // Missed premium bookings: the disclosed existing policy (booking detail copy) is
+  // "contact the studio / make a new booking". The server's missed-move bypass in
+  // rescheduleBooking predates the request flow and would allow a direct move - a
+  // genuine UI/server inconsistency now flagged for the owner batch, NOT resolved
+  // here by changing either side. The no-show-retention x missed-reschedule
+  // financial interaction is likewise an explicit open flag.
   if (booking.status !== "CONFIRMED" || isBookingMissed(booking)) return { mode: "none", reason: "This booking can't be rescheduled online - contact the studio." };
   const req = booking.rescheduleRequest;
   if (req?.status === "pending") return { mode: "request-pending", requestedDate: req.requestedDate, requestedTime: req.requestedTime };

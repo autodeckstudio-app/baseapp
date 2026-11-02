@@ -194,6 +194,32 @@ describe("Premium reschedule request flow (preview)", () => {
     expect(second.booking.rescheduleRequestCount).toBe(1);
   });
 
+  it("same-key approve retry returns the approved state unchanged and never moves twice", async () => {
+    const booking = await makePremiumBooking(customerId, service, vehicle);
+    const reqDate = nextDate();
+    await requestBookingReschedule.run({
+      data: { bookingId: booking.id, newDate: reqDate, newTime: "14:00", idempotencyKey: uid("idem") },
+      auth: customerAuth(customerId),
+    } as never);
+    const key = uid("idem-dec");
+    const admin = adminAuth(uid("admin"));
+    const first = (await decideBookingRescheduleRequest.run({
+      data: { bookingId: booking.id, approve: true, idempotencyKey: key },
+      auth: admin,
+    } as never)) as { booking: Booking };
+    // Simulates a client retry after a timeout where the first call committed.
+    const second = (await decideBookingRescheduleRequest.run({
+      data: { bookingId: booking.id, approve: true, idempotencyKey: key },
+      auth: admin,
+    } as never)) as { booking: Booking };
+    expect(second.booking.rescheduleRequest?.status).toBe("approved");
+    expect(second.booking.rescheduleRequest?.decidedAt).toBe(first.booking.rescheduleRequest?.decidedAt);
+    // Exactly one move: count and slot identical to the first decision.
+    expect(second.booking.rescheduleCount).toBe(first.booking.rescheduleCount);
+    expect(second.booking.scheduledAt).toBe(first.booking.scheduledAt);
+    expect(second.booking.rescheduleCount).toBe(booking.rescheduleCount + 1);
+  });
+
   it("same key with a different slot is a conflict, never silently applied", async () => {
     const booking = await makePremiumBooking(customerId, service, vehicle);
     const key = uid("idem-req");
