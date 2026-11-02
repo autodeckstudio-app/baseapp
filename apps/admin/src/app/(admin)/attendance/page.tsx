@@ -21,6 +21,7 @@ function kolkataToday(): string {
 export default function AttendancePage() {
   const { user, claims } = useAdminAuth();
   const [staff, setStaff] = useState<Employee[]>([]);
+  const [rosterFailed, setRosterFailed] = useState<"permission" | "error" | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -33,8 +34,14 @@ export default function AttendancePage() {
   useEffect(() => {
     if (!claims) return;
     listStaff(claims.tenantId)
-      .then(setStaff)
-      .catch(() => setError("Couldn't load the team."));
+      .then((s) => { setStaff(s); setRosterFailed(null); })
+      .catch((err: unknown) => {
+        // Only a rules denial means "needs an Office sign-in"; anything else
+        // (offline, transient) is a generic load failure.
+        const code = (err as { code?: string } | null)?.code;
+        setRosterFailed(code === "permission-denied" ? "permission" : "error");
+        setError("Couldn't load the team.");
+      });
   }, [claims]);
 
   useEffect(() => {
@@ -81,6 +88,7 @@ export default function AttendancePage() {
       date={today}
       staff={staff}
       records={records}
+      rosterFailed={rosterFailed}
       me={me}
       myRecord={myRecord}
       isAdmin={claims?.role === "admin" || claims?.role === "superadmin"}

@@ -25,6 +25,12 @@ export function AttendanceView(p: {
   date: string;
   staff: Employee[];
   records: AttendanceRecord[];
+  // Set when the roster query itself failed. "permission": rules denied the
+  // tenant-wide read (e.g. a Studio role, which may read only its own employee
+  // doc) - the roster genuinely needs an Office sign-in. "error": any other
+  // failure (network, transient) - says nothing about permissions. Either way
+  // the KPIs and empty state must never compose a fake roster from it.
+  rosterFailed: "permission" | "error" | null;
   me: Employee | null;
   myRecord: AttendanceRecord | null;
   isAdmin: boolean;
@@ -46,6 +52,10 @@ export function AttendanceView(p: {
   const onBreak = p.records.some((r) => r.breaks.some((b) => b.endedAt === null));
   const myOnBreak = p.myRecord?.breaks.some((b) => b.endedAt === null) ?? false;
   const activeStaff = p.staff.filter((s) => !s.terminatedAt);
+  // A denied/failed roster is not a roster of zero: never let the counter go
+  // negative (attendance records can outlive a roster read or belong to
+  // someone no longer listed).
+  const notIn = Math.max(0, activeStaff.length - present);
 
   return (
     <div className="ax-page">
@@ -54,7 +64,9 @@ export function AttendanceView(p: {
         title="Attendance"
         kpis={[
           { value: present, label: "Present today" },
-          { value: activeStaff.length - present, label: "Not in", tone: activeStaff.length - present > 0 ? "accent" : undefined },
+          p.rosterFailed !== null
+            ? { value: "\u2013", label: "Not in" }
+            : { value: notIn, label: "Not in", tone: notIn > 0 ? ("accent" as const) : undefined },
           { value: p.records.length, label: "Marked", tone: "premium" },
         ]}
       />
@@ -67,6 +79,10 @@ export function AttendanceView(p: {
             <span className="ax-label">Today · {p.date}</span>
             {p.loading ? (
               [0, 1, 2].map((i) => <div key={i} className="ax-skel ax-skel--row" />)
+            ) : p.rosterFailed === "permission" ? (
+              <p className="ax-note">The team roster needs an Office sign-in. Staff check in from the Studio app.</p>
+            ) : p.rosterFailed === "error" ? (
+              <p className="ax-note">The roster didn't load. Check the connection and try again.</p>
             ) : activeStaff.length === 0 ? (
               <p className="ax-note">No one on the roster yet. Add people from Office → Team.</p>
             ) : (
