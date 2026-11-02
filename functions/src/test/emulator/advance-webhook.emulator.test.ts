@@ -107,6 +107,42 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
     expect(pay.razorpayPaymentLinkId).toBeTruthy(); // kept for reconciliation
   });
 
+  it("F2: a raw payment entity with NO currency fails closed (parser default INR must not mask it)", async () => {
+    const s = await seed();
+    const raw = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { id: s.payId, order_id: s.orderId, amount: 23600, status: "captured" } } } });
+    const r = await call(raw, "ADVC0" + s.payDocId);
+    expect(r.body.outcome).toBe("amount_mismatch");
+    expect((await db.collection("payments").doc(s.payDocId).get()).data()!.status).toBe("pending");
+  });
+
+  it("F2: a wrong provider currency fails closed", async () => {
+    const s = await seed();
+    const raw = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { id: s.payId, order_id: s.orderId, amount: 23600, currency: "USD", status: "captured" } } } });
+    const r = await call(raw, "ADVC1" + s.payDocId);
+    expect(r.body.outcome).toBe("amount_mismatch");
+    expect((await db.collection("payments").doc(s.payDocId).get()).data()!.status).toBe("pending");
+  });
+
+  it("F1: a cross-TENANT booking is never mutated; money recorded + flagged for review", async () => {
+    const s = await seed();
+    await db.collection("bookings").doc(s.bookingId).update({ tenantId: "OTHER-tenant" });
+    const r = await call(captured(s.orderId, 23600, s.payId), "ADVC2" + s.payDocId);
+    expect(r.body.outcome).toBe("completed");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.status).toBe("completed"); expect(pay.invoiceReviewNeeded).toBe(true);
+    expect((await db.collection("bookings").doc(s.bookingId).get()).data()!.advancePaidAt ?? null).toBeNull();
+  });
+
+  it("F1: a one-sided null studio does NOT bypass the binding (booking null vs payment set)", async () => {
+    const s = await seed();
+    await db.collection("bookings").doc(s.bookingId).update({ studioId: null });
+    const r = await call(captured(s.orderId, 23600, s.payId), "ADVC3" + s.payDocId);
+    expect(r.body.outcome).toBe("completed");
+    const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+    expect(pay.invoiceReviewNeeded).toBe(true);
+    expect((await db.collection("bookings").doc(s.bookingId).get()).data()!.advancePaidAt ?? null).toBeNull();
+  });
+
   it("a second capture for an already advance-paid booking flags review instead of double-marking", async () => {
     const s = await seed();
     await call(captured(s.orderId, 23600, s.payId), "ADV5" + s.payDocId);
