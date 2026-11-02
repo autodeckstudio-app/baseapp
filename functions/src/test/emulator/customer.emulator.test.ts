@@ -9,6 +9,7 @@
  *   +919876543211  →  code: 123456
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
@@ -27,7 +28,7 @@ let testEnv: RulesTestEnvironment;
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     firestore: { host: "localhost", port: 8080 },
   });
 });

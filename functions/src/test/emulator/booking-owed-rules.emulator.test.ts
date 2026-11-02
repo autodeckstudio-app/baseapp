@@ -7,12 +7,13 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { initializeTestEnvironment, assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const T = "bo-tenant", ID = "bo-booking";
 let env: RulesTestEnvironment;
 const FS_PORT = Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? 8085);
 beforeAll(async () => {
-  env = await initializeTestEnvironment({ projectId: "autodeck-dev", firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: FS_PORT } });
+  env = await initializeTestEnvironment({ projectId: TEST_PROJECT_ID, firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: FS_PORT } });
   await env.withSecurityRulesDisabled(async (c) => {
     const seedDb = c.firestore();
     await seedDb.doc(`jobs/${ID}`).set({id:ID,tenantId:T,studioId:"s1",customerId:"cust1",membershipWashUsed:true});

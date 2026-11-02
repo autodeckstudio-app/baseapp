@@ -7,10 +7,11 @@
  */
 import { it, expect } from "vitest";
 import { deleteApp, getApp, initializeApp } from "firebase-admin/app";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 it("retry pass on real firestore+storage", async () => {
   await deleteApp(getApp());
-  initializeApp({ projectId: "autodeck-dev", storageBucket: "autodeck-dev.appspot.com" });
+  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: "autodeck-dev.appspot.com" });
   const { getFirestore } = await import("firebase-admin/firestore");
   const { getStorage } = await import("firebase-admin/storage");
   const { retryFailedVehiclePhotoCleanups } = await import("../../lib/vehicle-delete.js");

@@ -11,13 +11,14 @@ import { initializeTestEnvironment, assertFails, assertSucceeds, type RulesTestE
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FIRST_TENANT_ID } from "@autodeck/core";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const RULES_PATH = resolve(__dirname, "../../../../firestore.rules");
 const OTHER = "other-tenant";
 const VEH = "veh-lookup-1";
 let testEnv: RulesTestEnvironment;
 beforeAll(async () => {
-  testEnv = await initializeTestEnvironment({ projectId: "autodeck-dev", firestore: { rules: readFileSync(RULES_PATH, "utf8"), host: "localhost", port: Number(process.env.FIRESTORE_EMULATOR_TEST_PORT ?? 8080) } });
+  testEnv = await initializeTestEnvironment({ projectId: TEST_PROJECT_ID, firestore: { rules: readFileSync(RULES_PATH, "utf8"), host: "localhost", port: Number(process.env.FIRESTORE_EMULATOR_TEST_PORT ?? 8080) } });
 });
 afterAll(async () => { await testEnv.cleanup(); });
 beforeEach(async () => {

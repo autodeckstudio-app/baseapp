@@ -1,6 +1,7 @@
 import { getStorage } from "firebase-admin/storage";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 /**
  * Round 7 photo handling against the REAL local Firestore + Storage emulators (success path). Failure paths are unit-tested with mocks.
  * Proves objects are actually removed from Storage, only the intended one, and records match. Fixtures only, emulator only.
@@ -22,7 +23,7 @@ const has = async (p: string) => (await bucket.file(p).exists())[0];
 
 beforeAll(async () => {
   await deleteApp(getApp());
-  initializeApp({ projectId: "autodeck-dev", storageBucket: "autodeck-dev.appspot.com" });
+  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: "autodeck-dev.appspot.com" });
   const { getFirestore } = await import("firebase-admin/firestore");
   db = getFirestore(); bucket = getStorage().bucket();
   const papers = await import("../../functions/papers/myPaperEdits.js");

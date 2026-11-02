@@ -18,6 +18,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { RazorpayProvider } from "../../lib/razorpay-provider.js";
 import { processProviderEvent } from "../../lib/razorpay-webhook.js";
 import { reserveRefund, runRefundOutbox } from "../../lib/refund-outbox.js";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const db = getFirestore();
 const provider = new RazorpayProvider("rzp_test_x", "secret", "whsec_test");
@@ -25,7 +26,7 @@ const T = "pv-tenant";
 const SECRET_BITS = ["secret@example.com", "+919000090000", "SECRETNOTE", "https://secret.example/x", "plink_SECRET", "order_SECRET", "ref_SECRET"];
 let testEnv: RulesTestEnvironment;
 beforeAll(async () => {
-  testEnv = await initializeTestEnvironment({ projectId: "autodeck-dev", firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: Number(process.env.FIRESTORE_EMULATOR_TEST_PORT ?? 8080) } });
+  testEnv = await initializeTestEnvironment({ projectId: TEST_PROJECT_ID, firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: Number(process.env.FIRESTORE_EMULATOR_TEST_PORT ?? 8080) } });
 });
 afterAll(async () => { await testEnv.cleanup(); });
 

@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
   initializeTestEnvironment,
   assertFails,
@@ -601,7 +602,7 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
 
   beforeAll(async () => {
     storageEnv = await initializeTestEnvironment({
-      projectId: "autodeck-dev",
+      projectId: TEST_PROJECT_ID,
       storage: { rules: readFileSync(resolve(__dirname, "../../../../storage.rules"), "utf8"), host: "localhost", port: 9199 },
     });
     await seedStudio(STUDIO_A, TENANT_A);

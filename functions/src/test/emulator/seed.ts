@@ -12,6 +12,7 @@ import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import type { StudioConfig } from "@autodeck/core";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
   FIRST_TENANT_ID,
   FIRST_STUDIO_ID,
@@ -29,7 +30,7 @@ process.env["FIREBASE_AUTH_EMULATOR_HOST"] ??= "localhost:9099";
 process.env["GCLOUD_PROJECT"] ??= "autodeck-dev";
 
 if (!getApps().length) {
-  initializeApp({ projectId: "autodeck-dev" });
+  initializeApp({ projectId: TEST_PROJECT_ID });
 }
 
 const db = getFirestore();

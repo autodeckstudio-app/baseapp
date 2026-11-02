@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getFirestore } from "firebase-admin/firestore";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const db = getFirestore();
 const T = "lr-tenant";
@@ -20,7 +21,7 @@ const CAR = "lr-car";
 let testEnv: RulesTestEnvironment;
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? 8080) },
   });
 });

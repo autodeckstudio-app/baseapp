@@ -5,6 +5,7 @@
  * Rules are loaded from ../../../../firestore.rules (repo root)
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
   initializeTestEnvironment,
   assertFails,
@@ -25,7 +26,7 @@ function makeCustomerClaims(_uid: string) {
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     firestore: {
       rules: readFileSync(RULES_PATH, "utf8"),
       host: "localhost",

@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getFirestore } from "firebase-admin/firestore";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const db = getFirestore();
 const TENANT = "pd-tenant";
@@ -20,7 +21,7 @@ let env: RulesTestEnvironment;
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: Number(process.env["FIRESTORE_EMULATOR_HOST"]?.split(":").at(-1) ?? 8080) },
   });
 });

@@ -8,7 +8,11 @@ process.env["FIRESTORE_EMULATOR_HOST"] ??= "localhost:8099"; // matches firebase
 process.env["FIRESTORE_EMULATOR_TEST_PORT"] ??= "8099";
 process.env["FIREBASE_AUTH_EMULATOR_HOST"] ??= "localhost:9099";
 process.env["FIREBASE_STORAGE_EMULATOR_HOST"] ??= "localhost:9199";
-process.env["GCLOUD_PROJECT"] = "autodeck-dev";
+// VERIFY/final gates may force a demo-* project id (demo-* can never fall
+// back to a live backend); the historical default stays autodeck-dev.
+process.env["GCLOUD_PROJECT"] ??= "autodeck-dev";
+const PROJECT = process.env["GCLOUD_PROJECT"]!;
+export const TEST_PROJECT_ID = PROJECT;
 
 // A throwaway service-account keypair can be injected for tests that mint
 // real signed URLs (e.g. storage upload URL flows); without it the app uses
@@ -20,13 +24,13 @@ const hasSignCred = Boolean(process.env["TEST_SIGN_CLIENT_EMAIL"] && process.env
 initializeApp(
   hasSignCred
     ? {
-        projectId: "autodeck-dev",
-        storageBucket: "autodeck-dev.appspot.com",
+        projectId: PROJECT,
+        storageBucket: `${PROJECT}.appspot.com`,
         credential: cert({
-          projectId: "autodeck-dev",
+          projectId: PROJECT,
           clientEmail: process.env["TEST_SIGN_CLIENT_EMAIL"]!,
           privateKey: process.env["TEST_SIGN_PRIVATE_KEY"]!,
         }),
       }
-    : { projectId: "autodeck-dev", storageBucket: "autodeck-dev.appspot.com" },
+    : { projectId: PROJECT, storageBucket: `${PROJECT}.appspot.com` },
 );

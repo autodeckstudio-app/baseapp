@@ -4,13 +4,14 @@ import { initializeTestEnvironment, assertFails, type RulesTestEnvironment } fro
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FIRST_TENANT_ID } from "@autodeck/core";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const RULES_PATH = resolve(__dirname, "../../../../firestore.rules");
 const PRIVATE = ["payments", "invoices", "expenses", "dailyClosings", "customers", "bookings", "jobs", "vehicles", "memberships", "staffAlerts", "refundRequests",
   "paymentEvents", "auditLogs", "gifts", "warranties", "attendance", "staff", "users", "notifications", "inspections"];
 let testEnv: RulesTestEnvironment;
 beforeAll(async () => {
-  testEnv = await initializeTestEnvironment({ projectId: "autodeck-dev", firestore: { rules: readFileSync(RULES_PATH, "utf8"), host: "localhost", port: Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? 8080) } });
+  testEnv = await initializeTestEnvironment({ projectId: TEST_PROJECT_ID, firestore: { rules: readFileSync(RULES_PATH, "utf8"), host: "localhost", port: Number(process.env["FIRESTORE_EMULATOR_TEST_PORT"] ?? 8080) } });
 });
 beforeEach(async () => {
   await testEnv.clearFirestore();

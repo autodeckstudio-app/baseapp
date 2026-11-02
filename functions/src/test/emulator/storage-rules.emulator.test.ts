@@ -12,6 +12,7 @@
  * Rules are loaded from ../../../../storage.rules (repo root)
  */
 import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
   initializeTestEnvironment,
   assertFails,
@@ -40,7 +41,7 @@ const CONTENT = new Uint8Array([1, 2, 3]);
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     storage: {
       rules: readFileSync(RULES_PATH, "utf8"),
       host: "localhost",

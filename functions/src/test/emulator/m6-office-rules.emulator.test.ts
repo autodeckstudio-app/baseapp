@@ -10,6 +10,7 @@
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080)
  */
 import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
   initializeTestEnvironment,
   assertFails,
@@ -28,7 +29,7 @@ let testEnv: RulesTestEnvironment;
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     firestore: {
       rules: readFileSync(RULES_PATH, "utf8"),
       host: "localhost",

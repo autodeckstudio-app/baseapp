@@ -8,6 +8,7 @@ import { initializeTestEnvironment, assertFails, type RulesTestEnvironment } fro
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { FIRST_TENANT_ID, mergeFloorJobs, OPEN_FLOOR_STATUSES } from "@autodeck/core";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 let env: RulesTestEnvironment;
 const STUDIO = "studio-ahmedabad";
@@ -15,7 +16,7 @@ const TODAY = "2026-10-28";
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
-    projectId: "autodeck-dev",
+    projectId: TEST_PROJECT_ID,
     firestore: {
       rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"),
       host: "localhost",

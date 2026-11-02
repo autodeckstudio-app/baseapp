@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { deleteApp, getApp, initializeApp } from "firebase-admin/app";
 import type { getStorage } from "firebase-admin/storage";
+import { TEST_PROJECT_ID } from "../emulator-setup";
 
 const TENANT = "photo-del-tenant";
 let n = 0;
@@ -20,7 +21,7 @@ const has = async (p: string) => (await bucket.file(p).exists())[0];
 
 beforeAll(async () => {
   await deleteApp(getApp());
-  initializeApp({ projectId: "autodeck-dev", storageBucket: "autodeck-dev.appspot.com" });
+  initializeApp({ projectId: TEST_PROJECT_ID, storageBucket: "autodeck-dev.appspot.com" });
   const { getFirestore } = await import("firebase-admin/firestore");
   const { getStorage } = await import("firebase-admin/storage");
   db = getFirestore(); bucket = getStorage().bucket();
