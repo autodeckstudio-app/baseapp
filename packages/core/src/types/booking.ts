@@ -92,6 +92,23 @@ export interface Booking {
   notes: string | null;
   idempotencyKey: string;
   rescheduleCount: number; // starts at 0; max enforced by Cloud Function
+  /** Premium reschedule request (basket item 6, PREVIEW - pending migration/backward-compat
+   *  review before activation). Optional by design: absent on all existing bookings means
+   *  no request, and that absence IS the backward compatibility - no migration writes needed.
+   *  At most one request is ever attached; a new request is allowed only after the previous
+   *  one reached a terminal state (approved/declined/expired). */
+  rescheduleRequest?: {
+    requestedDate: string; // yyyy-mm-dd, studio-local
+    requestedTime: string; // HH:mm, studio-local
+    requestedAt: string;   // ISO timestamp
+    status: "pending" | "approved" | "declined" | "expired";
+    decidedBy?: string | null;
+    decidedAt?: string | null;
+    note?: string | null;
+    /** The booking's scheduledAt (ISO) when the request was made. Approval re-checks this:
+     *  if the booking has since moved or otherwise changed, the approval is stale and rejected. */
+    baseScheduledAt: string;
+  } | null;
   standbyArrivedAt?: string | null;
   standbyAdmittedAt?: string | null;
   missedAt?: string | null; // persisted by the 9pm scheduler; cleared on reschedule

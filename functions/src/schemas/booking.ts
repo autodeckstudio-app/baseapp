@@ -53,6 +53,22 @@ export const rescheduleBookingSchema = z.object({
   idempotencyKey: z.string().min(1).max(128),
 }).strict();
 
+export const requestBookingRescheduleSchema = z.object({
+  customerContext: z.boolean().optional(),
+  bookingId: z.string().min(1),
+  newDate: dateStr,
+  newTime: timeStr,
+  note: z.string().max(500).optional(),
+  idempotencyKey: z.string().min(1).max(128),
+}).strict();
+
+export const decideBookingRescheduleRequestSchema = z.object({
+  bookingId: z.string().min(1),
+  approve: z.boolean(),
+  note: z.string().max(500).optional(),
+  idempotencyKey: z.string().min(1).max(128),
+}).strict();
+
 export type GetAvailabilityInput = z.infer<typeof getAvailabilitySchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;

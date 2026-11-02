@@ -54,6 +54,8 @@ export type AuditAction =
   | "service.activated"
   | "service.deactivated"
   | "booking.rescheduled"
+  | "booking.reschedule_requested"
+  | "booking.reschedule_decided"
   | "booking.expired"
   | "booking.missed"
   | "booking.standby_arrived"
