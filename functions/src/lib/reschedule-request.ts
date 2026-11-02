@@ -11,7 +11,40 @@ export const PREMIUM_REQUEST_CUTOFF_HOURS = 24;
 export type RescheduleRequestState = {
   status: string;
   baseScheduledAt: string;
+  requestedDate?: string;
+  requestedTime?: string;
+  idempotencyKey?: string;
+  decisionIdempotencyKey?: string | null;
 };
+
+/** Exactly-once retry check for a request submission. The caller must only
+ *  consult this while a request record exists; it classifies the retry:
+ *  - "retry": same key AND same requested slot -> return the existing request
+ *  - "conflict": same key, different slot -> never silently apply
+ *  - "new": different key -> a genuinely new submission attempt (the pending/
+ *    one-per-booking guards decide whether that is allowed) */
+export function classifyRequestRetry(
+  existing: RescheduleRequestState,
+  input: { newDate: string; newTime: string; idempotencyKey: string },
+): "retry" | "conflict" | "new" {
+  if (existing.idempotencyKey !== input.idempotencyKey) return "new";
+  if (existing.requestedDate === input.newDate && existing.requestedTime === input.newTime) return "retry";
+  return "conflict";
+}
+
+/** Exactly-once retry check for a decision on a terminal request:
+ *  - "retry": same decision key AND same approve value -> return current state
+ *  - "conflict": same decision key, different approve value
+ *  - "new": different key -> a fresh decision attempt on a decided request */
+export function classifyDecisionRetry(
+  existing: RescheduleRequestState,
+  input: { approve: boolean; idempotencyKey: string },
+): "retry" | "conflict" | "new" {
+  if (existing.decisionIdempotencyKey !== input.idempotencyKey) return "new";
+  const wasApproved = existing.status === "approved";
+  if (wasApproved === input.approve) return "retry";
+  return "conflict";
+}
 
 export type RequestGuardBooking = {
   status: string;

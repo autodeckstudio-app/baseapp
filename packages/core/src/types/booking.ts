@@ -108,6 +108,13 @@ export interface Booking {
     /** The booking's scheduledAt (ISO) when the request was made. Approval re-checks this:
      *  if the booking has since moved or otherwise changed, the approval is stale and rejected. */
     baseScheduledAt: string;
+    /** The customer's submission idempotency key. A retry with the same key and the same
+     *  requested slot returns the existing request unchanged (exactly-once); the same key
+     *  with a different slot is a conflict and never silently applies. */
+    idempotencyKey: string;
+    /** The admin's decision idempotency key, recorded with the decision for the same
+     *  exactly-once retry semantics. */
+    decisionIdempotencyKey?: string | null;
   } | null;
   /** How many reschedule requests the customer has submitted for this booking (absent = 0).
    *  The adopted premium rule is ONE request per booking; an idempotent retry of the same

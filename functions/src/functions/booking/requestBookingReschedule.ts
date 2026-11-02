@@ -14,7 +14,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { requestBookingRescheduleSchema } from "../../schemas/booking.js";
-import { canRequestReschedule, isPremiumCategory } from "../../lib/reschedule-request.js";
+import { canRequestReschedule, classifyRequestRetry, isPremiumCategory } from "../../lib/reschedule-request.js";
 import { localToUTC } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
@@ -62,10 +62,22 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
       throw new HttpsError("invalid-argument", "The requested new time must be in the future.");
     }
 
-    // Idempotency: a retried submit with the same key returns the pending request unchanged.
+    // Exactly-once retry, checked BEFORE the guards so a retry is not mistaken
+    // for a second request (reviewer defect: this check was dead code behind
+    // the already-exists guard, and the key was never stored or compared).
+    // Runs inside the transaction, so concurrent retries serialize: the loser
+    // re-reads, sees the committed request and classifies against it.
     const existing = booking.rescheduleRequest;
-    if (existing && existing.status === "pending") {
-      return { booking };
+    if (existing) {
+      const cls = classifyRequestRetry(existing, data);
+      if (cls === "retry") {
+        // Same key, same slot: return the existing request unchanged - no
+        // second count, no state change, no audit spam.
+        return { booking };
+      }
+      if (cls === "conflict") {
+        throw new HttpsError("aborted", "This request key was already used with a different time. Submit with a new key.");
+      }
     }
 
     const rescheduleRequest = {
@@ -75,6 +87,7 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
       status: "pending" as const,
       note: data.note ?? null,
       baseScheduledAt: booking.scheduledAt,
+      idempotencyKey: data.idempotencyKey,
     };
 
     // One request per booking: count submissions; the pending-retry path above

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRequestReschedule, canDecideRescheduleRequest, isPremiumCategory, PREMIUM_REQUEST_CUTOFF_HOURS } from "../../lib/reschedule-request.js";
+import { canRequestReschedule, canDecideRescheduleRequest, classifyRequestRetry, classifyDecisionRetry, isPremiumCategory, PREMIUM_REQUEST_CUTOFF_HOURS } from "../../lib/reschedule-request.js";
 
 const NOW = new Date("2026-11-02T10:00:00.000Z");
 const hoursFromNow = (h: number) => new Date(NOW.getTime() + h * 3600_000).toISOString();
@@ -58,5 +58,36 @@ describe("canDecideRescheduleRequest", () => {
   });
   it("rejects re-deciding a terminal request", () => {
     expect(canDecideRescheduleRequest(confirmed(), { ...req, status: "approved" })).toMatchObject({ ok: false, code: "failed-precondition" });
+  });
+});
+
+describe("classifyRequestRetry (exactly-once submission)", () => {
+  const existing = { status: "pending", baseScheduledAt: "x", requestedDate: "2026-11-10", requestedTime: "14:00", idempotencyKey: "k1" };
+  it("same key + same slot is a retry (return existing, no second count)", () => {
+    expect(classifyRequestRetry(existing, { newDate: "2026-11-10", newTime: "14:00", idempotencyKey: "k1" })).toBe("retry");
+  });
+  it("same key + different slot is a conflict, never silently applied", () => {
+    expect(classifyRequestRetry(existing, { newDate: "2026-11-11", newTime: "14:00", idempotencyKey: "k1" })).toBe("conflict");
+    expect(classifyRequestRetry(existing, { newDate: "2026-11-10", newTime: "15:00", idempotencyKey: "k1" })).toBe("conflict");
+  });
+  it("different key is a new submission attempt for the guards to judge", () => {
+    expect(classifyRequestRetry(existing, { newDate: "2026-11-10", newTime: "14:00", idempotencyKey: "k2" })).toBe("new");
+  });
+});
+
+describe("classifyDecisionRetry (exactly-once decision)", () => {
+  it("same decision key + same value on a terminal request is a retry", () => {
+    const approved = { status: "approved", baseScheduledAt: "x", decisionIdempotencyKey: "d1" };
+    expect(classifyDecisionRetry(approved, { approve: true, idempotencyKey: "d1" })).toBe("retry");
+    const declined = { status: "declined", baseScheduledAt: "x", decisionIdempotencyKey: "d1" };
+    expect(classifyDecisionRetry(declined, { approve: false, idempotencyKey: "d1" })).toBe("retry");
+  });
+  it("same decision key + opposite value is a conflict, never a silent flip", () => {
+    const approved = { status: "approved", baseScheduledAt: "x", decisionIdempotencyKey: "d1" };
+    expect(classifyDecisionRetry(approved, { approve: false, idempotencyKey: "d1" })).toBe("conflict");
+  });
+  it("different key on a decided request is a new (rejected) decision attempt", () => {
+    const approved = { status: "approved", baseScheduledAt: "x", decisionIdempotencyKey: "d1" };
+    expect(classifyDecisionRetry(approved, { approve: true, idempotencyKey: "d2" })).toBe("new");
   });
 });

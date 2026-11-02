@@ -15,7 +15,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { decideBookingRescheduleRequestSchema } from "../../schemas/booking.js";
-import { canDecideRescheduleRequest, isPremiumCategory } from "../../lib/reschedule-request.js";
+import { canDecideRescheduleRequest, classifyDecisionRetry, isPremiumCategory } from "../../lib/reschedule-request.js";
 import { runRescheduleMove } from "../../lib/reschedule-move.js";
 import { localToUTC, computeScheduleEnd } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
@@ -55,6 +55,17 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
   const config = configSnap.data() as import("@autodeck/core").StudioConfig;
   assertTenant(user, config.tenantId);
 
+  // Exactly-once decision retry, checked BEFORE the pending guard: a retried
+  // decision with the same key and same approve value returns the decided
+  // state instead of failing "already decided"; the same key with the opposite
+  // value is a conflict, never a silent flip.
+  if (req.status !== "pending") {
+    const cls = classifyDecisionRetry(req, data);
+    if (cls === "retry") return { booking };
+    if (cls === "conflict") {
+      throw new HttpsError("aborted", "This decision key was already used with the opposite decision. Use a new key.");
+    }
+  }
   const guard = canDecideRescheduleRequest(booking, req);
   if (!guard.ok) throw new HttpsError(guard.code as never, guard.message);
   if (isBookingMissed(booking)) {
@@ -66,14 +77,22 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
   if (!data.approve) {
     // Decline: mark the request only. The booking keeps its original slot; the
     // one-request counter still stands, so the customer cannot silently re-ask.
-    await db.runTransaction(async (tx) => {
+    const declineOutcome = await db.runTransaction(async (tx) => {
       const fresh = (await tx.get(bookingRef)).data() as Booking | undefined;
       const freshReq = fresh?.rescheduleRequest;
       if (!fresh || !freshReq) throw new HttpsError("failed-precondition", "This booking has no reschedule request.");
-      const recheck = canDecideRescheduleRequest(fresh, freshReq);
+      // Concurrent double-decline: after a tx retry the request may already be
+      // terminal. Classify against the decision key instead of failing.
+      if (freshReq.status !== "pending") {
+        const cls = classifyDecisionRetry(freshReq, data);
+        if (cls === "retry") return "retry" as const;
+        if (cls === "conflict") throw new HttpsError("aborted", "This decision key was already used with the opposite decision. Use a new key.");
+      }
+      const pendingReq = freshReq;
+      const recheck = canDecideRescheduleRequest(fresh, pendingReq);
       if (!recheck.ok) throw new HttpsError(recheck.code as never, recheck.message);
 
-      const rescheduleRequest = { ...freshReq, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? freshReq.note ?? null };
+      const rescheduleRequest = { ...pendingReq, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? pendingReq.note ?? null, decisionIdempotencyKey: data.idempotencyKey };
       tx.update(bookingRef, { rescheduleRequest, updatedAt: nowIso });
       writeAuditLog(tx, {
         action: "booking.reschedule_decided",
@@ -81,11 +100,13 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
         entityId: data.bookingId,
         user,
         studioId: booking.studioId,
-        before: { rescheduleRequest: freshReq },
+        before: { rescheduleRequest: pendingReq },
         after: { rescheduleRequest },
       });
+      return "applied" as const;
     });
-    return { booking: { ...booking, rescheduleRequest: { ...req, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? req.note ?? null } } as Booking };
+    if (declineOutcome === "retry") return { booking: (await bookingRef.get()).data() as Booking };
+    return { booking: { ...booking, rescheduleRequest: { ...req, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? req.note ?? null, decisionIdempotencyKey: data.idempotencyKey } } as Booking };
   }
 
   // Approve: move to the REQUESTED time (the admin approves the request as made,
@@ -104,7 +125,7 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
   }
   const newEstimatedEndAt = computeScheduleEnd(newStart, visitMinutes, config.operatingHours, config.holidays, config.timezone);
 
-  const approvedRequest = { ...req, status: "approved" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? req.note ?? null };
+  const approvedRequest = { ...req, status: "approved" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? req.note ?? null, decisionIdempotencyKey: data.idempotencyKey };
   const updatedBooking = await runRescheduleMove(db, user, booking, config, compatibleBays, {
     bookingId: data.bookingId,
     newDate: req.requestedDate,
@@ -118,9 +139,16 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
     extraBookingUpdates: { rescheduleRequest: approvedRequest },
     extraFreshnessCheck: (fresh) => {
       const freshReq = fresh.rescheduleRequest;
-      const recheck = freshReq
-        ? canDecideRescheduleRequest(fresh, freshReq)
-        : { ok: false as const, code: "failed-precondition", message: "This booking has no reschedule request." };
+      if (!freshReq) throw new HttpsError("failed-precondition", "This booking has no reschedule request.");
+      // Concurrent double-approval: after a tx retry the request may already be
+      // terminal. A same-key same-value retry must NOT apply a second move -
+      // the shared move would still consume capacity checks, and the count
+      // would double. Fail closed: the first decision already committed, so a
+      // retry aborts the transaction and the original move stands exactly once.
+      if (freshReq.status !== "pending") {
+        throw new HttpsError("failed-precondition", `This reschedule request is already ${freshReq.status}.`);
+      }
+      const recheck = canDecideRescheduleRequest(fresh, freshReq);
       if (!recheck.ok) throw new HttpsError(recheck.code as never, recheck.message);
       if (freshReq!.requestedDate !== req.requestedDate || freshReq!.requestedTime !== req.requestedTime) {
         throw new HttpsError("failed-precondition", "The request changed. Reload it before deciding.");

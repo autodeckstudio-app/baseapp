@@ -177,6 +177,64 @@ describe("Premium reschedule request flow (preview)", () => {
     ).rejects.toThrow(/already pending/);
   });
 
+  it("same-key same-slot retry returns the existing request unchanged and counts exactly once", async () => {
+    const booking = await makePremiumBooking(customerId, service, vehicle);
+    const key = uid("idem-req");
+    const reqDate = nextDate();
+    const first = (await requestBookingReschedule.run({
+      data: { bookingId: booking.id, newDate: reqDate, newTime: "14:00", idempotencyKey: key },
+      auth: customerAuth(customerId),
+    } as never)) as { booking: Booking };
+    const second = (await requestBookingReschedule.run({
+      data: { bookingId: booking.id, newDate: reqDate, newTime: "14:00", idempotencyKey: key },
+      auth: customerAuth(customerId),
+    } as never)) as { booking: Booking };
+    expect(second.booking.rescheduleRequest?.status).toBe("pending");
+    expect(second.booking.rescheduleRequest?.requestedAt).toBe(first.booking.rescheduleRequest?.requestedAt);
+    expect(second.booking.rescheduleRequestCount).toBe(1);
+  });
+
+  it("same key with a different slot is a conflict, never silently applied", async () => {
+    const booking = await makePremiumBooking(customerId, service, vehicle);
+    const key = uid("idem-req");
+    await requestBookingReschedule.run({
+      data: { bookingId: booking.id, newDate: nextDate(), newTime: "14:00", idempotencyKey: key },
+      auth: customerAuth(customerId),
+    } as never);
+    await expect(
+      requestBookingReschedule.run({
+        data: { bookingId: booking.id, newDate: nextDate(), newTime: "16:30", idempotencyKey: key },
+        auth: customerAuth(customerId),
+      } as never),
+    ).rejects.toThrow(/already used with a different time/);
+  });
+
+  it("same-key same-value decision retry returns the decided state unchanged", async () => {
+    const booking = await makePremiumBooking(customerId, service, vehicle);
+    await requestBookingReschedule.run({
+      data: { bookingId: booking.id, newDate: nextDate(), newTime: "14:00", idempotencyKey: uid("idem") },
+      auth: customerAuth(customerId),
+    } as never);
+    const key = uid("idem-dec");
+    const admin = adminAuth(uid("admin"));
+    const first = (await decideBookingRescheduleRequest.run({
+      data: { bookingId: booking.id, approve: false, idempotencyKey: key },
+      auth: admin,
+    } as never)) as { booking: Booking };
+    const second = (await decideBookingRescheduleRequest.run({
+      data: { bookingId: booking.id, approve: false, idempotencyKey: key },
+      auth: admin,
+    } as never)) as { booking: Booking };
+    expect(second.booking.rescheduleRequest?.status).toBe("declined");
+    expect(second.booking.rescheduleRequest?.decidedAt).toBe(first.booking.rescheduleRequest?.decidedAt);
+    await expect(
+      decideBookingRescheduleRequest.run({
+        data: { bookingId: booking.id, approve: true, idempotencyKey: key },
+        auth: admin,
+      } as never),
+    ).rejects.toThrow(/opposite decision/);
+  });
+
   it("admin approval moves the booking to the requested slot, request approved, money fields untouched", async () => {
     const booking = await makePremiumBooking(customerId, service, vehicle);
     const reqDate = nextDate();
