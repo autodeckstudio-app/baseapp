@@ -61,7 +61,10 @@ jobs:
       # firebase-tools is CI-only, kept out of the repo's dependencies so the
       # production install surface does not grow. Emulators run against a
       # demo-* project: no credentials, no live backend, no billing.
-      - run: npm install --no-save firebase-tools@13
+      # Install ISOLATED from the repo: npm at the pnpm workspace root fails
+      # on workspace: protocol links (EUNSUPPORTEDPROTOCOL), so firebase-tools
+      # lives in its own throwaway dir outside the workspace.
+      - run: mkdir -p /tmp/fbtools && cd /tmp/fbtools && npm init -y && npm install firebase-tools@13
       # Some storage tests need to exercise the signed-URL code path. They use
       # a THROWAWAY keypair generated per run - never production credentials -
       # purely so Admin SDK cert() signing works locally. Nothing to revoke.
@@ -73,4 +76,4 @@ jobs:
           cat /tmp/ci-sign-key.pem >> "$GITHUB_ENV"
           echo "EOF_KEY" >> "$GITHUB_ENV"
           rm /tmp/ci-sign-key.pem
-      - run: npx firebase emulators:exec --only auth,firestore,storage --project demo-autodeck-ci 'pnpm --filter functions test:emulator'
+      - run: /tmp/fbtools/node_modules/.bin/firebase emulators:exec --only auth,firestore,storage --project demo-autodeck-ci 'pnpm --filter functions test:emulator'
