@@ -157,12 +157,14 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
     });
     h.cancelCalls.length = 0; h.cancelOutcome = { outcome: "cancelled" };
     // Late-settling capture against the OLD order (authorized before expiry).
-    const raw = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { id: "pay_OLD", order_id: s.orderId, amount: 23600, currency: "INR", status: "captured" } } } });
+    const payOld = `pay_OLD_${s.payDocId}`; // unique per run (main 21:58): no cross-run collision
+    const raw = JSON.stringify({ event: "payment.captured", payload: { payment: { entity: { id: payOld, order_id: s.orderId, amount: 23600, currency: "INR", status: "captured" } } } });
     const r = await call(raw, "ADVO" + s.payDocId);
+    expect((r.body as { paymentId?: string }).paymentId).toBe(s.payDocId); // assert the RESOLVED payment before money expectations
     expect(r.body.outcome).toBe("old_link_capture");
     const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
     expect(pay.status).toBe("completed");
-    expect(pay.razorpayPaymentId).toBe("pay_OLD"); // ACTUAL capture identity preserved
+    expect(pay.razorpayPaymentId).toBe(payOld); // ACTUAL capture identity preserved
     expect(pay.invoiceReviewNeeded).toBe(true);
     const bk = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
     expect(bk.advancePaidAt ?? null).toBeNull(); // a human verifies which payment stands
@@ -174,21 +176,24 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
 
   it("G3: a DISTINCT second capture on a settled advance is overpayment review - identities preserved, never flattened to already_final", async () => {
     const s = await seed();
-    await call(captured(s.orderId, 23600, "pay_FIRST"), "ADVP1" + s.payDocId);
-    const r = await call(captured(s.orderId, 23600, "pay_SECOND"), "ADVP2" + s.payDocId);
+    const payFirst = `pay_FIRST_${s.payDocId}`, paySecond = `pay_SECOND_${s.payDocId}`, payThird = `pay_THIRD_${s.payDocId}`;
+    const r1 = await call(captured(s.orderId, 23600, payFirst), "ADVP1" + s.payDocId);
+    expect((r1.body as { paymentId?: string }).paymentId).toBe(s.payDocId); // resolved payment before money expectations
+    const r = await call(captured(s.orderId, 23600, paySecond), "ADVP2" + s.payDocId);
+    expect((r.body as { paymentId?: string }).paymentId).toBe(s.payDocId);
     expect(r.body.outcome).toBe("overpayment_review");
     const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
-    expect(pay.razorpayPaymentId).toBe("pay_FIRST"); // original completion untouched
+    expect(pay.razorpayPaymentId).toBe(payFirst); // original completion untouched
     expect(pay.overpayments).toHaveLength(1);
-    expect(pay.overpayments[0]).toMatchObject({ providerPaymentId: "pay_SECOND", amount: 23600, currency: "INR" });
+    expect(pay.overpayments[0]).toMatchObject({ providerPaymentId: paySecond, amount: 23600, currency: "INR" });
     expect(pay.invoiceReviewNeeded).toBe(true);
     // APPEND (main 2 Nov): a THIRD distinct capture appends - every identity
     // stays for operational review, never an overwrite of the latest slot.
-    const r3 = await call(captured(s.orderId, 23600, "pay_THIRD"), "ADVP3" + s.payDocId);
+    const r3 = await call(captured(s.orderId, 23600, payThird), "ADVP3" + s.payDocId);
     expect(r3.body.outcome).toBe("overpayment_review");
     const pay3 = (await db.collection("payments").doc(s.payDocId).get()).data()!;
-    expect(pay3.overpayments.map((x: { providerPaymentId: string }) => x.providerPaymentId)).toEqual(["pay_SECOND", "pay_THIRD"]);
-    expect(pay3.razorpayPaymentId).toBe("pay_FIRST");
+    expect(pay3.overpayments.map((x: { providerPaymentId: string }) => x.providerPaymentId)).toEqual([paySecond, payThird]);
+    expect(pay3.razorpayPaymentId).toBe(payFirst);
   });
 
   it("R3: an advance capture on an ACTIVE held (PENDING) booking confirms it and clears the hold", async () => {

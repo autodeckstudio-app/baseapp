@@ -55,4 +55,4 @@ export const NO_SHOW_ADVANCE_DISCLOSURE =
 // refund APPROVAL. Refunds are never auto-executed. Disclosed BEFORE
 // payment, no cancellation wording (a no-show is not a late cancellation).
 export const NO_SHOW_FULL_ONLINE_DISCLOSURE =
-  "If you don't show up for your appointment, the studio keeps 20% of the service price including tax. The rest of what you paid, including unused pickup and drop charges, goes to the studio owner for refund approval. Nothing more is charged and nothing is refunded automatically.";
+  "If you don't show up for your appointment, the studio keeps 20% of the discounted service price including GST. The rest of what you paid - including unused pickup and drop charges and their GST - goes to the studio owner for refund approval. Nothing more is charged and nothing is refunded automatically.";

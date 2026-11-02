@@ -18,8 +18,8 @@ describe("advance split disclosure (items 4/5, preview)", () => {
   });
   it("full-online no-show line: keeps 20% of service, remainder (incl unused pickup/drop) to owner refund approval, never auto", () => {
     const { noShowFullOnline } = advanceDisclosureLines();
-    expect(noShowFullOnline).toContain("20% of the service price");
-    expect(noShowFullOnline).toContain("pickup and drop");
+    expect(noShowFullOnline).toContain("20% of the discounted service price including GST");
+    expect(noShowFullOnline).toContain("unused pickup and drop charges and their GST");
     expect(noShowFullOnline).toContain("refund approval");
     expect(noShowFullOnline).toContain("nothing is refunded automatically");
     expect(noShowFullOnline.toLowerCase()).not.toContain("cancel");

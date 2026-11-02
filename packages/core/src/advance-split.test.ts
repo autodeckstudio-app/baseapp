@@ -41,7 +41,8 @@ describe("no-show disclosures (item 5, OWNER-APPROVED 2 Nov 21:32:50)", () => {
     expect(NO_SHOW_ADVANCE_DISCLOSURE.toLowerCase()).not.toContain("cancel");
   });
   it("full-online line: 20% of service kept, remainder to owner refund approval, never auto-refunded", () => {
-    expect(NO_SHOW_FULL_ONLINE_DISCLOSURE).toContain("20% of the service price");
+    expect(NO_SHOW_FULL_ONLINE_DISCLOSURE).toContain("20% of the discounted service price including GST");
+    expect(NO_SHOW_FULL_ONLINE_DISCLOSURE).toContain("unused pickup and drop charges and their GST");
     expect(NO_SHOW_FULL_ONLINE_DISCLOSURE).toContain("refund approval");
     expect(NO_SHOW_FULL_ONLINE_DISCLOSURE.toLowerCase()).not.toContain("cancel");
   });
