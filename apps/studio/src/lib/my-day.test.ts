@@ -8,8 +8,8 @@ describe("my day actions", () => {
     expect(dayActions(null)).toEqual({ in: true, bs: false, be: false, out: false });
     expect(dayActions(rec({}))).toEqual({ in: true, bs: false, be: false, out: false });
   });
-  it("working: break or check out, not check in", () => {
-    expect(dayActions(rec({ checkInAt: "2026-10-26T04:00:00Z" }))).toEqual({ in: false, bs: true, be: false, out: true });
+  it("working: check out only - break start is removed from the UI (basket item 3), end break stays for an open break", () => {
+    expect(dayActions(rec({ checkInAt: "2026-10-26T04:00:00Z" }))).toEqual({ in: false, bs: false, be: false, out: true });
   });
   it("on break: only end break", () => {
     expect(dayActions(rec({ checkInAt: "x", breaks: [{ startedAt: "y" }] }))).toEqual({ in: false, bs: false, be: true, out: false });
@@ -59,9 +59,12 @@ describe("buttons match what the server would accept (source-derived model)", ()
   for (const [name, r] of states) {
     it(name, () => {
       const ui = dayActions(r as never);
-      for (const k of ["in", "bs", "be", "out"] as const) {
+      // Basket item 3 (UI-only): "Start break" is never offered even though the server still
+      // accepts it - the backend and history are intentionally untouched. The other buttons
+      // keep matching what the server would accept, including "End break" for an open break.
+      expect(ui.bs, `${name} / bs`).toBe(false);
+      for (const k of ["in", "be", "out"] as const) {
         const serverOk = server[k](r);
-        // "end break" is also accepted by the server only with an open break; UI must show a button iff the server would accept it.
         expect(ui[k], `${name} / ${k}`).toBe(serverOk);
       }
     });

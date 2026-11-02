@@ -58,6 +58,13 @@ export default function VehicleDetailScreen() {
   // module - no Firebase session, no real data. Stripped from production bundles.
   const mockDetail = __DEV__ && devGarageDetail && mockQ === "1" && id ? devGarageDetail(id) : null;
   const effUid = mockDetail ? mockDetail.uid : null;
+  // Sample preview (?mock=1) must never reach the network: a persisted Firebase session
+  // can exist in this browser, so writes are blocked explicitly, not by missing auth.
+  const mockWriteBlocked = (setErr: (m: string) => void): boolean => {
+    if (!mockDetail) return false;
+    setErr("Sample preview - changes are not saved.");
+    return true;
+  };
   const router = useRouter();
   const auth = useAuth();
 
@@ -257,6 +264,7 @@ export default function VehicleDetailScreen() {
     setNumberError(numberClash(allPapers, documentReference(docForm.kind, value), docEditing, docEditing ? null : docSubmissionId));
   }
   async function handleSaveDoc() {
+    if (mockWriteBlocked(setDocError)) return;
     if (!id) return;
     setDocError(null);
     const validationError=validateDocument(docForm.kind,docForm.reference,docForm.expiresOn);
@@ -306,6 +314,7 @@ export default function VehicleDetailScreen() {
     }
   }
   async function handleDeleteDoc(paperId: string) {
+    if (mockWriteBlocked(setDocError)) return;
     setDocBusy(true); setDocError(null);
     try { await deleteMyPaper(paperId); setDeleteId(null); }
     catch { setDocError("Could not delete that document. Try again."); }
@@ -346,6 +355,7 @@ export default function VehicleDetailScreen() {
   const [typePick, setTypePick] = useState<VehicleCategory | "">("");
   const [typeSaving, setTypeSaving] = useState(false);
   async function saveType() {
+    if (mockWriteBlocked(setActionError)) return;
     if (!id || !typePick) return;
     setTypeSaving(true);
     setActionError(null);
@@ -355,6 +365,7 @@ export default function VehicleDetailScreen() {
   }
 
   async function handleSave() {
+    if (mockWriteBlocked(setActionError)) return;
     if (!id) return;
     setSaving(true);
     setActionError(null);
@@ -397,6 +408,7 @@ export default function VehicleDetailScreen() {
   }
 
   async function handleArchiveConfirmed() {
+    if (mockWriteBlocked(setActionError)) return;
     if (!id) return;
     setActionError(null);
     try {
@@ -434,6 +446,7 @@ export default function VehicleDetailScreen() {
   }
 
   async function saveProtectionForm() {
+    if (mockWriteBlocked(setActionError)) return;
     if (!protEdit || protBusy || !vehicle || auth.status !== "ready") return;
     // The editor belongs to the car + identity it was opened under; a save
     // from a stale editor (context changed before render-time invalidation

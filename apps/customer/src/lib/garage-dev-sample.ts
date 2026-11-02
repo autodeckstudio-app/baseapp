@@ -23,7 +23,7 @@ export function devGarage(o: { live: boolean; empty: boolean }) {
 // booking. No photos, no real customer data, never bundled into production.
 export function devGarageDetail(vehicleId: string) {
   const uid = "dev-customer";
-  const vehicle = { id: vehicleId, tenantId: "dev", ownerId: uid, registrationNumber: "MH 40 AB 1234", make: "BMW", model: "M340i", year: "2023", color: "Black", category: "sedan", odometer: 18450, photoUrl: null, deletedAt: null, createdAt: day(400), updatedAt: day(1) } as unknown as Vehicle;
+  const vehicle = { id: vehicleId, tenantId: "dev", ownerId: uid, registrationNumber: "SAMPLE 01", make: "BMW", model: "M340i", year: "2023", color: "Black", category: "sedan", odometer: 18450, photoUrl: null, deletedAt: null, createdAt: day(400), updatedAt: day(1) } as unknown as Vehicle;
   const jobs = [
     { id: "dj1", vehicleId, serviceId: "menu-coat-autodeck-1", status: "DELIVERED", createdAt: day(60), sealedAt: day(59) },
     { id: "dj2", vehicleId, serviceId: "menu-wash-foam", status: "DELIVERED", createdAt: day(20), sealedAt: day(20) },

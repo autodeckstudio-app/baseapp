@@ -118,14 +118,12 @@ export function AttendanceView(p: {
                   </button>
                 )}
                 {p.myRecord?.checkInAt && !p.myRecord.checkOutAt && !myOnBreak && (
-                  <>
-                    <button type="button" className="ax-button" disabled={p.busy} onClick={p.onStartBreak}>
-                      Start break
-                    </button>
-                    <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={p.onCheckOut}>
-                      Check out
-                    </button>
-                  </>
+                  // Break controls removed from the UI (basket item 3, UI-only: records,
+                  // history and backend untouched). "End break" below stays while a break
+                  // is open so a mid-break day can still be finished and checked out.
+                  <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={p.onCheckOut}>
+                    Check out
+                  </button>
                 )}
                 {myOnBreak && (
                   <button type="button" className="ax-button ax-button--primary" disabled={p.busy} onClick={p.onEndBreak}>
