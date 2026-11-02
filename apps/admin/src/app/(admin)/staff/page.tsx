@@ -58,9 +58,9 @@ export default function StaffPage() {
       error={error}
       message={message}
       busy={busy}
-      onAdd={({ name, email, role }) =>
+      onAdd={({ name, email, phone, role }) =>
         void run(
-          () => addStaffMember({ name, email, role, studioId: role === "studio" ? FIRST_STUDIO_ID : null }),
+          () => addStaffMember({ name, email, ...(phone === undefined ? {} : { phone }), role, studioId: role === "studio" ? FIRST_STUDIO_ID : null }),
           `${name} can now sign in with Google as ${email}.`,
           "Couldn't add them.",
         )

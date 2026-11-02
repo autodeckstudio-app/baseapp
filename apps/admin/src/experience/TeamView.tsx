@@ -20,7 +20,7 @@ export function TeamView(p: {
   error: string | null;
   message: string | null;
   busy: boolean;
-  onAdd: (input: { name: string; email: string; role: Role }) => void;
+  onAdd: (input: { name: string; email: string; phone?: string; role: Role }) => void;
   onRole: (emp: Employee, role: Role) => void;
   onRemove: (emp: Employee) => void;
   requests?: StaffAccessRequest[];
@@ -28,6 +28,7 @@ export function TeamView(p: {
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<Role>("studio");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const current = p.staff.filter((s) => !s.terminatedAt);
@@ -133,9 +134,12 @@ export function TeamView(p: {
             className="ax-panel"
             onSubmit={(e) => {
               e.preventDefault();
-              p.onAdd({ name: name.trim(), email: email.trim().toLowerCase(), role });
+              // Contact number is optional: the Google account alone grants sign-in
+              // (basket item 1: name/email/contact; the Google account alone grants sign-in.)
+              p.onAdd({ name: name.trim(), email: email.trim().toLowerCase(), ...(phone.trim() === "" ? {} : { phone: phone.trim() }), role });
               setName("");
               setEmail("");
+              setPhone("");
             }}
           >
             <span className="ax-label">Add someone</span>
@@ -146,6 +150,10 @@ export function TeamView(p: {
             <label className="ax-form-row">
               <span>Google account</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@gmail.com" autoComplete="off" />
+            </label>
+            <label className="ax-form-row">
+              <span>Contact number (optional)</span>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="98765 43210" autoComplete="off" />
             </label>
             <div className="ax-form-row">
               <span>Access</span>
