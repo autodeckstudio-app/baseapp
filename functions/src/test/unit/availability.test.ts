@@ -17,6 +17,7 @@ import {
   addDays,
   computeScheduleEnd,
 } from "../../lib/schedule.js";
+import { TURNOVER_BUFFER_MINUTES, SLOT_INTERVAL_MINUTES } from "@autodeck/core";
 import type { Bay, OperatingHours } from "@autodeck/core";
 
 const IST = "Asia/Kolkata";
@@ -437,6 +438,77 @@ describe("buildOccupiedInterval", () => {
     const interval = buildOccupiedInterval(start, end);
     // endAt should be 10:15 IST = 04:45 UTC
     expect(interval.endAt.toISOString()).toBe("2026-08-17T04:45:00.000Z");
+  });
+});
+
+// ─── wash capacity (2 Nov basket item 8) ─────────────────────────────────────
+// Adopted constraint: wash runs on a 30-minute start grid with capacity 2, and
+// a booking occupies its bay for the WHOLE service plus the configured turnover
+// buffer. These pins are constant-driven on TURNOVER_BUFFER_MINUTES on purpose:
+// the actual cleanup/hours/durations are a held owner decision, so nothing here
+// blesses the seed value - it pins that the engine counts service+buffer,
+// whatever the configured buffer is.
+describe("wash capacity 2 on a 30-minute grid (basket item 8)", () => {
+  const svc = 60; // service duration for these pins
+  const at = (hhmm: string) => new Date(`${BASE_DATE}T${hhmm}:00+05:30`);
+  const iso = (d: Date) => d.toISOString();
+  // One job 10:00-11:00 on a bay: occupied interval is service + buffer via the
+  // same builder the Cloud Function uses.
+  const jobInterval = (start: string) =>
+    buildOccupiedInterval(iso(at(start)), iso(new Date(at(start).getTime() + svc * 60000)));
+
+  const run = (occupiedByBay: Map<string, OccupiedInterval[]>) =>
+    computeAvailability({
+      startDate: BASE_DATE,
+      lookAheadDays: 1,
+      serviceDurationMinutes: svc,
+      requiredBayType: "wash",
+      bays: BAYS,
+      operatingHours: weeklyHours,
+      holidays: [],
+      timezone: IST,
+      occupiedByBay,
+    });
+
+  it("capacity 2: one busy wash bay never removes a start time; two busy bays do", () => {
+    const oneBusy = run(new Map([["bay-wash-1", [jobInterval("10:00")]]]));
+    expect(oneBusy.filter((s) => s.startTime === "10:00")).toHaveLength(1); // bay-wash-2 serves it, de-duplicated
+    const bothBusy = run(
+      new Map([
+        ["bay-wash-1", [jobInterval("10:00")]],
+        ["bay-wash-2", [jobInterval("10:00")]],
+      ]),
+    );
+    expect(bothBusy.some((s) => s.startTime === "10:00")).toBe(false);
+  });
+
+  it("occupancy spans the whole service plus the configured buffer, no more", () => {
+    const bufferEndMin = 11 * 60 + 0 + TURNOVER_BUFFER_MINUTES; // 10:00 + 60 + buffer
+    const toHHMM = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    const bothBusy = run(
+      new Map([
+        ["bay-wash-1", [jobInterval("10:00")]],
+        ["bay-wash-2", [jobInterval("10:00")]],
+      ]),
+    );
+    // A 10:30 start (10:30-11:30+buffer) overlaps the occupied window: blocked.
+    expect(bothBusy.some((s) => s.startTime === "10:30")).toBe(false);
+    // Touching intervals do not overlap (endAt is exclusive), so the first free
+    // start is the first grid point at or after the buffer end.
+    const firstFreeMin = Math.ceil(bufferEndMin / SLOT_INTERVAL_MINUTES) * SLOT_INTERVAL_MINUTES;
+    if (firstFreeMin !== bufferEndMin) {
+      // The grid point just before the buffer end still overlaps: blocked.
+      expect(bothBusy.some((s) => s.startTime === toHHMM(firstFreeMin - SLOT_INTERVAL_MINUTES))).toBe(false);
+    }
+    expect(bothBusy.some((s) => s.startTime === toHHMM(firstFreeMin))).toBe(true);
+  });
+
+  it("start times stay on the 30-minute grid with two active wash bays", () => {
+    const slots = run(new Map());
+    for (const s of slots) {
+      const m = timeToMinutes(s.startTime);
+      expect(m % SLOT_INTERVAL_MINUTES).toBe(0);
+    }
   });
 });
 
