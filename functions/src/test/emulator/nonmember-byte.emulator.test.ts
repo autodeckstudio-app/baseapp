@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
 import { createBooking as current } from "../../functions/booking/createBooking.js";
 const db = getFirestore();
 describe("real nonmember booking baseline vs covered diff", () => {
@@ -54,9 +55,10 @@ describe("real nonmember booking baseline vs covered diff", () => {
       expect("membershipWashUsed" in a).toBe(false);
       expect(JSON.stringify(a)).toBe(JSON.stringify(b));
       // Evidence output only (after the assertions above); the harness creates its own directory.
-      mkdirSync("/downloads/evidence", { recursive: true });
-      writeFileSync("/downloads/evidence/nonmember-baseline-job.json", JSON.stringify(b, null, 2));
-      writeFileSync("/downloads/evidence/nonmember-current-job.json", JSON.stringify(a, null, 2));
+      const evidenceDir = process.env["EVIDENCE_DIR"] ?? join(tmpdir(), "evidence");
+      mkdirSync(evidenceDir, { recursive: true });
+      writeFileSync(join(evidenceDir, "nonmember-baseline-job.json"), JSON.stringify(b, null, 2));
+      writeFileSync(join(evidenceDir, "nonmember-current-job.json"), JSON.stringify(a, null, 2));
     } finally {
       spy.mockRestore();
       vi.useRealTimers();

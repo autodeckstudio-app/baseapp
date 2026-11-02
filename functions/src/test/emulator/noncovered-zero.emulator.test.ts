@@ -3,7 +3,8 @@ import type * as NodeCryptoModule from "node:crypto";
 import { describe, it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
 import { initiatePayment } from "../../functions/payment/initiatePayment.js";
 import { recordManualPayment } from "../../functions/payment/recordManualPayment.js";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
@@ -177,13 +178,14 @@ describe("noncovered zero functions baseline0d73f895 comparison", () => {
             )[kind + "-" + (error ? "error" : "success")],
             a = await capture(after, kind, error);
           // Evidence first: on a mismatch these files are the diagnosis.
-          mkdirSync("/downloads/evidence", { recursive: true });
+          const evidenceDir = process.env["EVIDENCE_DIR"] ?? join(tmpdir(), "evidence");
+          mkdirSync(evidenceDir, { recursive: true });
           writeFileSync(
-            `/downloads/evidence/noncovered-zero-${kind}-${error ? "error" : "success"}-baseline.json`,
+            join(evidenceDir, `noncovered-zero-${kind}-${error ? "error" : "success"}-baseline.json`),
             JSON.stringify(b, null, 2),
           );
           writeFileSync(
-            `/downloads/evidence/noncovered-zero-${kind}-${error ? "error" : "success"}-current.json`,
+            join(evidenceDir, `noncovered-zero-${kind}-${error ? "error" : "success"}-current.json`),
             JSON.stringify(a, null, 2),
           );
           expect(a).toEqual(b);
