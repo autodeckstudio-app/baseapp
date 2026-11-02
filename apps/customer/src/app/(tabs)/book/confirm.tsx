@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { GIFT_LIVE, takePendingGiftCode } from "../../../lib/gift";
+import { ADVANCE_SPLIT_ENABLED, advanceDisclosureLines } from "../../../lib/advance-booking";
 import { createBooking, generateIdempotencyKey, getStudioInfo } from "../../../lib/booking-service";
 import { calculateServicePrice } from "../../../lib/catalogue-service";
 import type { Service, Vehicle, VehicleCategory, PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
@@ -411,10 +412,16 @@ export default function BookingConfirmScreen() {
               <Row title="Pay online" detail={<T role="caption" tone="secondary">Secure payment now. Your slot is held for 15 minutes.</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={false} />
             </Pressable>
           ) : null}
-          {true ? (
-            <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
-              <Row title="Pay at studio" detail={<T role="caption" tone="secondary">Your slot is confirmed now. Pay when you collect your car.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last />
-            </Pressable>
+          <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
+            <Row title="Pay at studio" detail={<T role="caption" tone="secondary">Your slot is confirmed now. Pay when you collect your car.</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!ADVANCE_SPLIT_ENABLED} />
+          </Pressable>
+          {/* Item 4/5 preview: 20% advance + no-show disclosure, DISABLED until the held
+              basis/rounding decisions, payment wiring and the final review gate land. */}
+          {ADVANCE_SPLIT_ENABLED ? (
+            <View style={{ paddingHorizontal: space.line, paddingBottom: space.line }}>
+              <T role="caption" tone="secondary">{advanceDisclosureLines().split}</T>
+              <T role="caption" tone="secondary">{advanceDisclosureLines().noShow}</T>
+            </View>
           ) : null}
         </Pane>
       </View>}
