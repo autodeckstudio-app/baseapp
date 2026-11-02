@@ -27,7 +27,10 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
     if (!booking || decisionBusy) return;
     setDecisionBusy(true);
     try {
-      decisionKeyRef.current = intentKey(decisionKeyRef.current, `${booking.id}:${approve ? "approve" : "decline"}`, () => crypto.randomUUID());
+      // The note is part of the decision payload, so it is part of the intent:
+      // editing the note after a failed attempt mints a new key, and a retried
+      // click with the same note reuses it.
+      decisionKeyRef.current = intentKey(decisionKeyRef.current, `${booking.id}:${approve ? "approve" : "decline"}:${decisionNote.trim()}`, () => crypto.randomUUID());
       await decideBookingRescheduleRequest(booking.id, approve, decisionKeyRef.current.key, decisionNote.trim() || undefined);
       setError(null);
       decisionKeyRef.current = null;

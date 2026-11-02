@@ -115,6 +115,10 @@ export interface Booking {
     /** The admin's decision idempotency key, recorded with the decision for the same
      *  exactly-once retry semantics. */
     decisionIdempotencyKey?: string | null;
+    /** The admin's note recorded WITH the decision (the customer's own note stays in
+     *  `note`). Compared on decision retries: same key + same approve + same note is a
+     *  retry; any payload difference is a conflict. */
+    decisionNote?: string | null;
   } | null;
   /** How many reschedule requests the customer has submitted for this booking (absent = 0).
    *  The adopted premium rule is ONE request per booking; an idempotent retry of the same

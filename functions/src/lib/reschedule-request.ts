@@ -15,6 +15,7 @@ export type RescheduleRequestState = {
   requestedTime?: string;
   idempotencyKey?: string;
   decisionIdempotencyKey?: string | null;
+  decisionNote?: string | null;
 };
 
 /** Exactly-once retry check for a request submission. The caller must only
@@ -38,12 +39,15 @@ export function classifyRequestRetry(
  *  - "new": different key -> a fresh decision attempt on a decided request */
 export function classifyDecisionRetry(
   existing: RescheduleRequestState,
-  input: { approve: boolean; idempotencyKey: string },
+  input: { approve: boolean; idempotencyKey: string; note?: string | null },
 ): "retry" | "conflict" | "new" {
   if (existing.decisionIdempotencyKey !== input.idempotencyKey) return "new";
   const wasApproved = existing.status === "approved";
-  if (wasApproved === input.approve) return "retry";
-  return "conflict";
+  if (wasApproved !== input.approve) return "conflict";
+  // The note is part of the decision payload: a same-key retry with a different
+  // note is a conflict, never a silent drop or overwrite.
+  if ((existing.decisionNote ?? null) !== (input.note ?? null)) return "conflict";
+  return "retry";
 }
 
 export type RequestGuardBooking = {

@@ -90,4 +90,10 @@ describe("classifyDecisionRetry (exactly-once decision)", () => {
     const approved = { status: "approved", baseScheduledAt: "x", decisionIdempotencyKey: "d1" };
     expect(classifyDecisionRetry(approved, { approve: true, idempotencyKey: "d2" })).toBe("new");
   });
+  it("the note is part of the decision payload: same key + changed note is a conflict, never a silent drop", () => {
+    const declined = { status: "declined", baseScheduledAt: "x", decisionIdempotencyKey: "d1", decisionNote: "No bay that day" };
+    expect(classifyDecisionRetry(declined, { approve: false, idempotencyKey: "d1", note: "No bay that day" })).toBe("retry");
+    expect(classifyDecisionRetry(declined, { approve: false, idempotencyKey: "d1", note: "different note" })).toBe("conflict");
+    expect(classifyDecisionRetry(declined, { approve: false, idempotencyKey: "d1" })).toBe("conflict");
+  });
 });

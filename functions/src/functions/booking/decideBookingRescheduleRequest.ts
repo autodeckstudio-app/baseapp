@@ -60,7 +60,7 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
   // state instead of failing "already decided"; the same key with the opposite
   // value is a conflict, never a silent flip.
   if (req.status !== "pending") {
-    const cls = classifyDecisionRetry(req, data);
+    const cls = classifyDecisionRetry(req, { approve: data.approve, idempotencyKey: data.idempotencyKey, note: data.note ?? null });
     if (cls === "retry") return { booking };
     if (cls === "conflict") {
       throw new HttpsError("aborted", "This decision key was already used with the opposite decision. Use a new key.");
@@ -84,7 +84,7 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
       // Concurrent double-decline: after a tx retry the request may already be
       // terminal. Classify against the decision key instead of failing.
       if (freshReq.status !== "pending") {
-        const cls = classifyDecisionRetry(freshReq, data);
+        const cls = classifyDecisionRetry(freshReq, { approve: data.approve, idempotencyKey: data.idempotencyKey, note: data.note ?? null });
         if (cls === "retry") return "retry" as const;
         if (cls === "conflict") throw new HttpsError("aborted", "This decision key was already used with the opposite decision. Use a new key.");
       }
@@ -106,7 +106,7 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
       return "applied" as const;
     });
     if (declineOutcome === "retry") return { booking: (await bookingRef.get()).data() as Booking };
-    return { booking: { ...booking, rescheduleRequest: { ...req, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? req.note ?? null, decisionIdempotencyKey: data.idempotencyKey } } as Booking };
+    return { booking: { ...booking, rescheduleRequest: { ...req, status: "declined" as const, decidedBy: user.uid, decidedAt: nowIso, decisionNote: data.note ?? null, decisionIdempotencyKey: data.idempotencyKey } } as Booking };
   }
 
   // Approve: move to the REQUESTED time (the admin approves the request as made,
@@ -125,7 +125,7 @@ export const decideBookingRescheduleRequest = onCall({ region: "asia-south1", en
   }
   const newEstimatedEndAt = computeScheduleEnd(newStart, visitMinutes, config.operatingHours, config.holidays, config.timezone);
 
-  const approvedRequest = { ...req, status: "approved" as const, decidedBy: user.uid, decidedAt: nowIso, note: data.note ?? req.note ?? null, decisionIdempotencyKey: data.idempotencyKey };
+  const approvedRequest = { ...req, status: "approved" as const, decidedBy: user.uid, decidedAt: nowIso, decisionNote: data.note ?? null, decisionIdempotencyKey: data.idempotencyKey };
   const updatedBooking = await runRescheduleMove(db, user, booking, config, compatibleBays, {
     bookingId: data.bookingId,
     newDate: req.requestedDate,

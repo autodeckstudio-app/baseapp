@@ -110,3 +110,12 @@ export function rescheduleEntry(
   if ((booking.rescheduleRequestCount ?? 0) >= 1) return { mode: "request-used" };
   return { mode: "request" };
 }
+
+/** Format a studio-local date+time for display without letting the DEVICE timezone
+ *  reinterpret the wall time: parsing "2026-11-10T14:00:00" bare reads it as
+ *  device-local and the IST display then shifts on non-IST devices (reviewer
+ *  finding). Pin the IST offset first, then format in IST. */
+export function formatStudioLocal(date: string, time: string): string {
+  const instant = new Date(`${date}T${time}:00+05:30`);
+  return instant.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
+}

@@ -30,7 +30,7 @@ import type * as BookingDevSample from "../../../lib/booking-dev-sample";
 const devSample = __DEV__ ? (require("../../../lib/booking-dev-sample") as typeof BookingDevSample) : null;
 import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
-import { getRescheduleEligibility, rescheduleEntry, cancelState, cancelConfirmBody, expectedReady, nextStepLine, readyRowTitle } from "../../../lib/booking-rules";
+import { getRescheduleEligibility, rescheduleEntry, formatStudioLocal, cancelState, cancelConfirmBody, expectedReady, nextStepLine, readyRowTitle } from "../../../lib/booking-rules";
 import { googleCalendarUrl, icsFor } from "../../../lib/calendar-link";
 import { enablePush, pushPermission } from "../../../lib/push";
 import { shouldAskPush, PUSH_ASKED_KEY } from "../../../lib/push-ask";
@@ -89,6 +89,11 @@ const BOOKING_CHIP_TONE: Record<string, "neutral" | "accent" | "premium" | "dang
 
 export default function BookingDetailScreen() {
   const { id, placed, mock, pickup } = useLocalSearchParams<{ id: string; placed?: string; mock?: string; pickup?: string }>();
+  // Dev preview only (?mock=1/2, __DEV__): sample screens render without a session,
+  // but a persisted Firebase session can exist in this browser - so every write and
+  // every navigation into a write flow is blocked explicitly, never relying on the
+  // fake ids being rejected by the backend.
+  const isMock = __DEV__ && !!devSample && (mock === "1" || mock === "2");
   const router = useRouter();
   useLang();
   const [, tick] = useState(0);
@@ -102,6 +107,11 @@ export default function BookingDetailScreen() {
   const [payingNow, setPayingNow] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const mockWriteBlocked = (): boolean => {
+    if (!isMock) return false;
+    setActionError("Sample preview - changes are not saved.");
+    return true;
+  };
   const minuteNow = useMinuteNow();
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -120,6 +130,7 @@ export default function BookingDetailScreen() {
   }, [id, booking?.status]);
 
   async function handleRate() {
+    if (mockWriteBlocked()) return;
     if (!id || stars < 1) return;
     setRateBusy(true);
     setRateError(null);
@@ -209,6 +220,7 @@ export default function BookingDetailScreen() {
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<string | null>(null);
   async function handleDecide(approvalId: string, decision: "approved" | "rejected") {
+    if (mockWriteBlocked()) return;
     if (decidingId) return;
     setDecidingId(approvalId); setDecideError(null);
     try { await respondToApproval(approvalId, decision); }
@@ -216,6 +228,7 @@ export default function BookingDetailScreen() {
     finally { setDecidingId(null); }
   }
   async function handleApproveQuote() {
+    if (mockWriteBlocked()) return;
     if (!id) return;
     setQuoteBusy(true);
     try {
@@ -229,6 +242,7 @@ export default function BookingDetailScreen() {
   }
 
   async function handlePayNow() {
+    if (mockWriteBlocked()) return;
     if (payingNow || authB.status !== "ready" || !booking) return;
     setPayingNow(true);
     setActionError(null);
@@ -247,6 +261,7 @@ export default function BookingDetailScreen() {
   }
 
   async function handleCancelConfirmed() {
+    if (mockWriteBlocked()) return;
     if (!booking || !id) return;
     setCancelling(true);
     setActionError(null);
@@ -389,7 +404,7 @@ export default function BookingDetailScreen() {
       ) : null}
 
       {booking.status === "COMPLETED" || booking.status === "CANCELLED" ? (
-        <Button label="Book again" onPress={() => router.push(`/(tabs)/book/${booking.serviceId}`)} />
+        <Button label="Book again" onPress={() => { if (mockWriteBlocked()) return; router.push(`/(tabs)/book/${booking.serviceId}`); }} />
       ) : null}
 
       <Pane pad="gap">
@@ -511,7 +526,7 @@ export default function BookingDetailScreen() {
             return null; // catalogue still loading - do not flash the wrong path
           }
           if (entry.mode === "request-pending") {
-            const when = new Date(`${entry.requestedDate}T${entry.requestedTime}:00`).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
+            const when = formatStudioLocal(entry.requestedDate, entry.requestedTime);
             return <T role="caption" tone="secondary">Reschedule request sent for {when}. Your booking stays at its current time until the studio confirms.</T>;
           }
           if (entry.mode === "request-used") {
@@ -522,7 +537,7 @@ export default function BookingDetailScreen() {
               <Button
                 label="Request reschedule"
                 kind="quiet"
-                onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })}
+                onPress={() => { if (mockWriteBlocked()) return; router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } }); }}
               />
             );
           }
@@ -540,7 +555,7 @@ export default function BookingDetailScreen() {
             <Button
               label="Reschedule"
               kind="quiet"
-              onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })}
+              onPress={() => { if (mockWriteBlocked()) return; router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } }); }}
             />
           </View>
         ) : (
@@ -549,7 +564,7 @@ export default function BookingDetailScreen() {
         })()
       ) : null}
 
-      {!walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
+      {!isMock && !walkIn && booking.status !== "CANCELLED" && booking.status !== "EXPIRED" ? <PickupCard bookingId={booking.id} /> : null}
 
       {isBookingLateToday(booking) ? <Notice title="Your booking is still valid today" body="Your slot has passed, but you can still come today during studio hours. If not checked in by close (7 pm Sunday, 9 pm other days), the booking auto-cancels." /> : null}
       {autoCancelled ? (
@@ -570,13 +585,13 @@ export default function BookingDetailScreen() {
             action={
               <View style={{ gap: space.breath }}>
                 <Button label="Yes, cancel booking" kind="danger" busy={cancelling} onPress={() => void handleCancelConfirmed()} />
-                {rescheduleEligibility.eligible ? <Button label="Reschedule instead" kind="primary" onPress={() => router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } })} /> : null}
+                {rescheduleEligibility.eligible ? <Button label="Reschedule instead" kind="primary" onPress={() => { if (mockWriteBlocked()) return; router.push({ pathname: "/(tabs)/bookings/reschedule", params: { bookingId: booking.id } }); }} /> : null}
                 <Button label="Keep it" kind="quiet" onPress={() => setConfirmingCancel(false)} />
               </View>
             }
           />
         ) : (
-          <Button label="Cancel booking" kind="danger" onPress={() => setConfirmingCancel(true)} />
+          !isMock ? <Button label="Cancel booking" kind="danger" onPress={() => setConfirmingCancel(true)} /> : null
         )
       ) : null}
     </Screen>
