@@ -1,13 +1,16 @@
 // Advance payment link lifecycle (basket item 4 - PREVIEW, NOT ACTIVATED).
 // Pure orchestration over injected deps: fully unit-testable with the flag
 // off. Money-safety rules (reviewer 2 Nov 2026):
+//  - NEVER hand out a payable URL without validating it against the
+//    provider FIRST. The expiry webhook can be delayed or missing and a
+//    provider-side cancel or partial payment would leave a dead or
+//    money-attached URL looking live. Reconcile-first, every time.
 //  - A provider success whose DB patch failed must never be blind-retried
 //    into a SECOND payable link. Ambiguity reconciles by provider lookup,
 //    or fails closed to manual review. Never blind-create.
-//  - Razorpay has no fetch-link-by-reference API: reconciliation fetches a
-//    KNOWN provider link id. When the create response itself was lost (no
-//    link id recorded), the provider state is unknowable to us, so the only
-//    safe outcome is manual review.
+//  - A fresh link is created ONLY when no link id exists, or the provider
+//    CONFIRMS the old one is expired/cancelled. paid / partially_paid /
+//    unknown states fail closed - never create over possible money.
 import type { CreatePaymentLinkParams, PaymentLinkResult } from "./payment-provider.js";
 
 export type AdvanceLinkState = {
@@ -20,10 +23,12 @@ export type AdvanceLinkState = {
   orderAmbiguous: boolean | null;
 };
 
+export type FetchedLink = { id: string; amount: number; currency: string; paymentUrl: string; status: string };
+
 export type AdvanceLinkDeps = {
-  fetchLink(providerPaymentLinkId: string): Promise<{ id: string; amount: number; currency: string; paymentUrl: string; status: string } | null>;
+  fetchLink(providerPaymentLinkId: string): Promise<FetchedLink | null>;
   createLink(params: CreatePaymentLinkParams): Promise<PaymentLinkResult>;
-  patch(patch: { paymentUrl: string; razorpayPaymentLinkId: string; razorpayOrderId: string | null }): Promise<void>;
+  patch(patch: { paymentUrl: string | null; razorpayPaymentLinkId: string; razorpayOrderId: string | null }): Promise<void>;
   markAmbiguous(ambiguous: boolean): Promise<void>;
   flagManualReview(reason: string): Promise<void>;
 };
@@ -32,78 +37,83 @@ export type AdvanceLinkOutcome =
   | { outcome: "link_ready"; paymentUrl: string }
   | { outcome: "manual_review" };
 
+// Razorpay payment-link statuses (official API reference). ACTIVE ones can
+// still be paid; everything else is terminal or money-attached.
+const ACTIVE = new Set(["created", "issued"]);
+const INACTIVE = new Set(["expired", "cancelled"]);
+const MONEY_ATTACHED = new Set(["paid", "partially_paid"]);
+
 export async function ensureAdvanceLink(
   payment: AdvanceLinkState,
   linkParams: Omit<CreatePaymentLinkParams, "amount" | "currency">,
   deps: AdvanceLinkDeps,
 ): Promise<AdvanceLinkOutcome> {
-  // 1. Already linked: idempotent replay, no provider call. (The webhook
-  //    clears paymentUrl on payment_link.expired/cancelled, so a stored URL
-  //    here is a LIVE link, not a dead one.)
-  if (payment.paymentUrl && payment.razorpayPaymentLinkId) {
-    return { outcome: "link_ready", paymentUrl: payment.paymentUrl };
-  }
-
-  // 1b. URL was cleared (expired/cancelled) but we hold the provider id and
-  //     are NOT ambiguous: reconcile with the provider before ANY create.
-  if (!payment.paymentUrl && payment.razorpayPaymentLinkId && !payment.orderAmbiguous) {
-    let found: { id: string; amount: number; currency: string; paymentUrl: string; status: string } | null;
+  // Reconcile-first: whenever we hold a provider link id, validate it with
+  // the provider before ANY return or create. This covers the stored-URL
+  // replay (webhook may be delayed/missing), the cleared-URL retry, and the
+  // ambiguous state in one flow.
+  if (payment.razorpayPaymentLinkId) {
+    let found: FetchedLink | null;
     try {
       found = await deps.fetchLink(payment.razorpayPaymentLinkId);
     } catch {
+      // Provider unreachable: stay closed. A later retry reconciles.
       throw new Error("We are confirming your earlier payment link. Please try again in a few minutes.");
     }
     if (found) {
-      const st = found.status;
-      if (st === "created" || st === "issued" || st === "partially_paid") {
-        // Still active: re-store the URL, no create.
-        await deps.patch({ paymentUrl: found.paymentUrl, razorpayPaymentLinkId: found.id, razorpayOrderId: payment.razorpayOrderId });
-        return { outcome: "link_ready", paymentUrl: found.paymentUrl };
-      }
-      if (st === "paid") {
-        // Provider says PAID but our record is pending: money may have
-        // arrived without our webhook. Never create over it.
-        await deps.flagManualReview("advance link paid provider-side while our record is pending");
+      if (MONEY_ATTACHED.has(found.status)) {
+        // Money is (partly) attached provider-side. Never hand the URL out,
+        // never create over it - a human reconciles with the webhook record.
+        await deps.flagManualReview(`advance link provider status "${found.status}" while our record is pending`);
         return { outcome: "manual_review" };
       }
-      if (st === "expired" || st === "cancelled") {
-        // Provider CONFIRMS the old link is inactive: a fresh create below
-        // cannot duplicate a payable link.
+      if (ACTIVE.has(found.status)) {
+        if (found.amount !== payment.amount || found.currency !== payment.currency) {
+          await deps.flagManualReview("advance link reconciliation mismatch");
+          return { outcome: "manual_review" };
+        }
+        if (payment.orderAmbiguous) {
+          // Ambiguity resolved: the link exists and matches.
+          await deps.patch({ paymentUrl: found.paymentUrl, razorpayPaymentLinkId: found.id, razorpayOrderId: payment.razorpayOrderId });
+          await deps.markAmbiguous(false);
+        } else if (!payment.paymentUrl) {
+          // URL was cleared (expired/cancelled webhook) but the provider
+          // says the link is still active: re-store it, no create.
+          await deps.patch({ paymentUrl: found.paymentUrl, razorpayPaymentLinkId: found.id, razorpayOrderId: payment.razorpayOrderId });
+        }
+        return { outcome: "link_ready", paymentUrl: found.paymentUrl };
+      }
+      if (INACTIVE.has(found.status)) {
+        if (payment.orderAmbiguous) {
+          // The only link we can reference is dead AND a create outcome was
+          // lost: a second link may exist provider-side that we cannot see.
+          await deps.flagManualReview("advance link creation outcome unknown and the referenced link is inactive");
+          return { outcome: "manual_review" };
+        }
+        // Provider CONFIRMS the old link is inactive: fall through to a
+        // fresh create - it cannot duplicate a payable link.
       } else {
-        await deps.flagManualReview(`advance link in unknown provider state "${st}"`);
+        await deps.flagManualReview(`advance link in unknown provider state "${found.status}"`);
         return { outcome: "manual_review" };
       }
     } else {
-      // Provider has no such link: nothing payable exists, safe to create.
-    }
-  }
-
-  // 2. Ambiguous state: reconcile, never blind-create.
-  if (payment.orderAmbiguous) {
-    if (payment.razorpayPaymentLinkId) {
-      let found: { id: string; amount: number; currency: string; paymentUrl: string; status: string } | null;
-      try {
-        found = await deps.fetchLink(payment.razorpayPaymentLinkId);
-      } catch {
-        // Provider unreachable: stay closed. A later retry reconciles.
-        throw new Error("We are confirming your earlier payment link. Please try again in a few minutes.");
-      }
-      if (!found || found.amount !== payment.amount || found.currency !== payment.currency) {
-        await deps.flagManualReview("advance link reconciliation mismatch");
+      if (payment.orderAmbiguous) {
+        // The create response itself was lost and the provider has no such
+        // link: the provider state is unknowable to us. Never blind-create.
+        await deps.flagManualReview("advance link creation outcome unknown; provider reference unrecoverable");
         return { outcome: "manual_review" };
       }
-      await deps.patch({ paymentUrl: found.paymentUrl, razorpayPaymentLinkId: found.id, razorpayOrderId: payment.razorpayOrderId });
-      await deps.markAmbiguous(false);
-      return { outcome: "link_ready", paymentUrl: found.paymentUrl };
+      // We reference a link the provider has never heard of: nothing
+      // payable exists, a fresh create is safe.
     }
-    // The create response itself was lost: the provider may hold a payable
-    // link we cannot reference. Never create a second one.
-    await deps.flagManualReview("advance link creation outcome unknown; provider reference unrecoverable");
+  } else if (payment.orderAmbiguous) {
+    // Ambiguous with NO reference at all: never blind-create.
+    await deps.flagManualReview("advance link creation outcome unknown; no provider reference recorded");
     return { outcome: "manual_review" };
   }
 
-  // 3. Fresh create. ANY failure after this point is ambiguous by definition:
-  //    the provider may have created the link.
+  // Fresh create. ANY failure after this point is ambiguous by definition:
+  // the provider may have created the link.
   let result: PaymentLinkResult;
   try {
     result = await deps.createLink({ ...linkParams, amount: payment.amount, currency: payment.currency });
