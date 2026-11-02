@@ -26,9 +26,11 @@ payment/refund rules.
 - Declined request, or appointment missed: **further changes go through the
   studio** (both sides). The server's legacy missed-move bypass no longer
   applies to premium categories.
-- Cutoff: **24 hours** from the current time (the already-agreed rule), kept.
-- Transitional wash behaviour (one free move up to 4h) is unchanged and
-  remains owner-pending for later confirmation.
+- Cutoff: **24 hours before the current appointment start** (the
+  already-agreed rule), kept: a move within 24h of the appointment start
+  needs a studio-approved request.
+- Wash rule (one free move up to 4h before the appointment start) was
+  already accepted by the owner at 16:25 the same day and is unchanged.
 
 ## 3. Aadhaar
 - **Do not collect Aadhaar.** Staff sign in with email; no Aadhaar
