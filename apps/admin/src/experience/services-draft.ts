@@ -1,11 +1,14 @@
 // Service editor draft: every number is a string while typing (so an empty
 // field is distinct from 0) and money is in rupees. toServicePayload turns
 // it into the stored shape (paise, integers) or explains what's wrong.
+import {customerServiceName} from "@autodeck/core";
 import type { BayType, Service, ServiceCategory, VehicleCategory, VehicleCategoryPricing, WarrantyDurationUnit } from "@autodeck/core";
 
 export interface SizeRuleDraft { vehicleCategory: VehicleCategory; extraRupees: string; extraMinutes: string }
 export interface ServiceDraft {
   serviceId: string | null;
+  internalRating?: "A" | "B" | "C" | "D" | null;
+  ratingChanged?: boolean;
   name: string;
   category: ServiceCategory;
   brand: string;
@@ -34,7 +37,9 @@ export const EMPTY_SERVICE: ServiceDraft = {
 export function draftFromService(s: Service): ServiceDraft {
   return {
     serviceId: s.id,
-    name: s.name,
+    name: customerServiceName(s.name),
+    ...(s.internalRating !== undefined ? {internalRating:s.internalRating} : {}),
+    ratingChanged: false,
     category: s.category,
     brand: s.brand ?? "",
     description: s.description ?? "",
@@ -56,6 +61,7 @@ export function draftFromService(s: Service): ServiceDraft {
 }
 
 export interface ServicePayload {
+  internalRating?: "A" | "B" | "C" | "D" | null;
   name: string;
   category: ServiceCategory;
   brand: string | null;
@@ -114,7 +120,8 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
   return {
     ok: true,
     payload: {
-      name: d.name.trim(),
+      name: customerServiceName(d.name.trim()),
+      ...(d.ratingChanged ? {internalRating: d.internalRating ?? null} : {}),
       category: d.category,
       brand: d.brand.trim() || null,
       description: d.description.trim(),

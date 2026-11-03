@@ -237,3 +237,15 @@ describe("advance webhook (targetType booking, reviewer B)", () => {
     expect(r.body.outcome).toBe("already_final");
   });
 });
+
+it.each(["EXPIRED", "CANCELLED"])("late capture on %s records money for refund review without advancing booking", async status => {
+  const s = await seed({ bookingStatus: status });
+  await call(captured(s.orderId, 23600, s.payId), `late-${status}-${s.payDocId}`);
+  const pay = (await db.collection("payments").doc(s.payDocId).get()).data()!;
+  const b = (await db.collection("bookings").doc(s.bookingId).get()).data()!;
+  expect(pay.status).toBe("completed");
+  expect(pay.invoiceReviewNeeded).toBe(true);
+  expect(b.status).toBe(status);
+  expect(b.advancePaidAt ?? null).toBeNull();
+  expect(pay.refundAmount ?? null).toBeNull();
+});

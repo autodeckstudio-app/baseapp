@@ -75,17 +75,18 @@ export async function payWithPaymentLink(paymentId: string, paymentUrl: string |
     let settled = false;
     let grace: ReturnType<typeof setTimeout> | null = null;
     let cap: ReturnType<typeof setTimeout> | null = null;
+    let unsub: (() => void) | undefined;
     const finish = (outcome: OnlinePayOutcome) => {
       if (settled) return;
       settled = true;
       if (grace) clearTimeout(grace);
       if (cap) clearTimeout(cap);
-      unsub();
+      unsub?.();
       resolve(outcome);
     };
     // Attached before the browser opens; onSnapshot also delivers the current doc
     // immediately, so an already-reconciled payment resolves at once.
-    const unsub = onSnapshot(
+    unsub = onSnapshot(
       doc(db, COLLECTIONS.payments(), paymentId),
       (snap) => {
         const terminal = snap.exists() ? terminalPayOutcome((snap.data() as Payment).status) : null;
@@ -93,12 +94,13 @@ export async function payWithPaymentLink(paymentId: string, paymentUrl: string |
       },
       () => finish("pending"),
     );
+    if (settled) { unsub(); return; }
     cap = setTimeout(() => finish("pending"), 180_000);
     void (async () => {
       try {
         await WebBrowser.openBrowserAsync(url);
         // Browser closed with no terminal status yet: give the webhook a short grace window.
-        grace = setTimeout(() => finish("pending"), 20_000);
+        if (!settled) grace = setTimeout(() => finish("pending"), 20_000);
       } catch {
         finish("failed");
       }

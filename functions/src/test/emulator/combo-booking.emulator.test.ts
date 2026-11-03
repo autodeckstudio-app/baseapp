@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { MENU_SEED } from "@autodeck/core";
-import { createBooking } from "../../functions/booking/createBooking.js";
+import { createBooking } from "../helpers/paid-advance-booking.js";
 import { getAvailability } from "../../functions/booking/getAvailability.js";
 // Combo = one main service plus extraServiceIds in a single createBooking call (real callable, Firestore emulator).
 const db = getFirestore(); const T = "combo-tenant"; const S = "combo-studio"; let n = 0;

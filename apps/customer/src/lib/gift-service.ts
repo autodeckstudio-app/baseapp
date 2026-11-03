@@ -13,11 +13,15 @@ export async function listMyGifts(): Promise<{ gifts: GiftView[]; offer: GiftOff
   const d = (await httpsCallable<Record<string, never>, { gifts: GiftView[]; offer: GiftOffer | null }>(functions, "listMyGifts")({})).data;
   return { gifts: d.gifts, offer: d.offer ?? null };
 }
-/** Starts a purchase: the server makes the unpaid gift and its payment. Pay it with payWithCheckout(paymentId). */
+/** Starts a purchase: the server makes the unpaid gift and its payment. Pay it through the platform payment entrypoint. */
 export async function startGiftPurchase(): Promise<{ giftId: string; paymentId: string; amountPaise: number }> {
   return (await httpsCallable<Record<string, never>, { giftId: string; paymentId: string; amountPaise: number }>(functions, "createGift")({})).data;
 }
 /** The code of a gift you bought. The server only returns it after the payment is verified. */
 export async function fetchGiftCode(giftId: string): Promise<{ code: string; expiresAt: string | null }> {
   return (await httpsCallable<{ giftId: string }, { code: string; expiresAt: string | null }>(functions, "getGiftCode")({ giftId })).data;
+}
+
+export async function requestGiftPaymentLink(paymentId: string): Promise<{ paymentId: string; paymentUrl: string | null; status: string }> {
+  return (await httpsCallable<{ paymentId: string }, { paymentId: string; paymentUrl: string | null; status: string }>(functions, "requestGiftPaymentLink")({ paymentId })).data;
 }

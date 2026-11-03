@@ -1,3 +1,5 @@
+import { customerRatingPrivacy } from "@autodeck/core";
+import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
 import { TabPills } from "../../../ui/CarOverview";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
@@ -7,7 +9,7 @@ import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { isSizePriced, needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
+import { customerCatalogueEligible, isSizePriced, needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
@@ -28,6 +30,8 @@ import { applyBrandWarranty, getServiceCatalogue, priceLabel } from "../../../li
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router=useRouter();
+  const [sourceHold, setSourceHold] = useState(false);
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -45,10 +49,11 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
+    if (!customerCatalogueEligible({id},__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""))) {setSourceHold(true);setLoading(false);return;}
     void (async () => {
       try {
         const snap = await getDoc(doc(db, COLLECTIONS.services(), id));
-        if (snap.exists()) setService(applyBrandWarranty(snap.data() as Service));
+        if (snap.exists() && snap.data().active === true) setService(applyBrandWarranty(customerRatingPrivacy(snap.data() as Service)));
       } catch {
         setLoadError(true);
       } finally {
@@ -84,6 +89,7 @@ export default function ServiceDetailScreen() {
     void getServiceReviews(service.id).then(setReviews).catch(() => setReviews(null));
   }, [service]);
 
+  if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Ask for a quote" onPress={()=>router.push("/(tabs)/help")} /></Screen>;
   return (
     <ServiceDetailView
       id={id}
@@ -174,7 +180,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </View>
 
         <T role="heading">{sc.tagline || service.description}</T>
-        {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description}</T> : null}
+        {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description.split(/\n+/).slice(1).join("\n")}</T> : null}
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
         {reviews && reviews.count > 0 ? (
@@ -224,16 +230,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 
         {tab === "includes" ? (
           <>
-        {sc.included.length > 0 ? (
-          <View style={{ gap: space.breath }}>
-            {H("What's included")}
-            <Pane pad="gap">
-              {sc.included.map((x, i) => (
-                <Row key={x} title={<View style={{ flexDirection: "row", gap: space.line }}><Icon name="check" color={colors.accent} size={18} /><View style={{ flex: 1 }}><T>{x}</T></View></View>} last={i === sc.included.length - 1} />
-              ))}
-            </Pane>
-          </View>
-        ) : null}
+        <ServiceScope service={service} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
 
         {sc.benefits.length > 0 ? (
           <View style={{ gap: space.breath }}>
@@ -277,7 +274,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         ) : null}
 
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
-        <View style={{ height: 220 }} />
+        <View style={{ height: showBar ? 100 : 0 }} />
       </Screen>
       {focused && showBar ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : "#1B1B1F", borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>

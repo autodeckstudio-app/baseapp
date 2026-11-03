@@ -9,3 +9,10 @@ export function dueChip(jobs: Array<FinishedJob & { vehicleId?: string }>, vehic
   if (days === 0) return `${d.label} due today`;
   return `${d.label} due in ${days} day${days === 1 ? "" : "s"}`;
 }
+
+/** Compact visual badge; keep the full service text in its accessible label. */
+export function compactDueChip(text: string): string {
+  const match = text.match(/\b(due in \d+ days?|due today|overdue \d+ days?)$/i);
+  const compact = match?.[1] ?? text;
+  return compact.charAt(0).toUpperCase() + compact.slice(1);
+}

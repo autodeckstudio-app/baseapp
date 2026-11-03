@@ -6,7 +6,7 @@ test('broad website categories lead to catalogue categories, never one bookable 
  const expected={'paint-protection-film':'cat=ppf','ceramic-coating':'cat=coatings&p=ceramic','detailing':'cat=wash','washing':'cat=wash','garage':'cat=garage','modifications':'cat=mods'};
  for(const [slug,q]of Object.entries(expected)){
   const h=read('dist/services/'+slug+'/index.html');
-  assert(h.includes('data-app-category-link="https://app.autodeck.in/catalogue?'+q+'"'));
+  assert(h.includes('href="https://app.autodeck.in/catalogue?'+q.replaceAll('&','&amp;')+'"')||h.includes('href="https://app.autodeck.in/catalogue?'+q+'"')); 
   assert(!/data-app-category-link="[^"]*\/book\//.test(h));
  }
  const js=read('src/scripts/redesign.ts');

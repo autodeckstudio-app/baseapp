@@ -1929,3 +1929,5 @@ describe("adminApprovalRequests collection rules", () => {
     await assertFails(admin.collection("adminApprovalRequests").doc("rules-req-new").set({ tenantId: FIRST_TENANT_ID }));
   });
 });
+
+describe('servicePrivate metadata is server-only under deployed-shape default deny',()=>{it('same-tenant customer and staff SDK cannot read private ratings',async()=>{await testEnv.withSecurityRulesDisabled(async ctx=>{await ctx.firestore().collection('servicePrivate').doc('privacy-proof').set({tenantId:FIRST_TENANT_ID,internalRating:'B'})});for(const role of ['customer','studio','admin','superadmin']){const ctx=testEnv.authenticatedContext('private-rating-new-'+role,{role,tenantId:FIRST_TENANT_ID});const sdk=ctx.firestore();await assertFails(sdk.collection('servicePrivate').doc('privacy-proof').get());await assertFails(sdk.collection('servicePrivate').doc('privacy-proof').set({internalRating:'A'}))}})});

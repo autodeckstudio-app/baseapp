@@ -54,6 +54,7 @@ export const updateService = onCall({ region: "asia-south1", enforceAppCheck: sh
     if (data.displayOrder !== undefined) updates["displayOrder"] = data.displayOrder;
     if (data.imageUrl !== undefined) updates["imageUrl"] = data.imageUrl;
 
+    if(data.internalRating !== undefined) tx.set(db.collection("servicePrivate").doc(data.serviceId),{tenantId:existing.tenantId,internalRating:data.internalRating,updatedAt:updates["updatedAt"]},{merge:true});
     tx.update(ref, updates);
     writeAuditLog(tx, {
       action: "service.updated",

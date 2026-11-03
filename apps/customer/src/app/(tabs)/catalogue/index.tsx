@@ -3,8 +3,8 @@ import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import type { ReactElement } from "react";
 import { usePricingVehicle, useVehiclePrices, servicePriceText } from "../../../lib/vehicle-size";
 // Services: one screen, two levels. Sticky category chips, sub-group sections, search, rows.
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { type ImageSourcePropType, Pressable, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ImageSourcePropType, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
 import { BRANDS} from "../../../lib/brands";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -15,9 +15,10 @@ import { layout, space, type IconName } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { getServiceCatalogue, peekCatalogue } from "../../../lib/catalogue-service";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { serviceVisual, brandHero, typePhoto, serviceImagery } from "../../../lib/imagery";
+import { BRAND_LOGOS, serviceVisual, brandHero, typePhoto, serviceImagery } from "../../../lib/imagery";
 import { PhotoCard, TILE_GAP } from "../../../ui/HomeView";
 import { Icon } from "@autodeck/ui/native";
+import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { FilterPills } from "../../../ui/FilterPills";
 import { Button, Kicker, Notice, Pane, Row, Screen, Skeleton, T, rupees } from "../../../ui/kit";
 import { AREA_SECTIONS, areaSections, SERVICE_TYPES, buildTree, leafServices, matchesQuery, pathToLabel, resolvePath, type TreeNode } from "../../../lib/services-tree";
@@ -64,6 +65,12 @@ export default function CatalogueScreen() {
   }, []);
   useEffect(() => void load(), [load]);
 
+  const { height: winH } = useWindowDimensions();
+  const filterKeys = ["all", ...MENU_GROUPS.filter(g => (services ?? []).some(s => (g.categories as string[]).includes(s.category))).map(g => g.key)];
+  const grpRef = useRef(grp);
+  grpRef.current = grp;
+  const swipe = useSegmentSwipe(filterKeys, () => grpRef.current ?? "all", key => setGrp(key === "all" ? null : key));
+
   const all = services ?? [];
   const prices = useVehiclePrices(all, pricingVehicle.category);
   const pricedLabel=(sv:Service)=>servicePriceText(sv,pricingVehicle.category,prices);
@@ -106,7 +113,7 @@ export default function CatalogueScreen() {
   );
 
   const card = (sv: Service, i = 0) => (
-    <PhotoCard key={sv.id} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} variant={i} />} />
+    <PhotoCard key={sv.id} mediaTreatment={serviceVisual(sv).bottle ? "paper" : undefined} title={sv.name.replace(/^Kovalent\s+/i, "")} pill={pricedLabel(sv) === "Quote on request" ? "Consult" : pricedLabel(sv) ?? undefined} onPress={() => router.push(`/(tabs)/catalogue/${sv.id}`)} media={<ServicePhoto service={sv} height={400} variant={i} />} />
   );
 
 
@@ -122,14 +129,16 @@ export default function CatalogueScreen() {
     const base = inCat ? [] : trail.map((step) => step.key);
     if (n.kind === "leaf") return card(n.service, i);
     if (n.kind === "enquiry") {
-      const photo = typePhoto(n.key);
-      return <PhotoCard key={n.key} title={n.label} pill="Get a quote" hearted={false} onPress={() => router.push("/(tabs)/help")} media={photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
+      const photo = n.infoKey ? null : typePhoto(n.key);
+      const title = n.infoKey && trail.some(x=>x.key==="3M") ? n.label.replace("Scotchgard Paint Protection Film Pro ", "Scotchgard Pro ").replace("Paint Protection Film ", "") : n.label;
+      return <PhotoCard key={n.key} title={title} pill={n.infoKey ? "Ask for a quote" : "Get a quote"} hearted={false} onPress={() => router.push(n.infoKey ? { pathname: "/(tabs)/catalogue/enquiry", params: { id: n.infoKey } } : { pathname: "/(tabs)/help", params: { service: n.label } })} media={photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
     }
     const xs = leafServices(n);
     const photo = base.length === 0 ? typePhoto(n.key) : null;
     const first = xs[0];
-    const media = base.length === 0 && n.kind === "branch" && SERVICE_TYPES[catKey ?? ""] ? (photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")) : first ? <ServicePhoto service={first} height={400} variant={i} /> : iconPanel("tools");
-    return <PhotoCard key={n.key} title={n.label} pill={pricedFrom(xs)?.replace(/^From /, "From ")} hearted={false} onPress={() => go({ cat: catKey!, p: [...base, n.key].join(",") })} media={media} />;
+    const logo = BRAND_LOGOS[n.label];
+    const media = logo ? <View style={{ width: "100%", height: "100%", backgroundColor: logo.background, alignItems: "center", justifyContent: "center", paddingHorizontal: 28, paddingTop: 44, paddingBottom: 40 }}><FadeImage source={logo.src} resizeMode="contain" style={{ width: "100%", height: "100%", maxHeight: 82 }} /></View> : base.length === 0 && n.kind === "branch" && SERVICE_TYPES[catKey ?? ""] ? (photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")) : first ? <ServicePhoto service={first} height={400} variant={i} /> : iconPanel("tools");
+    return <PhotoCard key={n.key} mediaTreatment={logo ? (logo.background === "#FFFFFF" ? "paper" : "logo-dark") : undefined} title={n.label} pill={xs.length ? pricedFrom(xs)?.replace(/^From /, "From ") : "Ask for a quote"} hearted={false} onPress={() => go({ cat: catKey!, p: [...base, n.key].join(",") })} media={media} />;
   };
   const renderNodes = (ns: TreeNode[]) => {
     if (trail.length === 0 && catGroup && AREA_SECTIONS[catGroup.key]) {
@@ -161,7 +170,7 @@ export default function CatalogueScreen() {
   };
   const here = trail[trail.length - 1];
   const top = (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 16, paddingBottom: 16 }} testID="services-filter-header">
       {pricingVehicle.label ? <T role="caption" tone="accent">For your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}{GST_ENABLED ? " · incl. GST" : ""}</T> : null}
       <View style={{ height: 48, borderRadius: 24, ...glassInner, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
         <Icon name="search" color={colors.textTertiary} size={20} />
@@ -180,6 +189,7 @@ export default function CatalogueScreen() {
 
   return (
     <Screen appBar={here?.label ?? catGroup?.label ?? "Services"} top={top} onBack={levelBack}>
+      <View testID="services-swipe-area" {...(!fromRoute && !searching ? swipe.handlers : {})} style={[{ gap: 20, minHeight: Math.max(winH - 300, 480) }, !fromRoute && !searching ? swipe.style : null]}>
       {error ? <Notice title="Can't load services" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
       {!services && !error ? (
         <View style={{ gap: space.line }}>
@@ -218,9 +228,11 @@ export default function CatalogueScreen() {
       {services && !searching && level === 2 ? (
         <View style={{ gap: 18 }}>
           {renderNodes(nodes)}
-          {cat === "ppf" || cat === "coatings" ? <T role="caption" tone="secondary">{PAINT_INSPECTION_NOTE}</T> : null}
+          {cat === "ppf" || cat === "coatings" ? <T role="caption" tone="secondary">{cat === "coatings" ? "Final price confirmed after inspection." : PAINT_INSPECTION_NOTE}</T> : null}
         </View>
       ) : null}
+      </View>
+
     </Screen>
   );
 }

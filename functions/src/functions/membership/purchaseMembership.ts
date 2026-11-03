@@ -12,6 +12,8 @@ import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { purchaseMembershipSchema } from "../../schemas/membership.js";
+import { membershipPaymentUrl } from "../../lib/membership-payment-url.js";
+import { obtainMembershipPaymentLink } from "../../lib/membership-payment-link.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
@@ -62,7 +64,7 @@ export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZ
       .limit(1)
       .get();
     const existingPayment = paymentSnap.docs[0]?.data() as Payment | undefined;
-    return { membershipId: existing.id, paymentId: existingPayment?.id ?? null, paymentUrl: null };
+    return { membershipId: existing.id, paymentId: existingPayment?.id ?? null, paymentUrl: await membershipPaymentUrl(db, existingPayment, user.phone ?? "") };
   }
 
   const now = new Date().toISOString();
@@ -70,24 +72,10 @@ export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZ
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
 
   let paymentUrl: string | null = null;
-  let razorpayPaymentLinkId: string | null = null;
-  let razorpayOrderId: string | null = null;
+  const razorpayPaymentLinkId: string | null = null;
+  const razorpayOrderId: string | null = null;
 
-  if (data.method === "razorpay_payment_link") {
-    const provider = getPaymentProvider();
-    const result = await provider.createPaymentLink({
-      amount: plan.priceInPaise,
-      currency: "INR",
-      bookingId: membershipRef.id,
-      description: `AutoDeck Membership — ${plan.name}`,
-      customerName: user.email ?? user.phone ?? "Customer",
-      customerPhone: user.phone ?? "",
-      referenceId: paymentRef.id,
-    });
-    paymentUrl = result.paymentUrl;
-    razorpayPaymentLinkId = result.providerPaymentLinkId;
-    razorpayOrderId = result.providerOrderId;
-  }
+
 
   const membership: Membership = {
     id: membershipRef.id,
@@ -126,6 +114,7 @@ export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZ
     currency: "INR",
     method: data.method,
     status: "pending",
+    paymentUrl,
     razorpayPaymentLinkId,
     razorpayPaymentId: null,
     razorpayOrderId,
@@ -194,5 +183,10 @@ export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZ
     });
   });
 
+  if (data.method === "razorpay_payment_link") {
+    const stored = (await paymentRef.get()).data() as Payment;
+    const link = await obtainMembershipPaymentLink(db, stored, getPaymentProvider(), user.phone ?? "");
+    paymentUrl = link.outcome === "link_ready" ? link.paymentUrl : null;
+  }
   return { membershipId: membershipRef.id, paymentId: paymentRef.id, paymentUrl };
 });

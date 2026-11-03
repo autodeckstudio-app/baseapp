@@ -16,6 +16,9 @@ export function useStaffAlerts(): StaffAlert[] {
 
 /** Count only: no customer details. Persistent, read-only. */
 const TEXT: Record<string, (n: number) => string> = {
+  unmatched_payment_capture: (n) => `${n} verified payment capture(s) could not be matched to a payment record. Reconcile in Razorpay before collecting again.`,
+  membership_manual_review: (n) => `${n} membership payment(s) need a provider check before another payment link can be opened.`,
+  gift_manual_review: (n) => `${n} gift payment(s) need a provider check before another payment link can be opened.`,
   waiting_cancel_link_terminal_processing: (n) => `${n} cancellation request(s) have a closed payment link, but a payment already started may still arrive. Booked times remain held and cancel automatically if a payment arrives. Check the link in the Razorpay dashboard.`,
   waiting_cancel_review: (n) => `${n} cancellation request(s) still await the online payment. Booked times remain held; a manual check is needed.`,
   waiting_cancel_refund_not_reserved: (n) => `${n} payment(s) arrived for a waiting cancellation but the full refund was NOT reserved. Booked times remain held; manual action is required.`,
@@ -31,11 +34,16 @@ const TEXT: Record<string, (n: number) => string> = {
 /** Count per kind only: no customer details. Persistent, read-only. */
 export function StaffAlertsNotice() {
   const alerts = useStaffAlerts();
+  return <StaffAlertsContent alerts={alerts} />;
+}
+
+export function StaffAlertsContent({ alerts }: { alerts: StaffAlert[] }) {
   if (alerts.length === 0) return null;
   const kinds = Array.from(new Set(alerts.map((a) => a.kind)));
   return (
     <div className="ax-panel" role="status" data-testid="staff-alerts-notice">
       <span className="ax-label">Needs a manual check</span>
+      {alerts.length >= 50 ? <p>Showing the 50 newest notices. Older notices remain recorded and may still need a check.</p> : null}
       {kinds.map((k) => (
         <p key={k} style={{ margin: "4px 0 0" }}>{(TEXT[k] ?? (() => "An automatic step needs a manual check."))(alerts.filter((a) => a.kind === k).length)}</p>
       ))}

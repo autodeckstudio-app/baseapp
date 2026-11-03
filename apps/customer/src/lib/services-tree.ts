@@ -1,10 +1,11 @@
+import { BRAND_ENQUIRIES } from "./brand-enquiries";
 import { COATING_BRANDS, PPF_BRANDS, type MenuGroup, type Service } from "@autodeck/core";
 
 /** One level of the Services drill-down. A branch opens another level, a leaf is a bookable service, an enquiry is a market type we do not list yet. */
 export type TreeNode =
   | { kind: "branch"; key: string; label: string; blurb?: string; children: TreeNode[] }
   | { kind: "leaf"; service: Service }
-  | { kind: "enquiry"; key: string; label: string; blurb?: string };
+  | { kind: "enquiry"; key: string; label: string; blurb?: string; infoKey?: string };
 
 interface TypeDef {
   key: string;
@@ -39,12 +40,12 @@ export const SERVICE_TYPES: Record<string, TypeDef[]> = {
     { key: "glass", label: "Glass protection", blurb: "Water-repellent coating for glass.", ids: ["menu-coat-glass"] },
     { key: "wheels", label: "Wheel and alloy protection", blurb: "Coating for wheel faces and barrels.", ids: ["menu-coat-wheels"] },
     { key: "leather", label: "Leather protection", blurb: "Protective coating for leather.", ids: ["menu-coat-leather"] },
-    { key: "fabric", label: "Fabric and upholstery protection", blurb: "Stain-repellent coating for fabric.", ids: ["menu-coat-fabric"] },
+    { key: "fabric", label: "Fabric protection", blurb: "Stain-repellent coating for fabric.", ids: ["menu-coat-fabric"] },
     { key: "trim", label: "Exterior plastic and trim protection", blurb: "Restores faded trim and seals it.", ids: ["menu-coat-trim"], test: (s) => s.category === "coating" },
-    E("matte", "Matte paint protection"), E("tyre", "Tyre protection"), E("dashboard", "Dashboard and interior trim protection"), E("ppf-coat", "PPF coating and aftercare"),
+    E("maintenance-coating", "Coating maintenance"), E("matte", "Matte paint protection"), E("tyre", "Tyre protection"), E("dashboard", "Dashboard and interior trim protection"), E("ppf-coat", "PPF coating and aftercare"),
   ],
   ppf: [
-    { key: "brand-film", label: "Film by brand", blurb: "Garware, XPEL, LLumar and 3M, by coverage.", test: (s) => s.category === "ppf" && s.priceOnRequest !== true, byBrand: PPF_BRANDS },
+    { key: "brand-film", label: "Film by brand", blurb: "Bookable films and additional ranges to enquire about.", test: (s) => s.category === "ppf" && s.priceOnRequest !== true, byBrand: PPF_BRANDS },
     { key: "colour", label: "Colour film", blurb: "Coloured and black films. Priced after we see the car.", ids: ["menu-ppf-colour"], test: (s) => s.category === "ppf" && s.priceOnRequest === true },
     E("matte-ppf", "Matte and satin film"),
   ],
@@ -98,6 +99,19 @@ export function buildTree(group: Pick<MenuGroup, "key" | "categories">, all: Ser
     offered.push({ kind: "branch", key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}), children: d.byBrand ? byBrand(mine, d.byBrand) : leaves(mine) });
   }
   const asks: TreeNode[] = defs.filter((d) => d.enquiryOnly).map((d) => ({ kind: "enquiry" as const, key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}) }));
+  const additionType=group.key==='ppf'?'brand-film':group.key==='coatings'?'ceramic':null;
+  if(group.key==='ppf') {
+    const pps=BRAND_ENQUIRIES.find(x=>x.key==='pps-spray');
+    if(pps) asks.push({kind:'enquiry',key:pps.key,label:pps.name,blurb:pps.note,infoKey:pps.key});
+  }
+  for(const item of BRAND_ENQUIRIES.filter(x=>x.group===group.key&&x.key!=='pps-spray'&&x.brand!==null)) {
+    const typeKey=item.surface??additionType;
+    let dest=offered.find((node):node is Extract<TreeNode,{kind:'branch'}>=>node.kind==='branch'&&node.key===typeKey);
+    if(!dest){const def=defs.find(x=>x.key===typeKey);if(!def)continue;dest={kind:'branch',key:def.key,label:def.label,children:[]};offered.push(dest);const duplicate=asks.findIndex(n=>n.kind==='enquiry'&&n.key===def.key);if(duplicate>=0)asks.splice(duplicate,1);}
+    let brand=dest.children.find((node):node is Extract<TreeNode,{kind:'branch'}>=>node.kind==='branch'&&node.key===item.brand);
+    if(!brand){brand={kind:'branch',key:item.brand!,label:item.brand!,children:[]};dest.children.push(brand);}
+    brand.children.push({kind:'enquiry',key:item.key,label:item.name,blurb:item.note,infoKey:item.key});
+  }
   return [...offered, ...asks];
 }
 
@@ -163,7 +177,7 @@ export const AREA_SECTIONS: Record<string, Array<{ label: string; keys: string[]
     { label: "Paint", keys: ["decon", "polish"] },
   ],
   coatings: [
-    { label: "Paint", keys: ["ceramic", "graphene", "matte", "ppf-coat"] },
+    { label: "Paint", keys: ["ceramic", "graphene", "matte", "ppf-coat", "maintenance-coating"] },
     { label: "Exterior", keys: ["trim"] },
     { label: "Interior", keys: ["leather", "fabric", "dashboard"] },
     { label: "Wheels and tyres", keys: ["wheels", "tyre"] },

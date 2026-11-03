@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ADVANCE_SPLIT_ENABLED, advanceDisclosureLines } from "./advance-booking";
 
-describe("advance split disclosure (items 4/5, preview)", () => {
-  it("is DISABLED until the held basis/rounding decisions, payment wiring and final gate", () => {
+describe("advance split disclosure (owner-approved activation)", () => {
+  it("release candidate remains OFF pending compatible Android activation decision", () => {
     expect(ADVANCE_SPLIT_ENABLED).toBe(false);
   });
   it("copy states the adopted 20% split without computing an amount (basis/rounding held)", () => {
@@ -73,10 +73,35 @@ import { readFileSync } from "node:fs";
 describe("confirm advance lines stay behind the flag and qualify the balance when pickup is chosen", () => {
   const src = readFileSync("src/app/(tabs)/book/confirm.tsx", "utf8");
   it("both money lines render only under ADVANCE_SPLIT_ENABLED", () => {
-    expect(src).toContain("ADVANCE_SPLIT_ENABLED && payAtStudio && advancePreview ?");
+    expect(src).toContain("advanceDue && advancePreview ?");
     expect(src).toContain("const advancePreview = ADVANCE_SPLIT_ENABLED && breakdown ?");
   });
   it("balance is labelled before pickup/drop fees when a pickup is chosen", () => {
     expect(src).toContain('pickupKind ? "Pay at the studio (before pickup/drop fees)" : "Pay at the studio"');
+  });
+});
+
+import { needsBookingAdvance } from "./advance-booking";
+describe("effective advance route", () => {
+  const base = { enabled: true, studioSelected: true, onlineAvailable: true,
+    giftCovered: false, membershipCovered: false, priceOnRequest: false, advancePaise: 20000 };
+  it("uses studio selection, including the studio-only default", () => {
+    expect(needsBookingAdvance(base)).toBe(true);
+    expect(needsBookingAdvance({ ...base, studioSelected: false, onlineAvailable: false })).toBe(true);
+    expect(needsBookingAdvance({ ...base, studioSelected: false })).toBe(false);
+  });
+  it("ignores stale studio selection for gifts, covered washes, quotes and zero totals", () => {
+    for (const override of [{ giftCovered: true }, { membershipCovered: true }, { priceOnRequest: true },
+      { advancePaise: 0 }, { advancePaise: null }, { advancePaise: NaN }, { enabled: false }]) {
+      expect(needsBookingAdvance({ ...base, ...override })).toBe(false);
+    }
+  });
+  it("retains the created advance booking before requesting a link and retries through held state", () => {
+    const src = readFileSync("src/app/(tabs)/book/confirm.tsx", "utf8");
+    expect(src).toContain("if (held) { if (!heldOver) await payHeld(held); return; }");
+    expect(src).toContain("setHeld(h);\n        await payHeld(h);");
+    expect(src).toContain("if (h.advance)");
+    expect(src).toContain("await requestAdvancePayment(h.bookingId)");
+    expect(src).toContain("await payWithPaymentLink(adv.paymentId, adv.paymentUrl)");
   });
 });

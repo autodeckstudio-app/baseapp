@@ -4,7 +4,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { readFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
-import { createBooking as current } from "../../functions/booking/createBooking.js";
+import { createBooking as current } from "../helpers/paid-advance-booking.js";
 const db = getFirestore();
 describe("real nonmember booking baseline vs covered diff", () => {
   it("writes byte-identical full job with snapshot field absent, fixed ids/time", async () => {

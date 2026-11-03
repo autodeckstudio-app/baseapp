@@ -37,6 +37,8 @@ export const createBookingSchema = z.object({
   giftCode: z.string().min(1).max(32).optional(),
   /** How the customer will pay. online holds the slot for 15 minutes until paid; studio confirms at once. Omitted = studio (older apps). */
   payMode: z.enum(["online", "studio"]).optional(),
+  /** Capability marker: old clients must refresh before a priced studio advance. */
+  advanceFlowVersion: z.literal(1).optional(),
 }).strict();
 
 export const cancelBookingSchema = z.object({

@@ -1,9 +1,10 @@
+import type * as LegacyAdvanceModule from "../../lib/advance-payment.js";
 /**
  * Emulator tests for the structured inspection workflow (Phase 4).
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, Inspection, AuditLog } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -366,4 +367,13 @@ describe("Inspection workflow — start / update / finalize", () => {
       expect(succeeded.length, `iteration ${i}`).toBe(1);
     }
   }, 180_000);
+});
+
+// Legacy lifecycle fixture contract: these tests start with confirmed studio
+// bookings and test unrelated job/inspection/ownership/refund behavior. The
+// enabled real customer advance lifecycle is tested without this mock in
+// advance-activation-booking.emulator.test.ts (including signature + replay).
+vi.mock("../../lib/advance-payment.js", async (orig) => {
+  const m = await orig<typeof LegacyAdvanceModule>();
+  return { ...m, advancePaymentEnabled: () => false };
 });

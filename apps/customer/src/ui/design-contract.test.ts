@@ -129,7 +129,7 @@ describe("sizes come from one rulebook",()=>{
   });
   it("uses the same section gap on Home and in Screen",()=>{
     expect(read("src/ui/HomeView.tsx")).toContain("gap: metrics.sectionGap");
-    expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120, gap: 20");
+    expect(read("src/ui/kit.tsx")).toContain("calc(96px + env(safe-area-inset-bottom))");
   });
   it("does not leave a tall empty car panel when there is no photo",()=>{
     const home=read("src/ui/HomeView.tsx");expect(home).toContain("CarChips");expect(home).not.toContain("height: 210");
@@ -170,7 +170,7 @@ it("audit batch: no spinner price labels, no icon placeholders over titles, labe
   expect(read("src/app/(tabs)/profile.tsx")).toContain('<Screen appBar="You">'); // the common header is the only title (no second "Your account")
   expect(read("src/app/(tabs)/notifications/index.tsx")).toContain("NOTIFICATION_ACTION");
   const home=read("src/ui/HomeView.tsx");expect(home).toContain("isCompactCarRow");expect(home).not.toContain("{car ? car.title : p.greeting}");
-  expect(read("src/ui/kit.tsx")).toContain("paddingBottom: 120");
+  expect(read("src/ui/kit.tsx")).toContain("calc(96px + env(safe-area-inset-bottom))");
 });
 
 describe("booking flow guardrails", () => {
@@ -251,7 +251,7 @@ describe("one confirm button", () => {
     expect(c).toMatch(/busy=\{booking\} disabled=\{booking\}/);
     expect(c).toMatch(/Go back/);
     expect(c).toMatch(/payMode:/);
-    expect(c).toMatch(/Payment failed, please retry/);
+    expect(c).toMatch(/bookingPayOutcomeMessage/);
   });
 });
 
@@ -292,10 +292,10 @@ describe("services filters", () => {
     expect(src).toContain("<Screen appBar=");
     expect(src).toContain("typePhoto(");
   });
-  it("type tiles use a photo only where it shows that work, else an icon panel, never an unrelated stock picture", () => {
+  it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
     const src = read("src/lib/imagery.ts");
     const block = src.slice(src.indexOf("const TYPE_TOPIC"), src.indexOf("export function typePhoto"));
-    for (const k of ["glass", "matte", "trim", "decon", "odour", "rust", "audio", "cameras", "mats", "interior-style", "exterior-style", "periodic-x"]) expect(block).not.toMatch(new RegExp(`(^|[ ,{])"?${k}"?:`));
+    for (const k of ["periodic-x"]) expect(block).not.toMatch(new RegExp(`(^|[ ,{])"?${k}"?:`));
   });
 });
 
@@ -393,7 +393,7 @@ describe("membership wash", () => {
 
 describe("referral wording", () => {
   it("every Bring a friend button uses the one share message", () => {
-    for (const f of ["src/lib/drawer-items.ts"]) {
+    for (const f of ["src/app/(tabs)/gifts.tsx"]) {
       const s = read(f);
       expect(s).toContain("referralSubtitle(referralCode)");
       expect(s).not.toContain("Book on https://app.autodeck.in");
@@ -512,7 +512,7 @@ it("profile settings sit in glass panes (concept A), Help once, no repeated tab 
   const p=read("src/app/(tabs)/profile.tsx");
   expect(p).toContain("<Kicker>Appearance</Kicker>");expect(p).toContain('title="Driving licence"');
   expect((p.match(/glassPane\(light\)/g)??[]).length).toBeGreaterThanOrEqual(2);
-  expect(p.split('title="Help and contact"').length-1).toBe(1);
+  expect(p.split('title="Help & contact"').length-1).toBe(1);
 });
 
 it("car overview shows a concrete Next due, not vague count tiles or a one-row details card",()=>{

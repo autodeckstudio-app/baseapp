@@ -10,11 +10,11 @@ describe("Profile (concept A)", () => {
     expect(src).not.toContain("Your account");
   });
   it("each thing appears once, in order: identity, list, appearance, sign out", () => {
-    const order = ["<ProfileHero", 'title="Driving licence"', 'title="Help and contact"', "Appearance", "Delete my account", "<LegalLinks"];
+    const order = ["<ProfileHero", 'title="Driving licence"', 'title="Help & contact"', "Appearance", "Delete my account", "<LegalLinks"];
     const pos = order.map((o) => src.indexOf(o));
     expect(pos.every((x) => x > 0)).toBe(true);
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);
-    for (const o of ['title="Help and contact"', "<LegalLinks", "<ProfileHero"]) expect(src.split(o).length - 1).toBe(1);
+    for (const o of ['title="Help & contact"', "<LegalLinks", "<ProfileHero"]) expect(src.split(o).length - 1).toBe(1);
   });
   it("no tilted card, no 3D shadow, no orange text links, no member tiles", () => {
     const h = read("ui/ProfileHero.tsx");

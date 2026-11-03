@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service, PriceSnapshot } from "@autodeck/core";
@@ -52,7 +53,7 @@ export const calculateServicePrice = onCall({ region: "asia-south1" , enforceApp
   // PriceSnapshot — immutable record of this calculation; written into bookings at creation.
   const snapshot: PriceSnapshot = {
     serviceId: service.id,
-    serviceName: service.name,
+    serviceName: customerServiceName(service.name),
     serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
     basePrice: breakdown.basePrice,

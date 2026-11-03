@@ -131,3 +131,19 @@ Same AI theme as the site: black car, dark studio, vertical strip lights, one te
 | generated/ai-headlight.jpg, ai-roof.jpg, ai-wheel.jpg, ai-engine.jpg, ai-underbody.jpg | Headlight, roof, wheel, engine and underbody services |
 | generated/ai-interior.jpg, ai-interior-wheel.jpg, ai-interior-rear.jpg | Interior services |
 | generated/ai-tint-apply.jpg, ai-tint-done.jpg | Tint |
+
+## 3 November 2026 local service-card refresh (held for review)
+Official brand marks, proportion-preserving contain fit; no brand claim/warranty or endorsement inferred. Existing owner permission notes remain; this is local-only.
+
+- xpel-logo.png: https://lp.xpel.com/xpel-brand-guidelines | asset https://lp.xpel.com/hubfs/xpel-no-r-blk.png?hsLang=en | native [1020, 262]
+- 3m-logo.jpg: https://news.3m.com/logos | asset https://filecache.mediaroom.com/mr5mr_3m/180983/download/Trifecta%203M%20001%20Logo%20CMYK.jpg | native [1058, 556]
+- llumar-logo.png: https://llumar.com/en/about/brand-story/ | asset https://llumar.com/content/experience-fragments/eastman-llumar/en/site/header/master/_jcr_content/root/header/headcontainer/navcontainer/image.coreimg.png/1790793762788/llumarlogo-primary-fullcolor-rgb.png | native [217, 40]
+- fireball-logo.png: https://fireballkorea.com/ | asset https://static.wixstatic.com/media/fe7082_a319dc640a024d91ba3c84f9606b1d4a~mv2.png/v1/fill/w_314,h_40,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/logo.png | native [314, 40]
+- kovalent-logo.png: https://kovalentcoatings.com/products/graphene/ | asset https://kovalentcoatings.com/wp-content/uploads/2024/09/Isolation_Mode.png | native [229, 40]
+- fireball-logo.png: https://fireballkorea.com/ | asset https://static.wixstatic.com/media/fe7082_a319dc640a024d91ba3c84f9606b1d4a~mv2.png | native [604, 77]
+- garware-logo.png: https://www.garwarehitechfilms.com/ | asset https://www.garwarehitechfilms.com/front_assets/home/image/logo-white.png | native [198, 48]
+
+Generated illustrative unbranded service scenes: ai-trim-restore, ai-decon, ai-glass, ai-odour, ai-rust, ai-audio, ai-camera, ai-mats, ai-periodic.jpg. Generated3Nov2026 to match dark studio/vertical LED style. Not actual AutoDeck work or branded product photography. New generation attempts that timed out are not used.
+
+## Added brand enquiry marks,3Nov2026
+Official homepage header assets: GSWF190x57 https://gswf.com/wp-content/uploads/2026/03/GSWF-Logo-WHITE-1-190x57.webp ; NAR176x37 https://www.narppf.com/template/default/images/logo.png ; AVVYX sourceAVIF convertedPNG without recolour https://avvyx.com/wp-content/uploads/2025/09/AVVYX__3_-removebg-preview.avif . Exact marks, not claims of authorised installer or stock. Enquiry product cards use generic protection application imagery, not fake product packaging. Small intrinsic headermarks are not called high-resolution assets.

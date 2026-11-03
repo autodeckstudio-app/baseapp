@@ -57,6 +57,7 @@ type CreateBookingInput = {
   giftCode?: string;
   /** online holds the slot 15 minutes until paid; studio confirms at once. */
   payMode?: "online" | "studio";
+  advanceFlowVersion?: 1;
 };
 type CreateBookingOutput = { booking: Booking };
 

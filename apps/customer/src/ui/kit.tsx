@@ -172,7 +172,7 @@ export function Screen({
   const myTab = segs[0] === "(tabs)" ? (segs[1] ?? "index") : "";
   useEffect(() => onTabPressed((t) => { if (t === myTab) scrollRef.current?.scrollTo({ y: 0, animated: true }); }), [myTab]);
   const body = (
-    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: 120, gap: 20 }}>
+    <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: top ? space.gap : space.inset, paddingBottom: (Platform.OS === "web" ? "calc(96px + env(safe-area-inset-bottom))" : 96) as unknown as number, gap: 20 }}>
       {bar && !top ? <AppBar title={bar.title} onBack={bar.back} /> : null}
       {header}
       {children}

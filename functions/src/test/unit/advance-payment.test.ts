@@ -17,10 +17,18 @@ const booking: AdvanceBookingShape = {
   },
 };
 
-describe("buildAdvancePaymentRequest (preview, disabled)", () => {
-  it("is disabled: ADVANCE_PAYMENT_ENABLED is false and every call throws before any provider shape is built", () => {
+describe("buildAdvancePaymentRequest (owner-approved activation)", () => {
+  it("release candidate remains OFF; adopted calculation is available only to explicit isolated test", () => {
     expect(ADVANCE_PAYMENT_ENABLED).toBe(false);
-    expect(() => buildAdvancePaymentRequest(booking, "service_total_only", "ceil")).toThrow(/disabled/);
+    expect(()=>buildAdvancePaymentRequest(booking, "service_total_only", "ceil")).toThrow();
+    const request = buildAdvancePaymentRequest(booking, "service_total_only", "ceil", {enabled:true});
+    expect(request.amountPaise).toBe(23600);
+    expect(request.dueAtStudioPaise).toBe(103840);
+    expect(request.bookingId).toBe(booking.id);
+  });
+
+  it("the disabled seam still rejects before building a provider request", () => {
+    expect(() => buildAdvancePaymentRequest(booking, "service_total_only", "ceil", { enabled: false })).toThrow(/disabled/);
   });
 
   it("requires explicit basis and rounding - there is no defaulted call", () => {

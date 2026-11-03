@@ -30,3 +30,7 @@ export * from "./floor-jobs.js";
 export * from "./pickup-eligibility.js";
 export * from "./visit-timing.js";
 export * from "./protection-declaration.js";
+
+export * from "./customer-rating-privacy.js";
+
+export * from "./customer-catalogue-eligibility.js";

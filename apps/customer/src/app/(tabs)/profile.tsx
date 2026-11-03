@@ -105,7 +105,7 @@ export default function YouScreen() {
             ) : null}
           </>
         ) : null}
-        <ListRow last icon="chat" title="Help and contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} />
+        <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} />
       </View>
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
         <Kicker>Appearance</Kicker>

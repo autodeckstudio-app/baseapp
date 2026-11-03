@@ -29,8 +29,8 @@ describe("garage showroom guards", () => {
   it("respects Reduce Motion in the care ring", () => { expect(read("../ui/CareRing.tsx")).toContain("useReduceMotion"); });
   it("hero is one photo: no swipe, no paging, no page dots, no parallax", () => { expect(s).not.toMatch(/ScrollView|pagingEnabled|Animated|onMomentumScrollEnd|Car \$\{index/); expect(s).toContain("chips above only"); });
   it("uses only allowed radii and no emoji", () => { expect(s).not.toMatch(/borderRadius: (?!12|16|24|9999|0\b)\d+/); });
-  it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).toContain("paddingBottom: 100"); });
-  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).toContain("marginTop: metrics.sectionGap, paddingBottom: 100"); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
+  it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).not.toContain("paddingBottom: 100"); });
+  it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).toContain("marginTop: metrics.sectionGap"); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
   it("Home, Garage and the booking screen agree on the step for every live status (Garage once showed Ready during Final checks)", () => {
     for (const st of ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]) {
       expect(liveStep(LIVE_PROGRESS[st]!)).toBe(jobStage(st)!.index); expect(jobStep(st)).toBe(jobStage(st)!.index);
@@ -86,7 +86,7 @@ describe("pay in the app at booking", () => {
   });
   it("the confirm screen pays through the existing job payment path, never for a wash on the plan, and keeps the booking if checkout is closed", () => {
     const c = read("../app/(tabs)/book/confirm.tsx");
-    expect(c).toContain("initiatePayment(h.paymentJobId"); expect(c).toContain("payWithCheckout"); expect(c).toContain("!washOn");
+    expect(c).toContain("initiatePayment(h.paymentJobId"); expect(c).toContain("payOnline"); expect(c).toContain("!washOn");
     expect(c).not.toContain("Opens when online payments go live");
   });
 });

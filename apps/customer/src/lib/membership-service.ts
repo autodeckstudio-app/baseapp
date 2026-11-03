@@ -30,14 +30,23 @@ export async function purchaseMembership(
     functions,
     "purchaseMembership",
   );
-  const result = await fn({ planId, method, idempotencyKey });
-  return result.data;
+  try { return (await fn({ planId, method, idempotencyKey })).data; }
+  catch (error) {
+    if ((error as {code?: string}).code !== "functions/already-exists") throw error;
+    // A competing first request may have committed this customer's pending record.
+    // Replay the same request once to read its IDs instead of showing a false failure.
+    return (await fn({ planId, method, idempotencyKey })).data;
+  }
 }
 
 /** Upgrade the active plan to a dearer one. The server prices it (core upgradePricePaise) and ends the old plan on payment. */
 export async function upgradeMembership(planId: string, method: PaymentMethod, idempotencyKey: string): Promise<PurchaseMembershipOutput> {
   const fn = httpsCallable<PurchaseMembershipInput, PurchaseMembershipOutput>(functions, "upgradeMembership");
-  return (await fn({ planId, method, idempotencyKey })).data;
+  try { return (await fn({ planId, method, idempotencyKey })).data; }
+  catch (error) {
+    if ((error as {code?: string}).code !== "functions/already-exists") throw error;
+    return (await fn({ planId, method, idempotencyKey })).data;
+  }
 }
 
 export async function getMyMemberships(): Promise<Membership[]> {

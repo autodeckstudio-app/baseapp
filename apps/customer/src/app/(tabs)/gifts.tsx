@@ -1,7 +1,7 @@
 // Gifts: buy a foam wash for someone (pay, then get the code to share), enter a code you were given, and see the gifts you bought.
 // Empty until GIFT_LIVE. A gift is valid 60 days from payment and cannot be refunded; both are said before the pay button.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View } from "react-native";
+import { Share, View } from "react-native";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
 import { GIFT_TERMS, giftDaysLeft, giftValidityLine, normaliseGiftCode } from "@autodeck/core";
@@ -9,8 +9,10 @@ import { Button, Field, Kicker, Notice, Pane, Row, Screen, T, rupees } from "../
 import { GiftCard } from "../../ui/GiftCard";
 import { GiftBuy } from "../../ui/GiftBuy";
 import { GIFT_LIVE, GIFT_SERVICE_ROUTE, GIFT_STATE_LABEL, setPendingGiftCode } from "../../lib/gift";
-import { claimGift, fetchGiftCode, listMyGifts, startGiftPurchase, type GiftOffer, type GiftView } from "../../lib/gift-service";
-import { checkoutSupported, payWithCheckout } from "../../lib/razorpay-checkout";
+import { claimGift, fetchGiftCode, listMyGifts, startGiftPurchase, requestGiftPaymentLink, type GiftOffer, type GiftView } from "../../lib/gift-service";
+import { checkoutSupported, payOnline } from "../../lib/razorpay-checkout";
+import { NATIVE_GIFT_PAYMENT_ENABLED } from "../../lib/native-gift-availability";
+import { referralCodeFor, referralShareMessage, referralSubtitle } from "../../lib/referral";
 import { useAuth } from "../../hooks/useAuth";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }) : "");
@@ -35,17 +37,26 @@ export default function GiftsScreen() {
     void listMyGifts().then((r) => { setGifts(r.gifts); setOffer(r.offer); }).catch(() => setLoadFailed(true));
   }, []);
   useEffect(() => { if (GIFT_LIVE) load(); }, [load]);
-  if (!GIFT_LIVE) return <Screen header={<T role="title">Gifts</T>}><Notice title="Coming soon" body="Gifting a wash will be here soon." /></Screen>;
+  const referralCode = auth.status === "ready" ? referralCodeFor(auth.user.uid) : null;
+  const friendPanel = <Pane pad="gap"><T role="heading">Bring a friend</T><T tone="secondary">{referralSubtitle(referralCode)}</T><Button label="Share AutoDeck" onPress={() => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined)} /></Pane>;
+  if (!GIFT_LIVE) return <Screen appBar="Friends & gifts">{friendPanel}<Notice title="Gift a wash" body="Gifting a wash will be here soon." /></Screen>;
 
   async function buy() {
+    if (!checkoutSupported && !NATIVE_GIFT_PAYMENT_ENABLED) { setInfo("Buying a gift is not available in this app build yet. Use app.autodeck.in."); return; }
     if (buyBusy.current) return; // double-tap: one in-flight purchase; the server slot is the second line
     buyBusy.current = true;
     setBusy(true); setError(null); setInfo(null); setCard(null);
     try {
       const g = await startGiftPurchase();
-      const r = await payWithCheckout(g.paymentId, { name: "AutoDeck Studio", description: "Gift: foam wash" });
+      const link = checkoutSupported ? null : await requestGiftPaymentLink(g.paymentId);
+      if (link && !link.paymentUrl) { setInfo("Your earlier payment is being checked. Contact the studio before trying again."); load(); return; }
+      const r = await payOnline({ paymentId: g.paymentId, paymentUrl: link?.paymentUrl ?? null, name: "AutoDeck Studio", description: "Gift: foam wash" });
       if (r === "dismissed") { setInfo("The payment was not completed. Tap the button to try again."); return; }
       if (r === "failed") { setError("The payment did not go through. Please try again."); return; }
+      if (r !== "paid") {
+        setInfo(r === "pending" ? "Payment is still being confirmed. Check Gifts you bought before trying again." : "This payment was returned or partly returned. No gift code is available from this payment. Contact the studio.");
+        load(); return;
+      }
       try { const c = await fetchGiftCode(g.giftId); if (c.expiresAt) setCard({ code: c.code, expiresAt: c.expiresAt }); }
       catch { setInfo("Payment received. Your gift is under Gifts you bought. Tap it to see the code."); }
       load();
@@ -68,10 +79,11 @@ export default function GiftsScreen() {
   }
   const now = Date.now();
   return (
-    <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Gifts</Kicker><T role="title">Gift a wash</T></View>}>
+    <Screen appBar="Friends & gifts">
+      {friendPanel}
       {card ? <GiftCard code={card.code} expiresAt={card.expiresAt} buyerName={buyerName} /> : null}
       {loadFailed ? <Notice title="Could not load gifts" body="Check your connection and try again." action={<Button label="Retry" onPress={load} />} /> : null}
-      {offer ? <GiftBuy amountPaise={offer.amountPaise} canPay={checkoutSupported} busy={busy} onPay={() => void buy()} /> : null}
+      {offer ? <GiftBuy amountPaise={offer.amountPaise} canPay={checkoutSupported || NATIVE_GIFT_PAYMENT_ENABLED} busy={busy} onPay={() => void buy()} /> : null}
       <Pane pad="gap">
         <T role="heading">Got a gift code?</T>
         <Field label="Gift code" value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="GW-XXXX-XXXX" maxLength={14} {...(error ? { error } : {})} />

@@ -209,3 +209,5 @@ export { bookingRemindersScheduled } from "./functions/notification/bookingRemin
 export { settleMembershipCoveredJob } from "./functions/job/settleMembershipCoveredJob.js";
 
 export { recordExternalReturn } from "./functions/payment/recordExternalReturn.js";
+
+export { requestGiftPaymentLink } from "./functions/payment/requestGiftPaymentLink.js";

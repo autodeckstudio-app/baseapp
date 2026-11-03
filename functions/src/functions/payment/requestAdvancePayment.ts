@@ -60,15 +60,16 @@ export const requestAdvancePayment = onCall(
     if (booking.customerId !== user.uid) {
       throw new HttpsError("permission-denied", "Cannot pay an advance for another customer's booking.");
     }
-    if (booking.status !== "CONFIRMED" && booking.status !== "PENDING") {
-      throw new HttpsError("failed-precondition", `Cannot pay an advance for a booking with status ${booking.status}.`);
-    }
-    // R3: a PENDING booking is the advance HELD state (same 15-minute
-    // machinery as online holds). An already-expired hold cannot be paid
-    // against - the sweep releases it and the customer books again.
-    if (booking.status === "PENDING" && isHoldExpired(booking, Date.now())) {
-      throw new HttpsError("failed-precondition", "The slot hold expired before the advance was paid. Please book again.");
-    }
+    const assertActiveHold = (b: Booking) => {
+      if (b.status !== "PENDING" || b.paymentStatus !== "unpaid") {
+        throw new HttpsError("failed-precondition", `Cannot pay an advance for a booking with status ${b.status}; an unpaid active hold is required.`);
+      }
+      if (!b.holdExpiresAt || !Number.isFinite(Date.parse(b.holdExpiresAt)) || isHoldExpired(b, Date.now())) {
+        throw new HttpsError("failed-precondition", "The slot hold expired before the advance was paid. Please book again.");
+      }
+      if (b.payMode !== "studio") throw new HttpsError("failed-precondition", "Advance applies to pay-at-studio bookings only.");
+    };
+    assertActiveHold(booking);
 
     // Deterministic payment id == provider referenceId: a retry finds the
     // SAME record, and the webhook resolves it without a query.
@@ -78,6 +79,7 @@ export const requestAdvancePayment = onCall(
     const claim = await db.runTransaction(async (tx) => {
       const freshBooking = await tx.get(bookingRef);
       const b = freshBooking.data() as Booking;
+      assertActiveHold(b);
       if (b.advancePaymentId) {
         const existing = await tx.get(db.collection(COLLECTIONS.payments()).doc(b.advancePaymentId as string));
         return { created: false as const, existing: existing.data() as Payment };
@@ -160,7 +162,10 @@ export const requestAdvancePayment = onCall(
       // this point fails CLOSED (never a blind second payable link).
       claimCreate: async (leaseId, knownLinkId) => {
         return db.runTransaction(async (tx) => {
+          const heldBooking = (await tx.get(bookingRef)).data() as Booking;
+          assertActiveHold(heldBooking);
           const cur = (await tx.get(paymentRef)).data() as Payment;
+          if (cur.status === "completed") throw new HttpsError("already-exists", "The advance is already paid.");
           if (cur.linkCreateLeaseId && cur.linkCreateLeaseId !== leaseId) {
             return { kind: "held" as const, ambiguous: !!cur.orderAmbiguous };
           }

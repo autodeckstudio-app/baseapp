@@ -5,6 +5,14 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Scoped reviewed web release: only these reviewed projects build on this exact branch.
+# Studio remains unchanged. Other branches keep their existing diff/default policy.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = "release/approved-web-20261104" ]; then
+  case "$app" in
+    customer|admin|site) printf 'reviewed web release: BUILD (%s)\n' "$app"; exit 1 ;;
+    *) printf 'reviewed web release: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
 # Website releases fail closed. An app-only push must never rebuild the site
 # merely because its older successful base is missing from a shallow clone.
 if [ "$app" = site ]; then

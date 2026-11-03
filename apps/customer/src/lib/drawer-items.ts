@@ -1,7 +1,4 @@
-import { Share } from "react-native";
 import type { IconName } from "@autodeck/ui/theme";
-import { GIFT_LIVE } from "./gift";
-import { referralShareMessage, referralSubtitle } from "./referral";
 
 export type DrawerEntry = { key: string; label: string; sub?: string; icon: IconName; onPress: () => void };
 
@@ -9,15 +6,12 @@ export type DrawerEntry = { key: string; label: string; sub?: string; icon: Icon
  * The one left menu. Home and every other screen build it here, so the items and
  * their order never differ between pages.
  */
-export function buildDrawerItems(go: (path: string) => void, referralCode: string | null): DrawerEntry[] {
-  const share = () => void Share.share({ message: referralShareMessage(referralCode) }).catch(() => undefined);
+export function buildDrawerItems(go: (path: string) => void, _referralCode: string | null): DrawerEntry[] {
   return [
     { key: "cars", label: "Buy & Sell", sub: "Browse cars or list yours", icon: "car", onPress: () => go("/(tabs)/cars") },
     { key: "membership", label: "Membership", sub: "Washes and perks", icon: "club", onPress: () => go("/(tabs)/membership") },
-    { key: "friend", label: "Bring a friend", sub: referralSubtitle(referralCode), icon: "gift", onPress: share },
-    ...(GIFT_LIVE ? [{ key: "gifts", label: "Gift a wash", sub: "Use or send a gift", icon: "gift" as const, onPress: () => go("/(tabs)/gifts") }] : []),
+    { key: "friends-gifts", label: "Friends & gifts", sub: "Bring a friend or gift a wash", icon: "gift", onPress: () => go("/(tabs)/gifts") },
     { key: "notifications", label: "Notifications", icon: "bell", onPress: () => go("/(tabs)/notifications") },
-    { key: "studio", label: "The studio", sub: "Address, hours, call", icon: "pin", onPress: () => go("/(tabs)/studio") },
-    { key: "help", label: "Help and contact", icon: "chat", onPress: () => go("/(tabs)/help") },
+    { key: "help", label: "Help & contact", sub: "Studio, hours and questions", icon: "chat", onPress: () => go("/(tabs)/help") },
   ];
 }

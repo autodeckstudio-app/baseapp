@@ -56,6 +56,7 @@ export const createService = onCall({ region: "asia-south1", enforceAppCheck: sh
 
   await db.runTransaction(async (tx) => {
     tx.set(ref, service);
+    if(data.internalRating !== undefined) tx.set(db.collection("servicePrivate").doc(ref.id),{tenantId:user.claims.tenantId,internalRating:data.internalRating,updatedAt:now});
     writeAuditLog(tx, {
       action: "service.created",
       entityType: "Service",

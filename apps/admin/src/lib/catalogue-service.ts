@@ -27,12 +27,8 @@ export async function getServiceCatalogue(category?: ServiceCategory): Promise<S
 // The callable returns active services only. Hidden ones are read directly so the
 // owner can bring them back (Firestore rules allow tenant-scoped reads).
 export async function getServicesIncludingHidden(): Promise<Service[]> {
-  const active = await getServiceCatalogue();
-  const tenantId = active[0]?.tenantId;
-  if (!tenantId) return active;
-  const snap = await getDocs(query(collection(db, COLLECTIONS.services()), where("tenantId", "==", tenantId), where("active", "==", false)));
-  const hidden = snap.docs.map((d) => d.data() as Service);
-  return [...active, ...hidden];
+  const fn = httpsCallable<{includeInactive:boolean},{services:Service[]}>(functions,"getServiceCatalogue");
+  return (await fn({includeInactive:true})).data.services;
 }
 
 // Reuses the server-side pricing engine - the admin app never computes prices itself.
@@ -49,6 +45,7 @@ export async function calculateServicePrice(
 }
 
 export interface CreateServiceInput {
+  internalRating?: "A" | "B" | "C" | "D" | null;
   name: string;
   category: ServiceCategory;
   brand: string | null;

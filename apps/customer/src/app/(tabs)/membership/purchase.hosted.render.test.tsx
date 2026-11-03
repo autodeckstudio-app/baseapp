@@ -1,0 +1,24 @@
+import React from "react";
+import {it,expect,vi,beforeEach} from "vitest";
+import {create,act,type ReactTestRenderer} from "react-test-renderer";
+const h=vi.hoisted(()=>({snapshot:null as null|((s:unknown)=>void),member:null as null|((s:unknown[])=>void),browser:vi.fn(async()=>({type:"opened"})),unsub:vi.fn(),purchase:vi.fn(async()=>({membershipId:"m",paymentId:"p",paymentUrl:"https://pay.example"}))}));
+vi.mock("firebase/functions",()=>({httpsCallable:vi.fn()}));
+vi.mock("firebase/firestore",()=>({doc:vi.fn(),getDoc:async()=>({exists:()=>true,data:()=>({id:"plan",name:"Gold",tier:"gold",priceInPaise:90000,includedWashes:3,freePickups:0})}),onSnapshot:(_r:unknown,cb:(s:unknown)=>void)=>{h.snapshot=cb;return h.unsub;}}));
+vi.mock("expo-web-browser",()=>({openBrowserAsync:()=>h.browser()}));
+vi.mock("../../../lib/firebase",()=>({db:{},functions:{}}));
+vi.mock("../../../hooks/useAuth",()=>({useAuth:()=>({status:"ready",user:{uid:"c"},claims:{tenantId:"t"}})}));
+vi.mock("../../../lib/membership-service",()=>({purchaseMembership:()=>h.purchase(),upgradeMembership:vi.fn(),generateIdempotencyKey:()=>"key"}));
+vi.mock("../../../lib/home-service",()=>({listenToMyMemberships:(_t:unknown,_u:unknown,cb:(s:unknown[])=>void)=>{h.member=cb;cb([]);return()=>{};}}));
+vi.mock("../../../ui/kit",()=>({Screen:({children}:any)=><section>{children}</section>,Notice:({title,body,action}:any)=><article>{title}{body}{action}</article>,Button:({label,onPress}:any)=><button onClick={onPress}>{label}</button>,Loading:()=>null,Kicker:({children}:any)=><span>{children}</span>,Pane:({children}:any)=><div>{children}</div>,Row:()=>null,T:({children}:any)=><span>{children}</span>,rupees:(n:number)=>String(n)}));
+import {__params} from "../../../../test/stubs/expo-router";
+import Screen from "./purchase";
+beforeEach(()=>{__params.current={planId:"plan"};vi.clearAllMocks();});
+it("mounted web membership uses hosted tab, browser-open is not success, server membership listener alone unlocks",async()=>{
+ let tree!:ReactTestRenderer;await act(async()=>{tree=create(<Screen/>);});
+ const button=tree.root.findAllByType("button").find(b=>String(b.props.children).includes("Pay online"));expect(button).toBeTruthy();
+ let pending:unknown;await act(async()=>{pending=button!.props.onClick();await Promise.resolve();});
+ expect(h.browser).toHaveBeenCalledTimes(1);expect(JSON.stringify(tree.toJSON())).not.toContain("Membership active");
+ await act(async()=>{h.snapshot?.({exists:()=>true,data:()=>({status:"completed"})});await pending;});
+ expect(JSON.stringify(tree.toJSON())).not.toContain("Membership active");
+ await act(async()=>{h.member?.([{id:"m",planId:"plan",tier:"gold",status:"active"}]);});expect(JSON.stringify(tree.toJSON())).toContain("Membership active");await act(async()=>tree.unmount());
+});

@@ -1,12 +1,6 @@
-// Pay-at-studio advance payment PREPARATION (basket item 4 - PREVIEW, not activated).
-// This module only BUILDS the provider request for the 20% advance: it computes
-// the amount via core advanceSplit and shapes a CreatePaymentLinkParams. It makes
-// NO provider call and is never wired to a callable while
-// ADVANCE_PAYMENT_ENABLED is false. Basis and rounding are owner-adopted
-// (2 Nov 2026, "All 3": service price excl pickup, round up); core
-// advance-split.ts keeps them as REQUIRED parameters (and so does this
-// module) as defense-in-depth. Activation additionally requires the final
-// review gate.
+// Pay-at-studio 20% advance, held OFF in this release candidate for old-native compatibility.
+// The pure builder makes no provider calls; requestAdvancePayment owns those.
+// Basis and rounding remain explicit owner-adopted policies.
 import { advanceSplit, type AdvanceBasis, type AdvanceRounding, type AdvanceSplit } from "@autodeck/core";
 import { calculateTax } from "./pricing.js";
 

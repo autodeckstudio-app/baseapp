@@ -7,7 +7,7 @@
  * `.run({ data, auth } as never)` entry point — same pattern as
  * walkin-financial.emulator.test.ts.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Membership, Payment, Booking } from "@autodeck/core";
 
@@ -21,7 +21,7 @@ import { cancelMembership } from "../../functions/membership/cancelMembership.js
 import { getMyMemberships } from "../../functions/membership/getMyMemberships.js";
 import { getMembershipUsage } from "../../functions/membership/getMembershipUsage.js";
 import { expireStaleMemberships } from "../../functions/membership/expireStaleMemberships.js";
-import { createBooking } from "../../functions/booking/createBooking.js";
+import { createBooking } from "../helpers/paid-advance-booking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { confirmPaymentMock } from "../../functions/payment/confirmPaymentMock.js";

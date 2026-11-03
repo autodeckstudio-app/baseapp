@@ -39,3 +39,6 @@ describe("saved size rules survive on non-PPF services (rules hidden in the edit
     expect(r.ok && r.payload.vehicleCategoryPricing.length).toBe(1);
   });
 });
+
+it('does not infer or overwrite a staff rating on unrelated saves',()=>{const r=toServicePayload({...base,name:'Ceramic Coating 1-Year B',internalRating:'C',ratingChanged:false});expect(r.ok && r.payload.name).toBe('Ceramic Coating 1-Year');expect(r.ok && Object.prototype.hasOwnProperty.call(r.payload,'internalRating')).toBe(false);const blank=toServicePayload({...base});expect(blank.ok && Object.prototype.hasOwnProperty.call(blank.payload,'internalRating')).toBe(false);});
+it('only an explicit staff rating edit sends a value or deliberate clear',()=>{const r=toServicePayload({...base,internalRating:'D',ratingChanged:true});expect(r.ok&&r.payload.internalRating).toBe('D');const clear=toServicePayload({...base,internalRating:null,ratingChanged:true});expect(clear.ok&&clear.payload.internalRating).toBe(null);});

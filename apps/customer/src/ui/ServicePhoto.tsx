@@ -28,17 +28,17 @@ export function ServicePhoto({ service, height, width, radius = 0, aspect, varia
       </View>
     );
   }
-  if (service.category === "garage" && !hasGaragePhoto(service.name)) {
+  if ((/fabric|upholstery/i.test(service.name) && !v.bottle) || (service.category === "garage" && !hasGaragePhoto(service.name))) {
     return (
       <View style={[box, { backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", ...(height && height > 260 ? { height: "100%" as const } : {}) }]}>
         <View style={{ position: "absolute", width: "70%", aspectRatio: 1, borderRadius: 999, backgroundColor: "rgba(236,134,56,0.16)" }} />
-        <Icon name={garageIconFor(` ${service.name} `)} color="#F4F1EC" size={44} />
+        <Icon name={/fabric|upholstery/i.test(service.name) ? "check" : garageIconFor(` ${service.name} `)} color="#F4F1EC" size={44} />
       </View>
     );
   }
   if (v.bottle) {
     return (
-      <View style={[box, { backgroundColor: "#F3EFE8", alignItems: "center", justifyContent: "flex-end", ...(height && height > 260 ? { height: "100%" as const, paddingTop: 44, paddingBottom: 30 } : null) }]}>
+      <View style={[box, { backgroundColor: "#F3EFE8", alignItems: "center", justifyContent: "flex-end", ...(height && height > 260 ? { height: "100%" as const, paddingTop: 28, paddingBottom: 24 } : null) }]}>
         <Image source={v.bottle.src} resizeMode="contain" style={{ width: "62%", ...(height && height > 260 ? { flex: 1 } : { height: "88%" }) }} />
       </View>
     );

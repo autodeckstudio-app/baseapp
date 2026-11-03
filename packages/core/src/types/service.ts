@@ -44,6 +44,7 @@ export type WarrantyDurationUnit = "days" | "months" | "years" | "lifetime";
 export interface Service {
   id: string;
   tenantId: string; // tenant isolation key (not in doc06 spec but architecturally required)
+  internalRating?: "A" | "B" | "C" | "D" | null; // Staff-only, never customer copy.
   name: string; // e.g. "LLumar Gloss PPF"
   category: ServiceCategory;
   brand: string | null; // e.g. "LLumar", "Kovalent"

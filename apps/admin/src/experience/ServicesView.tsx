@@ -100,6 +100,7 @@ export function ServicesView(p: {
                       <div key={s.id} className={`ax-svc-card${s.active ? "" : " is-hidden"}`}>
                         <div className="ax-svc-card-top">
                           <span className="ax-person-name">{s.name}</span>
+                          {s.internalRating ? <span className="ax-chip">Internal rating: {s.internalRating}</span> : null}
                           {!s.active && <span className="ax-chip">Hidden</span>}
                         </div>
                         {s.description ? <p className="ax-sub ax-svc-desc">{s.description}</p> : null}
@@ -132,6 +133,7 @@ export function ServicesView(p: {
         <Drawer eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => setDraft(null)}>
           <form onSubmit={(e) => { e.preventDefault(); if (result?.ok) { p.onSave(draft.serviceId, result.payload); setDraft(null); } }}>
             <label className="ax-form-row"><span>Name customers see</span><input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Ceramic coat" /></label>
+            <label className="ax-form-row"><span>Internal rating (staff only)</span><select value={draft.internalRating ?? ""} onChange={(e) => set({ratingChanged:true, internalRating: e.target.value ? e.target.value as "A" | "B" | "C" | "D" : null})}><option value="">Unrated</option>{["A", "B", "C", "D"].map(r => <option key={r} value={r}>{r}</option>)}</select><small>Never shown to customers. Keep the public name and brand factual.</small></label>
             <div className="ax-form-pair">
               <label className="ax-form-row"><span>Kind</span>
                 <select value={draft.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })}>{CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_NAME[c]}</option>)}</select>

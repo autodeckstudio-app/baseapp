@@ -3,13 +3,13 @@
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
 import { enforceRateLimit } from "../../middleware/rateLimit.js";
-import { createBooking } from "../../functions/booking/createBooking.js";
+import { createBooking } from "../helpers/paid-advance-booking.js";
 
 const db = getFirestore();
 

@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 // Builds a Warranty from the completed ServiceJob + its Service catalogue
 // entry, both read at seal time (job DELIVERED). Everything is snapshotted —
 // later catalogue edits must never alter an already-issued Warranty
@@ -50,7 +51,7 @@ export function buildWarranty(params: BuildWarrantyParams): Warranty | null {
     customerId: job.customerId,
     vehicleId: job.vehicleId,
     serviceId: service.id,
-    serviceName: service.name,
+    serviceName: customerServiceName(service.name),
     warrantyLabel: service.warrantyLabel,
     coverageTerms: service.warrantyLabel,
     startDate,

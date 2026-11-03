@@ -1,4 +1,5 @@
-import { onCall } from "firebase-functions/v2/https";
+import { customerCatalogueEligible, customerRatingPrivacy } from "@autodeck/core";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Service } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -20,24 +21,28 @@ export const getServiceCatalogue = onCall({ region: "asia-south1" , enforceAppCh
   await enforceRateLimit(subjectFrom(user), "read.catalogue");
 
   const db = getFirestore();
-  let query = db
-    .collection(COLLECTIONS.services())
-    .where("tenantId", "==", user.claims.tenantId)
-    .where("active", "==", true)
-    .orderBy("displayOrder", "asc");
-
-  if (data.category !== undefined) {
-    query = query.where("category", "==", data.category) as typeof query;
-  }
-
-  const snap = await query.get();
   const isAdmin = user.claims.role === "admin" || user.claims.role === "superadmin";
-  const services = snap.docs.map((doc) => {
+  if(data.includeInactive && !isAdmin) throw new HttpsError("permission-denied", "Staff catalogue access required");
+  // Preserve existing indexed query shapes; no new tenant+order-only index is assumed.
+  const queryFor=(active:boolean)=>{
+    let query=db.collection(COLLECTIONS.services()).where("tenantId", "==", user.claims.tenantId).where("active", "==", active).orderBy("displayOrder", "asc");
+    if(data.category !== undefined) query=query.where("category", "==", data.category);
+    return query;
+  };
+  const pages=await Promise.all((data.includeInactive ? [true,false] : [true]).map(active=>queryFor(active).get()));
+  // Missing-active historical records remain excluded, exactly as the old active/hidden readers did.
+  const docs=pages.flatMap(page=>page.docs).sort((a,b)=>(a.data()["displayOrder"]??0)-(b.data()["displayOrder"]??0)||a.id.localeCompare(b.id));
+  const privateMetadata = isAdmin ? new Map((await Promise.all(docs.map(doc=>db.collection("servicePrivate").doc(doc.id).get()))).filter(x=>x.exists).map(x=>[x.id,x.data()!])) : new Map();
+  const services = docs.filter(doc => isAdmin || customerCatalogueEligible({id:doc.id},process.env["CATALOGUE_IDENTITY_HOLD_PREVIEW"] === "true")).map((doc) => {
     const svc = doc.data() as Service;
-    if (isAdmin) return svc;
+    if (isAdmin) {
+      const metadata=privateMetadata.get(doc.id);
+      const fields=metadata?.tenantId === user.claims.tenantId ? Object.fromEntries(["internalRating","internalNotes","priceBasis","priceBasisAt"].filter(key=>metadata[key]!==undefined).map(key=>[key,metadata[key]])) : {};
+      return {...svc,...fields} as Service;
+    }
     // Sources and pricing basis are admin-only; customers only learn whether a price is an estimate.
     const { internalNotes: _n, priceBasis, priceBasisAt: _a, ...rest } = svc;
-    return { ...rest, priceEstimate: /estimate/i.test(priceBasis ?? "") } as Service;
+    return customerRatingPrivacy({ ...rest, priceEstimate: svc.priceEstimate === true || /estimate/i.test(priceBasis ?? "") } as Service);
   });
 
   // Display totals for list tiles, computed with the same engine bookings use while the

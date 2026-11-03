@@ -117,14 +117,14 @@ function Round({ icon, label, onPress, on, badge }: { icon: IconName; label: str
 export const TILE_ASPECT = 1.4;
 export const TILE_GAP = 10;
 
-export function PhotoCard({ media, title, pill, onPress, hearted = true }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean }) {
+export function PhotoCard({ media, title, pill, onPress, hearted = true, mediaTreatment }: { media: ReactNode; title: string; pill?: string | undefined; onPress: () => void; hearted?: boolean; mediaTreatment?: "paper" | "logo-dark" | undefined }) {
   const [liked, setLiked] = useState(false);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={{ flex: 1, minWidth: 0, borderRadius: 24, overflow: "hidden", ...glassSurface, aspectRatio: TILE_ASPECT }}>
       <View style={{ position: "absolute", width: "100%", height: "100%" }}>{media}</View>
-      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.25)" }) }} />
+      {!mediaTreatment ? <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.25)" }) }} /> : null}
       <View style={{ position: "absolute", left: 12, right: hearted ? 44 : 12, top: 10 }}>
-        <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>{title}</Text>
+        <Text numberOfLines={2} style={{ color: mediaTreatment === "paper" ? "#17191C" : "#FFFFFF", fontSize: 13, fontWeight: "700" }}>{title}</Text>
       </View>
       {hearted ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => setLiked(!liked)} hitSlop={8} style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: 16, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
@@ -287,7 +287,7 @@ export function HomeView(p: HomeViewProps) {
   const pct = p.progress;
   const liveOn = !!p.live && p.live.idle !== true;
   return (
-    <View style={{ gap: metrics.sectionGap, paddingBottom: 100, paddingTop: 20 }}>
+    <View style={{ gap: metrics.sectionGap, paddingTop: 20 }}>
       <HomeBackdrop />
       {p.drawer?.length ? <SideDrawer open={menu} onClose={() => setMenu(false)} name={p.displayName ?? "AutoDeck"} initial={p.initial} items={p.drawer} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>

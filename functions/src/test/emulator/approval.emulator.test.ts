@@ -1,3 +1,4 @@
+import type * as LegacyAdvanceModule from "../../lib/advance-payment.js";
 /**
  * Emulator integration tests for the additional-work approval workflow
  * (Phase 3). Run with: pnpm test:emulator (requires Firestore Emulator at
@@ -10,7 +11,7 @@
  * directly, cross-customer/cross-tenant read denial) live in
  * security-rules.emulator.test.ts alongside every other collection.
  */
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, ApprovalRequest, Notification } from "@autodeck/core";
 
@@ -821,4 +822,13 @@ describe("Approval / additional-work workflow", () => {
       expect(rejectedNotification?.type).toBe("approval_rejected");
     });
   });
+});
+
+// Legacy lifecycle fixture contract: these tests start with confirmed studio
+// bookings and test unrelated job/inspection/ownership/refund behavior. The
+// enabled real customer advance lifecycle is tested without this mock in
+// advance-activation-booking.emulator.test.ts (including signature + replay).
+vi.mock("../../lib/advance-payment.js", async (orig) => {
+  const m = await orig<typeof LegacyAdvanceModule>();
+  return { ...m, advancePaymentEnabled: () => false };
 });

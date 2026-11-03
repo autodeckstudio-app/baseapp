@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 import { z } from "zod";
 
 const vehicleCategoryEnum = z.enum([
@@ -33,7 +34,8 @@ export const vehicleCategoryPricingSchema = z.object({
 }).strict();
 
 export const createServiceSchema = z.object({
-  name: z.string().min(1).max(100).trim(),
+  name: z.string().min(1).max(100).trim().refine(name => customerServiceName(name) === name, "Keep internal ratings out of the public service name"),
+  internalRating: z.enum(["A", "B", "C", "D"]).nullable().optional(),
   category: serviceCategoryEnum,
   brand: z.string().max(100).trim().nullable(),
   description: z.string().min(1).max(2000).trim(),
@@ -66,7 +68,8 @@ export const createServiceSchema = z.object({
 
 export const updateServiceSchema = z.object({
   serviceId: z.string().min(1),
-  name: z.string().min(1).max(100).trim().optional(),
+  name: createServiceSchema.shape.name.optional(),
+  internalRating: createServiceSchema.shape.internalRating,
   category: serviceCategoryEnum.optional(),
   brand: z.string().max(100).trim().nullable().optional(),
   description: z.string().min(1).max(2000).trim().optional(),
@@ -93,6 +96,7 @@ export const setServiceActiveSchema = z.object({
 }).strict();
 
 export const getServiceCatalogueSchema = z.object({
+  includeInactive: z.boolean().optional(),
   category: serviceCategoryEnum.optional(),
   // Optional: when set, the response carries server-computed display totals for this car size,
   // so list tiles price in one round trip instead of one calculateServicePrice call per service.

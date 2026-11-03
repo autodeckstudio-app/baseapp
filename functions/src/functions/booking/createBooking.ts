@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 import { bookingStartState } from "../../lib/booking-hold.js";
 import { advancePaymentEnabled } from "../../lib/advance-payment.js";
 import { assertNotPriorityHeld } from "../../lib/priority-access.js";
@@ -347,12 +348,19 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
 
     // Extra services ride on the same booking. Any membership benefit stays on the main service only.
     finalBreakdown = addExtrasToBreakdown(finalBreakdown, extraLines);
-    const lines = extraLines.length ? [{ serviceId: data.serviceId, name: service.name, price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : undefined;
+    const lines = extraLines.length ? [{ serviceId: data.serviceId, name: customerServiceName(service.name), price: breakdown.subtotal, durationMinutes: service.estimatedDurationMinutes }, ...extraLines] : undefined;
 
     // R3: with the advance flag ON, pay-at-studio goes through the existing
     // verified PENDING hold (15 min, same sweep) - confirmed ONLY by the
     // verified advance webhook. Flag OFF: unchanged (confirmed at once).
-    const start = bookingStartState({ payMode: data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: service.priceOnRequest === true, nowMs: now.getTime(), advanceEnabled: advancePaymentEnabled() });
+    // A previously open customer tab cannot complete the advance path. Fail
+    // before writing its booking rather than strand it in an unpayable hold.
+    if (advancePaymentEnabled() && user.claims.role === "customer" &&
+        (data.payMode ?? "studio") === "studio" && finalBreakdown.total > 0 &&
+        service.priceOnRequest !== true && data.advanceFlowVersion !== 1) {
+      throw new HttpsError("failed-precondition", "Online advance payments are now available. Refresh or update AutoDeck before booking so you can pay the 20% advance.");
+    }
+    const start = bookingStartState({ payMode: data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: service.priceOnRequest === true, nowMs: now.getTime(), advanceEnabled: advancePaymentEnabled() && user.claims.role === "customer" });
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,

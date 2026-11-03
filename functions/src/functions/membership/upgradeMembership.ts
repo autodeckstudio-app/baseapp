@@ -14,6 +14,8 @@ import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { upgradeMembershipSchema } from "../../schemas/membership.js";
+import { membershipPaymentUrl } from "../../lib/membership-payment-url.js";
+import { obtainMembershipPaymentLink } from "../../lib/membership-payment-link.js";
 import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { upgradePricePaise } from "@autodeck/core";
 import { freshGrant } from "../../lib/membership-grant.js";
@@ -52,7 +54,8 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
     // Idempotent replay of the same upgrade, never a second one.
     if (pending.upgradeFromMembershipId !== current.id) throw new HttpsError("already-exists", "A plan purchase is already in progress for you.");
     const paymentSnap = await db.collection(COLLECTIONS.payments()).where("membershipId", "==", pending.id).where("status", "in", ["pending", "processing", "completed"]).limit(1).get();
-    return { membershipId: pending.id, paymentId: (paymentSnap.docs[0]?.data() as Payment | undefined)?.id ?? null, paymentUrl: null };
+    const existingPayment = paymentSnap.docs[0]?.data() as Payment | undefined;
+    return { membershipId: pending.id, paymentId: existingPayment?.id ?? null, paymentUrl: await membershipPaymentUrl(db, existingPayment, user.phone ?? "") };
   }
   const currentPlanSnap = await db.collection(COLLECTIONS.membershipPlans()).doc(current.planId).get();
   if (!currentPlanSnap.exists) throw new HttpsError("failed-precondition", "Your current plan could not be read. Contact the studio.");
@@ -64,24 +67,10 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
   const paymentRef = db.collection(COLLECTIONS.payments()).doc();
 
   let paymentUrl: string | null = null;
-  let razorpayPaymentLinkId: string | null = null;
-  let razorpayOrderId: string | null = null;
+  const razorpayPaymentLinkId: string | null = null;
+  const razorpayOrderId: string | null = null;
 
-  if (data.method === "razorpay_payment_link") {
-    const provider = getPaymentProvider();
-    const result = await provider.createPaymentLink({
-      amount: difference,
-      currency: "INR",
-      bookingId: membershipRef.id,
-      description: `AutoDeck Membership upgrade — ${plan.name}`,
-      customerName: user.email ?? user.phone ?? "Customer",
-      customerPhone: user.phone ?? "",
-      referenceId: paymentRef.id,
-    });
-    paymentUrl = result.paymentUrl;
-    razorpayPaymentLinkId = result.providerPaymentLinkId;
-    razorpayOrderId = result.providerOrderId;
-  }
+
 
   const membership: Membership = {
     id: membershipRef.id,
@@ -116,6 +105,7 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
     currency: "INR",
     method: data.method,
     status: "pending",
+    paymentUrl,
     razorpayPaymentLinkId,
     razorpayPaymentId: null,
     razorpayOrderId,
@@ -142,6 +132,16 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
     const stillActive = await tx.get(activeDoc.ref);
     if (!stillActive.exists || (stillActive.data() as Membership).status !== "active") throw new HttpsError("failed-precondition", "Your plan changed. Try again.");
 
+    // Read the shared claim before writing: blind writes do not conflict-check
+    // competing first upgrades that leave the active predecessor unchanged.
+    const claimRef = db.collection("membershipClaims").doc(`${user.claims.tenantId}_${user.uid}`);
+    const claim = await tx.get(claimRef);
+    const heldId = claim.exists ? (claim.data() as {membershipId?: string}).membershipId : null;
+    if (heldId && heldId !== activeDoc.id) {
+      const held = await tx.get(db.collection(COLLECTIONS.memberships()).doc(heldId));
+      if (held.exists && ["pending", "active"].includes((held.data() as Membership).status)) throw new HttpsError("already-exists", "A plan purchase is already in progress for you.");
+    }
+
     // Shared per-customer claim (the same document purchaseMembership
     // writes): a concurrent purchase, walkin creation, or a refund-restore of
     // the plan being upgraded touches this document and conflict-retries
@@ -161,5 +161,10 @@ export const upgradeMembership = onCall({ region: "asia-south1", secrets: ["RAZO
     });
   });
 
+  if (data.method === "razorpay_payment_link") {
+    const stored = (await paymentRef.get()).data() as Payment;
+    const link = await obtainMembershipPaymentLink(db, stored, getPaymentProvider(), user.phone ?? "");
+    paymentUrl = link.outcome === "link_ready" ? link.paymentUrl : null;
+  }
   return { membershipId: membershipRef.id, paymentId: paymentRef.id, paymentUrl };
 });

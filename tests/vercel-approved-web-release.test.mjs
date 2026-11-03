@@ -1,0 +1,4 @@
+import{test}from'node:test';import assert from'node:assert/strict';import{spawnSync}from'node:child_process';import{resolve}from'node:path';
+const script=resolve('scripts/vercel-ignore.sh');const run=(app,branch)=>spawnSync('bash',[script,app],{cwd:'/tmp',encoding:'utf8',env:{...process.env,VERCEL_GIT_COMMIT_REF:branch,VERCEL_GIT_PREVIOUS_SHA:''}});
+test('exact reviewed release builds only customer Admin site even without base',()=>{for(const app of['customer','admin','site'])assert.equal(run(app,'release/approved-web-20261104').status,1);for(const app of['studio','other',''])assert.equal(run(app,'release/approved-web-20261104').status,0)});
+test('normal and lookalike branches retain original fallback',()=>{for(const branch of['main','preview/launch-reconciliation-spacing','release/approved-web-20261104-extra','']){assert.equal(run('studio',branch).status,1);assert.equal(run('site',branch).status,0)}});

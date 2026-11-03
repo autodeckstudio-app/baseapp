@@ -1,3 +1,4 @@
+import type * as LegacyAdvanceModule from "../../lib/advance-payment.js";
 /**
  * Emulator integration tests for the customer notification system (Phase 2C).
  *
@@ -16,7 +17,7 @@
  * security-rules.emulator.test.ts alongside every other collection's rules
  * tests, not here.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, Notification } from "@autodeck/core";
 
@@ -537,4 +538,13 @@ describe("Notification system", () => {
     expect(notification?.tenantId).toBe(TENANT_B);
     expect(notification?.userId).toBe(custB);
   });
+});
+
+// Legacy lifecycle fixture contract: these tests start with confirmed studio
+// bookings and test unrelated job/inspection/ownership/refund behavior. The
+// enabled real customer advance lifecycle is tested without this mock in
+// advance-activation-booking.emulator.test.ts (including signature + replay).
+vi.mock("../../lib/advance-payment.js", async (orig) => {
+  const m = await orig<typeof LegacyAdvanceModule>();
+  return { ...m, advancePaymentEnabled: () => false };
 });

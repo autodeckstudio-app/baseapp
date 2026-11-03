@@ -32,3 +32,5 @@ describe("resolveServiceName", () => {
     await expect(resolveServiceName(db, tx, "t1", "svc1")).resolves.toBe("Ceramic Coating");
   });
 });
+
+it("future invoice snapshot omits internal letter rating without altering source", async()=>{const {db,tx}=mockDb({exists:true,row:{tenantId:"t1",name:"PPF Full Body D"}});await expect(resolveServiceName(db,tx,"t1","svc1")).resolves.toBe("PPF Full Body");});

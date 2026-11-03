@@ -37,3 +37,5 @@ describe("tray and viewer follow the Instagram pattern", () => {
     for (const x of ["onPressIn", "onPressOut", "onNextGroup", "onPrevGroup", "onTouchStart", "onTouchEnd"]) expect(v).toContain(x);
   });
 });
+
+it('video stories use the same in-app user-initiated player on web/native, never Image fallback or autoplay',()=>{const v=readFileSync(`${__dirname}/../ui/StoryViewer.tsx`,'utf8');expect(v).toContain('ServiceVideo');expect(v).not.toContain('createElement("video"');expect(v).not.toContain('autoPlay: true');expect(v).toContain('!isVideo ? <View');});

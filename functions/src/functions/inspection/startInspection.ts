@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 // Studio/admin only. Starts a structured vehicle-condition inspection for a
 // job — one per job (id == jobId, same deterministic pattern as Warranty).
 // The checklist template is resolved from the job's service category at
@@ -60,7 +61,7 @@ export const startInspection = onCall({ region: "asia-south1" , enforceAppCheck:
     customerId: job.customerId,
     vehicleId: job.vehicleId,
     serviceId: job.serviceId,
-    serviceName: service.name,
+    serviceName: customerServiceName(service.name),
     serviceCategory: service.category,
     status: "in_progress",
     checklist: buildInspectionChecklist(service.category),

@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 // Builds an ApprovalRequest snapshot from the job + the selected catalogue
 // Service, both read at request time. Price is always computed via the same
 // pricing engine used for bookings (calculatePrice) — never trusted from the
@@ -44,7 +45,7 @@ export function buildApproval(params: BuildApprovalParams): ApprovalRequest {
     requestedBy,
     reason,
     serviceId: service.id,
-    serviceName: service.name,
+    serviceName: customerServiceName(service.name),
     quantity,
     unitPrice,
     priceImpact,

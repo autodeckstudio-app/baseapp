@@ -154,6 +154,10 @@ export async function processProviderEvent(
       eventType: ev.eventType, outcome: "unknown_payment", providerPaymentId: ev.providerPaymentId,
       providerPaymentLinkId: ev.providerPaymentLinkId, processedAt: new Date().toISOString(),
     });
+    if (ev.eventType === "payment.captured" || ev.eventType === "payment_link.paid") {
+      const id = `unmatched_capture_${ev.providerEventId}`;
+      await db.collection(COLLECTIONS.staffAlerts()).doc(id).set({ id, kind: "unmatched_payment_capture", tenantId: null, studioId: null, providerEventId: ev.providerEventId, providerPaymentId: ev.providerPaymentId ?? null, providerPaymentLinkId: ev.providerPaymentLinkId ?? null, providerOrderId: ev.providerOrderId ?? null, referenceId: ev.referenceId ?? null, amount: ev.amount, currency: ev.currency, createdAt: new Date().toISOString(), reason: "Verified provider capture has no matching Payment. Reconcile before any new collection." });
+    }
     return { outcome: "unknown_payment", paymentId: null };
   }
 
@@ -197,6 +201,13 @@ export async function processProviderEvent(
     }
 
     if (isPaid) {
+      if ((payment.targetType === "membership" || payment.targetType === "gift") && (payment.status === "completed" || payment.status === "refunded") && ev.providerPaymentId && payment.razorpayPaymentId && ev.providerPaymentId !== payment.razorpayPaymentId) {
+        record("overpayment_review");
+        tx.update(paymentRef, { invoiceReviewNeeded: true, updatedAt: now });
+        const alert = db.collection(COLLECTIONS.staffAlerts()).doc(`extra_capture_${ev.providerPaymentId}`);
+        tx.set(alert, { id: alert.id, kind: "extra_payment_capture", tenantId: payment.tenantId, studioId: null, paymentId: payment.id, providerPaymentId: ev.providerPaymentId, amount: ev.amount, currency: ev.currency, createdAt: now, reason: "A different capture arrived on an already settled payment. Reconcile manually; no automatic refund." });
+        return "overpayment_review";
+      }
       if (payment.status === "completed" && payment.targetType === "membership" && payment.membershipId) {
         // Mixed-vintage rollout repair (same 24 Oct ruling #5 scope as the late-capture reservation below): an OLDER instance can
         // complete a capture for a cancelled/expired membership with no reservation and no alert, and this newer code would then
@@ -296,6 +307,11 @@ export async function processProviderEvent(
         writeAuditLog(tx, { action: "payment.completed", entityType: "Payment", entityId: payment.id, user, studioId: null,
           after: { status: "completed", targetType: "gift", giftId: payment.giftId ?? null, via: "razorpay_webhook" },
           ...(plan.activate ? {} : { metadata: { needsReview: plan.reason } }) });
+        if (!plan.activate) {
+          tx.update(paymentRef, { invoiceReviewNeeded: true });
+          const alert = db.collection(COLLECTIONS.staffAlerts()).doc(`gift_capture_review_${payment.id}`);
+          tx.set(alert, { id: alert.id, tenantId: payment.tenantId, studioId: null, kind: "gift_manual_review", paymentId: payment.id, giftId: payment.giftId ?? null, reason: plan.reason, createdAt: now });
+        }
         if (gRef && plan.activate) {
           tx.update(gRef, plan.patch);
           writeAuditLog(tx, { action: "gift.activated", entityType: "Gift", entityId: gRef.id, user, studioId: null,
@@ -363,6 +379,7 @@ export async function processProviderEvent(
           : bk.tenantId !== payment.tenantId ? "tenant_mismatch"
           : (bk.studioId ?? null) !== (payment.studioId ?? null) ? "studio_mismatch"
           : bk.status === "CANCELLED" ? "booking_cancelled"
+          : bk.status === "EXPIRED" ? "advance_hold_expired"
           : bk.advancePaidAt ? "advance_already_paid"
           : holdExpired ? "advance_hold_expired"
           : null;

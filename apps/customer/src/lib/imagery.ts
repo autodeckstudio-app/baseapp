@@ -90,6 +90,16 @@ const BOTTLES: Record<string, { src: ImageSourcePropType; tint: string }> = {
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const TOPICS: Record<string, ImageSourcePropType> = {
+  decon: require("../../assets/imagery/generated/ai-decon.jpg"),
+  glass: require("../../assets/imagery/generated/ai-glass.jpg"),
+  odour: require("../../assets/imagery/generated/ai-odour.jpg"),
+  rust: require("../../assets/imagery/generated/ai-rust.jpg"),
+  audio: require("../../assets/imagery/generated/ai-audio.jpg"),
+  camera: require("../../assets/imagery/generated/ai-camera.jpg"),
+  mats: require("../../assets/imagery/generated/ai-mats.jpg"),
+  periodic: require("../../assets/imagery/generated/ai-periodic.jpg"),
+
+  trimRestore: require("../../assets/imagery/generated/ai-trim-restore.jpg"),
   washExt: require("../../assets/imagery/generated/ai-wash-foam.jpg"), roof: require("../../assets/imagery/generated/ai-roof.jpg"),
   interior: require("../../assets/imagery/generated/ai-interior.jpg"), polish: require("../../assets/imagery/generated/ai-polish.jpg"),
   headlight: require("../../assets/imagery/generated/ai-headlight.jpg"), coating: require("../../assets/imagery/generated/ai-coat-apply.jpg"),
@@ -159,10 +169,12 @@ export function hasGaragePhoto(name: string): boolean {
  * never a stock image of something else. Swap an entry for a studio photo when one exists.
  */
 const TYPE_TOPIC: Record<string, string | [string, number]> = {
-  exterior: "washExt", interior: "interior", complete: "roof", polish: "polish", "leather-care": "interior", "wheel-clean": "wheel", lamps: "headlight",
-  ceramic: "coating", graphene: "coating", wheels: "wheel", tyre: "wheel", leather: "interior", fabric: "interior", dashboard: "interior", "ppf-coat": "ppf",
+  glass: "glass", matte: "coating", decon: "decon", "glass-clean": "glass", odour: "odour", rust: "rust", audio: "audio", cameras: "camera", mats: "mats", "interior-style": "interior", "exterior-style": "styling",
+  "trim-restore": "trimRestore", trim: "trimRestore", exterior: "washExt", interior: "interior", complete: "roof", polish: "polish", "leather-care": "interior", "wheel-clean": "wheel", lamps: "headlight",
+  ceramic: "coating", graphene: "coating", wheels: "wheel", tyre: "wheel", leather: "interior", fabric: "interior", dashboard: "interior", "maintenance-coating": "coating",
+  "ppf-coat": "ppf",
   "brand-film": "ppf", "matte-ppf": ["ppf", 1], colour: "wrap",
-  checks: "gInspect", periodic: "engine", battery: "battery", ac: "ac", tyres: "align", brakes: "wheel", suspension: "inspection", repairs: "repair",
+  checks: "gInspect", periodic: "periodic", battery: "battery", ac: "ac", tyres: "align", brakes: "wheel", suspension: "inspection", repairs: "repair",
   wraps: "wrap", styling: "styling", film: "tint", alloys: "wheel", seats: "interior",
 };
 export function typePhoto(key: string): ImageSourcePropType | null {
@@ -171,3 +183,17 @@ export function typePhoto(key: string): ImageSourcePropType | null {
   if (!t) return null;
   return Array.isArray(t) ? pooledPhoto(t[0], t[1]) ?? null : TOPICS[t] ?? null;
 }
+
+/** Official brand marks, contained without recolouring, distortion or crop. */
+export const BRAND_LOGOS: Record<string, {src: ImageSourcePropType; background: string}> = {
+  GSWF:{src:require('../../assets/imagery/brands/gswf-logo.webp'),background:'#15171B'},
+  NAR:{src:require('../../assets/imagery/brands/nar-logo.png'),background:'#15171B'},
+  AVVYX:{src:require('../../assets/imagery/brands/avvyx-logo.png'),background:'#15171B'},
+  "AutoDeck Care": {src: require("../../assets/brand/icon-512.png"), background: "#FFFFFF"},
+  XPEL: {src: require('../../assets/imagery/brands/xpel-logo.png'), background: '#FFFFFF'},
+  '3M': {src: require('../../assets/imagery/brands/3m-logo.jpg'), background: '#FFFFFF'},
+  LLumar: {src: require('../../assets/imagery/brands/llumar-logo.png'), background: '#FFFFFF'},
+  Garware: {src: require('../../assets/imagery/brands/garware-logo.png'), background: '#15171B'},
+  Fireball: {src: require('../../assets/imagery/brands/fireball-logo.png'), background: '#FFFFFF'},
+  Kovalent: {src: require('../../assets/imagery/brands/kovalent-logo.png'), background: '#15171B'},
+};

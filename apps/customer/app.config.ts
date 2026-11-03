@@ -7,12 +7,15 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/brand/icon.png",
   web: { favicon: "./assets/brand/favicon.png" },
-  scheme: "autodeck",
+  scheme: ["autodeck", "in.autodeck.customer"],
   userInterfaceStyle: "automatic",
   ios: {
     supportsTablet: false,
     bundleIdentifier: "in.autodeck.customer",
-    // Apple Developer account required — REQUIRES APPROVAL ($99/year)
+    // Local Personal Team testing is free; store distribution needs separate approval.
+    infoPlist: {
+      CFBundleURLTypes: [{ CFBundleURLSchemes: ["autodeck", "in.autodeck.customer", "com.googleusercontent.apps.24903853329-tfe3ualcp55o35qa3hupc4ogsu8tr902"] }],
+    },
   },
   android: {
     package: "in.autodeck.customer",
@@ -24,6 +27,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "./plugins/with-android-kotlin-alignment.cjs",
+    ["react-native-nitro-google-signin", { iosUrlScheme: "com.googleusercontent.apps.24903853329-tfe3ualcp55o35qa3hupc4ogsu8tr902" }],
     [
       "expo-build-properties",
       {
@@ -32,6 +37,7 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  extra: { eas: { projectId: "5a7ec752-81a0-43bc-b7e1-401217fa2c7c" } },
   experiments: {
     typedRoutes: true,
   },

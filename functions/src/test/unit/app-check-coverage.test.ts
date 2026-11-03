@@ -163,6 +163,7 @@ const ENFORCED = [
   "payment/reconcileRefundClaims.ts",
   "payment/recordManualPayment.ts",
   "payment/requestAdvancePayment.ts",
+  "payment/requestGiftPaymentLink.ts",
   "payment/requestBookingRefund.ts",
   "payment/settleManualRefund.ts",
   "payment/verifyCheckoutPayment.ts",

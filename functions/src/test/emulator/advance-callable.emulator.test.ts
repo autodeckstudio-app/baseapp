@@ -43,7 +43,8 @@ async function seed(o: { status?: string; payMode?: string } = {}) {
   await db.collection("customers").doc(customerId).set({ id: customerId, tenantId: "ac-t", name: "Test Customer", phone: "+919000000001" });
   await db.collection("bookings").doc(bookingId).set({
     id: bookingId, tenantId: "ac-t", studioId: "ac-s", customerId,
-    status: o.status ?? "CONFIRMED", payMode: o.payMode ?? "studio",
+    status: o.status ?? "PENDING", paymentStatus: "unpaid",
+    holdExpiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), payMode: o.payMode ?? "studio",
     priceBreakdown: {
       currency: "INR", subtotal: 108000, pickupFee: 5000, dropFee: 3000,
       membershipDiscount: null, taxRatePercent: 18, tax: 19440, total: 127440,
@@ -163,4 +164,14 @@ describe("requestAdvancePayment callable (W1, flag mocked on, mock provider)", (
     await expect(requestAdvancePayment.run({ data: { bookingId: s.bookingId }, auth: auth(s.customerId) } as never))
       .rejects.toThrow(/pay-at-studio/);
   });
+});
+
+it("activation rejects already confirmed and paid holds without a new payment", async () => {
+  const s = await seed({ status: "CONFIRMED" });
+  await expect(requestAdvancePayment.run({ data: { bookingId: s.bookingId }, auth: auth(s.customerId) } as never)).rejects.toThrow(/active hold/);
+  expect((await db.collection("payments").doc(s.paymentId).get()).exists).toBe(false);
+  const p = await seed();
+  await db.collection("bookings").doc(p.bookingId).update({ paymentStatus: "paid" });
+  await expect(requestAdvancePayment.run({ data: { bookingId: p.bookingId }, auth: auth(p.customerId) } as never)).rejects.toThrow(/active hold/);
+  expect((await db.collection("payments").doc(p.paymentId).get()).exists).toBe(false);
 });

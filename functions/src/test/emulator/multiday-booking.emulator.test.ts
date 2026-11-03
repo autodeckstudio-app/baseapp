@@ -11,11 +11,11 @@
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob, Customer } from "@autodeck/core";
 
-import { createBooking } from "../../functions/booking/createBooking.js";
+import { createBooking } from "../helpers/paid-advance-booking.js";
 import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { getAvailability } from "../../functions/booking/getAvailability.js";

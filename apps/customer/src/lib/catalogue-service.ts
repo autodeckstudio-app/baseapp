@@ -3,16 +3,17 @@ import { auth, functions } from "./firebase";
 import { priceCache, onPriceCacheScopeChange } from "./price-cache";
 import { rupees } from "../ui/kit";
 import { primeVisuals } from "./imagery";
-import { MENU_SEED, sizePricingForCategory, isSizePriced } from "@autodeck/core";
+import { customerCatalogueEligible, customerRatingPrivacy, MENU_SEED, sizePricingForCategory, isSizePriced } from "@autodeck/core";
 import { applyBrandWarranty } from "./warranty-labels";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 // Dev-only: ?mock=1 on web renders the real screens from the seeded menu (no Firebase session needed).
 const devMock = (): Service[] | null => {
   if (!__DEV__ || !/mock=1/.test((globalThis as { location?: { search?: string } }).location?.search ?? "")) return null;
-  return MENU_SEED.map((m) => ({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingForCategory(m.category, m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service);
+  return MENU_SEED.filter(previewEligible).map((m) => customerRatingPrivacy(({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingForCategory(m.category, m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service));
 };
 
+const previewEligible=(row:{id:string})=>customerCatalogueEligible(row,__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""));
 const KEY = "autodeck.catalogue.v1";
 const TTL_MS = 5 * 60 * 1000;
 let memo: { at: number; p: Promise<Service[]> } | null = null;
@@ -31,7 +32,7 @@ const store = (): { getItem(k: string): string | null; setItem(k: string, v: str
 export function peekCatalogue(): Service[] | null {
   try {
     const raw = store()?.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Service[]) : null;
+    return raw ? (JSON.parse(raw) as Service[]).filter(previewEligible).map(customerRatingPrivacy) : null;
   } catch { return null; }
 }
 
@@ -41,7 +42,7 @@ async function fetchCatalogue(category?: ServiceCategory): Promise<Service[]> {
     "getServiceCatalogue",
   );
   const result = await fn(category !== undefined ? { category } : {});
-  const list = result.data.services.map(applyBrandWarranty);
+  const list = result.data.services.filter(previewEligible).map(customerRatingPrivacy).map(applyBrandWarranty);
   if (category === undefined) {
     primeVisuals(list);
     try { store()?.setItem(KEY, JSON.stringify(list)); } catch { /* storage full or blocked */ }

@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node ../../scripts/catalogue-source-guard.mjs && astro build",
     "preview": "astro preview",
-    "test": "npm run typecheck && astro build && node scripts/headers-guard.mjs && node scripts/shop-fixture-guard.mjs && node scripts/redesign-guard.mjs && node scripts/rover-debug-guard.mjs && node --test tests/*.test.mjs && node scripts/css-version-guard.mjs && node scripts/no-emoji-guard.mjs && node scripts/mockup-asset-version-guard.mjs",
+    "test": "node ../../scripts/catalogue-source-guard.mjs && npm run typecheck && astro build && node scripts/headers-guard.mjs && node scripts/shop-fixture-guard.mjs && node scripts/redesign-guard.mjs && node scripts/rover-debug-guard.mjs && node --test tests/*.test.mjs && node scripts/css-version-guard.mjs && node scripts/no-emoji-guard.mjs && node scripts/mockup-asset-version-guard.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Linking, Modal } from "react-native";
+import { View, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { COLLECTIONS } from "@autodeck/database";
@@ -10,10 +10,11 @@ import { Button, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from ".
 import { db } from "../../../lib/firebase";
 import { purchaseMembership, upgradeMembership, generateIdempotencyKey } from "../../../lib/membership-service";
 import { listenToMyMemberships } from "../../../lib/home-service";
-import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
+import { payWithPaymentLink } from "../../../lib/razorpay-checkout";
 import { useAuth } from "../../../hooks/useAuth";
 import { carryOverLine } from "../../../lib/membership-rules";
 import { pickupsLine } from "../../../lib/membership-view";
+import { membershipOnlinePayCopy, type OnlinePayOutcome } from "../../../lib/native-pay-core";
 import { upgradeConfirmCopy } from "../../../lib/upgrade-copy";
 
 export default function PurchaseMembershipScreen() {
@@ -29,6 +30,7 @@ export default function PurchaseMembershipScreen() {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [payOutcome, setPayOutcome] = useState<OnlinePayOutcome | null>(null);
   const [done, setDone] = useState<"online" | "studio" | null>(null);
   const [idempotencyKey] = useState(() => generateIdempotencyKey());
 
@@ -82,8 +84,10 @@ export default function PurchaseMembershipScreen() {
     setError(null);
     try {
       const result = await upgradeMembership(plan.id, method, idempotencyKey);
-      if (method === "razorpay_payment_link" && checkoutSupported && result.paymentId) {
-        try { await payWithCheckout(result.paymentId, { name: "AutoDeck Studio", description: `${plan.name} upgrade` }); } catch { /* payment link fallback below */ }
+      if (method === "razorpay_payment_link") {
+        if (!result.paymentId) throw new Error("Payment is not ready. Please try again.");
+        if (!result.paymentUrl) throw new Error("Your membership payment needs checking. Contact the studio before trying again; do not start another payment.");
+        setPayOutcome(await payWithPaymentLink(result.paymentId, result.paymentUrl));
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {
@@ -101,16 +105,9 @@ export default function PurchaseMembershipScreen() {
       // A pending upgrade is paid again through the same call (the server replays it, never makes a second one).
       const result = pendingIsUpgrade ? await upgradeMembership(plan.id, method, idempotencyKey) : await purchaseMembership(plan.id, method, idempotencyKey);
       if (method === "razorpay_payment_link") {
-        let opened = false;
-        if (checkoutSupported && result.paymentId) {
-          try {
-            await payWithCheckout(result.paymentId, { name: "AutoDeck Studio", description: plan.name });
-            opened = true;
-          } catch {
-            opened = false; // checkout unavailable: fall back to the payment link below
-          }
-        }
-        if (!opened && result.paymentUrl) void Linking.openURL(result.paymentUrl).catch(() => undefined);
+        if (!result.paymentId) throw new Error("Payment is not ready. Please try again.");
+        if (!result.paymentUrl) throw new Error("Your membership payment needs checking. Contact the studio before trying again; do not start another payment.");
+        setPayOutcome(await payWithPaymentLink(result.paymentId, result.paymentUrl));
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {
@@ -166,14 +163,15 @@ export default function PurchaseMembershipScreen() {
 
   if (done || existing?.status === "pending") {
     const isStudio = done === "studio";
+    const payCopy = membershipOnlinePayCopy(payOutcome, active?.tier ?? null);
     return (
       <Screen>
         <Notice
-          title={isStudio ? "Pay at the studio to activate" : "Almost done"}
+          title={isStudio ? "Pay at the studio to activate" : payCopy.title}
           body={
             isStudio
               ? "Request saved. Pay at the studio front desk - benefits unlock once payment is confirmed. Unpaid requests are cancelled automatically."
-              : "Complete payment to activate. Closed the payment window? Tap Pay online to reopen it. Membership activates on its own once verified - benefits stay locked until then."
+              : payCopy.body
           }
           action={
             <View style={{ gap: space.hair }}>

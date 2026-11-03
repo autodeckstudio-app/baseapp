@@ -1,7 +1,7 @@
 // Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
@@ -12,8 +12,9 @@ import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { glassPane } from "../../../lib/glass-pane";
+import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { FilterPills } from "../../../ui/FilterPills";
-import { dueChip } from "../../../lib/garage-due";
+import { compactDueChip, dueChip } from "../../../lib/garage-due";
 import { listenToMyJobs } from "../../../lib/job-service";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
@@ -29,11 +30,10 @@ import { devGarage } from "../../../lib/dev-garage-loader";
 
 
 function DueChip({ text }: { text: string }) {
-  const { colors } = useExperienceTheme();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(128,128,128,0.14)", maxWidth: 150 }}>
+    <View accessible accessibilityLabel={text} style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "#FFFFFF", maxWidth: 180 }}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#EC8638" }} />
-      <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{text}</Text>
+      <Text numberOfLines={1} style={{ color: "#1D1B26", fontSize: 11, fontWeight: "700", flexShrink: 1 }}>{compactDueChip(text)}</Text>
     </View>
   );
 }
@@ -85,6 +85,11 @@ export default function GarageScreen() {
     return () => clearTimeout(t);
   }, [auth.status, retryTick, vehicles]);
 
+  const { height: winH } = useWindowDimensions();
+  const swipeList = [...(vehicles ?? [])].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  const pickRef = useRef(pick); pickRef.current = pick;
+  const swipe = useSegmentSwipe(["all", ...swipeList.map(v=>v.id)], () => pickRef.current && swipeList.some(v=>v.id===pickRef.current) ? pickRef.current : "all", key=>setPick(key === "all" ? null : key));
+
   if (!vehicles && !error) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
     void setActiveVehicle(v.id);
@@ -124,6 +129,7 @@ export default function GarageScreen() {
 
   return (
     <Screen appBar="Garage">
+      <View testID="garage-swipe-area" {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 240, 400) }, swipe.style]}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
         <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
@@ -161,7 +167,7 @@ export default function GarageScreen() {
         </View>
       )}
       {list.length > 0 ? (
-        <View style={{ gap: space.breath, marginTop: metrics.sectionGap, paddingBottom: 100 }}>
+        <View style={{ gap: space.breath, marginTop: metrics.sectionGap }}>
           <Button label="Book a service" onPress={() => router.push("/(tabs)/catalogue")} />
           <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
         </View>
@@ -201,6 +207,7 @@ export default function GarageScreen() {
       ) : null}
       {photoCleanupNote?<Notice title="Photo removal pending" body={photoCleanupNote} action={<Button label="Got it" kind="quiet" onPress={()=>setPhotoCleanupNote(null)}/>}/>:null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
+      </View>
     </Screen>
   );
 }

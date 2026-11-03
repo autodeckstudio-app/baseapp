@@ -6,10 +6,11 @@ import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { NavIcon } from "../../ui/NavIcon";
 import { useLang } from "../../lib/i18n";
-import { FAQ, STUDIO_INFO, formatHours } from "../../lib/studio-info";
+import { FAQ, STUDIO_INFO, formatHours, isOpenNow, type LiveStudioInfo } from "../../lib/studio-info";
 import { getStudioInfo } from "../../lib/booking-service";
 import { FIRST_STUDIO_ID } from "@autodeck/core";
 import { Field, Kicker, Notice, Pane, Row, Screen, T } from "../../ui/kit";
+import { StudioMapCanvas } from "../../ui/StudioMapCanvas";
 import { searchFaq } from "../../lib/faq-search";
 
 export default function HelpScreen() {
@@ -17,19 +18,22 @@ export default function HelpScreen() {
   const cut = name === "light" ? "#FFFFFF" : "#18181C";
   const { t } = useLang();
   const [open, setOpen] = useState<number | null>(null);
-  const { q: initialQuery } = useLocalSearchParams<{ q?: string }>();
+  const { q: initialQuery, service: serviceName } = useLocalSearchParams<{ q?: string; service?: string }>();
   const [query, setQuery] = useState(__DEV__ && typeof initialQuery === "string" ? initialQuery : "");
   const shown = searchFaq(FAQ, query);
   const [liveHours, setLiveHours] = useState<string | null>(null);
+  const [liveOperatingHours, setLiveOperatingHours] = useState<LiveStudioInfo["operatingHours"] | null>(null);
   useEffect(() => {
     let alive = true;
-    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) setLiveHours(formatHours(i.operatingHours)); }).catch(() => undefined);
+    void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) { setLiveHours(formatHours(i.operatingHours)); setLiveOperatingHours(i.operatingHours); } }).catch(() => undefined);
     return () => { alive = false; };
   }, []);
   const s = { ...STUDIO_INFO, hours: liveHours ?? STUDIO_INFO.hours };
+  const openNow = isOpenNow(liveOperatingHours, new Date());
   const hasContact = Boolean(s.phone || s.whatsapp);
   return (
-    <Screen>
+    <Screen appBar="Help & contact">
+      {typeof serviceName === "string" && serviceName.trim() ? <Notice title={`Ask about ${serviceName.slice(0, 160)}`} body="Call or message the studio below to confirm the scope, exclusions and care instructions for this service." /> : null}
       {hasContact ? (
         <Pane pad="gap">
           {s.phone ? <Row title={t("Call the studio")} detail={s.hours || undefined} trailing={<NavIcon name="call" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`tel:${s.phone}`)} last={!s.whatsapp} /> : null}
@@ -40,8 +44,11 @@ export default function HelpScreen() {
       )}
       {s.address ? (
         <Pane pad="gap">
-          {s.address ? <Row title="Studio" detail={s.address} last {...(s.mapsUrl ? { onPress: () => void Linking.openURL(s.mapsUrl) } : {})} /> : null}
-          
+          <StudioMapCanvas onPress={() => void Linking.openURL(s.mapsUrl)} />
+          {openNow !== null ? <T role="label" tone="accent">{openNow ? "OPEN NOW" : "CLOSED NOW"}</T> : null}
+          <Row title="AutoDeck Studio" detail={s.address} last={!s.hours && !s.mapsUrl} {...(s.mapsUrl ? { onPress: () => void Linking.openURL(s.mapsUrl) } : {})} />
+          {s.hours ? <Row title="Opening hours" detail={s.hours} last={!s.mapsUrl} /> : null}
+          {s.mapsUrl ? <Row title="Directions" detail="Open the studio in maps" onPress={() => void Linking.openURL(s.mapsUrl)} last /> : null}
         </Pane>
       ) : null}
       <Kicker>{t("Questions")}</Kicker>

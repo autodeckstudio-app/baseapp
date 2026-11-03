@@ -1,11 +1,5 @@
-// Pay-at-studio 20% advance (basket item 4) + no-show disclosure (item 5),
-// PREVIEW. Item 5 policy is OWNER-APPROVED 2 Nov 21:32:50; the flow stays
-// disabled until activation review.
-// DISABLED by constant: the policy is OWNER-ADOPTED (2 Nov 2026, "All 3": 20% of
-// the discounted service price incl GST excl pickup, advance rounded up to the
-// next whole rupee, balance exact), but activation still requires (a) payment-
-// flow wiring (Razorpay order for the advance) and (b) the final review gate.
-// While disabled nothing computes an amount and nothing here is shown.
+// Pay-at-studio 20% advance and no-show disclosure.
+// Local release candidate only. Production activation remains separately gated.
 import { NO_SHOW_ADVANCE_DISCLOSURE, NO_SHOW_FULL_ONLINE_DISCLOSURE, advanceSplit } from "@autodeck/core";
 import type { PriceBreakdown } from "@autodeck/core";
 
@@ -13,8 +7,7 @@ export const ADVANCE_SPLIT_ENABLED = false;
 
 /** Disclosure lines for the pay-at-studio choice once the advance flow is
  *  enabled. Percent (20%), basis and rounding are owner-adopted; the exact
- *  amount is still not rendered while the flag is off (no payment mechanism
- *  yet). The no-show line is the OWNER-APPROVED rule (2 Nov 21:32:50,
+ *  amount is computed from the booking price snapshot. The no-show line is the published no-show rule (
  *  docs/owner-decisions-2026-11-02.md section 4), disclosed BEFORE payment;
  *  it deliberately avoids cancellation wording - a no-show is not a late
  *  cancellation. */
@@ -22,7 +15,7 @@ export function advanceDisclosureLines(): { split: string; noShow: string; noSho
   return {
     split: "You pay 20% online now to confirm; the rest at the studio when you collect your car.",
     noShow: NO_SHOW_ADVANCE_DISCLOSURE,
-    // Full-online mode gets the same owner-approved rule with its own
+    // Full-online mode gets the same no-show rule with its own
     // wording: 20% of the service price kept, the remainder (incl unused
     // pickup/drop + GST) goes to owner refund approval, never auto-refunded.
     noShowFullOnline: NO_SHOW_FULL_ONLINE_DISCLOSURE,
@@ -49,8 +42,7 @@ const okMoney = (n: unknown): n is number => typeof n === "number" && Number.isS
  *       (core advanceSplit, "service_total_only" + "ceil");
  *    4. balance = grand total (incl pickup/drop and their GST) - advance.
  *  Returns null for any non-finite, negative or inconsistent input instead of
- *  a wrong amount. Uses the snapshot's own tax rate (0 with GST off). Not wired
- *  to any payment: ADVANCE_SPLIT_ENABLED stays false. */
+ *  a wrong amount. Uses the snapshot's own tax rate (0 with GST off). */
 export function advancePreviewFromParts(
   pb: Pick<PriceBreakdown, "subtotal" | "pickupFee" | "dropFee" | "membershipDiscount" | "taxRatePercent">,
   extraSubtotalsPaise: readonly number[] = [],
@@ -72,4 +64,16 @@ export function advancePreviewFromParts(
   } catch {
     return null;
   }
+}
+
+/** One effective selection for display and execution. Covered and quote visits
+ *  never request money even if a prior studio choice remains in component state. */
+export function needsBookingAdvance(i: {
+  enabled: boolean; studioSelected: boolean; onlineAvailable: boolean;
+  giftCovered: boolean; membershipCovered: boolean; priceOnRequest: boolean;
+  advancePaise: number | null;
+}): boolean {
+  return i.enabled && (i.studioSelected || !i.onlineAvailable) &&
+    !i.giftCovered && !i.membershipCovered && !i.priceOnRequest &&
+    i.advancePaise !== null && Number.isSafeInteger(i.advancePaise) && i.advancePaise > 0;
 }

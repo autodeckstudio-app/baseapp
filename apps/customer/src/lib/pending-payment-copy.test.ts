@@ -11,9 +11,13 @@ describe("pending online payment copy", () => {
     expect(r.reason).toMatch(/payment/i);
     expect(r.reason).not.toMatch(/studio confirmation/i);
   });
+  it("held studio advances also wait for payment rather than studio confirmation", () => {
+    const r = getRescheduleEligibility({ status: "PENDING", payMode: "studio", holdExpiresAt: "2026-11-03T11:30:00Z", rescheduleCount: 0 } as never);
+    expect(r.reason).toMatch(/waiting for payment/);
+  });
   it("labels the payment row and hides the Live chip while payment is pending", () => {
     expect(detail).toContain("Awaiting payment");
-    expect(detail).toMatch(/!\(booking\.status === "PENDING" && booking\.payMode === "online"\)/);
+    expect(detail).toContain('!(booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)))');
     expect(detail).toContain("Held until");
   });
   it("retitles the confirm notice while a slot is held", () => {

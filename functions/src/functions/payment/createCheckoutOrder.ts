@@ -27,6 +27,18 @@ export const createCheckoutOrder = onCall({ region: "asia-south1", secrets: ["RA
   if (payment.customerId !== user.uid || payment.tenantId !== user.claims.tenantId) throw new HttpsError("permission-denied", "Cannot pay for this.");
   if (payment.status !== "pending" && payment.status !== "processing") throw new HttpsError("failed-precondition", "This payment is already closed.");
 
+  if (payment.targetType === "membership") throw new HttpsError("failed-precondition", "Membership payments use their existing hosted payment link. Open it from Membership status; contact the studio if it needs checking.");
+
+  // Gift web checkout and hosted native links share one exclusive payment lane.
+  // Persist the lane before contacting Razorpay, including on crash/retry.
+  if (payment.targetType === "gift") {
+    await getFirestore().runTransaction(async tx => {
+      const cur = (await tx.get(ref)).data() as Payment;
+      if (cur.customerId !== user.uid || cur.tenantId !== user.claims.tenantId || cur.targetType !== payment.targetType || cur.status !== "pending" || cur.razorpayPaymentLinkId || (cur.linkCreateLeaseId && cur.linkCreateLeaseId !== `${payment.targetType}-standard-checkout`)) throw new HttpsError("failed-precondition", "This payment has another checkout in progress. Complete it there or contact the studio.");
+      tx.update(ref, { linkCreateLeaseId: `${payment.targetType}-standard-checkout`, updatedAt: new Date().toISOString() });
+    });
+  }
+
   try {
     const order = await obtainCheckoutOrder(payment, {
       createOrder: (p) => createRazorpayOrder({ ...p, keyId, keySecret }),

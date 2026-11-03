@@ -1,3 +1,4 @@
+import type * as LegacyAdvanceModule from "../../lib/advance-payment.js";
 /**
  * Emulator tests for the Studio staff-app backend batch (2026-10-26):
  *  1. updatePickupRequest refuses to CONFIRM an unpriced (feePaise null)
@@ -1133,4 +1134,13 @@ describe("updatePickupRequest - COMPLETED booking and member free-pickup credit"
     expect(ok.status).toBe("CONFIRMED");
     expect(await used(mid)).toBe(1);
   });
+});
+
+// Legacy lifecycle fixture contract: these tests start with confirmed studio
+// bookings and test unrelated job/inspection/ownership/refund behavior. The
+// enabled real customer advance lifecycle is tested without this mock in
+// advance-activation-booking.emulator.test.ts (including signature + replay).
+vi.mock("../../lib/advance-payment.js", async (orig) => {
+  const m = await orig<typeof LegacyAdvanceModule>();
+  return { ...m, advancePaymentEnabled: () => false };
 });

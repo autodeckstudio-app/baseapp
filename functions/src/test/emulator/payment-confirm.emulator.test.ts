@@ -1,3 +1,4 @@
+import type * as LegacyAdvanceModule from "../../lib/advance-payment.js";
 /**
  * Emulator integration tests for confirmManualPayment (Phase 3G — P0 #1).
  *
@@ -1148,4 +1149,13 @@ describe("office-only confirmation of account payments (28 Oct 2026 policy)", ()
     } as never)) as { paymentId: string };
     expect(((await db.collection(COLLECTIONS.payments()).doc(recorded.paymentId).get()).data() as Payment).status).toBe("completed");
   });
+});
+
+// Legacy lifecycle fixture contract: these tests start with confirmed studio
+// bookings and test unrelated job/inspection/ownership/refund behavior. The
+// enabled real customer advance lifecycle is tested without this mock in
+// advance-activation-booking.emulator.test.ts (including signature + replay).
+vi.mock("../../lib/advance-payment.js", async (orig) => {
+  const m = await orig<typeof LegacyAdvanceModule>();
+  return { ...m, advancePaymentEnabled: () => false };
 });

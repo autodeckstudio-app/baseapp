@@ -1,16 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Platform, View } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
+import { signInWithNativeGoogle } from "../../lib/native-google-signin";
 import { TextInput } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
 import { AuthButton } from "@autodeck/ui/native";
 import { LoginStage } from "../../ui/LoginStage";
 import {
   devGoogleSignIn,
-  googleClientIds,
   googleSignInConfigured,
-  signInWithGoogleIdToken,
   signInWithGooglePopup,
   useEmulator,
 } from "../../lib/auth-service";
@@ -66,37 +64,17 @@ function WebGoogleButton({ onError }: { onError: (m: string | null) => void }) {
 }
 
 function GoogleButton({ onError }: { onError: (m: string | null) => void }) {
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    ...googleClientIds(),
-    selectAccount: true,
-  });
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (response?.type !== "success") {
-      if (response) setBusy(false);
-      return;
-    }
-    const idToken = response.params["id_token"];
-    if (!idToken) {
-      setBusy(false);
-      onError("Google didn't return a sign-in token. Please try again.");
-      return;
-    }
-    signInWithGoogleIdToken(idToken)
-      .catch((e: unknown) => onError(friendly(e)))
-      .finally(() => setBusy(false));
-  }, [response]);
-
   return (
     <AuthButton dark soft
       label="Continue with Google"
       busy={busy}
-      disabled={!request}
       onPress={() => {
         setBusy(true);
         onError(null);
-        void promptAsync();
+        void signInWithNativeGoogle()
+          .catch((e: unknown) => onError(friendly(e)))
+          .finally(() => setBusy(false));
       }}
     />
   );

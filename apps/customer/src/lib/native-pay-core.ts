@@ -45,3 +45,12 @@ export function membershipOnlinePayCopy(outcome: OnlinePayOutcome | null, active
   }
   return { title: "Almost done", body: "Complete payment to activate. Closed the payment window? Tap Pay online to reopen it. Membership activates on its own once verified - benefits stay locked until then." };
 }
+
+/** Only a settled capture is success. Every other outcome stays explicit. */
+export function bookingPayOutcomeMessage(outcome: OnlinePayOutcome): string | null {
+  if (outcome === "paid") return null;
+  if (outcome === "pending") return "Payment is still being confirmed. Check this booking before trying again.";
+  if (outcome === "refunded" || outcome === "partially_refunded") return "This payment was returned or partly returned. It does not confirm your booking. Contact the studio.";
+  if (outcome === "dismissed") return "Payment was not completed. You can retry while your slot is held.";
+  return "Payment failed. You can retry while your slot is held.";
+}

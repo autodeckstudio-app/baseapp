@@ -1,0 +1,2 @@
+import {it,expect} from 'vitest';import {serviceQuestions} from './service-questions';
+it('covers every category with confirmation questions, not invented package promises',()=>{for(const c of ['washing','ceramic','coating','ppf','garage','inspection','modifications','tinting','pickup','other'] as const){expect(serviceQuestions(c).length).toBeGreaterThan(0);expect(serviceQuestions(c).every(x=>x.endsWith('?'))).toBe(true);}});

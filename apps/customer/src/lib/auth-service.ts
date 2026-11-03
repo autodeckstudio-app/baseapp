@@ -1,7 +1,7 @@
 /**
  * Customer authentication: Google sign-in only.
  *
- * The native Google flow (expo-auth-session, see app/(auth)/login.tsx)
+ * The native Google SDK flow (see native-google-signin.ts)
  * returns a Google ID token; it is exchanged here for a Firebase session
  * with signInWithCredential. No password or phone number is collected.
  *

@@ -10,7 +10,7 @@ describe("gift client", () => {
     expect(c).toContain("GIFT_LIVE ? takePendingGiftCode()");
     expect(read("lib/gift-service.ts")).not.toMatch(/amount\s*:\s*\d/);
   });
-  it("the home entry only exists when live", () => expect(read("lib/drawer-items.ts")).toContain("...(GIFT_LIVE ? ["));
+  it("one combined friends and gifts entry opens the shared page", () => expect(read("lib/drawer-items.ts")).toContain("friends-gifts"));
   it("holds a claimed code in memory only", () => {
     setPendingGiftCode("GWABCD2345");
     expect(takePendingGiftCode()).toBe("GWABCD2345");

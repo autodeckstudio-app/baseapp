@@ -1,3 +1,4 @@
+import { customerServiceName } from "@autodeck/core";
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import type { Service } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -20,7 +21,7 @@ export async function resolveServiceName(
   if (snap.exists) {
     const service = snap.data() as Service;
     if (service.tenantId === tenantId && typeof service.name === "string" && service.name.trim()) {
-      return service.name.trim();
+      return customerServiceName(service.name.trim());
     }
   }
   return FALLBACK_SERVICE_NAME;

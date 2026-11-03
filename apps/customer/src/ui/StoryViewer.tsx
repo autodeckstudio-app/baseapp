@@ -1,11 +1,12 @@
 // Full-screen story player, Instagram style: progress bars, tap right or left, hold to pause, swipe down to close,
-// and it moves on to the next circle when one ends. Photos run 5 seconds; videos play inline on web and advance when they end.
-import { createElement, useEffect, useRef, useState } from "react";
-import { Image, Modal, Platform, Pressable, View } from "react-native";
+// Photos advance after5seconds. Videos use in-app user-initiated playback and explicit navigation on every platform.
+import { useEffect, useRef, useState } from "react";
+import { Image, Modal, Pressable, View } from "react-native";
 import { Icon } from "@autodeck/ui/native";
 import type { StoryGroup } from "../lib/story-service";
 import { storyAge } from "../lib/story-groups";
-import { T } from "./kit";
+import { Button, T } from "./kit";
+import { ServiceVideo } from "./ServiceVideo";
 
 const PHOTO_MS = 5000;
 
@@ -37,11 +38,7 @@ export function StoryViewer({ group, onClose, onNextGroup, onPrevGroup }: { grou
         onTouchEnd={(e) => { if (touchY.current !== null && e.nativeEvent.pageY - touchY.current > 90) onClose(); touchY.current = null; }}
       >
         <View style={{ flex: 1, width: "100%", maxWidth: 480 }}>
-          {isVideo && Platform.OS === "web" ? (
-            createElement("video", { key: item.id, src: item.url, autoPlay: true, playsInline: true, onEnded: next, ref: (el: { pause(): void; play(): Promise<void> } | null) => { if (el) { if (paused) el.pause(); else void el.play().catch(() => undefined); } }, style: { position: "absolute", width: "100%", height: "100%", objectFit: "contain", background: "#000" } })
-          ) : (
-            <Image source={{ uri: item.url }} resizeMode="contain" style={{ position: "absolute", width: "100%", height: "100%" }} />
-          )}
+          {isVideo ? <View style={{flex:1,paddingHorizontal:16,paddingTop:90,gap:16}}><View style={{backgroundColor:"#F7F5F2",padding:16,borderRadius:20}}><ServiceVideo key={item.id} uri={item.url} title={item.caption||group.title}/></View><View style={{flexDirection:'row',gap:12}}><View style={{flex:1}}><Button kind="quiet" label="Previous" onPress={prev}/></View><View style={{flex:1}}><Button kind="quiet" label={last?'Done':'Next'} onPress={next}/></View></View></View> : <Image source={{uri:item.url}} resizeMode="contain" style={{position:'absolute',width:'100%',height:'100%'}}/>}
           <View style={{ position: "absolute", top: 14, left: 12, right: 12, gap: 10 }}>
             <View style={{ flexDirection: "row", gap: 4 }}>
               {group.items.map((s, n) => (
@@ -63,11 +60,11 @@ export function StoryViewer({ group, onClose, onNextGroup, onPrevGroup }: { grou
               </Pressable>
             </View>
           </View>
-          <View style={{ position: "absolute", top: 80, bottom: 90, left: 0, right: 0, flexDirection: "row" }}>
+          {!isVideo ? <View style={{ position: "absolute", top: 80, bottom: 90, left: 0, right: 0, flexDirection: "row" }}>
             <Pressable accessibilityLabel="Previous" onPress={prev} onPressIn={() => setPaused(true)} onPressOut={() => setPaused(false)} style={{ flex: 1 }} />
             <Pressable accessibilityLabel="Next" onPress={next} onPressIn={() => setPaused(true)} onPressOut={() => setPaused(false)} style={{ flex: 2 }} />
-          </View>
-          {item.caption ? (
+          </View> : null}
+          {item.caption && !isVideo ? (
             <View style={{ position: "absolute", left: 16, right: 16, bottom: 36 }}>
               <T style={{ color: "#fff", textAlign: "center" }}>{item.caption}</T>
             </View>

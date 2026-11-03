@@ -5,12 +5,12 @@
  * Run with: pnpm test:emulator against the local emulator stack
  * (firestore 8099 / auth 9099 / storage 9199, see firebase.json).
  */
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
-import { createBooking } from "../../functions/booking/createBooking.js";
+import { createBooking } from "../helpers/paid-advance-booking.js";
 import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { requestBookingReschedule } from "../../functions/booking/requestBookingReschedule.js";
 import { decideBookingRescheduleRequest } from "../../functions/booking/decideBookingRescheduleRequest.js";

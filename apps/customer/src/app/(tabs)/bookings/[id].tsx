@@ -1,3 +1,4 @@
+import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { useMinuteNow } from "@autodeck/ui/clock";
 import { membershipCoveredLabel, visitTiming, customerTimingLine } from "@autodeck/core";
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
@@ -13,8 +14,8 @@ import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
 import { getJobIdForBooking } from "../../../lib/job-service";
-import { initiatePayment } from "../../../lib/payment-service";
-import { checkoutSupported, payWithCheckout } from "../../../lib/razorpay-checkout";
+import { initiatePayment, requestAdvancePayment } from "../../../lib/payment-service";
+import { payOnline, payWithPaymentLink } from "../../../lib/razorpay-checkout";
 import { translate, useLang } from "../../../lib/i18n";
 import { listenToJobForBooking, listenToJobById, bookingFromJob } from "../../../lib/job-service";
 import { listenToPaymentForJob } from "../../../lib/payment-service";
@@ -247,12 +248,18 @@ export default function BookingDetailScreen() {
     setPayingNow(true);
     setActionError(null);
     try {
-      if (!checkoutSupported) throw new Error("no checkout");
+      if (booking.payMode === "studio" && booking.status === "PENDING" && Boolean(booking.holdExpiresAt)) {
+        const adv = await requestAdvancePayment(booking.id);
+        if (!adv.paymentUrl || adv.status === "manual_review") { setActionError("Your advance payment is being checked. Please try again later."); return; }
+        const out = await payWithPaymentLink(adv.paymentId, adv.paymentUrl);
+        setActionError(bookingPayOutcomeMessage(out));
+        return;
+      }
       const jobId = await getJobIdForBooking(booking.id, authB.claims.tenantId, authB.user.uid);
       if (!jobId) throw new Error("no job");
       const pay = await initiatePayment(jobId, "razorpay_payment_link");
-      const out = pay.paymentId ? await payWithCheckout(pay.paymentId, { name: "AutoDeck Studio", description: "Booking" }) : "failed";
-      if (out === "failed") setActionError("Payment failed, please retry.");
+      const out = pay.paymentId ? await payOnline({ paymentId: pay.paymentId, paymentUrl: pay.paymentUrl, name: "AutoDeck Studio", description: "Booking" }) : "failed";
+      setActionError(bookingPayOutcomeMessage(out));
     } catch {
       setActionError("We could not open the payment. Please retry, or call the studio.");
     } finally {
@@ -324,7 +331,7 @@ export default function BookingDetailScreen() {
           <CarThumb car={car ?? (booking.vehicleSnapshot ? { ...booking.vehicleSnapshot, photoUrl: null, category: booking.vehicleCategory } : undefined)} height={metrics.heroCompact + 60} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, ...({ backgroundImage: "linear-gradient(180deg, rgba(8,8,10,0.25) 0%, rgba(8,8,10,0) 35%, rgba(8,8,10,0.92) 100%)" } as object) }} />
           <View style={{ position: "absolute", left: metrics.cardPad, right: metrics.cardPad, bottom: metrics.cardPad, gap: 6 }}>
-            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && booking.payMode === "online") ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && booking.payMode === "online" ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
+            <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6 }}>{job && jobStage(job.status) && job.status !== "DELIVERED" && !(booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt))) ? <Chip label="Live" tone="accent" onDark /> : null}<Chip label={missed ? "Missed" : booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) ? "Pending payment" : BOOKING_STATUS_LABELS[booking.status] ?? booking.status} tone={missed ? "danger" : BOOKING_CHIP_TONE[booking.status] ?? "neutral"} onDark /></View>
             <T role="heading" numberOfLines={1} style={{ color: "#FFFFFF" }}>{svc?.name ?? "Your visit"}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>{displayDate} · {displayTime}</T>
             <T role="caption" style={{ color: "#E4E2DF" }}>Booking ID {bookingCode(booking.id)}</T>
@@ -333,7 +340,7 @@ export default function BookingDetailScreen() {
       }
     >
       {timingLine ? <Pane pad="gap"><T role="bodyStrong" tone="primary">{timingLine}</T></Pane> : null}
-      {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" ? (
+      {placed === "1" && booking.status === "PENDING" && booking.payMode !== "online" && !booking.holdExpiresAt ? (
         <Notice
           title="Request sent"
           body="The studio has your request and will confirm your slot. Status updates here. Nothing is charged now."
@@ -503,7 +510,7 @@ export default function BookingDetailScreen() {
       {waitingCancel ? <Notice title="Cancellation requested" body="Your slot is held while the online payment is checked. Not cancelled yet. Contact the studio for help." /> : null}
       {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
 
-      {!waitingCancel && booking.status === "PENDING" && booking.payMode === "online" && !walkIn ? (
+      {!waitingCancel && booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) && !walkIn ? (
         <Notice
           title="Payment pending"
           body={`${booking.holdExpiresAt ? `Held until ${new Date(booking.holdExpiresAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}. ` : ""}Your slot is held until the payment goes through.`}

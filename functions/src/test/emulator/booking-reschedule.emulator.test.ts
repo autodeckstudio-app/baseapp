@@ -7,13 +7,13 @@
  * via the `.run({ data, auth } as never)` entry point — same pattern as
  * membership.emulator.test.ts / walkin-financial.emulator.test.ts.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import type { StudioConfig, Service, Vehicle, Booking, ServiceJob } from "@autodeck/core";
 import { MAX_CUSTOMER_RESCHEDULES } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 
-import { createBooking } from "../../functions/booking/createBooking.js";
+import { createBooking } from "../helpers/paid-advance-booking.js";
 import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { advanceJobStatus } from "../../functions/job/advanceJobStatus.js";
