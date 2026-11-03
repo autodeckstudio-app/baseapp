@@ -59,6 +59,9 @@ export interface Payment {
   // Set when the provider may have created an order but the response was lost.
   // While true, checkout order creation fails closed until reconciled with the provider.
   orderAmbiguous?: boolean | null;
+  /** Aggregate owner-attested offline return. Provider refund fields stay unchanged.
+   * No per-payment allocation is implied. Blocks further provider refunds. */
+  externalReturnRecordId?: string | null;
   // Refund tracking (set when a refund is issued)
   razorpayRefundId: string | null;
   refundAmount: number | null; // paise; null until refund initiated

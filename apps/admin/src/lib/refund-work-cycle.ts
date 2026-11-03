@@ -15,7 +15,7 @@ export function mergeWorkIntoAccum(prev: Map<string, LegacyRefundClaim>, work: R
   const next = new Map(prev);
   for (const c of work.legacyClaims) next.set(c.paymentId, c);
   for (const t of work.claimTruth) {
-    if (t.state === "resolved" || t.state === "released") next.delete(t.paymentId);
+    if (t.state === "resolved" || t.state === "released" || t.state === "external_return") next.delete(t.paymentId);
     else {
       const row = next.get(t.paymentId);
       if (row) next.set(t.paymentId, { ...row, reconcileState: t.state, reconcileNote: t.note });

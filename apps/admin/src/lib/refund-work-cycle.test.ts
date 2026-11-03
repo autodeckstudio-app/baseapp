@@ -164,3 +164,8 @@ describe("dispose", () => {
     expect(ticks).toBe(before); // no notification after dispose
   });
 });
+
+it("external-return truth drops obsolete legacy claim without calling it released",()=>{
+ const result=mergeWorkIntoAccum(new Map([["external",claim("external")]]),work({claimTruth:[{paymentId:"external",state:"external_return",note:"Owner attested"}]}));
+ expect(result.has("external")).toBe(false);
+});

@@ -95,6 +95,9 @@ export const initiateRefund = onCall({ region: "asia-south1", secrets: ["RAZORPA
     if (freshPayment.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
+    if (freshPayment.externalReturnRecordId) {
+      throw new HttpsError("failed-precondition", "Owner-reported external return recorded; provider refunds are blocked for reconciliation.");
+    }
     if (freshPayment.status !== "completed") {
       throw new HttpsError(
         "failed-precondition",

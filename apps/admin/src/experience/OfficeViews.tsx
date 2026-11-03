@@ -158,7 +158,7 @@ export function PaymentsView(p: {
     { key: "who", head: "Customer", kind: "strong", width: "minmax(96px, 1.6fr)", cell: (x) => p.names[x.customerId] ?? "Customer" },
     { key: "inv", head: "Invoice", kind: "data", width: "minmax(84px, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Invoice") : "-") },
     { key: "how", head: "Method", width: "66px", cell: (x) => methodLabel(x.method) },
-    { key: "status", head: "Status", width: "88px", cell: (x) => <StatusBadge label={x.status} /> },
+    { key: "status", head: "Status", width: "160px", cell: (x) => <StatusBadge label={x.externalReturnRecordId ? "External return recorded" : x.status} /> },
     { key: "amt", head: "Amount", kind: "data", align: "end", width: "72px", cell: (x) => formatPaise(x.amount) },
     {
       key: "act",
@@ -181,7 +181,7 @@ export function PaymentsView(p: {
           ) : (
             <button type="button" className="ax-button" onClick={() => setAckId(x.id)}>Confirm received</button>
           ))}
-          {x.status === "completed" && (confirmId === x.id ? (
+          {x.status === "completed" && !x.externalReturnRecordId && (confirmId === x.id ? (
             <span className="ax-confirm-panel">
               <input placeholder="Reason for refund" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Refund reason" />
               <span className="ax-confirm-buttons">
@@ -216,6 +216,9 @@ export function PaymentsView(p: {
         <input className="ax-search" type="search" aria-label="Search payments" placeholder="Search customer, job or booking" value={p.search} onChange={(e) => p.onSearch(e.target.value)} />
       </Toolbar>
       {p.message && <p className="ax-status-msg">{p.message}</p>}
+      {p.payments.some((x) => x.externalReturnRecordId) && <div className="ax-panel" role="note" style={{ padding: 16, marginBottom: 12, color: "var(--ad-text-primary, #222)" }}>
+        Returned outside Razorpay (owner reported). Linked payments share one return record; no individual split is recorded. Provider capture and refund amounts are unchanged. Further provider refunds are blocked pending reconciliation.
+      </div>}
       <ListPane
         rows={rows}
         columns={cols}

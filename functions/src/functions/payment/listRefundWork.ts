@@ -109,10 +109,10 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
     fastComplete = false;
     const events = db.collection(COLLECTIONS.paymentEvents());
     const claimsRange = () => events.where("__name__", ">=", "refund_").where("__name__", "<", "refund`").orderBy("__name__");
-    const pushClaim = async (docId: string, d: { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string; outboxRequestId?: string }) => {
+    const pushClaim = async (docId: string, d: { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string; outboxRequestId?: string; kind?: string }) => {
       // Outbox-owned tombstones are managed by the refund-outbox lifecycle,
       // not legacy claims: never list them as refund work.
-      if (typeof d.outboxRequestId === "string") return;
+      if (d.kind === "external_return_hold" || typeof d.outboxRequestId === "string") return;
       if (d.reconcileState === "resolved") return;
       const paymentId = docId.slice("refund_".length);
       if (!paymentId || seenClaimPayments.has(paymentId)) return;
@@ -188,8 +188,8 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       lastSeen = page.docs[page.size - 1]!.id;
       afterId = lastSeen;
       for (const doc of page.docs) {
-        const d = doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string; outboxRequestId?: string };
-        if (typeof d.outboxRequestId === "string") continue; // outbox-owned tombstone, not a legacy claim
+        const d = doc.data() as { claimedAt?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string; outboxRequestId?: string; kind?: string };
+        if (d.kind === "external_return_hold" || typeof d.outboxRequestId === "string") continue; // outbox-owned tombstone, not a legacy claim
         if (typeof d.tenantId === "string") continue; // already indexed
         const paymentId = doc.id.slice("refund_".length);
         if (!paymentId) continue;
@@ -249,10 +249,10 @@ export const listRefundWork = onCall({ region: "asia-south1", enforceAppCheck: s
       if (payTenant === tenantId) claimTruth.push({ paymentId: pid, state: "released", note: null });
       continue;
     }
-    const cd = cSnap.data() as { reconcileState?: string; reconcileNote?: string; tenantId?: string };
+    const cd = cSnap.data() as { kind?: string; reconcileState?: string; reconcileNote?: string; tenantId?: string };
     const claimTenant = payTenant ?? (typeof cd.tenantId === "string" ? cd.tenantId : undefined);
     if (claimTenant !== tenantId) continue;
-    claimTruth.push({ paymentId: pid, state: cd.reconcileState ?? "retained", note: cd.reconcileNote ?? null });
+    claimTruth.push({ paymentId: pid, state: cd.kind === "external_return_hold" ? "external_return" : cd.reconcileState ?? "retained", note: cd.kind === "external_return_hold" ? "Owner-reported external return; provider refund unchanged." : cd.reconcileNote ?? null });
   }
   return {
     requests: requests.slice(0, 50), reviewPayments: reviewPayments.slice(0, 50),

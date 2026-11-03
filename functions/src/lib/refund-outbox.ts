@@ -127,6 +127,7 @@ export async function planReserveInTx(
   if (i.expectedJobId !== undefined && payment.jobId !== i.expectedJobId) {
     return { ok: false, code: "invalid", reason: `payment ${payment.id} is no longer linked to job ${i.expectedJobId} (now ${payment.jobId ?? "none"})` };
   }
+  if (payment.externalReturnRecordId) return { ok: false, code: "conflict", reason: "Owner-reported external return recorded; provider refunds are blocked for reconciliation." };
   const refundable = refundablePaise(payment);
   if (amount > refundable) {
     return { ok: false, code: "invalid", reason: `refund of ${amount} exceeds the refundable ${refundable} on payment ${i.payment.id}` };

@@ -405,12 +405,12 @@ export default function BookingConfirmScreen() {
 
       <View style={{ gap: space.line }}>
         <Kicker>Pickup and drop (optional)</Kicker>
-        <Pane pad="gap">
+        <Pane pad="gap" style={{ gap: space.gap }}>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
             {PICKUP_KINDS.map((k) => <Button key={k.value} label={k.label} kind={pickupKind === k.value ? "primary" : "quiet"} onPress={() => choosePickupKind(k.value)} style={{ flexGrow: 1 }} />)}
           </View>
           {pickupKind ? (
-            <View style={{ gap: space.line, marginTop: space.line }}>
+            <View style={{ gap: space.line }}>
               <T role="caption" tone="secondary">{PICKUP_POLICY}</T>
               <Field
                 label="Address"
@@ -439,7 +439,7 @@ export default function BookingConfirmScreen() {
               ) : null}
             </View>
           ) : (
-            <T role="caption" tone="secondary">Want us to collect or return your car? Choose one above and it goes with your booking.</T>
+            <T role="caption" tone="secondary">Choose pickup, drop-off or both to add it to your booking.</T>
           )}
         </Pane>
       </View>

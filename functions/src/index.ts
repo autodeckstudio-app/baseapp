@@ -207,3 +207,5 @@ export { expiryRemindersScheduled } from "./functions/notification/expiryReminde
 export { bookingRemindersScheduled } from "./functions/notification/bookingRemindersScheduled.js";
 
 export { settleMembershipCoveredJob } from "./functions/job/settleMembershipCoveredJob.js";
+
+export { recordExternalReturn } from "./functions/payment/recordExternalReturn.js";
