@@ -158,7 +158,7 @@ export function PaymentsView(p: {
     { key: "who", head: "Customer", kind: "strong", width: "minmax(96px, 1.6fr)", cell: (x) => p.names[x.customerId] ?? "Customer" },
     { key: "inv", head: "Invoice", kind: "data", width: "minmax(84px, 1fr)", cell: (x) => (x.invoiceId ? (p.invoiceNos?.[x.invoiceId] || "Invoice") : "-") },
     { key: "how", head: "Method", width: "66px", cell: (x) => methodLabel(x.method) },
-    { key: "status", head: "Status", width: "160px", cell: (x) => <StatusBadge label={x.externalReturnRecordId ? "External return recorded" : x.status} /> },
+    { key: "status", head: "Status", width: "104px", cell: (x) => <StatusBadge label={x.externalReturnRecordId ? "External return recorded" : x.status} /> },
     { key: "amt", head: "Amount", kind: "data", align: "end", width: "72px", cell: (x) => formatPaise(x.amount) },
     {
       key: "act",
