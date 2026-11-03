@@ -45,7 +45,7 @@ export function describePickupQuote(q: PickupQuote): string {
     return `${label}: about ${l.km} km by road - first 3 km free, ${extraText} extra at Rs 25/km - ${rupeesFromPaise(l.feePaise)}.`;
   };
   const lines = q.legs.map(line).join(" ");
-  return q.legs.length > 1 ? `${lines}Total ${rupeesFromPaise(q.feePaise)}.` : lines;
+  return q.legs.length > 1 ? `${lines} Total ${rupeesFromPaise(q.feePaise)}.` : lines;
 }
 
 /** Server-checked ROAD distance + stored quote. Throws when the distance cannot be checked - the caller must
