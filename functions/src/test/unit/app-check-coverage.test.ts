@@ -157,6 +157,7 @@ const ENFORCED = [
   "payment/createCheckoutOrder.ts",
   "payment/initiatePayment.ts",
   "payment/initiateRefund.ts",
+  "payment/recordExternalReturn.ts",
   "payment/listRefundWork.ts",
   "payment/processRefundOutbox.ts",
   "payment/reconcileRefundClaims.ts",
