@@ -36,7 +36,15 @@ function uid(prefix: string): string {
   return `${prefix}-${Date.now()}-${seq}`;
 }
 
-let dayOffset = 6;
+// Bounded date budget: this file executes nextDate() 25 times per run, so
+// the start value must keep start+25 within the createBooking 30-day advance
+// cap under ANY suite start time (the comparison uses the real clock's
+// time-of-day, and dates are booked at 10:00 IST = 04:30 UTC). start=6 let
+// the last test reach exactly +30 days and fail whenever the suite ran the
+// file between 00:00 and 04:30 UTC. With start=2 the offsets run 3..27:
+// every booking stays at least 24h out (PREMIUM_REQUEST_CUTOFF_HOURS) and at
+// least 3 days short of the advance cap, independent of the wall clock.
+let dayOffset = 2;
 function nextDate(): string {
   dayOffset += 1;
   return new Date(Date.now() + dayOffset * 86400000).toISOString().slice(0, 10);
