@@ -15,6 +15,10 @@ export const COLLECTIONS = {
   deletedVehicles: () => "deletedVehicles",
   bookings: () => "bookings",
   pickupRequests: () => "pickupRequests",
+  // Server-only pickup fee quotes (getPickupQuote): default-deny rules, never read by clients.
+  pickupQuotes: () => "pickupQuotes",
+  // Server-only monthly routing-call counters (kill-switch). Default-deny rules.
+  routingUsage: () => "routingUsage",
   accountDeletionRequests: () => "accountDeletionRequests",
   jobs: () => "jobs",
   approvals: () => "approvals",

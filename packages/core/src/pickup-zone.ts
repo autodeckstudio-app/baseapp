@@ -1,41 +1,37 @@
-/** Pickup and drop, one rule for every service (wash, garage, club). Two flat fees per leg, by straight-line distance from the studio:
- *  under 3 km Rs 100, 3 km and above Rs 150. A leg is one trip, so "both" is two legs. No per km charge, no free tier, no distance limit.
- *  Values live here only: the server and the apps read them, never typed twice. */
-export const PICKUP_NEAR_KM = 3;
-/** Fee per leg under PICKUP_NEAR_KM, in paise: Rs 100. */
-export const PICKUP_NEAR_FEE_PAISE = 10_000;
-/** Fee per leg at PICKUP_NEAR_KM and beyond, in paise: Rs 150. Exactly 3.0 km is this band. */
-export const PICKUP_FAR_FEE_PAISE = 15_000;
-
+/** Pickup and drop, one rule for every service (wash, garage, club), priced on the ROAD distance between the
+ *  studio and the customer's spot, per selected leg: the first 3 road km of each leg are free, then Rs 25 per
+ *  extra road km, computed from the actual metres the routing service returned - nearest paise, never rounded
+ *  up to a whole km. "both" is two legs, each measured in the direction actually driven (pickup: the customer's
+ *  spot to the studio; drop: the studio to the customer's spot) and each with its own free 3 km.
+ *  Distances only ever arrive here as server-fetched metres; the client never supplies a distance.
+ *  (Rule accepted by the studio owner on 2 Nov 2026; Google Routes spend approved by Meet on 3 Nov 2026 -
+ *  see the channel record, this comment is only a pointer.)
+ *  The pre-launch flat Rs 100/Rs 150 haversine tier is RETIRED: it never shipped to a durable client (the app
+ *  is web-only, no native builds), and the server rejects pre-quote requests so a stale open tab is told to
+ *  refresh and re-check the distance instead of being silently priced on either list. */
 export type PickupKind = "pickup" | "drop" | "both";
-
-/** Fee for ONE leg at this distance, in paise. */
-export function pickupLegFeePaise(km: number): number {
-  return km < PICKUP_NEAR_KM ? PICKUP_NEAR_FEE_PAISE : PICKUP_FAR_FEE_PAISE;
-}
-/** Fee for a request at this distance: per leg, so "both" is twice one leg. */
-export function pickupFeePaise(km: number, kind: PickupKind): number {
-  return pickupLegFeePaise(km) * (kind === "both" ? 2 : 1);
-}
-/** Short text for the catalogue tile. Numbers come from the constants above. */
-export const PICKUP_TILE_TEXT = `From Rs ${PICKUP_NEAR_FEE_PAISE / 100}`;
 
 /** The studio front door, geocoded from its address in studio-info (Sunbeam Complex, Ellisbridge). */
 export const STUDIO_COORDS = { lat: 23.0192928, lng: 72.5614457 } as const;
 
-/** Straight-line distance in km. Roads are longer, so a road trip can be a little more than this. */
-export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6371, rad = (d: number) => (d * Math.PI) / 180;
-  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
+/** Free road distance per leg, in metres: 3 km. */
+export const PICKUP_FREE_ROAD_METERS = 3_000;
+/** Rs 25 per extra road km, in paise per km. */
+export const PICKUP_ROAD_RATE_PER_KM_PAISE = 2_500;
+
+/** Fee for ONE leg at this road distance in metres, in paise, to the nearest paise (2.5 paise per extra metre). */
+export function pickupLegFeePaiseForRoadMeters(roadMeters: number): number {
+  return Math.round(Math.max(roadMeters - PICKUP_FREE_ROAD_METERS, 0) * (PICKUP_ROAD_RATE_PER_KM_PAISE / 1000));
+}
+/** Fee for a request from its per-leg road distances in metres: one entry per selected leg, each leg priced
+ *  independently (routes can differ by direction, so "both" is NOT one route doubled). */
+export function pickupLegsFeePaise(legMeters: readonly number[]): number {
+  return legMeters.reduce((sum, m) => sum + pickupLegFeePaiseForRoadMeters(m), 0);
+}
+/** Display distance, cut down to 0.1 km (never rounded up) - display only; the fee always uses exact metres. */
+export function pickupRoadKmForDisplay(roadMeters: number): number {
+  return Math.floor(roadMeters / 100 + 1e-9) / 10;
 }
 
-export type PickupTier = "near" | "far";
-
-/** The distance is cut down to 0.1 km (never rounded up) and the fee is read from that value, so what the customer sees is what is charged
- *  and the 3 km line is the real line: 2.96 km shows 2.9 km and is Rs 100, 3.0 km is Rs 150. */
-export function pickupZone(point: { lat: number; lng: number }): { km: number; tier: PickupTier; feePerLegPaise: number } {
-  const km = Math.floor(haversineKm(STUDIO_COORDS, point) * 10 + 1e-9) / 10;
-  return { km, tier: km < PICKUP_NEAR_KM ? "near" : "far", feePerLegPaise: pickupLegFeePaise(km) };
-}
+/** Short text for the catalogue tile. Reflects the road-distance model (free first 3 road km per leg). */
+export const PICKUP_TILE_TEXT = `Free up to ${PICKUP_FREE_ROAD_METERS / 1000} km`;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { cancellationTerms, pickupZone, pickupFeePaise, STUDIO_COORDS } from "@autodeck/core";
+import { cancellationTerms } from "@autodeck/core";
 import { planRefund, readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
 import { fakeFirestore } from "./fake-firestore.js";
 
@@ -40,13 +40,6 @@ describe("policy rules", () => {
     expect(small.feePaise).toBe(0);
     const mixed = cancellationTerms({ categories: ["washing", "ppf"], totalPaise: 100000, scheduledAtMs: at, nowMs: at - 10 * H });
     expect(mixed.feePaise).toBe(20000);
-  });
-  it("pickup tier uses the raw distance: 2.96 km is Rs 100 and shows 2.9 km, 3.0 km is Rs 150", () => {
-    const z = (km: number) => pickupZone({ lat: STUDIO_COORDS.lat + km / 111.19, lng: STUDIO_COORDS.lng });
-    expect(z(2.96).feePerLegPaise).toBe(10000);
-    expect(z(2.96).km).toBeLessThan(3);
-    expect(z(3.02).feePerLegPaise).toBe(15000);
-    expect(pickupFeePaise(z(2.96).km, "both")).toBe(20000);
   });
 });
 

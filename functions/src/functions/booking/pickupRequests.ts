@@ -4,7 +4,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
 import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
-import { pickupZone, pickupFeePaise, type Booking, type Invoice, type ServiceJob, type Membership } from "@autodeck/core";
+import { pickupRoadKmForDisplay, type Booking, type Invoice, type ServiceJob, type Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -26,9 +26,14 @@ const requestSchema = z.object({
   requestedPickupTime: z.string().trim().max(100).optional(),
   requestedDropTime: z.string().trim().max(100).optional(),
   note: z.string().trim().max(300).optional(),
-  // Optional device location. When sent, the server checks the free zone itself. Without it the studio checks by phone.
+  // Optional device location. Current clients send quoteId from getPickupQuote and the stored road-distance
+  // quote is authoritative. Bare lat/lng WITHOUT a quote can only come from a client loaded before the road
+  // pricing deploy (an open tab; the app is web-only, no native builds) and is REJECTED with a refresh/re-check
+  // instruction - never silently priced on the retired flat tier or on an unseen road fee.
+  // Without either, the studio checks by phone.
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+  quoteId: z.string().min(1).max(80).optional(),
 }).strict().refine((d) => (d.lat === undefined) === (d.lng === undefined), "Send both latitude and longitude.");
 
 const updateSchema = z.object({
@@ -85,14 +90,35 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
   const data = validate(requestSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "pickup.request");
   let distanceKm: number | null = null;
+  let roadMeters: number | null = null;
   // The fee is decided here from the distance. null = no location sent, so the studio confirms the distance and fee by phone.
   let feePaise: number | null = null;
-  if (data.lat !== undefined && data.lng !== undefined) {
-    const zone = pickupZone({ lat: data.lat, lng: data.lng });
-    distanceKm = zone.km;
-    feePaise = pickupFeePaise(zone.km, data.kind);
-  }
   const db = getFirestore();
+  let quoteRef: FirebaseFirestore.DocumentReference | null = null;
+  if (data.quoteId) {
+    // Stored server-side quote is the single source of truth: charge EXACTLY what the customer was shown.
+    quoteRef = db.collection(COLLECTIONS.pickupQuotes()).doc(data.quoteId);
+    const qSnap = await quoteRef.get();
+    if (!qSnap.exists) throw new HttpsError("not-found", "That pickup quote is gone - check the distance again.");
+    const q = qSnap.data() as { tenantId: string; customerId: string; kind: string; lat: number; lng: number; roadMeters: number; feePaise: number; expiresAt: string; consumedAt: string | null };
+    assertTenant(user, q.tenantId);
+    if (q.customerId !== user.uid) throw new HttpsError("permission-denied", "That is not your pickup quote.");
+    if (q.kind !== data.kind) throw new HttpsError("invalid-argument", "That quote is for a different pickup selection - check the distance again.");
+    if (q.consumedAt) throw new HttpsError("failed-precondition", "That pickup quote was already used - check the distance again.");
+    if (Date.parse(q.expiresAt) <= Date.now()) throw new HttpsError("failed-precondition", "That pickup quote expired - check the distance again.");
+    if (data.lat !== undefined && data.lng !== undefined) {
+      // The pin may not drift from the quoted spot (~500 m tolerance): the customer approved THIS place's fee.
+      if (Math.abs(data.lat - q.lat) > 0.005 || Math.abs(data.lng - q.lng) > 0.005) {
+        throw new HttpsError("invalid-argument", "The location changed since the price was shown - check the distance again.");
+      }
+    }
+    roadMeters = q.roadMeters;
+    distanceKm = pickupRoadKmForDisplay(q.roadMeters);
+    feePaise = q.feePaise;
+  } else if (data.lat !== undefined && data.lng !== undefined) {
+    // Stale pre-quote client (open tab from before this deploy). Do not price silently on either list.
+    throw new HttpsError("failed-precondition", "Prices changed - refresh the page and check the distance again.");
+  }
   const bookingSnap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
   if (!bookingSnap.exists) throw new HttpsError("not-found", "Booking not found.");
   const booking = bookingSnap.data() as Booking;
@@ -116,6 +142,8 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
     requestedDropTime: data.requestedDropTime ?? "",
     note: data.note ?? "",
     distanceKm,
+    roadMeters,
+    quoteId: data.quoteId ?? null,
     feePaise,
     status: "REQUESTED" as const,
     staffNote: "",
@@ -128,6 +156,14 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
     const existing = await tx.get(ref);
     if (existing.exists && (existing.data() as { status: string }).status !== "DECLINED") {
       throw new HttpsError("already-exists", "A pickup request is already open for this booking.");
+    }
+    if (quoteRef) {
+      const qNow = await tx.get(quoteRef);
+      const qd = qNow.data() as { consumedAt?: string | null } | undefined;
+      if (!qNow.exists || qd?.consumedAt) {
+        throw new HttpsError("failed-precondition", "That pickup quote was already used - check the distance again.");
+      }
+      tx.update(quoteRef, { consumedAt: now });
     }
     tx.set(ref, doc);
     writeAuditLog(tx, { action: "pickup.requested", entityType: "PickupRequest", entityId: ref.id, user, studioId: booking.studioId, after: { kind: data.kind } });
@@ -186,10 +222,10 @@ export const updatePickupRequest = onCall({ region: "asia-south1" , enforceAppCh
       // state silently bills Rs 0 (legFees(null) -> {0,0}) even though the
       // real fee is unknown - the distance tier (Rs 100/leg under 3 km,
       // Rs 150/leg beyond, per packages/core pickup-zone) was never
-      // determined. An explicit fee of 0 can only come from an admin
-      // deliberately pricing the request free (pin-computed fees are always
-      // > 0), and member free pickups only ever apply to a known fee > 0,
-      // so neither is affected. The admin prices the request first
+      // determined. An explicit fee of 0 comes from an admin
+      // deliberately pricing the request free, or from a road-distance quote inside the free first 3 km
+      // per leg (customer-visible free, never unpriced), and member free pickups only ever apply to a
+      // known fee > 0, so none of those is affected. The admin prices the request first
       // (feePaise is accepted only while status is REQUESTED), then staff
       // confirm.
       if (curFeePaise === null || curFeePaise === undefined) {

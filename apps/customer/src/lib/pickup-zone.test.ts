@@ -3,13 +3,18 @@ import { readFileSync } from "node:fs";
 const card = readFileSync(`${__dirname}/../ui/PickupCard.tsx`, "utf8");
 const confirm = readFileSync(`${__dirname}/../app/(tabs)/book/confirm.tsx`, "utf8");
 const policy = readFileSync(`${__dirname}/pickup-policy.ts`, "utf8");
-describe("pickup zone and fee", () => {
-  it("the booking-flow section takes the zone and fee from the shared core, with no fee typed in the screen", () => {
-    expect(confirm).toContain("pickupZone(pickupWhere)");
-    expect(confirm).toContain("pickupFeeText(pickupZoneInfo.km, pickupKind)");
-    expect(policy).toContain("pickupFeePaise");
-    expect(policy).toContain("PICKUP_FAR_FEE_PAISE");
+describe("pickup road-distance quote flow", () => {
+  it("the booking flow prices only through the server quote, with no fee or distance typed in the screen", () => {
+    expect(confirm).toContain("getPickupQuote({ kind: pickupKind");
+    expect(confirm).toContain("describePickupQuote(pickupQuoteInfo)");
+    expect(confirm).toContain("quoteId: pickupQuoteInfo.quoteId");
+    expect(policy).toContain("PICKUP_FREE_ROAD_METERS");
+    expect(policy).toContain("PICKUP_ROAD_RATE_PER_KM_PAISE");
     expect(confirm).not.toMatch(/Rs\s?\d/);
+  });
+  it("never estimates on routing failure: honest copy, no charge path", () => {
+    expect(confirm).toContain("could not check the road distance");
+    expect(confirm).not.toContain("pickupZone(pickupWhere)");
   });
   it("the status card shares the same policy wording and types no fee itself", () => {
     expect(card).toContain("PICKUP_POLICY");

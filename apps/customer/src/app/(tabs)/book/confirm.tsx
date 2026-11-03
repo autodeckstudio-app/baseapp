@@ -24,10 +24,9 @@ import { memberSaving } from "../../../lib/member-save";
 import { Sheet, SheetTotal, SheetLine, SheetDivider } from "../../../ui/Sheet";
 import { Button, Field, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { REFERRAL_LIVE, normaliseReferralCode, referralCodeToSend } from "../../../lib/referral";
-import { getDeviceLocation, requestPickupDrop } from "../../../lib/pickup-service";
+import { describePickupQuote, getDeviceLocation, getPickupQuote, requestPickupDrop, type PickupQuote } from "../../../lib/pickup-service";
 import { pickupDayHoursFor, pickupSlotOptions, validPickupSlot, type PickupDayHours } from "../../../lib/pickup-slots";
-import { PICKUP_POLICY, pickupFeeText } from "../../../lib/pickup-policy";
-import { pickupZone } from "@autodeck/core";
+import { PICKUP_POLICY } from "../../../lib/pickup-policy";
 import { SelectField } from "../../../ui/inputs";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -79,6 +78,10 @@ export default function BookingConfirmScreen() {
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupSlot, setPickupSlot] = useState("");
   const [pickupWhere, setPickupWhere] = useState<{ lat: number; lng: number } | null>(null);
+  // The server-checked road-distance quote for pickupWhere+pickupKind. Its stored fee is exactly what the
+  // customer is charged; when it cannot be fetched there is no estimate - only the failure copy below.
+  const [pickupQuote, setPickupQuote] = useState<PickupQuote | null>(null);
+  const [pickupQuoteError, setPickupQuoteError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   // Pay online holds the slot for 15 minutes. The booking exists (pending) while the customer pays or retries.
   const [held, setHeld] = useState<{ bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean } | null>(null);
@@ -167,23 +170,42 @@ export default function BookingConfirmScreen() {
   // A stale choice can never survive: the shown and sent preference is always
   // one of the current options, or nothing.
   const chosenSlot = validPickupSlot(pickupSlot, pickupSlots);
-  const pickupZoneInfo = pickupWhere ? pickupZone(pickupWhere) : null;
+  const pickupQuoteInfo = pickupWhere && pickupQuote && pickupQuote.kind === pickupKind ? pickupQuote : null;
 
   function choosePickupKind(k: "pickup" | "drop" | "both") {
+    setPickupQuote(null);
+    setPickupQuoteError(null);
+    setPickupWhere(null);
     if (pickupKind === k) {
       setPickupKind(null);
       setPickupAddress("");
       setPickupSlot("");
-      setPickupWhere(null);
     } else {
       setPickupKind(k);
     }
   }
 
   async function locatePickup() {
+    if (!pickupKind) return;
     setLocating(true);
+    setPickupQuote(null);
+    setPickupQuoteError(null);
     const p = await getDeviceLocation();
-    setPickupWhere(p);
+    if (!p) {
+      setPickupWhere(null);
+      setLocating(false);
+      return;
+    }
+    try {
+      const q = await getPickupQuote({ kind: pickupKind, lat: p.lat, lng: p.lng });
+      setPickupWhere(p);
+      setPickupQuote(q);
+    } catch {
+      // Approved failure behaviour: no estimate is ever shown or charged. The customer can retry or continue
+      // without pickup; no other fallback is offered from this failure.
+      setPickupWhere(null);
+      setPickupQuoteError("We could not check the road distance right now. You can try again, or continue without pickup.");
+    }
     setLocating(false);
   }
 
@@ -203,7 +225,7 @@ export default function BookingConfirmScreen() {
         bookingId,
         kind: pickupKind,
         address,
-        ...(pickupWhere ? { lat: pickupWhere.lat, lng: pickupWhere.lng } : {}),
+        ...(pickupWhere && pickupQuoteInfo ? { lat: pickupWhere.lat, lng: pickupWhere.lng, quoteId: pickupQuoteInfo.quoteId } : {}),
         ...(pickupKind !== "drop" && chosenSlot ? { requestedPickupTime: chosenSlot } : {}),
       });
       return true;
@@ -399,7 +421,8 @@ export default function BookingConfirmScreen() {
                 error={pickupAddress.trim().length > 0 && pickupAddress.trim().length < 8 ? "Enter the full address" : undefined}
               />
               <Button label={pickupWhere ? "Location added" : "Use my location to check distance"} kind="quiet" busy={locating} onPress={() => void locatePickup()} />
-              {pickupZoneInfo ? <T role="caption" tone="secondary">{`About ${pickupZoneInfo.km} km from the studio. ${pickupFeeText(pickupZoneInfo.km, pickupKind)} for ${pickupKind === "both" ? "pickup and drop-off" : pickupKind === "pickup" ? "pickup" : "drop-off"}.`}</T> : null}
+              {pickupQuoteInfo ? <T role="caption" tone="secondary">{describePickupQuote(pickupQuoteInfo)}</T> : null}
+              {pickupQuoteError ? <T role="caption" tone="secondary">{pickupQuoteError}</T> : null}
               {pickupKind !== "drop" && studioHours.status === "loading" ? (
                 <T role="caption" tone="secondary">Checking the studio's hours for pickup times...</T>
               ) : null}

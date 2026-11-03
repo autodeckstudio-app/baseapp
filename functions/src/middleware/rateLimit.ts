@@ -94,6 +94,7 @@ export type RateLimitAction =
   | "account.deletion"
   | "account.deletion.cancel"
   | "pickup.request"
+  | "pickup.quote"
   | "gift.create"
   | "gift.redeem"
   | "gift.read"
@@ -225,6 +226,7 @@ const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
   "account.deletion": { limit: 5, windowMs: 60_000 },
   "account.deletion.cancel": { limit: 5, windowMs: 60_000 },
   "pickup.request": { limit: 10, windowMs: 60_000 },
+  "pickup.quote": { limit: 20, windowMs: 60_000 },
   "gift.create": { limit: 5, windowMs: 60_000 },
   "gift.redeem": { limit: 10, windowMs: 60_000 },
   "gift.read": { limit: 60, windowMs: 60_000 },

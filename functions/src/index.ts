@@ -198,6 +198,7 @@ export { publicListingPhoto } from "./functions/carsale/listing-photo.js";
 export { registerPushToken } from "./functions/push/registerPushToken.js";
 export { onNotificationPush } from "./functions/push/onNotificationPush.js";
 export { requestPickupDrop, updatePickupRequest } from "./functions/booking/pickupRequests.js";
+export { getPickupQuote } from "./functions/booking/pickupQuote.js";
 export { requestAccountDeletion } from "./functions/auth/requestAccountDeletion.js";
 
 export { standbyBooking } from "./functions/job/standbyBooking.js";

@@ -77,11 +77,14 @@ describe("round 8 fixes 3-4: pickup/drop is chosen while booking and sent with C
   });
   it("fee and distance wording has one shared source", () => {
     const policy = read("src/lib/pickup-policy.ts");
-    expect(policy).toContain("PICKUP_NEAR_KM");
+    expect(policy).toContain("PICKUP_FREE_ROAD_METERS");
     expect(confirm).toContain("PICKUP_POLICY");
     expect(card).toContain("PICKUP_POLICY");
   });
-  it("pickup stays optional and reversible: deselecting clears kind, address, slot and location", () => {
-    expect(confirm).toContain('setPickupKind(null);\n      setPickupAddress("");\n      setPickupSlot("");\n      setPickupWhere(null);');
+  it("pickup stays optional and reversible: deselecting clears kind, address, slot, location and quote", () => {
+    const fn = confirm.slice(confirm.indexOf("function choosePickupKind"));
+    for (const clear of ['setPickupKind(null);', 'setPickupAddress("");', 'setPickupSlot("");', 'setPickupWhere(null);', 'setPickupQuote(null);', 'setPickupQuoteError(null);']) {
+      expect(fn).toContain(clear);
+    }
   });
 });

@@ -81,6 +81,7 @@ const ENFORCED = [
   "booking/getServiceReviews.ts",
   "booking/noShowReview.ts",
   "booking/pickupRequests.ts",
+  "booking/pickupQuote.ts",
   "booking/purgeTestBookings.ts",
   "booking/decideBookingRescheduleRequest.ts",
   "booking/requestBookingReschedule.ts",
