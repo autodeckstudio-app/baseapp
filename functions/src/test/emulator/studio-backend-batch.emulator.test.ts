@@ -10,7 +10,7 @@
  *
  * Run with: pnpm test:emulator (requires Firestore Emulator at localhost:8080)
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { TEST_PROJECT_ID } from "../emulator-setup";
@@ -29,6 +29,7 @@ import { createBooking } from "../../functions/booking/createBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
 import { mergeFloorJobs, closedOnDate } from "@autodeck/core";
 import { requestPickupDrop, updatePickupRequest } from "../../functions/booking/pickupRequests.js";
+import { getPickupQuote } from "../../functions/booking/pickupQuote.js";
 import { startInspection } from "../../functions/inspection/startInspection.js";
 import { updateInspection } from "../../functions/inspection/updateInspection.js";
 import { finalizeInspection } from "../../functions/inspection/finalizeInspection.js";
@@ -262,25 +263,38 @@ describe("updatePickupRequest — unpriced (no-pin) requests cannot be confirmed
     expect(confirmed.status).toBe("CONFIRMED");
   });
 
-  it("a pin-priced request (fee computed at request time) confirms without admin involvement", async () => {
+  it("a server-quoted pin request (fee fixed by the stored quote) confirms without admin involvement", async () => {
+    process.env.GOOGLE_ROUTES_API_KEY = "test-routes-key";
+    // 8,000 m both directions: pickup leg fee = (8 - 3) km x Rs 25 = Rs 125, fixed in the stored quote.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ routes: [{ distanceMeters: 8000 }] }), { status: 200 })),
+    );
     const { booking, customerId } = await freshJob(service);
+    const pin = { lat: 23.03, lng: 72.57 };
+    const quote = (await getPickupQuote.run({
+      data: { kind: "pickup", ...pin },
+      auth: customerAuth(customerId),
+    } as never)) as { quoteId: string; feePaise: number };
+    expect(quote.feePaise).toBe(12_500);
     await requestPickupDrop.run({
       data: {
         bookingId: booking.id,
         kind: "pickup",
         address: "12, Test Society, Ahmedabad 380006",
-        lat: 23.03, // ~1.2 km from the studio door
-        lng: 72.57,
+        ...pin,
+        quoteId: quote.quoteId,
       },
       auth: customerAuth(customerId),
     } as never);
     const snap = await db.collection(COLLECTIONS.pickupRequests()).doc(booking.id).get();
-    expect(snap.data()?.feePaise).toBeGreaterThan(0);
+    expect(snap.data()?.feePaise).toBe(12_500);
     const confirmed = (await updatePickupRequest.run({
       data: { requestId: booking.id, status: "CONFIRMED", agreedPickupAt: `${nextDate()} 10:30` },
       auth: studioAuth(uid("staff")),
     } as never)) as { status: string };
     expect(confirmed.status).toBe("CONFIRMED");
+    vi.unstubAllGlobals();
   });
 });
 
