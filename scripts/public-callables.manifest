@@ -13,3 +13,8 @@ removemyvehicleimage
 removemylistingphoto
 replacemylistingphoto
 recordwebvital
+# Incident 2026-11-03: getPickupQuote first-deployed without the binding
+# (run-level 403); requestPickupDrop is the sibling public callable and is
+# asserted here so the checker covers the whole pickup/drop ingress.
+getpickupquote
+requestpickupdrop

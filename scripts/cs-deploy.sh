@@ -16,4 +16,9 @@ sed -i '/workspace:\*/d' functions/package.json
 (cd functions && npm install --no-audit --no-fund --silent)
 firebase deploy --only firestore:rules,storage,functions --project autodeck-studio --non-interactive
 git checkout -- functions/package.json
+# Post-deploy invoker guardrail (read-only, fail-closed; grants nothing):
+# every reviewed public callable in scripts/public-callables.manifest must
+# still have roles/run.invoker on allUsers. A missing binding fails the
+# feature at ingress while deploy output says success (2026-11-01, 2026-11-03).
+scripts/verify-callable-invoker.sh
 echo FINISHED
