@@ -1,3 +1,4 @@
+import {hasReleasedBay} from "@autodeck/core";
 import { customerHasPriority } from "../../lib/priority-access.js";
 import { heldStartTimes, isPriorityHeld } from "../../lib/priority-hold.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -17,6 +18,7 @@ import {
 } from "../../lib/availability.js";
 import { addDays } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 const MAX_RETURNED_SLOTS = 60;
 
@@ -91,7 +93,7 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsSnap.docs) {
         const job = doc.data() as ServiceJob;
-        if (job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED") continue;
         intervals.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
       }
       occupiedByBay.set(bay.id, intervals);
@@ -114,7 +116,8 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
   let visible = slots;
   if (user.claims.role === "customer") {
     const now = new Date();
-    const mine = await customerHasPriority(db, user.uid, now, config.timezone);
+    const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+    const mine = await customerHasPriority(db, customerDocId, now, config.timezone);
     if (!mine) {
       const heldByDate = new Map<string, string[]>();
       visible = slots.filter((s) => {

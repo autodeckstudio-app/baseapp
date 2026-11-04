@@ -1,3 +1,4 @@
+import {hasReleasedBay} from "@autodeck/core";
 // Shared transactional reschedule move (basket item 6, stage 2).
 // Extracted from rescheduleBooking so the premium approve path moves the
 // booking with the SAME capacity, freshness and money semantics - not a
@@ -80,7 +81,7 @@ export async function runRescheduleMove(
         const j = doc.data() as ServiceJob;
         // Exclude the current booking's own job from conflict check
         if (j.bookingId === params.bookingId) continue;
-        if (j.status === "CANCELLED" || j.status === "DELIVERED") continue;
+        if (hasReleasedBay(j)||j.status === "CANCELLED" || j.status === "DELIVERED") continue;
         intervals.push(buildOccupiedInterval(j.scheduledAt, j.estimatedEndAt));
       }
       bayOccupancy.set(bay.id, intervals);

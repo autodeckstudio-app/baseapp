@@ -211,3 +211,5 @@ export { settleMembershipCoveredJob } from "./functions/job/settleMembershipCove
 export { recordExternalReturn } from "./functions/payment/recordExternalReturn.js";
 
 export { requestGiftPaymentLink } from "./functions/payment/requestGiftPaymentLink.js";
+
+export {releaseCompletedBay} from "./functions/job/releaseCompletedBay.js";

@@ -1,3 +1,4 @@
+import {hasReleasedBay} from "@autodeck/core";
 import { customerServiceName } from "@autodeck/core";
 import { bookingStartState } from "../../lib/booking-hold.js";
 import { advancePaymentEnabled } from "../../lib/advance-payment.js";
@@ -35,6 +36,7 @@ import { findGiftByHash, giftBlockReason } from "../../lib/gift-store.js";
 import { addExtrasToBreakdown, extrasProblem, priceExtras, totalMinutes, type BookingLine } from "../../lib/booking-lines.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -42,6 +44,12 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   await enforceRateLimit(subjectFrom(user), "booking.create");
 
   const db = getFirestore();
+  // Self-service booking is role-agnostic: studio/admin book their OWN cars here too.
+  // Customers must have a profile; other roles fall back to legacy uid-keyed ownership when they have none.
+  const resolvedDocId = user.claims.role === "customer"
+    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
+    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const customerDocId = resolvedDocId ?? user.uid;
   const now = new Date();
 
   // Validate booking is not too far in advance
@@ -78,7 +86,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   if (config.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if (vehicle.ownerId !== user.uid) {
+  if (vehicle.ownerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Vehicle does not belong to this customer.");
   }
   if (!service.active) {
@@ -129,7 +137,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     if (membership.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
-    if (membership.customerId !== user.uid) {
+    if (membership.customerId !== customerDocId) {
       throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
     }
     if (membership.status !== "active") {
@@ -159,7 +167,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   // its start day (Phase 5 — multi-day booking; single source of truth used
   // by both booking and job records below, and re-derived identically by
   // rescheduleBooking).
-  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: user.uid, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: visitMinutes, config, now });
+  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: customerDocId, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: visitMinutes, config, now });
   const estimatedEndAt = computeScheduleEnd(
     requestedStart,
     visitMinutes,
@@ -189,7 +197,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
     if(!currentVehicleSnap.exists)throw new HttpsError("not-found","Vehicle not found.");
     const currentVehicle=currentVehicleSnap.data() as Vehicle;
-    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==user.uid)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
+    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==customerDocId)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
     if(currentVehicle.deletedAt)throw new HttpsError("failed-precondition","Restore this car before booking.");
 
     // Re-validate availability inside the transaction to prevent race conditions.
@@ -212,7 +220,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsSnap.docs) {
         const job = doc.data() as ServiceJob;
-        if (job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED") continue;
         intervals.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
       }
       bayOccupancy.set(bay.id, intervals);
@@ -258,9 +266,9 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       if (!gd) throw new HttpsError("not-found", "That gift code did not work.");
       const gift = gd.data() as Gift;
       if (gift.tenantId !== user.claims.tenantId) throw new HttpsError("not-found", "That gift code did not work.");
-      const reason = giftBlockReason(gift, user.uid, now.getTime());
+      const reason = giftBlockReason(gift, customerDocId, now.getTime());
       if (reason) throw new HttpsError("failed-precondition", reason);
-      if (gift.claimedBy !== user.uid) throw new HttpsError("failed-precondition", "Enter the gift code first.");
+      if (gift.claimedBy !== customerDocId) throw new HttpsError("failed-precondition", "Enter the gift code first.");
       if (gift.serviceId !== data.serviceId) throw new HttpsError("failed-precondition", "This gift is for a different wash.");
       giftToUse = { ref: gd.ref, gift };
     }
@@ -283,7 +291,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
         throw new HttpsError("not-found", "Membership not found.");
       }
       const membership = membershipSnap.data() as Membership;
-      if (membership.tenantId !== user.claims.tenantId || membership.customerId !== user.uid) {
+      if (membership.tenantId !== user.claims.tenantId || membership.customerId !== customerDocId) {
         throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
       }
       if (membership.status !== "active" || !membership.endDate || membership.endDate < data.scheduledDate) {
@@ -308,7 +316,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
           id: usageRef.id,
           tenantId: user.claims.tenantId,
           membershipId: data.membershipId as string,
-          customerId: user.uid,
+          customerId: customerDocId,
           usageType: consumeWash ? "wash" : "discount",
           jobId: jobRef.id,
           bookingId: bookingRef.id,
@@ -342,7 +350,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     if (giftToUse) {
       // The buyer already paid the full price, so this visit costs the recipient nothing.
       finalBreakdown = { ...breakdown, tax: 0, total: 0, subtotal: 0 };
-      tx.update(giftToUse.ref, { status: "REDEEMED", redeemedBy: user.uid, redeemedAt: nowIso, bookingId: bookingRef.id });
+      tx.update(giftToUse.ref, { status: "REDEEMED", redeemedBy: customerDocId, redeemedAt: nowIso, bookingId: bookingRef.id });
       writeAuditLog(tx, { action: "gift.redeemed", entityType: "Gift", entityId: giftToUse.gift.id, user, studioId: data.studioId, after: { bookingId: bookingRef.id } });
     }
 
@@ -365,7 +373,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
       studioId: data.studioId,
-      customerId: user.uid,
+      customerId: customerDocId,
       vehicleId: data.vehicleId,
       vehicleSnapshot: {
         registrationNumber: vehicle.registrationNumber,
@@ -415,7 +423,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       tenantId: user.claims.tenantId,
       studioId: data.studioId,
       bookingId: bookingRef.id,
-      customerId: user.uid,
+      customerId: customerDocId,
       vehicleId: data.vehicleId,
       serviceId: data.serviceId,
       bayId: assignedBayId,
@@ -453,7 +461,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     tx.set(jobRef, job);
     tx.set(intentRef, {
       bookingId: bookingRef.id,
-      customerId: user.uid,
+      customerId: customerDocId,
       tenantId: user.claims.tenantId,
       createdAt: nowIso,
     });
