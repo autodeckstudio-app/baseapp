@@ -58,6 +58,8 @@ export interface Booking {
   estimatedEndDate: string; // "YYYY-MM-DD" in studio TZ
   estimatedEndTime: string; // "HH:mm" in studio TZ
   durationMinutes: number; // snapshotted at booking creation (service duration, excl. buffer)
+  bayReleasedAt?: string;
+  bayReleasedBy?: string;
   bayId: string; // assigned at booking creation
   assignedEmployeeId: string | null;
   status: BookingStatus;

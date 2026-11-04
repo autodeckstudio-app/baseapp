@@ -1,3 +1,4 @@
+import {hasCataloguePhoto} from "../../../lib/catalogue-assets";
 import {PpfSelection} from '../../../ui/PpfSelection';
 import {careEntryPrice} from "../../../lib/service-journey";
 import {BRAND_ENQUIRIES} from "../../../lib/brand-enquiries";
@@ -138,7 +139,7 @@ export default function CatalogueScreen() {
       const exactProduct=n.infoKey?BRAND_ENQUIRIES.find(x=>x.key===n.infoKey):null;
       const exactVisual=exactProduct?serviceVisual({name:exactProduct.name,brand:exactProduct.brand,category:exactProduct.group==='ppf'?'ppf':'ceramic'}):null;
       const title = n.infoKey && trail.some(x=>x.key==="3M") ? n.label.replace("Scotchgard Paint Protection Film Pro ", "Scotchgard Pro ").replace("Paint Protection Film ", "") : n.label;
-      return <PhotoCard key={n.key} title={title} pill={n.infoKey ? "Ask for a quote" : "Get a quote"} hearted={false} onPress={() => router.push(n.infoKey ? { pathname: "/(tabs)/catalogue/enquiry", params: { id: n.infoKey } } : { pathname: "/(tabs)/help", params: { service: n.label } })} media={exactProduct&&exactVisual?.bottle?<ServicePhoto service={{name:exactProduct.name,brand:exactProduct.brand,category:"ceramic"}} height={400}/>:photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
+      return <PhotoCard key={n.key} title={title} pill={n.infoKey ? "Ask for a quote" : "Get a quote"} hearted={false} onPress={() => router.push(n.infoKey ? { pathname: "/(tabs)/catalogue/enquiry", params: { id: n.infoKey } } : { pathname: "/(tabs)/help", params: { service: n.label } })} media={exactProduct&&(hasCataloguePhoto({id:'enquiry:'+exactProduct.key})||exactVisual?.bottle)?<ServicePhoto service={{id:'enquiry:'+exactProduct.key,name:exactProduct.name,brand:exactProduct.brand,category:exactProduct.group==='ppf'?'ppf':'ceramic'}} height={400}/>:photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
     }
     const xs = leafServices(n);
     const photo = base.length === 0 ? typePhoto(n.key) : null;

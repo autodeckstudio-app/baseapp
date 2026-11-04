@@ -1,3 +1,4 @@
+import {ReleaseCompletedBayPane} from "../../../components/ReleaseCompletedBayPane";
 import { httpsCallable } from "firebase/functions";
 import { MEMBERSHIP_SETTLEMENT_ENABLED, ADMIN_APPROVAL_ENABLED, UPI_RECORD_ENABLED } from "../../../lib/backend-features";
 import { AdminRequestPanel } from "../../../components/AdminRequestPanel";
@@ -81,6 +82,7 @@ const ADVANCE_ACTION_LABELS: Record<string, string> = {
 };
 
 export default function JobDetailScreen() {
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [reslotOpen, setReslotOpen] = useState(false);
@@ -833,6 +835,7 @@ export default function JobDetailScreen() {
       {job.status === "QUALITY_CHECK" ? <Button label="Send back for rework" variant="ghost" onPress={() => setStaffAction("rework")} style={{marginBottom: spacing.lg}} /> : null}
       {ADMIN_APPROVAL_ENABLED && job ? <AdminRequestPanel targetType="job" targetId={job.id} tenantId={job.tenantId} studioId={job.studioId} /> : null}
       {advanceConfirm && job ? <Section>{job.status === "READY_FOR_DELIVERY" ? <DeliveryConfirmPane key={`${job.id}:${job.vehicleId}`} job={job} onDelivered={()=>setAdvanceConfirm(null)} onCancel={()=>setAdvanceConfirm(null)}/> : <><Text style={{color:colors.textPrimary}}>{advanceLabel}? This updates the studio floor and customer tracker.</Text><Button label={`Confirm ${advanceLabel.toLowerCase()}`} onPress={()=>void handleAdvance()} loading={advancing}/><Button label="Cancel" variant="secondary" disabled={advancing} onPress={()=>setAdvanceConfirm(null)}/></>}</Section> : null}
+      {job.status === "READY_FOR_DELIVERY" ? <Section><ReleaseCompletedBayPane key={`${job.id}:${job.status}:${job.bayReleasedAt??''}`} job={job}/></Section> : null}
       {job.status === "READY_FOR_DELIVERY" && job.paymentStatus !== "paid" ? <Text style={{color: colors.textPrimary, marginBottom: spacing.md}}>{MEMBERSHIP_SETTLEMENT_ENABLED && booking?.membershipWashUsed && job.totalAmount === 0 ? "Settle the membership-covered visit before marking delivered." : "Collect and confirm full payment before marking delivered."}</Text> : null}
       {/* While a confirmation is open the original advance control stays
           hidden: only the confirmation's Confirm/Cancel may act - no second
