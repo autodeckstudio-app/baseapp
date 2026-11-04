@@ -1,25 +1,20 @@
 [
   {
-    "slug": "paint-protection-film",
-    "title": "Paint protection film",
-    "description": "Film coverage for high-impact panels, the full front or the full body.",
+    "slug": "paint-protection",
+    "title": "Paint Protection",
+    "description": "PPF film or PPS spray-on protection. Choose the treatment with the studio.",
     "image": "/assets/redesign/service-paint-protection.jpg",
     "heading": "Choose the coverage first.",
     "intro": "A transparent urethane layer that takes stone chips and everyday scuffs before your paint does. The studio confirms the right film and coverage for your car before quoting.",
     "choices": [
       [
-        "High-impact kit",
-        "The panels that take the most hits, confirmed on your car.",
+        "PPF Film",
+        "Film coverage for high-impact panels, the full front or full body.",
         1
       ],
       [
-        "Full front",
-        "The whole front end, confirmed panel by panel on your car.",
-        2
-      ],
-      [
-        "Full body",
-        "Every painted panel, front to back.",
+        "PPS - Spray-on Protection",
+        "Spray-applied paint protection, discussed with the studio.",
         3
       ]
     ],
@@ -28,7 +23,7 @@
     "relatedLabel": "Explore ceramic coating instead",
     "source": "Oct12 approved catalogue restructure; current menu coverage groups; prices and brands excluded; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
     "appChoice": "PPF",
-    "headline": "Takes the hit before your paint does.",
+    "headline": "Two ways to protect your paint.",
     "zones": true,
     "poster": "/assets/models/rover-poster.png?v=5683da12fa"
   },
@@ -57,7 +52,7 @@
       ]
     ],
     "question": "Confirm the exact product, preparation, surfaces and aftercare with the studio before any work.",
-    "related": "paint-protection-film",
+    "related": "paint-protection",
     "relatedLabel": "Compare film coverage options",
     "source": "Oct18 owner-approved surface-type expansion; current menu brand-neutral groups only; reconciled services-tree @28aea08, enquiryOnly distinctions preserved",
     "appChoice": "Coatings",
@@ -196,41 +191,5 @@
     "appChoice": "Modifications",
     "zones": true,
     "poster": "/assets/models/rover-poster.png?v=5683da12fa"
-  },
-  {
-    "slug": "paint-protection-spray",
-    "title": "Paint protection spray",
-    "description": "Spray-applied paint protection. Ask the studio for a quote.",
-    "image": "/assets/redesign/service-paint-protection-spray.jpg",
-    "heading": "Spray-on protection, discussed first.",
-    "intro": "A spray-applied coating for painted surfaces. The exact product and its suitability for your car are not confirmed yet, so this starts with a conversation, not a booking.",
-    "choices": [
-      [
-        "Full car enquiry",
-        "Ask whether spray-on protection suits your car and its finish.",
-        3
-      ],
-      [
-        "Front-end enquiry",
-        "Protect the more exposed front end from road grime and debris.",
-        1
-      ],
-      [
-        "Colour change enquiry",
-        "Some spray coatings can change the colour while leaving the original paint untouched. Discuss the options.",
-        3
-      ]
-    ],
-    "question": "Ask about the exact product, clean removal, covered surfaces and aftercare before agreeing to anything. Availability is not confirmed yet.",
-    "related": "paint-protection-film",
-    "relatedLabel": "Compare film coverage options",
-    "source": "Oct30 category research from official manufacturer pages ngenco.com and ngencodubai.com (spray-applied removable coating category); brand identity and local availability unconfirmed; enquiryOnly per catalogue",
-    "appChoice": "the studio",
-    "enquiry": true,
-    "zones": true,
-    "poster": "/assets/models/rover-poster.png?v=5683da12fa",
-    "zonesEyebrow": "THE SPRAYED LAYER, EXPLAINED SIMPLY",
-    "zonesNote": "Coverage shown is illustrative, not a panel map.",
-    "layerBuild": true
   }
 ]

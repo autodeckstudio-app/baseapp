@@ -7,13 +7,13 @@ import catalogue from '../../../../../packages/core/src/public-service-catalogue
 import enquiries from '../../../../../packages/core/src/brand-enquiries.json';
 export function getStaticPaths(){return services.map(service=>({params:{slug:service.slug},props:{service}}))}
 const {service}=Astro.props;
-const categoryMap:Record<string,string[]>={'paint-protection-film':['ppf'],'ceramic-coating':['ceramic','coating'],'washing':['washing'],'detailing':['washing'],'garage':['garage','inspection','other'],'modifications':['modifications','tinting']};
+const categoryMap:Record<string,string[]>={'paint-protection':['ppf'],'ceramic-coating':['ceramic','coating'],'washing':['washing'],'detailing':['washing'],'garage':['garage','inspection','other'],'modifications':['modifications','tinting']};
 const listed=catalogue.services.filter(row=>customerCatalogueEligible(row,import.meta.env.CATALOGUE_IDENTITY_HOLD_PREVIEW === "true")).filter(s=>(categoryMap[service.slug]??[]).includes(s.category));
-const enquiryGroup=service.slug==='paint-protection-film'?'ppf':service.slug==='ceramic-coating'?'coatings':null;
+const enquiryGroup=service.slug==='paint-protection'?'ppf':service.slug==='ceramic-coating'?'coatings':null;
 const askRanges=enquiries.filter(s=>s.group===enquiryGroup);
 
 const appCategoryLinks:Record<string,string>={
- 'paint-protection-film':'https://app.autodeck.in/catalogue?cat=ppf',
+ 'paint-protection':'https://app.autodeck.in/catalogue?cat=ppf',
  'ceramic-coating':'https://app.autodeck.in/catalogue?cat=coatings&p=ceramic',
  'detailing':'https://app.autodeck.in/catalogue?cat=wash',
  'washing':'https://app.autodeck.in/catalogue?cat=wash',
@@ -22,8 +22,8 @@ const appCategoryLinks:Record<string,string>={
 };
 ---
 <Redesign title={`${service.title} · AutoDeck`} description={service.description}>
-<div class="page-intro service-intro"><a class="back" href="/services">All seven services</a><p class="eyebrow">AUTODECK / {service.title}</p><h1>{service.headline??service.title}</h1></div>
-<section class="service-detail">{!service.enquiry&&<div><img class="service-detail-image" src={service.image} alt={service.title}/></div>}<div class="service-decision glass">{!service.enquiry&&<h2>{service.title}</h2>}<div class="service-links">{service.choices.map(([title]:[string,string])=><a href={appCategoryLinks[service.slug]??'tel:+919898679711'}><span>{title.replace(/Enquiry/gi,'').trim()}</span><span aria-hidden="true">&rarr;</span></a>)}</div>{service.enquiry?<a class="solid" href="tel:+919898679711">Ask for a quote</a>:<a class="solid" href={appCategoryLinks[service.slug]}>View in app</a>}<a class="outline" href="tel:+919898679711">Call the studio</a></div></section>
+<div class="page-intro service-intro"><a class="back" href="/services">All services</a><p class="eyebrow">AUTODECK / {service.title}</p><h1>{service.headline??service.title}</h1></div>
+<section class="service-detail">{!service.enquiry&&<div><img class="service-detail-image" src={service.image} alt={service.title}/></div>}<div class="service-decision glass">{!service.enquiry&&<h2>{service.title}</h2>}<div class="service-links">{service.choices.map(([title,detail]:[string,string])=><a href={service.slug==='paint-protection'&&title.startsWith('PPS')?'https://app.autodeck.in/catalogue/enquiry?id=pps-spray':appCategoryLinks[service.slug]??'tel:+919898679711'}><span>{title.replace(/Enquiry/gi,'').trim()}{service.slug==='paint-protection'&&<small style="display:block;font-size:13px;font-weight:400;margin-top:6px">{detail}</small>}</span><span aria-hidden="true">&rarr;</span></a>)}</div>{service.enquiry?<a class="solid" href="tel:+919898679711">Ask for a quote</a>:<a class="solid" href={appCategoryLinks[service.slug]}>View in app</a>}<a class="outline" href="tel:+919898679711">Call the studio</a></div></section>
 {(listed.length>0||askRanges.length>0)&&<section class="service-next"><p class="eyebrow">EXPLORE IN THE APP</p><h2>Services and ranges</h2><div class="service-links">{listed.map(item=><a href={`https://app.autodeck.in/catalogue/${item.id}`}><span>{customerServiceName(item.name)}</span><span aria-hidden="true">&rarr;</span></a>)}{askRanges.map(item=><a href={`https://app.autodeck.in/catalogue/enquiry?id=${encodeURIComponent(item.key)}`}><span>{item.key==='pps-spray'?item.name:`${item.brand} · ${item.name}`}</span><span aria-hidden="true">&rarr;</span></a>)}</div></section>}
 <section class="service-next"><p class="eyebrow">KEEP EXPLORING</p><h2>All under one roof</h2><div class="service-links">{services.filter(s=>s.slug!==service.slug).map(s=><a href={`/services/${s.slug}`}>{s.title} <span aria-hidden="true">&rarr;</span></a>)}</div></section>
 </Redesign>

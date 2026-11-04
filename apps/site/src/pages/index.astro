@@ -1,5 +1,6 @@
 ---
+import Arrow from '../components/Arrow.astro';
 import Redesign from '../layouts/Redesign.astro';
 import content from '../data/redesign/home.html?raw';
 ---
-<Redesign title="AutoDeck | Complete car care. All under one roof" description="Complete car care in Ahmedabad. Washing, detailing, coatings, paint protection film, garage and modifications." page="index"><Fragment set:html={content}/></Redesign>
+<Redesign title="AutoDeck | Complete car care. All under one roof" description="Complete car care in Ahmedabad. Washing, detailing, coatings, paint protection film, garage and modifications." page="index">{content.split("<!--SERVICE_ARROW-->").map((part,i)=><><Fragment set:html={part}/>{i !== content.split("<!--SERVICE_ARROW-->").length-1&&<Arrow/>}</>)}</Redesign>

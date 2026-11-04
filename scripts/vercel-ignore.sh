@@ -5,6 +5,25 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# Single approved website release. Exact parent + allowed paths keep other projects off.
+guard_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ -n "$guard_root" ] && [ -f "$guard_root/scripts/site-only-release-20261104" ]; then
+  cd "$guard_root" || exit 0
+  expected="$(cat scripts/site-only-release-20261104 2>/dev/null)"
+  parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  # Missing ancestry cannot prove this is a later release. Skip every project.
+  if [ -z "$parent" ] || [ "$expected" != 6f31d7c346d1c2c3fe092a9f2bb3d59d2625068a ]; then
+    printf 'site-only marker ancestry unresolved: SKIP\n'; exit 0
+  fi
+  if [ "$parent" = "$expected" ]; then
+    changed="$(git diff --name-only "$parent" HEAD 2>/dev/null)" || exit 0
+    unexpected="$(printf '%s\n' "$changed" | grep -vE '^(apps/site/|scripts/vercel-ignore\.sh$|scripts/site-only-release-20261104$|tests/vercel-site-only-release\.test\.mjs$)' | grep -v '^$' || true)"
+    if [ -n "$unexpected" ]; then printf 'site-only release has unexpected paths: SKIP\n'; exit 0; fi
+    if [ "$app" = site ]; then printf 'approved site-only release: BUILD\n'; exit 1; fi
+    printf 'approved site-only release: SKIP (%s)\n' "$app"; exit 0
+  fi
+  # A proven later commit makes this one-shot marker inert. Existing policy resumes.
+fi
 # Scoped reviewed web release: only these reviewed projects build on this exact branch.
 # Studio remains unchanged. Other branches keep their existing diff/default policy.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = "release/approved-web-20261104" ]; then
