@@ -70,6 +70,17 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     return () => clearTimeout(t);
   }, [uid, tenantId, tick]);
 
+  // Claim-pending session: signed in with claims but no customer doc yet
+  // (staff-first record not claimed). There is nothing to listen to, so
+  // resolve the designed empty model immediately - without this, vehicles
+  // stays null, coreReady stays false, and Home hangs on the skeleton
+  // forever (the 8s watchdog below also arms only when uid exists).
+  useEffect(() => {
+    if (uid || !tenantId) return;
+    setVehicles((v) => v ?? []);
+    setCoreReady(true);
+  }, [uid, tenantId]);
+
   useEffect(() => {
     if (!uid || !tenantId) return;
     setError(null);
