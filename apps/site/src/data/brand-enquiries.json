@@ -1,0 +1,243 @@
+[
+  {
+    "key": "gswf-0",
+    "brand": "GSWF",
+    "name": "Defender Platinum",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://gswf.com/products/"
+  },
+  {
+    "key": "gswf-1",
+    "brand": "GSWF",
+    "name": "Defender Ultra",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://gswf.com/products/"
+  },
+  {
+    "key": "gswf-2",
+    "brand": "GSWF",
+    "name": "Defender Ultra Lite",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://gswf.com/products/"
+  },
+  {
+    "key": "nar-m1",
+    "brand": "NAR",
+    "name": "M1 film",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.narppf.com/"
+  },
+  {
+    "key": "nar-e190",
+    "brand": "NAR",
+    "name": "E190 film",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.narppf.com/?show=35"
+  },
+  {
+    "key": "avvyx-0",
+    "brand": "AVVYX",
+    "name": "170 micron film",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://avvyx.com/"
+  },
+  {
+    "key": "avvyx-1",
+    "brand": "AVVYX",
+    "name": "190 micron film",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://avvyx.com/"
+  },
+  {
+    "key": "pps-spray",
+    "brand": null,
+    "name": "PPS - spray-on paint protection",
+    "group": "ppf",
+    "note": "Spray-on paint protection. Ask the studio about the product and coverage for your car."
+  },
+  {
+    "key": "garware-plus-exact",
+    "brand": "Garware",
+    "name": "Plus PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.garwarehitechfilms.com/paint-protection-films/plus-ppf"
+  },
+  {
+    "key": "garware-premium-exact",
+    "brand": "Garware",
+    "name": "Premium PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.garwarehitechfilms.com/paint-protection-films/premium-ppf"
+  },
+  {
+    "key": "kovalent-powershield",
+    "brand": "Kovalent",
+    "name": "PowerShield",
+    "group": "coatings",
+    "note": "A ceramic spray for maintenance between washes. Ask the studio about fit and options.",
+    "source": "https://kovalentcoatings.com/products/powershield/",
+    "surface": "maintenance-coating"
+  },
+  {
+    "key": "gswf-defender-max",
+    "brand": "GSWF",
+    "name": "Defender Max",
+    "group": "ppf",
+    "note": "Clear paint protection film. Ask the studio about fit and options.",
+    "source": "https://www.gswf.in/clear-ppf",
+    "surface": "brand-film"
+  },
+  {
+    "key": "xpel-ultimate-fusion",
+    "brand": "XPEL",
+    "name": "ULTIMATE FUSION",
+    "group": "ppf",
+    "note": "Clear paint protection film with a water-repellent finish. Ask the studio about fit and options.",
+    "source": "https://www.xpel.com/en-in/products/ultimate-fusion",
+    "surface": "brand-film"
+  },
+  {
+    "key": "xpel-ultimate-plus",
+    "brand": "XPEL",
+    "name": "ULTIMATE PLUS",
+    "group": "ppf",
+    "note": "Paint protection film for painted vehicle surfaces. Ask the studio about fit and options.",
+    "source": "https://www.xpel.com/en-in/products/ultimate-plus",
+    "surface": "brand-film"
+  },
+  {
+    "key": "xpel-stealth",
+    "brand": "XPEL",
+    "name": "STEALTH",
+    "group": "ppf",
+    "note": "Satin-finish paint protection film. Ask the studio about fit and options.",
+    "source": "https://www.xpel.com/en-in/products/stealth",
+    "surface": "brand-film"
+  },
+  {
+    "key": "garware-matte-ppf",
+    "brand": "Garware",
+    "name": "Matte PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.garwareppf.com/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "garware-black-ppf",
+    "brand": "Garware",
+    "name": "Black PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.garwareppf.com/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "garware-white-ppf",
+    "brand": "Garware",
+    "name": "White PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.garwareppf.com/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "garware-protect-ppf",
+    "brand": "Garware",
+    "name": "Protect PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.garwareppf.com/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "llumar-valor-ppf",
+    "brand": "LLumar",
+    "name": "Valor PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "llumar-select-black-ppf",
+    "brand": "LLumar",
+    "name": "Select Black PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "llumar-platinum-extra-ppf",
+    "brand": "LLumar",
+    "name": "Platinum Extra PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "llumar-platinum-gloss-ppf",
+    "brand": "LLumar",
+    "name": "Platinum Gloss PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "llumar-platinum-matte-ppf",
+    "brand": "LLumar",
+    "name": "Platinum Matte PPF",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://llumar.com/en/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "3m-scotchgard-paint-protection-film-pro-series-200",
+    "brand": "3M",
+    "name": "Scotchgard Paint Protection Film Pro Series 200",
+    "group": "ppf",
+    "note": "Paint protection film in gloss or matte finishes. Ask the studio about coverage and options.",
+    "source": "https://www.3mindia.in/3M/en_IN/car-personalization-in/products/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "3m-paint-protection-film-series-150",
+    "brand": "3M",
+    "name": "Paint Protection Film Series 150",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.3mindia.in/3M/en_IN/car-personalization-in/products/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "3m-paint-protection-film-series-100",
+    "brand": "3M",
+    "name": "Paint Protection Film Series 100",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.3mindia.in/3M/en_IN/car-personalization-in/products/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "3m-paint-protection-film-series-50",
+    "brand": "3M",
+    "name": "Paint Protection Film Series 50",
+    "group": "ppf",
+    "note": "Paint protection film. Ask about the right finish and coverage for your car.",
+    "source": "https://www.3mindia.in/3M/en_IN/car-personalization-in/products/paint-protection-film/",
+    "surface": "brand-film"
+  }
+]

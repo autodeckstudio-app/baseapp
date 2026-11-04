@@ -3,8 +3,8 @@ import {customerCatalogueEligible} from '../../../../../packages/core/src/custom
 import { customerServiceName } from '../../../../../packages/core/src/customer-rating-privacy';
 import Redesign from '../../layouts/Redesign.astro';
 import services from '../../data/services.json';
-import catalogue from '../../../../../packages/core/src/public-service-catalogue.json';
-import enquiries from '../../../../../packages/core/src/brand-enquiries.json';
+import catalogue from '../../data/public-service-catalogue.json';
+import enquiries from '../../data/brand-enquiries.json';
 export function getStaticPaths(){return services.map(service=>({params:{slug:service.slug},props:{service}}))}
 const {service}=Astro.props;
 const categoryMap:Record<string,string[]>={'paint-protection':['ppf'],'ceramic-coating':['ceramic','coating'],'washing':['washing'],'detailing':['washing'],'garage':['garage','inspection','other'],'modifications':['modifications','tinting']};
