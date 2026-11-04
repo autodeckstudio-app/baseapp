@@ -14,6 +14,7 @@ import { __params } from "../../../../test/stubs/expo-router";
 const OP_ID = "00000000-0000-4000-8000-000000000001"; // first id the expo-crypto stub hands the form
 
 const h = vi.hoisted(() => ({
+  native:false,
   auth: { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } } as Record<string, unknown>,
   vehicleCb: null as null | ((snap: unknown) => void),
   vehiclePapersCb: null as null | ((list: unknown[]) => void),
@@ -23,12 +24,14 @@ const h = vi.hoisted(() => ({
   resolvePaperEvidenceUrl: vi.fn(async (..._a: unknown[]) => ({ url: null as string | null, failure: null })),
   openURL: vi.fn(async (..._a: unknown[]) => undefined),
   emulatorBackend: false,
+  cover: vi.fn(), rc: vi.fn(),
 }));
 
 vi.mock("react-native", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
+    Platform:{...(actual.Platform as object),get OS(){return h.native?"android":"web";}},
     TextInput: (props: Record<string, unknown>) => createElement("TextInput", props),
     Image: (props: Record<string, unknown>) => createElement("Image", props),
     Linking: { ...(actual as { Linking?: unknown }).Linking as object, openURL: (...a: unknown[]) => h.openURL(...a) },
@@ -44,7 +47,7 @@ vi.mock("expo-image-picker", () => ({ launchImageLibraryAsync: vi.fn(), requestM
 vi.mock("../../../lib/firebase", () => ({ db: {}, functions: {}, get emulatorBackend() { return h.emulatorBackend; } }));
 vi.mock("../../../hooks/useAuth", () => ({ useAuth: () => h.auth }));
 vi.mock("../../../lib/vehicle-service", () => ({
-  updateVehicle: vi.fn(), archiveVehicle: vi.fn(), uploadVehiclePhoto: vi.fn(), uploadVehicleRc: vi.fn(), removeVehicleImage: vi.fn(),
+  updateVehicle: vi.fn(), archiveVehicle: vi.fn(), uploadVehiclePhoto: (...a:unknown[])=>h.cover(...a), uploadVehicleRc: (...a:unknown[])=>h.rc(...a), removeVehicleImage: vi.fn(),
   resolveVehiclePhotoUrl: vi.fn(async () => { throw new Error("no photo"); }),
 }));
 vi.mock("../../../lib/metrics", () => ({ metrics: { heroTall: 200, heroCompact: 120 } }));
@@ -125,14 +128,14 @@ const pushPapers = async (el: ReactTestRenderer, list: unknown[]) => {
 beforeEach(() => {
   (globalThis as Record<string, unknown>).__DEV__ = false;
   __params.current = { id: "v1" };
-  h.auth = { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } };
+  h.native=false;h.auth = { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } };
   h.vehicleCb = null; h.vehiclePapersCb = null; h.customerPapersCb = null;
   h.submitMyPaper.mockReset();
   h.updateMyPaper.mockReset();
   h.resolvePaperEvidenceUrl.mockReset();
   h.resolvePaperEvidenceUrl.mockResolvedValue({ url: null, failure: null });
   h.openURL.mockReset();
-  h.emulatorBackend = false;
+  h.emulatorBackend = false; h.cover.mockReset().mockResolvedValue("cover");h.rc.mockReset().mockResolvedValue("rc");
 });
 
 describe("mounted document-add retry after a lost acknowledgement", () => {
@@ -228,3 +231,20 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
     expect(textOf(el)).not.toContain("Can't add this document");
   });
 });
+
+
+describe("mounted garage native photo entry joins",()=>{
+ it("edit cover and RC pick bytes reach correct upload services",async()=>{
+  const el=await mount();await act(async()=>press(el,"Edit vehicle"));
+  const bytes=new Uint8Array([255,216,255]);
+  const cover=el.root.findAll(n=>n.props.label==="Add car photo"&&typeof n.props.onNativeChange==="function")[0]!;
+  const rc=el.root.findAll(n=>n.props.label==="Add RC photo"&&typeof n.props.onNativeChange==="function")[0]!;
+  expect(cover.props.nativeEnabled).toBe(true);expect(rc.props.nativeEnabled).toBe(true);
+  await act(async()=>{cover.props.onNativeChange([{bytes,type:"image/jpeg",previewUri:"file:///cover"}]);rc.props.onNativeChange([{bytes,type:"image/jpeg",previewUri:"file:///rc"}]);});
+  await act(async()=>{press(el,"Save changes");await Promise.resolve();});
+  expect(h.cover).toHaveBeenCalledWith("v1",bytes,"image/jpeg");expect(h.rc).toHaveBeenCalledWith("v1",bytes,"image/jpeg");
+ });
+});
+
+it("native expiry partial or invalid draft is rejected by Save without blur",async()=>{h.native=true;const el=await mount();act(()=>switchTab(el,"Documents"));await act(async()=>press(el,"Add a document"));await act(async()=>typeReference(el,"POL-NATIVE"));for(const date of ["2028-02-","2027-02-29"]){const input=el.root.findAllByType(TextInput).find(n=>n.props.accessibilityLabel==="Expiry date (optional)")!;await act(async()=>input.props.onChangeText(date));await act(async()=>press(el,"Submit for verification"));expect(h.submitMyPaper).not.toHaveBeenCalled();expect(textOf(el)).toContain("valid expiry date");}});
+it('native valid expiry Save without blur persists exact new draft',async()=>{h.native=true;const el=await mount();act(()=>switchTab(el,'Documents'));await act(async()=>press(el,'Add a document'));await act(async()=>typeReference(el,'POL-VALID'));const input=el.root.findAllByType(TextInput).find(n=>n.props.accessibilityLabel==='Expiry date (optional)')!;await act(async()=>input.props.onChangeText('2028-02-29'));h.submitMyPaper.mockResolvedValue({replayed:false,photoUploaded:false});await act(async()=>press(el,'Submit for verification'));expect(h.submitMyPaper).toHaveBeenCalledWith(expect.objectContaining({expiresOn:'2028-02-29'}));});

@@ -39,6 +39,8 @@ export interface Booking {
   // Set only for price-on-request services. requested -> quoted (studio sets price) -> approved (customer).
   quoteStatus?: QuoteStatus;
   priceOnRequest?: boolean;
+  /** Revised pickup/drop total requires exact customer consent before payment. */
+  requiresPriceApproval?: boolean;
   tenantId: string;
   studioId: string;
   customerId: string;

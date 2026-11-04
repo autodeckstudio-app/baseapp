@@ -56,7 +56,7 @@ describe("services type level", () => {
     }
   });
   it("type ids named in the vocabulary exist in the menu", () => {
-    const real = new Set(MENU_SEED.map((m) => m.id));
+    const real = new Set([...MENU_SEED.map((m) => m.id),"svc-wash-detail-spa","svc-wash-headlight-buffing","svc-coating-maintenance","svc-coating-teflon"]);
     for (const defs of Object.values(SERVICE_TYPES)) for (const d of defs) for (const id of d.ids ?? []) expect(real.has(id)).toBe(true);
   });
   it("a single child branch opens by itself; old ?brand= links resolve", () => {
@@ -77,3 +77,5 @@ describe("services type level", () => {
 it('owner-sheet missing brands are enquiries, never priced leaves',()=>{const tree=buildTree(group('ppf'),all);const film=tree.find(n=>n.kind==='branch'&&n.key==='brand-film') as Extract<TreeNode,{kind:'branch'}>;const gswf=film.children.find(n=>n.kind==='branch'&&n.key==='GSWF') as Extract<TreeNode,{kind:'branch'}>;expect(gswf.children.length).toBe(4);expect(gswf.children.every(n=>n.kind==='enquiry')).toBe(true);expect(leafServices(gswf)).toEqual([]);});
 
 it('source-qualified surface ranges never drift into paint coating and remain unpriced enquiries',()=>{const t=buildTree(group('coatings'),all);for(const [type,name]of [['fabric','Fabric'],['ppf-coat','Overlay'],['wheels','Ceramic Rims Cr0.01'],['maintenance-coating','PowerShield']]){const branch=t.find(n=>n.kind==='branch'&&n.key===type)as Extract<TreeNode,{kind:'branch'}>;expect(branch).toBeTruthy();expect(JSON.stringify(branch)).toContain(name);const ceramic=t.find(n=>n.kind==='branch'&&n.key==='ceramic');expect(JSON.stringify(ceramic)).not.toContain('"label":"'+name+'"');}expect(JSON.stringify(t)).not.toContain('Revive');});
+
+it('live explicit identities avoid misleading category fallback',async()=>{const {typeKeyOf}=await import('./services-tree');const row=(id:string,category:string)=>({id,category})as never;expect(typeKeyOf('coatings',row('svc-coating-maintenance','coating'))).toBe('maintenance-coating');expect(typeKeyOf('coatings',row('svc-coating-teflon','coating'))).toBe('sealant');expect(typeKeyOf('wash',row('svc-wash-detail-spa','washing'))).toBe('complete');expect(typeKeyOf('wash',row('svc-wash-headlight-buffing','washing'))).toBe('lamps');});

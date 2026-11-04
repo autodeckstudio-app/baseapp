@@ -23,7 +23,10 @@ import {
   type Unsubscribe,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { auth, functions, useEmulator, emulatorBackend } from "./firebase";
+import { doc, getDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { COLLECTIONS } from "@autodeck/database";
+import { auth, db, functions, useEmulator, emulatorBackend } from "./firebase";
 
 export interface GoogleClientIds {
   webClientId?: string;
@@ -86,15 +89,32 @@ export async function devGoogleSignIn(email: string, name: string): Promise<User
  * staff role (the function uses the shared role resolver). After this call, force-refresh the
  * ID token so the app can access Firestore with correct tenant isolation.
  */
-export async function setupCustomerProfile(name?: string): Promise<{
-  customer: Record<string, unknown>;
-  isNew: boolean;
-}> {
-  const fn = httpsCallable<{ name?: string }, { customer: Record<string, unknown>; isNew: boolean }>(
+export type SetupResult =
+  | { customer: Record<string, unknown>; isNew: boolean; customerId?: string }
+  | { claimRequired: true; renewalRequired?: boolean };
+
+export function isClaimRequired(r: SetupResult): r is { claimRequired: true; renewalRequired?: boolean } {
+  return (r as { claimRequired?: boolean }).claimRequired === true;
+}
+
+export async function setupCustomerProfile(name?: string): Promise<SetupResult> {
+  const fn = httpsCallable<{ name?: string }, SetupResult>(
     functions,
     "setupCustomerProfile",
   );
   const result = await fn(name !== undefined ? { name } : {});
+  return result.data;
+}
+
+/**
+ * Claims the walk-in record the studio created, with the one-time counter
+ * code. The server also requires this account's verified Google email to
+ * match the record, so the code alone never grants anything. Every failure
+ * reads the same ("That code did not work. Check it with the studio.").
+ */
+export async function claimCustomerRecord(code: string): Promise<{ customerId: string }> {
+  const fn = httpsCallable<{ code: string }, { customerId: string }>(functions, "claimCustomerRecord");
+  const result = await fn({ code });
   return result.data;
 }
 
@@ -105,6 +125,129 @@ export async function setupCustomerProfile(name?: string): Promise<{
  * refreshes the token, not cached profile fields like displayName.
  * Must be called after setupCustomerProfile succeeds.
  */
+
+/**
+ * Canonical customer DOCUMENT id ownership probe (staff-first identity).
+ *
+ * Every record keys off the customer DOC id, which is NOT always the Auth
+ * uid: a claimed walk-in record keeps its staged doc id. Client list queries
+ * on customers are denied by design (per-doc binding rules), so the client
+ * cannot discover the doc id on its own - it must come from context (the
+ * booking/job it is looking at, or the setup/claim response). This probe
+ * answers the only question a route needs: "is THIS customer doc id mine?"
+ *
+ * A readable doc is NOT proof: staff and admins can read tenant customer
+ * docs too. Ownership is the DATA: authUid === this account's uid, tenantId
+ * === this token's validated tenant claim, and not deleted. This account is
+ * the customer app, but the data check is what makes that true rather than
+ * assumed. Fail-closed on permission-denied, network errors, missing claims,
+ * and any field mismatch.
+ *
+ * No result caching: a positive answer can go stale (deletion, admin
+ * correction, account change) and a cache keyed by uid cannot see those
+ * epochs. Each call is one billed read - UI gates call this rarely.
+ * Server callables re-check everything; this is UI gating only.
+ */
+type OwnershipProbe = "mine" | "not-mine" | "error";
+async function probeMyCustomerDoc(customerDocId: string): Promise<OwnershipProbe> {
+  const user = auth.currentUser;
+  if (!user || !customerDocId) return "not-mine";
+  try {
+    const tenantId = (await user.getIdTokenResult()).claims["tenantId"];
+    if (typeof tenantId !== "string" || !tenantId) return "not-mine";
+    const snap = await getDoc(doc(db, COLLECTIONS.customers(), customerDocId));
+    if (!snap.exists()) return "not-mine";
+    const d = snap.data() as { authUid?: unknown; tenantId?: unknown; deletedAt?: unknown };
+    return d.authUid === user.uid && d.tenantId === tenantId && !d.deletedAt ? "mine" : "not-mine";
+  } catch {
+    // Network/AppCheck/permission transport failures are NOT "not mine":
+    // callers that would otherwise fall through to a mutating path must stop.
+    return "error";
+  }
+}
+
+export async function verifyMyCustomerDocId(customerDocId: string): Promise<boolean> {
+  return (await probeMyCustomerDoc(customerDocId)) === "mine";
+}
+
+/**
+ * Fast path for the legacy shape (doc id == authUid). Returns uid when the
+ * account's own doc sits at its uid, else null. Null does NOT mean the
+ * account has no record - a claimed staged record's id comes from context
+ * and is verified with verifyMyCustomerDocId - and null must NEVER be used
+ * as a reason to create a new profile or record.
+ */
+export async function getMyCustomerDocId(): Promise<string | null> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return null;
+  return (await verifyMyCustomerDocId(uid)) ? uid : null;
+}
+
+/**
+ * Resolves the canonical customer DOCUMENT id for the signed-in account,
+ * for list routes that must key reads by the record id, not the Auth uid.
+ * Order: legacy fast path (doc at uid), then the persisted id from this
+ * device's setup/claim, then the app's own idempotent setupCustomerProfile
+ * call - the same callable the setup screen uses, which returns the existing
+ * or claimed record's id (and for a brand-new account performs the app's
+ * normal self-serve profile creation; it never merges records). Every
+ * candidate is verified (authUid + tenant + not deleted) before use.
+ * claimRequired returns null - the claim screen owns that state. Null must
+ * NEVER be used as a reason to create anything.
+ */
+const DOC_ID_STORAGE_PREFIX = "autodeck.customerDocId.";
+export async function resolveMyCustomerDocId(): Promise<string | null> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return null;
+  // Principal-switch guard: every candidate is accepted only if the SAME
+  // account is still signed in after the await that produced it.
+  const current = () => auth.currentUser?.uid === uid;
+  const fast = await probeMyCustomerDoc(uid);
+  if (fast === "mine") return current() ? uid : null;
+  if (fast === "error" || !current()) return null; // transient read failure: never fall through to a mutating call
+  let stored: string | null = null;
+  try {
+    stored = await AsyncStorage.getItem(DOC_ID_STORAGE_PREFIX + uid);
+  } catch { /* storage unavailable - fall through to server resolution */ }
+  if (stored && current()) {
+    const probe = await probeMyCustomerDoc(stored);
+    if (probe === "mine") return current() ? stored : null;
+    if (probe === "error" || !current()) return null;
+  }
+  // Server semantics (verified in the callable): this returns the CLAIMED
+  // profile for a claimed account, claimRequired for a known unclaimed
+  // email, and only creates a profile for a genuinely new email - the app's
+  // own self-serve path, never a parallel record for an existing email.
+  let r: SetupResult;
+  try {
+    r = await setupCustomerProfile();
+  } catch {
+    return null; // terminal: the hook still reaches ready, the next token event retries
+  }
+  if (!current()) return null;
+  if (isClaimRequired(r)) return null;
+  const id = typeof r.customerId === "string" && r.customerId
+    ? r.customerId
+    : typeof (r.customer as { id?: unknown })?.id === "string"
+      ? (r.customer as { id: string }).id
+      : null;
+  if (id) {
+    const probe = await probeMyCustomerDoc(id);
+    if (probe === "mine" && current()) {
+      try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, id); } catch { /* best effort */ }
+      return id;
+    }
+  }
+  return null;
+}
+
+/** Persists the id at the moments the app already knows it (setup/claim). */
+export async function rememberMyCustomerDocId(customerDocId: string): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !customerDocId) return;
+  try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, customerDocId); } catch { /* best effort */ }
+}
+
 export async function refreshAuthToken(): Promise<void> {
   await auth.currentUser?.getIdToken(true);
   await auth.currentUser?.reload();

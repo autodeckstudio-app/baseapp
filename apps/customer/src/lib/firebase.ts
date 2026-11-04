@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
-import { getStorage } from "firebase/storage";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 import { emulatorConnectionsVerified, emulatorTargets, resolveUseEmulator, type EmulatorConnectionProof } from "./emulator-flag";
 
 // metro.config.js sets resolverMainFields: ["react-native", "browser", "main"] and enables
@@ -67,24 +67,24 @@ const emulatorEnv = {
   EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: process.env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"],
   EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT: process.env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"],
   EXPO_PUBLIC_AUTH_EMULATOR_PORT: process.env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"],
+  EXPO_PUBLIC_STORAGE_EMULATOR_PORT: process.env["EXPO_PUBLIC_STORAGE_EMULATOR_PORT"],
 };
 
 if (useEmulator) {
   const targets = emulatorTargets(emulatorEnv);
-  try {
-    connectFirestoreEmulator(db, targets.host, targets.firestorePort);
-    connectFunctionsEmulator(functions, targets.host, targets.functionsPort);
-    connectAuthEmulator(auth, targets.authUrl, { disableWarnings: true });
-  } catch {
-    // Already connected (React Native fast refresh). Never trust the
-    // catch - verify below.
-  }
+  // Reconnect independently: an already-connected client must not prevent
+  // a later client from reaching its own emulator. Verification below stays closed.
+  try { connectFirestoreEmulator(db, targets.host, targets.firestorePort); } catch {}
+  try { connectFunctionsEmulator(functions, targets.host, targets.functionsPort); } catch {}
+  try { connectAuthEmulator(auth, targets.authUrl, { disableWarnings: true }); } catch {}
+  try { connectStorageEmulator(storage, targets.host, targets.storagePort); } catch {}
 }
 
 // Fail-closed: true only when the flag is on AND every client provably
 // points at the local emulators. A missed or partial connection leaves
 // this false, so dev-only affordances never run against a real backend.
 const emulatorProof: EmulatorConnectionProof = {
+  storageHost: (storage as unknown as {_host?:string})._host??null,
   firestoreHost: (db as unknown as { _settings?: { host?: string } })._settings?.host ?? null,
   functionsOrigin: (functions as unknown as { emulatorOrigin?: string | null }).emulatorOrigin ?? null,
   authEmulatorUrl: (auth as unknown as { config?: { emulator?: { url?: string } } }).config?.emulator?.url ?? null,

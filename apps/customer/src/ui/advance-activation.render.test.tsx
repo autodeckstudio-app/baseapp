@@ -9,7 +9,7 @@ import {space} from "@autodeck/ui/theme";
 import {Icon} from "@autodeck/ui/native";
 import {Button,Kicker,Pane,Row,T} from "./kit";
 import {ADVANCE_SPLIT_ENABLED,advanceDisclosureLines} from "../lib/advance-booking";
-const studioAdvanceAvailable=true,washOn=false,giftCode=null,held=null,payHow={online:true},setPayAtStudio=(_value:boolean)=>{};
+const studioAdvanceAvailable=ADVANCE_SPLIT_ENABLED,washOn=false,giftCode=null,held=null,payHow={online:true},setPayAtStudio=(_value:boolean)=>{};
 function Payment({advanceDue,payNow,payAtStudio}:{advanceDue:boolean,payNow:boolean,payAtStudio:boolean}){return (<>
       {washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
@@ -45,7 +45,8 @@ const src=readFileSync("src/app/(tabs)/book/confirm.tsx","utf8");
 expect(src).toContain('Disclose the policy for the effective payment route only.');
 for(const [name,advanceDue] of [["studio",true],["online",false]] as const){
 const body=renderToStaticMarkup(<Payment advanceDue={advanceDue} payNow={!advanceDue} payAtStudio={advanceDue}/>);
-expect(body).toContain(advanceDue ? "Nothing more is charged" : "nothing is refunded automatically");
+if (ADVANCE_SPLIT_ENABLED) expect(body).toContain(advanceDue ? "Nothing more is charged" : "nothing is refunded automatically");
+else { expect(body).not.toContain("Nothing more is charged"); expect(body).not.toContain("nothing is refunded automatically"); expect(body).toContain("Your slot is confirmed now. Pay when you collect your car."); }
 const css=(StyleSheet as any).getSheet().textContent;
 writeFileSync(`/tmp/activation-${name}.html`,`<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}html,body{margin:0;background:#101216}body{padding:20px;box-sizing:border-box;font-family:Arial}#preview{display:flex;flex-direction:column;gap:24px;max-width:480px;margin:0 auto}</style><div id="preview">${body}</div>`);
 }

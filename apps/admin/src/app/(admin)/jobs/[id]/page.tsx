@@ -1,10 +1,11 @@
 "use client";
 import { MembershipSettlement } from "../../../../components/MembershipSettlement";
 import { JobPaymentPanel } from "../../../../components/JobPaymentPanel";
+import {jobActivityLabel} from "../../../../lib/job-activity-label";
 import { membershipCoveredLabel } from "@autodeck/core";
 
 import { goBackOrTo } from "../../../../lib/go-back";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { httpsCallable } from "firebase/functions";
 import type { Booking, ServiceJob, Payment, Invoice, ApprovalRequest, Warranty, AuditLog, Customer, Vehicle, Service, PaymentMethod, Inspection, InspectionArea } from "@autodeck/core";
@@ -27,8 +28,9 @@ type ConfirmManualPaymentOutput = { paymentId: string; invoiceId: string | null;
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { claims } = useAdminAuth();
+  const { claims,user } = useAdminAuth();
 
+  const scopeGeneration=useRef(0);const[resolvedId,setResolvedId]=useState('');const[resolvedPrincipal,setResolvedPrincipal]=useState('');const[paymentScope,setPaymentScope]=useState('');
   const [attempt,setAttempt] = useState(0);
   const [bayName,setBayName] = useState("");
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -52,47 +54,42 @@ export default function JobDetailPage() {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
-    setError(null);
+    const generation=++scopeGeneration.current;setError(null);setPayment(undefined);setInvoice(null);setCustomer(null);setVehicle(null);setService(null);setStatus(null);setResolvedId('');setResolvedPrincipal('');setPaymentScope('');setLinking(false);setRecording(false);setConfirming(false);setBooking(null);
     if (!id) {setJob(null);return undefined;}
     // Route change: clear the previous job FIRST - until this route's
     // listener delivers, nothing from the old job may stay on screen.
     setJob(undefined);
-    return listenToJob(id, value=>{setJob(value);setError(null);}, (err) => setError(err.message));
-  }, [id,attempt]);
+    const stop=listenToJob(id, value=>{if(scopeGeneration.current!==generation)return;setResolvedId(id);setResolvedPrincipal(user?.uid??'');setJob(value);setError(null);}, (err) =>{if(scopeGeneration.current===generation)setError(err.message)});return()=>{scopeGeneration.current++;stop()};
+  }, [id,attempt,claims?.tenantId,user?.uid,claims?.role]);
 
   const bookingId = job?.bookingId ?? null;
   useEffect(() => {
     if (!bookingId) { setBooking(null); return undefined; }
-    return listenToBooking(bookingId, setBooking, (err) => setError(err.message));
+    let alive=true;setBooking(null);const stop=listenToBooking(bookingId,v=>{if(alive)setBooking(v)},err=>{if(alive)setError(err.message)});return()=>{alive=false;stop()};
   }, [bookingId, attempt]);
 
   useEffect(() => {
-    if (!job || !claims) return undefined;
-    const unsubApprovals = listenToApprovalsForJob(job.id, claims.tenantId, setApprovals, (err) => setError(err.message));
-    const unsubPayment = listenToPaymentForJob(job.id, claims.tenantId, setPayment, (err) => setError(err.message));
-    const unsubInvoice = listenToInvoiceForJob(job.id, claims.tenantId, setInvoice, (err) => setError(err.message));
-    const unsubAudit = listenToAuditForEntity(claims.tenantId, "ServiceJob", job.id, setAudit, (err) => setError(err.message));
-    const unsubInspection = listenToInspectionForJob(job.id, setInspection, () => undefined);
-    void getWarrantyForJob(job.id).then(setWarranty).catch(()=>setWarranty(null));
-    return () => {
-      unsubApprovals();
-      unsubPayment();
-      unsubInvoice();
-      unsubAudit();
-      unsubInspection();
-    };
-  }, [job?.id, claims,attempt]);
-
-  useEffect(() => {
-    if (!job) return;
-    void getCustomer(job.customerId).then(setCustomer).catch(()=>setCustomer(null));
-    void getVehicle(job.vehicleId).then(setVehicle).catch(()=>setVehicle(null));
-    void getService(job.serviceId).then(setService).catch(()=>setService(null));
-  }, [job]);
+    setPayment(undefined);setPaymentScope('');setInvoice(null);setApprovals([]);setInspection(null);setAudit([]);setWarranty(null);
+    if(!job||!claims||!user||resolvedPrincipal!==user.uid||job.id!==id||job.tenantId!==claims.tenantId||resolvedId!==id)return;
+    let alive=true;const scope=[id,claims.tenantId,user.uid].join('|');const safe=<T,>(set:(v:T)=>void)=>(v:T)=>{if(alive)set(v)};
+    const fail=(err:Error)=>{if(alive){setPayment(undefined);setInvoice(null);setError(err.message)}};
+    const unsubApprovals=listenToApprovalsForJob(job.id,claims.tenantId,safe(setApprovals),fail);
+    const unsubPayment=listenToPaymentForJob(job.id,claims.tenantId,p=>{if(!alive)return;if(p&&(p.jobId!==id||p.tenantId!==claims.tenantId)){fail(Error('Payment record does not match this job.'));return}setPayment(p);setPaymentScope(scope)},fail);
+    const unsubInvoice=listenToInvoiceForJob(job.id,claims.tenantId,v=>{if(!alive)return;if(v&&(v.jobId!==id||v.tenantId!==claims.tenantId)){fail(Error('Invoice does not match this job.'));return}setInvoice(v)},fail);
+    const unsubAudit=listenToAuditForEntity(claims.tenantId,'ServiceJob',job.id,safe(setAudit),fail);
+    const unsubInspection=listenToInspectionForJob(job.id,safe(setInspection),()=>{});
+    void getWarrantyForJob(job.id).then(safe(setWarranty)).catch(()=>{if(alive)setWarranty(null)});
+    void getCustomer(job.customerId).then(safe(setCustomer)).catch(()=>{if(alive)setCustomer(null)});
+    void getVehicle(job.vehicleId).then(safe(setVehicle)).catch(()=>{if(alive)setVehicle(null)});
+    void getService(job.serviceId).then(safe(setService)).catch(()=>{if(alive)setService(null)});
+    return()=>{alive=false;unsubApprovals();unsubPayment();unsubInvoice();unsubAudit();unsubInspection()};
+  },[job?.id,job?.customerId,job?.vehicleId,job?.serviceId,claims?.tenantId,attempt,resolvedId,id,user?.uid,resolvedPrincipal]);
+  const currentScope=!!claims&&!!user&&resolvedPrincipal===user.uid&&resolvedId===id&&job?.id===id&&job?.tenantId===claims.tenantId;
+  const currentPayment= currentScope&&paymentScope===[id,claims?.tenantId,user?.uid].join('|')?payment:undefined;
 
   async function handleRecordPayment() {
-    if (!job) return;
-    setStatus(null);
+    if (!job||!currentScope||currentPayment===undefined) return;
+    const generation=scopeGeneration.current;setStatus(null);
     setRecording(true);
     try {
       const fn = httpsCallable<{ jobId: string; method: PaymentMethod; manualReference?: string }, RecordManualPaymentOutput>(
@@ -100,53 +97,53 @@ export default function JobDetailPage() {
         "recordManualPayment",
       );
       await fn(reference ? { jobId: job.id, method, manualReference: reference } : { jobId: job.id, method });
-      setStatus("Payment recorded and invoice issued.");
-      setReference("");
+      if(scopeGeneration.current===generation)setStatus("Payment recorded and invoice issued.");
+      if(scopeGeneration.current===generation)setReference("");
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Failed to record payment.");
+      if(scopeGeneration.current===generation)setStatus(err instanceof Error ? err.message : "Failed to record payment.");
     } finally {
-      setRecording(false);
+      if(scopeGeneration.current===generation)setRecording(false);
     }
   }
 
   async function handleCreateLink() {
-    if (!job) return;
-    setStatus(null);
+    if (!job||!currentScope||currentPayment===undefined) return;
+    const generation=scopeGeneration.current;setStatus(null);
     setLinking(true);
     try {
       const fn = httpsCallable<{ jobId: string; method: PaymentMethod }, { paymentId: string; paymentUrl: string | null; status: string }>(functions, "initiatePayment");
       const res = await fn({ jobId: job.id, method: "razorpay_payment_link" });
-      setStatus(res.data.paymentUrl ? "Payment link ready. Copy it or send it on WhatsApp." : "A payment is already in progress for this job.");
+      if(scopeGeneration.current===generation)setStatus(res.data.paymentUrl ? "Payment link ready. Copy it or send it on WhatsApp." : "A payment is already in progress for this job.");
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Could not create the payment link.");
+      if(scopeGeneration.current===generation)setStatus(err instanceof Error ? err.message : "Could not create the payment link.");
     } finally {
-      setLinking(false);
+      if(scopeGeneration.current===generation)setLinking(false);
     }
   }
 
   async function handleConfirmCashPayment() {
-    if (!payment) return;
-    setStatus(null);
+    if (!currentPayment||!currentScope) return;
+    const generation=scopeGeneration.current;setStatus(null);
     setConfirming(true);
     try {
       const fn = httpsCallable<{ paymentId: string }, ConfirmManualPaymentOutput>(functions, "confirmManualPayment");
-      await fn({ paymentId: payment.id });
-      setStatus("Payment confirmed and invoice issued.");
+      await fn({ paymentId: currentPayment.id });
+      if(scopeGeneration.current===generation)setStatus("Payment confirmed and invoice issued.");
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Failed to confirm payment.");
+      if(scopeGeneration.current===generation)setStatus(err instanceof Error ? err.message : "Failed to confirm payment.");
     } finally {
-      setConfirming(false);
+      if(scopeGeneration.current===generation)setConfirming(false);
     }
   }
 
   useEffect(()=>{
     if(!job) return;
-    setBayName("");
-    void getStudioConfig(job.studioId).then(c=>setBayName(c?.bays.find(b=>b.id===job.bayId)?.name??"")).catch(()=>setBayName(""));
+    let alive=true;setBayName("");
+    void getStudioConfig(job.studioId).then(c=>{if(alive)setBayName(c?.bays.find(b=>b.id===job.bayId)?.name??"")}).catch(()=>{if(alive)setBayName("")});return()=>{alive=false};
   },[job?.studioId,job?.bayId,attempt]);
 
   if (error) return <div className="ax-panel"><p className="ax-status-msg ax-status-msg--warn" role="alert">{error}</p><button className="ax-button" onClick={()=>setAttempt(n=>n+1)}>Retry</button></div>;
-  if (job === undefined) return <p className="ax-label" role="status">Loading…</p>;
+  if (!currentScope && job!==null || job === undefined) return <p className="ax-label" role="status">Loading…</p>;
   if (job === null) {
     return (
       <div className="ax-empty">
@@ -163,16 +160,16 @@ export default function JobDetailPage() {
     <div className="ax-page">
       <button type="button" className="ax-back" onClick={() => goBackOrTo(router, "/jobs")}>‹ Back</button>
 
-      <header className="ax-hero">
+      <header className="ax-hero ax-job-hero">
         <div>
           <p className="ax-label">{job.isWalkIn ? "Walk-in job" : "Booked job"} · {service?.name ?? "Service"}</p>
           <h1>{plate}</h1>
           <p className="ax-hero-sub">{[car, customer?.name].filter(Boolean).join(" · ")}</p>
         </div>
-        <div className="ax-hero-side">
-          <StatusBadge label={job.status} />
-          <span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
-          <StatusBadge label={membershipCoveredLabel(job) ?? job.paymentStatus} />
+        <div className="ax-hero-side ax-job-summary">
+          <span className="ax-label">Job stage</span><StatusBadge label={job.status} />
+          <span className="ax-label">Job total</span><span className="ax-hero-total">{formatPaise(job.totalAmount)}</span>
+          <span className="ax-label">Payment</span><StatusBadge label={membershipCoveredLabel(job) ?? ((payment as (Payment & {invoiceReviewNeeded?:boolean})|null)?.invoiceReviewNeeded ? "Received - needs review" : (payment?.status==="completed"&&job.paymentStatus!=="paid")||(job.paymentStatus==="paid"&&payment?.status!=="completed") ? "Payment records syncing" : job.paymentStatus)} />
         </div>
       </header>
 
@@ -243,7 +240,7 @@ export default function JobDetailPage() {
           )}
 
           <section className="ax-panel">
-            <span className="ax-label">Activity</span>
+            <span className="ax-label">Job activity</span>
             {audit.length === 0 ? (
               <p className="ax-note" style={{ marginTop: 0 }}>No recorded changes yet.</p>
             ) : (
@@ -251,7 +248,7 @@ export default function JobDetailPage() {
                 {audit.map((a) => (
                   <li key={a.id}>
                     <span className="ax-timeline-dot" style={{ background: "var(--ad-inactive)" }} aria-hidden="true" />
-                    <span>{statusLabel(a.action)}<span className="ax-timeline-note">by {statusLabel(a.performedByRole)}</span></span>
+                    <span>{jobActivityLabel(a.action)}<span className="ax-timeline-note">by {statusLabel(a.performedByRole)}</span></span>
                     <span className="ax-timeline-meta">{formatDateTime(a.createdAt)}</span>
                   </li>
                 ))}
@@ -298,10 +295,10 @@ export default function JobDetailPage() {
             <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
           </section>
 
-          <JobPaymentPanel
+          <JobPaymentPanel onRefreshPayment={()=>{setPayment(undefined);setStatus("Refreshing AutoDeck payment record. This does not charge or record money.");setAttempt(n=>n+1)}}
             job={job}
             booking={booking}
-            payment={payment}
+            payment={currentPayment}
             invoice={invoice}
             customer={customer}
             status={status}

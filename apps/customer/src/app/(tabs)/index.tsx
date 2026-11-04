@@ -94,7 +94,7 @@ export default function HomeScreen() {
   const { colors } = useExperienceTheme();
   const ready = auth.status === "ready";
   const myCode = ready ? referralCodeFor(auth.user.uid) : null;
-  const home = useCustomerHome(ready ? auth.user.uid : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
+  const home = useCustomerHome(ready ? auth.customerDocId : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
   const [unread, setUnread] = useState(0);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [open, setOpen] = useState<StoryGroup | null>(null);
@@ -132,9 +132,9 @@ export default function HomeScreen() {
   }, [ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !auth.customerDocId) return;
     let alive = true;
-    void getMyBookings(auth.user.uid, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
+    void getMyBookings(auth.customerDocId, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
     return () => { alive = false; };
   }, [ready]);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
@@ -155,20 +155,20 @@ export default function HomeScreen() {
   }, [ready]);
   useEffect(() => {
     setCarJobs([]);
-    if (!ready || !carId) return;
-    return listenToJobsForVehicle(carId, auth.claims.tenantId, auth.user.uid, (j) => setCarJobs(j as never), () => undefined);
+    if (!ready || !auth.customerDocId || !carId) return;
+    return listenToJobsForVehicle(carId, auth.claims.tenantId, auth.customerDocId, (j) => setCarJobs(j as never), () => undefined);
   }, [ready, carId]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
   useEffect(() => {
     setPapers([]);
-    if (!ready || !carId) return;
-    return listenToVehiclePapers(carId, auth.claims.tenantId, auth.user.uid, setPapers, () => undefined);
+    if (!ready || !auth.customerDocId || !carId) return;
+    return listenToVehiclePapers(carId, auth.claims.tenantId, auth.customerDocId, setPapers, () => undefined);
   }, [ready, carId]);
   useEffect(() => {
     setWarranties([]);
-    if (!ready || !carId) return;
-    return listenToVehicleWarranties(carId, auth.claims.tenantId, auth.user.uid, (w) => setWarranties(w as never), () => undefined);
+    if (!ready || !auth.customerDocId || !carId) return;
+    return listenToVehicleWarranties(carId, auth.claims.tenantId, auth.customerDocId, (w) => setWarranties(w as never), () => undefined);
   }, [ready, carId]);
 
   if (!ready || !home.model) {
@@ -278,6 +278,7 @@ export default function HomeScreen() {
         onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}
       />
       <StoryViewer
+        identityKey={ready ? `${auth.user.uid}:${auth.claims.tenantId}` : null}
         group={open}
         onClose={() => setOpen(null)}
         onNextGroup={() => { const n = open ? groups[groups.findIndex((x) => x.key === open.key) + 1] : undefined; if (n) { setOpen(n); setSeen(new Set([...seen, seenKeyOf(n)])); } else setOpen(null); }}

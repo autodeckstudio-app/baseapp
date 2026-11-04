@@ -21,7 +21,7 @@ export type JournalEntry = {
   kind: MyProtectionKind;
   entry: { brand: string; years: string; applied: string; declarationId: string };
 };
-export type JournalPhoto = { blob: Blob; contentType: string };
+export type JournalPhoto = { blob: Blob | Uint8Array; contentType: string };
 
 export type AddCarJournal = {
   entries: JournalEntry[];

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('broad website categories lead to catalogue categories, never one bookable service',()=>{
- const expected={'paint-protection-film':'cat=ppf','ceramic-coating':'cat=coatings&p=ceramic','detailing':'cat=wash','washing':'cat=wash','garage':'cat=garage','modifications':'cat=mods'};
+ const expected={'paint-protection':'cat=ppf','ceramic-coating':'cat=coatings&p=ceramic','detailing':'cat=wash','washing':'cat=wash','garage':'cat=garage','modifications':'cat=mods'};
  for(const [slug,q]of Object.entries(expected)){
   const h=read('dist/services/'+slug+'/index.html');
   assert(h.includes('href="https://app.autodeck.in/catalogue?'+q.replaceAll('&','&amp;')+'"')||h.includes('href="https://app.autodeck.in/catalogue?'+q+'"')); 

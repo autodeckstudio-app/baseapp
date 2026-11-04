@@ -72,10 +72,10 @@ export default function BookingsScreen() {
   const [activeId, setActiveId] = useState<string | null>(null);
   useEffect(() => { void AsyncStorage.getItem("autodeck.activeVehicle").then(setActiveId); }, [cars]);
   useEffect(() => {
-    if (auth.status !== "ready") return;
-    const un = listenToMyVehicles(auth.user.uid, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
-    const unJobs = listenToMyJobs(auth.claims.tenantId, auth.user.uid, (js) => { setJobs(js); setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)); }, () => {});
-    const unInv = listenToMyInvoices(auth.claims.tenantId, auth.user.uid, setInvoices, () => {});
+    if (auth.status !== "ready" || !auth.customerDocId) return;
+    const un = listenToMyVehicles(auth.customerDocId, auth.claims.tenantId, (vs) => setCars(Object.fromEntries(vs.map((v) => [v.id, v]))), () => {});
+    const unJobs = listenToMyJobs(auth.claims.tenantId, auth.customerDocId, (js) => { setJobs(js); setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)); }, () => {});
+    const unInv = listenToMyInvoices(auth.claims.tenantId, auth.customerDocId, setInvoices, () => {});
     getServiceCatalogue().then((l) => setSvcs(Object.fromEntries(l.map((x) => [x.id, x])))).catch(() => {});
     return () => { un(); unJobs(); unInv(); };
   }, [auth]);
@@ -84,15 +84,15 @@ export default function BookingsScreen() {
   const liveJobId = liveJob?.id ?? null;
   useEffect(() => {
     setApprovals([]);
-    if (auth.status !== "ready" || !liveJobId) return;
-    return listenToApprovalsForJob(liveJobId, auth.claims.tenantId, auth.user.uid, setApprovals, () => {});
+    if (auth.status !== "ready" || !auth.customerDocId || !liveJobId) return;
+    return listenToApprovalsForJob(liveJobId, auth.claims.tenantId, auth.customerDocId, setApprovals, () => {});
   }, [auth, liveJobId]);
 
   const load = useCallback(async () => {
-    if (auth.status !== "ready") return;
+    if (auth.status !== "ready" || !auth.customerDocId) return;
     setError(false);
     try {
-      setBookings(await getMyBookings(auth.user.uid, auth.claims.tenantId));
+      setBookings(await getMyBookings(auth.customerDocId, auth.claims.tenantId));
     } catch {
       setError(true);
     }

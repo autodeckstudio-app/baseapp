@@ -29,20 +29,21 @@ export const SERVICE_TYPES: Record<string, TypeDef[]> = {
   wash: [
     { key: "exterior", label: "Exterior wash", blurb: "Foam and detail washes.", ids: ["menu-wash-foam", "menu-wash-exterior"], test: (s) => s.category === "washing" },
     { key: "interior", label: "Interior cleaning", blurb: "Vacuum, steam and conditioning.", ids: ["menu-wash-interior"] },
-    { key: "complete", label: "Complete detailing", blurb: "Interior and exterior together.", ids: ["menu-wash-full"] },
+    { key: "complete", label: "Complete detailing", blurb: "Interior and exterior together.", ids: ["menu-wash-full", "svc-wash-detail-spa"] },
     E("decon", "Paint decontamination"), E("polish", "Polish and paint correction"), E("glass-clean", "Glass cleaning and water spots"),
     E("leather-care", "Leather cleaning and conditioning"), E("wheel-clean", "Wheel and tyre cleaning"), E("trim-restore", "Trim restoration"),
-    E("lamps", "Headlight and tail-light restoration"), E("odour", "Odour treatment"),
+    { key: "lamps", label: "Headlight restoration", ids: ["svc-wash-headlight-buffing"] }, E("odour", "Odour treatment"),
   ],
   coatings: [
     { key: "ceramic", label: "Ceramic paint coating", blurb: "Gloss paint protection, by brand.", ids: ["menu-coat-autodeck-1", "menu-coat-autodeck-2", "menu-coat-fireball-1", "menu-coat-fireball-2", "menu-coat-fireball-3", "menu-coat-kovalent-prolong", "menu-coat-kovalent-borophene", "menu-coat-3m-ceramic"], test: (s) => s.category === "ceramic", byBrand: COATING_BRANDS },
     { key: "graphene", label: "Graphene paint coating", blurb: "Graphene-based paint protection.", ids: ["menu-coat-kovalent-graphene"], byBrand: COATING_BRANDS },
+    {key:"maintenance-coating",label:"Coating maintenance",ids:["svc-coating-maintenance"]}, {key:"sealant",label:"Paint sealant",ids:["svc-coating-teflon"]},
     { key: "glass", label: "Glass protection", blurb: "Water-repellent coating for glass.", ids: ["menu-coat-glass"] },
     { key: "wheels", label: "Wheel and alloy protection", blurb: "Coating for wheel faces and barrels.", ids: ["menu-coat-wheels"] },
     { key: "leather", label: "Leather protection", blurb: "Protective coating for leather.", ids: ["menu-coat-leather"] },
     { key: "fabric", label: "Fabric protection", blurb: "Stain-repellent coating for fabric.", ids: ["menu-coat-fabric"] },
     { key: "trim", label: "Exterior plastic and trim protection", blurb: "Restores faded trim and seals it.", ids: ["menu-coat-trim"], test: (s) => s.category === "coating" },
-    E("maintenance-coating", "Coating maintenance"), E("matte", "Matte paint protection"), E("tyre", "Tyre protection"), E("dashboard", "Dashboard and interior trim protection"), E("ppf-coat", "PPF coating and aftercare"),
+    E("matte", "Matte paint protection"), E("tyre", "Tyre protection"), E("dashboard", "Dashboard and interior trim protection"), E("ppf-coat", "PPF coating and aftercare"),
   ],
   ppf: [
     { key: "brand-film", label: "Film by brand", blurb: "Bookable films and additional ranges to enquire about.", test: (s) => s.category === "ppf" && s.priceOnRequest !== true, byBrand: PPF_BRANDS },
@@ -177,7 +178,7 @@ export const AREA_SECTIONS: Record<string, Array<{ label: string; keys: string[]
     { label: "Paint", keys: ["decon", "polish"] },
   ],
   coatings: [
-    { label: "Paint", keys: ["ceramic", "graphene", "matte", "ppf-coat", "maintenance-coating"] },
+    { label: "Paint", keys: ["ceramic", "graphene", "matte", "ppf-coat", "maintenance-coating", "sealant"] },
     { label: "Exterior", keys: ["trim"] },
     { label: "Interior", keys: ["leather", "fabric", "dashboard"] },
     { label: "Wheels and tyres", keys: ["wheels", "tyre"] },

@@ -12,7 +12,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { useLang } from "../../lib/i18n";
 import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-service";
-import { uploadLicensePhoto } from "../../lib/vehicle-service";
+import { uploadLicensePhoto, type VehiclePhotoBody } from "../../lib/vehicle-service";
 import { FileUploader } from "../../ui/inputs";
 import { signOut } from "../../lib/auth-service";
 import { useAuth } from "../../hooks/useAuth";
@@ -36,7 +36,7 @@ export default function YouScreen() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lic, setLic] = useState<{ blob: Blob; contentType: string } | null>(null);
+  const [lic, setLic] = useState<{ blob: VehiclePhotoBody; contentType: string } | null>(null);
   const [licBusy, setLicBusy] = useState(false);
   const [licOpen, setLicOpen] = useState(false);
   const [licMsg, setLicMsg] = useState<string | null>(null);
@@ -52,6 +52,7 @@ export default function YouScreen() {
 
   async function saveName() {
     if (auth.status !== "ready" || saving) return;
+    if (!auth.customerDocId) { setSaveError("Your profile is still linking. Try again once it is ready."); return; }
     const next = draft.trim();
     if (next.length < 2 || next.length > 100) {
       setSaveError("Enter your name, 2 to 100 characters.");
@@ -60,7 +61,7 @@ export default function YouScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      await updateDoc(doc(db, COLLECTIONS.customers(), auth.user.uid), { name: next, updatedAt: new Date().toISOString() });
+      await updateDoc(doc(db, COLLECTIONS.customers(), auth.customerDocId), { name: next, updatedAt: new Date().toISOString() });
       await updateProfile(auth.user, { displayName: next });
       setSavedName(next);
       setEditing(false);
@@ -93,18 +94,16 @@ export default function YouScreen() {
       ) : null}
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
-        {Platform.OS === "web" ? (
-          <>
+        <>
             <ListRow icon="search" title="Driving licence" detail="Add a photo. Only you and the studio see it" action={licOpen ? "Close" : "Add"} onPress={() => setLicOpen(!licOpen)} />
             {licOpen ? (
               <View style={{ gap: space.breath, paddingBottom: 14 }}>
-                <FileUploader files={lic ? [{ blob: lic.blob, type: lic.contentType }] : []} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
+                <FileUploader files={lic && !(lic.blob instanceof Uint8Array) ? [{ blob: lic.blob, type: lic.contentType }] : []} nativeEnabled nativeFileCount={lic?1:0} onNativeChange={fs=>{const f=fs[0];setLic(f?{blob:f.bytes,contentType:f.type}:null);setLicMsg(null);}} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
                 {lic ? <Button label="Save licence photo" busy={licBusy} onPress={() => void saveLicense()} /> : null}
                 {licMsg ? <T role="caption" tone={!licMsg.endsWith("saved.") ? "danger" : "tertiary"}>{licMsg}</T> : null}
               </View>
             ) : null}
-          </>
-        ) : null}
+        </>
         <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} />
       </View>
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>

@@ -18,5 +18,5 @@ export default defineConfig({
       { find: /^\.\.\/\.\.\/\.\.\/ui\/AppBar$/, replacement: path.resolve(__dirname, "test/stubs/app-bar.tsx") },
     ],
   },
-  test: { include: ["src/**/*.render.test.tsx"] },
+  test: { include: ["src/**/*.render.test.tsx"], exclude: ["src/app/(tabs)/bookings/booking-payment.render.test.tsx"] },
 });

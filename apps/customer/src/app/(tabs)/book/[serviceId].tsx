@@ -114,9 +114,9 @@ export default function BookServiceScreen() {
   }, [serviceId, auth.status, retryTick]);
 
   useEffect(() => {
-    if (auth.status !== "ready") return;
+    if (auth.status !== "ready" || !auth.customerDocId) return;
     return listenToMyVehicles(
-      auth.user.uid,
+      auth.customerDocId,
       auth.claims.tenantId,
       (list) => {
         setVehiclesError(false);

@@ -1,3 +1,4 @@
+import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
 import { buildCarePlan } from "../../../lib/care-plan";
@@ -19,7 +20,7 @@ import { useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Field, Kicker, LinkAction, Loading, Notice, Pane, Plate, Row, Screen, T } from "../../../ui/kit";
 import { TabPills } from "../../../ui/CarOverview";
 import { db } from "../../../lib/firebase";
-import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc, removeVehicleImage } from "../../../lib/vehicle-service";
+import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc, removeVehicleImage, type VehiclePhotoBody } from "../../../lib/vehicle-service";
 import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
@@ -75,9 +76,9 @@ export default function VehicleDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [newRc, setNewRc] = useState<{ blob: Blob; contentType: string } | null>(null);
-  const [newPhoto, setNewPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
-  useEffect(()=>()=>{if(newPhoto?.previewUrl)URL.revokeObjectURL(newPhoto.previewUrl);},[newPhoto]);
+  const [newRc, setNewRc] = useState<{ blob: VehiclePhotoBody; contentType: string } | null>(null);
+  const [newPhoto, setNewPhoto] = useState<{ blob: VehiclePhotoBody; contentType: string; previewUrl: string } | null>(null);
+  useEffect(()=>()=>{if(newPhoto?.previewUrl && !(newPhoto.blob instanceof Uint8Array))URL.revokeObjectURL(newPhoto.previewUrl);},[newPhoto]);
   const [form, setForm] = useState<{ make: string; model: string; color: string; odometer: string; category: VehicleCategory | "" }>({ make: "", model: "", color: "", odometer: "", category: "" });
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -346,8 +347,8 @@ export default function VehicleDetailScreen() {
 
   useEffect(() => {
     if (mockDetail) { setUpcomingBookings(mockDetail.upcomingBookings); setUpcomingBooking(mockDetail.upcomingBookings[0] ?? null); return; }
-    if (!id || auth.status !== "ready") return;
-    void getMyBookings(auth.user.uid, auth.claims.tenantId)
+    if (!id || auth.status !== "ready" || !auth.customerDocId) return;
+    void getMyBookings(auth.customerDocId, auth.claims.tenantId)
       .then((bookings) => {
         const upcoming = bookings
           .filter((b) => b.vehicleId === id && (b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE"))
@@ -468,8 +469,8 @@ export default function VehicleDetailScreen() {
       setActionError("Warranty years must be a whole number between 1 and 50, or left empty.");
       return;
     }
-    if (applied !== "" && !isCalendarDate(applied)) {
-      setActionError("Dates must be a real calendar date in YYYY-MM-DD, or left empty.");
+    if (applied !== "" && !validAppliedDate(applied)) {
+      setActionError("Use a real date in YYYY-MM-DD, no later than today, or leave it empty.");
       return;
     }
     setActionError(null);
@@ -526,7 +527,7 @@ export default function VehicleDetailScreen() {
       header={
         <View style={{ gap: space.breath }}>
           <CarHero
-            photo={newPhoto ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <CarThumb car={vehicle} height={vehicle.photoUrl ? metrics.heroTall : metrics.heroCompact} radius={0} />}
+            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : <CarThumb car={vehicle} height={vehicle.photoUrl ? metrics.heroTall : metrics.heroCompact} radius={0} />}
             title={`${vehicle.make} ${vehicle.model}`}
             plate={mockDetail ? null : vehicle.registrationNumber}
             facts={[
@@ -590,7 +591,7 @@ export default function VehicleDetailScreen() {
           {vehicle && editing ? (
             <View style={{ borderRadius: 16, overflow: "hidden" }}>
               {newPhoto ? (
-                createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 200, objectFit: "cover", display: "block" } })
+                (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: 200, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:200}} resizeMode="cover" />)
               ) : (
                 <CarThumb car={vehicle} height={200} radius={0} />
               )}
@@ -599,23 +600,23 @@ export default function VehicleDetailScreen() {
 
           {editing ? (
             <View style={{ gap: space.line }}>
-              {Platform.OS === "web" ? (
+              <>
                 <View style={{ gap: space.hair }}>
                   <Kicker>Car photo</Kicker>
-                  <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} files={newPhoto?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
+                  <FileUploader label={vehicle.photoUrl ? "Replace car photo" : "Add car photo"} files={newPhoto && !(newPhoto.blob instanceof Uint8Array)?[{blob:newPhoto.blob,type:newPhoto.contentType}]:[]} nativeEnabled nativeFileCount={newPhoto?1:0} onNativeChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);}} onChange={fs=>{const f=fs[0];setNewPhoto(f?{blob:f.blob,contentType:f.type,previewUrl:URL.createObjectURL(f.blob)}:null);}}/>
 
                   {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.photoUrl && !newPhoto ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove car photo" onPress={() => setRemoveImage("cover")} /><T role="caption" tone="tertiary">Remove the saved car photo</T></View> : null}
                   <T role="caption" tone="tertiary">{newPhoto ? "New photo ready. It uploads when you save." : "Choose a JPEG, PNG or WebP to replace the photo."}</T>
                 </View>
-              ) : null}
-              {Platform.OS === "web" ? (
+              </>
+              <>
                 <View style={{ gap: space.hair }}>
                   <Kicker>RC photo</Kicker>
-                  <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} files={newRc ? [{ blob: newRc.blob, type: newRc.contentType }] : []} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
+                  <FileUploader label={vehicle.rcPhotoUrl ? "Replace RC photo" : "Add RC photo"} files={newRc && !(newRc.blob instanceof Uint8Array) ? [{ blob: newRc.blob, type: newRc.contentType }] : []} nativeEnabled nativeFileCount={newRc?1:0} onNativeChange={fs=>{const f=fs[0];setNewRc(f?{blob:f.bytes,contentType:f.type}:null);}} onChange={(fs) => { const f = fs[0]; setNewRc(f ? { blob: f.blob, contentType: f.type } : null); }} />
                   {VEHICLE_IMAGE_REMOVE_ENABLED && vehicle.rcPhotoUrl && !newRc ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><IconAction kind="delete" label="Remove RC photo" onPress={() => setRemoveImage("rc")} /><T role="caption" tone="tertiary">Remove the saved RC photo</T></View> : null}
                   <T role="caption" tone="tertiary">{newRc ? "RC photo ready. It uploads when you save." : vehicle.rcPhotoUrl ? "An RC photo is on file. Choose a JPEG, PNG or WebP to replace it." : "Add a clear photo of the registration certificate (JPEG, PNG or WebP)."}</T>
                 </View>
-              ) : null}
+              </>
               <Field label="Make" value={form.make} onChangeText={(v) => setForm((p) => ({ ...p, make: v }))} autoCapitalize="words" />
               <Field label="Model" value={form.model} onChangeText={(v) => setForm((p) => ({ ...p, model: v }))} autoCapitalize="words" />
               <Field label="Colour" value={form.color} onChangeText={(v) => setForm((p) => ({ ...p, color: v }))} autoCapitalize="words" />
@@ -798,7 +799,7 @@ export default function VehicleDetailScreen() {
                     programmatic change while the save is in flight. (Writer lineage 0110/0113 restored.) */}
                 <Field label="Brand or installer" placeholder="e.g. Garware, LLumar" value={protForm.brand} onChangeText={(v: string) => { if (!protBusy) setProtForm((f) => ({ ...f, brand: v })); }} maxLength={200} editable={!protBusy} />
                 <Field label="Warranty (years, optional)" placeholder="e.g. 5" value={protForm.years} onChangeText={(v: string) => { if (!protBusy) setProtForm((f) => ({ ...f, years: v })); }} keyboardType="numeric" maxLength={2} editable={!protBusy} />
-                <DateField label="Applied on (optional)" value={protForm.applied} onChange={(v: string) => { if (!protBusy) setProtForm((f) => ({ ...f, applied: v })); }} max={new Date().toISOString().slice(0, 10)} disabled={protBusy} />
+                <DateField label="Applied on (optional)" value={protForm.applied} onChange={(v: string) => { if (!protBusy) setProtForm((f) => ({ ...f, applied: v })); }} max={todayStudioDate()} disabled={protBusy} />
                 <Field label="Notes (optional)" placeholder="e.g. full body except roof" value={protForm.notes} onChangeText={(v: string) => { if (!protBusy) setProtForm((f) => ({ ...f, notes: v })); }} maxLength={1000} editable={!protBusy} />
               </View>
               <View style={{ flexDirection: "row", gap: space.breath }}>
@@ -837,7 +838,7 @@ export default function VehicleDetailScreen() {
               ) : null}
               <View style={{ gap: space.hair }}>
                 <Kicker>Photo or scan (optional)</Kicker>
-                <FileUploader files={docPhoto&&"blob"in docPhoto&&docPhoto.blob?[{blob:docPhoto.blob,type:docPhoto.contentType??docPhoto.blob.type}]:[]} onChange={fs=>{const f=fs[0];if(f)setRemoveDocPhoto(false);setDocPhoto(f?{blob:f.blob,contentType:f.type}:null);}} nativeEnabled onNativeChange={nf=>{const f=nf[0];if(f)setRemoveDocPhoto(false);setDocPhoto(f?{bytes:f.bytes,contentType:f.type}:null);}}/>
+                <FileUploader files={docPhoto&&"blob"in docPhoto&&docPhoto.blob?[{blob:docPhoto.blob,type:docPhoto.contentType??docPhoto.blob.type}]:[]} onChange={fs=>{const f=fs[0];if(f)setRemoveDocPhoto(false);setDocPhoto(f?{blob:f.blob,contentType:f.type}:null);}} nativeEnabled nativeFileCount={docPhoto?1:0} onNativeChange={nf=>{const f=nf[0];if(f)setRemoveDocPhoto(false);setDocPhoto(f?{bytes:f.bytes,contentType:f.type}:null);}}/>
                 {docPhoto ? <T role="caption" tone="tertiary">Photo selected - it uploads when you save.</T> : null}
               </View>
               {docError ? <Notice title={/^Saved, but the photo did not upload/.test(docError) ? "Photo did not upload" : docEditing ? "Can't save this document" : "Can't add this document"} body={docError} /> : null}

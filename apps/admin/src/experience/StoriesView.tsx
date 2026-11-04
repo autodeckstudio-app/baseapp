@@ -112,7 +112,7 @@ export function StoriesView(p: {
               {STORY_HIGHLIGHTS.map((h) => <option key={h} value={h}>Also keep in {h}</option>)}
             </select>
             <button type="button" className="ax-button ax-button--primary" disabled={p.busy || !file || !!bad} onClick={() => { if (!file) return; p.onPublish({ file, caption: caption.trim(), highlightTitle: collection }); setAdding(false); setFile(null); setCaption(""); setCollection(""); }}>Post story</button>
-            <p className="ax-note">Photos and videos (MP4) up to {MAX_MB} MB. Vertical 9:16 looks best.</p>
+            <p className="ax-note">Photos and videos (MP4) up to {MAX_MB} MB. Stories fill the phone screen automatically. Portrait photos and videos work best; keep important details near the centre.</p>
           </div>
         </div>, document.body) : null}
 

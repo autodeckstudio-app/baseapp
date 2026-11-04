@@ -27,6 +27,7 @@ export function JobPaymentPanel({
   onRecordPayment,
   onConfirmCashPayment,
   onOpenInvoice,
+  onRefreshPayment,
 }: {
   job: ServiceJob;
   booking: Booking | null;
@@ -46,6 +47,7 @@ export function JobPaymentPanel({
   onRecordPayment: () => void;
   onConfirmCashPayment: () => void;
   onOpenInvoice: (invoiceId: string) => void;
+  onRefreshPayment?:()=>void;
 }) {
   async function copyLink(url: string) {
     try {
@@ -70,17 +72,21 @@ export function JobPaymentPanel({
   return (
           <section className="ax-panel">
             <span className="ax-label">Payment</span>
+            {payment?.status==="completed"&&job.paymentStatus!=="paid"&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?<p className="ax-note">Payment records are syncing. Do not collect another payment. Delivery stays on hold until the job is marked paid.</p>:null}
             {status && <p className="ax-status-msg" role="status">{status}</p>}
             {paymentPanelMode(payment) === "loading" ? (
               <p className="ax-note" style={{ marginTop: 0 }}>Loading payment…</p>
             ) : payment ? (
               <>
-                <div className="kv"><span>{METHOD_LABEL[payment.method] ?? statusLabel(payment.method)}</span><span><StatusBadge label={payment.status} /></span></div>
+                <div className="kv"><span>{METHOD_LABEL[payment.method] ?? statusLabel(payment.method)}</span><span><StatusBadge label={(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded ? "Received - needs review" : payment.status==="completed"&&job.paymentStatus!=="paid"?"Payment records syncing":payment.status} /></span></div>
+                {(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded ? <p className="ax-note">Money received, but this payment needs office review. The job is not marked paid. Do not collect another payment.</p> : null}
                 <div className="kv"><span>Amount</span><span className="ax-data">{formatPaise(payment.amount)}</span></div>
                 {(payment.status === "pending" || payment.status === "processing") &&
                   (payment.method === "razorpay_payment_link" ? (
                     <>
-                      <p className="ax-note">Waiting for the customer to pay online.</p>
+                      <p className="ax-note">Payment link pending. No payment is confirmed in AutoDeck yet.</p>
+                      {onRefreshPayment?<button type="button" className="ax-button" onClick={onRefreshPayment}>Refresh recorded payment status</button>:null}
+                      <p className="ax-note">Counter collection is on hold while this online link is pending. A safe switch is not available here yet. Do not record or collect a second payment.</p>
                       {payment.paymentUrl && (
                         <div className="ax-panel-actions">
                           <button type="button" className="ax-button" onClick={() => void copyLink(payment.paymentUrl as string)}>Copy link</button>

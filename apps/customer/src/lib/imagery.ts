@@ -74,6 +74,7 @@ export const sceneImagery = {
 // ---------------------------------------------------------------------------
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BOTTLES: Record<string, { src: ImageSourcePropType; tint: string }> = {
+  overlay: { src: require("../../assets/imagery/brands/kovalent-overlay.png"), tint: "#DDE8DB" },
   borophene: { src: require("../../assets/imagery/brands/kovalent-borophene.png"), tint: "#F6D6D6" },
   "graphene matrix": { src: require("../../assets/imagery/brands/kovalent-graphene-matrix.png"), tint: "#D9DBF5" },
   graphene: { src: require("../../assets/imagery/brands/kovalent-graphene.png"), tint: "#DCE2E6" },
@@ -135,8 +136,17 @@ function bottleOf(s: Svc) {
   const n = s.name.toLowerCase();
   const b = (s.brand ?? "").toLowerCase();
   if (b === "kovalent" || n.includes("kovalent") || (b === "" && (n === "borophene" || n === "graphene matrix"))) {
-    const key = ["graphene matrix", "prolong light", "borophene", "graphene", "prolong", "powershield", "restore", "matte", "fabric", "glass", "revive"].find((k) => n.includes(k));
+    const key = ["graphene matrix", "prolong light", "borophene", "graphene", "prolong", "powershield", "overlay", "restore", "matte", "fabric", "glass", "revive"].find((k) => n.includes(k));
     return key ? BOTTLES[key] : undefined;
+  }
+  if (b === "koch-chemie") {
+    const packshots: Record<string, {src: ImageSourcePropType; tint: string}> = {
+      "ceramic allround c0.02": {src: require("../../assets/imagery/brands/koch-chemie-ceramic-allround-c002.png"), tint: "#EEEEEE"},
+      "ceramic body cb0.01": {src: require("../../assets/imagery/brands/koch-chemie-ceramic-body-cb001.png"), tint: "#EEEEEE"},
+      "ceramic rims cr0.01": {src: require("../../assets/imagery/brands/koch-chemie-ceramic-rims-cr001.png"), tint: "#EEEEEE"},
+      "ceramic neo c0.03": {src: require("../../assets/imagery/brands/koch-chemie-ceramic-neo-c003.png"), tint: "#EEEEEE"},
+    };
+    return packshots[n];
   }
   return undefined;
 }

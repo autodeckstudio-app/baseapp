@@ -9,7 +9,7 @@ import { useAuth } from "../hooks/useAuth";
 export const VEHICLE_SIZES: { value: VehicleCategory; label: string }[] = CAR_SEGMENTS;
 export function usePricingVehicle() {
  const auth=useAuth(); const [vehicle,setVehicle]=useState<Vehicle|null>(null);
- const uid=auth.status==="ready"?auth.user.uid:null;
+ const uid=auth.status==="ready"?auth.customerDocId:null;
  const tenant=auth.status==="ready"?auth.claims.tenantId:null;
  useEffect(()=>{if(!uid||!tenant){setVehicle(null);return;}
   return listenToMyVehicles(uid,tenant,(vs)=>{void AsyncStorage.getItem("autodeck.activeVehicle").then(id=>setVehicle(vs.find(v=>v.id===id)??vs[0]??null));},()=>setVehicle(null));

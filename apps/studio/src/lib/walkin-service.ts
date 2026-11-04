@@ -1,5 +1,5 @@
 import { httpsCallable } from "firebase/functions";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import { searchCustomersAnyField } from "./lookup-service";
@@ -73,10 +73,30 @@ export async function findCustomersByEmail(tenantId: string, email: string): Pro
 }
 
 /** New walk-in customer by email. Returns the existing customer if that email already has a login. */
+type WalkinIntakeResult =
+  | { existingAccount: true }
+  | { existingAccount: false; customerId: string; alreadyRegistered: boolean };
+
 export async function registerWalkinCustomer(input: { name: string; email: string; phone?: string }): Promise<{ customer: Customer; created: boolean }> {
-  const fn = httpsCallable<typeof input, { customer: Customer; created: boolean }>(functions, "createWalkinCustomer");
-  const result = await fn(input);
-  return result.data;
+  const fn = httpsCallable<typeof input, WalkinIntakeResult>(functions, "createWalkinCustomer");
+  const result = (await fn(input)).data;
+  if (result.existingAccount) {
+    // Flat by design: the counter learns only that this email already has an app account.
+    throw new Error("This email already has an AutoDeck account. Find them by name, phone or plate instead.");
+  }
+  const snap = await getDoc(doc(db, COLLECTIONS.customers(), result.customerId));
+  if (!snap.exists()) throw new Error("Registration did not complete. Please try again.");
+  return { customer: snap.data() as Customer, created: !result.alreadyRegistered };
+}
+
+/**
+ * Issues the one-time counter claim code for an UNCLAIMED staged record.
+ * The code is returned ONCE here and never stored client-side; show it to
+ * the customer in person. Reissues revoke the previous code and are capped.
+ */
+export async function issueClaimCode(customerId: string): Promise<{ code: string; expiresAt: string }> {
+  const fn = httpsCallable<{ customerId: string }, { code: string; expiresAt: string }>(functions, "issueClaimCode");
+  return (await fn({ customerId })).data;
 }
 
 export const findCustomersBySearch = searchCustomersAnyField;

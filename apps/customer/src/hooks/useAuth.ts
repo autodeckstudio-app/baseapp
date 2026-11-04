@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
-import { onIdTokenChanged } from "../lib/auth-service";
+import { onIdTokenChanged, resolveMyCustomerDocId } from "../lib/auth-service";
 import { priceCache } from "../lib/price-cache";
 
 type AuthState =
   | { status: "loading" }
   | { status: "unauthenticated" }
   | { status: "authenticated_no_claims"; user: User }
-  | { status: "ready"; user: User; claims: AutoDeckClaims };
+  | { status: "ready"; user: User; claims: AutoDeckClaims; customerDocId: string | null };
 
 /**
  * Reads and watches Firebase Auth state + custom claims.
@@ -25,15 +25,30 @@ export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
+    // Stale-async guard: a newer auth event (sign-out, account switch, token
+    // refresh) supersedes any resolution still in flight.
+    let generation = 0;
     const unsubscribe = onIdTokenChanged(async (user) => {
+      const gen = ++generation;
       if (!user) {
         priceCache.setScope(null, null);
         setState({ status: "unauthenticated" });
         return;
       }
 
-      // Read custom claims from the ID token result
-      const tokenResult = await user.getIdTokenResult();
+      // Read custom claims from the ID token result. A transient failure here
+      // must still reach a TERMINAL state (never an infinite loading screen);
+      // the next token event retries.
+      let tokenResult;
+      try {
+        tokenResult = await user.getIdTokenResult();
+      } catch {
+        if (gen !== generation) return;
+        priceCache.setScope(null, null);
+        setState({ status: "unauthenticated" });
+        return;
+      }
+      if (gen !== generation) return; // superseded while reading claims
       const rawClaims = tokenResult.claims as Record<string, unknown>;
 
       if (
@@ -49,7 +64,19 @@ export function useAuth(): AuthState {
               : null,
         };
         priceCache.setScope(user.uid, claims.tenantId);
-        setState({ status: "ready", user, claims });
+        // Canonical customer record id (staff-first): a claimed walk-in
+        // record keeps its staged doc id. Lists must key on this, never uid.
+        // Null only pre-setup/claim-pending; never a reason to create.
+        // resolveMyCustomerDocId never throws (errors resolve to null), but
+        // keep the terminal guarantee explicit: ready always fires.
+        let customerDocId: string | null = null;
+        try {
+          customerDocId = claims.role === "customer" ? await resolveMyCustomerDocId() : null;
+        } catch {
+          customerDocId = null;
+        }
+        if (gen !== generation) return; // superseded while resolving
+        setState({ status: "ready", user, claims, customerDocId });
       } else {
         // User is signed in but claims not set yet (first sign-in)
         priceCache.setScope(user.uid, null);
@@ -57,7 +84,12 @@ export function useAuth(): AuthState {
       }
     });
 
-    return unsubscribe;
+    // Unmount invalidates the generation: a resolution still in flight must
+    // never setState on an unmounted hook.
+    return () => {
+      generation += 1;
+      unsubscribe();
+    };
   }, []);
 
   return state;

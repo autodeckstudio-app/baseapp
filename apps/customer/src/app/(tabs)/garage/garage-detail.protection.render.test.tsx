@@ -15,7 +15,8 @@ import { __params } from "../../../../test/stubs/expo-router";
 const h = vi.hoisted(() => {
   const d = <T,>() => { let resolve!: (v: T) => void, reject!: (e: unknown) => void; const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; }); return { promise, resolve, reject }; };
   return {
-    auth: { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } } as Record<string, unknown>,
+    native:false,
+  auth: { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } } as Record<string, unknown>,
     vehicleCb: null as null | ((snap: unknown) => void),
     protectionsCb: null as null | ((list: unknown[]) => void),
     createMyProtection: vi.fn(),
@@ -30,7 +31,7 @@ const h = vi.hoisted(() => {
 // editable/disabled props assertable without pulling in a DOM dependency.
 vi.mock("react-native", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, TextInput: (props: Record<string, unknown>) => createElement("TextInput", props) };
+  return { ...actual, Platform:{...(actual.Platform as object),get OS(){return h.native?"android":"web";}}, TextInput: (props: Record<string, unknown>) => createElement("TextInput", props) };
 });
 vi.mock("firebase/firestore", () => ({
   doc: (...parts: string[]) => ({ path: parts.join("/") }),
@@ -110,7 +111,7 @@ const editorOpen = (el: ReactTestRenderer) => textOf(el).includes("Marked as add
 beforeEach(() => {
   (globalThis as Record<string, unknown>).__DEV__ = false;
   __params.current = { id: "v1" };
-  h.auth = { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } };
+  h.native=false;h.auth = { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } };
   h.vehicleCb = null; h.protectionsCb = null;
   h.createMyProtection.mockReset(); h.updateMyProtection.mockReset(); h.getDocFromServer.mockReset();
 });
@@ -274,3 +275,5 @@ describe("mounted protection editor orchestration", () => {
     expect(textOf(el)).toContain("could not be loaded right now");
   });
 });
+
+it("native AppliedOn bad partial or future draft is rejected by Save without blur",async()=>{h.native=true;const el=await mount();act(()=>switchTab(el,"Documents"));await act(async()=>press(el,"Edit Paint Protection Film"));for(const date of ["2026-1","2027-02-29","2099-01-01"]){const input=el.root.findAllByType(TextInput).find(n=>n.props.accessibilityLabel==="Applied on (optional)")!;await act(async()=>input.props.onChangeText(date));await act(async()=>press(el,"Save"));expect(h.updateMyProtection).not.toHaveBeenCalled();expect(textOf(el)).toContain("no later than today");}});

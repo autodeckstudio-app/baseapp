@@ -23,18 +23,18 @@ export default function SellScreen() {
   const light = themeName === "light";
   const [garage, setGarage] = useState<Vehicle[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
   useEffect(() => {
     if (!uid || !tenantId) return;
     return listenToMyVehicles(uid, tenantId, setGarage, () => undefined);
   }, [uid, tenantId]);
   const [f, setF] = useState<F>({ make: "", model: "", variant: "", year: "", km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", name: "", phone: "", reg: "" });
-  const [photos, setPhotos] = useState<Array<{ blob: Blob; type: string }>>([]);
+  const [photos, setPhotos] = useState<Array<{ blob: Blob | Uint8Array; type: string }>>([]);
   const [previews,setPreviews] = useState<string[]>([]);
   useEffect(() => {
     if (Platform.OS!=="web") return;
-    const urls=photos.map(p=>URL.createObjectURL(p.blob));setPreviews(urls);
+    const urls=photos.map(p=>p.blob instanceof Uint8Array?"":URL.createObjectURL(p.blob));setPreviews(urls);
     return () => urls.forEach(u=>URL.revokeObjectURL(u));
   },[photos]);
   const [busy, setBusy] = useState(false);
@@ -125,10 +125,10 @@ export default function SellScreen() {
         <Field label="About the car (optional)" placeholder="Service history, owners, accidents, reason for selling - no phone numbers or links" value={f.description} error={fieldErrors.description} onBlur={() => setFieldErrors((p) => ({ ...p, description: validateSellStep(f, step, photos.length).description }))} onChangeText={(v) => up("description", v)} multiline maxLength={1000} />
       </View>}
 
-      {step===1 && Platform.OS === "web" ? (
+      {step===1 ? (
         <View style={{ gap: space.hair }}>
           <Kicker>Photos (up to 12, first is the cover)</Kicker>
-          <FileUploader files={photos} multiple maxFiles={12} onChange={fs=>{setPhotos(fs);setFieldErrors(p=>({...p,photos:undefined}));}}/>
+          <FileUploader files={photos.filter((p):p is {blob:Blob;type:string}=>!(p.blob instanceof Uint8Array))} nativeEnabled nativeFileCount={photos.length} onNativeChange={fs=>{setPhotos(fs.map(p=>({blob:p.bytes,type:p.type})));setFieldErrors(p=>({...p,photos:undefined}));}} multiple maxFiles={12} onChange={fs=>{setPhotos(fs);setFieldErrors(p=>({...p,photos:undefined}));}}/>
           {fieldErrors.photos ? <T role="caption" tone="danger">{fieldErrors.photos}</T> : null}
           <T role="caption" tone="tertiary">{photos.length} photo{photos.length === 1 ? "" : "s"} selected. Use clear exterior and interior photos. Originals are kept unchanged.</T>
         </View>

@@ -1,3 +1,4 @@
+import { fetch as nativeFetch } from "expo/fetch";
 import { httpsCallable } from "firebase/functions";
 import type { CarListingView } from "@autodeck/core";
 import { auth, functions } from "./firebase";
@@ -15,10 +16,11 @@ export async function getCarListings(mine = false): Promise<CarListingView[]> {
   return (await fn({ mine })).data.listings;
 }
 
-export async function uploadListingPhoto(blob: Blob, contentType: string): Promise<string> {
+export async function uploadListingPhoto(blob: Blob | Uint8Array, contentType: string): Promise<string> {
   const issue = httpsCallable<{ contentType: string }, { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }>(functions, "issueListingPhotoUploadUrl");
   const { uploadUrl, path, requiredHeaders } = (await issue({ contentType })).data;
-  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
+  const transport = blob instanceof Uint8Array ? nativeFetch : fetch;
+  const res = await transport(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
   if (!res.ok) throw new Error("A photo did not upload. Try again.");
   return path;
 }
@@ -50,7 +52,7 @@ export async function removeListingPhoto(listingId: string, index: number, expec
 }
 
 /** Seller replaces one photo on their own listing: upload the new file, then the server swaps it in at that position (owner, count and path checked) and removes the old object. */
-export async function replaceListingPhoto(listingId: string, index: number, expectedCount: number, blob: Blob, contentType: string): Promise<void> {
+export async function replaceListingPhoto(listingId: string, index: number, expectedCount: number, blob: Blob | Uint8Array, contentType: string): Promise<void> {
   const newPath = await uploadListingPhoto(blob, contentType);
   await httpsCallable(functions, "replaceMyListingPhoto")({ listingId, index, expectedCount, newPath });
 }

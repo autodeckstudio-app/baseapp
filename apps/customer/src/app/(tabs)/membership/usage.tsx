@@ -24,10 +24,10 @@ export default function MembershipUsageScreen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   useEffect(() => {
-    if (auth.status !== "ready") return undefined;
+    if (auth.status !== "ready" || !auth.customerDocId) return undefined;
     const noop = () => undefined;
-    const a = listenToMyJobs(auth.claims.tenantId, auth.user.uid, setJobs, noop);
-    const b = listenToMyInvoices(auth.claims.tenantId, auth.user.uid, setInvoices, noop);
+    const a = listenToMyJobs(auth.claims.tenantId, auth.customerDocId, setJobs, noop);
+    const b = listenToMyInvoices(auth.claims.tenantId, auth.customerDocId, setInvoices, noop);
     void getServiceCatalogue().then((all) => setNames(Object.fromEntries(all.map((x) => [x.id, x.name])))).catch(noop);
     return () => { a(); b(); };
   }, [auth.status]);

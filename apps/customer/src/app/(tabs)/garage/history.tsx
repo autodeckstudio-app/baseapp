@@ -33,11 +33,11 @@ export default function ServiceHistoryScreen() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (auth.status !== "ready") return undefined;
+    if (auth.status !== "ready" || !auth.customerDocId) return undefined;
     setError(null);
     const fail = () => setError("Could not load service history. Check your connection and retry.");
-    const a = vehicleId ? listenToJobsForVehicle(vehicleId, auth.claims.tenantId, auth.user.uid, setJobs, fail):listenToMyJobs(auth.claims.tenantId,auth.user.uid,setJobs,fail);
-    const b = vehicleId ? listenToInvoicesForVehicle(vehicleId, auth.claims.tenantId, auth.user.uid, setInvoices, fail):listenToMyInvoices(auth.claims.tenantId,auth.user.uid,setInvoices,fail);
+    const a = vehicleId ? listenToJobsForVehicle(vehicleId, auth.claims.tenantId, auth.customerDocId, setJobs, fail):listenToMyJobs(auth.claims.tenantId,auth.customerDocId,setJobs,fail);
+    const b = vehicleId ? listenToInvoicesForVehicle(vehicleId, auth.claims.tenantId, auth.customerDocId, setInvoices, fail):listenToMyInvoices(auth.claims.tenantId,auth.customerDocId,setInvoices,fail);
     return () => { a(); b(); };
   }, [vehicleId, auth.status, tick]);
 

@@ -12,6 +12,7 @@ import {
 import {
   findCustomersBySearch,
   registerWalkinCustomer,
+  issueClaimCode,
   getVehiclesForCustomer,
   createVehicleForCustomer,
   previewServicePrice,
@@ -51,6 +52,7 @@ export default function WalkinScreen() {
   const [newCust, setNewCust] = useState({ name: "", email: "", phone: "" });
   const [registering, setRegistering] = useState(false);
   const [justRegistered, setJustRegistered] = useState(false);
+  const [claimCode, setClaimCode] = useState<{ code: string; expiresAt: string } | null>(null);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -149,6 +151,18 @@ export default function WalkinScreen() {
       const { customer: c, created } = await registerWalkinCustomer({ name: newCust.name.trim(), email, ...(newCust.phone.trim() ? { phone: newCust.phone.trim() } : {}) });
       setCustomer(c);
       setJustRegistered(created);
+      // Fresh staged record: issue the one-time counter code NOW and show it
+      // once. The customer claims the record with this code plus their own
+      // Google sign-in; a reissue later (from the admin page) revokes it.
+      if (created) {
+        try {
+          setClaimCode(await issueClaimCode(c.id));
+        } catch {
+          setClaimCode(null); // issuing can wait for the admin page; never block intake
+        }
+      } else {
+        setClaimCode(null);
+      }
       setShowNew(false);
       reloadDirectory();
       if (auth.status === "ready") setVehicles(await getVehiclesForCustomer(auth.claims.tenantId, c.id));
@@ -318,7 +332,14 @@ export default function WalkinScreen() {
       ) : null}
 
       {justRegistered && customer?.email ? (
-        <Text style={{ ...typography.caption, color: colors.success }}>Added. Tell them to open the AutoDeck app and continue with Google using {customer.email}. They will see this same record.</Text>
+        <View style={{ gap: spacing.xs }}>
+          <Text style={{ ...typography.caption, color: colors.success }}>Added. Tell them to open the AutoDeck app and continue with Google using {customer.email}. They will see this same record.</Text>
+          {claimCode ? (
+            <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
+              Counter code: {claimCode.code} - valid 30 days, one use. Shown once; a new code from the admin page replaces it.
+            </Text>
+          ) : null}
+        </View>
       ) : null}
       {actionError ? <ErrorState title="Check walk-in details" message={actionError} fill={false} /> : null}
       {feedError ? <ErrorState title="Walk-in setup unavailable" message={feedError} fill={false} onRetry={() => setRetryTick((n) => n + 1)} /> : null}

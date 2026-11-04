@@ -2,6 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/services/paint-protection-film",
+      "destination": "/services/paint-protection",
+      "statusCode": 301
+    },
+    {
+      "source": "/services/paint-protection-spray",
+      "destination": "/services/paint-protection",
+      "statusCode": 301
+    },
+    {
       "source": "/gallery",
       "destination": "/#services",
       "statusCode": 301

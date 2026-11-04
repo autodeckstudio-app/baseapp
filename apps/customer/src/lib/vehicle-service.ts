@@ -9,9 +9,18 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { getDownloadURL, ref as storageRef } from "firebase/storage";
+import { resolveMyCustomerDocId } from "./auth-service";
 import { auth, db, functions, storage } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle, VehicleCategory } from "@autodeck/core";
+
+export type VehiclePhotoBody = Blob | Uint8Array;
+export async function putVehiclePhoto(url: string, headers: Record<string, string>, body: VehiclePhotoBody): Promise<void> {
+  const response = body instanceof Uint8Array
+    ? await (await import("expo/fetch")).fetch(url, { method: "PUT", headers, body })
+    : await fetch(url, { method: "PUT", headers, body });
+  if (!response.ok) throw new Error(`Photo upload failed (${response.status}).`);
+}
 
 type CreateVehicleInput = {
   registrationNumber: string;
@@ -115,14 +124,13 @@ export function listenToMyVehicles(
  * signature), direct upload to Storage, then photoUrl on the vehicle doc.
  * Returns the storage object path.
  */
-export async function uploadVehiclePhoto(vehicleId: string, blob: Blob, contentType: string): Promise<string> {
+export async function uploadVehiclePhoto(vehicleId: string, blob: VehiclePhotoBody, contentType: string): Promise<string> {
   const fn = httpsCallable<
     { vehicleId: string; contentType: string },
     { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
   >(functions, "issueVehiclePhotoUploadUrl");
   const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType })).data;
-  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
-  if (!res.ok) throw new Error(`Photo upload failed (${res.status}).`);
+  await putVehiclePhoto(uploadUrl, requiredHeaders, blob);
   const publish = () =>
     // Points the car at the new file (single writer) and returns a read URL.
     httpsCallable<{ vehicleId: string; path: string; publish: boolean }, { url: string }>(
@@ -182,30 +190,30 @@ export function listenToMyArchivedVehicles(uid:string,tenantId:string,onData:(ve
 
 
 /** Uploads the car's RC (registration certificate) photo and records it as rcPhotoUrl. Returns the storage path. */
-export async function uploadVehicleRc(vehicleId: string, blob: Blob, contentType: string): Promise<string> {
+export async function uploadVehicleRc(vehicleId: string, blob: VehiclePhotoBody, contentType: string): Promise<string> {
   const fn = httpsCallable<
     { vehicleId: string; contentType: string; kind: "rc" },
     { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
   >(functions, "issueVehiclePhotoUploadUrl");
   const { uploadUrl, path, requiredHeaders } = (await fn({ vehicleId, contentType, kind: "rc" })).data;
-  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
-  if (!res.ok) throw new Error(`RC photo upload failed (${res.status}).`);
+  await putVehiclePhoto(uploadUrl, requiredHeaders, blob);
   await httpsCallable<{ vehicleId: string; path: string; publish: boolean; kind: "rc" }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path, publish: true, kind: "rc" });
   return path;
 }
 
 /** Uploads the signed-in customer's driving licence photo and records it as licensePhotoUrl. Returns the storage path. */
-export async function uploadLicensePhoto(blob: Blob, contentType: string): Promise<string> {
+export async function uploadLicensePhoto(blob: VehiclePhotoBody, contentType: string): Promise<string> {
   // Always name the customer: the server infers it only for a "customer" sign-in, and staff or test sign-ins get "customerId is required".
-  const customerId = auth.currentUser?.uid;
+  const uid = auth.currentUser?.uid;
+  const customerId = uid ? await resolveMyCustomerDocId() : null;
+  if (auth.currentUser?.uid !== uid) throw new Error("Sign in again to save your licence photo.");
   if (!customerId) throw new Error("Sign in again to save your licence photo.");
   const fn = httpsCallable<
     { customerId: string; contentType: string },
     { uploadUrl: string; path: string; requiredHeaders: Record<string, string> }
   >(functions, "issueLicensePhotoUploadUrl");
   const { uploadUrl, path, requiredHeaders } = (await fn({ customerId, contentType })).data;
-  const res = await fetch(uploadUrl, { method: "PUT", headers: requiredHeaders, body: blob });
-  if (!res.ok) throw new Error(`Licence upload failed (${res.status}).`);
+  await putVehiclePhoto(uploadUrl, requiredHeaders, blob);
   await httpsCallable<{ customerId: string; path: string; publish: boolean }, { url: string }>(functions, "publishLicensePhoto")({ customerId, path, publish: true });
   return path;
 }

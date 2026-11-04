@@ -1,3 +1,7 @@
+import {PpfSelection} from '../../../ui/PpfSelection';
+import {careEntryPrice} from "../../../lib/service-journey";
+import {BRAND_ENQUIRIES} from "../../../lib/brand-enquiries";
+import {CareJourney} from "../../../ui/CareJourney";
 import { formatDurationWithDays } from "../../../lib/duration";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import type { ReactElement } from "react";
@@ -43,6 +47,7 @@ export default function CatalogueScreen() {
   const { need, cat: catParam, brand: brandParam, p: pathParam } = useLocalSearchParams<{ need?: string; cat?: string; brand?: string; p?: string }>();
   const [services, setServices] = useState<Service[] | null>(() => peekCatalogue());
   const [error, setError] = useState(false);
+  const [showEnquiries,setShowEnquiries]=useState(false);const [careActive,setCareActive]=useState(false);
   const pricingVehicle = usePricingVehicle();
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState<string | null>(null);
@@ -130,8 +135,10 @@ export default function CatalogueScreen() {
     if (n.kind === "leaf") return card(n.service, i);
     if (n.kind === "enquiry") {
       const photo = n.infoKey ? null : typePhoto(n.key);
+      const exactProduct=n.infoKey?BRAND_ENQUIRIES.find(x=>x.key===n.infoKey):null;
+      const exactVisual=exactProduct?serviceVisual({name:exactProduct.name,brand:exactProduct.brand,category:exactProduct.group==='ppf'?'ppf':'ceramic'}):null;
       const title = n.infoKey && trail.some(x=>x.key==="3M") ? n.label.replace("Scotchgard Paint Protection Film Pro ", "Scotchgard Pro ").replace("Paint Protection Film ", "") : n.label;
-      return <PhotoCard key={n.key} title={title} pill={n.infoKey ? "Ask for a quote" : "Get a quote"} hearted={false} onPress={() => router.push(n.infoKey ? { pathname: "/(tabs)/catalogue/enquiry", params: { id: n.infoKey } } : { pathname: "/(tabs)/help", params: { service: n.label } })} media={photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
+      return <PhotoCard key={n.key} title={title} pill={n.infoKey ? "Ask for a quote" : "Get a quote"} hearted={false} onPress={() => router.push(n.infoKey ? { pathname: "/(tabs)/catalogue/enquiry", params: { id: n.infoKey } } : { pathname: "/(tabs)/help", params: { service: n.label } })} media={exactProduct&&exactVisual?.bottle?<ServicePhoto service={{name:exactProduct.name,brand:exactProduct.brand,category:"ceramic"}} height={400}/>:photo ? <FadeImage source={photo} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : iconPanel("tools")} />;
     }
     const xs = leafServices(n);
     const photo = base.length === 0 ? typePhoto(n.key) : null;
@@ -141,6 +148,9 @@ export default function CatalogueScreen() {
     return <PhotoCard key={n.key} mediaTreatment={logo ? (logo.background === "#FFFFFF" ? "paper" : "logo-dark") : undefined} title={n.label} pill={xs.length ? pricedFrom(xs)?.replace(/^From /, "From ") : "Ask for a quote"} hearted={false} onPress={() => go({ cat: catKey!, p: [...base, n.key].join(",") })} media={media} />;
   };
   const renderNodes = (ns: TreeNode[]) => {
+    const bookable=ns.filter(n=>leafServices(n).length>0);const enquiry=ns.filter(n=>leafServices(n).length===0);
+    if(trail.length===0&&catGroup){return <View style={{gap:16}}>{bookable.map(n=><Row key={n.kind==='leaf'?n.service.id:n.key} title={n.kind==='leaf'?n.service.name:n.label} detail={`${leafServices(n).length} listed options`} onPress={()=>{if(n.kind==='leaf')router.push(`/(tabs)/catalogue/${n.service.id}`);else go({cat:catGroup.key,p:n.key});}} last/>)}{enquiry.length?<View style={{gap:10}}><Pressable accessibilityRole="button" onPress={()=>setShowEnquiries(x=>!x)}><T tone="secondary">{showEnquiries?'Hide':'Ask about'} other options ({enquiry.length})</T></Pressable>{showEnquiries?enquiry.map(n=>nodeTile(n,0)):null}</View>:null}</View>;}
+
     if (trail.length === 0 && catGroup && AREA_SECTIONS[catGroup.key]) {
       return areaSections(catGroup.key, ns).map((sec) => (
         <View key={sec.label || "all"} style={{ gap: 8 }}>
@@ -199,10 +209,11 @@ export default function CatalogueScreen() {
       {services && searching ? (
         found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : grid(found.map(card))
       ) : null}
-      {services && !searching && level === 1 && !grp ? (
+      {services&&!searching&&level===1&&!grp?<CareJourney services={services} onOpen={s=>router.push(`/(tabs)/catalogue/${s.id}`)} priceLabel={s=>careEntryPrice(pricedLabel(s),!!pricingVehicle.category)} onDepthChange={setCareActive}/>:null}
+      {services && !searching && level === 1 && !grp && !careActive ? (
         // All: one card per category, same as the filter pills. Tapping one opens that filter view.
         <View style={{ gap: 8 }} testID="category-cards">
-          {grid(overviewGroups(MENU_GROUPS, (g) => inGroup(g).length).map((g) => {
+          {grid(overviewGroups(MENU_GROUPS, (g) => inGroup(g).length).filter(g=>g.key!=="wash"&&g.key!=="coatings").map((g) => {
             const photo = groupPhoto(g.key);
             const pill = pricedFrom(inGroup(g)) ?? (g.pricing === "consult" ? "Get a quote" : undefined);
             return <PhotoCard key={g.key} title={groupLabel(g)} pill={pill} hearted={false} onPress={() => { setGrp(g.key); }}
@@ -212,7 +223,7 @@ export default function CatalogueScreen() {
       ) : null}
       {services && !searching && level === 1 && grp ? (
         <View style={{ gap: 18 }}>
-          {visibleGroups.filter((g) => !grp || g.key === grp).map((g) => (
+          {grp==='ppf'?<PpfSelection services={all} priceLabel={s=>careEntryPrice(pricedLabel(s),!!pricingVehicle.category)} onService={s=>router.push(`/(tabs)/catalogue/${s.id}`)} onEnquiry={(id,request)=>router.push(request?{pathname:'/(tabs)/help',params:{service:request}}:{pathname:'/(tabs)/catalogue/enquiry',params:{id}})}/>:visibleGroups.filter((g) => !grp || g.key === grp).map((g) => (
             <View key={g.key} style={{ gap: 8 }}>
               <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" }}>{groupLabel(g)}</Text>
               {areaSections(g.key, buildTree(g, all)).map((sec) => (
@@ -227,7 +238,7 @@ export default function CatalogueScreen() {
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: 18 }}>
-          {renderNodes(nodes)}
+          {cat === 'ppf' ? <PpfSelection services={all} initialBrand={trail.find(t=>['XPEL','Garware','LLumar','3M','GSWF','NAR','AVVYX'].includes(t.key))?.key} priceLabel={s=>careEntryPrice(pricedLabel(s),!!pricingVehicle.category)} onService={s=>router.push(`/(tabs)/catalogue/${s.id}`)} onEnquiry={(id,request)=>router.push(request?{pathname:'/(tabs)/help',params:{service:request}}:{pathname:'/(tabs)/catalogue/enquiry',params:{id}})}/> : renderNodes(nodes)}
           {cat === "ppf" || cat === "coatings" ? <T role="caption" tone="secondary">{cat === "coatings" ? "Final price confirmed after inspection." : PAINT_INSPECTION_NOTE}</T> : null}
         </View>
       ) : null}

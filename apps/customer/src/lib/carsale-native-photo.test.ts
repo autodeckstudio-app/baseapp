@@ -1,0 +1,10 @@
+import{it,expect,vi,beforeEach}from'vitest';
+const h=vi.hoisted(()=>({native:vi.fn(),calls:[]as any[]}));
+vi.mock('expo/fetch',()=>({fetch:(...a:any[])=>h.native(...a)}));vi.mock('./firebase',()=>({auth:{},functions:{}}));vi.mock('firebase/functions',()=>({httpsCallable:(_:unknown,name:string)=>async(data:unknown)=>{h.calls.push({name,data});return{data:{uploadUrl:'https://upload.invalid',path:'listing/photo.jpg',requiredHeaders:{'Content-Type':'image/jpeg','x-goog-meta-owner':'canonical'}}};}}));
+import{uploadListingPhoto,replaceListingPhoto}from'./carsale-service';
+beforeEach(()=>{h.calls=[];h.native.mockReset().mockResolvedValue({ok:true});vi.stubGlobal('fetch',vi.fn(async()=>({ok:true})));});
+it('native listing upload sends bytes unchanged and signed headers',async()=>{const b=new Uint8Array([255,216,255]);await expect(uploadListingPhoto(b,'image/jpeg')).resolves.toBe('listing/photo.jpg');expect(h.native).toHaveBeenCalledWith('https://upload.invalid',{method:'PUT',headers:{'Content-Type':'image/jpeg','x-goog-meta-owner':'canonical'},body:b});expect(fetch).not.toHaveBeenCalled();});
+it('web Blob preserves web upload path',async()=>{await uploadListingPhoto(new Blob(['x']),'image/jpeg');expect(fetch).toHaveBeenCalled();expect(h.native).not.toHaveBeenCalled();});
+it('failed native PUT never swaps current listing photo',async()=>{h.native.mockResolvedValue({ok:false});await expect(replaceListingPhoto('l',0,2,new Uint8Array([1]),'image/jpeg')).rejects.toThrow('did not upload');expect(h.calls.map(x=>x.name)).toEqual(['issueListingPhotoUploadUrl']);});
+it('successful native replacement binds index/count/new path',async()=>{await replaceListingPhoto('l',1,3,new Uint8Array([1]),'image/jpeg');expect(h.calls[1]).toEqual({name:'replaceMyListingPhoto',data:{listingId:'l',index:1,expectedCount:3,newPath:'listing/photo.jpg'}});});
+it('rejected native network PUT never invokes replacement swap',async()=>{h.native.mockRejectedValue(new Error('network lost'));await expect(replaceListingPhoto('l',0,2,new Uint8Array([1]),'image/jpeg')).rejects.toThrow('network lost');expect(h.calls.map(x=>x.name)).toEqual(['issueListingPhotoUploadUrl']);});

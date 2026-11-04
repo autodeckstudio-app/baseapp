@@ -57,7 +57,7 @@ export default function GarageScreen() {
   const [plan, setPlan] = useState<Membership | null>(mock ? mock.plan : null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
   // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
   useEffect(() => {

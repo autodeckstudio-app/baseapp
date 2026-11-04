@@ -11,14 +11,14 @@ export function StoryCircles({ groups, seen, onOpen }: { groups: StoryGroup[]; s
   const shown = groups;
   if (shown.length === 0) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.line, paddingRight: space.line }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.line, paddingRight: space.line, paddingVertical: 4 }}>
       {shown.map((g) => {
-        const ring = seen.has(seenKeyOf(g)) ? colors.borderSubtle : colors.accent;
+        const ring = !g.live || seen.has(seenKeyOf(g)) ? colors.borderSubtle : colors.accent;
         return (
-          <Pressable key={g.key} accessibilityRole="button" accessibilityLabel={`${g.title}, ${g.items.length} ${g.items.length === 1 ? "story" : "stories"}`} onPress={() => onOpen(g)} style={{ width: 72, alignItems: "center", gap: 6 }}>
+          <Pressable key={g.key} accessibilityRole="button" accessibilityHint="Opens full-screen stories. Tap the sides to move, hold to pause, swipe down to close." accessibilityLabel={`${g.title}, ${g.items.length} ${g.items.length === 1 ? "story" : "stories"}`} onPress={() => onOpen(g)} style={{ width: 72, alignItems: "center", gap: 6 }}>
             <View style={{ width: 68, height: 68, borderRadius: 9999, borderWidth: 2, borderColor: ring, padding: 3 }}>
               <View style={{ flex: 1, borderRadius: 9999, overflow: "hidden", backgroundColor: colors.accentHaze, alignItems: "center", justifyContent: "center" }}>
-                {g.cover ? <Image source={{ uri: g.cover }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <T role="title" tone="secondary">{(g.title.trim()[0] ?? "H").toUpperCase()}</T>}
+                {g.cover ? <Image source={{ uri: g.cover }} resizeMode="cover" style={{ width: "100%", height: "100%" }} /> : <T role="title" tone="secondary">{g.live ? "AD" : (g.title.trim()[0] ?? "H").toUpperCase()}</T>}
               </View>
             </View>
             <T role="caption" tone="secondary" numberOfLines={1}>{g.title}</T>

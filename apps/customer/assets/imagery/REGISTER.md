@@ -147,3 +147,12 @@ Generated illustrative unbranded service scenes: ai-trim-restore, ai-decon, ai-g
 
 ## Added brand enquiry marks,3Nov2026
 Official homepage header assets: GSWF190x57 https://gswf.com/wp-content/uploads/2026/03/GSWF-Logo-WHITE-1-190x57.webp ; NAR176x37 https://www.narppf.com/template/default/images/logo.png ; AVVYX sourceAVIF convertedPNG without recolour https://avvyx.com/wp-content/uploads/2025/09/AVVYX__3_-removebg-preview.avif . Exact marks, not claims of authorised installer or stock. Enquiry product cards use generic protection application imagery, not fake product packaging. Small intrinsic headermarks are not called high-resolution assets.
+
+## Exact named product enquiry photos, private preview 4 Nov 2026
+
+No installed product or studio package is inferred from these photos. Original source pages identify the named enquiry product. Private preview only under existing test scope; production image scope needs reconciliation.
+| koch-chemie-ceramic-allround-c002.png | https://www.koch-chemie.com/en/products/ceramic_allround_c002 | https://media.koch-chemie.com/Mockups/1248x1248/506999_506001__1793672750.png | TEST |
+| koch-chemie-ceramic-body-cb001.png | https://www.koch-chemie.com/en/products/ceramic_body_cb001 | https://media.koch-chemie.com/Mockups/1248x1248/807001_807999__1793672436.png | TEST |
+| koch-chemie-ceramic-rims-cr001.png | https://www.koch-chemie.com/en/products/ceramic_rims_cr001 | https://media.koch-chemie.com/Mockups/1248x1248/808001_808001__1793676939.png | TEST |
+| koch-chemie-ceramic-neo-c003.png | https://www.koch-chemie.com/en/products/ceramic_neo_c003 | https://media.koch-chemie.com/Mockups/1248x1248/699-S75-01_1__1793677801.png | TEST |
+| kovalent-overlay.png | https://kovalentcoatings.com/products/overlay-ppf-coating/ | https://kovalentcoatings.com/wp-content/uploads/2026/06/overlay-ppf-coating-cars.jpg | TEST |

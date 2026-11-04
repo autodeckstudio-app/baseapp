@@ -19,6 +19,8 @@ const config: ExpoConfig = {
   },
   android: {
     package: "in.autodeck.customer",
+    // Photo-only uploads need neither microphone capture nor drawing over other apps.
+    blockedPermissions: ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"],
     adaptiveIcon: {
       backgroundColor: "#ffffff",
       foregroundImage: "./assets/brand/icon-512.png",

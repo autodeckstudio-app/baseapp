@@ -27,7 +27,7 @@ export default function CarDetail() {
   const [confirmPhoto,setConfirmPhoto] = useState(false);
   const [photoBusy,setPhotoBusy] = useState(false);
   const [replacing,setReplacing] = useState(false);
-  const [replacement,setReplacement] = useState<{ blob: Blob; type: string } | null>(null);
+  const [replacement,setReplacement] = useState<{ blob: Blob | Uint8Array; type: string; previewUri?:string } | null>(null);
   const [photoError,setPhotoError] = useState<string | null>(null);
   const [car, setCar] = useState<CarListingView | null | undefined>(undefined);
   const [phone, setPhone] = useState("");
@@ -97,12 +97,12 @@ export default function CarDetail() {
       ) : null}
       {replacing && !replacement ? (
         <View style={{ gap: space.hair }}>
-          <FileUploader label="Choose a replacement photo" files={[]} onChange={(fs) => { const f = fs[0]; if (f) setReplacement({ blob: f.blob, type: f.type }); }} />
+          <FileUploader label="Choose a replacement photo" files={[]} nativeEnabled nativeFileCount={replacement?1:0} onNativeChange={fs=>{const f=fs[0];if(f)setReplacement({blob:f.bytes,type:f.type,previewUri:f.previewUri});}} onChange={(fs) => { const f = fs[0]; if (f) setReplacement({ blob: f.blob, type: f.type }); }} />
           <Button label="Cancel" kind="quiet" onPress={() => setReplacing(false)} />
         </View>
       ) : null}
       {replacing && replacement ? (
-        <Notice title="Replace this image?" body="The new photo takes this spot. The old one is removed. Your listing and its other photos stay." action={<View style={{ gap: space.breath }}><Button label="Replace" busy={photoBusy} onPress={() => { setPhotoBusy(true); replaceListingPhoto(car.id, photoIndex, car.photoUrls.length, replacement.blob, replacement.type).then(() => { setReplacing(false); setReplacement(null); setAttempt((n) => n + 1); }).catch(() => setPhotoError("Could not replace the photo. Nothing was changed. Try again.")).finally(() => setPhotoBusy(false)); }} /><Button label="Keep the old one" kind="quiet" onPress={() => { setReplacing(false); setReplacement(null); }} /></View>} />
+        <>{replacement.previewUri?<Image source={{uri:replacement.previewUri}} accessibilityLabel="Replacement photo preview" style={{width:"100%",height:180,borderRadius:12}}/>:null}<Notice title="Replace this image?" body="The new photo takes this spot. The old one is removed. Your listing and its other photos stay." action={<View style={{ gap: space.breath }}><Button label="Replace" busy={photoBusy} onPress={() => { setPhotoBusy(true); replaceListingPhoto(car.id, photoIndex, car.photoUrls.length, replacement.blob, replacement.type).then(() => { setReplacing(false); setReplacement(null); setAttempt((n) => n + 1); }).catch(() => setPhotoError("Could not replace the photo. Nothing was changed. Try again.")).finally(() => setPhotoBusy(false)); }} /><Button label="Keep the old one" kind="quiet" onPress={() => { setReplacing(false); setReplacement(null); }} /></View>} /></>
       ) : null}
       {confirmPhoto ? (
         <Notice title="Remove this image?" body="Only this photo is removed. Your listing and its other photos stay." action={<View style={{ gap: space.breath }}><Button label="Remove" busy={photoBusy} onPress={() => { setPhotoBusy(true); removeListingPhoto(car.id, photoIndex, car.photoUrls.length).then(() => { setConfirmPhoto(false); setPhotoIndex(0); setAttempt((n) => n + 1); }).catch(() => setPhotoError("Could not remove the photo. Nothing was changed. Try again.")).finally(() => setPhotoBusy(false)); }} /><Button label="Keep it" kind="quiet" onPress={() => setConfirmPhoto(false)} /></View>} />

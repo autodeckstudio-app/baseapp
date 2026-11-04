@@ -15,6 +15,7 @@ export type EmulatorTargets = {
   host: string;
   firestorePort: number;
   functionsPort: number;
+  storagePort: number;
   authUrl: string;
 };
 
@@ -29,7 +30,7 @@ export function emulatorTargets(env: Record<string, string | undefined>): Emulat
   const firestorePort = Number(env["EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT"] ?? "8080");
   const functionsPort = Number(env["EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT"] ?? "5001");
   const authPort = Number(env["EXPO_PUBLIC_AUTH_EMULATOR_PORT"] ?? "9099");
-  return { host, firestorePort, functionsPort, authUrl: `http://${host}:${authPort}` };
+  return { host, firestorePort, functionsPort, storagePort:Number(env["EXPO_PUBLIC_STORAGE_EMULATOR_PORT"]??"9199"), authUrl: `http://${host}:${authPort}` };
 }
 
 
@@ -39,6 +40,7 @@ export function emulatorTargets(env: Record<string, string | undefined>): Emulat
  */
 export type EmulatorConnectionProof = {
   firestoreHost: string | null;
+  storageHost:string|null;
   functionsOrigin: string | null;
   authEmulatorUrl: string | null;
 };
@@ -56,8 +58,9 @@ export function emulatorConnectionsVerified(
 ): boolean {
   const t = emulatorTargets(env);
   return (
+    proof.storageHost === `${t.host}:${t.storagePort}` &&
     proof.firestoreHost === `${t.host}:${t.firestorePort}` &&
     proof.functionsOrigin === `http://${t.host}:${t.functionsPort}` &&
-    proof.authEmulatorUrl === t.authUrl
+    (proof.authEmulatorUrl === t.authUrl || proof.authEmulatorUrl === `${t.authUrl}/`)
   );
 }

@@ -523,3 +523,61 @@ html{scroll-behavior:smooth}html,body,#root{margin:0;min-height:100%}body{backgr
 
 /* picture wrapper for responsive hero film: no box of its own */
 .hero-film>picture{display:contents}
+
+/* Service discovery: native horizontal scrolling, no wheel interception. */
+.service-orbit-heading{display:flex;justify-content:space-between;align-items:baseline;gap:24px;margin:0 0 28px}.service-orbit-heading>p:first-child{font-size:20px;color:#f4f2ed}.service-orbit{display:flex;gap:26px;overflow-x:auto;scroll-snap-type:x mandatory;perspective:1300px;padding:28px 5% 40px;scroll-padding-inline:5%;overscroll-behavior-x:contain}.service-orbit-card{position:relative;flex:0 0 44%;min-height:510px;border-radius:32px;overflow:hidden;scroll-snap-align:center;transform:rotateY(-8deg) scale(.96);transform-origin:center;transition:transform .45s ease,box-shadow .45s ease;border:1px solid #ffffff28;background:#18191b;box-shadow:0 25px 45px #0005;text-decoration:none}.service-orbit-card:hover,.service-orbit-card:focus-visible,.service-orbit-card.is-current{transform:rotateY(0) scale(1);box-shadow:0 28px 65px #0009}.service-orbit-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.service-orbit-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#080a0c00 15%,#080a0c80 45%,#080a0cf5 100%)}.service-orbit-card>div{position:absolute;z-index:1;bottom:0;padding:34px;color:#fff}.service-orbit-card h3{font-size:38px;line-height:1.08;margin:14px 0}.service-orbit-card p{font-size:15px;line-height:1.55;color:#ddd;max-width:34ch;margin-bottom:24px}.service-orbit-card strong{font-size:13px;letter-spacing:.03em;color:#e4c39c}.service-orbit:focus-visible{outline:2px solid #d5ba92;outline-offset:5px}@media(max-width:700px){.service-orbit-heading{display:block}.service-orbit-heading>p:first-child{font-size:17px;margin-bottom:10px}.service-orbit{gap:14px;padding:15px 4% 28px}.service-orbit-card{flex-basis:88%;min-height:440px;transform:rotateY(-4deg) scale(.97);border-radius:26px}.service-orbit-card>div{padding:25px}.service-orbit-card h3{font-size:31px}.service-orbit-card p{font-size:14px}}@media (prefers-reduced-motion: reduce){.service-orbit{perspective:none;scroll-behavior:auto}.service-orbit-card{transform:none!important;transition:none!important}}
+
+/* Natural-flow showcase and studio visit: one alignment grid, no pinned-scroll runway. */
+.autodeck #app.app-showcase-revamp{height:auto;min-height:0;padding-block:var(--section-space)}
+.autodeck #app.app-showcase-revamp .app-five-stage{position:relative;top:auto;height:auto;min-height:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 64px;max-width:1120px;margin:auto;background:none}
+.autodeck #app.app-showcase-revamp .source-head{grid-column:1/-1;margin:0 0 8px}
+.autodeck #app.app-showcase-revamp .source-head h2{max-width:800px;font-size:clamp(32px,4.8vw,62px);line-height:1.08;margin-top:14px}
+.autodeck #app.app-showcase-revamp .app-five-layout{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px;width:100%;max-width:none;align-items:center;padding:40px;background:linear-gradient(145deg,#ffffff09,#ffffff02);border:1px solid #ffffff20;border-radius:28px;box-shadow:none}
+.autodeck #app.app-showcase-revamp .app-five-device{min-width:0;touch-action:pan-y}
+.autodeck #app.app-showcase-revamp .app-five-device .phone{height:auto;width:260px;max-width:100%;min-height:0;aspect-ratio:390/844;padding:5px;border-radius:30px}
+.autodeck #app.app-showcase-revamp .app-five-device>.fine{display:block;margin-top:16px;font-size:11px!important}
+.autodeck #app.app-showcase-revamp .app-five-copy{text-align:left;min-width:0;align-self:center}
+.autodeck #app.app-showcase-revamp .app-five-copy h3{font-size:clamp(30px,3.3vw,46px);line-height:1.12;margin:18px 0;min-height:2.24em;max-width:400px}
+.autodeck #app.app-showcase-revamp .app-five-copy>p:not(.eyebrow){font-size:17px;line-height:1.6;margin:0;min-height:3.2em;max-width:350px}
+.autodeck #app.app-showcase-revamp .app-five-copy .text-link{display:inline-flex;min-height:44px;align-items:center;margin-top:20px}
+.autodeck #app.app-showcase-revamp .five-controls{grid-column:1/-1;width:100%;margin:0;max-width:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px;border-radius:18px;gap:6px}
+.autodeck #app.app-showcase-revamp .five-controls button{width:100%;height:58px;min-width:0;border-radius:12px;gap:8px}
+.autodeck #app.app-showcase-revamp .app-download{grid-column:2;grid-row:4;justify-self:end;width:100%;max-width:390px;margin:0}
+.autodeck #app.app-showcase-revamp .five-scroll-hint{grid-column:1;grid-row:4;text-align:left;align-self:center;margin:0;font-size:12px}
+.autodeck #visit[data-layout=studio-visit]{display:block}
+.autodeck #visit[data-layout=studio-visit]>.source-head,.autodeck #visit[data-layout=studio-visit]>.contact{width:100%;max-width:1120px;margin-left:auto;margin-right:auto}
+.autodeck #visit[data-layout=studio-visit]>.source-head{margin-bottom:32px}
+.autodeck #visit[data-layout=studio-visit] .source-head h2{font-size:clamp(32px,4.8vw,62px);line-height:1.08;max-width:850px}
+.autodeck #visit[data-layout=studio-visit] .visit-mobile-break{display:none}
+.autodeck #visit[data-layout=studio-visit] .visit-heading-tail{white-space:normal}
+.autodeck #visit[data-layout=studio-visit] .contact.source-contact{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;gap:0;border-radius:28px;overflow:hidden;border:1px solid #ffffff20;background:#ffffff04}
+.autodeck #visit[data-layout=studio-visit] .visit-map{display:flex;align-items:center;justify-content:center;aspect-ratio:auto;min-height:340px;background:#171917;overflow:hidden}
+.autodeck #visit[data-layout=studio-visit] .visit-map img{width:100%;height:auto;max-height:none;aspect-ratio:2/1;object-fit:contain}
+.autodeck #visit[data-layout=studio-visit] .visit-details{padding:40px;display:flex;flex-direction:column;justify-content:center;max-width:none}
+.autodeck #visit[data-layout=studio-visit] .visit-details>p:first-child{font-size:20px;line-height:1.5;margin:0 0 14px}
+.autodeck #visit[data-layout=studio-visit] .visit-details>.fine{font-size:14px!important;line-height:1.7;margin-top:10px}
+.autodeck #visit[data-layout=studio-visit] .contact-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
+.autodeck #visit[data-layout=studio-visit] .contact-actions a{white-space:normal;min-height:50px;text-align:center;justify-content:center;padding:12px;font-size:13px}
+@media(max-width:700px){
+.autodeck #app.app-showcase-revamp .app-five-stage{grid-template-columns:1fr;gap:20px}
+.autodeck #app.app-showcase-revamp .source-head h2,.autodeck #visit[data-layout=studio-visit] .source-head h2{font-size:clamp(30px,8vw,42px)}
+.autodeck #app.app-showcase-revamp .app-five-layout{grid-template-columns:1fr;gap:28px;padding:28px 20px;border-radius:24px}
+.autodeck #app.app-showcase-revamp .app-five-device .phone{width:244px;max-width:100%;height:auto;min-height:0}
+.autodeck #app.app-showcase-revamp .app-five-copy{text-align:left;width:100%}
+.autodeck #app.app-showcase-revamp .app-five-copy h3{font-size:30px;min-height:2.24em;margin:14px 0}
+.autodeck #app.app-showcase-revamp .app-five-copy>p:not(.eyebrow){font-size:16px;min-height:3.2em;max-width:none}
+.autodeck #app.app-showcase-revamp .app-five-copy>.eyebrow{font-size:10px!important}
+.autodeck #app.app-showcase-revamp .five-controls{padding:4px;gap:2px;border-radius:14px}
+.autodeck #app.app-showcase-revamp .five-controls button{height:60px;flex-direction:column;gap:5px;padding:4px 1px;border-radius:10px}
+.autodeck #app.app-showcase-revamp .five-controls button b{font-size:9px;line-height:1.25}
+.autodeck #app.app-showcase-revamp .app-download{grid-column:1;grid-row:auto;max-width:none;justify-self:stretch}
+.autodeck #app.app-showcase-revamp .five-scroll-hint{grid-column:1;grid-row:auto;text-align:center;font-size:11px}
+.autodeck #visit[data-layout=studio-visit]>.source-head{margin-bottom:24px}
+.autodeck #visit[data-layout=studio-visit] .contact.source-contact{grid-template-columns:1fr;border-radius:24px}
+.autodeck #visit[data-layout=studio-visit] .visit-map{min-height:0;aspect-ratio:2/1}
+.autodeck #visit[data-layout=studio-visit] .visit-details{padding:26px 22px}
+.autodeck #visit[data-layout=studio-visit] .visit-details>p:first-child{font-size:18px}
+.autodeck #visit[data-layout=studio-visit] .contact-actions{grid-template-columns:1fr;margin-top:24px;gap:10px}
+}
+/* Keep the review-critical content legible even before reveal observers settle. */
+.autodeck.cinema-ready #app.app-showcase-revamp .cinema-reveal,.autodeck.cinema-ready #visit[data-layout=studio-visit] .cinema-reveal{opacity:1;transform:none;filter:none}

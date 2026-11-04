@@ -25,6 +25,7 @@ export interface ServiceDraft {
   washEligible: boolean;
   sizes: SizeRuleDraft[];
   imageUrl: string;
+  imageChanged?: boolean;
   coverageLevel: "" | "high_impact" | "full_front" | "full_body";
   priceMode: "fixed" | "from" | "consult";
 }
@@ -77,7 +78,7 @@ export interface ServicePayload {
   membershipWashEligible: boolean;
   vehicleCategoryPricing: VehicleCategoryPricing[];
   // Only sent once a photo has been uploaded, so saves from before the photo feature stay unchanged.
-  imageUrl?: string;
+  imageUrl?: string | null;
   coverageLevel: "high_impact" | "full_front" | "full_body" | null;
   priceFrom: boolean;
   priceOnRequest: boolean;
@@ -89,7 +90,7 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
   if (!d.name.trim()) return { ok: false, problem: "Give the service a name." };
   if (!d.description.trim()) return { ok: false, problem: "Add a short description customers will read." };
   const price = Number(d.priceRupees);
-  if (!d.priceRupees.trim() || !Number.isFinite(price) || price <= 0) return { ok: false, problem: "Starting price must be more than ₹0." };
+  if (!Number.isFinite(price) || price < 0 || (d.priceMode !== "consult" && (!d.priceRupees.trim() || price <= 0))) return { ok: false, problem: "Starting price must be more than ₹0." };
   const minutes = Number(d.minutes);
   if (!Number.isInteger(minutes) || minutes <= 0) return { ok: false, problem: "Time needed must be a whole number of minutes." };
   const order = Number(d.displayOrder || "0");
@@ -138,7 +139,7 @@ export function toServicePayload(d: ServiceDraft): { ok: true; payload: ServiceP
       coverageLevel: d.coverageLevel || null,
       priceFrom: d.priceMode === "from",
       priceOnRequest: d.priceMode === "consult",
-      ...(d.imageUrl ? { imageUrl: d.imageUrl } : {}),
+      ...(d.imageChanged ? { imageUrl: d.imageUrl || null } : d.imageUrl ? { imageUrl: d.imageUrl } : {}),
     },
   };
 }

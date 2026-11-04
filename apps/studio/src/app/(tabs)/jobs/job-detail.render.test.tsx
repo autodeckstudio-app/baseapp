@@ -15,12 +15,15 @@ vi.mock("expo-router", () => ({
 }));
 
 type Snap = { exists: () => boolean; data: () => unknown };
+const bookingErrors=new Map<string,()=>void>();
+const bookingListeners = new Map<string, (s: Snap) => void>();
 const jobListeners = new Map<string, (s: Snap) => void>();
 vi.mock("firebase/firestore", () => ({
   doc: (_db: unknown, ...parts: string[]) => ({ parts }),
   getDoc: async () => ({ exists: () => false, data: () => undefined }),
-  onSnapshot: (ref: { parts?: string[] }, cb: (s: Snap) => void) => {
+  onSnapshot: (ref: { parts?: string[] }, cb: (s: Snap) => void,err?:()=>void) => {
     if (ref.parts && ref.parts[0] === "jobs" && ref.parts[1]) jobListeners.set(ref.parts[1], cb);
+    if(ref.parts?.[0] === "bookings") {bookingListeners.set(ref.parts[1]!,cb);if(err)bookingErrors.set(ref.parts[1]!,err);}
     return () => {};
   },
 }));
@@ -75,7 +78,7 @@ vi.mock("../../../lib/approval-service", () => ({
 }));
 vi.mock("../../../lib/inspection-service", () => ({ listenToInspection: () => () => {}, startInspection: vi.fn() }));
 vi.mock("../../../components/AdminRequestPanel", () => ({ AdminRequestPanel: () => null }));
-vi.mock("../../../components/RecordPaymentFields", () => ({ RecordPaymentFields: () => null }));
+vi.mock("../../../components/UpiQr", () => ({ UpiQr: () => null }));
 
 // Render-spy on the pane: proves the parent's render-level identity gate
 // never even MOUNTS the declaration for a mismatched job/stage/operator,
@@ -574,4 +577,22 @@ describe("payment read-state guard (no real payments, read-state only)", () => {
     await flush();
     expect(paymentListeners.length).toBeGreaterThan(before);
   });
+it('opening record hides redundant outer action and cash retry is available only for failed cash, never failed online link',async()=>{const el=mk('jA',{paymentStatus:'unpaid'});await flush();deliverPayment(null);press(el,'Record payment');expect(textOf(el)).toContain('Record cash payment?');expect(el.root.findAll((n:any)=>n.props.label==='Record payment')).toHaveLength(0);press(el,'Cancel');deliverPayment({...PENDING_CASH,status:'failed'});expect(textOf(el)).toContain('Record payment');deliverPayment({...PENDING_CASH,status:'failed',method:'razorpay_payment_link'});expect(textOf(el)).not.toContain('Record payment');});
+  it('real cash fields receipt checkbox reaches record callable exactly once and listener paid closes collection',async()=>{const svc=await import('../../../lib/payment-service');vi.mocked(svc.recordManualPayment).mockClear();const el=mk('jA',{paymentStatus:'unpaid'});await flush();deliverPayment(null);press(el,'Record payment');press(el,'Confirm');await flush();expect(textOf(el)).toContain('Confirm you have the cash in hand first.');expect(svc.recordManualPayment).not.toHaveBeenCalled();press(el,'I have the cash');press(el,'Confirm');await flush();expect(svc.recordManualPayment).toHaveBeenCalledTimes(1);expect(svc.recordManualPayment).toHaveBeenCalledWith({jobId:'jA',method:'cash'});emitJob('jA',mkJob('jA',{paymentStatus:'paid'}));deliverPayment({...PENDING_CASH,status:'completed'});await flush();expect(textOf(el)).not.toContain('Record payment');expect(textOf(el)).not.toContain('Confirm cash received');});
+
+  it('cash receipt affirmation dies across operator A to B to A and cannot replay old confirm',async()=>{const svc=await import('../../../lib/payment-service');vi.mocked(svc.recordManualPayment).mockClear();const el=mk('jA',{paymentStatus:'unpaid'});await flush();deliverPayment(null);press(el,'Record payment');press(el,'I have the cash');const stale=capturePress(el,'Confirm');fireAuth({...STAFF,uid:'replacement'});fireAuth(STAFF);act(()=>stale());await flush();expect(svc.recordManualPayment).not.toHaveBeenCalled();expect(textOf(el)).not.toContain('Cash in hand');});
+
+ it('payment then job listeners show syncing until both paid, and reverse order holds collection too',async()=>{const el=mk('jA',{paymentStatus:'unpaid'});await flush();deliverPayment({...PENDING_CASH,status:'completed'});expect(textOf(el)).toContain('Payment records syncing - do not collect again');expect(textOf(el)).not.toContain('Record payment');emitJob('jA',mkJob('jA',{paymentStatus:'paid'}));expect(textOf(el)).not.toContain('Payment records syncing');deliverPayment({...PENDING_CASH,status:'pending'});expect(textOf(el)).toContain('Payment records syncing - do not collect again');expect(textOf(el)).not.toContain('Record payment');});
+
+ it('consult wait disables work and cash action until quoted price approved; ordinary booked work stays enabled',async()=>{
+ const el=mk('jA',{paymentStatus:'unpaid',status:'VEHICLE_RECEIVED',bookingId:'b'});await flush();deliverPayment(null);
+ const disabled=(label:string)=>el.root.findAll((n:any)=>n.props.label===label).some((n:any)=>n.props.disabled===true);
+ expect(disabled('Start Work')).toBe(true);expect(disabled('Record payment')).toBe(true);
+ expect(textOf(el)).toContain('Checking linked booking');act(()=>bookingErrors.get('b')!());expect(textOf(el)).toContain('Linked booking unavailable');expect(textOf(el)).toContain('Retry linked booking');
+ const quote=(patch:any)=>act(()=>bookingListeners.get('b')!({exists:()=>true,data:()=>({id:'b',tenantId:'t',customerId:'c',priceOnRequest:true,quoteStatus:'quoted',...patch})}));
+ quote({});expect(textOf(el)).toContain('Waiting for customer price approval');expect(disabled('Record payment')).toBe(true);
+ quote({quoteStatus:'approved'});expect(disabled('Start Work')).toBe(false);expect(disabled('Record payment')).toBe(false);
+ quote({priceOnRequest:false,quoteStatus:undefined});expect(disabled('Start Work')).toBe(false);expect(disabled('Record payment')).toBe(false);
+ });
+
 });

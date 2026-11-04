@@ -574,7 +574,8 @@ describe("one time format", () => {
 describe("form controls follow the theme", () => {
   it("SelectField and DateField read Day/Night, no fixed dark box", () => {
     const s = read("src/ui/inputs.tsx");
-    expect(s).toContain("controlFor(useExperienceTheme().name==='light')");
+    expect(s).toContain("const day=useExperienceTheme().name==='light'");
+    expect(s).toContain("controlFor(day)");
     expect(s).not.toContain("#202023");
     expect(s).not.toContain("borderRadius:14");
   });

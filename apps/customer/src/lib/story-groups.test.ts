@@ -38,4 +38,4 @@ describe("tray and viewer follow the Instagram pattern", () => {
   });
 });
 
-it('video stories use the same in-app user-initiated player on web/native, never Image fallback or autoplay',()=>{const v=readFileSync(`${__dirname}/../ui/StoryViewer.tsx`,'utf8');expect(v).toContain('ServiceVideo');expect(v).not.toContain('createElement("video"');expect(v).not.toContain('autoPlay: true');expect(v).toContain('!isVideo ? <View');});
+it('stories use a dedicated full-screen media player; catalogue player remains separate',()=>{const v=readFileSync(`${__dirname}/../ui/StoryViewer.tsx`,'utf8');expect(v).toContain('StoryMedia');expect(v).not.toContain('ServiceVideo');expect(v).not.toContain('Close video');expect(v).not.toContain('label={last');});

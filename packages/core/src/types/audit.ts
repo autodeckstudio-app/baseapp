@@ -1,10 +1,13 @@
 export type AuditAction =
+  | "service.catalogue_draft_saved" | "service.catalogue_draft_reviewed"
   | "payment.external_return_recorded"
   | "staffAccess.approved" | "staffAccess.rejected"
   | "account.deletion_requested" | "account.deletion_cancelled"
   | "pickup.requested"
   | "pickup.updated"
   | "customer.created"
+  | "customer.claim_code_issued"
+  | "customer.claimed"
   | "customer.profile_updated"
   | "vehicle.created"
   | "vehicle.updated"
