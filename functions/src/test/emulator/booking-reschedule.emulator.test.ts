@@ -279,13 +279,15 @@ describe("Customer booking reschedule", () => {
       const job = await getJobForBooking(booking.id);
       expect(job.statusHistory.length, `iteration ${i}`).toBe(1); // just the initial PENDING_VEHICLE entry
 
-      const [advanceResult] = await Promise.allSettled([
+      const [advanceResult,cancelResult] = await Promise.allSettled([
         advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user"), raceStudioId) } as never),
         cancelBooking.run(
           { data: { bookingId: booking.id, reason: "race test" }, auth: customerAuth(raceCustomerId) } as never,
         ),
       ]);
 
+      if(cancelResult.status==="rejected"){const snapshot=(await db.collection("bookings").doc(booking.id).get()).data();console.error("CANCEL_RACE_DIAGNOSTIC",{iteration:i,reason:cancelResult.reason,booking:snapshot,job:await getJobForBooking(booking.id),payments:(await db.collection("payments").where("bookingId","==",booking.id).get()).docs.map(d=>d.data())});}
+      expect(cancelResult.status, `iteration ${i}: cancel settlement must succeed`).toBe("fulfilled");
       const finalJob = await getJobForBooking(booking.id);
       const finalBooking = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
 
