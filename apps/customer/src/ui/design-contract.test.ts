@@ -149,7 +149,7 @@ it("takes hero heights from metrics on car and booking detail",()=>{expect(read(
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
-    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: 480");expect(svc).toContain('alignItems: "center", paddingHorizontal: 20');expect(svc).not.toContain('width: "92%"');
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: 480");expect(svc).toContain('alignItems: "center", paddingHorizontal: 20');expect(svc).not.toContain('width: "92%"');expect(svc).toContain("height: showBar ? barH + 24 : 0");expect(svc).toContain("onLayout={(e) => setBarH(e.nativeEvent.layout.height)}"); // the spacer tracks the measured bar so the last line scrolls clear at 320px
     expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });

@@ -24,7 +24,7 @@ it("one exact five-home placement per active confirmed service, no record data c
     { ...active[0]!, id: "unconfirmed" },
     { ...active[1]!, active: false },
   ]);
-  expect(new Set(shown.map((s) => s.id)).size).toBe(shown.length);
+  expect(new Set(shown.map((row) => row.id)).size).toBe(shown.length);
   for (const row of shown) {
     if (row.category === "pickup") expect(servicePlacement(row)).toBeNull();
     else expect(servicePlacement(row)?.home).toBeTruthy();

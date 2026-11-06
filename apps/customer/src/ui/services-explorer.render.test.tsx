@@ -58,7 +58,7 @@ const rows = [
 const press = async (r: any, label: string) => {
   const p = r.root
     .findAllByType(Pressable)
-    .find((p: any) => p.props.accessibilityLabel === label);
+    .find((candidate: any) => candidate.props.accessibilityLabel === label);
   expect(p, label).toBeTruthy();
   await act(async () => p.props.onPress());
 };
