@@ -247,6 +247,7 @@ export default function BookingDetailScreen() {
   const [decideError, setDecideError] = useState<string | null>(null);
   async function handleDecide(approvalId: string, decision: "approved" | "rejected") {
     if (mockWriteBlocked()) return;
+    if(decision==="approved"&&booking&&(booking.priceOnRequest||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval)&&booking.quoteStatus!=="approved"){setDecideError("Approve the original quote on this booking first. Your additional-work request will remain here.");return;}
     if (decidingId||actionLock.current||routeRef.current!==routeScope||!liveApprovalsRef.current.some(a=>a.id===approvalId&&a.status==='pending')) return;
     const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setDecidingId(approvalId); setDecideError(null);

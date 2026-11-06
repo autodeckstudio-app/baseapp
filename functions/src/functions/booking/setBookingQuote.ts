@@ -65,7 +65,7 @@ export const setBookingQuote = onCall({ region: "asia-south1" , enforceAppCheck:
     for (const j of jobsSnap.docs) {
       tx.update(j.ref, { priceBreakdown: breakdown, totalAmount: breakdown.total, updatedAt: nowIso });
     }
-    tx.update(ref, { priceBreakdown: breakdown, totalAmount: breakdown.total, quoteStatus: "quoted", updatedAt: nowIso });
+    tx.update(ref, { priceBreakdown: breakdown, totalAmount: breakdown.total, quoteStatus: "quoted", consultQuoteApproval:null, updatedAt: nowIso });
     writeAuditLog(tx, {
       action: "booking.quoted",
       entityType: "Booking",

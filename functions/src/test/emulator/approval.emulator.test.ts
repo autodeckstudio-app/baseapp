@@ -119,6 +119,7 @@ async function seedAdditionalService(serviceId: string, tenantId: string, name: 
 }
 
 async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:tenantId,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
@@ -398,6 +399,7 @@ describe("Approval / additional-work workflow", () => {
     });
 
     it("cross-customer: another customer cannot respond to this approval", async () => {
+      const other=uid("other-cust");await db.collection("customers").doc(other).set({id:other,authUid:other,tenantId:TENANT_A});
       const { jobId } = await setupInProgressJob("cust-owner");
       const addSvc = await seedAdditionalService(uid("svc-add"), TENANT_A, "Extra", 40000);
       const created = (await createApproval.run({
@@ -408,12 +410,13 @@ describe("Approval / additional-work workflow", () => {
       await expect(
         respondToApproval.run({
           data: { approvalId: created.approvalId, decision: "approved" },
-          auth: customerAuth(uid("other-cust")),
+          auth: customerAuth(other),
         } as never),
       ).rejects.toMatchObject({ code: "permission-denied" });
     });
 
     it("cross-tenant: a tenant-B customer cannot respond to a tenant-A approval", async () => {
+      const other=uid("cust-b");await db.collection("customers").doc(other).set({id:other,authUid:other,tenantId:TENANT_B});
       const { jobId } = await setupInProgressJob("cust-tenantcheck");
       const addSvc = await seedAdditionalService(uid("svc-add"), TENANT_A, "Extra", 40000);
       const created = (await createApproval.run({
@@ -424,7 +427,7 @@ describe("Approval / additional-work workflow", () => {
       await expect(
         respondToApproval.run({
           data: { approvalId: created.approvalId, decision: "approved" },
-          auth: customerAuth(uid("cust-b"), TENANT_B),
+          auth: customerAuth(other, TENANT_B),
         } as never),
       ).rejects.toMatchObject({ code: "permission-denied" });
     });

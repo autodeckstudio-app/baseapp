@@ -12,6 +12,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createApprovalSchema } from "../../schemas/approval.js";
 import { buildApproval } from "../../lib/approval-builder.js";
+import { readConsultPaymentBinding } from "../../lib/consult-payment.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 export const createApproval = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
@@ -61,6 +62,10 @@ export const createApproval = onCall({ region: "asia-south1" , enforceAppCheck: 
     // an additional amount once a payment is already in flight or settled
     // for this job — no recharge/refund model exists, and none is invented
     // here (Phase 3 explicit scope boundary — see HANDOFF).
+    const current=(await tx.get(jobSnap.ref)).data() as ServiceJob;
+    if(!current||current.tenantId!==job.tenantId||current.customerId!==job.customerId||current.studioId!==job.studioId||current.totalAmount!==job.totalAmount||current.status==="DELIVERED"||current.status==="CANCELLED")throw new HttpsError("failed-precondition","The job changed. Review it before requesting work.");
+    const booking=current.bookingId?(await tx.get(db.collection(COLLECTIONS.bookings()).doc(current.bookingId))).data():undefined;
+    try{await readConsultPaymentBinding(db,tx,current,booking);}catch{throw new HttpsError("failed-precondition","Approve the original booking quote before requesting additional work.");}
     const inFlight = await tx.get(
       db
         .collection(COLLECTIONS.payments())

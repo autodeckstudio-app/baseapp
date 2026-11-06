@@ -274,7 +274,7 @@ export default function JobDetailScreen() {
   }
 
   async function handleCreateApproval() {
-    if (!job || creatingApproval || !selectedServiceId || !approvalReason.trim()) return;
+    if (!job || quotePaymentHold || creatingApproval || !selectedServiceId || !approvalReason.trim()) return;
     setActionError(null);setApprovalsBefore(approvals.length);setApprovalSent(false);setCreatingApproval(true);
     try {
       await createApproval({ jobId: job.id, serviceId: selectedServiceId, reason: approvalReason.trim() });
@@ -390,7 +390,7 @@ export default function JobDetailScreen() {
 
 
   function handleRecordCashPayment() {
-    if(job?.bookingId&&(!booking||booking.priceOnRequest===true&&booking.quoteStatus!=="approved"))return;
+    if(job?.bookingId&&(!booking||(booking.priceOnRequest===true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true)&&booking.quoteStatus!=="approved"))return;
     if (!job?.id||!advanceAuth||advanceAuth.tenantId!==job.tenantId||!["studio","admin","superadmin"].includes(advanceAuth.role??"")||(advanceAuth.role==="studio"&&advanceAuth.studioId!==job.studioId)) return;
     setCashError(null); setPayMethod("cash"); setPayVerified(false); setPayRef("");
     setCashConfirm({ mode: "record", armId: ++payArmSeq.current, jobId: job.id, tenantId: job.tenantId, paymentId: null, epoch: paymentEpoch.current, gen: payGen });
@@ -530,8 +530,8 @@ export default function JobDetailScreen() {
 
   const transitions = JOB_STATUS_TRANSITIONS[job.status] ?? [];
   const canAdvance = job.status !== "STANDBY" && transitions.some((s) => s !== "CANCELLED");
-  const quotePaymentHold=Boolean(job.bookingId)&&(!booking||booking.priceOnRequest===true&&booking.quoteStatus!=='approved');
-  const quoteWorkHold=job.status==='VEHICLE_RECEIVED'&&Boolean(job.bookingId)&&(!booking||booking.priceOnRequest===true&&booking.quoteStatus!=='approved');
+  const quotePaymentHold=Boolean(job.bookingId)&&(!booking||(booking.priceOnRequest===true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true)&&booking.quoteStatus!=='approved');
+  const quoteWorkHold=job.status==='VEHICLE_RECEIVED'&&Boolean(job.bookingId)&&(!booking||(booking.priceOnRequest===true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true)&&booking.quoteStatus!=='approved');
   const advanceLabel = ADVANCE_ACTION_LABELS[job.status] ?? "Advance";
   const statusLabel = JOB_STATUS_LABELS[job.status] ?? job.status;
 
@@ -759,7 +759,8 @@ export default function JobDetailScreen() {
         </Section>
       ))}
 
-      {job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
+      {quotePaymentHold ? <Text style={{...typography.body,color:colors.textSecondary,marginBottom:spacing.md}}>The customer must approve the original booking quote before additional work can be requested. Existing requests stay available after that approval.</Text> : null}
+      {!quotePaymentHold && job.status !== "DELIVERED" && job.status !== "CANCELLED" && (
         <>
           {!showApprovalForm ? (
             <Button

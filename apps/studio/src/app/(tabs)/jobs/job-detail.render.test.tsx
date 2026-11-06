@@ -590,8 +590,8 @@ it('opening record hides redundant outer action and cash retry is available only
  expect(disabled('Start Work')).toBe(true);expect(disabled('Record payment')).toBe(true);
  expect(textOf(el)).toContain('Checking linked booking');act(()=>bookingErrors.get('b')!());expect(textOf(el)).toContain('Linked booking unavailable');expect(textOf(el)).toContain('Retry linked booking');
  const quote=(patch:any)=>act(()=>bookingListeners.get('b')!({exists:()=>true,data:()=>({id:'b',tenantId:'t',customerId:'c',priceOnRequest:true,quoteStatus:'quoted',...patch})}));
- quote({});expect(textOf(el)).toContain('Waiting for customer price approval');expect(disabled('Record payment')).toBe(true);
- quote({quoteStatus:'approved'});expect(disabled('Start Work')).toBe(false);expect(disabled('Record payment')).toBe(false);
+ quote({});expect(textOf(el)).toContain("original booking quote");expect(textOf(el)).not.toContain("Request Approval");expect(textOf(el)).toContain('Waiting for customer price approval');expect(disabled('Record payment')).toBe(true);
+ quote({quoteStatus:'approved'});expect(textOf(el)).toContain('Request Approval');expect(disabled('Start Work')).toBe(false);expect(disabled('Record payment')).toBe(false);
  quote({priceOnRequest:false,quoteStatus:undefined});expect(disabled('Start Work')).toBe(false);expect(disabled('Record payment')).toBe(false);
  });
 

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
-import type { ApprovalRequest, Vehicle } from "@autodeck/core";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import type { ApprovalRequest, Vehicle, Booking, ServiceJob } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { space } from "@autodeck/ui/theme";
 import { Button, Chip, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
@@ -40,6 +40,8 @@ export default function ApprovalDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [deciding, setDeciding] = useState(false);
   const [confirming, setConfirming] = useState<"approved" | "rejected" | null>(null);
+  const [quoteScopeRead,setQuoteScopeRead]=useState<"loading"|"ready"|"error">("loading");
+  const [linkedBooking,setLinkedBooking]=useState<Booking|null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const approvalRef=useRef(approval);approvalRef.current=approval;const scopeRef=useRef(id);scopeRef.current=id;const generation=useRef(0);const decidingRef=useRef(false);
@@ -67,7 +69,10 @@ export default function ApprovalDetailScreen() {
     }).catch(()=>{if(alive)setVehicle(null)});return()=>{alive=false};
   }, [approval?.vehicleId]);
 
+  useEffect(()=>{setQuoteScopeRead(approval?.jobId?"loading":"ready");setLinkedBooking(null);let active=true;let stop:(()=>void)|undefined;if(approval?.jobId){void getDoc(doc(db,COLLECTIONS.jobs(),approval.jobId)).then(snap=>{const job=snap.data() as ServiceJob|undefined;if(active&&!job?.bookingId)setQuoteScopeRead(snap.exists()?"ready":"error");if(active&&job?.bookingId)stop=onSnapshot(doc(db,COLLECTIONS.bookings(),job.bookingId),b=>{if(active){setLinkedBooking(b.exists()?b.data() as Booking:null);setQuoteScopeRead(b.exists()?"ready":"error")}},()=>{if(active){setLinkedBooking(null);setQuoteScopeRead("error")}});}).catch(()=>{if(active){setLinkedBooking(null);setQuoteScopeRead("error")}});}return()=>{active=false;stop?.()};},[approval?.jobId]);
+  const initialQuotePending=Boolean(linkedBooking&&(linkedBooking.priceOnRequest||(linkedBooking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval)&&linkedBooking.quoteStatus!=="approved");
   async function handleDecision(decision: "approved" | "rejected") {
+    if(decision==="approved"&&(initialQuotePending||quoteScopeRead!=="ready"))return;
     if (!id || decidingRef.current || approvalRef.current?.status!=="pending"||scopeRef.current!==id) return;
     const scope=id,gen=generation.current;decidingRef.current=true;
     setDeciding(true);
@@ -148,7 +153,7 @@ export default function ApprovalDetailScreen() {
           />
         ) : (
           <View style={{ gap: space.breath }}>
-            <Button label="Approve" onPress={() => setConfirming("approved")} />
+            {quoteScopeRead!=="ready" ? <Notice title={quoteScopeRead==="loading"?"Checking the original quote":"Original quote could not load"} body="Your request stays here. Open the booking to check its original quote before approving additional work." action={<Button label="Open booking" onPress={()=>router.push(`/(tabs)/bookings/${approval.bookingId??approval.jobId}`)} />} /> : initialQuotePending ? <Notice title="Original quote approval needed" body="Your additional-work request stays here. Review the original quote on your booking first, then return to this request." action={<Button label="Open booking quote" onPress={()=>router.push(`/(tabs)/bookings/${linkedBooking?.id}`)} />} /> : <Button label="Approve" onPress={() => setConfirming("approved")} />}
             <Button label="Decline" kind="danger" onPress={() => setConfirming("rejected")} />
           </View>
         )

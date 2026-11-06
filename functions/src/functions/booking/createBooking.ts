@@ -1,3 +1,4 @@
+import { freezeConsultQuoteApproval } from "../../lib/consult-approval-binding.js";
 import {acceptedServiceQuote,acceptedQuoteBreakdown} from "../../lib/accepted-service-quote.js";
 import type {QuoteJourney} from "@autodeck/core";
 import {hasReleasedBay} from "@autodeck/core";
@@ -208,6 +209,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       const existing=existingSnap.data() as Booking|undefined;if(!existing||existing.serviceId!==data.serviceId||existing.vehicleId!==data.vehicleId||existing.studioId!==data.studioId||existing.scheduledDate!==data.scheduledDate||existing.scheduledTime!==data.scheduledTime)throw new HttpsError("already-exists","This request already confirmed different booking details.");return { booking: existing };
     }
 
+    if(quoteRef){const identity=(await tx.get(db.collection(COLLECTIONS.customers()).doc(customerDocId))).data();if(!identity||identity["authUid"]!==user.uid||identity["tenantId"]!==user.claims.tenantId||identity["deletedAt"])throw new HttpsError("failed-precondition","Customer identity needs review.");}
     if(quoteRef){const liveService=await tx.get(db.collection(COLLECTIONS.services()).doc(data.serviceId));const live=liveService.data();if(!liveService.exists||live?.['active']!==true||live['tenantId']!==user.claims.tenantId||(live['productKey']??null)!==quoteBefore!.scope.productKey||(!!quoteBefore!.requestedReference&&live?.['name']!==quoteBefore!.scope.coverage))throw new HttpsError("failed-precondition","The selected offering changed. Ask the studio to review the quote.");const fresh=(await tx.get(quoteRef)).data() as QuoteJourney|undefined;const currentOffer=acceptedServiceQuote(fresh,quoteInput);if(fresh!.version!==quoteBefore!.version||JSON.stringify(currentOffer)!==JSON.stringify(acceptedOffer))throw new HttpsError("aborted","Quote changed. Review it again.");}
 
     // Coordinate creation with permanent deletion: a changed/deleted vehicle
@@ -475,6 +477,11 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       sealedAt: null,
     };
 
+    if(acceptedOffer){
+      const receipt=freezeConsultQuoteApproval({version:1,bookingId:bookingRef.id,jobId:jobRef.id,tenantId:booking.tenantId,customerId:customerDocId,quotedTotalPaise:booking.totalAmount,pickupFeePaise:finalBreakdown.pickupFee??0,dropFeePaise:finalBreakdown.dropFee??0,quotedAt:nowIso},customerDocId,nowIso);
+      tx.create(db.collection("consultQuoteApprovals").doc(receipt.quoteHash),receipt);
+      Object.assign(booking,{consultQuoteApproval:{quoteHash:receipt.quoteHash}});
+    }
     if(quoteRef)tx.update(quoteRef,{phase:"visit_booked",bookingId:bookingRef.id,version:quoteBefore!.version+1});
     tx.set(bookingRef, booking);
     tx.set(jobRef, job);
