@@ -18,14 +18,16 @@ describe("Services All view: one card per category", () => {
     expect(GROUP_PHOTO_CATEGORY["pickup"]).toBe("pickup");
     expect(readFileSync(`${__dirname}/imagery.ts`, "utf8")).toMatch(/pickup: genPickup/);
   });
-  it("the cards and the pills use the same list, and a card tap opens that filter", () => {
-    expect(src).toContain("<ServiceHomes services={services}");
-    expect(src).toContain("onOpen={s=>router.push(`/(tabs)/catalogue/${s.id}`)}");
-    expect(src).toContain("MENU_GROUPS.filter((g) => inGroup(g).length > 0).map((g) => ({ key: g.key as string | null, label: groupLabel(g) }))");
+  it("the cards and pills use the same five-home list and route-backed choice",()=>{
+    const explorer=readFileSync(`${__dirname}/../ui/ServicesExplorer.tsx`,"utf8");
+    expect(src).toContain("SERVICE_HOMES.map");expect(explorer).toContain("SERVICE_HOMES.map");
+    expect(explorer).toContain("onPath({ home: h.key })");expect(src).toContain("value={path.home ?? \"all\"}");
+    expect(src).not.toContain("buildTree(");expect(src).not.toContain("<PpfSelection");
   });
-  it("All no longer lists every service of every category on one page", () => {
-    expect(src.replace(/\s/g," ")).toMatch(/level\s*===\s*1\s*&&\s*!grp/);
-    expect(src).toContain("level === 1 && grp");
+  it("All keeps large home cards, not a second list of every product",()=>{
+    const explorer=readFileSync(`${__dirname}/../ui/ServicesExplorer.tsx`,"utf8");
+    expect(explorer).toContain("if (!home)");expect(explorer).toContain("serviceHomeImages[h.key]");
+    expect(explorer).toContain("<ServicePackageCard");expect(explorer).toContain('s.category === "pickup"');
   });
 });
 
@@ -54,7 +56,8 @@ describe("area sections inside a category", () => {
     expect(areaSections("wash", n).map((s) => s.label)).toEqual(["Exterior", "More"]);
     expect(areaSections("ppf", n)).toEqual([{ label: "", nodes: n }]);
   });
-  it("the screen applies the sections in both the All>category view and the direct category view", () => {
-    expect((src.match(/areaSections\(/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  it("legacy category URLs normalize into the same home/family flow instead of a second section renderer",()=>{
+    expect(src).toContain("routePath(params, all)");expect(src).toContain("<ServicesExplorer");
+    expect(src).not.toContain("areaSections(");
   });
 });

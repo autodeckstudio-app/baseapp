@@ -187,7 +187,7 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
         <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{title}</Text>
         {showDetail ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{detail}</Text> : null}
       </View>
-      <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: name === "light" ? "#1D1B26" : "#F4F2EF" }}>
+      <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: name === "light" ? "#1D1B26" : "#B9A58C" }}>
         <Text style={{ color: name === "light" ? "#F4F1EC" : "#0B0B0D", fontSize: 13, fontWeight: "800" }}>{cta}</Text>
       </View>
     </Pressable>

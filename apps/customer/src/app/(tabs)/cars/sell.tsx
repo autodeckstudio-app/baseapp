@@ -94,7 +94,7 @@ export default function SellScreen() {
           {[...garage.map((v) => ({ id: v.id as string | null, label: sellCarLabel(v), v })), { id: null as string | null, label: "Another car", v: null as Vehicle | null }].map((c) => {
             const on = picked === c.id;
             return (
-              <Pressable key={c.id ?? "other"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setPicked(c.id); if (c.v) setF((p) => ({ ...p, ...sellPrefillFromVehicle(c.v!) })); }} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#F3F1ED") : "rgba(128,128,128,0.14)" }}>
+              <Pressable key={c.id ?? "other"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setPicked(c.id); if (c.v) setF((p) => ({ ...p, ...sellPrefillFromVehicle(c.v!) })); }} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#B9A58C") : "rgba(128,128,128,0.14)" }}>
                 <Text style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : ink.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
               </Pressable>
             );

@@ -17,8 +17,8 @@ export function FilterPills<K extends string | null>({ items, value, onChange, t
       );
     }
     return (
-      <Pressable key={c.key ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#F3F1ED") : "rgba(128,128,128,0.14)" }}>
-        <Text style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : ink.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
+      <Pressable key={c.key ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} style={{ borderRadius: 9999, paddingHorizontal: 15, paddingVertical: 9, backgroundColor: on ? (light ? "#16181C" : "#665A4B") : "rgba(128,128,128,0.14)" }}>
+        <Text style={{ color: on ? (light ? "#F4F1EC" : "#F5EDE2") : ink.textPrimary, fontSize: 13, fontWeight: "700" }}>{c.label}</Text>
       </Pressable>
     );
   };

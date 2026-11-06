@@ -1,3 +1,5 @@
+import { SERVICE_HOMES } from "@autodeck/core";
+import { servicePlacement } from "../../../lib/services-navigation";
 import { SceneIntro } from "../../../ui/SceneIntro";
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
@@ -162,7 +164,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
       <Screen
         header={
           <View style={{ gap: space.hair }}>
-            <SceneIntro compact eyebrow={service.category} title={service.name} />
+            <SceneIntro compact eyebrow={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} />
             {pricingVehicle.label ? <T role="caption" tone="accent">Prices for your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}</T> : null}
             {service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
           </View>
@@ -275,7 +277,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
         <View style={{ height: showBar ? 100 : 0 }} />
       </Screen>
-      {focused && showBar ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : "#1B1B1F", borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
+      {focused && showBar ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : colors.surface, borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <ServiceActionBar car={`${pricingVehicle.label??"Your car"}${GST_ENABLED ? " · incl. GST" : ""}`} price={stickyPriceLabel({priceOnRequest:service.priceOnRequest===true,loading:priceLoading,total:priceBreakdown?priceBreakdown.total:null,from:service.priceFrom===true,needsCarType,hasCar:!!pricingVehicle.vehicle,error:priceError!==null},rupees)} disabled={!service.priceOnRequest&&priceBreakdown===null} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Book an inspection":"Request a quote"):"Book now"} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>
 
       </View></View> : null}

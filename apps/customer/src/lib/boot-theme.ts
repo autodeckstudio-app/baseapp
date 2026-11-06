@@ -5,3 +5,6 @@ import { applyCustomerRaisedTheme } from "@autodeck/ui/theme";
 
 applyCustomerRaised();
 applyCustomerRaisedTheme();
+
+import {applyCustomerSoftNight} from './customer-night';
+applyCustomerSoftNight();

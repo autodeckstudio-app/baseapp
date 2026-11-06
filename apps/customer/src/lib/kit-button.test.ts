@@ -7,12 +7,12 @@ import { join } from "node:path";
 // highlights), confirmed by the connected Instinct from its user's original
 // messages with locators (phonemsg-01M56KYTSGE053B53J9JR6PDST in
 // phoneconv-01M0NBXH0TC5NETW2EGQ3PEBST). The kit primary button must not fall
-// back to the charcoal fill.
+// back to the charcoal fill. Night was softened by the owner on 7 Nov 2026.
 const kit = readFileSync(join(__dirname, "..", "ui", "kit.tsx"), "utf8");
 
 describe("kit primary button", () => {
   it("fills the primary button white in day mode", () => {
-    expect(kit).toContain('mode === "light" ? "#FFFFFF" : "#F3F1ED"');
+    expect(kit).toContain('mode === "light" ? "#FFFFFF" : "#B9A58C"');
   });
   it("never uses the charcoal fill for the primary action", () => {
     const inkLine = kit.split("\n").find((l) => l.includes("inkButton ="));

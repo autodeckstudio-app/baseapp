@@ -19,8 +19,8 @@ describe("soleServiceRedirect: single-service category opens its service directl
     expect(soleServiceRedirect({ ...base, catGroup: undefined })).toBeUndefined();
     expect(soleServiceRedirect({ ...base, soleLeaf: undefined })).toBeUndefined();
   });
-  it("the catalogue screen actually gates the redirect on focus", () => {
-    expect(src).toContain("useFocusEffect");
-    expect(src).toContain("soleServiceRedirect({ focused, searching, fromRoute");
+  it("canonical catalogue never lets a background single-service result hijack a visible page",()=>{
+    expect(src).not.toContain("soleServiceRedirect(");expect(src).not.toContain("soleId");
+    expect(src).toContain("setServices(await getServiceCatalogue())");expect(src).toContain("onOpen={(s) => router.push(");
   });
 });

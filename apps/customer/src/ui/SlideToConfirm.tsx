@@ -31,7 +31,7 @@ export function SlideToConfirm({ label, onConfirm, busy = false, disabled = fals
       <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ height: THUMB + PAD * 2, borderRadius: 9999, backgroundColor: day ? "#16181C" : "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", justifyContent: "center", overflow: "hidden", opacity: disabled ? 0.5 : 1 }}>
         <Animated.View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: fillW, borderRadius: 9999, backgroundColor: "rgba(244,242,239,0.16)" }} />
         <Text pointerEvents="none" style={{ textAlign: "center", color: "#F4F2EF", fontSize: 15, fontWeight: "700", paddingLeft: THUMB / 2 }}>{busy ? "Sending..." : label}</Text>
-        <Animated.View {...pan.panHandlers} accessibilityRole="button" accessibilityLabel={label} style={{ position: "absolute", left: PAD, top: PAD, width: THUMB, height: THUMB, borderRadius: 9999, backgroundColor: "#F4F2EF", alignItems: "center", justifyContent: "center", transform: [{ translateX: x }] }}>
+        <Animated.View {...pan.panHandlers} accessibilityRole="button" accessibilityLabel={label} style={{ position: "absolute", left: PAD, top: PAD, width: THUMB, height: THUMB, borderRadius: 9999, backgroundColor: day?"#F4F2EF":"#B9A58C", alignItems: "center", justifyContent: "center", transform: [{ translateX: x }] }}>
           <Text style={{ color: "#0B0B0D", fontSize: 22, fontWeight: "800" }}>{"\u203A"}</Text>
         </Animated.View>
       </View>

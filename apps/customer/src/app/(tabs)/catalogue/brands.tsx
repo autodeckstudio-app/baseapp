@@ -1,37 +1,72 @@
-import { SceneIntro } from "../../../ui/SceneIntro";
-// Brand product page: same layout family as the service page. Sourced facts only; price is "ask the studio".
-import { View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { space } from "@autodeck/ui/theme";
-import { BRANDS } from "../../../lib/brands";
-import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { Chip, Kicker, Pane, Row, Screen, T } from "../../../ui/kit";
-
+// Old brand-item links resolve to the same confirmed catalogue/detail route.
+// A manufacturer's range list is not proof that the studio offers that product.
+import { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { getServiceCatalogue } from "../../../lib/catalogue-service";
+import { BRAND_ENQUIRIES } from "../../../lib/brand-enquiries";
+import { currentServices } from "../../../lib/services-navigation";
+import { Button, Loading, Notice, Screen } from "../../../ui/kit";
 export default function BrandProduct() {
-  const { b, n } = useLocalSearchParams<{ b?: string; n?: string }>();
-  const brand = BRANDS.find((x) => x.name === b);
-  const item = brand?.items.find((x) => x.name === n);
-  if (!brand || !item) return <Screen><T role="title">Product not found</T></Screen>;
-  const svc = { name: `${brand.name} ${item.name}`, brand: brand.name, category: item.kind === "PPF" ? "ppf" : "ceramic" };
+  const { b, n } = useLocalSearchParams<{ b?: string; n?: string }>(),
+    router = useRouter();
+  const [status, setStatus] = useState<"loading" | "missing" | "error">(
+    "loading",
+  );
+  useEffect(() => {
+    let alive = true;
+    setStatus("loading");
+    void getServiceCatalogue()
+      .then((rows) => {
+        if (!alive) return;
+        const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        const wanted = [norm(n ?? ""), norm(`${b ?? ""} ${n ?? ""}`)];
+        const service = currentServices(rows).find(
+          (s) =>
+            norm(s.brand ?? "") === norm(b ?? "") &&
+            wanted.includes(norm(s.name)),
+        );
+        if (service) {
+          router.replace(`/(tabs)/catalogue/${service.id}`);
+          return;
+        }
+        const ref = BRAND_ENQUIRIES.find(
+          (r) =>
+            norm(r.brand ?? "") === norm(b ?? "") &&
+            wanted.includes(norm(r.name)),
+        );
+        if (ref) {
+          router.replace({
+            pathname: "/(tabs)/catalogue/enquiry",
+            params: { id: ref.key },
+          });
+          return;
+        }
+        setStatus("missing");
+      })
+      .catch(() => {
+        if (alive) setStatus("error");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [b, n, router]);
+  if (status === "loading") return <Loading label="Opening current product" />;
   return (
-    <Screen
-      header={
-        <View style={{ gap: space.hair }}>
-          <SceneIntro compact eyebrow={item.kind === "PPF" ? "Paint protection film" : item.kind === "Coating" ? "Coating" : "Range"} title={item.name}/>
-          <T role="caption" tone="secondary">{brand.name}</T>
-        </View>
-      }
-    >
-      <ServicePhoto service={svc} aspect={16 / 10} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-        {item.warranty ? <Chip label={item.warranty.split(" (")[0] ?? item.warranty} tone="premium" /> : null}
-        <Chip label={brand.name} tone="neutral" />
-      </View>
-      <Pane pad="gap">
-        {item.note ? <Row title="About" detail={<T role="caption" tone="secondary">{item.note}</T>} /> : null}
-        {item.warranty ? <Row title="Warranty" detail={<T role="caption" tone="secondary">{item.warranty}. As stated by the brand.</T>} /> : <Row title="Warranty" detail={<T role="caption" tone="secondary">Not listed. Ask the studio.</T>} />}
-        <Row title="Price" detail={<T role="caption" tone="secondary">Ask the studio</T>} last />
-      </Pane>
+    <Screen appBar="Services">
+      <Notice
+        title={
+          status === "error"
+            ? "Can't load the current menu"
+            : "Product not currently listed"
+        }
+        body="Choose a confirmed offering from Services. Manufacturer information alone does not confirm availability."
+        action={
+          <Button
+            label="Browse services"
+            onPress={() => router.replace("/(tabs)/catalogue")}
+          />
+        }
+      />
     </Screen>
   );
 }

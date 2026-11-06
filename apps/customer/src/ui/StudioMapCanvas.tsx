@@ -21,7 +21,7 @@ export function StudioMapCanvas({ onPress }: { onPress: () => void }) {
       {bar({ left: 240, top: 0, bottom: 0, width: 14 })}
       <Text style={{ position: "absolute", left: 150, top: 108, color: label, fontSize: 10, fontWeight: "600" }}>Old Sharda Mandir Rd</Text>
       <View style={{ position: "absolute", left: 150, top: 150, alignItems: "center", gap: 4 }}>
-        <View style={{ width: 54, height: 54, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: night ? "#F3F1ED" : "#16181C", ...(Platform.OS === "web" ? ({ boxShadow: "0 12px 22px rgba(0,0,0,.35)" } as object) : {}) }}>
+        <View style={{ width: 54, height: 54, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: night ? "#B9A58C" : "#16181C", ...(Platform.OS === "web" ? ({ boxShadow: "0 12px 22px rgba(0,0,0,.35)" } as object) : {}) }}>
           <Icon name="garage" color={night ? "#16181C" : "#FFFFFF"} size={26} />
         </View>
         <View style={{ borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: colors.surface }}><Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "800" }}>AutoDeck</Text></View>

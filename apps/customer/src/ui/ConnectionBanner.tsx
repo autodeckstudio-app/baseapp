@@ -9,7 +9,7 @@ export function ConnectionBanner() {
   if (online) return null;
   const day = name === "light";
   return (
-    <View accessibilityRole="alert" accessibilityLiveRegion="polite" pointerEvents="none" style={{ position: "absolute", top: 8, left: 16, right: 16, maxWidth: 460, alignSelf: "center", zIndex: 70, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: day ? "#16181C" : "#F3F1ED" }}>
+    <View accessibilityRole="alert" accessibilityLiveRegion="polite" pointerEvents="none" style={{ position: "absolute", top: 8, left: 16, right: 16, maxWidth: 460, alignSelf: "center", zIndex: 70, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: day ? "#16181C" : "#B9A58C" }}>
       <Text style={{ color: day ? "#F4F2EF" : "#16181C", fontSize: 13, fontWeight: "700", textAlign: "center" }}>You are offline. Some things may not load or save until you reconnect.</Text>
     </View>
   );

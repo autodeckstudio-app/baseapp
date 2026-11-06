@@ -27,7 +27,7 @@ import { glassSurface, glassQuiet } from "../lib/glass";
 import { raised } from "../lib/raised";
 // Owner design choice: customer main actions are white (orange stays on active
 // nav and small highlights). Day: white fill; night keeps the off-white fill.
-const inkButton = (mode: string): ViewStyle => ({ ...raised(mode as never).dark, backgroundColor: mode === "light" ? "#FFFFFF" : "#F3F1ED" });
+const inkButton = (mode: string): ViewStyle => ({ ...raised(mode as never).dark, backgroundColor: mode === "light" ? "#FFFFFF" : "#B9A58C" });
 import { Ambient as BaseAmbient, type GlassProps, useExperienceTheme, onTabPressed } from "@autodeck/ui/native";
 import { floatHero, fontFamily, layout, motion, radius, space, type as typeScale, type TypeRole } from "@autodeck/ui/theme";
 
@@ -274,7 +274,7 @@ export function Button({
       ]}
     >
       {busy ? <ActivityIndicator color={primary ? "#16181C" : colors.textPrimary} /> : null}
-      <T numberOfLines={1} role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{color:"#16181C",fontWeight:"700"}:null]}>
+      <T numberOfLines={1} role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{color:name==="light"?"#16181C":"#231E18",fontWeight:"700"}:null]}>
         {label}
       </T>
     </Pressable>

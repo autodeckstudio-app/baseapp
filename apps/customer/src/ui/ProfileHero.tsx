@@ -12,7 +12,7 @@ export function ProfileHero({ name, email, photoUrl, onEdit }: { name: string; p
   const light = themeName === "light";
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: metrics.cardPad, ...glassPane(light) }}>
-      <View style={{ overflow:"hidden", width: 60, height: 60, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: light ? "#16181C" : "#F3F1ED" }}>
+      <View style={{ overflow:"hidden", width: 60, height: 60, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: light ? "#16181C" : "#B9A58C" }}>
         {photoUrl&&!failed?<Image accessibilityLabel="Your Google profile photo" source={{uri:photoUrl}} onError={()=>setFailed(true)} style={{width:60,height:60}}/>:<Text style={{ color: light ? "#F4F1EC" : "#16181C", fontSize: 24, fontWeight: "800" }}>{(name.trim()[0] ?? "A").toUpperCase()}</Text>}
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>

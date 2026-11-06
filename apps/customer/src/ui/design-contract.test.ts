@@ -282,15 +282,15 @@ describe("home menu", () => {
 });
 
 describe("services filters", () => {
-  it("Services is simple tiles: category tiles, then type tiles, then brand and product; no heading, no 3D car or goal chips", () => {
+  it("Services has one home/family/brand/product journey; no 3D car or competing goal flow", () => {
     const src = read("src/app/(tabs)/catalogue/index.tsx");
-    expect(src).toContain("const cat = fromRoute ?? undefined");
+    expect(src).toContain("routePath(params, all)");
     expect(src).toContain("<FilterPills");
     expect(read("src/app/(tabs)/garage/index.tsx")).toContain("<FilterPills");
     expect(src).not.toMatch(/What does your car need/);
     expect(src).not.toMatch(/ZoneCar|GOALS|zonesOf/);
-    expect(src).toContain("<Screen appBar=");
-    expect(src).toContain("typePhoto(");
+    expect(src).toMatch(/<Screen\s+(?:key=\{JSON.stringify\(path\)\}\s+)?appBar=/);
+    expect(read("src/ui/ServicesExplorer.tsx")).toContain("serviceHomeImages[h.key]");
   });
   it("unmapped types keep an icon rather than unrelated stock; newly generated matching service subjects are allowed", () => {
     const src = read("src/lib/imagery.ts");
@@ -368,7 +368,7 @@ describe("one icon set", () => {
     expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*serviceImagery/);
   });
   it("night surfaces use one charcoal card colour", () => {
-    expect(read("src/lib/raised.ts")).toContain('#1B1B1F');
+    expect(read("src/lib/raised.ts")).toContain('const surf = c.surface');
   });
 });
 
@@ -409,7 +409,8 @@ describe("one tile size everywhere", () => {
     expect((h.match(/aspectRatio: TILE_ASPECT/g) ?? []).length).toBe(1);
   });
   it("Services and Home Top services use PhotoCard and TILE_GAP", () => {
-    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("TILE_GAP");
+    expect(read("src/app/(tabs)/catalogue/index.tsx")).toContain("<ServicesExplorer");
+    expect(read("src/ui/ServicesExplorer.tsx")).toContain("<ServicePackageCard");
     expect(read("src/ui/HomeView.tsx")).toMatch(/function TopPickCard[\s\S]*<PhotoCard/);
   });
 });
@@ -460,7 +461,7 @@ describe("nav order and drawer", () => {
   it("Services levels step back through the one header, not a second back link", () => {
     const c = read("src/app/(tabs)/catalogue/index.tsx");
     expect(c).not.toContain("\u2039 {label}");
-    expect(c).toContain("onBack={levelBack}");
+    expect(c).toContain("onBack={fromRoute ? () => navigate(parentPath(path), true) : undefined}");
     expect(read("src/ui/GarageCard.tsx")).toContain("minHeight: 44");
   });
   it("a plan wash is labelled as a wash and its expiry date is human readable", () => {

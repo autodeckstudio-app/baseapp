@@ -1,0 +1,30 @@
+[
+  {
+    "key": "ppf",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "484a684049f2d7cf0c302308b6d66afca1d4b9127eae526807f1cbdedc98b59d",
+    "asset": "assets/imagery/service-types/ppf.jpg",
+    "bytes": 59488
+  },
+  {
+    "key": "pps",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "d72b020325727a6f0967d96824ffc39b4fe66964cb10e0a0d30d62a53874d938",
+    "asset": "assets/imagery/service-types/pps.jpg",
+    "bytes": 54368
+  },
+  {
+    "key": "colour-ppf",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "846fe59bcd349b64d7739b088934042761670b4da0976dcdda5d6dfcb8dc0800",
+    "asset": "assets/imagery/service-types/colour-ppf.jpg",
+    "bytes": 48026
+  },
+  {
+    "key": "accessories",
+    "kind": "generated service illustration, not product/stock/customer proof",
+    "sourceSHA256": "e3586cc9939451429415f4a215eda62d6e7b4c4c689583e567719686da0850e6",
+    "asset": "assets/imagery/service-types/accessories.jpg",
+    "bytes": 60681
+  }
+]

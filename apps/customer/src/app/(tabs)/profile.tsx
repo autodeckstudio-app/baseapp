@@ -122,8 +122,8 @@ export default function YouScreen() {
           {(["auto", "light", "night"] as const).map((m) => {
             const on = pref === m;
             return (
-              <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1, flexBasis: 0, height: 40, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (light ? "#16181C" : "#F3F1ED") : "transparent" }}>
-                <Text style={{ color: on ? (light ? "#F4F1EC" : "#16181C") : colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
+              <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => { setThemePref(m); setPref(m); }} style={{ flex: 1, flexBasis: 0, height: 40, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: on ? (light ? "#16181C" : "#665A4B") : "transparent" }}>
+                <Text style={{ color: on ? (light ? "#F4F1EC" : "#F5EDE2") : colors.textSecondary, fontSize: 14, fontWeight: "700" }}>{m === "auto" ? "Auto" : m === "light" ? "Day" : "Night"}</Text>
               </Pressable>
             );
           })}

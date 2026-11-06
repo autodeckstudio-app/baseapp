@@ -29,9 +29,9 @@ const SH = {
     well: "inset 0 2px 6px rgba(70,55,40,0.14)",
   },
   night: {
-    card: "12px 16px 30px rgba(0,0,0,0.60), -6px -6px 18px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.07)",
-    small: "7px 9px 18px rgba(0,0,0,0.58), -4px -4px 12px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.07)",
-    well: "inset 6px 7px 14px rgba(0,0,0,0.55), inset -4px -4px 10px rgba(255,255,255,0.04)",
+    card: "12px 16px 30px rgba(0,0,0,0.22), -6px -6px 18px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.07)",
+    small: "7px 9px 18px rgba(0,0,0,0.20), -4px -4px 12px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.07)",
+    well: "inset 6px 7px 14px rgba(0,0,0,0.20), inset -4px -4px 10px rgba(255,255,255,0.04)",
   },
 };
 
@@ -40,22 +40,22 @@ export function raised(mode: Mode): Raised {
   const c = night ? nightColors : { ...lightColors, surface: "#FFFFFF", surfaceElevated: "#F7F6F3", canvas: "#FFFFFF" };
   const s = night ? SH.night : SH.light;
   // One dark card colour everywhere (the same charcoal as Home and Garage), never the theme palette grey.
-  const surf = night ? "#1B1B1F" : c.surface;
-  const surfElevated = night ? "#232328" : c.surfaceElevated;
+  const surf = c.surface;
+  const surfElevated = c.surfaceElevated;
   const native = (elev: number): ViewStyle => ({ shadowColor: "#000", shadowOpacity: night ? 0.5 : 0.18, shadowRadius: elev * 1.6, shadowOffset: { width: 0, height: elev }, elevation: elev });
   const grad = (a: string, b: string) => (web ? ({ backgroundImage: `linear-gradient(145deg, ${a}, ${b})` } as object) : {});
   return {
     card: { backgroundColor: surf, borderRadius: 24, ...(web ? ({ boxShadow: s.card, ...grad(night ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0)", night ? "rgba(255,255,255,0.0)" : "rgba(255,255,255,0.0)") } as object) : native(8)) },
-    well: { backgroundColor: night ? "#131417" : "#E9E2D7", borderRadius: 16, ...(web ? ({ boxShadow: s.well } as object) : {}) },
+    well: { backgroundColor: night ? "#292C30" : "#E9E2D7", borderRadius: 16, ...(web ? ({ boxShadow: s.well } as object) : {}) },
     round: { backgroundColor: surf, borderRadius: 999, ...(web ? ({ boxShadow: s.small, ...grad(night ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0)", "rgba(255,255,255,0)") } as object) : native(5)) },
     roundOn: { backgroundColor: "#EC8638", borderRadius: 999, ...(web ? ({ boxShadow: "0 10px 22px -6px rgba(236,134,56,0.65), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -6px 10px rgba(160,70,10,0.25)", backgroundImage: "linear-gradient(180deg, #F7A257, #EC8638 55%, #D9712A)" } as object) : native(6)) },
     primary: { backgroundColor: "rgba(236,134,56,0.88)", ...(web ? ({ boxShadow: "0 6px 14px -8px rgba(236,134,56,0.5), inset 0 1px 0 rgba(255,255,255,0.35)" } as object) : native(3)) },
     quiet: { backgroundColor: surf, ...(web ? ({ boxShadow: s.small } as object) : native(4)) },
-    dark: { backgroundColor: night ? "#F3F1ED" : "#16181C", ...(web ? ({ boxShadow: night ? "0 10px 22px -8px rgba(0,0,0,0.7)" : "0 12px 22px -8px rgba(22,24,28,0.55), inset 0 1px 0 rgba(255,255,255,0.18)" } as object) : native(6)) },
+    dark: { backgroundColor: night ? "#B9A58C" : "#16181C", ...(web ? ({ boxShadow: night ? "0 10px 22px -8px rgba(0,0,0,0.7)" : "0 12px 22px -8px rgba(22,24,28,0.55), inset 0 1px 0 rgba(255,255,255,0.18)" } as object) : native(6)) },
     sheet: { backgroundColor: surfElevated, borderRadius: 24, ...(web ? ({ boxShadow: s.card } as object) : native(10)) },
     ground: c.canvas,
     groundImage: night
-      ? "radial-gradient(120% 50% at 80% -10%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #14151A 0%, #0F1013 60%, #0B0B0E 100%)"
+      ? "radial-gradient(120% 50% at 80% -10%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #2D3035 0%, #25282D 60%, #22252A 100%)"
       : "radial-gradient(100% 40% at 50% 0%, rgba(236,134,56,0.025), transparent 70%), linear-gradient(180deg, #FFFFFF, #FDFDFC)",
   };
 }

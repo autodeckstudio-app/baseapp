@@ -8,7 +8,7 @@ describe("Day surfaces are never the night colour", () => {
     const r = read("lib/raised.ts");
     expect(r).toContain('surface: "#FFFFFF"');
     expect(r).toContain('canvas: "#FFFFFF"');
-    expect(r).toMatch(/const surf = night \? "#1B1B1F" : c\.surface/);
+    expect(r).toMatch(/const surf = c\.surface/);
   });
   it("glassPane has a light variant that is the warm card, not dark glass", () => {
     const g = read("lib/glass-pane.ts");
