@@ -8,3 +8,5 @@ it('service recovery retries catalogue loading and preserves all price gates',()
 it('review guide follows quote and mandatory advance before fallback studio copy',()=>{const s=readFileSync('src/app/(tabs)/book/confirm.tsx','utf8');expect(s).toContain("payment={service?.priceOnRequest===true?'quote':giftCode?'gift':washOn?'membership':payNow?'online':advanceDue?'advance':'studio'}");});
 
 it('quote requests do not present payment selection before approval',()=>{const s=readFileSync('src/app/(tabs)/book/confirm.tsx','utf8');expect(s).toContain('{service?.priceOnRequest === true || washOn || giftCode ? null : <View');});
+
+it('category illustrations are bounded independently of Metro intrinsic asset dimensions',()=>{const s=readFileSync('src/ui/ServiceHomes.tsx','utf8');expect(s).toContain("aspectRatio:1.4,overflow:'hidden'");expect(s).toContain("position:'absolute',width:'100%',height:'100%'");});
