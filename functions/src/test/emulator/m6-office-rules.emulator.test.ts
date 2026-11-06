@@ -1,3 +1,4 @@
+import { getFirestore } from "firebase-admin/firestore";
 /**
  * M6 office module security rules tests.
  *
@@ -64,6 +65,7 @@ async function seed(
   data: Record<string, unknown>,
 ) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    if(coll==="papers" && typeof data["customerId"]==="string")await getFirestore().collection("customers").doc(data["customerId"]).set({id:data["customerId"],authUid:data["customerId"],tenantId:FIRST_TENANT_ID,deletedAt:null});
     await ctx.firestore().collection(coll).doc(docId).set({
       id: docId,
       tenantId: FIRST_TENANT_ID,

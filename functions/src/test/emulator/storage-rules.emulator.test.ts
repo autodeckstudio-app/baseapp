@@ -11,6 +11,7 @@
  * Run with: pnpm test:emulator (Storage Emulator at FIREBASE_STORAGE_EMULATOR_HOST, default localhost:9199)
  * Rules are loaded from ../../../../storage.rules (repo root)
  */
+import { getFirestore } from "firebase-admin/firestore";
 import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
 import { TEST_PROJECT_ID } from "../emulator-setup";
 import {
@@ -56,6 +57,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await testEnv.clearStorage();
+  await getFirestore().collection("customers").doc("uid-alice").set({id:"uid-alice",authUid:"uid-alice",tenantId:TENANT_ID,deletedAt:null});
+  await getFirestore().collection("vehicles").doc("vehicle-1").set({id:"vehicle-1",ownerId:"uid-alice",tenantId:TENANT_ID,deletedAt:null});
 });
 
 async function seedObject(path: string, customMetadata: Record<string, string>) {
@@ -139,19 +142,19 @@ describe("/{tenantId}/jobs/{jobId}/photos/{filename} — owner-scoped read", () 
   const path = `${TENANT_ID}/jobs/job-1/photos/stage1.jpg`;
 
   it("owning customer (customMetadata.customerId) can read", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
     await assertSucceeds(alice.storage().ref(path).getMetadata());
   });
 
   it("a different customer in the same tenant cannot read another customer's job photo", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const bob = testEnv.authenticatedContext("uid-bob", customerClaims());
     await assertFails(bob.storage().ref(path).getMetadata());
   });
 
   it("studio/admin in the same tenant can read regardless of ownership", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const studio = testEnv.authenticatedContext("uid-studio", studioClaims());
     await assertSucceeds(studio.storage().ref(path).getMetadata());
   });
@@ -160,13 +163,13 @@ describe("/{tenantId}/jobs/{jobId}/photos/{filename} — owner-scoped read", () 
   // normalizes x-goog-meta-customerId -> customerid; production-observed
   // 2026-10-26). The rule must honor that casing and the original one.
   it("owning customer can read when the binding key landed lowercased (customerid)", async () => {
-    await seedObject(path, { customerid: "uid-alice" });
+    await seedObject(path, { customerid: "uid-alice", vehicleid:"vehicle-1" });
     const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
     await assertSucceeds(alice.storage().ref(path).getMetadata());
   });
 
   it("a different customer cannot read a lowercased-key photo", async () => {
-    await seedObject(path, { customerid: "uid-alice" });
+    await seedObject(path, { customerid: "uid-alice", vehicleid:"vehicle-1" });
     const bob = testEnv.authenticatedContext("uid-bob", customerClaims());
     await assertFails(bob.storage().ref(path).getMetadata());
   });
@@ -182,7 +185,7 @@ describe("/{tenantId}/invoices/{invoiceId}/{filename} — owner-scoped read", ()
   const path = `${TENANT_ID}/invoices/inv-1/invoice.pdf`;
 
   it("owning customer can read; a different customer cannot", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
     await assertSucceeds(alice.storage().ref(path).getMetadata());
 
@@ -191,7 +194,7 @@ describe("/{tenantId}/invoices/{invoiceId}/{filename} — owner-scoped read", ()
   });
 
   it("admin in the same tenant can read", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const admin = testEnv.authenticatedContext("uid-admin", adminClaims());
     await assertSucceeds(admin.storage().ref(path).getMetadata());
   });
@@ -201,7 +204,7 @@ describe("/{tenantId}/warranties/{warrantyId}/{filename} — owner-scoped read",
   const path = `${TENANT_ID}/warranties/warr-1/certificate.pdf`;
 
   it("owning customer can read; a different customer cannot", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const alice = testEnv.authenticatedContext("uid-alice", customerClaims());
     await assertSucceeds(alice.storage().ref(path).getMetadata());
 
@@ -210,7 +213,7 @@ describe("/{tenantId}/warranties/{warrantyId}/{filename} — owner-scoped read",
   });
 
   it("studio in the same tenant can read", async () => {
-    await seedObject(path, { customerId: "uid-alice" });
+    await seedObject(path, { customerId: "uid-alice", vehicleId:"vehicle-1" });
     const studio = testEnv.authenticatedContext("uid-studio", studioClaims());
     await assertSucceeds(studio.storage().ref(path).getMetadata());
   });

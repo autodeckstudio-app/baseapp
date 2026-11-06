@@ -26,7 +26,9 @@ beforeAll(async () => {
   });
 });
 afterAll(async () => { await testEnv.cleanup(); });
-beforeEach(async () => { await testEnv.clearFirestore(); });
+beforeEach(async () => { await testEnv.clearFirestore();
+ for(const id of ["lr-owner","lr-buyer","lr-other"])await db.collection("customers").doc(id).set({id,authUid:id,tenantId:T,deletedAt:null});
+ });
 
 const asCustomer = (uid: string, tenantId = T) => testEnv.authenticatedContext(uid, { role: "customer", tenantId, studioId: null }).firestore();
 const asStaff = (role: string, tenantId = T) => testEnv.authenticatedContext(`lr-${role}`, { role, tenantId, studioId: role === "studio" ? "s1" : null }).firestore();

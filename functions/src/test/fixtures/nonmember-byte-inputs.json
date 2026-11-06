@@ -155,5 +155,15 @@
       "make": "Maruti",
       "updatedAt": "2026-10-24T07:50:05.862Z"
     }
+  },
+  {
+    "collection": "customers",
+    "id": "L7QxPdcsJ60NwLUyfHj3Zc2mH1oB",
+    "data": {
+      "id": "L7QxPdcsJ60NwLUyfHj3Zc2mH1oB",
+      "authUid": "L7QxPdcsJ60NwLUyfHj3Zc2mH1oB",
+      "tenantId": "automodz",
+      "deletedAt": null
+    }
   }
 ]

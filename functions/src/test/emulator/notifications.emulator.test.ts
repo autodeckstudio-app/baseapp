@@ -120,6 +120,7 @@ async function seedService(serviceId: string, tenantId: string) {
 }
 
 async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:tenantId,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
@@ -459,6 +460,7 @@ describe("Notification system", () => {
   describe("17. membership events", () => {
     it("membership activation produces a membership_activated notification", async () => {
       const cust = uid("cust-mem-active");
+      await db.collection("customers").doc(cust).set({id:cust,authUid:cust,tenantId:TENANT_A,deletedAt:null});
       const planResult = (await createMembershipPlan.run({
         data: { tier: "gold", name: "Gold", priceInPaise: 299900, includedWashes: 4, discountPercent: 15 },
         auth: adminAuth(adminUid),

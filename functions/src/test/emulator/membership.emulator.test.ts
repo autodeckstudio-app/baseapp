@@ -125,6 +125,7 @@ async function seedService(
 }
 
 async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:tenantId,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
@@ -148,12 +149,14 @@ async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string)
 
 // Purchases + activates a membership end-to-end via the real Cloud Functions,
 // returning the resulting active Membership document.
+async function seedCustomerProfile(id:string,tenantId=TENANT_A){await db.collection("customers").doc(id).set({id,authUid:id,tenantId,deletedAt:null},{merge:true});}
 async function purchaseAndActivate(
   customerUid: string,
   planId: string,
   adminUid: string,
   tenantId = TENANT_A,
 ): Promise<Membership> {
+  await seedCustomerProfile(customerUid,tenantId);
   const purchaseResult = (await purchaseMembership.run({
     data: { planId, method: "cash", idempotencyKey: uid("idem") },
     auth: customerAuth(customerUid, tenantId),
@@ -221,6 +224,7 @@ describe("Membership system", () => {
 
   it("2. membership purchase — creates a pending Membership + Payment", async () => {
     const cust = uid("cust-purchase");
+    await seedCustomerProfile(cust);
     const result = (await purchaseMembership.run({
       data: { planId, method: "cash", idempotencyKey: uid("idem") },
       auth: customerAuth(cust),
@@ -249,6 +253,7 @@ describe("Membership system", () => {
   // has already committed.
   it("2b. a second purchaseMembership call shortly after the first is rejected — no duplicate membership/payment", async () => {
     const cust = uid("cust-purchase-race");
+    await seedCustomerProfile(cust);
 
     const first = (await purchaseMembership.run({
       data: { planId, method: "cash", idempotencyKey: uid("idem") },
@@ -283,6 +288,7 @@ describe("Membership system", () => {
 
   it("2c. TRUE simultaneous purchaseMembership calls: exactly one membership and one payment are created", async () => {
     const cust = uid("cust-true-race");
+    await seedCustomerProfile(cust);
     const results = await Promise.allSettled([buy(cust), buy(cust)]);
     const fulfilled = results.filter((r) => r.status === "fulfilled");
     expect(fulfilled.length).toBeGreaterThanOrEqual(1);
@@ -293,6 +299,7 @@ describe("Membership system", () => {
 
   it("2d. five simultaneous purchases with different idempotency keys create exactly one membership and one payment", async () => {
     const cust = uid("cust-race5");
+    await seedCustomerProfile(cust);
     await Promise.allSettled([buy(cust), buy(cust), buy(cust), buy(cust), buy(cust)]);
     const { memberships, payments } = await countFor(cust);
     expect(memberships).toHaveLength(1);
@@ -301,12 +308,14 @@ describe("Membership system", () => {
 
   it("2e. the claim document key is deterministic per tenant+customer and points at the created membership", async () => {
     const cust = uid("cust-claimkey");
+    await seedCustomerProfile(cust);
     const first = await buy(cust);
     const claim = await db.collection("membershipClaims").doc(`${TENANT_A}_${cust}`).get();
     expect(claim.exists).toBe(true);
     expect((claim.data() as { membershipId: string }).membershipId).toBe(first.membershipId);
     // a different customer gets an independent claim and is not blocked
     const other = uid("cust-claimkey-other");
+    await seedCustomerProfile(other);
     await expect(buy(other)).resolves.toMatchObject({ membershipId: expect.any(String) });
     expect((await countFor(other)).memberships).toHaveLength(1);
   });
@@ -314,6 +323,7 @@ describe("Membership system", () => {
   it("2f. a purchase is possible again after the held membership is cancelled or expired (claim does not stick)", async () => {
     for (const terminal of ["cancelled", "expired"] as const) {
       const cust = uid(`cust-retry-${terminal}`);
+    await seedCustomerProfile(cust);
       const first = await buy(cust);
       await db.collection("memberships").doc(first.membershipId).update({ status: terminal });
       const second = await buy(cust);
@@ -328,6 +338,7 @@ describe("Membership system", () => {
 
   it("2g. a legacy active membership with no claim document still blocks a new purchase", async () => {
     const cust = uid("cust-legacy");
+    await seedCustomerProfile(cust);
     const first = await buy(cust);
     await db.collection("memberships").doc(first.membershipId).update({ status: "active" });
     await db.collection("membershipClaims").doc(`${TENANT_A}_${cust}`).delete();
@@ -337,6 +348,7 @@ describe("Membership system", () => {
 
   it("3. membership activation — admin activates after payment completes", async () => {
     const cust = uid("cust-activate");
+    await seedCustomerProfile(cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
     expect(membership.status).toBe("active");
     expect(membership.startDate).not.toBeNull();
@@ -347,6 +359,7 @@ describe("Membership system", () => {
 
   it("4. expiry — expireStaleMemberships flips a past-endDate active membership", async () => {
     const cust = uid("cust-expiry");
+    await seedCustomerProfile(cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
     // Force the membership into the past (simulating time passing).
@@ -381,6 +394,7 @@ describe("Membership system", () => {
 
   it("17. lazy expiry (no scheduler run) — a stale-active membership past endDate still rejects a wash-credit booking (Phase 3H)", async () => {
     const cust = uid("cust-lazy-wash");
+    await seedCustomerProfile(cust);
     await seedVehicle(uid("veh-lazy-wash"), TENANT_A, cust);
     const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
     const membership = await purchaseAndActivate(cust, planId, adminUid);
@@ -413,6 +427,7 @@ describe("Membership system", () => {
 
   it("18. lazy expiry (no scheduler run) — a stale-active membership past endDate still rejects a discount booking (Phase 3H)", async () => {
     const cust = uid("cust-lazy-discount");
+    await seedCustomerProfile(cust);
     await seedVehicle(uid("veh-lazy-discount"), TENANT_A, cust);
     const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
     const membership = await purchaseAndActivate(cust, planId, adminUid);
@@ -440,6 +455,7 @@ describe("Membership system", () => {
 
   it("19. valid (non-expired) membership booking is unaffected by the lazy-expiry check", async () => {
     const cust = uid("cust-lazy-valid");
+    await seedCustomerProfile(cust);
     await seedVehicle(uid("veh-lazy-valid"), TENANT_A, cust);
     const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
     const membership = await purchaseAndActivate(cust, planId, adminUid);
@@ -464,6 +480,7 @@ describe("Membership system", () => {
 
   it("20. valid membership cancellation still works after the Phase 3H display-layer change", async () => {
     const cust = uid("cust-lazy-cancel");
+    await seedCustomerProfile(cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
     await cancelMembership.run({
@@ -477,6 +494,7 @@ describe("Membership system", () => {
 
   it("5. eligible service — wash-eligible booking consumes a wash credit, price is 0", async () => {
     const cust = uid("cust-eligible");
+    await seedCustomerProfile(cust);
     await seedVehicle(uid("veh-eligible"), TENANT_A, cust);
     const veh = (await db.collection("vehicles").where("ownerId", "==", cust).limit(1).get()).docs[0]?.data() as Vehicle;
     const membership = await purchaseAndActivate(cust, planId, adminUid);
@@ -504,6 +522,7 @@ describe("Membership system", () => {
 
   it("6. ineligible service — non-wash service gets a percent discount instead", async () => {
     const cust = uid("cust-ineligible");
+    await seedCustomerProfile(cust);
     const veh = await seedVehicle(uid("veh-ineligible"), TENANT_A, cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
@@ -531,6 +550,7 @@ describe("Membership system", () => {
 
   it("7. usage consumption — MembershipUsage record is written for a wash redemption", async () => {
     const cust = uid("cust-usage");
+    await seedCustomerProfile(cust);
     const veh = await seedVehicle(uid("veh-usage"), TENANT_A, cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
@@ -560,6 +580,7 @@ describe("Membership system", () => {
 
   it("8. zero remaining usage — falls back to percent discount instead of failing", async () => {
     const cust = uid("cust-zero");
+    await seedCustomerProfile(cust);
     const veh = await seedVehicle(uid("veh-zero"), TENANT_A, cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid); // washesTotal = 2
 
@@ -606,6 +627,7 @@ describe("Membership system", () => {
 
   it("9. cancellation usage restoration — cancelling a wash-credit booking restores the wash", async () => {
     const cust = uid("cust-cancel-restore");
+    await seedCustomerProfile(cust);
     const veh = await seedVehicle(uid("veh-cancel-restore"), TENANT_A, cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
@@ -637,6 +659,7 @@ describe("Membership system", () => {
 
   it("10. reschedule — membership usage is untouched by rescheduling", async () => {
     const cust = uid("cust-reschedule");
+    await seedCustomerProfile(cust);
     const veh = await seedVehicle(uid("veh-reschedule"), TENANT_A, cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
@@ -673,6 +696,7 @@ describe("Membership system", () => {
 
   it("11. payment failure — membership purchase payment failing cancels the pending membership", async () => {
     const cust = uid("cust-payfail");
+    await seedCustomerProfile(cust);
     const purchaseResult = (await purchaseMembership.run({
       data: { planId, method: "cash", idempotencyKey: uid("idem") },
       auth: customerAuth(cust),
@@ -720,6 +744,7 @@ describe("Membership system", () => {
       const raceStudioId = uid("membership-race-studio");
       await seedStudio(raceStudioId, TENANT_A, 2);
       const cust = uid("cust-race");
+    await seedCustomerProfile(cust);
       const veh = await seedVehicle(uid("veh-race"), TENANT_A, cust);
       const membership = await purchaseAndActivate(cust, planResult.plan.id, adminUid);
 
@@ -769,6 +794,7 @@ describe("Membership system", () => {
   it("13. cross-customer rejection — customer B cannot use customer A's membership", async () => {
     const custA = uid("cust-a-xcust");
     const custB = uid("cust-b-xcust");
+    await seedCustomerProfile(custB);
     const vehB = await seedVehicle(uid("veh-b-xcust"), TENANT_A, custB);
     const membershipA = await purchaseAndActivate(custA, planId, adminUid);
 
@@ -791,6 +817,7 @@ describe("Membership system", () => {
 
   it("14. cross-tenant rejection — a tenant-B customer cannot purchase a tenant-A plan", async () => {
     const custB = uid("cust-xtenant");
+    await seedCustomerProfile(custB,TENANT_B);
     await expect(
       purchaseMembership.run({
         data: { planId, method: "cash", idempotencyKey: uid("idem") },
@@ -801,6 +828,7 @@ describe("Membership system", () => {
 
   it("15. historical membership immutability — editing a plan does not rewrite already-purchased memberships", async () => {
     const cust = uid("cust-immutable-plan");
+    await seedCustomerProfile(cust);
     const planResult = (await createMembershipPlan.run({
       data: { tier: "gold", name: "Immutability Plan", priceInPaise: 200000, includedWashes: 3, discountPercent: 12 },
       auth: adminAuth(adminUid),
@@ -820,6 +848,7 @@ describe("Membership system", () => {
 
   it("16. historical booking price immutability — editing a plan does not rewrite an already-priced booking", async () => {
     const cust = uid("cust-immutable-booking");
+    await seedCustomerProfile(cust);
     const veh = await seedVehicle(uid("veh-immutable-booking"), TENANT_A, cust);
     const planResult = (await createMembershipPlan.run({
       data: { tier: "platinum", name: "Booking Immutability Plan", priceInPaise: 300000, includedWashes: 0, discountPercent: 20 },
@@ -860,6 +889,7 @@ describe("Membership system", () => {
 
   it("getMyMemberships returns the customer's full membership history", async () => {
     const cust = uid("cust-history");
+    await seedCustomerProfile(cust);
     await purchaseAndActivate(cust, planId, adminUid);
     const result = (await getMyMemberships.run({
       data: {},
@@ -870,6 +900,7 @@ describe("Membership system", () => {
 
   it("21. getMyMemberships reports a stale-active-past-endDate membership as 'expired' without mutating storage (Phase 3H)", async () => {
     const cust = uid("cust-effective-status");
+    await seedCustomerProfile(cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
     await db.collection("memberships").doc(membership.id).update({ endDate: "2020-01-01" });
 
@@ -886,6 +917,7 @@ describe("Membership system", () => {
 
   it("22. getMyMemberships reports a valid (non-expired) membership as 'active', unaffected", async () => {
     const cust = uid("cust-effective-status-valid");
+    await seedCustomerProfile(cust);
     const membership = await purchaseAndActivate(cust, planId, adminUid);
 
     const result = (await getMyMemberships.run({

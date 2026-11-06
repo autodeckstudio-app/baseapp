@@ -51,6 +51,7 @@ const audits = async (entityId: string) =>
   (await db.collection(COLLECTIONS.auditLog()).where("entityId", "==", entityId).get()).docs.map((d) => d.data());
 
 beforeEach(async () => {
+  await db.collection(COLLECTIONS.customers()).doc("c1").set({id:"c1",authUid:"c1",tenantId:"t1",deletedAt:null});
   for (const col of [COLLECTIONS.payments(), COLLECTIONS.memberships(), COLLECTIONS.paymentRefunds(), COLLECTIONS.refundRequests(), COLLECTIONS.paymentEvents(), COLLECTIONS.staffAlerts(), COLLECTIONS.auditLog(), COLLECTIONS.jobs(), COLLECTIONS.bookings(), "membershipClaims"]) {
     const snap = await db.collection(col).get();
     await Promise.all(snap.docs.map((d) => d.ref.delete()));

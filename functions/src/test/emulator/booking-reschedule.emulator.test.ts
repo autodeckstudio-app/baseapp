@@ -108,6 +108,7 @@ async function seedService(serviceId: string) {
 }
 
 async function seedVehicle(vehicleId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:TENANT_A,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
@@ -234,6 +235,7 @@ describe("Customer booking reschedule", () => {
   it("rejects reschedule of another customer's booking", async () => {
     const booking = await makeBooking(customerId, service, vehicle);
     const otherCustomer = uid("cust-other");
+    await db.collection("customers").doc(otherCustomer).set({id:otherCustomer,authUid:otherCustomer,tenantId:TENANT_A,deletedAt:null});
 
     await expect(
       rescheduleBooking.run({

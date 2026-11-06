@@ -136,6 +136,7 @@ async function seedService(serviceId: string, tenantId: string) {
 }
 
 async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:tenantId,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,

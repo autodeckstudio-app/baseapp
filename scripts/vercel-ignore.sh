@@ -5,6 +5,11 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# This isolated emulator-fixture branch never builds or promotes a website/app.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
+  printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"
+  exit 0
+fi
 # One-shot Confirmed-product visibility release. Exact parent and file allowlist isolate this release.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
   release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
