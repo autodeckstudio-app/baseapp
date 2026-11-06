@@ -1,3 +1,4 @@
+import { SceneCard } from "./SceneCard";
 // Garage showroom: the selected car as one full-width hero photo. Changing car is done with the chips above only (no swipe, no dots).
 import { Platform, Pressable, Text, View } from "react-native";
 import { segmentLabel } from "@autodeck/core";
@@ -9,8 +10,8 @@ import { metrics } from "../lib/metrics";
 export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Vehicle; height: number; badge?: string | null; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${name}`} onPress={() => onOpen(v)}>
-      <View style={{ height, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
+    <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
+      <View style={{ height, borderRadius: 24, borderWidth:1,borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
         <CarThumb car={v} height={height} radius={0} />
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(height * 0.62), ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
         {badge ? (
@@ -21,13 +22,13 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
         ) : null}
         <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "800" }}>{name}</Text>
+            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 28, letterSpacing:-0.8, fontWeight: "600" }}>{name}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
           </View>
         </View>
         {chip ? <View style={{ position: "absolute", right: 12, top: 12 }}>{chip}</View> : null}
       </View>
-    </Pressable>
+    </SceneCard>
   );
 }
 
@@ -36,18 +37,18 @@ export function GarageShowroom({ cars, selectedId, onOpen, chipFor }: { cars: Ve
   if (!v) return null;
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${name}`} onPress={() => onOpen(v)}>
-      <View style={{ height: metrics.heroTall + 40, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
+    <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
+      <View style={{ height: metrics.heroTall + 40, borderRadius: 24, borderWidth:1,borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
         <CarThumb car={v} height={metrics.heroTall + 40} radius={0} />
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 130, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
         <View style={{ position: "absolute", left: 16, right: 16, bottom: 14, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800" }}>{name}</Text>
+            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 30, letterSpacing:-0.8, fontWeight: "600" }}>{name}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
           </View>
         </View>
         {chipFor(v) ? <View style={{ position: "absolute", right: 14, top: 14 }}>{chipFor(v)}</View> : null}
       </View>
-    </Pressable>
+    </SceneCard>
   );
 }

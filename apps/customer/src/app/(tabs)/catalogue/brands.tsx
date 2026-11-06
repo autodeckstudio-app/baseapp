@@ -1,3 +1,4 @@
+import { SceneIntro } from "../../../ui/SceneIntro";
 // Brand product page: same layout family as the service page. Sourced facts only; price is "ask the studio".
 import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -16,8 +17,7 @@ export default function BrandProduct() {
     <Screen
       header={
         <View style={{ gap: space.hair }}>
-          <Kicker tone="accent">{item.kind === "PPF" ? "Paint protection film" : item.kind === "Coating" ? "Coating" : "Range"}</Kicker>
-          <T role="title">{item.name}</T>
+          <SceneIntro compact eyebrow={item.kind === "PPF" ? "Paint protection film" : item.kind === "Coating" ? "Coating" : "Range"} title={item.name}/>
           <T role="caption" tone="secondary">{brand.name}</T>
         </View>
       }

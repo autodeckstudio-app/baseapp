@@ -1,0 +1,9 @@
+import{useEffect,useRef,useState,type ReactNode}from'react';
+import{AccessibilityInfo,Animated,Platform,Pressable,type StyleProp,type ViewStyle}from'react-native';
+/** Photo/card depth, not a rotating 3D car. No drag capture or perpetual motion. */
+export function SceneCard({children,onPress,label,style}:{children:ReactNode;onPress:()=>void;label?:string;style?:StyleProp<ViewStyle>}){
+ const [still,setStill]=useState(true);const lift=useRef(new Animated.Value(0)).current;
+ useEffect(()=>{let alive=true;const update=(reduce:boolean)=>{if(alive){setStill(reduce);if(reduce)lift.setValue(0)}};if(Platform.OS==='web'){const q=(globalThis as {matchMedia?:(q:string)=>{matches:boolean;addEventListener?:(event:string,callback:()=>void)=>void;removeEventListener?:(event:string,callback:()=>void)=>void}}).matchMedia?.('(prefers-reduced-motion: reduce)');update(q?.matches??true);const change=()=>update(q?.matches??true);q?.addEventListener?.('change',change);return()=>{alive=false;q?.removeEventListener?.('change',change);lift.stopAnimation()}}void AccessibilityInfo.isReduceMotionEnabled().then(update).catch(()=>update(true));const sub=AccessibilityInfo.addEventListener('reduceMotionChanged',update);return()=>{alive=false;sub.remove();lift.stopAnimation()}},[lift]);
+ const move=(to:number)=>{if(still)return;Animated.spring(lift,{toValue:to,damping:22,stiffness:220,mass:0.8,useNativeDriver:Platform.OS!=='web'}).start()};
+ return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} onHoverIn={()=>move(1)} onHoverOut={()=>move(0)} onPressIn={()=>move(-0.5)} onPressOut={()=>move(0)} style={style}><Animated.View style={{width:'100%',minWidth:0,transform:[{translateY:lift.interpolate({inputRange:[-0.5,0,1],outputRange:[1,0,-3]})},{scale:lift.interpolate({inputRange:[-0.5,0,1],outputRange:[0.99,1,1.008]})}]}}>{children}</Animated.View></Pressable>;
+}

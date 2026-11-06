@@ -1,3 +1,4 @@
+vi.mock('../../ui/SavedLicensePhoto',()=>({SavedLicensePhoto:(p:any)=>React.createElement('SavedLicence',p)}));
 import React from 'react';import{act,create,type ReactTestRenderer}from'react-test-renderer';import{describe,it,expect,vi,beforeEach}from'vitest';
 const h=vi.hoisted(()=>({auth:{status:'ready',user:{uid:'auth-one',displayName:'Meet',email:'x@example.test'},customerDocId:'canonical-one',claims:{role:'customer',tenantId:'t'}} as any,upload:vi.fn(),write:vi.fn(),updateProfile:vi.fn(),request:vi.fn(),cancel:vi.fn()}));
 vi.mock('react-native',()=>({Platform:{OS:'android'},View:(p:any)=>React.createElement('View',p),Pressable:(p:any)=>React.createElement('Pressable',p),Text:(p:any)=>React.createElement('Text',p)}));

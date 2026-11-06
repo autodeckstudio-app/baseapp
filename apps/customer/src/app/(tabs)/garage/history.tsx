@@ -1,3 +1,4 @@
+import { SceneIntro } from "../../../ui/SceneIntro";
 // Permanent service history. Keyed by vehicleId only and built from the
 // customer's own jobs and invoices, so it still works after the car document
 // is deleted (the garage room returns "Vehicle not found" in that case).
@@ -71,7 +72,7 @@ export default function ServiceHistoryScreen() {
   if (auth.status !== "ready" || jobs === null) return <Loading label="Opening service history" />;
 
   return (
-    <Screen header={<View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.hair }}><View style={{ gap: space.hair, flex: 1, minWidth: 0 }}><Kicker tone="accent">Service history</Kicker><T role="title">{!vehicleId?"All your visits":vehicle ? `${vehicle.make} ${vehicle.model}` : "Removed car"}</T></View><T role="caption" tone="secondary">{jobs.length === 1 ? "1 visit" : `${jobs.length} visits`}</T></View>}>
+    <Screen header={<View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.hair }}><View style={{ gap: space.hair, flex: 1, minWidth: 0 }}><SceneIntro compact eyebrow="Service history" title={!vehicleId?"All your visits":vehicle ? `${vehicle.make} ${vehicle.model}` : "Removed car"}/></View><T role="caption" tone="secondary">{jobs.length === 1 ? "1 visit" : `${jobs.length} visits`}</T></View>}>
       {jobs.length === 0 ? (
         <Notice title="No service history" body="No visits are on record for this car." />
       ) : (

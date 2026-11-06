@@ -1,3 +1,5 @@
+import { JourneySheet } from "../../../ui/JourneySheet";
+import { SceneIntro } from "../../../ui/SceneIntro";
 // Garage: one lead car with its state, the rest compact (spec §6.4).
 // Choosing a car makes it the active one on Home and opens its room.
 import { useEffect, useRef, useState } from "react";
@@ -134,6 +136,7 @@ export default function GarageScreen() {
 
   return (
     <Screen appBar="Garage">
+      <SceneIntro eyebrow="Your garage" compact title="Your cars, connected."/>
       <View testID="garage-swipe-area" {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 240, 400) }, swipe.style]}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
@@ -177,9 +180,10 @@ export default function GarageScreen() {
           <Button label="Service history" kind="quiet" onPress={() => router.push(one ? { pathname: "/(tabs)/garage/history", params: { vehicleId: one.id } } : "/(tabs)/garage/history")} />
         </View>
       ) : null}
+      <JourneySheet kind="garage"/>
       {archived.length > 0 ? (
         <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.line }}>
-          <Pressable accessibilityRole="button" onPress={() => setShowArchived((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Archived cars" onPress={() => setShowArchived((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <T role="heading">Archived cars ({archived.length})</T>
             <T tone="secondary">{showArchived ? "Hide" : "Show"}</T>
           </Pressable>

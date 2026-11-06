@@ -10,6 +10,55 @@ if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
   printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"
   exit 0
 fi
+# Exact reviewed Customer photo/journey repair. Inert beyond this direct parent.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$(git rev-parse --verify HEAD^ 2>/dev/null || true)" = bb65e6bac5ac399ee711b51ed85f3a59271aead9 ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_paths="$(git diff --name-only bb65e6bac5ac399ee711b51ed85f3a59271aead9 HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'CUSTOMER_REVIEWED_PATHS'
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/catalogue/brands.tsx
+apps/customer/src/app/(tabs)/catalogue/enquiry.tsx
+apps/customer/src/app/(tabs)/catalogue/index.tsx
+apps/customer/src/app/(tabs)/garage/add.tsx
+apps/customer/src/app/(tabs)/garage/archive-states.render.test.tsx
+apps/customer/src/app/(tabs)/garage/history.tsx
+apps/customer/src/app/(tabs)/garage/index.tsx
+apps/customer/src/app/(tabs)/profile.native-photo.render.test.tsx
+apps/customer/src/app/(tabs)/profile.tsx
+apps/customer/src/app/(tabs)/quote-request-auth.render.test.tsx
+apps/customer/src/app/(tabs)/quote-request.tsx
+apps/customer/src/lib/private-photo-service.test.ts
+apps/customer/src/lib/private-photo-service.ts
+apps/customer/src/lib/vehicle-service.ts
+apps/customer/src/ui/CarThumb.tsx
+apps/customer/src/ui/FilterPills.tsx
+apps/customer/src/ui/GarageShowroom.tsx
+apps/customer/src/ui/JourneySheet.tsx
+apps/customer/src/ui/ProfileHero.tsx
+apps/customer/src/ui/SavedLicensePhoto.tsx
+apps/customer/src/ui/SceneCard.tsx
+apps/customer/src/ui/SceneIntro.tsx
+apps/customer/src/ui/SceneMotion.tsx
+apps/customer/src/ui/ServiceHomes.tsx
+apps/customer/src/ui/ServicePackageCard.tsx
+apps/customer/src/ui/inputs.tsx
+apps/customer/src/ui/journey-sheet.render.test.tsx
+apps/customer/src/ui/kit.tsx
+apps/customer/src/ui/profile-photo.render.test.tsx
+apps/customer/src/ui/saved-license-photo.render.test.tsx
+apps/customer/src/ui/scene-motion.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+scripts/vercel-ignore.sh
+CUSTOMER_REVIEWED_PATHS
+)
+  if [ "$release_paths" != "$expected_paths" ]; then printf 'reviewed Customer repair paths mismatch: SKIP\n'; exit 0; fi
+  case "$app" in
+    customer) printf 'reviewed Customer photo/journey repair: BUILD\n'; exit 1 ;;
+    *) printf 'reviewed Customer photo/journey repair: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
 # Exact reviewed Customer illustration repair; other app builds are never inferred.
 release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = 6fb18ca112a8a475bbd87cd26e648b0882d8042f ]; then

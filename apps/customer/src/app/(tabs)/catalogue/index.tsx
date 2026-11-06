@@ -1,3 +1,5 @@
+import { JourneySheet } from "../../../ui/JourneySheet";
+import { SceneIntro } from "../../../ui/SceneIntro";
 import{ServicePackageCard}from '../../../ui/ServicePackageCard';
 import{ServiceHomes}from "../../../ui/ServiceHomes";
 import {hasCataloguePhoto} from "../../../lib/catalogue-assets";
@@ -210,6 +212,7 @@ export default function CatalogueScreen() {
       {services && searching ? (
         found.length === 0 ? <Notice title="Nothing matches" body="Try another word." /> : <View style={{gap:12}}>{found.map(card)}</View>
       ) : null}
+      {services&&!searching&&level===1&&!grp?<SceneIntro eyebrow="AutoDeck care" compact title="Care for the car you love."/>:null}
       {services&&!searching&&level===1&&!grp?<ServiceHomes services={services} onReference={(referenceKey,coverage)=>router.push({pathname:"/(tabs)/quote-request",params:{referenceKey,...(coverage?{coverage}:{})}})} onOpen={s=>router.push(`/(tabs)/catalogue/${s.id}`)} priceLabel={s=>careEntryPrice(pricedLabel(s),!!pricingVehicle.category)}/>:null}
       {services && !searching && level === 1 && grp ? (
         <View style={{ gap: 18 }}>
@@ -232,6 +235,7 @@ export default function CatalogueScreen() {
           {cat === "ppf" || cat === "coatings" ? <T role="caption" tone="secondary">{cat === "coatings" ? "Final price confirmed after inspection." : PAINT_INSPECTION_NOTE}</T> : null}
         </View>
       ) : null}
+      {services&&!searching&&level===1&&!grp?<JourneySheet kind="services"/>:null}
       </View>
 
     </Screen>

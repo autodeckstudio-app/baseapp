@@ -1,4 +1,4 @@
-// A car picture that never breaks: the customer's photo when there is one, otherwise a category placeholder.
+// Car photo with explicit loading/error states: the customer's photo when there is one, otherwise a category placeholder.
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { FadeImage } from "@autodeck/ui/native";
@@ -35,6 +35,9 @@ export function useVehiclePhotoUri(car: Car | null | undefined, nonce = 0): { ur
 export function CarThumb({ car, height, width, radius = 16 }: { car: Car | undefined; height: number; width?: number | `${number}%`; radius?: number }) {
   const [nonce, setNonce] = useState(0);
   const { uri, failed } = useVehiclePhotoUri(car, nonce);
+  // Refresh before the private reader's ten-minute expiry. Path/version identity
+  // still prevents a previous car or save from painting while the URL refreshes.
+  useEffect(()=>{if(!uri)return;const timer=setTimeout(()=>setNonce(n=>n+1),9*60*1000);return()=>clearTimeout(timer)},[uri]);
   const key = photoKey(car?.photoUrl ?? null, car?.updatedAt ?? null);
   // P4 signed URLs live 10 minutes: on a load failure re-resolve ONCE for a fresh
   // URL before falling back to the placeholder. The budget is keyed to the photo

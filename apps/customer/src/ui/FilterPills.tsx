@@ -11,7 +11,7 @@ export function FilterPills<K extends string | null>({ items, value, onChange, t
     // flat (Garage): plain text tab, the picked one underlined in gold; no pill fill.
     if (flat) {
       return (
-        <Pressable key={c.key ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} style={[{ minWidth: 0, paddingHorizontal: 2, paddingVertical: 9, borderBottomWidth: 2, borderBottomColor: on ? ink.premium : "transparent" }, items.length > 3 ? null : fixedFirst && c.key === items[0]?.key ? { flexGrow: 0, flexShrink: 0 } : { flex: 1 }]}>
+        <Pressable key={c.key ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} style={[{ minWidth: 0, paddingHorizontal: 2, paddingVertical: 9, borderBottomWidth: 2, borderBottomColor: on ? ink.premium : "transparent" }, items.length > 3 ? null : fixedFirst && c.key === items[0]?.key ? { flexGrow: 0, flexShrink: 0 } : { flexGrow: 0, flexShrink: 1, maxWidth: 160 }]}>
           <Text numberOfLines={1} ellipsizeMode="tail" style={[{ color: on ? ink.textPrimary : ink.textSecondary, fontSize: 14, fontWeight: on ? "800" : "600" }, items.length > 3 ? { maxWidth: 200 } : null]}>{c.label}</Text>
         </Pressable>
       );
@@ -36,14 +36,14 @@ export function FilterPills<K extends string | null>({ items, value, onChange, t
     // With more cars an equal split turns every label into a few letters, so the row scrolls with full labels instead.
     if (items.length <= 3) {
       return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minWidth: 0, width: "100%" }}>
           {items.map(pill)}
           {trailing}
         </View>
       );
     }
     return (
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minWidth: 0, width: "100%" }}>
         {fixedFirst && items.length > 0 ? pill(items[0]!) : null}
         <View style={{ flex: 1, minWidth: 0 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingRight: 8 }}>

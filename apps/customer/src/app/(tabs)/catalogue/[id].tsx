@@ -1,3 +1,4 @@
+import { SceneIntro } from "../../../ui/SceneIntro";
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
 import{ServiceActionBar}from "../../../ui/ServiceActionBar";
@@ -161,8 +162,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
       <Screen
         header={
           <View style={{ gap: space.hair }}>
-            <Kicker tone="accent">{service.category}</Kicker>
-            <T role="title">{service.name}</T>
+            <SceneIntro compact eyebrow={service.category} title={service.name} />
             {pricingVehicle.label ? <T role="caption" tone="accent">Prices for your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}</T> : null}
             {service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
           </View>
@@ -179,7 +179,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         <ServiceVisitFacts duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
         <T role="heading">{sc.tagline || service.description}</T>
-        {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description.split(/\n+/).slice(1).join("\n")}</T> : null}
+        {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description}</T> : null}
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
         {reviews && reviews.count > 0 ? (

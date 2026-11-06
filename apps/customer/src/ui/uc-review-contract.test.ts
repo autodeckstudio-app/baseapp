@@ -9,4 +9,4 @@ it('review guide follows quote and mandatory advance before fallback studio copy
 
 it('quote requests do not present payment selection before approval',()=>{const s=readFileSync('src/app/(tabs)/book/confirm.tsx','utf8');expect(s).toContain('{service?.priceOnRequest === true || washOn || giftCode ? null : <View');});
 
-it('category illustrations are bounded independently of Metro intrinsic asset dimensions',()=>{const s=readFileSync('src/ui/ServiceHomes.tsx','utf8');expect(s).toContain("aspectRatio:1.4,overflow:'hidden'");expect(s).toContain("position:'absolute',width:'100%',height:'100%'");});
+it('category illustrations are bounded independently of Metro intrinsic asset dimensions',()=>{const s=readFileSync('src/ui/ServiceHomes.tsx','utf8');expect(s).toContain("aspectRatio:1.85,overflow:'hidden'");expect(s).toContain("position:'absolute',width:'100%',height:'100%'");});

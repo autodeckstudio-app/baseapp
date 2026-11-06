@@ -1,3 +1,4 @@
+import { SceneIntro } from "../../../ui/SceneIntro";
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { DateField, FileUploader, SelectField } from "../../../ui/inputs";
 import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
@@ -478,7 +479,7 @@ export default function AddVehicleScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <Screen header={<View style={{ gap: space.hair }}><Kicker tone="accent">Garage</Kicker><T role="title">Add a car</T></View>}>
+      <Screen header={<SceneIntro compact eyebrow="Your garage" title="Add a car" detail="Its details, photos and records stay together."/>}>
         {/* Frozen while a save is in flight or a journal has pending stages:
             pointer events blocked for EVERY input path (fields, selects,
             date, photo) and the handlers no-op too, so no path can bypass

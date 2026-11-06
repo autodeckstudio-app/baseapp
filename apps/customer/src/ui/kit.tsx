@@ -1,3 +1,4 @@
+import { SceneMotion } from "./SceneMotion";
 // Customer app building blocks on the AutoDeck experience theme: the dark
 // studio ground, one warm amber light, glass panes for the raised layer.
 // Screens compose these instead of styling raw views.
@@ -178,12 +179,14 @@ export function Screen({
       {children}
     </View>
   );
+  const scene = segs.some(s => s === "garage" || s === "catalogue" || s === "quote-request");
+  const content = scene ? <SceneMotion identity={segs.join("/")}>{body}</SceneMotion> : body;
   if (!focused) return null;
   return (
     <Ambient>
       {canvas ? <CanvasBackdrop /> : null}
       {top ? <View style={{ width: "100%", maxWidth: layout.readingMeasure, alignSelf: "center", paddingHorizontal: gutter, paddingTop: space.inset, gap: space.line, zIndex: 2 }}>{bar ? <AppBar title={bar.title} onBack={bar.back} /> : null}{top}</View> : null}
-      {scroll ? <ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)} contentContainerStyle={{ flexGrow: 1 }}>{body}</ScrollView> : body}
+      {scroll ? <ScrollView ref={scrollRef} scrollEventThrottle={16} onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)} contentContainerStyle={{ flexGrow: 1 }}>{content}</ScrollView> : content}
     </Ambient>
   );
 }

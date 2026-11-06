@@ -1,3 +1,4 @@
+import { SavedLicensePhoto } from "../../ui/SavedLicensePhoto";
 // You: account, membership, notifications, sign out.
 import { LegalLinks } from "../../ui/LegalLinks";
 import { useState, useEffect, useRef } from "react";
@@ -39,6 +40,7 @@ export default function YouScreen() {
   const [lic, setLic] = useState<{ blob: VehiclePhotoBody; contentType: string } | null>(null);
   const [licBusy, setLicBusy] = useState(false);
   const [licOpen, setLicOpen] = useState(false);
+  const [licRefresh,setLicRefresh]=useState(0);
   const [licMsg, setLicMsg] = useState<string | null>(null);
   const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.claims.tenantId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const generation=useRef(0),saveLock=useRef(false);
   useEffect(()=>{generation.current++;saveLock.current=false;setEditing(false);setDraft('');setSaving(false);setSaveError(null);setLic(null);setLicBusy(false);setLicOpen(false);setLicMsg(null);setSavedName(null);setConfirm(false);setDelStep('idle');setDelBusy(false);setActionMessage(null);return()=>{generation.current++}},[scopeKey]);
@@ -46,7 +48,7 @@ export default function YouScreen() {
     if (!lic || licBusy||saveLock.current) return;
     const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;saveLock.current=true;
     setLicBusy(true); setLicMsg(null);
-    try { await uploadLicensePhoto(lic.blob, lic.contentType); if(!current())return;setLic(null); setLicMsg("Licence saved."); }
+    try { await uploadLicensePhoto(lic.blob, lic.contentType); if(!current())return;setLic(null); setLicRefresh(n=>n+1); setLicMsg("Licence saved."); }
     catch (e) { if(current())setLicMsg(e instanceof Error ? e.message : "Could not save your licence. Try again."); }
     finally { if(current()){saveLock.current=false;setLicBusy(false);} }
   }
@@ -85,6 +87,7 @@ export default function YouScreen() {
     <Screen appBar="You">
       <ProfileHero
         name={name}
+        photoUrl={auth.user.photoURL ?? auth.user.providerData?.find(p=>p.providerId==='google.com')?.photoURL ?? null}
         email={auth.user.email}
         onEdit={() => { setDraft(name === "AutoDeck member" ? "" : name); setSaveError(null); setEditing(true); }}
       />
@@ -101,12 +104,13 @@ export default function YouScreen() {
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
         <>
-            <ListRow icon="search" title="Driving licence" detail="Add a photo. Only you and the studio see it" action={licOpen ? "Close" : "Add"} onPress={() => setLicOpen(!licOpen)} />
+            <ListRow icon="search" title="Driving licence" detail="Private photo for the studio" action={licOpen ? "Close" : "Add"} onPress={() => setLicOpen(!licOpen)} />
             {licOpen ? (
               <View style={{ gap: space.breath, paddingBottom: 14 }}>
-                <FileUploader files={lic && !(lic.blob instanceof Uint8Array) ? [{ blob: lic.blob, type: lic.contentType }] : []} nativeEnabled nativeFileCount={lic?1:0} onNativeChange={fs=>{const f=fs[0];setLic(f?{blob:f.bytes,contentType:f.type}:null);setLicMsg(null);}} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
+                {auth.customerDocId?<SavedLicensePhoto customerId={auth.customerDocId} scope={scopeKey} refresh={licRefresh}/>:<T role="caption">Customer profile could not be verified. Your licence has not been changed.</T>}
+                <FileUploader label="Choose or replace licence photo" files={lic && !(lic.blob instanceof Uint8Array) ? [{ blob: lic.blob, type: lic.contentType }] : []} nativeEnabled nativeFileCount={lic?1:0} onNativeChange={fs=>{const f=fs[0];setLic(f?{blob:f.bytes,contentType:f.type}:null);setLicMsg(null);}} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
                 {lic ? <Button label="Save licence photo" busy={licBusy} onPress={() => void saveLicense()} /> : null}
-                {licMsg ? <T role="caption" tone={!licMsg.endsWith("saved.") ? "danger" : "tertiary"}>{licMsg}</T> : null}
+                {licMsg ? <T role="caption" tone={licMsg.startsWith("Licence saved.") ? "tertiary" : "danger"}>{licMsg}</T> : null}
               </View>
             ) : null}
         </>
@@ -166,7 +170,7 @@ function ListRow({ icon, title, detail, action, onPress, last }: { icon: "search
       <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(128,128,128,0.12)", alignItems: "center", justifyContent: "center" }}><NavIcon name={icon} color={colors.textPrimary} size={20} cut="#18181C" /></View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
-        <Text numberOfLines={2} style={{ color: colors.textSecondary, fontSize: 12 }}>{detail}</Text>
+        <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 11 }}>{detail}</Text>
       </View>
       {action ? <View style={{ borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>{action}</Text></View> : null}
     </Pressable>

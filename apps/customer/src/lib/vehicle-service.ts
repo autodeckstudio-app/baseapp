@@ -1,3 +1,4 @@
+import { readPrivatePhoto } from './private-photo-service';
 import {
   collection,
   query,
@@ -8,9 +9,8 @@ import {
   type QuerySnapshot,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { getDownloadURL, ref as storageRef } from "firebase/storage";
 import { resolveMyCustomerDocId } from "./auth-service";
-import { auth, db, functions, storage } from "./firebase";
+import { auth, db, functions } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
 import type { Vehicle, VehicleCategory } from "@autodeck/core";
 
@@ -149,19 +149,12 @@ export async function uploadVehiclePhoto(vehicleId: string, blob: VehiclePhotoBo
 }
 
 /** Resolves a stored vehicle photo path to a renderable URL (rules-gated read). */
-export async function resolveVehiclePhotoUrl(path: string, version?: string | null): Promise<string> {
-  let url: string;
-  try {
-    url = await getDownloadURL(storageRef(storage, path));
-  } catch {
-    // Photos uploaded through the signed URL have no download token yet; the
-    // backend adds one and hands back a working URL.
-    const vehicleId = path.split("/")[2] ?? "";
-    url = (await httpsCallable<{ vehicleId: string; path: string }, { url: string }>(functions, "publishVehiclePhoto")({ vehicleId, path })).data.url;
-  }
-  // A replaced photo gets a fresh UUID path (cover.<uuid>.<ext>), so the resolved URL changes too.
-  // The vehicle's updatedAt version still busts browser and image caches for screens holding an older URL.
-  return version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url;
+export async function resolveVehiclePhotoUrl(path: string, _version?: string | null): Promise<string> {
+  // A private signed URL must not be modified after signing. Do not fall back to
+  // the legacy publisher: its owner check used auth UID, not canonical customer ID.
+  const parts = path.split('/');
+  if (parts[1] !== 'vehicles' || !parts[2] || path.includes('..')) throw new Error('Saved car photo path is invalid.');
+  return readPrivatePhoto('vehiclePhoto', parts[2], path);
 }
 
 export function normalizePlate(value: string): string {
