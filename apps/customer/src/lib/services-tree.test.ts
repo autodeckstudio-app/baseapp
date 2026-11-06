@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import visibility from "../../../../packages/core/src/customer-offering-visibility.json";
+import { customerOfferingVisible } from "./customer-offering-visibility";
 import { MENU_GROUPS, MENU_SEED } from "@autodeck/core";
 import { type TreeNode, SERVICE_TYPES, buildTree, leafServices, matchesQuery, pathToLabel, resolvePath } from "./services-tree";
 
@@ -26,16 +28,16 @@ describe("services type level", () => {
     const graphene = leafServices(t.find((n) => n.kind === "branch" && n.key === "graphene")!);
     expect(graphene.map((s) => s.id)).toEqual(["menu-coat-kovalent-graphene"]);
   });
-  it("tyre and dashboard protection have no service, so they are enquiry-only and never carry a year tier", () => {
+  it("unconfirmed tyre and dashboard protection have no enquiry offer or year tier", () => {
     const t = buildTree(group("coatings"), all);
-    for (const k of ["tyre", "dashboard"]) expect(t.find((n) => n.kind === "enquiry" && n.key === k)).toBeTruthy();
+    for (const k of ["tyre", "dashboard"]) expect(t.find((n) => n.kind === "enquiry" && n.key === k)).toBeUndefined();
     const years = leafServices({ kind: "branch", key: "x", label: "x", children: t.filter((n) => n.kind === "branch") }).filter((s) => /year/i.test(s.warrantyLabel ?? ""));
     expect(years.every((s) => /^menu-coat-(autodeck|fireball|kovalent)/.test(s.id))).toBe(true);
   });
   it("ppf: colour is a film type, never a brand; brands are the four real ones", () => {
     const t = buildTree(group("ppf"), all);
     const film = resolvePath(t, ["brand-film"]).nodes.map((n) => (n.kind === "branch" ? n.label : ""));
-    expect(film).toEqual(["Garware", "XPEL", "LLumar", "3M", "GSWF", "NAR", "AVVYX"]);
+    expect(film).toEqual(["Garware", "XPEL", "LLumar", "3M"]);
     expect(film).not.toContain("Colour films");
     expect(t.some((n) => n.kind === "branch" && n.key === "colour")).toBe(true);
   });
@@ -74,6 +76,23 @@ describe("services type level", () => {
   });
 });
 
-it('owner-sheet missing brands are enquiries, never priced leaves',()=>{const tree=buildTree(group('ppf'),all);const film=tree.find(n=>n.kind==='branch'&&n.key==='brand-film') as Extract<TreeNode,{kind:'branch'}>;const gswf=film.children.find(n=>n.kind==='branch'&&n.key==='GSWF') as Extract<TreeNode,{kind:'branch'}>;expect(gswf.children.length).toBe(4);expect(gswf.children.every(n=>n.kind==='enquiry')).toBe(true);expect(leafServices(gswf)).toEqual([]);});
+it('unconfirmed film brands and generic product enquiry fallbacks are absent',()=>{
+  const eligible=all.filter(customerOfferingVisible);
+  expect(buildTree(group('ppf'),eligible)).toEqual([]);
+  const tree=buildTree(group('coatings'),eligible);
+  for(const key of ['tyre','dashboard','matte','ppf-coat','maintenance-coating']) {
+    expect(tree.some(n=>n.kind==='enquiry'&&n.key===key)).toBe(false);
+  }
+  expect(JSON.stringify(tree)).not.toContain('PowerShield');
+  expect(JSON.stringify(buildTree(group('ppf'),all))).not.toMatch(/GSWF|NAR|AVVYX|Matte and satin film|PPS/);
+});
 
-it('source-qualified surface ranges never drift into paint coating and remain unpriced enquiries',()=>{const t=buildTree(group('coatings'),all);for(const [type,name]of [['fabric','Fabric'],['ppf-coat','Overlay'],['wheels','Ceramic Rims Cr0.01'],['maintenance-coating','PowerShield']]){const branch=t.find(n=>n.kind==='branch'&&n.key===type)as Extract<TreeNode,{kind:'branch'}>;expect(branch).toBeTruthy();expect(JSON.stringify(branch)).toContain(name);const ceramic=t.find(n=>n.kind==='branch'&&n.key==='ceramic');expect(JSON.stringify(ceramic)).not.toContain('"label":"'+name+'"');}expect(JSON.stringify(t)).not.toContain('Revive');});
+it('all nine exact confirmed references remain enquiries and all 23 ordinary services remain visible',()=>{
+  const trees=MENU_GROUPS.flatMap(g=>buildTree(g,all.filter(customerOfferingVisible)));
+  const enquiries=(nodes:TreeNode[]):string[]=>nodes.flatMap(n=>n.kind==='enquiry'?[n.key]:n.kind==='branch'?enquiries(n.children):[]);
+  expect(enquiries(trees).filter(k=>visibility.confirmedEnquiryKeys.includes(k)).sort()).toEqual([...visibility.confirmedEnquiryKeys].sort());
+  for(const id of visibility.ordinaryServiceIds) expect(customerOfferingVisible({id,active:true})).toBe(true);
+  expect(customerOfferingVisible({id:visibility.ordinaryServiceIds[0],active:false})).toBe(false);
+});
+
+it('source-qualified surface ranges never drift into paint coating and remain unpriced enquiries',()=>{const t=buildTree(group('coatings'),all);for(const [type,name]of [['fabric','Fabric'],['ppf-coat','Overlay'],['wheels','Ceramic Rims Cr0.01']]){const branch=t.find(n=>n.kind==='branch'&&n.key===type)as Extract<TreeNode,{kind:'branch'}>;expect(branch).toBeTruthy();expect(JSON.stringify(branch)).toContain(name);const ceramic=t.find(n=>n.kind==='branch'&&n.key==='ceramic');expect(JSON.stringify(ceramic)).not.toContain('"label":"'+name+'"');}expect(JSON.stringify(t)).not.toContain('Revive');});

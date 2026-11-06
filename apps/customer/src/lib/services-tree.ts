@@ -98,7 +98,7 @@ export function buildTree(group: Pick<MenuGroup, "key" | "categories">, all: Ser
     if (mine.length === 0) continue;
     offered.push({ kind: "branch", key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}), children: d.byBrand ? byBrand(mine, d.byBrand) : leaves(mine) });
   }
-  const asks: TreeNode[] = defs.filter((d) => d.enquiryOnly).map((d) => ({ kind: "enquiry" as const, key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}) }));
+  const asks: TreeNode[] = defs.filter((d) => d.enquiryOnly && group.key !== 'ppf' && group.key !== 'coatings').map((d) => ({ kind: "enquiry" as const, key: d.key, label: d.label, ...(d.blurb ? { blurb: d.blurb } : {}) }));
   const additionType=group.key==='ppf'?'brand-film':group.key==='coatings'?'ceramic':null;
   if(group.key==='ppf') {
     const pps=BRAND_ENQUIRIES.find(x=>x.key==='pps-spray');

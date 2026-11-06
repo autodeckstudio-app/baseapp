@@ -5,6 +5,35 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# One-shot Confirmed-product visibility release. Exact parent and file allowlist isolate this release.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -z "$release_parent" ]; then printf 'Confirmed-product release ancestry unresolved: SKIP\n'; exit 0; fi
+  if [ "$release_parent" = 9419155f38188849dc4d95a28c213efd8756f8cc ]; then
+    [ -n "$release_root" ] || exit 0
+    cd "$release_root" || exit 0
+    release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+    unexpected="$(printf '%s\n' "$release_paths" | grep -Fvx \
+      -e 'apps/customer/src/lib/services-tree.ts' \
+      -e 'apps/customer/src/lib/services-tree.test.ts' \
+      -e 'apps/customer/src/lib/customer-offering-visibility.ts' \
+      -e 'apps/site/src/pages/services/[slug].astro' \
+      -e 'apps/site/src/data/redesign/home.html' \
+      -e 'apps/site/src/data/redesign/services.html' \
+      -e 'packages/core/src/customer-offering-visibility.json' \
+      -e 'packages/core/src/customer-offering-visibility.ts' \
+      -e 'tests/keramik-customer-hold.test.mjs' \
+      -e 'tests/customer-confirmed-offerings.test.mjs' \
+      -e 'tests/vercel-confirmed-release.test.mjs' \
+      -e 'scripts/vercel-ignore.sh' | grep -v '^$' || true)"
+    if [ -n "$unexpected" ]; then printf 'Confirmed-product release unexpected paths: SKIP\n'; exit 0; fi
+    case "$app" in
+      customer|site) printf 'Confirmed-product visibility release: BUILD (%s)\n' "$app"; exit 1 ;;
+      *) printf 'Confirmed-product visibility release: SKIP (%s)\n' "$app"; exit 0 ;;
+    esac
+  fi
+fi
 # One-shot Keramik visibility release. Exact parent and file allowlist isolate this release.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
   release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
