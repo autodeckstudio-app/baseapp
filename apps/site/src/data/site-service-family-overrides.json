@@ -1,0 +1,77 @@
+{
+  "source": "public-service-catalogue.json; exact published product descriptions, display only",
+  "rows": [
+    {
+      "id": "svc_8fe3c734573024265ba900a29310ca30",
+      "name": "CarPro CQUARTZ BlackOut 2.0",
+      "family": "Tyres and rubber",
+      "sourceDescription": "Tyre, rubber and resin coating with a rugged satin finish; more durable and chemical-resistant than the original BlackOut per brand."
+    },
+    {
+      "id": "svc_73695dabf44d93b9ebd5cd9024ee028d",
+      "name": "CarPro CQUARTZ DLUX 2.0",
+      "family": "Wheels and trim",
+      "sourceDescription": "Coating for wheels and exterior trim; restores gloss and color of plastic and rubber trim and protects from fading per brand."
+    },
+    {
+      "id": "svc_54cd856b406ee1215117530ad9b401bf",
+      "name": "Fireball RAPTOR",
+      "family": "Wheels and trim",
+      "sourceDescription": "Newest Fireball line entry; hydrophobic anti-fouling coating for wheels, plastic and exterior trim."
+    },
+    {
+      "id": "svc_7c799caa1e4d2560b37825cd050a107b",
+      "name": "CarPro CQUARTZ DLight",
+      "family": "Lights and plastics",
+      "sourceDescription": "UV-blocking coating for headlights, PPF and other plastics; formulated for long-lasting protection of light lenses and trim plastics."
+    },
+    {
+      "id": "svc_3597c0cf6b6f78d91f3b2e2d20a33cbb",
+      "name": "CarPro CQUARTZ Skin",
+      "family": "Film and trim coating care",
+      "sourceDescription": "Coating developed for PPF, vinyl films, clear bra and plastic trim; heavy UV blockers with chemical and salt resistance per brand."
+    },
+    {
+      "id": "svc_d69177dc7c13d6c282ea2e37f4918e39",
+      "name": "CarPro DQUARTZ GForce",
+      "family": "Glass",
+      "sourceDescription": "High-clarity hydrophobic glass coating for the windshield and glass; extreme water repellency and abrasion resistance per brand."
+    },
+    {
+      "id": "svc-brand-fireball-talon",
+      "name": "Fireball Talon",
+      "family": "Wheels and heat-exposed parts",
+      "sourceDescription": "High-temperature ceramic for wheels, brake components, engine parts, exhaust tips and unpainted trim."
+    },
+    {
+      "id": "svc_3eefcd920146c12bf2964e0039caf527",
+      "name": "Gtechniq HALOv2 Flexible Film Coating",
+      "family": "Film coating care",
+      "sourceDescription": "Flexible coating formulated for PPF and vinyl film. Special order."
+    },
+    {
+      "id": "svc-brand-kovalent-overlay",
+      "name": "Kovalent Overlay",
+      "family": "Film coating care",
+      "sourceDescription": "Ceramic coating made to be applied over PPF; easier cleaning and reduced contamination per brand."
+    },
+    {
+      "id": "svc_7cf3a05184a39da790c1f3f8325bda5a",
+      "name": "Koch-Chemie Ceramic Rims Cr0.01",
+      "family": "Wheels",
+      "sourceDescription": "Ceramic coating for painted rims; lotus-effect beading and easy-clean behaviour per brand."
+    },
+    {
+      "id": "svc-brand-kovalent-restore",
+      "name": "Kovalent Restore",
+      "family": "Leather vinyl and plastic care",
+      "sourceDescription": "Coating for leather, vinyl and plastic; matte finish, water-repellent and UV-resistant per brand."
+    },
+    {
+      "id": "svc-coating-teflon",
+      "name": "Teflon",
+      "family": "Sealant",
+      "sourceDescription": "Teflon paint sealant for added shine and protection."
+    }
+  ]
+}
