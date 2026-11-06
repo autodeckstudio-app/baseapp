@@ -228,7 +228,7 @@ export default function CatalogueScreen() {
       ) : null}
       {services && !searching && level === 2 ? (
         <View style={{ gap: 18 }}>
-          {cat === 'ppf' ? <PpfSelection services={all} initialBrand={trail.find(t=>['XPEL','Garware','LLumar','3M','GSWF','NAR','AVVYX'].includes(t.key))?.key} priceLabel={s=>careEntryPrice(pricedLabel(s),!!pricingVehicle.category)} onService={s=>router.push(`/(tabs)/catalogue/${s.id}`)} onEnquiry={(id,request)=>router.push(request?{pathname:'/(tabs)/quote-request',params:{referenceKey:id,coverage:request}}:{pathname:'/(tabs)/catalogue/enquiry',params:{id}})}/> : renderNodes(nodes)}
+          {cat === 'ppf' ? <PpfSelection services={all} initialBrand={trail.find(crumb=>['XPEL','Garware','LLumar','3M','GSWF','NAR','AVVYX'].includes(crumb.key))?.key} priceLabel={s=>careEntryPrice(pricedLabel(s),!!pricingVehicle.category)} onService={s=>router.push(`/(tabs)/catalogue/${s.id}`)} onEnquiry={(id,request)=>router.push(request?{pathname:'/(tabs)/quote-request',params:{referenceKey:id,coverage:request}}:{pathname:'/(tabs)/catalogue/enquiry',params:{id}})}/> : renderNodes(nodes)}
           {cat === "ppf" || cat === "coatings" ? <T role="caption" tone="secondary">{cat === "coatings" ? "Final price confirmed after inspection." : PAINT_INSPECTION_NOTE}</T> : null}
         </View>
       ) : null}

@@ -226,9 +226,9 @@ export default function JobDetailScreen() {
       return;
     }
     void (async () => {
-      const bookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
-      if (!bookingSnap.exists()) return;
-      const membershipBooking = bookingSnap.data() as Booking;
+      const freshBookingSnap = await getDoc(doc(db, COLLECTIONS.bookings(), job.bookingId as string));
+      if (!freshBookingSnap.exists()) return;
+      const membershipBooking = freshBookingSnap.data() as Booking;
       if (!membershipBooking.membershipId) return;
       const membership = await getCustomerMembership(job.customerId, membershipBooking.membershipId);
       if (membership) {

@@ -115,7 +115,7 @@ export function approvedConsultPaymentBinding(
     quoteHash: a.quoteHash,
     approvalBindingHash: digest({
       quoteHash: a.quoteHash,
-      deltas: ds.sort((a, b) => a.approvalId.localeCompare(b.approvalId)),
+      deltas: ds.sort((left, right) => left.approvalId.localeCompare(right.approvalId)),
     }),
   };
 }

@@ -1,5 +1,6 @@
+import type { Service } from "./index";
 import{it,expect}from'vitest';import{resolveCatalogueSelection,legacyCoverageOffers,type CatalogueChoice,type OfferAssignment}from'./catalogue-selection';
-const service={id:'legacy-xpel-body',name:'XPEL Full body',category:'ppf',brand:'XPEL',coverageLevel:'full_body',active:true,basePrice:20000000,vehicleCategoryPricing:[],priceOnRequest:false}as any;
+const service={id:'legacy-xpel-body',name:'XPEL Full body',category:'ppf',brand:'XPEL',coverageLevel:'full_body',active:true,basePrice:20000000,vehicleCategoryPricing:[],priceOnRequest:false}as unknown as Service;
 const choice:CatalogueChoice={serviceKind:'ppf',brand:'XPEL',productId:'ultimate-plus',coverage:'full_body',vehicleCategory:'sedan'};
 const assignment:OfferAssignment={offerId:'explicit-offer',serviceId:service.id,serviceKind:'ppf',brand:'XPEL',productId:'ultimate-plus',coverage:'full_body',vehicleCategories:['sedan'],status:'published',version:'v1'};
 it('legacy coverage keeps exact IDs/money but has no invented film price',()=>{const before=JSON.stringify(service);expect(legacyCoverageOffers([service])[0]).toMatchObject({legacyServiceId:service.id,productId:null,basePrice:20000000,needsProductAssignment:true});expect(resolveCatalogueSelection(choice,[],[service]).kind).toBe('quote');expect(JSON.stringify(service)).toBe(before);});

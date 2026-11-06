@@ -107,7 +107,7 @@ export default function GarageScreen() {
       const outcome = await deleteVehiclePermanently(deleting.id);
       if(!current())return;
       // Do not wait for the archived stream to catch up with the callable.
-      setArchived((current) => current.filter((v) => v.id !== deleting.id));
+      setArchived((previous) => previous.filter((v) => v.id !== deleting.id));
       setDeleting(null);
       if (outcome.photoCleanupFailed) {
         // The car is deleted; only the cover-photo sweep failed. It retries

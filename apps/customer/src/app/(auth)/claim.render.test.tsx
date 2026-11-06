@@ -5,7 +5,8 @@
 // and copy, not on-device styling.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { create, act } from "react-test-renderer";
-import React, { createElement } from "react";
+import type React from "react";
+import { createElement } from "react";
 // Mock react-native itself: minimal host components keep the tree inspectable
 // without react-native-web's DOM dependencies.
 vi.mock("react-native", () => {

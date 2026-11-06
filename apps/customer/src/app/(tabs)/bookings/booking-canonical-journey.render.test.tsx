@@ -168,7 +168,7 @@ vi.mock("../../../ui/PickupCard", () => ({ PickupCard: () => null }));
 vi.mock("../../../ui/ServicePhoto", () => ({ ServicePhoto: () => null }));
 
 vi.mock("expo-router", async () => {
-  const React = await import("react");
+  const ReactModule = await import("react");
   return {
     useSegments: () => [],
     useLocalSearchParams: () => __params.current,
@@ -177,7 +177,7 @@ vi.mock("expo-router", async () => {
       push: (p: any) => h.routes.push(p),
       back: () => {},
     }),
-    useFocusEffect: (cb: any) => React.useEffect(cb, [cb]),
+    useFocusEffect: (cb: any) => ReactModule.useEffect(cb, [cb]),
   };
 });
 vi.mock("../../../lib/invoice-service", () => ({
@@ -305,7 +305,7 @@ it("real job-ID consult fallback uses linked booking ID and exact displayed revi
     .findAllByType(Button)
     .find((x: any) => x.props.label === "Approve quote");
   const capturedApprove=approve.props.onPress;
-  let finishApprove:any;h.approve.mockImplementationOnce(()=>new Promise(r=>finishApprove=r));
+  let finishApprove:any;h.approve.mockImplementationOnce(()=>new Promise(resolve=>finishApprove=resolve));
   await act(async () => {approve.props.onPress();approve.props.onPress()});expect(h.approve).toHaveBeenCalledTimes(1);await act(async()=>finishApprove({}));
   expect(h.approve).toHaveBeenCalledWith("quote-b", 129900, "v2");
   await act(async () => h.bookingCb({ ...b, status: "CANCELLED" }));

@@ -9,4 +9,4 @@ export function uniqueServices(services:readonly Service[]):Service[]{const map=
 export const PPF_CUSTOMER_OPTIONS=[{key:'full_body',label:'Full-body protection'},{key:'removal',label:'Remove existing film'},{key:'replacement',label:'Replace damaged film'}]as const;
 
 /** Exact structured fields only. Half/front/custom coverage stays offline. */
-export function ppfWorkServices(services:readonly Service[],work:typeof PPF_CUSTOMER_OPTIONS[number]['key']):Service[]{return uniqueServices(services).filter(s=>s.active&&s.category==='ppf'&&(s.ppfWork===work||(work==='full_body'&&s.ppfWork==null&&s.coverageLevel==='full_body')))}
+export function ppfWorkServices(services:readonly Service[],work:typeof PPF_CUSTOMER_OPTIONS[number]['key']):Service[]{return uniqueServices(services).filter(s=>s.active&&s.category==='ppf'&&(s.ppfWork===work||(work==='full_body'&&(s.ppfWork===null||s.ppfWork===undefined)&&s.coverageLevel==='full_body')))}

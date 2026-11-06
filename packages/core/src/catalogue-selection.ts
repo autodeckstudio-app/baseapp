@@ -16,4 +16,4 @@ export function resolveCatalogueSelection(choice:CatalogueChoice,assignments:Off
  return{kind:'offer',service,assignment,choice};
 }
 /** Explicitly coverage-only. No manufacturer's film identity inferred from price/year/brand. */
-export function legacyCoverageOffers(services:Service[]){return services.filter(s=>s.active&&s.category==='ppf'&&s.coverageLevel).map(s=>({legacyServiceId:s.id,brand:s.brand,coverage:s.coverageLevel!,productId:null,basePrice:s.basePrice,vehicleCategoryPricing:s.vehicleCategoryPricing,needsProductAssignment:true as const}));}
+export function legacyCoverageOffers(services:Service[]){return services.filter(s=>s.active&&s.category==='ppf'&&s.coverageLevel).map(s=>({legacyServiceId:s.id,brand:s.brand,coverage:s.coverageLevel as NonNullable<Service["coverageLevel"]>,productId:null,basePrice:s.basePrice,vehicleCategoryPricing:s.vehicleCategoryPricing,needsProductAssignment:true as const}));}
