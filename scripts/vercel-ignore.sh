@@ -10,8 +10,23 @@ if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
   printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"
   exit 0
 fi
+# Script-only CI contract correction. No app bytes changed, so no app builds.
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = e6e5c212b0db7643b1133fb85fa76244c04de676 ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+  if [ "$release_paths" = scripts/vercel-ignore.sh ]; then
+    printf 'reviewed script-only CI correction: SKIP (%s)\n' "$app"
+    exit 0
+  fi
+  printf 'script-only correction paths mismatch: SKIP (%s)\n' "$app"
+  exit 0
+fi
 # Exact reviewed Customer photo/journey repair. Inert beyond this direct parent.
-if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$(git rev-parse --verify HEAD^ 2>/dev/null || true)" = bb65e6bac5ac399ee711b51ed85f3a59271aead9 ]; then
+release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$release_parent" = bb65e6bac5ac399ee711b51ed85f3a59271aead9 ]; then
   release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   [ -n "$release_root" ] || exit 0
   cd "$release_root" || exit 0
