@@ -12,7 +12,12 @@ vi.mock("../../middleware/rateLimit.js", () => ({ enforceRateLimit: vi.fn(), sub
 vi.mock("../../middleware/audit.js", () => ({ writeAuditLog: vi.fn() }));
 vi.mock("firebase-admin/firestore", () => {
   const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => ({ id: path.split("/").pop(), exists: h.rows.has(path), data: () => h.rows.get(path) }) });
-  return { getFirestore: () => ({ collection: (c: string) => ({ doc: (id: string) => docRef(`${c}/${id}`) }) }) };
+  const query = (col: string, filters: Array<[string, unknown]>, cap = Infinity): any => ({
+    where: (field: string, op: string, value: unknown) => { if (op !== "==") throw Error("Unsupported query operator"); return query(col, [...filters, [field, value]], cap); },
+    limit: (n: number) => query(col, filters, n),
+    get: async () => ({ docs: [...h.rows.entries()].filter(([path, row]) => path.startsWith(col + "/") && path.split("/").length === 2 && filters.every(([field, value]) => row[field] === value)).slice(0, cap).map(([path, row]) => ({ id: path.split("/").pop(), data: () => row })) }),
+  });
+  return { getFirestore: () => ({ collection: (c: string) => ({ doc: (id: string) => docRef(`${c}/${id}`), where: (field: string, op: string, value: unknown) => query(c, []).where(field, op, value) }) }) };
 });
 vi.mock("firebase-admin/storage", () => ({
   getStorage: () => ({ bucket: () => ({ file: (path: string, opts?: any) => {
@@ -30,6 +35,7 @@ const T = "t", V = "v1", P = "p1";
 const PATH = `${T}/vehicles/${V}/paper-${P}.jpg`;
 const req = (uid: string, data: any, role = "customer"): any => ({ data, auth: { uid, token: { role, tenantId: T } } });
 const seed = (paperOver: any = {}, vehicleOver: any = {}) => {
+  h.rows.set("customers/me", { id: "me", authUid: "me", tenantId: T });
   h.rows.set(`papers/${P}`, { id: P, tenantId: T, customerId: "me", vehicleId: V, kind: "INSURANCE", status: "VERIFIED", evidencePath: PATH, evidenceGeneration: "1730000000000123", ...paperOver });
   h.rows.set(`vehicles/${V}`, { ownerId: "me", tenantId: T, ...vehicleOver });
 };
@@ -90,5 +96,26 @@ describe("paper branch: fresh vehicle proof, prefix binding, error taxonomy, pin
     await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "not-found" });
     h.existsValue = true; h.existsError = { code: 500 };
     await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "unavailable" });
+  });
+});
+
+
+describe("paper reader canonical identity seam", () => {
+  it("missing, wrong-tenant and deleted bindings fail closed", async () => {
+    seed(); h.rows.delete("customers/me");
+    await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "failed-precondition" });
+    h.rows.set("customers/staged", { authUid: "me", tenantId: "other" });
+    await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "failed-precondition" });
+    h.rows.set("customers/staged", { authUid: "me", tenantId: T, deletedAt: "2026-11-06" });
+    await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "failed-precondition" });
+  });
+  it("a claimed staged binding resolves by authUid, not a matching-looking id", async () => {
+    seed({ customerId: "staged" }, { ownerId: "staged" }); h.rows.delete("customers/me");
+    h.rows.set("customers/unrelated", { authUid: "other", tenantId: T });
+    h.rows.set("customers/staged", { authUid: "me", tenantId: T });
+    const result: any = await getPrivateFileUrl.run(req("me", { kind: "paper", id: P }));
+    expect(result.url).toContain("generation=1730000000000123");
+    h.rows.set("customers/duplicate", { authUid: "me", tenantId: T });
+    await expect(getPrivateFileUrl.run(req("me", { kind: "paper", id: P }))).rejects.toMatchObject({ code: "internal" });
   });
 });

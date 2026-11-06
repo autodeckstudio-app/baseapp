@@ -49,9 +49,10 @@ vi.mock("firebase-admin/storage", () => ({
 }));
 vi.mock("firebase-admin/firestore", () => {
   const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => ({ id: path.split("/").pop(), exists: h.rows.has(path), data: () => h.rows.get(path) }) });
-  const query = (col: string, filters: Array<[string, unknown]>) => ({
-    where: (f: string, _o: string, v: unknown) => query(col, [...filters, [f, v]]),
-    get: async () => ({ docs: [...h.rows.entries()].filter(([k, r]) => k.startsWith(col + "/") && filters.every(([f, v]) => r[f] === v)).map(([k, r]) => ({ id: k.split("/").pop(), data: () => r })) }),
+  const query = (col: string, filters: Array<[string, unknown]>, cap = Infinity): any => ({
+    where: (f: string, op: string, v: unknown) => { if (op !== "==") throw Error("Unsupported query operator"); return query(col, [...filters, [f, v]], cap); },
+    limit: (n: number) => query(col, filters, n),
+    get: async () => ({ docs: [...h.rows.entries()].filter(([k, r]) => k.startsWith(col + "/") && k.split("/").length === 2 && filters.every(([f, v]) => r[f] === v)).slice(0, cap).map(([k, r]) => ({ id: k.split("/").pop(), data: () => r })) }),
   });
   return { getFirestore: () => ({
     collection: (c: string) => ({ doc: (id?: string) => docRef(`${c}/${id ?? `auto-${++h.docSeq}`}`), where: (f: string, o: string, v: unknown) => query(c, []).where(f, o, v) }),
@@ -71,7 +72,7 @@ vi.mock("firebase-admin/firestore", () => {
     },
   }) };
 });
-vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", auditLog: () => "audit" } }));
+vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", auditLog: () => "audit", customers: () => "customers" } }));
 import { updateMyPaper } from "../../functions/papers/myPaperEdits.js";
 import { finalizeMyPaper } from "../../functions/papers/submitMyPaper.js";
 import { getPrivateFileUrl } from "../../functions/files/getPrivateFileUrl.js";
@@ -84,6 +85,7 @@ const req = (uid: string, data: any): any => ({ data, auth: { uid, token: { role
 
 beforeEach(() => {
   h.rows.clear(); h.audit.length = 0; h.storageDeleted.length = 0; h.meta.clear(); h.generations.clear();
+  h.rows.set(`customers/${ME}`, { id: ME, authUid: ME, tenantId: T });
   h.rows.set(`vehicles/${V}`, { ownerId: ME, tenantId: T });
   // A real checked record: VERIFIED, evidence pinned to the observed generation of OLD.
   h.rows.set(`papers/${P}`, {
