@@ -26,7 +26,7 @@ test('cached, fetched and mock catalogue all pass same hold; direct enquiry is f
  assert.match(detail,/active === true && customerOfferingVisible/);
  const booking=fs.readFileSync(new URL('apps/customer/src/app/(tabs)/book/[serviceId].tsx',root),'utf8');
  assert.match(booking,/customerOfferingVisible\(\{id:serviceId\}\)/);
- assert.match(booking,/serviceSnap.data\(\).active === true && customerOfferingVisible\(serviceSnap.data\(\) as Service\)/);
+ assert.match(booking,/s.active === true && customerOfferingVisible\(s\)/);
  assert.match(booking,/!selectedCategory \|\| !customerOfferingVisible\(\{id:serviceId\}\) \|\| !service \|\| !customerOfferingVisible\(service\)/);
  assert.match(booking,/\[serviceId, selectedCategory, service\]/);
 });

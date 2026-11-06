@@ -40,7 +40,7 @@ export default function HelpScreen() {
           {s.whatsapp ? <Row title="WhatsApp" detail="Message the studio" trailing={<NavIcon name="whatsapp" color={colors.textPrimary} size={22} cut={cut} />} onPress={() => void Linking.openURL(`https://wa.me/${s.whatsapp}`)} last /> : null}
         </Pane>
       ) : (
-        <Notice title="Contact details coming soon" body="Calling and messaging the studio will appear here." />
+        <Notice title="Studio contact unavailable" body="Contact details could not load. Your requests and bookings have not changed." />
       )}
       {s.address ? (
         <Pane pad="gap">

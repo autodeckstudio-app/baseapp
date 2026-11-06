@@ -93,8 +93,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
   const ready = auth.status === "ready";
+  const owner = ready ? `${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId??""}` : null;
   const myCode = ready ? referralCodeFor(auth.user.uid) : null;
-  const home = useCustomerHome(ready ? auth.user.uid : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
+  const home = useCustomerHome(ready ? auth.customerDocId : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
   const [unread, setUnread] = useState(0);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [open, setOpen] = useState<StoryGroup | null>(null);
@@ -104,16 +105,16 @@ export default function HomeScreen() {
   const [catalogue, setCatalogue] = useState<Service[]>([]);
   const [past, setPast] = useState<Booking[]>([]);
   const [carListings, setCarListings] = useState<CarListingView[] | null>(null);
-  useEffect(() => { if (ready) void getCarListings(false).then(setCarListings).catch(() => undefined); }, [ready]);
+  useEffect(() => {let alive=true;setCarListings(null);if(ready)void getCarListings(false).then(v=>{if(alive)setCarListings(v)}).catch(()=>undefined);return()=>{alive=false}}, [owner]);
   const pricingVehicle = usePricingVehicle();
   const vehiclePrices = useVehiclePrices(catalogue, pricingVehicle.category);
   useEffect(() => {
-    if (!ready) return;
+    setGroups([]);setOpen(null);setSeen(new Set());setCatalogue([]);setCatalogueFailed(false);if (!ready) return;
     let alive = true;
-    const loadStories = (tries: number) => void getStories().then((l) => { if (!alive) return; if (l.length === 0 && tries > 0) setTimeout(() => loadStories(tries - 1), 2500); else setGroups(groupStories(l)); }).catch(() => undefined);
+    const loadStories = (tries: number) => {if(!alive)return;void getStories().then((l) => { if (!alive) return; if (l.length === 0 && tries > 0) setTimeout(() => loadStories(tries - 1), 2500); else setGroups(groupStories(l)); }).catch(() => undefined);};
     loadStories(2);
     const loadCatalogue = (tries: number) => {
-      void getServiceCatalogue()
+      if(!alive)return;void getServiceCatalogue()
         .then((all) => {
           if (!alive) return;
           setCatalogueFailed(false);
@@ -124,52 +125,52 @@ export default function HomeScreen() {
     };
     loadCatalogue(2);
     return () => { alive = false; };
-  }, [ready, retryTick]);
+  }, [owner, retryTick]);
 
   useEffect(() => {
-    if (!ready) return;
-    return listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => setUnread(n.filter((x) => x.readAt === null).length), () => undefined);
-  }, [ready]);
+    setUnread(0);if (!ready) return;let alive=true;
+    const stop=listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => {if(alive)setUnread(n.filter((x) => x.readAt === null).length)}, () => undefined);return()=>{alive=false;stop()};
+  }, [owner]);
 
   useEffect(() => {
-    if (!ready) return;
+    setPast([]);if (!ready || !auth.customerDocId) return;
     let alive = true;
-    void getMyBookings(auth.user.uid, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
+    void getMyBookings(auth.customerDocId, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
     return () => { alive = false; };
-  }, [ready]);
+  }, [owner]);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;
   const [offers, setOffers] = useState<OfferView[]>([]);
   useEffect(() => {
-    if (!ready) return;
+    setOffers([]);if (!ready) return;
     let alive = true;
-    void getOffers().then((l) => { if (alive) setOffers(l); });
+    void getOffers().then((l) => { if (alive) setOffers(l); }).catch(()=>undefined);
     return () => { alive = false; };
-  }, [ready]);
+  }, [owner]);
   const [liveInfo, setLiveInfo] = useState<{ operatingHours: Array<{ dayOfWeek: number; open: string; close: string; closed: boolean }>; holidays: string[] } | null>(null);
   const [carJobs, setCarJobs] = useState<Array<{ serviceId: string; status: string; createdAt: string; sealedAt?: string | null }>>([]);
   useEffect(() => {
-    if (!ready) return;
+    setLiveInfo(null);if (!ready) return;
     let alive = true;
     void getStudioInfo(FIRST_STUDIO_ID).then((i) => { if (alive && i.operatingHours?.length) setLiveInfo(i); }).catch(() => undefined);
     return () => { alive = false; };
-  }, [ready]);
+  }, [owner]);
   useEffect(() => {
     setCarJobs([]);
-    if (!ready || !carId) return;
-    return listenToJobsForVehicle(carId, auth.claims.tenantId, auth.user.uid, (j) => setCarJobs(j as never), () => undefined);
-  }, [ready, carId]);
+    if (!ready || !auth.customerDocId || !carId) return;
+    let alive=true;const stop=listenToJobsForVehicle(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setCarJobs(v as never)}, () => undefined);return()=>{alive=false;stop()};
+  }, [owner, carId]);
   const [papers, setPapers] = useState<MyPaper[]>([]);
   const [warranties, setWarranties] = useState<Array<{ warrantyLabel: string; endDate: string | null; revokedAt: string | null }>>([]);
   useEffect(() => {
     setPapers([]);
-    if (!ready || !carId) return;
-    return listenToVehiclePapers(carId, auth.claims.tenantId, auth.user.uid, setPapers, () => undefined);
-  }, [ready, carId]);
+    if (!ready || !auth.customerDocId || !carId) return;
+    let alive=true;const stop=listenToVehiclePapers(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setPapers(v as never)}, () => undefined);return()=>{alive=false;stop()};
+  }, [owner, carId]);
   useEffect(() => {
     setWarranties([]);
-    if (!ready || !carId) return;
-    return listenToVehicleWarranties(carId, auth.claims.tenantId, auth.user.uid, (w) => setWarranties(w as never), () => undefined);
-  }, [ready, carId]);
+    if (!ready || !auth.customerDocId || !carId) return;
+    let alive=true;const stop=listenToVehicleWarranties(carId, auth.claims.tenantId, auth.customerDocId, (v)=>{if(alive)setWarranties(v as never)}, () => undefined);return()=>{alive=false;stop()};
+  }, [owner, carId]);
 
   if (!ready || !home.model) {
     return (
@@ -278,6 +279,7 @@ export default function HomeScreen() {
         onReminders={() => (car ? router.push(`/(tabs)/garage/${car.id}`) : undefined)}
       />
       <StoryViewer
+        identityKey={ready ? `${auth.user.uid}:${auth.claims.tenantId}` : null}
         group={open}
         onClose={() => setOpen(null)}
         onNextGroup={() => { const n = open ? groups[groups.findIndex((x) => x.key === open.key) + 1] : undefined; if (n) { setOpen(n); setSeen(new Set([...seen, seenKeyOf(n)])); } else setOpen(null); }}

@@ -175,7 +175,7 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
   const idle = !live || live.idle === true;
   const n = idle ? nudge : null;
   const kicker = n ? n.kicker : idle ? "Ready when you are" : live!.kicker;
-  const title = n ? n.title : idle ? (car ? `Book care for your ${car.title}` : "Add your car to begin") : live!.title;
+  const title = n ? n.title : idle ? (car ? `Care for ${car.title}` : "Add your car to begin") : live!.title;
   const detail = n ? n.detail : idle ? (live?.detail ?? "") : live!.detail;
   const press = n ? n.onPress : idle ? (live?.onPress ?? onBook) : live!.onPress;
   const cta = n ? n.cta : idle ? (car ? "Book a service" : "Add your car") : live!.kicker === "Needs your OK" ? "Review" : "Track";
@@ -184,7 +184,7 @@ function LeadCard({ live, pct, nudge, car, onBook }: { live: HomeLive | null; pc
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={press} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingLeft: 16, paddingRight: 10, opacity: pressed ? 0.9 : 1, ...glassPane(name === "light") })}>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
         <Text numberOfLines={1} style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase" }}>{kicker}</Text>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{title}</Text>
+        <Text numberOfLines={2} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{title}</Text>
         {showDetail ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{detail}</Text> : null}
       </View>
       <View style={{ borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: name === "light" ? "#1D1B26" : "#F4F2EF" }}>
@@ -303,6 +303,8 @@ export function HomeView(p: HomeViewProps) {
           {p.unread > 0 ? <View style={{ position: "absolute", top: 11, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: "#EC8638" }} /> : null}
         </Pressable>
       </View>
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Search services" onPress={p.onSearch} style={{minHeight:48,borderRadius:24,paddingHorizontal:16,flexDirection:'row',alignItems:'center',gap:12,...glassPane(name === "light")}}><NavIcon name="search" color={colors.textSecondary} size={20} cut="#18181C"/><Text style={{color:colors.textSecondary,fontSize:15}}>Search services</Text></Pressable>
 
       {p.stories}
 

@@ -57,19 +57,22 @@ export default function GarageScreen() {
   const [plan, setPlan] = useState<Membership | null>(mock ? mock.plan : null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
+  const ownerKey=JSON.stringify([uid,tenantId,auth.status==='ready'?auth.user.uid:null]);const ownerRef=useRef(ownerKey);ownerRef.current=ownerKey;const archiveLock=useRef(false),archiveGeneration=useRef(0);
+  useEffect(()=>{archiveGeneration.current++;archiveLock.current=false;setArchiveActionBusy(null);return()=>{archiveGeneration.current++}},[ownerKey]);
   // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
   useEffect(() => {
-    if (mock || !uid || !tenantId) return;
-    return listenToMyVehicles(uid, tenantId, (v) => { setVehicles(v); setError(false); }, () => setError(true));
+    if(mock)return;setVehicles(null);setPick(null);setDeleting(null);setArchiveActionError(null);setPhotoCleanupNote(null);setError(false);if (!uid || !tenantId) return;let alive=true;
+    const stop=listenToMyVehicles(uid, tenantId, (v) => {if(alive){setVehicles(v); setError(false)}}, () => {if(alive)setError(true)});return()=>{alive=false;stop()};
   }, [uid, tenantId, retryTick]);
 
-  useEffect(() => { if (mock || !uid || !tenantId) return; return listenToMyJobs(tenantId, uid, setJobs, () => undefined); }, [uid, tenantId, retryTick]);
-  useEffect(() => { if (mock || !uid || !tenantId) return; return listenToMyMemberships(tenantId, uid, (ms) => setPlan(ms.find((m) => m.status === "active") ?? null), () => undefined); }, [uid, tenantId, retryTick]);
+  useEffect(() => { if(mock)return;setJobs([]);if (!uid || !tenantId) return;let alive=true;const stop=listenToMyJobs(tenantId, uid, v=>{if(alive)setJobs(v)}, () => undefined);return()=>{alive=false;stop()}; }, [uid, tenantId, retryTick]);
+  useEffect(() => { if(mock)return;setPlan(null);if (!uid || !tenantId) return;let alive=true;const stop=listenToMyMemberships(tenantId, uid, (ms) => {if(alive)setPlan(ms.find((m) => m.status === "active") ?? null)}, () => undefined);return()=>{alive=false;stop()}; }, [uid, tenantId, retryTick]);
   useEffect(() => { if (mock) return; void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
-  useEffect(()=>{if(mock||!uid||!tenantId)return;return listenToMyArchivedVehicles(uid,tenantId,setArchived,()=>setArchiveActionError("Could not load archived cars. Retry before restoring or deleting."));},[uid,tenantId,retryTick]);
-  async function restore(v:Vehicle){setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){setArchiveActionError(e instanceof Error?e.message:"Could not restore the car.");}finally{setArchiveActionBusy(null);}}
+  useEffect(()=>{if(mock)return;setArchived([]);setShowArchived(false);if(!uid||!tenantId)return;let alive=true;const stop=listenToMyArchivedVehicles(uid,tenantId,v=>{if(alive)setArchived(v)},()=>{if(alive)setArchiveActionError("Could not load archived cars. Retry before restoring or deleting.")});return()=>{alive=false;stop()};},[uid,tenantId,retryTick]);
+  async function restore(v:Vehicle){if(archiveLock.current)return;const owner=ownerKey,gen=archiveGeneration.current;const current=()=>ownerRef.current===owner&&archiveGeneration.current===gen;archiveLock.current=true;setArchiveActionBusy(v.id);setArchiveActionError(null);try{await restoreVehicle(v.id);}catch(e){if(current())setArchiveActionError(e instanceof Error?e.message:"The restore was not confirmed. Refresh before trying again.");}finally{if(current()){archiveLock.current=false;setArchiveActionBusy(null);}}}
+
   // Watchdog: if the vehicles stream never delivers (no data, no error),
   // show the connection notice instead of spinning forever.
   useEffect(() => {
@@ -96,11 +99,13 @@ export default function GarageScreen() {
     router.push({ pathname: "/(tabs)/garage/[id]", params: { id: v.id } });
   };
   async function confirmDeletePermanently() {
-    if (!deleting) return;
+    if (!deleting||archiveLock.current) return;
+    const owner=ownerKey,gen=archiveGeneration.current;const current=()=>ownerRef.current===owner&&archiveGeneration.current===gen;archiveLock.current=true;
     setArchiveActionBusy(deleting.id);
     setArchiveActionError(null);
     try {
       const outcome = await deleteVehiclePermanently(deleting.id);
+      if(!current())return;
       // Do not wait for the archived stream to catch up with the callable.
       setArchived((current) => current.filter((v) => v.id !== deleting.id));
       setDeleting(null);
@@ -110,9 +115,9 @@ export default function GarageScreen() {
         setPhotoCleanupNote("Car deleted. Its cover photo could not be removed yet - we will keep trying to remove it. Documents, service history, bills and inspection photos are kept.");
       }
     } catch (e) {
-      setArchiveActionError(e instanceof Error ? e.message : "Could not delete the car. Please try again.");
+      if(current())setArchiveActionError(e instanceof Error ? e.message : "The delete was not confirmed. Refresh before trying again.");
     } finally {
-      setArchiveActionBusy(null);
+      if(current()){archiveLock.current=false;setArchiveActionBusy(null);}
     }
   }
   const list = [...(vehicles ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

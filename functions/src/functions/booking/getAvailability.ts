@@ -1,3 +1,6 @@
+import {acceptedServiceQuote} from "../../lib/accepted-service-quote.js";
+import type {QuoteJourney} from "@autodeck/core";
+import {hasReleasedBay} from "@autodeck/core";
 import { customerHasPriority } from "../../lib/priority-access.js";
 import { heldStartTimes, isPriorityHeld } from "../../lib/priority-hold.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -17,6 +20,7 @@ import {
 } from "../../lib/availability.js";
 import { addDays } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 const MAX_RETURNED_SLOTS = 60;
 
@@ -41,6 +45,7 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
 
   // Extra services in the same visit lengthen the slot. Same rules as createBooking; the price is not needed here.
   let visitMinutes = service.estimatedDurationMinutes;
+  if(data.quoteJourneyId){if(data.extraServiceIds?.length)throw new HttpsError("failed-precondition","Accepted quote covers its exact work only.");const cid=await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);const q=(await db.collection("serviceQuoteJourneys").doc(data.quoteJourneyId).get()).data() as QuoteJourney|undefined;const offer=acceptedServiceQuote(q,{tenantId:user.claims.tenantId,customerId:cid,studioId:data.studioId,serviceId:data.serviceId,vehicleId:q?.scope.vehicleId??"",revision:data.quoteRevision??0,termsVersion:data.quoteTermsVersion??""});if((service.productKey??null)!==q!.scope.productKey||!!q!.requestedReference&&service.name!==q!.scope.coverage)throw new HttpsError('failed-precondition','The selected offering changed. Ask the studio to review the quote.');visitMinutes=offer.workingMinutes;}else if(data.quoteRevision||data.quoteTermsVersion)throw new HttpsError("invalid-argument","Quote reference required.");
   if (data.extraServiceIds?.length) {
     const extraSnaps = await Promise.all(data.extraServiceIds.map((id) => db.collection(COLLECTIONS.services()).doc(id).get()));
     if (extraSnaps.some((x) => !x.exists)) throw new HttpsError("not-found", "Service not found.");
@@ -91,7 +96,7 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsSnap.docs) {
         const job = doc.data() as ServiceJob;
-        if (job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED") continue;
         intervals.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
       }
       occupiedByBay.set(bay.id, intervals);
@@ -114,7 +119,8 @@ export const getAvailability = onCall({ region: "asia-south1" , enforceAppCheck:
   let visible = slots;
   if (user.claims.role === "customer") {
     const now = new Date();
-    const mine = await customerHasPriority(db, user.uid, now, config.timezone);
+    const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+    const mine = await customerHasPriority(db, customerDocId, now, config.timezone);
     if (!mine) {
       const heldByDate = new Map<string, string[]>();
       visible = slots.filter((s) => {

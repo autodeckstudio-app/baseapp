@@ -821,3 +821,8 @@ html[data-theme="night"] .ax-due { color: #F5A15C; }
 .ax-jc-timing--error { color: var(--color-error, #b3261e); font-weight: 600; }
 .ax-jc-timing--success { color: var(--color-success, #1b6e3c); }
 .ax-jc-timing[data-attention="true"] { font-weight: 700; }
+
+/* Job money/status must remain separate readable facts on staff-sized phones. */
+.ax-job-summary{min-width:190px;display:grid;gap:6px;align-content:start;justify-items:start;padding:18px;border-radius:22px;background:rgba(255,255,255,.65)}
+.ax-job-summary .ax-hero-total{font-size:30px;line-height:1.15;white-space:nowrap}
+@media(max-width:600px){.ax-job-hero{display:flex;flex-direction:column;align-items:stretch;gap:18px}.ax-job-summary{min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}.ax-job-summary .ax-label{align-self:center}.ax-job-summary .ax-hero-total{font-size:28px}}

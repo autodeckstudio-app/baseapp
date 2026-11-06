@@ -30,6 +30,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="book" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="approvals" options={{ href: null }} />
+      <Tabs.Screen name="quote-request" options={{ href: null }} />
+      <Tabs.Screen name="quotes" options={{ href: null }} />
       <Tabs.Screen name="help" options={{ href: null }} />
       <Tabs.Screen name="gifts" options={{ href: null }} />
       <Tabs.Screen name="studio" options={{ href: null }} />

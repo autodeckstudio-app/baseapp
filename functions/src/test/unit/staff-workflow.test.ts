@@ -6,7 +6,7 @@ vi.mock("firebase-admin/firestore", () => ({ getFirestore: () => {
   const snap = (key: string) => ({ id: key.split("/").pop(), exists: h.rows.has(key), data: () => h.rows.get(key) });
   const db: any = { collection: (name: string) => {
     const q: any = { name, filters: [] as any[], doc: (id: string) => ({ key: `${name}/${id}`, get: async () => snap(`${name}/${id}`) }), where: (field: string, op: string, val: any) => { q.filters.push([field,op,val]); return q; }, limit: () => q };
-    q.get = async () => ({ docs: [...h.rows].filter(([k,v]) => k.startsWith(name+"/") && q.filters.every(([f,op,val]: any[]) => op === "==" ? v[f] === val : true)).map(([key]) => snap(key)), get empty() { return this.docs.length === 0; } }); return q;
+    q.get = async () => ({ docs: [...h.rows].filter(([k,v]) => k.startsWith(name+"/") && q.filters.every(([f,op,val]: any[]) => op === "==" ? v[f] === val : op === "in" ? val.includes(v[f]) : op === ">=" ? v[f]>=val : op === "<=" ? v[f]<=val : false)).map(([key]) => snap(key)), get empty() { return this.docs.length === 0; } }); return q;
   }, runTransaction: async (fn: any) => {
     const writes: any[] = [];
     const result = await fn({ get: async (r: any) => r.key ? snap(r.key) : r.get(), update: (r: any, value: any) => writes.push([r.key,value]), set: (r: any,value: any) => writes.push([r.key,value]) });
@@ -36,7 +36,7 @@ const expectErr = async (p: Promise<unknown>, code: string, message?: RegExp) =>
 const job = (id = "j", extra = {}): any => ({id,tenantId:"t",studioId:"s",bookingId:"b",customerId:"c",vehicleId:"v",serviceId:"svc",bayId:"wash",status:"PENDING_VEHICLE",statusHistory:[],scheduledAt:"2026-10-07T04:30:00Z",scheduledDate:"2026-10-07",estimatedEndAt:"2026-10-07T06:00:00Z",estimatedDurationMinutes:30,createdAt:"2026-10-01T00:00:00Z",paymentStatus:"unpaid",...extra});
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(h.now); h.rows.clear(); h.writes=[]; h.role="studio";h.studio="s";h.tenant="t";
-  h.rows.set("jobs/j",job()); h.rows.set("bookings/b",{id:"b",tenantId:"t",studioId:"s",status:"CONFIRMED"});
+  h.rows.set("jobs/j",job()); h.rows.set("bookings/b",{id:"b",tenantId:"t",studioId:"s",customerId:"c",status:"CONFIRMED"});
   h.rows.set("studioConfig/s",{tenantId:"t",timezone:"Asia/Kolkata",operatingHours:Array.from({length:7},(_,dayOfWeek)=>({dayOfWeek,open:"09:00",close:"21:00",closed:false})),holidays:[],bays:[{id:"wash",name:"Wash",active:true,bayType:"wash"}]});
   h.rows.set("services/svc",{tenantId:"t",active:true,requiredBayType:"wash"}); h.rows.set("vehicles/v",{make:"QA",model:"Car"});
 });

@@ -97,10 +97,13 @@ export default function BookingConfirmScreen() {
   // More services in the same visit. The server prices them again; this is what the customer sees first.
   const extraIds = useMemo(() => extrasFromParam(params.extras), [params.extras]);
   const [extraRows, setExtraRows] = useState<Array<{ id: string; name: string; minutes: number; total: number; subtotal: number }>>([]);
-  const [idempotencyKey] = useState(() => generateIdempotencyKey());
+  const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,params.serviceId,params.vehicleId,params.vehicleCategory,params.extras,params.scheduledDate,params.scheduledTime]);
+  const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const actionGeneration=useRef(0),confirmBusy=useRef(false);
+  const idempotencyKey=useRef(generateIdempotencyKey());
+  useEffect(()=>{actionGeneration.current++;confirmBusy.current=false;payBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setBooking(false);setHeld(null);setFriendCode('');setUseWash(false);setWash(null);setPayAtStudio(false);setPickupKind(null);setPickupAddress('');setPickupSlot('');setPickupWhere(null);setPickupQuote(null);setPickupQuoteError(null);setLocating(false);return()=>{actionGeneration.current++}},[scopeKey]);
 
   useEffect(() => {
-    if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
+    let alive=true;setService(null);setVehicle(null);setBreakdown(null);setExtraRows([]);setBookError(null);setHeld(null);if (!params.serviceId || !params.vehicleId || !params.vehicleCategory) {setLoading(false);setLoadError(true);return;}
     setLoading(true);setLoadError(false);
     void (async () => {
       try {
@@ -109,7 +112,7 @@ export default function BookingConfirmScreen() {
           getDoc(doc(db, COLLECTIONS.vehicles(), params.vehicleId)),
           calculateServicePrice(params.serviceId, params.vehicleCategory),
         ]);
-        if (!serviceSnap.exists() || !vehicleSnap.exists()) throw new Error("Booking details unavailable");
+        if(!alive)return;if (!serviceSnap.exists() || !vehicleSnap.exists()) throw new Error("Booking details unavailable");
         setService(serviceSnap.data() as Service);
         setVehicle(vehicleSnap.data() as Vehicle);
         setBreakdown(priceResult.breakdown);
@@ -119,13 +122,13 @@ export default function BookingConfirmScreen() {
           const e = es.data() as Service;
           return { id, name: e.name, minutes: e.estimatedDurationMinutes, total: ep.breakdown.total, subtotal: ep.breakdown.subtotal };
         }));
-        setExtraRows(rows);
+        if(alive)setExtraRows(rows);
       } catch {
-        setLoadError(true);
+        if(alive)setLoadError(true);
       } finally {
-        setLoading(false);
+        if(alive)setLoading(false);
       }
-    })();
+    })();return()=>{alive=false};
   }, [params.serviceId, params.vehicleId, params.vehicleCategory, extraIds.join(","), retryTick]);
 
   // One included wash per booking, offered only when every rule passes (see lib/membership-wash.ts). Dark until the server can record it.
@@ -193,10 +196,12 @@ export default function BookingConfirmScreen() {
 
   async function locatePickup() {
     if (!pickupKind) return;
+    const scope=scopeKey,gen=actionGeneration.current,kind=pickupKind;
     setLocating(true);
     setPickupQuote(null);
     setPickupQuoteError(null);
     const p = await getDeviceLocation();
+    if(scopeRef.current!==scope||actionGeneration.current!==gen)return;
     if (!p) {
       setPickupWhere(null);
       setLocating(false);
@@ -204,9 +209,11 @@ export default function BookingConfirmScreen() {
     }
     try {
       const q = await getPickupQuote({ kind: pickupKind, lat: p.lat, lng: p.lng });
+      if(scopeRef.current!==scope||actionGeneration.current!==gen)return;
       setPickupWhere(p);
       setPickupQuote(q);
     } catch {
+      if(scopeRef.current!==scope||actionGeneration.current!==gen)return;
       // Approved failure behaviour: no estimate is ever shown or charged. The customer can retry or continue
       // without pickup; no other fallback is offered from this failure.
       setPickupWhere(null);
@@ -243,17 +250,20 @@ export default function BookingConfirmScreen() {
   /** Opens checkout for the held booking. Success goes to the booking; a failure or close stays here with the slot held. */
   async function payHeld(h: { bookingId: string; paymentJobId: string | null; expiresAt: number; pickupSent: boolean; advance?: boolean }) {
     if (payBusy.current || !service) return;
+    const scope=scopeKey,gen=actionGeneration.current;const current=()=>scopeRef.current===scope&&actionGeneration.current===gen;
     payBusy.current = true;
     setBooking(true);
     setBookError(null);
     try {
       if (h.advance) {
         const adv = await requestAdvancePayment(h.bookingId);
+        if(!current())return;
         if (adv.status === "manual_review" || !adv.paymentUrl) {
           setBookError("We're confirming your advance payment link. Please try again in a few minutes.");
           return;
         }
         const out = await payWithPaymentLink(adv.paymentId, adv.paymentUrl);
+        if(!current())return;
         const message = bookingPayOutcomeMessage(out);
         if (message) { setBookError(message); return; }
         router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
@@ -261,24 +271,27 @@ export default function BookingConfirmScreen() {
       }
       if (!h.paymentJobId) throw new Error("no checkout");
       const pay = await initiatePayment(h.paymentJobId, "razorpay_payment_link");
+      if(!current())return;
       const out = pay.paymentId ? await payOnline({ paymentId: pay.paymentId, paymentUrl: pay.paymentUrl, name: "AutoDeck Studio", description: service.name }) : "failed";
+      if(!current())return;
       if (out === "paid") {
         router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: h.bookingId, placed: "1", pay: "paid", ...(h.pickupSent ? {} : { pickup: "failed" }) } });
         return;
       }
       setBookError(bookingPayOutcomeMessage(out));
     } catch {
-      setBookError("We could not open the payment. Please retry.");
+      if(current())setBookError("We could not open the payment. Please retry.");
     } finally {
-      payBusy.current = false;
-      setBooking(false);
+      if(current()){payBusy.current = false;setBooking(false);}
     }
   }
 
   async function handleConfirm() {
     if(booking || !service || !vehicle || !breakdown) return;
+    if(confirmBusy.current)return;
     if (held) { if (!heldOver) await payHeld(held); return; }
     if (!params.serviceId || !params.vehicleId || !params.vehicleCategory || !params.scheduledDate || !params.scheduledTime) return;
+    const scope=scopeKey,gen=actionGeneration.current;const current=()=>scopeRef.current===scope&&actionGeneration.current===gen;confirmBusy.current=true;
     setBooking(true);
     setBookError(null);
     let created = false;
@@ -291,18 +304,20 @@ export default function BookingConfirmScreen() {
         studioId: FIRST_STUDIO_ID,
         scheduledDate: params.scheduledDate,
         scheduledTime: params.scheduledTime,
-        idempotencyKey,
+        idempotencyKey:idempotencyKey.current,
         payMode: payNow ? "online" : "studio",
         ...(ADVANCE_SPLIT_ENABLED ? { advanceFlowVersion: 1 as const } : {}),
         ...(washOn && washOffer ? { membershipId: washOffer.membershipId } : {}),
         ...(sendCode ? { referralCode: sendCode } : {}),
         ...(giftCode ? { giftCode } : {}),
       });
+      if(!current())return;
       created = true;
       // Create the booking exactly as before, then request pickup/drop with
       // the new booking id (round 8). The request's failure never fails the
       // booking - the booking page shows a call-the-studio note instead.
       const pickupSent = await sendPickupRequest(result.id);
+      if(!current())return;
       // Retain the created booking before requesting its link: every retry uses
       // this same booking/payment, never creates a second held booking.
       if (advanceDue && (result.status === "CONFIRMED" || result.status === "PENDING")) {
@@ -315,7 +330,8 @@ export default function BookingConfirmScreen() {
       }
       if (result.status === "PENDING" && auth.status === "ready") {
         // Held for 15 minutes until paid. Pay now; if it fails the customer retries on this page.
-        const jobId = await getJobIdForBooking(result.id, auth.claims.tenantId, auth.user.uid).catch(() => null);
+        const jobId = auth.customerDocId ? await getJobIdForBooking(result.id, auth.claims.tenantId, auth.customerDocId).catch(() => null) : null;
+        if(!current())return;
         const h = { bookingId: result.id, paymentJobId: jobId, expiresAt: Date.parse(result.holdExpiresAt ?? "") || Date.now() + 15 * 60_000, pickupSent };
         setHeld(h);
         setBooking(false);
@@ -325,9 +341,9 @@ export default function BookingConfirmScreen() {
       router.replace({ pathname: "/(tabs)/bookings/[id]", params: { id: result.id, placed: "1", ...(pickupSent ? {} : { pickup: "failed" }) } });
     } catch (err) {
       console.warn("create booking failed", err);
-      setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings first - if it reached the studio, it appears there.");
+      if(current())setBookError(created ? "We could not open the payment. Please retry." : "We could not send your request. Check your bookings first - if it reached the studio, it appears there.");
     } finally {
-      if (!payBusy.current) setBooking(false);
+      if(current()){confirmBusy.current=false;if (!payBusy.current) setBooking(false);}
     }
   }
 
@@ -460,18 +476,18 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : giftCode ? "Your slot is confirmed. Your gift covers this wash." : washOn ? "Your slot is confirmed. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : advanceDue ? "Pay 20% advance online to confirm your slot. The rest at the studio when you collect your car." : "Your slot is confirmed. Pay at the studio. Price may vary based on final work."}
+        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : giftCode ? "Confirm your slot. Your gift covers this wash." : washOn ? "Confirm your slot. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : advanceDue ? "Pay 20% advance online to confirm your slot. The rest at the studio when you collect your car." : "Confirm your slot. Pay at the studio. Price may vary based on final work."}
       </T>
       {washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
           {payHow.online ? (
             <Pressable accessibilityRole="button" accessibilityState={{ selected: !payAtStudio }} onPress={() => { if (!held) setPayAtStudio(false); }}>
-              <Row title="Pay online" detail={<T role="caption" tone="secondary">Secure payment now. Your slot is held for 15 minutes.</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={false} />
+              <Row title="Pay online" detail={<T role="caption" tone="secondary">Confirm below to open secure payment. The slot is held for 15 minutes after your request.</T>} trailing={!payAtStudio ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={false} />
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" accessibilityState={{ selected: payAtStudio || !payHow.online }} onPress={() => { if (!held) setPayAtStudio(true); }}>
-            <Row title="Pay at studio" detail={<T role="caption" tone="secondary">{studioAdvanceAvailable ? "Pay 20% advance online to confirm. Slot held for 15 minutes; the rest at the studio." : "Your slot is confirmed now. Pay when you collect your car."}</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!advanceDue && !payNow} />
+            <Row title="Pay at studio" detail={<T role="caption" tone="secondary">{studioAdvanceAvailable ? "Pay 20% advance online to confirm. Slot held for 15 minutes; the rest at the studio." : "Confirm your slot below. Pay when you collect your car."}</T>} trailing={payAtStudio || !payHow.online ? <Icon name="check" color="#EC8638" size={20} /> : undefined} last={!advanceDue && !payNow} />
           </Pressable>
           {/* Disclose the policy for the effective payment route only. */}
           {ADVANCE_SPLIT_ENABLED && (advanceDue || payNow) ? (
@@ -488,6 +504,8 @@ export default function BookingConfirmScreen() {
           ) : null}
         </Pane>
       </View>}
+
+      <Pane pad="gap"><Kicker>Before you confirm</Kicker><Row title="Your visit" detail="Check the car, service and selected time above."/><Row title="Optional pickup" detail="Pickup and drop requests are separate. The studio agrees the exact time with you."/><Row title="Questions or a change of plan?" detail="Open Help & contact before confirming if anything is unclear." onPress={()=>router.push('/(tabs)/help')} last/></Pane>
 
       {bookError ? <Notice title={held ? "Payment pending" : "Could not confirm the request"} body={bookError} /> : null}
 

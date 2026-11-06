@@ -1,3 +1,6 @@
+import {acceptedServiceQuote,acceptedQuoteBreakdown} from "../../lib/accepted-service-quote.js";
+import type {QuoteJourney} from "@autodeck/core";
+import {hasReleasedBay} from "@autodeck/core";
 import { customerServiceName } from "@autodeck/core";
 import { bookingStartState } from "../../lib/booking-hold.js";
 import { advancePaymentEnabled } from "../../lib/advance-payment.js";
@@ -35,6 +38,7 @@ import { findGiftByHash, giftBlockReason } from "../../lib/gift-store.js";
 import { addExtrasToBreakdown, extrasProblem, priceExtras, totalMinutes, type BookingLine } from "../../lib/booking-lines.js";
 import { localToUTC, utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -42,6 +46,12 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   await enforceRateLimit(subjectFrom(user), "booking.create");
 
   const db = getFirestore();
+  // Self-service booking is role-agnostic: studio/admin book their OWN cars here too.
+  // Customers must have a profile; other roles fall back to legacy uid-keyed ownership when they have none.
+  const resolvedDocId = user.claims.role === "customer"
+    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
+    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const customerDocId = resolvedDocId ?? user.uid;
   const now = new Date();
 
   // Validate booking is not too far in advance
@@ -78,7 +88,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   if (config.tenantId !== user.claims.tenantId) {
     throw new HttpsError("permission-denied", "Cross-tenant access denied.");
   }
-  if (vehicle.ownerId !== user.uid) {
+  if (vehicle.ownerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Vehicle does not belong to this customer.");
   }
   if (!service.active) {
@@ -106,7 +116,20 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     for (const e of extras) cancelCategories.push(String((e as { category?: string }).category ?? ""));
     extraLines = priceExtras(extras, { vehicleCategory: data.vehicleCategory, tax: taxFor(config), currency: config.currency });
   }
-  const visitMinutes = totalMinutes(service.estimatedDurationMinutes, extraLines);
+  const quoteRef=data.quoteJourneyId?db.collection("serviceQuoteJourneys").doc(data.quoteJourneyId):null;
+  const quoteBefore=quoteRef?(await quoteRef.get()).data() as QuoteJourney|undefined:undefined;
+  const quoteInput={tenantId:user.claims.tenantId,customerId:customerDocId,studioId:data.studioId,serviceId:data.serviceId,vehicleId:data.vehicleId,revision:data.quoteRevision??0,termsVersion:data.quoteTermsVersion??""};
+  if(quoteRef&&quoteBefore?.phase==="visit_booked"){
+    const replay=await db.collection(COLLECTIONS.bookingIntents()).doc(data.idempotencyKey).get();const r=replay.data();
+    if(quoteBefore.tenantId!==user.claims.tenantId||quoteBefore.customerId!==customerDocId||r?.["customerId"]!==customerDocId||r?.["tenantId"]!==user.claims.tenantId||r?.["bookingId"]!==quoteBefore.bookingId)throw new HttpsError("failed-precondition","This quote already has a booking.");
+    const b=(await db.collection(COLLECTIONS.bookings()).doc(quoteBefore.bookingId!).get()).data() as Booking|undefined;
+    if(!b||b.serviceId!==data.serviceId||b.vehicleId!==data.vehicleId||b.studioId!==data.studioId||b.scheduledDate!==data.scheduledDate||b.scheduledTime!==data.scheduledTime||quoteBefore.offer?.revision!==data.quoteRevision||quoteBefore.offer?.termsVersion!==data.quoteTermsVersion)throw new HttpsError("already-exists","This request already confirmed different booking details.");return{booking:b};
+  }
+  const acceptedOffer=quoteRef?acceptedServiceQuote(quoteBefore,quoteInput):null;
+  if(acceptedOffer&&advancePaymentEnabled()&&user.claims.role==="customer")throw new HttpsError("failed-precondition","Quote booking needs an updated payment flow. No booking or payment was started.");
+  if(quoteRef&&(data.extraServiceIds?.length||data.membershipId||data.giftCode))throw new HttpsError("failed-precondition","The accepted quote covers its exact work only. Extras, credits and gifts cannot change it.");
+  if(!quoteRef&&(data.quoteRevision||data.quoteTermsVersion))throw new HttpsError("invalid-argument","Quote reference required.");
+  const visitMinutes = acceptedOffer?acceptedOffer.workingMinutes:totalMinutes(service.estimatedDurationMinutes, extraLines);
 
   // A gift covers the gifted wash only: no stacking with a membership, and the code must be well formed.
   let giftHash: string | null = null;
@@ -129,7 +152,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     if (membership.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     }
-    if (membership.customerId !== user.uid) {
+    if (membership.customerId !== customerDocId) {
       throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
     }
     if (membership.status !== "active") {
@@ -144,7 +167,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   }
 
   // Compute server-authoritative price
-  const breakdown = calculatePrice({
+  const breakdown = acceptedOffer?acceptedQuoteBreakdown(acceptedOffer.totalPaise,data.vehicleCategory,config):calculatePrice({
     basePrice: service.basePrice,
     serviceCategory: service.category,
     vehicleCategory: data.vehicleCategory,
@@ -159,7 +182,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
   // its start day (Phase 5 — multi-day booking; single source of truth used
   // by both booking and job records below, and re-derived identically by
   // rescheduleBooking).
-  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: user.uid, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: visitMinutes, config, now });
+  await assertNotPriorityHeld(db, { isCustomer: user.claims.role === "customer", customerId: customerDocId, date: data.scheduledDate, time: data.scheduledTime, serviceDurationMinutes: visitMinutes, config, now });
   const estimatedEndAt = computeScheduleEnd(
     requestedStart,
     visitMinutes,
@@ -177,19 +200,22 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     // Idempotency check
     const intentSnap = await tx.get(intentRef);
     if (intentSnap.exists) {
+      const prior=intentSnap.data()!;if(prior["tenantId"]!==user.claims.tenantId||prior["customerId"]!==customerDocId)throw new HttpsError("permission-denied","Booking request unavailable.");
       const existingBookingId = (intentSnap.data() as { bookingId: string }).bookingId;
       const existingSnap = await tx.get(
         db.collection(COLLECTIONS.bookings()).doc(existingBookingId),
       );
-      return { booking: existingSnap.data() as Booking };
+      const existing=existingSnap.data() as Booking|undefined;if(!existing||existing.serviceId!==data.serviceId||existing.vehicleId!==data.vehicleId||existing.studioId!==data.studioId||existing.scheduledDate!==data.scheduledDate||existing.scheduledTime!==data.scheduledTime)throw new HttpsError("already-exists","This request already confirmed different booking details.");return { booking: existing };
     }
+
+    if(quoteRef){const liveService=await tx.get(db.collection(COLLECTIONS.services()).doc(data.serviceId));const live=liveService.data();if(!liveService.exists||live?.['active']!==true||live['tenantId']!==user.claims.tenantId||(live['productKey']??null)!==quoteBefore!.scope.productKey||(!!quoteBefore!.requestedReference&&live?.['name']!==quoteBefore!.scope.coverage))throw new HttpsError("failed-precondition","The selected offering changed. Ask the studio to review the quote.");const fresh=(await tx.get(quoteRef)).data() as QuoteJourney|undefined;const currentOffer=acceptedServiceQuote(fresh,quoteInput);if(fresh!.version!==quoteBefore!.version||JSON.stringify(currentOffer)!==JSON.stringify(acceptedOffer))throw new HttpsError("aborted","Quote changed. Review it again.");}
 
     // Coordinate creation with permanent deletion: a changed/deleted vehicle
     // invalidates this transaction rather than creating a visit for a gone car.
     const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
     if(!currentVehicleSnap.exists)throw new HttpsError("not-found","Vehicle not found.");
     const currentVehicle=currentVehicleSnap.data() as Vehicle;
-    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==user.uid)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
+    if(currentVehicle.tenantId!==user.claims.tenantId || currentVehicle.ownerId!==customerDocId)throw new HttpsError("permission-denied","Vehicle does not belong to this customer.");
     if(currentVehicle.deletedAt)throw new HttpsError("failed-precondition","Restore this car before booking.");
 
     // Re-validate availability inside the transaction to prevent race conditions.
@@ -212,7 +238,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       const intervals: OccupiedInterval[] = [];
       for (const doc of jobsSnap.docs) {
         const job = doc.data() as ServiceJob;
-        if (job.status === "CANCELLED" || job.status === "DELIVERED") continue;
+        if (hasReleasedBay(job)||job.status === "CANCELLED" || job.status === "DELIVERED") continue;
         intervals.push(buildOccupiedInterval(job.scheduledAt, job.estimatedEndAt));
       }
       bayOccupancy.set(bay.id, intervals);
@@ -258,9 +284,9 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       if (!gd) throw new HttpsError("not-found", "That gift code did not work.");
       const gift = gd.data() as Gift;
       if (gift.tenantId !== user.claims.tenantId) throw new HttpsError("not-found", "That gift code did not work.");
-      const reason = giftBlockReason(gift, user.uid, now.getTime());
+      const reason = giftBlockReason(gift, customerDocId, now.getTime());
       if (reason) throw new HttpsError("failed-precondition", reason);
-      if (gift.claimedBy !== user.uid) throw new HttpsError("failed-precondition", "Enter the gift code first.");
+      if (gift.claimedBy !== customerDocId) throw new HttpsError("failed-precondition", "Enter the gift code first.");
       if (gift.serviceId !== data.serviceId) throw new HttpsError("failed-precondition", "This gift is for a different wash.");
       giftToUse = { ref: gd.ref, gift };
     }
@@ -283,7 +309,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
         throw new HttpsError("not-found", "Membership not found.");
       }
       const membership = membershipSnap.data() as Membership;
-      if (membership.tenantId !== user.claims.tenantId || membership.customerId !== user.uid) {
+      if (membership.tenantId !== user.claims.tenantId || membership.customerId !== customerDocId) {
         throw new HttpsError("permission-denied", "Cannot use another customer's membership.");
       }
       if (membership.status !== "active" || !membership.endDate || membership.endDate < data.scheduledDate) {
@@ -308,7 +334,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
           id: usageRef.id,
           tenantId: user.claims.tenantId,
           membershipId: data.membershipId as string,
-          customerId: user.uid,
+          customerId: customerDocId,
           usageType: consumeWash ? "wash" : "discount",
           jobId: jobRef.id,
           bookingId: bookingRef.id,
@@ -342,7 +368,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     if (giftToUse) {
       // The buyer already paid the full price, so this visit costs the recipient nothing.
       finalBreakdown = { ...breakdown, tax: 0, total: 0, subtotal: 0 };
-      tx.update(giftToUse.ref, { status: "REDEEMED", redeemedBy: user.uid, redeemedAt: nowIso, bookingId: bookingRef.id });
+      tx.update(giftToUse.ref, { status: "REDEEMED", redeemedBy: customerDocId, redeemedAt: nowIso, bookingId: bookingRef.id });
       writeAuditLog(tx, { action: "gift.redeemed", entityType: "Gift", entityId: giftToUse.gift.id, user, studioId: data.studioId, after: { bookingId: bookingRef.id } });
     }
 
@@ -357,15 +383,15 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
     // before writing its booking rather than strand it in an unpayable hold.
     if (advancePaymentEnabled() && user.claims.role === "customer" &&
         (data.payMode ?? "studio") === "studio" && finalBreakdown.total > 0 &&
-        service.priceOnRequest !== true && data.advanceFlowVersion !== 1) {
+        (acceptedOffer!==null||service.priceOnRequest !== true) && data.advanceFlowVersion !== 1) {
       throw new HttpsError("failed-precondition", "Online advance payments are now available. Refresh or update AutoDeck before booking so you can pay the 20% advance.");
     }
-    const start = bookingStartState({ payMode: data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: service.priceOnRequest === true, nowMs: now.getTime(), advanceEnabled: advancePaymentEnabled() && user.claims.role === "customer" });
+    const start = bookingStartState({ payMode: data.payMode, totalPaise: finalBreakdown.total, priceOnRequest: acceptedOffer===null&&service.priceOnRequest === true, nowMs: now.getTime(), advanceEnabled: advancePaymentEnabled() && user.claims.role === "customer" });
     const booking: Booking = {
       id: bookingRef.id,
       tenantId: user.claims.tenantId,
       studioId: data.studioId,
-      customerId: user.uid,
+      customerId: customerDocId,
       vehicleId: data.vehicleId,
       vehicleSnapshot: {
         registrationNumber: vehicle.registrationNumber,
@@ -389,7 +415,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       status: start.status,
       payMode: data.payMode ?? "studio",
       holdExpiresAt: start.holdExpiresAt,
-      ...(service.priceOnRequest === true ? { priceOnRequest: true, quoteStatus: "requested" as const } : {}),
+      ...(acceptedOffer?{priceOnRequest:true,quoteStatus:"approved" as const,quoteJourneyId:data.quoteJourneyId,quoteRevision:acceptedOffer.revision,quoteScope:quoteBefore!.scope,quoteTermsVersion:acceptedOffer.termsVersion}:service.priceOnRequest === true ? { priceOnRequest: true, quoteStatus: "requested" as const } : {}),
       priceBreakdown: finalBreakdown,
       ...(lines ? { lines } : {}),
       totalAmount: finalBreakdown.total,
@@ -415,7 +441,7 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       tenantId: user.claims.tenantId,
       studioId: data.studioId,
       bookingId: bookingRef.id,
-      customerId: user.uid,
+      customerId: customerDocId,
       vehicleId: data.vehicleId,
       serviceId: data.serviceId,
       bayId: assignedBayId,
@@ -449,11 +475,12 @@ export const createBooking = onCall({ region: "asia-south1" , enforceAppCheck: s
       sealedAt: null,
     };
 
+    if(quoteRef)tx.update(quoteRef,{phase:"visit_booked",bookingId:bookingRef.id,version:quoteBefore!.version+1});
     tx.set(bookingRef, booking);
     tx.set(jobRef, job);
     tx.set(intentRef, {
       bookingId: bookingRef.id,
-      customerId: user.uid,
+      customerId: customerDocId,
       tenantId: user.claims.tenantId,
       createdAt: nowIso,
     });

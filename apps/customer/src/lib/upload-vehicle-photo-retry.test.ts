@@ -5,6 +5,7 @@
 // ever falls back to updateVehicle({photoUrl}).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({ calls: [] as { name: string; payload: any }[], publishFails: 0 }));
+vi.mock("./auth-service", () => ({ resolveMyCustomerDocId: vi.fn(async () => "canonical-customer") }));
 vi.mock("firebase/functions", () => ({
   httpsCallable: (_f: any, name: string) => async (payload: any) => {
     h.calls.push({ name, payload });

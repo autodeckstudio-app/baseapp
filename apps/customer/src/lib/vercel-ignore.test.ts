@@ -28,7 +28,7 @@ describe("vercel ignored-build rule", () => {
     // the marker, never as a relevance base. Pin every literal use to that mechanism.
     const headTildeUses = s.split("\n").filter((l) => !l.trimStart().startsWith("#") && (l.includes("HEAD~1") || l.includes("HEAD^")));
     expect(headTildeUses.length).toBeGreaterThan(0);
-    for (const l of headTildeUses) expect(l).toMatch(/parent_sha/);
+    for (const l of headTildeUses) expect(l).toMatch(/parent_sha|release_parent|parent=/);
   });
   it("never builds for docs, functions or rules alone", () => {
     const s = readFileSync(join(root, "scripts/vercel-ignore.sh"), "utf8");

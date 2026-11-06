@@ -55,7 +55,7 @@ export function compareCols(plans: MembershipPlan[], currentPlanId: string | nul
     id: p.id, name: p.name, price: p.priceInPaise, washes: p.includedWashes, discount: p.discountPercent,
     perWash: p.includedWashes > 0 ? Math.round(p.priceInPaise / p.includedWashes) : null, pickups: p.freePickups ?? 0, priority: !!p.prioritySlot, best: false, current: p.id === currentPlanId,
   }));
-  const rates = cols.map((c) => c.perWash).filter((x): x is number => x !== null);
+  const rates = cols.map((c) => c.perWash).filter((x): x is number => x !== null&&Number.isFinite(x)&&x>0);
   const min = rates.length ? Math.min(...rates) : null;
   if (min !== null && new Set(rates).size > 1) for (const c of cols) c.best = c.perWash === min;
   return cols;

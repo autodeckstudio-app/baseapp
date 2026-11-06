@@ -1,4 +1,6 @@
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
+import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
+import{ServiceActionBar}from "../../../ui/ServiceActionBar";
 import { customerRatingPrivacy } from "@autodeck/core";
 import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
@@ -49,19 +51,17 @@ export default function ServiceDetailScreen() {
   const [reviews, setReviews] = useState<ServiceReviews | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    if (!customerOfferingVisible({id})) {setLoading(false);return;}
+    let alive=true;setService(null);setLoading(true);setLoadError(false);setSourceHold(false);setReviews(null);setPriceBreakdown(null);
+    if (!id || !customerOfferingVisible({id})) {setLoading(false);return;}
     if (!customerCatalogueEligible({id},__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""))) {setSourceHold(true);setLoading(false);return;}
     void (async () => {
       try {
-        const snap = await getDoc(doc(db, COLLECTIONS.services(), id));
-        if (snap.exists() && snap.data().active === true && customerOfferingVisible(snap.data() as Service)) setService(applyBrandWarranty(customerRatingPrivacy(snap.data() as Service)));
-      } catch {
-        setLoadError(true);
-      } finally {
-        setLoading(false);
-      }
+        const list=await getServiceCatalogue();const current=list.find(s=>s.id===id && s.active === true && customerOfferingVisible(s));
+        if(alive)setService(current?applyBrandWarranty(customerRatingPrivacy(current)):null);
+      } catch { if(alive)setLoadError(true); }
+      finally {if(alive)setLoading(false);}
     })();
+    return()=>{alive=false};
   }, [id]);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     if (!service) return;
-    void getServiceReviews(service.id).then(setReviews).catch(() => setReviews(null));
+    let alive=true;void getServiceReviews(service.id).then(r=>{if(alive)setReviews(r)}).catch(()=>{if(alive)setReviews(null)});return()=>{alive=false};
   }, [service]);
 
   if(sourceHold) return <Screen appBar="Service enquiry"><T role="title">Ask the studio</T><T>Confirm the product and options for your car before booking.</T><Button label="Ask for a quote" onPress={()=>router.push("/(tabs)/help")} /></Screen>;
@@ -279,15 +279,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         <View style={{ height: showBar ? 100 : 0 }} />
       </Screen>
       {focused && showBar ? <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : "#1B1B1F", borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
-        <View style={{ width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: space.inset }}>
-          <View style={{ flex: 1 }}>
-            <T role="caption" tone="tertiary">{pricingVehicle.label ?? "Your car"}{GST_ENABLED ? " · incl. GST" : ""}</T>
-            <T role="heading">{stickyPriceLabel({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, total: priceBreakdown ? priceBreakdown.total : null, from: service.priceFrom === true, needsCarType, hasCar: !!pricingVehicle.vehicle, error: priceError !== null }, rupees)}</T>
-          </View>
-          <View style={{ flex: 1.4 }}>
-            <Button disabled={!service.priceOnRequest && priceBreakdown === null} label={service.priceOnRequest === true ? (service.category === "garage" || service.category === "modifications" ? "Book an inspection" : "Request a quote") : "Book now"} onPress={() => router.push(`/(tabs)/book/${id}`)} />
-          </View>
-        </View>
+        <ServiceActionBar car={`${pricingVehicle.label??"Your car"}${GST_ENABLED ? " · incl. GST" : ""}`} price={stickyPriceLabel({priceOnRequest:service.priceOnRequest===true,loading:priceLoading,total:priceBreakdown?priceBreakdown.total:null,from:service.priceFrom===true,needsCarType,hasCar:!!pricingVehicle.vehicle,error:priceError!==null},rupees)} disabled={!service.priceOnRequest&&priceBreakdown===null} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Book an inspection":"Request a quote"):"Book now"} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>
+
       </View></View> : null}
     </View>
   );

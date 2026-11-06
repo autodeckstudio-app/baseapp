@@ -27,8 +27,9 @@ describe("mock sample route neutralizes writes explicitly", () => {
     expect(src).toContain('!isMock ? <Button label="Cancel booking"');
   });
   it("the signed-out dev bypass in _layout stays __DEV__-gated and mock-scoped", () => {
-    const layout = r("src/app/_layout.tsx");
-    expect(layout).toMatch(/const devMockPreview = __DEV__ && \(segs\[1\] === "garage" \|\| segs\[1\] === "bookings"\) && \/\[\?&\]mock=\//);
+    const guard = r("src/ui/NavigationGuard.tsx");
+    expect(guard).toMatch(/const devMockPreview =\s*__DEV__ &&\s*\(segs\[1\] === "garage" \|\| segs\[1\] === "bookings"\) &&\s*\/\[\?&\]mock=\//);
+    expect(guard).toContain("!devMockPreview");
   });
 });
 

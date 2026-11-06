@@ -47,6 +47,7 @@ export default function StudioTabsLayout() {
         name="lookup"
         options={{ title: "Lookup", tabBarLabel: "Lookup", headerShown: false }}
       />
+      <Tabs.Screen name="service-quotes" options={{ title: "Walk-in inspections", href: null, headerShown: false }} />
       <Tabs.Screen
         name="jobs"
         options={{ href: null, headerShown: false }} // sub-route, hidden from tab bar

@@ -1,5 +1,5 @@
 import { metrics } from "../../../lib/metrics";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import type { Membership, MembershipPlan } from "@autodeck/core";
@@ -17,6 +17,7 @@ import { useAuth } from "../../../hooks/useAuth";
 export default function MembershipScreen() {
   const router = useRouter();
   const auth = useAuth();
+  const [retryTick,setRetryTick]=useState(0);const planGeneration=useRef(0);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [current, setCurrent] = useState<Membership | null>(null);
   const [plansLoading, setPlansLoading] = useState(true);
@@ -26,44 +27,44 @@ export default function MembershipScreen() {
   const [ended, setEnded] = useState<Membership | null>(null);
   const [washIds, setWashIds] = useState<string[]>([]);
 
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
 
   const loadPlans = useCallback(async () => {
-    setPlansLoading(true);
+    const gen=++planGeneration.current;setPlansLoading(true);
     setError(null);
     try {
-      setPlans(await getMembershipPlans());
+      const rows=await getMembershipPlans();if(gen===planGeneration.current)setPlans(rows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load membership plans.");
+      if(gen===planGeneration.current)setError(err instanceof Error ? err.message : "Could not load membership plans.");
     } finally {
-      setPlansLoading(false);
+      if(gen===planGeneration.current)setPlansLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadPlans();
-  }, [loadPlans]);
+    void loadPlans();return()=>{planGeneration.current++};
+  }, [loadPlans,retryTick]);
 
   // Live membership status: approvals, payment activation, cancellation and
   // expiry appear here without a reload.
   useEffect(() => {
-    if (!uid || !tenantId) return;
+    setError(null);setCurrent(null);setEnded(null);setRedeemed(null);setWashIds([]);if (!uid || !tenantId) {setMembershipsLoading(false);return;}let alive=true;
     setMembershipsLoading(true);
-    return listenToMyMemberships(
+    const stop=listenToMyMemberships(
       tenantId,
       uid,
       (memberships) => {
-        setCurrent(memberships.find((m) => m.status === "active" || m.status === "pending") ?? null);
+        if(!alive)return;setCurrent(memberships.find((m) => m.status === "active" || m.status === "pending") ?? null);
         setEnded(memberships.filter((m) => m.status === "expired").sort((a, b) => (b.endDate ?? "").localeCompare(a.endDate ?? ""))[0] ?? null);
         setMembershipsLoading(false);
       },
       (e) => {
-        setError(e.message);
+        if(!alive)return;setError("Your membership could not load. Try again.");
         setMembershipsLoading(false);
       },
-    );
-  }, [uid, tenantId]);
+    );return()=>{alive=false;stop()};
+  }, [uid, tenantId,retryTick]);
 
   const currentId = current?.status === "active" ? current.id : null;
   const washesUsedNow = current?.washesUsed ?? 0;
@@ -75,8 +76,8 @@ export default function MembershipScreen() {
   }, [currentId, washesUsedNow]);
   // The "book with my membership" button exists only once the server records included washes (see lib/membership-wash.ts).
   useEffect(() => {
-    if (!MEMBERSHIP_WASH_LIVE || !currentId) return;
-    void getServiceCatalogue().then((all) => setWashIds(all.filter((x) => x.membershipWashEligible === true).map((x) => x.id))).catch(() => undefined);
+    setWashIds([]);if (!MEMBERSHIP_WASH_LIVE || !currentId) return;let alive=true;
+    void getServiceCatalogue().then((all) => {if(alive)setWashIds(all.filter((x) => x.membershipWashEligible === true).map((x) => x.id))}).catch(() => undefined);return()=>{alive=false};
   }, [currentId]);
 
   const loading = plansLoading || membershipsLoading;
@@ -87,7 +88,7 @@ export default function MembershipScreen() {
         <Notice
           title="Could not load membership"
           body={error}
-          action={<Button kind="quiet" label="Retry" onPress={()=>void loadPlans()}/>}
+          action={<Button kind="quiet" label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>}
         />
       </Screen>
     );

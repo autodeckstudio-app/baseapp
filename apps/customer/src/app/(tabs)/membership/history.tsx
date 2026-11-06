@@ -16,25 +16,25 @@ export default function MembershipHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
 
   useEffect(() => {
-    if (!uid || !tenantId) return;
+    setMemberships([]);setError(null);if (!uid || !tenantId) {setLoading(false);setError("Sign in to see your membership history.");return;}let alive=true;
     setLoading(true);
     setError(null);
-    return listenToMyMemberships(
+    const stop=listenToMyMemberships(
       tenantId,
       uid,
       (rows) => {
-        setMemberships([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+        if(!alive)return;setMemberships([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
         setLoading(false);
       },
       (e) => {
-        setError(e.message);
+        if(!alive)return;setError("Your membership history could not load. Try again.");
         setLoading(false);
       },
-    );
+    );return()=>{alive=false;stop()};
   }, [uid, tenantId]);
 
   if (loading) return <Loading label="Opening history" />;

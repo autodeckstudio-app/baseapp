@@ -19,12 +19,12 @@ describe("Services All view: one card per category", () => {
     expect(readFileSync(`${__dirname}/imagery.ts`, "utf8")).toMatch(/pickup: genPickup/);
   });
   it("the cards and the pills use the same list, and a card tap opens that filter", () => {
-    expect(src).toContain("overviewGroups(MENU_GROUPS, (g) => inGroup(g).length)");
-    expect(src).toContain("onPress={() => { setGrp(g.key); }}");
+    expect(src).toContain("<ServiceHomes services={services}");
+    expect(src).toContain("onOpen={s=>router.push(`/(tabs)/catalogue/${s.id}`)}");
     expect(src).toContain("MENU_GROUPS.filter((g) => inGroup(g).length > 0).map((g) => ({ key: g.key as string | null, label: groupLabel(g) }))");
   });
   it("All no longer lists every service of every category on one page", () => {
-    expect(src).toContain("level === 1 && !grp");
+    expect(src.replace(/\s/g," ")).toMatch(/level\s*===\s*1\s*&&\s*!grp/);
     expect(src).toContain("level === 1 && grp");
   });
 });
@@ -46,7 +46,7 @@ describe("area sections inside a category", () => {
     expect(by["Exterior"]).toEqual(["Exterior wash", "Complete detailing", "Trim restoration"]);
     expect(by["Interior"]).toContain("Leather cleaning and conditioning");
     expect(by["Wheels and tyres"]).toEqual(["Wheel and tyre cleaning"]);
-    expect(by["Glass and lights"]).toEqual(["Glass cleaning and water spots", "Headlight and tail-light restoration"]);
+    expect(by["Glass and lights"]).toEqual(["Glass cleaning and water spots", "Headlight restoration"]);
     expect(by["Paint"]).toEqual(["Paint decontamination", "Polish and paint correction"]);
   });
   it("an unknown type still shows (last, under More), and an unsectioned category stays flat", () => {

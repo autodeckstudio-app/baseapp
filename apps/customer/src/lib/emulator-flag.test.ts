@@ -24,7 +24,7 @@ describe("resolveUseEmulator", () => {
 
 describe("emulatorTargets", () => {
   it("defaults to the Firebase CLI ports on localhost", () => {
-    expect(emulatorTargets({})).toEqual({ host: "localhost", firestorePort: 8080, functionsPort: 5001, authUrl: "http://localhost:9099" });
+    expect(emulatorTargets({})).toEqual({ host: "localhost", firestorePort: 8080, functionsPort: 5001, storagePort:9199, authUrl: "http://localhost:9099" });
   });
   it("lets the web export reach the money-test Firestore port", () => {
     const t = emulatorTargets({ EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT: "8081" });
@@ -55,11 +55,16 @@ describe("emulatorConnectionsVerified", () => {
   };
   const good = {
     firestoreHost: "localhost:8099",
+    storageHost:"localhost:9199",
     functionsOrigin: "http://localhost:5001",
     authEmulatorUrl: "http://localhost:9099",
   };
   it("accepts only when every client provably points at the emulator targets", () => {
     expect(emulatorConnectionsVerified(good, env)).toBe(true);
+    expect(emulatorConnectionsVerified({...good,authEmulatorUrl:"http://localhost:9099/"},env)).toBe(true);
+    expect(emulatorConnectionsVerified({...good,authEmulatorUrl:"http://localhost:9099/other"},env)).toBe(false);
+    expect(emulatorConnectionsVerified({...good,storageHost:null},env)).toBe(false);
+    expect(emulatorConnectionsVerified({...good,storageHost:"firebasestorage.googleapis.com"},env)).toBe(false);
   });
   it("fails closed when any client missed the connection", () => {
     expect(emulatorConnectionsVerified({ ...good, firestoreHost: null }, env)).toBe(false);

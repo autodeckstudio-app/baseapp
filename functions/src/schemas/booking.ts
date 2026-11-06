@@ -13,6 +13,9 @@ const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD");
 const timeStr = z.string().regex(/^\d{2}:\d{2}$/, "Must be HH:mm");
 
 export const getAvailabilitySchema = z.object({
+  quoteJourneyId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
+  quoteRevision: z.number().int().positive().optional(),
+  quoteTermsVersion: z.string().min(1).max(120).optional(),
   serviceId: z.string().min(1),
   studioId: z.string().min(1),
   startDate: dateStr,
@@ -22,6 +25,9 @@ export const getAvailabilitySchema = z.object({
 }).strict();
 
 export const createBookingSchema = z.object({
+  quoteJourneyId: z.string().min(1).max(120).regex(/^[A-Za-z0-9_-]+$/).optional(),
+  quoteRevision: z.number().int().positive().optional(),
+  quoteTermsVersion: z.string().min(1).max(120).optional(),
   serviceId: z.string().min(1),
   /** More services in the same visit (up to 4 on top of serviceId). */
   extraServiceIds: z.array(z.string().min(1)).max(4).optional(),

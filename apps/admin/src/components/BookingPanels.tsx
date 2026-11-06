@@ -4,7 +4,7 @@
 // price breakdown. Shown on the Job page (one detail page per visit) and on the slim booking page
 // before check-in. Reads come from the parent; writes are unchanged: setBookingQuote and the
 // cancel/settle callables inside CancelBookingPanel.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Booking, ServiceJob, Service } from "@autodeck/core";
 import { formatDuration, intentKey } from "@autodeck/core";
 import { setBookingQuote, decideBookingRescheduleRequest } from "../lib/bookings-service";
@@ -23,8 +23,11 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
   // survives retries and re-renders; switching intent mints a new key so one
   // key never carries two decisions (the server rejects that as a conflict).
   const decisionKeyRef = useRef<{ intent: string; key: string } | null>(null);
+  const bookingRef=useRef(booking.id);bookingRef.current=booking.id;const decisionLock=useRef(false),decisionGeneration=useRef(0);
+  useEffect(()=>{decisionGeneration.current++;decisionLock.current=false;setDecisionBusy(false);setDecisionNote("");decisionKeyRef.current=null;return()=>{decisionGeneration.current++}},[booking.id]);
   async function decide(approve: boolean) {
-    if (!booking || decisionBusy) return;
+    if (!booking || decisionBusy||decisionLock.current||bookingRef.current!==booking.id||booking.rescheduleRequest?.status!=="pending") return;
+    decisionLock.current=true;const generation=decisionGeneration.current,scope=booking.id;const current=()=>decisionGeneration.current===generation&&bookingRef.current===scope;
     setDecisionBusy(true);
     try {
       // The note is part of the decision payload, so it is part of the intent:
@@ -32,12 +35,12 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
       // click with the same note reuses it.
       decisionKeyRef.current = intentKey(decisionKeyRef.current, `${booking.id}:${approve ? "approve" : "decline"}:${decisionNote.trim()}`, () => crypto.randomUUID());
       await decideBookingRescheduleRequest(booking.id, approve, decisionKeyRef.current.key, decisionNote.trim() || undefined);
-      setError(null);
+      if(!current())return;setError(null);
       decisionKeyRef.current = null;
       window.location.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not record the decision.");
-    } finally { setDecisionBusy(false); }
+      if(current())setError(e instanceof Error ? e.message : "Could not record the decision.");
+    } finally { if(current()){decisionLock.current=false;setDecisionBusy(false);} }
   }
 
   const [quoteBusy, setQuoteBusy] = useState(false);

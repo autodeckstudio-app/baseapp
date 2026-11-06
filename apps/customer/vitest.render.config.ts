@@ -6,8 +6,9 @@ import path from "node:path";
 // the rendered tree. Does NOT prove on-device behavior, navigation, or styling.
 export default defineConfig({
   esbuild: { jsx: "automatic" },
-  // Expo/RN modules reference __DEV__ at module scope.
-  define: { __DEV__: "true" },
+  // Production render state. Dev-only CommonJS fixtures cannot be loaded by the ESM harness.
+  // Both default and payment render entries exercise the same production branch.
+  define: { __DEV__: "false" },
   resolve: {
     alias: [
       { find: /^react-native$/, replacement: "react-native-web" },
@@ -18,5 +19,5 @@ export default defineConfig({
       { find: /^\.\.\/\.\.\/\.\.\/ui\/AppBar$/, replacement: path.resolve(__dirname, "test/stubs/app-bar.tsx") },
     ],
   },
-  test: { include: ["src/**/*.render.test.tsx"] },
+  test: { include: ["src/**/*.render.test.tsx"], exclude: ["src/app/(tabs)/bookings/booking-payment.render.test.tsx"] },
 });

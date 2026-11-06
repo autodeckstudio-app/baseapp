@@ -68,7 +68,7 @@
     "brand": "Keramik",
     "name": "Ceramic coating",
     "group": "coatings",
-    "note": "Ask the studio which coating and preparation suit your car."
+    "note": "Owner-listed coating. Exact manufacturer identity and product specifications need confirmation; no manufacturer warranty is implied."
   },
   {
     "key": "pps-spray",
@@ -325,6 +325,153 @@
     "group": "ppf",
     "note": "Paint protection film. Ask about the right finish and coverage for your car.",
     "source": "https://www.3mindia.in/3M/en_IN/car-personalization-in/products/paint-protection-film/",
+    "surface": "brand-film"
+  },
+  {
+    "key": "fireball-devils-blood",
+    "brand": "Fireball",
+    "name": "Devil's Blood",
+    "group": "coatings",
+    "note": "Paint coating range. Exact application and studio terms are confirmed in your quote.",
+    "surface": "ceramic",
+    "source": "https://www.fireballkorea.com/ceramic-coating"
+  },
+  {
+    "key": "fireball-butterfly-graphene",
+    "brand": "Fireball",
+    "name": "Butterfly Graphene",
+    "group": "coatings",
+    "note": "Graphene coating range. Compare the exact preparation and work in your quote.",
+    "surface": "ceramic",
+    "source": "https://www.fireballkorea.com/ceramic-coating"
+  },
+  {
+    "key": "fireball-silla",
+    "brand": "Fireball",
+    "name": "Silla",
+    "group": "coatings",
+    "note": "Paint coating range. Product and preparation are confirmed before booking.",
+    "surface": "ceramic",
+    "source": "https://www.fireballkorea.com/ceramic-coating"
+  },
+  {
+    "key": "fireball-dok-do",
+    "brand": "Fireball",
+    "name": "Dok Do",
+    "group": "coatings",
+    "note": "Paint coating range. Ask for the exact application and aftercare scope.",
+    "surface": "ceramic",
+    "source": "https://www.fireballkorea.com/ceramic-coating"
+  },
+  {
+    "key": "fireball-butterfly",
+    "brand": "Fireball",
+    "name": "Butterfly",
+    "group": "coatings",
+    "note": "Paint coating range. Studio confirms product and work before booking.",
+    "surface": "ceramic",
+    "source": "https://www.fireballkorea.com/ceramic-coating"
+  },
+  {
+    "key": "carpro-cquartz-dlight",
+    "brand": "CarPro",
+    "name": "CQUARTZ DLight",
+    "group": "coatings",
+    "note": "Paint coating reference. Exact product, preparation and studio quote are confirmed before booking.",
+    "surface": "ceramic",
+    "source": "https://carproindia.com/products/"
+  },
+  {
+    "key": "carpro-cquartz-uk3",
+    "brand": "CarPro",
+    "name": "CQuartz UK 3.0",
+    "group": "coatings",
+    "note": "Paint coating reference. Exact product, preparation and studio quote are confirmed before booking.",
+    "surface": "ceramic",
+    "source": "https://carproindia.com/products/"
+  },
+  {
+    "key": "gtechniq-csl",
+    "brand": "Gtechniq",
+    "name": "Crystal Serum Light",
+    "group": "coatings",
+    "note": "Paint protection coating. Special order - availability must be confirmed.",
+    "surface": "ceramic",
+    "source": "https://gtechniq.com/product-category/auto/ceramic-coatings/"
+  },
+  {
+    "key": "gtechniq-csu",
+    "brand": "Gtechniq",
+    "name": "Crystal Serum Ultra",
+    "group": "coatings",
+    "note": "Professional application coating. Special order - installer eligibility and availability need confirmation.",
+    "surface": "ceramic",
+    "source": "https://gtechniq.com/product-category/auto/ceramic-coatings/"
+  },
+  {
+    "key": "gtechniq-exov5",
+    "brand": "Gtechniq",
+    "name": "EXOv5 Ultra Durable Hydrophobic Coating",
+    "group": "coatings",
+    "note": "Water-repelling coating. Special order - product and availability need confirmation.",
+    "surface": "ceramic",
+    "source": "https://gtechniq.com/product-category/auto/ceramic-coatings/"
+  },
+  {
+    "key": "gtechniq-c1",
+    "brand": "Gtechniq",
+    "name": "C1 Crystal Lacquer",
+    "group": "coatings",
+    "note": "Quartz paint coating. Special order - exact preparation and availability need confirmation.",
+    "surface": "ceramic",
+    "source": "https://gtechniq.com/product-category/auto/ceramic-coatings/"
+  },
+  {
+    "key": "avery-reference",
+    "brand": "Avery Dennison",
+    "name": "Product range to confirm",
+    "group": "ppf",
+    "note": "Owner-listed film brand. Exact manufacturer range, specifications and studio availability are not yet verified.",
+    "surface": "brand-film"
+  },
+  {
+    "key": "rodium-reference",
+    "brand": "Rodium",
+    "name": "Product range to confirm",
+    "group": "ppf",
+    "note": "Owner-listed film brand. Exact manufacturer range, specifications and studio availability are not yet verified.",
+    "surface": "brand-film"
+  },
+  {
+    "key": "suntek-reference",
+    "brand": "SunTek",
+    "name": "Product range to confirm",
+    "group": "ppf",
+    "note": "Owner-listed film brand. Exact manufacturer range, specifications and studio availability are not yet verified.",
+    "surface": "brand-film"
+  },
+  {
+    "key": "prowrap-reference",
+    "brand": "ProWrap",
+    "name": "Product range to confirm",
+    "group": "ppf",
+    "note": "Owner-listed film brand. Exact manufacturer range, specifications and studio availability are not yet verified.",
+    "surface": "brand-film"
+  },
+  {
+    "key": "stek-reference",
+    "brand": "STEK",
+    "name": "Product range to confirm",
+    "group": "ppf",
+    "note": "Owner-listed film brand. Exact manufacturer range, specifications and studio availability are not yet verified.",
+    "surface": "brand-film"
+  },
+  {
+    "key": "legend-reference",
+    "brand": "Legend PPF",
+    "name": "Product range to confirm",
+    "group": "ppf",
+    "note": "Owner-listed film brand. Exact manufacturer range, specifications and studio availability are not yet verified.",
     "surface": "brand-film"
   }
 ]

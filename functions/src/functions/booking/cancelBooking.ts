@@ -10,6 +10,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { cancelBookingSchema } from "../../schemas/booking.js";
 import { runCancel } from "./adminCancelBooking.js";
 import { readCancelReads, writeCancelRestores } from "../../lib/cancel-booking.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
@@ -27,10 +28,11 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
 
   // Customers can only cancel their own bookings
   const isCustomer = user.claims.role === "customer";
+  const customerDocId=isCustomer?await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid):null;
   // Cancelling for a customer is admin-only for now (owner decision). Studio staff do not get a cancel here.
   const isStudioOrAbove = user.claims.role === "admin" || user.claims.role === "superadmin";
 
-  if (isCustomer && booking.customerId !== user.uid) {
+  if (isCustomer && booking.customerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
   }
   if (!isCustomer && !isStudioOrAbove) {

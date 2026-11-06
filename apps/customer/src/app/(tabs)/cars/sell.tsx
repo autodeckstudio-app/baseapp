@@ -1,6 +1,6 @@
 import { FileUploader, SelectField } from "../../../ui/inputs";
 // Sell your car: a short form plus photos. It goes to the studio for review first, then shows to other customers.
-import { createElement, useEffect, useState } from "react";
+import { createElement, useEffect, useState, useRef } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import type { Vehicle } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -23,18 +23,18 @@ export default function SellScreen() {
   const light = themeName === "light";
   const [garage, setGarage] = useState<Vehicle[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
   useEffect(() => {
-    if (!uid || !tenantId) return;
-    return listenToMyVehicles(uid, tenantId, setGarage, () => undefined);
+    setGarage([]);if (!uid || !tenantId) return;let alive=true;
+    const stop=listenToMyVehicles(uid, tenantId, rows=>{if(alive)setGarage(rows)}, () => undefined);return()=>{alive=false;stop()};
   }, [uid, tenantId]);
   const [f, setF] = useState<F>({ make: "", model: "", variant: "", year: "", km: "", fuel: "petrol", gearbox: "manual", body: "", owners: "1", colour: "", area: "", price: "", description: "", name: "", phone: "", reg: "" });
-  const [photos, setPhotos] = useState<Array<{ blob: Blob; type: string }>>([]);
+  const [photos, setPhotos] = useState<Array<{ blob: Blob | Uint8Array; type: string }>>([]);
   const [previews,setPreviews] = useState<string[]>([]);
   useEffect(() => {
     if (Platform.OS!=="web") return;
-    const urls=photos.map(p=>URL.createObjectURL(p.blob));setPreviews(urls);
+    const urls=photos.map(p=>p.blob instanceof Uint8Array?"":URL.createObjectURL(p.blob));setPreviews(urls);
     return () => urls.forEach(u=>URL.revokeObjectURL(u));
   },[photos]);
   const [busy, setBusy] = useState(false);
@@ -53,24 +53,28 @@ export default function SellScreen() {
   const up = (k: keyof F, v: string) => { setF((p) => ({ ...p, [k]: v })); setFieldErrors((p) => ({ ...p, [k]: undefined })); };
   const n = sellNumber;
 
+  const owner=JSON.stringify([uid,tenantId,auth.status==='ready'?auth.user.uid:null]);const ownerRef=useRef(owner);ownerRef.current=owner;const generation=useRef(0),submitLock=useRef(false);
+  useEffect(()=>{generation.current++;submitLock.current=false;setBusy(false);setDone(false);setError(null);setPicked(null);setPhotos([]);setStep(0);setF({make:'',model:'',variant:'',year:'',km:'',fuel:'petrol',gearbox:'manual',body:'',owners:'1',colour:'',area:'',price:'',description:'',name:'',phone:'',reg:''});return()=>{generation.current++}},[owner]);
   async function submit() {
     if (busy) return;
+    if(submitLock.current)return;
     const digits=f.phone.replace(/\D/g, "").replace(/^91(?=\d{10}$)/, "");
     const errors = validateSellStep(f, 2, photos.length);
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
-    setBusy(true); setError(null);
+    const scope=owner,gen=generation.current;const current=()=>ownerRef.current===scope&&generation.current===gen;submitLock.current=true;setBusy(true); setError(null);
     try {
       const paths = await Promise.all(photos.map((p) => uploadListingPhoto(p.blob, p.type)));
+      if(!current())return;
       await submitMyListing({
         make: f.make.trim(), model: f.model.trim(), variant: f.variant.trim() || null, year: n(f.year), kmDriven: n(f.km), fuel: f.fuel as never, gearbox: f.gearbox as never, bodyType: (f.body || null) as never,
         owners: Math.max(1, n(f.owners)), colour: f.colour.trim(), area: f.area.trim(), askingPrice: n(f.price) * 100, description: f.description.trim() || null, insuranceValidTill: null,
         photoPaths: paths, sellerName: f.name.trim(), sellerPhone: digits, registrationNumber: f.reg.trim().toUpperCase() || null,
       });
-      setDone(true);
+      if(current())setDone(true);
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : "That did not go through. Try again.");
-    } finally { setBusy(false); }
+      if(current())setError(e instanceof Error && e.message ? e.message : "The listing was not confirmed. Check Your cars for sale before trying again.");
+    } finally { if(current()){submitLock.current=false;setBusy(false);} }
   }
 
   if (done) {
@@ -125,10 +129,10 @@ export default function SellScreen() {
         <Field label="About the car (optional)" placeholder="Service history, owners, accidents, reason for selling - no phone numbers or links" value={f.description} error={fieldErrors.description} onBlur={() => setFieldErrors((p) => ({ ...p, description: validateSellStep(f, step, photos.length).description }))} onChangeText={(v) => up("description", v)} multiline maxLength={1000} />
       </View>}
 
-      {step===1 && Platform.OS === "web" ? (
+      {step===1 ? (
         <View style={{ gap: space.hair }}>
           <Kicker>Photos (up to 12, first is the cover)</Kicker>
-          <FileUploader files={photos} multiple maxFiles={12} onChange={fs=>{setPhotos(fs);setFieldErrors(p=>({...p,photos:undefined}));}}/>
+          <FileUploader files={photos.filter((p):p is {blob:Blob;type:string}=>!(p.blob instanceof Uint8Array))} nativeEnabled nativeFileCount={photos.length} onNativeChange={fs=>{setPhotos(fs.map(p=>({blob:p.bytes,type:p.type})));setFieldErrors(p=>({...p,photos:undefined}));}} multiple maxFiles={12} onChange={fs=>{setPhotos(fs);setFieldErrors(p=>({...p,photos:undefined}));}}/>
           {fieldErrors.photos ? <T role="caption" tone="danger">{fieldErrors.photos}</T> : null}
           <T role="caption" tone="tertiary">{photos.length} photo{photos.length === 1 ? "" : "s"} selected. Use clear exterior and interior photos. Originals are kept unchanged.</T>
         </View>

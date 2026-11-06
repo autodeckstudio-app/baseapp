@@ -14,7 +14,8 @@ import { __params } from "../../../../test/stubs/expo-router";
 const OP_ID = "00000000-0000-4000-8000-000000000001"; // first id the expo-crypto stub hands the form
 
 const h = vi.hoisted(() => ({
-  auth: { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } } as Record<string, unknown>,
+  native:false,owners:[]as any[],privateOwners:[]as any[],jobCb:null as any,invoiceCb:null as any,
+  auth: { status: "ready", customerDocId:"canonical-profile", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } } as Record<string, unknown>,
   vehicleCb: null as null | ((snap: unknown) => void),
   vehiclePapersCb: null as null | ((list: unknown[]) => void),
   customerPapersCb: null as null | ((list: unknown[]) => void),
@@ -23,12 +24,14 @@ const h = vi.hoisted(() => ({
   resolvePaperEvidenceUrl: vi.fn(async (..._a: unknown[]) => ({ url: null as string | null, failure: null })),
   openURL: vi.fn(async (..._a: unknown[]) => undefined),
   emulatorBackend: false,
+  cover: vi.fn(), rc: vi.fn(),
 }));
 
 vi.mock("react-native", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
+    Platform:{...(actual.Platform as object),get OS(){return h.native?"android":"web";}},
     TextInput: (props: Record<string, unknown>) => createElement("TextInput", props),
     Image: (props: Record<string, unknown>) => createElement("Image", props),
     Linking: { ...(actual as { Linking?: unknown }).Linking as object, openURL: (...a: unknown[]) => h.openURL(...a) },
@@ -44,18 +47,18 @@ vi.mock("expo-image-picker", () => ({ launchImageLibraryAsync: vi.fn(), requestM
 vi.mock("../../../lib/firebase", () => ({ db: {}, functions: {}, get emulatorBackend() { return h.emulatorBackend; } }));
 vi.mock("../../../hooks/useAuth", () => ({ useAuth: () => h.auth }));
 vi.mock("../../../lib/vehicle-service", () => ({
-  updateVehicle: vi.fn(), archiveVehicle: vi.fn(), uploadVehiclePhoto: vi.fn(), uploadVehicleRc: vi.fn(), removeVehicleImage: vi.fn(),
+  updateVehicle: vi.fn(), archiveVehicle: vi.fn(), uploadVehiclePhoto: (...a:unknown[])=>h.cover(...a), uploadVehicleRc: (...a:unknown[])=>h.rc(...a), removeVehicleImage: vi.fn(),
   resolveVehiclePhotoUrl: vi.fn(async () => { throw new Error("no photo"); }),
 }));
 vi.mock("../../../lib/metrics", () => ({ metrics: { heroTall: 200, heroCompact: 120 } }));
-vi.mock("../../../lib/job-service", () => ({ listenToJobsForVehicle: () => () => {} }));
+vi.mock("../../../lib/job-service", () => ({ listenToJobsForVehicle: (_v:any,_t:any,c:any,cb:any)=>{h.privateOwners.push(["jobs",c]);h.jobCb=cb;return()=>{}} }));
 vi.mock("../../../lib/protection-service", () => ({ listenToVehicleProtections: () => () => {}, createMyProtection: vi.fn(), updateMyProtection: vi.fn() }));
 vi.mock("../../../lib/warranty-service", () => ({ listenToVehicleWarranties: () => () => {} }));
 vi.mock("../../../lib/paper-service", async (importOriginal) => {
   const actual = await importOriginal<typeof PaperService>();
   return {
     ...actual,
-    listenToVehiclePapers: (_v: string, _t: string, _c: string, onData: (l: unknown[]) => void) => { h.vehiclePapersCb = onData; return () => {}; },
+    listenToVehiclePapers: (_v: string, _t: string, _c: string, onData: (l: unknown[]) => void) => {h.owners.push(_c); h.vehiclePapersCb = onData; return () => {}; },
     listenToCustomerPapers: (_t: string, _c: string, onData: (l: unknown[]) => void) => { h.customerPapersCb = onData; return () => {}; },
     submitMyPaper: (...args: unknown[]) => h.submitMyPaper(...args),
     updateMyPaper: (...args: unknown[]) => h.updateMyPaper(...args),
@@ -63,7 +66,7 @@ vi.mock("../../../lib/paper-service", async (importOriginal) => {
     resolvePaperEvidenceUrl: (...args: unknown[]) => h.resolvePaperEvidenceUrl(...args),
   };
 });
-vi.mock("../../../lib/invoice-service", () => ({ listenToInvoicesForVehicle: () => () => {} }));
+vi.mock("../../../lib/invoice-service", () => ({ listenToInvoicesForVehicle: (_v:any,_t:any,c:any,cb:any)=>{h.privateOwners.push(["invoices",c]);h.invoiceCb=cb;return()=>{}} }));
 vi.mock("../../../lib/catalogue-service", () => ({ getServiceCatalogue: vi.fn(async () => []) }));
 vi.mock("../../../lib/booking-service", () => ({ getMyBookings: vi.fn(async () => []) }));
 vi.mock("../../../lib/dev-detail-loader", () => ({ devGarageDetail: undefined }));
@@ -125,14 +128,14 @@ const pushPapers = async (el: ReactTestRenderer, list: unknown[]) => {
 beforeEach(() => {
   (globalThis as Record<string, unknown>).__DEV__ = false;
   __params.current = { id: "v1" };
-  h.auth = { status: "ready", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } };
+  h.native=false;h.auth = { status: "ready", customerDocId:"canonical-profile", user: { uid: "me" }, claims: { tenantId: "t", role: "customer" } };
   h.vehicleCb = null; h.vehiclePapersCb = null; h.customerPapersCb = null;
   h.submitMyPaper.mockReset();
   h.updateMyPaper.mockReset();
   h.resolvePaperEvidenceUrl.mockReset();
   h.resolvePaperEvidenceUrl.mockResolvedValue({ url: null, failure: null });
   h.openURL.mockReset();
-  h.emulatorBackend = false;
+  h.emulatorBackend = false; h.cover.mockReset().mockResolvedValue("cover");h.rc.mockReset().mockResolvedValue("rc");
 });
 
 describe("mounted document-add retry after a lost acknowledgement", () => {
@@ -228,3 +231,24 @@ describe("mounted document-add retry after a lost acknowledgement", () => {
     expect(textOf(el)).not.toContain("Can't add this document");
   });
 });
+
+
+describe("mounted garage native photo entry joins",()=>{
+ it("edit cover and RC pick bytes reach correct upload services",async()=>{
+  const el=await mount();await act(async()=>press(el,"Edit vehicle"));
+  const bytes=new Uint8Array([255,216,255]);
+  const cover=el.root.findAll(n=>n.props.label==="Add car photo"&&typeof n.props.onNativeChange==="function")[0]!;
+  const rc=el.root.findAll(n=>n.props.label==="Add RC photo"&&typeof n.props.onNativeChange==="function")[0]!;
+  expect(cover.props.nativeEnabled).toBe(true);expect(rc.props.nativeEnabled).toBe(true);
+  await act(async()=>{cover.props.onNativeChange([{bytes,type:"image/jpeg",previewUri:"file:///cover"}]);rc.props.onNativeChange([{bytes,type:"image/jpeg",previewUri:"file:///rc"}]);});
+  await act(async()=>{press(el,"Save changes");await Promise.resolve();});
+  expect(h.cover).toHaveBeenCalledWith("v1",bytes,"image/jpeg");expect(h.rc).toHaveBeenCalledWith("v1",bytes,"image/jpeg");
+ });
+});
+
+it("native expiry partial or invalid draft is rejected by Save without blur",async()=>{h.native=true;const el=await mount();act(()=>switchTab(el,"Documents"));await act(async()=>press(el,"Add a document"));await act(async()=>typeReference(el,"POL-NATIVE"));for(const date of ["2028-02-","2027-02-29"]){const input=el.root.findAllByType(TextInput).find(n=>n.props.accessibilityLabel==="Expiry date (optional)")!;await act(async()=>input.props.onChangeText(date));await act(async()=>press(el,"Submit for verification"));expect(h.submitMyPaper).not.toHaveBeenCalled();expect(textOf(el)).toContain("valid expiry date");}});
+it('native valid expiry Save without blur persists exact new draft',async()=>{h.native=true;const el=await mount();act(()=>switchTab(el,'Documents'));await act(async()=>press(el,'Add a document'));await act(async()=>typeReference(el,'POL-VALID'));const input=el.root.findAllByType(TextInput).find(n=>n.props.accessibilityLabel==='Expiry date (optional)')!;await act(async()=>input.props.onChangeText('2028-02-29'));h.submitMyPaper.mockResolvedValue({replayed:false,photoUploaded:false});await act(async()=>press(el,'Submit for verification'));expect(h.submitMyPaper).toHaveBeenCalledWith(expect.objectContaining({expiresOn:'2028-02-29'}));});
+
+it('actual garage canonical paper owner and old car snapshots ignored after route change',async()=>{const el=await mount();expect(h.owners.at(-1)).toBe('canonical-profile');const old=h.vehicleCb;__params.current={id:'v2'};await act(async()=>el.update(createElement(VehicleDetailScreen)));await act(async()=>h.vehicleCb?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,id:'v2',make:'NEW-CAR'})}));await act(async()=>old?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,make:'PRIVATE-OLD'})}));expect(textOf(el)).not.toContain('PRIVATE-OLD');expect(textOf(el)).toContain('NEW-CAR');await act(async()=>el.unmount())});
+
+it('actual private job/invoice listeners canonical owner and old callbacks cannot repopulate new car',async()=>{const el=await mount();expect(h.privateOwners).toContainEqual(['jobs','canonical-profile']);expect(h.privateOwners).toContainEqual(['invoices','canonical-profile']);const jobs=h.jobCb,inv=h.invoiceCb;__params.current={id:'other'};await act(async()=>el.update(createElement(VehicleDetailScreen)));await act(async()=>h.vehicleCb?.({exists:()=>true,metadata:{fromCache:false},data:()=>({...vehicle,id:'other',make:'NEW'})}));await act(async()=>{jobs([{id:'old-job',vehicleId:'v1',status:'DELIVERED',createdAt:'2026-01-01',services:[{serviceName:'PRIVATE-OLD-JOB'}]}]);inv([{id:'old-invoice',vehicleId:'v1',status:'issued',jobId:'old-job',lineItems:[{description:'PRIVATE-OLD-INVOICE'}]}])});act(()=>switchTab(el,'History'));expect(textOf(el)).not.toContain('PRIVATE-OLD');expect(textOf(el)).toContain('0 visits');await act(async()=>el.unmount())});

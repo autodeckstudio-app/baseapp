@@ -9,7 +9,6 @@ app="$1"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
   release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ -z "$release_parent" ]; then printf 'Confirmed-product release ancestry unresolved: SKIP\n'; exit 0; fi
   if [ "$release_parent" = 9419155f38188849dc4d95a28c213efd8756f8cc ]; then
     [ -n "$release_root" ] || exit 0
     cd "$release_root" || exit 0
@@ -38,7 +37,6 @@ fi
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
   release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  if [ -z "$release_parent" ]; then printf 'Keramik release ancestry unresolved: SKIP\n'; exit 0; fi
   if [ "$release_parent" = db86ae802280ded4a8b30a9a02fbbad1faf96549 ]; then
     [ -n "$release_root" ] || exit 0
     cd "$release_root" || exit 0
@@ -66,11 +64,9 @@ if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ -n "$guard_root" ] && [ -f "$gua
   cd "$guard_root" || exit 0
   expected="$(cat scripts/site-only-release-20261104 2>/dev/null)"
   parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
-  # Missing ancestry cannot prove this is a later release. Skip every project.
-  if [ -z "$parent" ] || [ "$expected" != 6f31d7c346d1c2c3fe092a9f2bb3d59d2625068a ]; then
-    printf 'site-only marker ancestry unresolved: SKIP\n'; exit 0
-  fi
-  if [ "$parent" = "$expected" ]; then
+  # A marker alone is not a matching release. Unresolved ancestry falls through
+  # to each app's normal safety policy (apps BUILD, website SKIP without a base).
+  if [ "$expected" = 6f31d7c346d1c2c3fe092a9f2bb3d59d2625068a ] && [ "$parent" = "$expected" ]; then
     changed="$(git diff --name-only "$parent" HEAD 2>/dev/null)" || exit 0
     unexpected="$(printf '%s\n' "$changed" | grep -vE '^(apps/site/|scripts/vercel-ignore\.sh$|scripts/site-only-release-20261104$|tests/vercel-site-only-release\.test\.mjs$)' | grep -v '^$' || true)"
     if [ -n "$unexpected" ]; then printf 'site-only release has unexpected paths: SKIP\n'; exit 0; fi

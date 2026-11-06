@@ -35,44 +35,22 @@ export default function RescheduleBookingScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [doneLabel, setDoneLabel] = useState<string | null>(null);
 
+  const requestGeneration=useRef(0),slotGeneration=useRef(0),submitLock=useRef(false);const routeRef=useRef(bookingId);routeRef.current=bookingId;
   const loadBooking = useCallback(() => {
-    if (!bookingId) {setLoading(false);return;}
+    const generation=++requestGeneration.current;submitLock.current=false;setSubmitting(false);slotGeneration.current++;setBooking(null);setSvcCategory(null);setSvcLoaded(false);setSlots([]);setPendingSlot(null);setDoneLabel(null);setActionError(null);submitKeyRef.current=null;setLoadFailed(false);
+    if(!bookingId){setLoading(false);setSvcLoaded(true);return;}
     setLoading(true);
-    setLoadFailed(false);
-    void getBookingById(bookingId)
-      .then((b) => {
-        setBooking(b);
-        // Category drives the adopted wash reschedule rule (item 6); missing category keeps legacy behavior.
-        if (b) void getServiceCatalogue().then((all) => setSvcCategory(all.find((x) => x.id === b.serviceId)?.category ?? null)).catch(() => undefined).finally(() => setSvcLoaded(true));
-      })
-      .catch(() => setLoadFailed(true))
-      .finally(() => setLoading(false));
-  }, [bookingId]);
-
-  useEffect(loadBooking, [loadBooking]);
-
-  const loadSlots = useCallback(() => {
-    if (!booking) return;
-    setSlotsLoading(true);
-    setSlotsError(null);
-    void getAvailability(booking.serviceId, booking.studioId, todayIST(), 14, extraServiceIdsOf(booking))
-      .then(setSlots)
-      .catch((err: unknown) => {
-        setSlotsError(err instanceof Error ? err.message : "Could not load available times.");
-      })
-      .finally(() => setSlotsLoading(false));
-  }, [booking]);
-
-  useEffect(loadSlots, [loadSlots]);
-
-  if (loading || !svcLoaded) return <Loading label="Opening your booking" />;
-  if (loadFailed || !booking) {
-    return (
-      <Screen>
-        <Notice title="Booking not found" body="Check your connection and try again." action={<Button label="Retry" onPress={loadBooking} />} />
-      </Screen>
-    );
-  }
+    void(async()=>{try{const b=await getBookingById(bookingId);if(generation!==requestGeneration.current)return;setBooking(b);if(b){const all=await getServiceCatalogue();if(generation!==requestGeneration.current)return;setSvcCategory(all.find(x=>x.id===b.serviceId&&x.active)?.category??null)}}catch{if(generation===requestGeneration.current)setLoadFailed(true)}finally{if(generation===requestGeneration.current){setLoading(false);setSvcLoaded(true)}}})();
+  },[bookingId]);
+  useEffect(()=>{loadBooking();return()=>{requestGeneration.current++;slotGeneration.current++}},[loadBooking]);
+  const loadSlots=useCallback(()=>{const generation=++slotGeneration.current;setSlots([]);setPendingSlot(null);setSlotsError(null);if(!booking||!svcCategory){setSlotsLoading(false);return;}
+    setSlotsLoading(true);void getAvailability(booking.serviceId,booking.studioId,todayIST(),14,extraServiceIdsOf(booking)).then(rows=>{if(generation===slotGeneration.current)setSlots(rows.filter(s=>Number.isFinite(Date.parse(s.startAt))&&Date.parse(s.startAt)>Date.now()))}).catch(()=>{if(generation===slotGeneration.current)setSlotsError("Available times could not load. Try again.")}).finally(()=>{if(generation===slotGeneration.current)setSlotsLoading(false)});
+  },[booking,svcCategory]);
+  useEffect(()=>{loadSlots();return()=>{slotGeneration.current++}},[loadSlots]);
+  if(loading)return <Loading label="Opening your booking"/>;
+  if(loadFailed||!booking)return <Screen><Notice title="Booking not found" body="Check your connection and try again." action={<Button label="Retry" onPress={loadBooking}/>}/></Screen>;
+  if(!svcLoaded)return <Loading label="Opening service terms"/>;
+  if(!svcCategory)return <Screen><Notice title="Service terms unavailable" body="This service's current reschedule terms could not be verified. Refresh before choosing a new time." action={<Button label="Retry" onPress={loadBooking}/>}/></Screen>;
 
   // Premium (pay-at-studio) bookings use the request-and-approve flow (item 6,
   // PREVIEW): the customer sends a request and the studio confirms. The callable
@@ -113,7 +91,8 @@ export default function RescheduleBookingScreen() {
   const currentDisplay = formatSlot(currentScheduledAt);
 
   async function handleConfirm() {
-    if (!booking || !pendingSlot || submitting) return;
+    if (!booking || !pendingSlot || submitting||submitLock.current||routeRef.current!==bookingId) return;
+    const scope=bookingId,generation=requestGeneration.current;const current=()=>routeRef.current===scope&&requestGeneration.current===generation;submitLock.current=true;
     const newDisplay = formatSlot(new Date(pendingSlot.startAt));
     setSubmitting(true);
     setActionError(null);
@@ -122,19 +101,18 @@ export default function RescheduleBookingScreen() {
       const submitKey = submitKeyRef.current.key;
       if (isPremiumRequest) {
         await requestBookingReschedule(booking.id, pendingSlot.date, pendingSlot.startTime, submitKey);
-        setDoneLabel(`REQUESTED:${newDisplay}`);
+        if(current())setDoneLabel(`REQUESTED:${newDisplay}`);
       } else {
         await rescheduleBooking(booking.id, pendingSlot.date, pendingSlot.startTime, submitKey);
-        setDoneLabel(newDisplay);
+        if(current())setDoneLabel(newDisplay);
       }
-      submitKeyRef.current = null;
+      if(current())submitKeyRef.current = null;
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setPendingSlot(null);
+      if(!current())return;
       loadBooking();
-      loadSlots();
+      setActionError("Your time change was not confirmed. Refresh the booking before trying again.");
     } finally {
-      setSubmitting(false);
+      if(current()){submitLock.current=false;setSubmitting(false);}
     }
   }
 

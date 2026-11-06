@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import type { MembershipUsage } from "@autodeck/core";
@@ -19,41 +19,42 @@ function formatDate(iso: string): string {
 export default function MembershipUsageScreen() {
   const router = useRouter();
   const auth = useAuth();
+  const owner=auth.status==='ready'&&auth.customerDocId?`${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId}`:null;const currentOwner=useRef(owner);currentOwner.current=owner;const generation=useRef(0);
   const [usage, setUsage] = useState<MembershipUsage[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   useEffect(() => {
-    if (auth.status !== "ready") return undefined;
+    setJobs([]);setInvoices([]);setNames({});if (auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
     const noop = () => undefined;
-    const a = listenToMyJobs(auth.claims.tenantId, auth.user.uid, setJobs, noop);
-    const b = listenToMyInvoices(auth.claims.tenantId, auth.user.uid, setInvoices, noop);
-    void getServiceCatalogue().then((all) => setNames(Object.fromEntries(all.map((x) => [x.id, x.name])))).catch(noop);
-    return () => { a(); b(); };
-  }, [auth.status]);
+    const a = listenToMyJobs(auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setJobs(rows)}, noop);
+    const b = listenToMyInvoices(auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setInvoices(rows)}, noop);
+    void getServiceCatalogue().then((all) => alive&&setNames(Object.fromEntries(all.map((x) => [x.id, x.name])))).catch(noop);
+    return () => {alive=false; a(); b(); };
+  }, [owner]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const gen=++generation.current;setUsage([]);if(!owner){setLoading(false);setError("Sign in to see your membership usage.");return;}setLoading(true);
     setError(null);
     try {
-      const memberships = await getMyMemberships();
-      const current = memberships.find((m) => m.status === "active" || m.status === "pending");
+      const memberships = await getMyMemberships();if(gen!==generation.current||currentOwner.current!==owner)return;
+      const current = memberships.find((m) => m.status === "active");
       if (!current) {
         setUsage([]);
         return;
       }
-      setUsage(await getMembershipUsage(current.id));
+      const rows=await getMembershipUsage(current.id);if(gen===generation.current&&currentOwner.current===owner)setUsage(rows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load usage.");
+      if(gen===generation.current&&currentOwner.current===owner)setError("Your membership usage could not load. Try again.");
     } finally {
-      setLoading(false);
+      if(gen===generation.current&&currentOwner.current===owner)setLoading(false);
     }
-  }, []);
+  }, [owner]);
 
   useEffect(() => {
-    void load();
+    void load();return()=>{generation.current++};
   }, [load]);
 
   if (loading) return <Loading label="Opening usage" />;
@@ -62,11 +63,11 @@ export default function MembershipUsageScreen() {
   return (
     <Screen
       header={
-        <PageHeader kicker="Membership" title={usage.length ? `${usage.length} ${usage.length === 1 ? "use" : "uses"} this cycle` : "No washes used yet"} />
+        <PageHeader kicker="Membership" title={usage.length ? `${usage.length} ${usage.length === 1 ? "use" : "uses"} this cycle` : "No usage recorded"} />
       }
     >
       {usage.length === 0 ? (
-        <Notice title="No usage yet" body="Book a wash or service to see it here." />
+        <Notice title="No usage yet" body="Recorded use of an active plan appears here. A pending plan does not provide benefits yet." />
       ) : (
         <Pane pad="gap">
           {usage.map((u, i) => {

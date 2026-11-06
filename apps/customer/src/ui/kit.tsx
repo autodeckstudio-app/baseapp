@@ -271,7 +271,7 @@ export function Button({
       ]}
     >
       {busy ? <ActivityIndicator color={primary ? "#16181C" : colors.textPrimary} /> : null}
-      <T role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={primary ? { color: "#16181C", fontWeight: "700" } : undefined}>
+      <T numberOfLines={1} role="bodyStrong" tone={primary ? "onAccent" : kind === "danger" ? "danger" : "primary"} style={[{textAlign:"center",flexShrink:1},primary?{color:"#16181C",fontWeight:"700"}:null]}>
         {label}
       </T>
     </Pressable>

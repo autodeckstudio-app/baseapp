@@ -12,6 +12,7 @@ import { z } from "zod";
 import type { Booking, ServiceJob, Payment, Invoice } from "@autodeck/core";
 import { cancellationTerms } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 import { extractUser, assertRole, assertTenant, assertStudio } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
@@ -45,6 +46,7 @@ export async function runCancel(
   actor: "admin" | "customer",
 ) {
     const db = getFirestore();
+    const customerDocId=actor==="customer"?await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid):null;
     const bookingRef = db.collection(COLLECTIONS.bookings()).doc(data.bookingId);
     const snap = await bookingRef.get();
     if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
@@ -52,7 +54,7 @@ export async function runCancel(
     assertTenant(user, booking.tenantId);
     assertStudio(user, booking.studioId, "Booking");
     if (actor === "customer") {
-      if (booking.customerId !== user.uid) throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
+      if (booking.customerId !== customerDocId) throw new HttpsError("permission-denied", "Cannot cancel another customer's booking.");
     }
     if (booking.status === "CANCELLED") return { success: true, alreadyCancelled: true };
     if (booking.status === "COMPLETED" || booking.status === "EXPIRED") {
@@ -192,6 +194,7 @@ export async function runCancel(
       if (fresh.status === "COMPLETED" || fresh.status === "EXPIRED") {
         throw new HttpsError("failed-precondition", `Cannot cancel a booking with status ${fresh.status}.`);
       }
+      if (actor==="customer"&&fresh.customerId!==customerDocId)throw new HttpsError("permission-denied","Cannot cancel another customer's booking.");
       if (fresh.tenantId !== booking.tenantId || fresh.studioId !== booking.studioId) {
         throw new HttpsError("failed-precondition", "The booking's studio changed. Reload and try again.");
       }

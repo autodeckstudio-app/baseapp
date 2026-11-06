@@ -172,9 +172,9 @@ export function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
-export async function approveBookingQuote(bookingId: string): Promise<void> {
-  const fn = httpsCallable<{ bookingId: string }, { bookingId: string }>(functions, "respondToBookingQuote");
-  await fn({ bookingId });
+export async function approveBookingQuote(bookingId: string,expectedTotalPaise:number,expectedUpdatedAt:string): Promise<void> {
+  const fn = httpsCallable<{ bookingId: string;expectedTotalPaise:number;expectedUpdatedAt:string }, { bookingId: string }>(functions, "respondToBookingQuote");
+  await fn({ bookingId,expectedTotalPaise,expectedUpdatedAt });
 }
 
 export async function getStudioInfo(studioId: string): Promise<LiveStudioInfo> {

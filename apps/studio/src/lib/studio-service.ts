@@ -293,3 +293,8 @@ export function listenToBookingsByDate(
   );
   return onSnapshot(q, (snap) => onData(snap.docs.map((d) => d.data() as Booking)), onError);
 }
+
+export async function releaseCompletedBay(jobId:string):Promise<{released:boolean;bayReleasedAt:string}> {
+ const result=await httpsCallable<{jobId:string;confirmWorkCompleteAndBayEmpty:true},{released:boolean;bayReleasedAt:string}>(functions,'releaseCompletedBay')({jobId,confirmWorkCompleteAndBayEmpty:true});
+ return result.data;
+}

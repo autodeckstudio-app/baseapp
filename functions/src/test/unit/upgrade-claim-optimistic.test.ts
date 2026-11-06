@@ -6,7 +6,7 @@ vi.mock("../../middleware/rateLimit.js",()=>({enforceRateLimit:async()=>{},subje
 vi.mock("../../middleware/audit.js",()=>({writeAuditLog:()=>{}}));
 import {upgradeMembership} from "../../functions/membership/upgradeMembership.js";
 it("optimistic precommit model: actual upgrade handler must READ shared claim to prevent phantom double upgrades",async()=>{
- const {db,data}=fakeFirestore({membershipPlans:{old:{id:"old",tenantId:"t",active:true,priceInPaise:90000},target:{id:"target",tenantId:"t",active:true,priceInPaise:180000,includedWashes:3,tier:"gold",freePickups:0,discountPercent:10}},memberships:{active:{id:"active",tenantId:"t",customerId:"c",planId:"old",status:"active",washesUsed:0,pickupsUsed:0}},membershipClaims:{t_c:{membershipId:"active"}}});h.db=db;
+ const {db,data}=fakeFirestore({customers:{c:{id:"c",authUid:"c",tenantId:"t"}},membershipPlans:{old:{id:"old",tenantId:"t",active:true,priceInPaise:90000},target:{id:"target",tenantId:"t",active:true,priceInPaise:180000,includedWashes:3,tier:"gold",freePickups:0,discountPercent:10}},memberships:{active:{id:"active",tenantId:"t",customerId:"c",planId:"old",status:"active",washesUsed:0,pickupsUsed:0}},membershipClaims:{t_c:{membershipId:"active"}}});h.db=db;
  const originalCollection=db.collection;
  db.collection=(name:string)=>{
   const col=originalCollection(name);if(name!=="memberships")return col;
@@ -32,7 +32,7 @@ it("optimistic precommit model: actual upgrade handler must READ shared claim to
   }throw Error("retry cap");
  };
  const results=await Promise.allSettled([0,1].map(n=>upgradeMembership.run({data:{planId:"target",method:"cash",idempotencyKey:`key-${n}`},auth:{uid:"c",token:{role:"customer",tenantId:"t",studioId:null}}} as never)));
- console.warn(results);
+
  expect(results.filter(r=>r.status==="fulfilled")).toHaveLength(1);
  expect(Object.values(data.memberships!).filter(m=>m.status==="pending")).toHaveLength(1);expect(Object.keys(data.payments!)).toHaveLength(1);
 });

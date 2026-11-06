@@ -1,10 +1,12 @@
+import{verifyMyCustomerDocId}from'../../../lib/auth-service';
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { useMinuteNow } from "@autodeck/ui/clock";
 import { membershipCoveredLabel, visitTiming, customerTimingLine } from "@autodeck/core";
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
 import { formatServiceTime } from "../../../lib/duration";
 import { invoiceHref } from "../../../lib/invoice-display";
-import { useState, useEffect } from "react";
+import {canResumeJobPayment,customerPaymentLabel}from "../../../lib/existing-job-payment";
+import { useState, useEffect, useRef } from "react";
 import { CarThumb } from "../../../ui/CarThumb";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
@@ -101,6 +103,8 @@ export default function BookingDetailScreen() {
   useEffect(() => { const timer = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(timer); }, []);
   const [retryTick,setRetryTick] = useState(0);
   const [feedError,setFeedError] = useState<string|null>(null);
+  const authB = useAuth();
+  const[resolvedRoute,setResolvedRoute]=useState('');
   const [booking, setBooking] = useState<Booking | null>(null);
   const [walkIn, setWalkIn] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -108,6 +112,8 @@ export default function BookingDetailScreen() {
   const [payingNow, setPayingNow] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const routeScope=JSON.stringify([id,authB.status,authB.status==='ready'?authB.customerDocId:null,authB.status==='ready'?authB.claims.tenantId:null,retryTick]);const routeRef=useRef(routeScope);routeRef.current=routeScope;const actionEpoch=useRef(0),actionLock=useRef(false);
+  useEffect(()=>{actionEpoch.current++;actionLock.current=false;setCancelling(false);setPayingNow(false);setConfirmingCancel(false);setActionError(null);setStars(0);setNote('');setRated(false);setRateBusy(false);setRateError(null);setDecidingId(null);setDecideError(null);setQuoteBusy(false);return()=>{actionEpoch.current++}},[routeScope]);
   const mockWriteBlocked = (): boolean => {
     if (!isMock) return false;
     setActionError("Sample preview - changes are not saved.");
@@ -116,7 +122,10 @@ export default function BookingDetailScreen() {
   const minuteNow = useMinuteNow();
   const [job, setJob] = useState<ServiceJob | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
+  const[paymentRead,setPaymentRead]=useState<'loading'|'ready'|'error'>('loading');const[paymentRefresh,setPaymentRefresh]=useState(0);const[paymentScope,setPaymentScope]=useState('');const paymentGeneration=useRef(0);const resumeLock=useRef(false);
+
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const liveApprovalsRef=useRef(approvals);liveApprovalsRef.current=approvals;
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const { colors } = useExperienceTheme();
   const [stars, setStars] = useState(0);
@@ -127,21 +136,22 @@ export default function BookingDetailScreen() {
 
   useEffect(() => {
     if (!id || booking?.status !== "COMPLETED") return;
-    void getReview(id).then((r) => { if (r) { setStars(r.rating); setNote(r.comment); setRated(true); } }).catch(() => undefined);
+    let alive=true;void getReview(id).then((r) => { if (alive&&r) { setStars(r.rating); setNote(r.comment); setRated(true); } }).catch(() => undefined);return()=>{alive=false};
   }, [id, booking?.status]);
 
   async function handleRate() {
     if (mockWriteBlocked()) return;
-    if (!id || stars < 1) return;
+    if (!id || stars < 1||actionLock.current) return;
+    const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setRateBusy(true);
     setRateError(null);
     try {
       await submitReview(id, stars, note);
-      setRated(true);
+      if(current())setRated(true);
     } catch {
-      setRateError("Couldn't save your rating. Try again.");
+      if(current())setRateError("Couldn't save your rating. Try again.");
     } finally {
-      setRateBusy(false);
+      if(current()){actionLock.current=false;setRateBusy(false);}
     }
   }
 
@@ -150,30 +160,33 @@ export default function BookingDetailScreen() {
     if (__DEV__ && devSample && mock === "1") { setBooking(devSample.DEV_SAMPLE_BOOKING); setSvc(devSample.DEV_SAMPLE_SERVICE); setSvcLoaded(true); setLoading(false); return; }
     if (__DEV__ && devSample && mock === "2") { setBooking(devSample.DEV_SAMPLE_PREMIUM_BOOKING); setSvc(devSample.DEV_SAMPLE_PREMIUM_SERVICE); setSvcLoaded(true); setLoading(false); return; }
     if (!id) {setLoading(false);return;}
-    setLoading(true);setFeedError(null);
+    let alive=true;setLoading(true);setFeedError(null);setJob(null);setPayment(null);setBooking(null);setActionError(null);
     setWalkIn(false);
     let stopJob: (() => void) | undefined;
+    let stopQuoteBooking:(()=>void)|undefined;
     // No booking under this id (or it is not readable): a walk-in visit has only a job, and the link carries the job id.
     const fallbackToJob = (err: Error | null) => {
+      if(!alive)return;
       stopJob?.();
       stopJob = listenToJobById(
         id,
         (j) => {
-          if (j) { setWalkIn(true); setFeedError(null); setJob(j); setBooking(bookingFromJob(j)); }
+          if(!alive)return;setResolvedRoute(id);
+          if (j) { setResolvedRoute(id); setWalkIn(true); setFeedError(null); setJob(j); setBooking(bookingFromJob(j));if(j.bookingId){stopQuoteBooking?.();stopQuoteBooking=listenToBooking(j.bookingId,b=>{if(alive&&b){setWalkIn(true);setBooking(b);}},e=>{if(alive)setFeedError(e.message);});} }
           else if (err) setFeedError(err.message);
           else setBooking(null);
           setLoading(false);
         },
-        (e) => { setFeedError((err ?? e).message); setLoading(false); },
+        (e) => { if(!alive)return;setResolvedRoute(id);setFeedError((err ?? e).message); setLoading(false); },
       );
     };
-    const stopBooking = listenToBooking(id, (value) => { if (value) { stopJob?.(); stopJob = undefined; setWalkIn(false); setFeedError(null); setBooking(value); setLoading(false); } else fallbackToJob(null); }, (err) => fallbackToJob(err));
-    return () => { stopBooking(); stopJob?.(); };
+    const stopBooking = listenToBooking(id, (value) => { if(!alive)return;setResolvedRoute(id);if (value) { setResolvedRoute(id); stopJob?.(); stopJob = undefined; setWalkIn(false); setFeedError(null); setBooking(value); setLoading(false); } else fallbackToJob(null); }, (err) => fallbackToJob(err));
+    return () => { alive=false;stopBooking(); stopJob?.();stopQuoteBooking?.(); };
   }, [id,retryTick]);
 
   useEffect(() => {
     if (!id || !booking || walkIn) return;
-    return listenToJobForBooking(id, booking.tenantId, booking.customerId, setJob, () => undefined);
+    let alive=true;const stop=listenToJobForBooking(id, booking.tenantId, booking.customerId,j=>{if(alive)setJob(j)},()=>{if(alive){setJob(null);setPayment(null);setPaymentRead('error')}});return()=>{alive=false;stop()};
   }, [id, booking?.tenantId, booking?.customerId, walkIn]);
 
   useEffect(() => {
@@ -181,17 +194,25 @@ export default function BookingDetailScreen() {
       setInspection(null);
       return undefined;
     }
-    return listenToInspection(job.id, setInspection, () => undefined);
+    setInspection(null);let alive=true;const stop=listenToInspection(job.id, value=>{if(alive)setInspection(value)}, () => undefined);return()=>{alive=false;stop()};
   }, [job?.id]);
 
+  const liveBookingRef=useRef(booking),livePaymentRef=useRef(payment);liveBookingRef.current=booking;livePaymentRef.current=payment;
+  const [verifiedOwner,setVerifiedOwner]=useState('');
+  const ownerKey=authB.status==='ready'&&job&&booking&&job.customerId===booking.customerId&&authB.customerDocId===job.customerId&&job.tenantId===booking.tenantId&&job.tenantId===authB.claims.tenantId&&resolvedRoute===id?[authB.user.uid,authB.claims.tenantId,job.customerId,job.id,id].join('|'):'';
+  useEffect(()=>{let alive=true;setVerifiedOwner('');if(ownerKey&&job)void verifyMyCustomerDocId(job.customerId).then(ok=>{if(alive&&ok)setVerifiedOwner(ownerKey)}).catch(()=>{});return()=>{alive=false};},[ownerKey]);
+  const ownerVerified=Boolean(ownerKey)&&verifiedOwner===ownerKey;
   useEffect(() => {
-    if (!job) return;
-    return listenToPaymentForJob(job.id, job.tenantId, job.customerId, setPayment, () => undefined);
-  }, [job?.id]);
+    const generation=++paymentGeneration.current;resumeLock.current=false;setPayingNow(false);setPayment(null);setPaymentRead('loading');setPaymentScope('');
+    if(!job||authB.status!=="ready"||job.tenantId!==authB.claims.tenantId||!ownerVerified||resolvedRoute!==id)return;
+    const scope=[job.id,job.tenantId,job.customerId].join('|');
+    const stop=listenToPaymentForJob(job.id,job.tenantId,job.customerId,p=>{if(paymentGeneration.current!==generation)return;if(p&&(p.jobId!==job.id||p.tenantId!==job.tenantId||p.customerId!==job.customerId)){setPayment(null);setPaymentRead('error');setPaymentScope(scope);return}setPayment(p);setPaymentRead('ready');setPaymentScope(scope)},()=>{if(paymentGeneration.current!==generation)return;setPayment(null);setPaymentRead('error');setPaymentScope(scope)});
+    return()=>{paymentGeneration.current++;stop()};
+  }, [job?.id,job?.tenantId,job?.customerId,paymentRefresh,authB.status,authB.status==='ready'?authB.user.uid:null,authB.status==='ready'?authB.claims.tenantId:null,resolvedRoute,id,ownerVerified]);
 
   useEffect(() => {
-    if (!job) return;
-    return listenToApprovalsForJob(job.id, job.tenantId, job.customerId, setApprovals, () => undefined);
+    setApprovals([]);if (!job) return;let alive=true;
+    const stop=listenToApprovalsForJob(job.id, job.tenantId, job.customerId, values=>{if(alive)setApprovals(values)}, () => undefined);return()=>{alive=false;stop()};
   }, [job?.id]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,12 +222,16 @@ export default function BookingDetailScreen() {
   const [pushAsked, setPushAsked] = useState<boolean>(() => { try { return store?.getItem(PUSH_ASKED_KEY) === "1"; } catch { return false; } });
   const [pushBusy, setPushBusy] = useState(false);
   const [pushResult, setPushResult] = useState<"on" | "denied" | null>(null);
-  const authB = useAuth();
+  const currentPaymentScope=job?[job.id,job.tenantId,job.customerId].join('|'):'';
+  const paymentOwnerCurrent=ownerVerified&&authB.status==='ready'&&job?.tenantId===authB.claims.tenantId&&resolvedRoute===id;
+  const paymentIsCurrent=paymentOwnerCurrent&&paymentScope===currentPaymentScope&&paymentRead==='ready';
+  const resumeAllowed=canResumeJobPayment({auth:authB.status==='ready'?{uid:job?.customerId??'',tenantId:authB.claims.tenantId}:null,job,payment,ready:paymentIsCurrent&&booking?.status!=="CANCELLED"&&booking?.status!=="EXPIRED"&&!booking?.cancelIntent});
+  async function resumePayment(){if(mockWriteBlocked()||resumeLock.current||payingNow||!resumeAllowed||!payment)return;resumeLock.current=true;const generation=paymentGeneration.current;setPayingNow(true);setActionError(null);try{const outcome=await payWithPaymentLink(payment.id,payment.paymentUrl??null);if(generation===paymentGeneration.current)setActionError(outcome==='paid'?null:'Payment is not confirmed yet. This page updates after server verification. Do not pay a second time.');}catch{if(generation===paymentGeneration.current)setActionError('Could not open the existing payment. Do not start a second payment; contact the studio.');}finally{if(generation===paymentGeneration.current){resumeLock.current=false;setPayingNow(false)}}}
   const [car, setCar] = useState<Vehicle | null>(null);
   useEffect(() => {
-    if (authB.status !== "ready" || !booking) return;
-    return listenToMyVehicles(authB.user.uid, authB.claims.tenantId, (vs) => setCar(vs.find((v) => v.id === booking.vehicleId) ?? null), () => {});
-  }, [authB, booking?.vehicleId]);
+    setCar(null);if (authB.status !== "ready" || !booking||!ownerVerified) return;let alive=true;
+    const stop=listenToMyVehicles(booking.customerId, authB.claims.tenantId, (vs) => {if(alive)setCar(vs.find((v) => v.id === booking.vehicleId) ?? null)}, () => {});return()=>{alive=false;stop()};
+  }, [authB, booking?.vehicleId,ownerVerified,booking?.customerId]);
   const [svc, setSvc] = useState<{ name: string; brand?: string | null; category: string; imageUrl?: string | null } | null>(null);
   const [svcLoaded, setSvcLoaded] = useState(false);
   useEffect(() => {
@@ -222,68 +247,76 @@ export default function BookingDetailScreen() {
   const [decideError, setDecideError] = useState<string | null>(null);
   async function handleDecide(approvalId: string, decision: "approved" | "rejected") {
     if (mockWriteBlocked()) return;
-    if (decidingId) return;
+    if (decidingId||actionLock.current||routeRef.current!==routeScope||!liveApprovalsRef.current.some(a=>a.id===approvalId&&a.status==='pending')) return;
+    const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setDecidingId(approvalId); setDecideError(null);
     try { await respondToApproval(approvalId, decision); }
-    catch (err) { setDecideError(err instanceof Error ? err.message : "Could not record your answer. Try again."); }
-    finally { setDecidingId(null); }
+    catch (err) { if(current())setDecideError(err instanceof Error ? err.message : "Could not record your answer. Try again."); }
+    finally { if(current()){actionLock.current=false;setDecidingId(null);} }
   }
   async function handleApproveQuote() {
     if (mockWriteBlocked()) return;
-    if (!id) return;
+    if (!id||!booking||!ownerVerified||livePaymentRef.current?.status==='completed'||liveBookingRef.current?.status==='CANCELLED'||liveBookingRef.current?.status==='EXPIRED'||liveBookingRef.current?.status==='COMPLETED'||routeRef.current!==routeScope||actionLock.current) return;
+    const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setQuoteBusy(true);
     try {
-      await approveBookingQuote(id);
-      setBooking((prev) => (prev ? { ...prev, quoteStatus: "approved" } : prev));
+      await approveBookingQuote(booking.id,booking.totalAmount,booking.updatedAt);
+      // The live booking listener, not a stale request closure, projects approval.
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Could not approve the quote.");
+      if(current())setActionError(err instanceof Error ? err.message : "Could not approve the quote.");
     } finally {
-      setQuoteBusy(false);
+      if(current()){actionLock.current=false;setQuoteBusy(false);}
     }
   }
 
   async function handlePayNow() {
     if (mockWriteBlocked()) return;
-    if (payingNow || authB.status !== "ready" || !booking) return;
+    if (payingNow || authB.status !== "ready" || !booking||!ownerVerified||actionLock.current) return;
+    const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setPayingNow(true);
     setActionError(null);
     try {
       if (booking.payMode === "studio" && booking.status === "PENDING" && Boolean(booking.holdExpiresAt)) {
         const adv = await requestAdvancePayment(booking.id);
+        if(!current())return;
         if (!adv.paymentUrl || adv.status === "manual_review") { setActionError("Your advance payment is being checked. Please try again later."); return; }
         const out = await payWithPaymentLink(adv.paymentId, adv.paymentUrl);
-        setActionError(bookingPayOutcomeMessage(out));
+        if(current())setActionError(bookingPayOutcomeMessage(out));
         return;
       }
-      const jobId = await getJobIdForBooking(booking.id, authB.claims.tenantId, authB.user.uid);
+      const jobId = await getJobIdForBooking(booking.id, authB.claims.tenantId, booking.customerId);
+      if(!current())return;
       if (!jobId) throw new Error("no job");
       const pay = await initiatePayment(jobId, "razorpay_payment_link");
+      if(!current())return;
       const out = pay.paymentId ? await payOnline({ paymentId: pay.paymentId, paymentUrl: pay.paymentUrl, name: "AutoDeck Studio", description: "Booking" }) : "failed";
-      setActionError(bookingPayOutcomeMessage(out));
+      if(current())setActionError(bookingPayOutcomeMessage(out));
     } catch {
-      setActionError("We could not open the payment. Please retry, or call the studio.");
+      if(current())setActionError("We could not open the payment. Please retry, or call the studio.");
     } finally {
-      setPayingNow(false);
+      if(current()){actionLock.current=false;setPayingNow(false);}
     }
   }
 
   async function handleCancelConfirmed() {
     if (mockWriteBlocked()) return;
-    if (!booking || !id) return;
+    if (!booking || !id||actionLock.current) return;
+    const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setCancelling(true);
     setActionError(null);
     try {
       const result = await cancelBooking(id, "Cancelled by customer");
+      if(!current())return;
       if (!result.cancellationPending) setBooking((prev) => (prev ? { ...prev, status: "CANCELLED" } : prev));
       setConfirmingCancel(false);
     } catch (err) {
-      setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
+      if(current())setActionError(err instanceof Error && err.message && !/^(internal|functions)/i.test(err.message) ? err.message : "We could not cancel this booking. Check your connection and try again, or call the studio.");
     } finally {
-      setCancelling(false);
+      if(current()){actionLock.current=false;setCancelling(false);}
     }
   }
 
-  if (loading) return <Loading label="Opening your booking" />;
+  if (loading||(!isMock&&resolvedRoute!==id&&!feedError)) return <Loading label="Opening your booking" />;
   if(feedError) return <Screen><Notice title="Can't load your booking" body={feedError} action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
   if (!booking) return <Screen><Notice title="Booking not found" body="It may have been removed, or the link is stale." /></Screen>;
 
@@ -473,16 +506,16 @@ export default function BookingDetailScreen() {
 
       <View style={{ gap: space.line }}>
         <Kicker>Price</Kicker>
-        {booking.priceOnRequest === true && booking.quoteStatus === "requested" ? (
+        {(booking.priceOnRequest === true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true) && booking.quoteStatus === "requested" && !["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status) ? (
           <Pane pad="gap"><Row title="Quote requested" detail={<T role="caption" tone="secondary">The studio will set the price for your car. You approve it before any work starts.</T>} last /></Pane>
         ) : null}
-        {booking.priceOnRequest === true && booking.quoteStatus === "quoted" ? (
+        {(booking.priceOnRequest === true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true) && booking.quoteStatus === "quoted" && !["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status) ? (
           <Pane pad="gap">
-            <Row title="Studio quote" detail={<T role="caption" tone="secondary">Approve to let the studio start work.</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-            <View style={{ marginTop: space.line }}><Button label="Approve quote" busy={quoteBusy} onPress={() => void handleApproveQuote()} /></View>
+            <Row title="Studio quote" detail={<T role="caption" tone="secondary">Approve this exact total before payment.</T>} trailing={<T role="heading">{rupees(booking.totalAmount)}</T>} />
+            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy} onPress={() => void handleApproveQuote()} /></View>
           </Pane>
         ) : null}
-        {booking.priceOnRequest === true && booking.quoteStatus === "requested" ? null : (
+        {(booking.priceOnRequest === true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true) && booking.quoteStatus === "requested" ? null : (
         <Pane pad="gap">
           <Row title="Base" trailing={<T role="data">{rupees(booking.priceBreakdown.basePrice)}</T>} />
           {booking.priceBreakdown.scopeAdjustment > 0 ? (
@@ -496,13 +529,15 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment ? (payment.status === "pending" && booking.payMode === "online" ? "Awaiting payment" : PAYMENT_STATUS_LABELS[payment.status] ?? payment.status) : "Not yet initiated")} last />
-          {(payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
+          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading'))} last />
+          {resumeAllowed?<View style={{gap:space.line,marginTop:space.line}}><Button label="Continue online payment" busy={payingNow} disabled={payingNow} onPress={()=>void resumePayment()}/><T role="caption" tone="secondary">Opens the existing payment link. Payment is confirmed only after server verification.</T></View>:null}
+          {job?<Button label="Refresh recorded payment status" kind="quiet" onPress={()=>setPaymentRefresh(n=>n+1)}/>:null}
+          {paymentIsCurrent && (payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
             <View style={{ marginTop: space.line }}>
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref((payment?.invoiceId || job.invoiceId || booking.invoiceId) as string))} />
             </View>
           ) : null}
-          {canPay && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>{nextStepLine({ giftCovered, jobStatus: job?.status ?? null, time: displayTime })}</T> : null}
+          {canPay && paymentIsCurrent && !payment ? <T role="caption" tone="secondary" style={{ marginTop: space.line }}>{nextStepLine({ giftCovered, jobStatus: job?.status ?? null, time: displayTime })}</T> : null}
         </Pane>
         )}
       </View>
@@ -510,7 +545,7 @@ export default function BookingDetailScreen() {
       {waitingCancel ? <Notice title="Cancellation requested" body="Your slot is held while the online payment is checked. Not cancelled yet. Contact the studio for help." /> : null}
       {owedNotice ? <Notice title={owedNotice.title} body={owedNotice.body} /> : null}
 
-      {!waitingCancel && booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) && !walkIn ? (
+      {!waitingCancel && paymentIsCurrent && (!payment || payment.status === "failed" || payment.status === "cancelled") && booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)) && !walkIn ? (
         <Notice
           title="Payment pending"
           body={`${booking.holdExpiresAt ? `Held until ${new Date(booking.holdExpiresAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })}. ` : ""}Your slot is held until the payment goes through.`}

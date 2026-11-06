@@ -1,0 +1,13 @@
+import{useEffect,useState,type ReactNode}from'react';import{Linking,Platform}from'react-native';import Constants from'expo-constants';import{NATIVE_POLICY_URL,nativeUpdateDecision,parseNativeUpdatePolicy}from'../lib/client-update';import{Button,Loading,Notice,Screen}from'./kit';
+/** Dormant until the exact hosted endpoint, native cutoffs and store destinations pass owner rollout review. No network when URL is null. */
+export function NativeUpdateGate({children}:{children:ReactNode}){
+ const[attempt,setAttempt]=useState(0),[state,setState]=useState<{loading:boolean;required:boolean;storeUrl:string|null;unverified:boolean}>({loading:!!NATIVE_POLICY_URL&&Platform.OS!=='web',required:false,storeUrl:null,unverified:false});
+ useEffect(()=>{if(!NATIVE_POLICY_URL||Platform.OS==='web'){setState({loading:false,required:false,storeUrl:null,unverified:false});return;}
+  let active=true;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);setState({loading:true,required:false,storeUrl:null,unverified:false});
+  void(async()=>{try{const endpoint=new URL(NATIVE_POLICY_URL);if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password)throw Error('Invalid update endpoint');const response=await fetch(endpoint.toString(),{signal:controller.signal});if(!response.ok)throw Error('Update policy unavailable');const policy=parseNativeUpdatePolicy(await response.json());const manifest=Constants.platform;const raw=Platform.OS==='android'?manifest?.android?.versionCode:manifest?.ios?.buildNumber;const build=typeof raw==='number'||typeof raw==='string'?String(raw):null;const decision=nativeUpdateDecision(policy,Platform.OS,build);if(active)setState({loading:false,...decision});}catch{if(active)setState({loading:false,required:false,storeUrl:null,unverified:true})}finally{clearTimeout(timeout)}})();return()=>{active=false;clearTimeout(timeout);controller.abort()};
+ },[attempt]);
+ if(state.loading)return <Loading label="Checking this app version"/>;
+ if(state.required)return <Screen><Notice title="Update AutoDeck to continue" body="This app version no longer supports the current booking and privacy controls." action={<Button label="Open app store" onPress={()=>{if(state.storeUrl)void Linking.openURL(state.storeUrl).catch(()=>setAttempt(x=>x+1))}}/>}/><Button kind="quiet" label="Check again" onPress={()=>setAttempt(x=>x+1)}/></Screen>;
+ if(NATIVE_POLICY_URL&&state.unverified)return <Screen><Notice title="App version could not be verified" body="Reconnect and check again before opening your account." action={<Button label="Check again" onPress={()=>setAttempt(x=>x+1)}/>}/></Screen>;
+ return <>{children}</>;
+}

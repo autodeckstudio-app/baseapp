@@ -17,3 +17,14 @@ export const updateCustomerProfileSchema = z.object({
 
 export type SetupCustomerProfileInput = z.infer<typeof setupCustomerProfileSchema>;
 export type UpdateCustomerProfileInput = z.infer<typeof updateCustomerProfileSchema>;
+
+export const issueClaimCodeSchema = z.object({
+  customerId: z.string().min(1).max(120),
+}).strict();
+
+export const claimCustomerRecordSchema = z.object({
+  code: z.string().min(8).max(12),
+}).strict();
+
+export type IssueClaimCodeInput = z.infer<typeof issueClaimCodeSchema>;
+export type ClaimCustomerRecordInput = z.infer<typeof claimCustomerRecordSchema>;

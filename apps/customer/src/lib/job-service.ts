@@ -1,3 +1,4 @@
+import{SAFE_CUSTOMER_JOBS_READY,listenToSafeJobs,safeJobIdForBooking}from "./customer-job-read";
 import { collection, doc, query, where, orderBy, onSnapshot, type Unsubscribe, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
 import { COLLECTIONS } from "@autodeck/database";
@@ -22,6 +23,7 @@ export function listenToJobForBooking(
   onData: (job: ServiceJob | null) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
+  if(SAFE_CUSTOMER_JOBS_READY)return listenToSafeJobs({bookingId},rows=>onData(rows[0]??null),onError);
   const q = query(
     collection(db, COLLECTIONS.jobs()),
     where("bookingId", "==", bookingId),
@@ -48,6 +50,7 @@ export function listenToJobsForVehicle(
   onData: (jobs: ServiceJob[]) => void,
   onError: (err: Error) => void,
 ): Unsubscribe {
+  if(SAFE_CUSTOMER_JOBS_READY)return listenToSafeJobs({vehicleId},onData,onError);
   const q = query(
     collection(db, COLLECTIONS.jobs()),
     where("vehicleId", "==", vehicleId),
@@ -63,6 +66,7 @@ export function listenToJobsForVehicle(
 }
 
 export function listenToMyJobs(tenantId:string,customerId:string,onData:(items:ServiceJob[])=>void,onError:(err:Error)=>void):Unsubscribe {
+ if(SAFE_CUSTOMER_JOBS_READY)return listenToSafeJobs({},onData,onError);
  const q=query(collection(db,COLLECTIONS.jobs()),where("tenantId","==",tenantId),where("customerId","==",customerId));
  return onSnapshot(q,snap=>onData(snap.docs.map(d=>({...d.data(),id:d.id}) as ServiceJob).sort((a,b)=>b.createdAt.localeCompare(a.createdAt))),onError);
 }
@@ -74,6 +78,7 @@ export function listenToMyJobs(tenantId:string,customerId:string,onData:(items:S
  * "Missing or insufficient permissions". Read the job directly instead.
  */
 export function listenToJobById(jobId: string, onData: (job: ServiceJob | null) => void, onError: (err: Error) => void): Unsubscribe {
+  if(SAFE_CUSTOMER_JOBS_READY)return listenToSafeJobs({jobId},rows=>onData(rows[0]??null),onError);
   return onSnapshot(doc(db, COLLECTIONS.jobs(), jobId), (snap) => onData(snap.exists() ? ({ ...(snap.data() as ServiceJob), id: snap.id }) : null), onError);
 }
 
@@ -109,7 +114,7 @@ export function bookingFromJob(job: ServiceJob): Booking {
     paymentStatus: job.paymentStatus,
     ...(job.settlementKind ? {settlementKind:job.settlementKind} : {}),
     ...(job.invoiceId ? {invoiceId:job.invoiceId} : {}),
-    notes: job.studioNotes,
+    notes: null, // Internal job notes never become customer booking notes.
     idempotencyKey: "",
     rescheduleCount: 0,
     confirmedAt: job.createdAt,
@@ -122,6 +127,7 @@ export function bookingFromJob(job: ServiceJob): Booking {
 
 /** The job made for a booking, read once (it is created with the booking). Null if it is not there yet. */
 export async function getJobIdForBooking(bookingId: string, tenantId: string, customerId: string): Promise<string | null> {
+  if(SAFE_CUSTOMER_JOBS_READY)return safeJobIdForBooking(bookingId);
   const snap = await getDocs(query(collection(db, COLLECTIONS.jobs()), where("bookingId", "==", bookingId), where("tenantId", "==", tenantId), where("customerId", "==", customerId)));
   return snap.empty ? null : snap.docs[0]!.id;
 }

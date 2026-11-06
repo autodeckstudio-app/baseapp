@@ -1,3 +1,4 @@
+import {catalogueAsset} from "../lib/catalogue-assets";
 // One image block for any service: a product shot on a tinted panel (brand bottles) or a cover photo.
 import { useState } from "react";
 import { Image, View } from "react-native";
@@ -5,7 +6,7 @@ import { FadeImage, Icon } from "@autodeck/ui/native";
 import type { IconName } from "@autodeck/ui/theme";
 import { serviceVisual, hasGaragePhoto } from "../lib/imagery";
 
-type Svc = { name: string; brand?: string | null; category: string; imageUrl?: string | null };
+type Svc = { id?:string; name: string; brand?: string | null; category: string; imageUrl?: string | null };
 
 /** Garage services have no brand photo. One clean icon tile each, so no card repeats a picture. */
 export function garageIconFor(name: string): IconName {
@@ -21,6 +22,8 @@ export function ServicePhoto({ service, height, width, radius = 0, aspect, varia
   const v = serviceVisual(service, variant);
   const [bad, setBad] = useState(false);
   const box = { width: width ?? ("100%" as const), ...(height ? { height } : {}), ...(aspect ? { aspectRatio: aspect } : {}), borderRadius: radius, overflow: "hidden" as const };
+  const mapped=catalogueAsset(service);
+  if(mapped){return <View style={[box,mapped.product?{backgroundColor:'#FFF'}:null]}><Image source={mapped.source} resizeMode={mapped.product?'contain':'cover'} style={{width:'100%',height:'100%'}}/></View>;}
   if (service.imageUrl && !bad) {
     return (
       <View style={box}>

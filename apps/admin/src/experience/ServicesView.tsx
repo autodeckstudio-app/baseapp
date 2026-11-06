@@ -4,7 +4,7 @@ import type { IconName } from "@autodeck/ui/theme";
 
 // Services and pricing: the menu customers book from. Grouped by kind, each
 // row shows starting price, time and warranty; the editor opens in a drawer.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { BayType, Service, ServiceCategory, VehicleCategory, WarrantyDurationUnit } from "@autodeck/core";
 import { formatDuration } from "@autodeck/core";
 import { PageHead, Toolbar, Segmented, Drawer } from "./Office";
@@ -35,16 +35,21 @@ function warranty(s: Service): string | null {
 
 export function ServicesView(p: {
   services: Service[];
+  draftMode?: boolean;
+  onOpenLive?:()=>void;
+  onCloseDraft?:()=>void;
+  incomingDraft?: {key:string;value:ServiceDraft}|null;
   loading: boolean;
   error: string | null;
   message: string | null;
   busy: boolean;
-  onSave: (serviceId: string | null, payload: ServicePayload) => void;
+  onSave: (serviceId: string | null, payload: ServicePayload) => void | Promise<boolean>;
   onToggle: (s: Service) => void;
 }) {
   const [cat, setCat] = useState<ServiceCategory | "">("");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<ServiceDraft | null>(null);
+  useEffect(()=>{if(p.incomingDraft)setDraft(p.incomingDraft.value)},[p.incomingDraft?.key]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const q = search.trim().toLowerCase();
   const rows = p.services.filter((s) => (!cat || s.category === cat) && (!q || s.name.toLowerCase().includes(q) || (s.brand ?? "").toLowerCase().includes(q)));
@@ -58,15 +63,16 @@ export function ServicesView(p: {
     if (!file) return;
     setPhotoBusy(true);
     setPhotoError(null);
-    try { const url = await uploadServiceImage(file); setDraft((d) => (d ? { ...d, imageUrl: url } : d)); }
+    try { const url = await uploadServiceImage(file); setDraft((d) => (d ? { ...d, imageUrl: url, imageChanged: true } : d)); }
     catch (e) { setPhotoError(e instanceof Error ? e.message : "Upload failed. Try again."); }
     finally { setPhotoBusy(false); }
   };
 
   return (
     <div className="ax-page">
+      <style>{`@media(max-width:480px){.ax-service-fields{grid-template-columns:minmax(0,1fr)!important;}}`}</style>
       <PageHead eyebrow="Office" title="Pricing" kpis={[{ value: p.services.filter((s) => s.active).length, label: "On the menu", tone: "premium" }, { value: p.services.filter((s) => !s.active).length, label: "Hidden" }]}>
-        <button type="button" className="ax-button ax-button--primary" onClick={() => setDraft(EMPTY_SERVICE)}>New service</button>
+        <button type="button" className="ax-button ax-button--primary" onClick={() => {p.onOpenLive?.();setDraft(EMPTY_SERVICE)}}>New service</button>
       </PageHead>
       {p.error && <p className="ax-status-msg ax-status-msg--warn" role="alert">{p.error}</p>}
       {p.message && <p className="ax-status-msg">{p.message}</p>}
@@ -109,10 +115,10 @@ export function ServicesView(p: {
                           <span className="ax-sub">{duration(s.estimatedDurationMinutes)}{warranty(s) ? ` · ${warranty(s)}` : ""}{s.membershipWashEligible ? " · member wash" : ""}</span>
                         </div>
                         <div className="ax-row-actions">
-                          <button type="button" className="ax-button" onClick={() => setDraft(draftFromService(s))}>Edit</button>
+                          <button type="button" className="ax-button" onClick={() => {p.onOpenLive?.();setDraft(draftFromService(s))}}>Edit</button>
                           {confirmId === s.id ? (
                             <>
-                              <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{s.active ? "Hide from menu" : "Show on menu"}</button>
+                              <button type="button" className={`ax-button${s.active ? " ax-button--danger" : ""}`} disabled={p.busy} onClick={() => { p.onToggle(s); setConfirmId(null); }}>{p.draftMode ? (s.active ? "Draft hide from menu" : "Draft show on menu") : s.active ? "Hide from menu" : "Show on menu"}</button>
                               <button type="button" className="ax-button" onClick={() => setConfirmId(null)}>Cancel</button>
                             </>
                           ) : (
@@ -130,17 +136,17 @@ export function ServicesView(p: {
       )}
 
       {draft && (
-        <Drawer eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => setDraft(null)}>
-          <form onSubmit={(e) => { e.preventDefault(); if (result?.ok) { p.onSave(draft.serviceId, result.payload); setDraft(null); } }}>
+        <Drawer portal eyebrow={draft.serviceId ? "Edit service" : "New service"} title={draft.name || "Untitled service"} onClose={() => {setDraft(null);p.onCloseDraft?.()}}>
+          <form onSubmit={async(e) => { e.preventDefault(); if (result?.ok) { const saved=await p.onSave(draft.serviceId, result.payload);if(saved!==false)setDraft(null); } }}>
             <label className="ax-form-row"><span>Name customers see</span><input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Ceramic coat" /></label>
             <label className="ax-form-row"><span>Internal rating (staff only)</span><select value={draft.internalRating ?? ""} onChange={(e) => set({ratingChanged:true, internalRating: e.target.value ? e.target.value as "A" | "B" | "C" | "D" : null})}><option value="">Unrated</option>{["A", "B", "C", "D"].map(r => <option key={r} value={r}>{r}</option>)}</select><small>Never shown to customers. Keep the public name and brand factual.</small></label>
-            <div className="ax-form-pair">
+            <div className="ax-form-pair ax-service-fields">
               <label className="ax-form-row"><span>Kind</span>
                 <select value={draft.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })}>{CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_NAME[c]}</option>)}</select>
               </label>
               <label className="ax-form-row"><span>Brand (optional)</span><input value={draft.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Gyeon" /></label>
             </div>
-            <div className="ax-form-pair">
+            <div className="ax-form-pair ax-service-fields">
               <label className="ax-form-row"><span>PPF coverage (PPF only)</span>
                 <select value={draft.coverageLevel} onChange={(e) => set({ coverageLevel: e.target.value as ServiceDraft["coverageLevel"] })}>
                   <option value="">Not applicable</option><option value="high_impact">High-impact kit</option><option value="full_front">Full front</option><option value="full_body">Full body</option>
@@ -159,14 +165,14 @@ export function ServicesView(p: {
               <input type="file" accept="image/*" disabled={photoBusy} onChange={(e) => void pickPhoto(e.target.files?.[0])} aria-label="Upload service photo" />
               {photoBusy ? <p className="ax-sub">Uploading...</p> : null}
               {photoError ? <p className="ax-status-msg">{photoError}</p> : null}
-              {draft.imageUrl ? <button type="button" className="ax-link" onClick={() => set({ imageUrl: "" })}>Remove photo</button> : null}
+              {draft.imageUrl ? <button type="button" className="ax-link" onClick={() => set({ imageUrl: "", imageChanged: true })}>Remove photo</button> : null}
             </div>
-            <label className="ax-form-row"><span>Description (shown to customers)</span><textarea rows={3} value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
+            <label className="ax-form-row"><span>Description and included work (shown to customers)</span><textarea rows={5} placeholder="Describe the service, then list the included work on separate lines. Only include what the studio actually provides." value={draft.description} onChange={(e) => set({ description: e.target.value })} /></label>
             {draft.internalNotes ? <label className="ax-form-row"><span>Internal notes (admin only, customers never see this)</span><textarea rows={3} value={draft.internalNotes} readOnly /></label> : null}
 
             <p className="ax-label ax-form-section">Price and time</p>
-            <div className="ax-form-pair">
-              <label className="ax-form-row"><span>Starting price (₹)</span><input inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
+            <div className="ax-form-pair ax-service-fields">
+              <label className="ax-form-row"><span>{draft.priceMode === "consult" ? "Price reference (₹, optional)" : "Starting price (₹)"}</span><input inputMode="decimal" value={draft.priceRupees} onChange={(e) => set({ priceRupees: e.target.value })} placeholder="1299" /></label>
               <label className="ax-form-row"><span>Time needed (min)</span><input inputMode="numeric" value={draft.minutes} onChange={(e) => set({ minutes: e.target.value })} /></label>
             </div>
             {draft.category === "ppf" ? (
@@ -192,7 +198,7 @@ export function ServicesView(p: {
             <p className="ax-label ax-form-section">Care tips</p>
             <p className="ax-note">Short aftercare lines customers see on this service. Leave empty to hide the card.</p>
             {draft.careTips.map((tip, i) => (
-              <div key={i} className="ax-form-pair">
+              <div key={i} className="ax-form-pair ax-service-fields">
                 <label className="ax-form-row"><span>Tip {i + 1}</span><input value={tip} maxLength={200} onChange={(e) => set({ careTips: draft.careTips.map((t, j) => (j === i ? e.target.value : t)) })} placeholder="e.g. Wipe bird droppings off early." /></label>
                 <div className="ax-form-row">
                   <button type="button" className="ax-button" disabled={i === 0} aria-label={`Move tip ${i + 1} up`} onClick={() => { const n = [...draft.careTips]; [n[i - 1], n[i]] = [n[i]!, n[i - 1]!]; set({ careTips: n }); }}>Up</button>
@@ -205,7 +211,7 @@ export function ServicesView(p: {
 
             <p className="ax-label ax-form-section">Warranty</p>
             <label className="ax-form-row"><span>What it&apos;s called</span><input value={draft.warrantyLabel} onChange={(e) => set({ warrantyLabel: e.target.value })} placeholder="e.g. 5-year film warranty" /></label>
-            <div className="ax-form-pair">
+            <div className="ax-form-pair ax-service-fields">
               <label className="ax-form-row"><span>Length</span>
                 <select value={draft.warrantyUnit} onChange={(e) => { const u = e.target.value as WarrantyDurationUnit | ""; set({ warrantyUnit: u, warrantyValue: u === "lifetime" || u === "" ? "" : draft.warrantyValue }); }}>
                   <option value="">No warranty</option>
@@ -216,7 +222,7 @@ export function ServicesView(p: {
             </div>
 
             <p className="ax-label ax-form-section">Booking</p>
-            <div className="ax-form-pair">
+            <div className="ax-form-pair ax-service-fields">
               <label className="ax-form-row"><span>Needs</span>
                 <select value={draft.bay} onChange={(e) => set({ bay: e.target.value as BayType })}>{(Object.keys(BAY_NAME) as BayType[]).map((b) => <option key={b} value={b}>{BAY_NAME[b]}</option>)}</select>
               </label>
@@ -226,8 +232,8 @@ export function ServicesView(p: {
 
             {result && !result.ok && draft.name && <p className="ax-note" style={{ color: "var(--ad-warning)" }}>{result.problem}</p>}
             <div className="ax-panel-actions">
-              <button type="submit" className="ax-button ax-button--primary" disabled={p.busy || !result?.ok}>{draft.serviceId ? "Save changes" : "Add to menu"}</button>
-              <button type="button" className="ax-button" onClick={() => setDraft(null)}>Cancel</button>
+              <button type="submit" className="ax-button ax-button--primary" disabled={p.busy || !result?.ok}>{p.draftMode ? "Save draft" : draft.serviceId ? "Save changes" : "Add to menu"}</button>
+              <button type="button" className="ax-button" onClick={() => {setDraft(null);p.onCloseDraft?.()}}>Cancel</button>
             </div>
             <p className="ax-note">Past bookings, invoices and issued warranties keep the terms they were sold with.</p>
           </form>

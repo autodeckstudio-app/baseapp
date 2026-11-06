@@ -1,3 +1,4 @@
+import {ServiceTimePicker} from '../../../ui/ServiceTimePicker';
 import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { CarThumb } from "../../../ui/CarThumb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -99,38 +100,11 @@ export default function BookServiceScreen() {
     return ()=>{current=false;};
   }, [serviceId, selectedCategory, service]);
 
-  useEffect(() => {
-    if (!serviceId || auth.status !== "ready") return;
-    if (!customerOfferingVisible({id:serviceId})) {setLoading(false);return;}
-    setService(null); setLoading(true); setLoadError(false);
-    void (async () => {
-      try {
-        const serviceSnap = await getDoc(doc(db, COLLECTIONS.services(), serviceId));
-        if (serviceSnap.exists() && serviceSnap.data().active === true && customerOfferingVisible(serviceSnap.data() as Service)) setService(serviceSnap.data() as Service);
-      } catch {
-        setLoadError(true);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [serviceId, auth.status, retryTick]);
-
-  useEffect(() => {
-    if (auth.status !== "ready") return;
-    return listenToMyVehicles(
-      auth.user.uid,
-      auth.claims.tenantId,
-      (list) => {
-        setVehiclesError(false);
-        setVehicles(list);
-        void AsyncStorage.getItem("autodeck.activeVehicle").then(activeId=>setSelectedVehicle(cur=>{
-          const keep=cur&&list.find(v=>v.id===cur.id);
-          return keep??list.find(v=>v.id===activeId)??list[0]??null;
-        }));
-      },
-      () => setVehiclesError(true),
-    );
-  }, [auth.status,retryTick]);
+  const owner=auth.status==='ready'&&auth.customerDocId?`${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId}`:null;
+  useEffect(()=>{let alive=true;setService(null);setSlots([]);setPickedSlot(null);setLoadError(false);setLoading(true);if(!serviceId||!customerOfferingVisible({id:serviceId})||auth.status!=='ready'){setLoading(false);return;}
+    void getServiceCatalogue().then(list=>{if(alive)setService(list.find(s=>s.id===serviceId && s.active === true && customerOfferingVisible(s))??null)}).catch(()=>{if(alive)setLoadError(true)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false};
+  },[serviceId,owner,retryTick]);
+  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesError(false);if(auth.status!=='ready'||!auth.customerDocId)return;let alive=true,revision=0;const stop=listenToMyVehicles(auth.customerDocId,auth.claims.tenantId,list=>{if(!alive)return;const rev=++revision;setVehicles(list);void AsyncStorage.getItem('autodeck.activeVehicle').then(activeId=>{if(alive&&revision===rev)setSelectedVehicle(cur=>{const keep=cur&&list.find(v=>v.id===cur.id);return keep??list.find(v=>v.id===activeId)??list[0]??null})}).catch(()=>{if(alive&&revision===rev)setSelectedVehicle(list[0]??null)})},()=>{if(alive)setVehiclesError(true)});return()=>{alive=false;stop()};},[owner,retryTick]);
 
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
@@ -138,13 +112,13 @@ export default function BookServiceScreen() {
     if (!serviceId || !service) return;
     const ids = extraKey ? extraKey.split(",") : [];
     const warm = peekAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids);
-    if (warm) setSlots(warm);
+    if (warm) setSlots(warm.filter(s=>Date.parse(s.startAt)>Date.now()));
     setSlotsLoading(!warm);
     setSlotsError(false);
     setPickedSlot(null);
     let alive = true;
     void getAvailability(serviceId, FIRST_STUDIO_ID, todayIST(), 7, ids)
-      .then((r) => { if (alive) setSlots(r); })
+      .then((r) => { if (alive) setSlots(r.filter(s=>Date.parse(s.startAt)>Date.now())); })
       .catch(() => { if (alive) setSlotsError(true); })
       .finally(() => { if (alive) setSlotsLoading(false); });
     return () => { alive = false; };
@@ -262,36 +236,7 @@ export default function BookServiceScreen() {
         ) : !slotsError && Object.keys(slotsByDate).length === 0 ? (
           <Notice title="Fully booked this week" body="No free times in the next 7 days. Try again tomorrow or call the studio." />
         ) : (
-          <View style={{gap:space.line}}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:8}}>{Object.keys(slotsByDate).map(date=><Pressable key={date} accessibilityRole="button" accessibilityLabel={`Choose ${date}`} accessibilityState={{selected:date===selectedDate}} onPress={()=>{setSelectedDate(date);setPickedSlot(null);}} style={{minHeight:48,justifyContent:"center",paddingHorizontal:16,paddingVertical:10,borderRadius:14,borderWidth:1,borderColor:date===selectedDate?colors.accent:colors.borderSubtle,backgroundColor:date===selectedDate?colors.accentHaze:"transparent"}}><T role="caption" tone={date===selectedDate?"accent":"secondary"}>{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</T></Pressable>)}</ScrollView>{Object.entries(slotsByDate).filter(([date])=>date===selectedDate).map(([date, daySlots]) => (
-            <Pane key={date} pad="gap">
-              <View style={{ gap: space.line }}>
-                <T role="heading">{new Date(`${date}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</T>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath }}>
-                  {[...daySlots].sort((a,b)=>a.startAt.localeCompare(b.startAt)).map((slot) => {
-                    const multiDay = slot.estimatedEndDate !== slot.date;
-                    const past = Date.parse(slot.startAt) < Date.now();
-                    const on = pickedSlot?.startAt === slot.startAt;
-                    return (
-                      <Pressable
-                        key={slot.startAt}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Time ${slot.startTime}${past ? ", already passed" : ""}`}
-                        accessibilityState={{ selected: on, disabled: past }}
-                        disabled={past}
-                        onPress={() => { setPickedSlot(slot); setSizeError(null); }}
-                        style={({ pressed }) => ({ borderRadius: 9999, borderWidth: 1, borderColor: on ? "#EC8638" : "rgba(128,128,128,0.28)", backgroundColor: on ? "rgba(236,134,56,0.14)" : "rgba(128,128,128,0.08)", paddingHorizontal: 16, paddingVertical: 10, opacity: past ? 0.3 : pressed ? 0.7 : 1, minWidth: 76, minHeight:44, justifyContent:"center", alignItems: "center" })}
-                      >
-                        <T role="data" tone={on ? "accent" : "primary"}>{slot.startTime}</T>
-                        {multiDay ? (
-                          <T role="caption" tone="tertiary">ready {new Date(`${slot.estimatedEndDate}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</T>
-                        ) : null}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            </Pane>
-          ))}</View>
+          <ServiceTimePicker key={selectedDate??'available'} slots={slots.filter(slot=>Date.parse(slot.startAt)>Date.now())} picked={pickedSlot} initialDate={selectedDate} onDayChange={date=>{setSelectedDate(date);setPickedSlot(null)}} onPick={slot=>{setPickedSlot(slot);setSizeError(null)}}/>
         )}
         {sizeError ? <T role="caption" tone="danger">{sizeError}</T> : null}
         <Button label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />

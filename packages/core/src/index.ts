@@ -34,3 +34,13 @@ export * from "./protection-declaration.js";
 export * from "./customer-rating-privacy.js";
 
 export * from "./customer-catalogue-eligibility.js";
+
+export * from "./quote-journey.js";
+
+export * from "./service-homes.js";
+
+export * from "./customer-job.js";
+
+export * from './reference-ranges.js';
+
+export {customerOfferingVisible} from "./customer-offering-visibility";

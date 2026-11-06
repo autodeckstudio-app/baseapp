@@ -32,14 +32,16 @@ export default function ServiceHistoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
+  const owner=auth.status==='ready'&&auth.customerDocId?`${auth.claims.tenantId}:${auth.customerDocId}`:null;
   useEffect(() => {
-    if (auth.status !== "ready") return undefined;
+    setJobs(null);setInvoices([]);setVehicle(null);
+    if (auth.status !== "ready" || !auth.customerDocId) return undefined;
     setError(null);
-    const fail = () => setError("Could not load service history. Check your connection and retry.");
-    const a = vehicleId ? listenToJobsForVehicle(vehicleId, auth.claims.tenantId, auth.user.uid, setJobs, fail):listenToMyJobs(auth.claims.tenantId,auth.user.uid,setJobs,fail);
-    const b = vehicleId ? listenToInvoicesForVehicle(vehicleId, auth.claims.tenantId, auth.user.uid, setInvoices, fail):listenToMyInvoices(auth.claims.tenantId,auth.user.uid,setInvoices,fail);
-    return () => { a(); b(); };
-  }, [vehicleId, auth.status, tick]);
+    let alive=true;const fail = () => {if(alive)setError("Could not load service history. Check your connection and retry.");};
+    const a = vehicleId ? listenToJobsForVehicle(vehicleId, auth.claims.tenantId, auth.customerDocId, v=>{if(alive)setJobs(v)}, fail):listenToMyJobs(auth.claims.tenantId,auth.customerDocId,v=>{if(alive)setJobs(v)},fail);
+    const b = vehicleId ? listenToInvoicesForVehicle(vehicleId, auth.claims.tenantId, auth.customerDocId, v=>{if(alive)setInvoices(v)}, fail):listenToMyInvoices(auth.claims.tenantId,auth.customerDocId,v=>{if(alive)setInvoices(v)},fail);
+    return () => { alive=false;a(); b(); };
+  }, [vehicleId, owner, tick]);
 
   useEffect(() => {
     void getServiceCatalogue().then((all) => setNames(Object.fromEntries(all.map((s) => [s.id, s.name])))).catch(() => undefined);
@@ -48,7 +50,7 @@ export default function ServiceHistoryScreen() {
   // Car label, best effort: live vehicle doc, else deletedVehicles/{id}
   // (owner-readable snapshot, backend contract), else "Removed car".
   useEffect(() => {
-    if (!vehicleId) return;
+    setVehicle(null);if (!vehicleId||!owner) return;
     let alive = true;
     const pick = (d: unknown) => {
       const x = d as Partial<Vehicle> & { vehicleSnapshot?: { make?: string; model?: string }; snapshot?: { make?: string; model?: string } };
@@ -63,7 +65,7 @@ export default function ServiceHistoryScreen() {
       })
       .then((v) => { if (alive) setVehicle(v); });
     return () => { alive = false; };
-  }, [vehicleId]);
+  }, [vehicleId,owner]);
 
   if (error) return <Screen><Notice title="History unavailable" body={error} action={<Button label="Retry" onPress={() => setTick((n) => n + 1)} />} /></Screen>;
   if (auth.status !== "ready" || jobs === null) return <Loading label="Opening service history" />;

@@ -51,8 +51,8 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
   const [coreReady, setCoreReady] = useState(false);
 
   useEffect(() => {
-    void AsyncStorage.getItem(ACTIVE_KEY).then(setPreferred);
-  }, [tick]);
+    let active=true;setPreferred(null);void AsyncStorage.getItem(ACTIVE_KEY).then(v=>{if(active)setPreferred(v)}).catch(()=>undefined);return()=>{active=false};
+  }, [uid,tenantId,tick]);
 
   // Watchdog: if no listener has delivered within 8s (e.g. the watch stream
   // never establishes on a flaky network), stop waiting and render with the
@@ -70,9 +70,19 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
     return () => clearTimeout(t);
   }, [uid, tenantId, tick]);
 
+  // Claim-pending session: signed in with claims but no customer doc yet
+  // (staff-first record not claimed). There is nothing to listen to, so
+  // resolve the designed empty model immediately - without this, vehicles
+  // stays null, coreReady stays false, and Home hangs on the skeleton
+  // forever (the 8s watchdog below also arms only when uid exists).
   useEffect(() => {
-    if (!uid || !tenantId) return;
-    setError(null);
+    if (uid || !tenantId) return;
+    setVehicles([]);
+    setCoreReady(true);
+  }, [uid, tenantId]);
+
+  useEffect(() => {
+    setVehicles(null);setBookings([]);setJobs([]);setApprovals([]);setInvoices([]);setMemberships([]);setProtections([]);setError(null);if (!uid || !tenantId){if(tenantId){setVehicles([]);setCoreReady(true)}return;}
     const settled = new Set<string>();
     let active = true;
     const settle = (source: string) => {
@@ -81,22 +91,23 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
       if (settled.size === 6) { delivered.current = true; setCoreReady(true); setError(clearWatchdogErrorOnDelivery); }
     };
     const failFor = (src: string) => (e?: unknown) => {
+    if(!active)return;
     // eslint-disable-next-line no-console
     console.warn("[home] listener failed:", src, e);
     settle(src);
     const code = (e as { code?: string } | undefined)?.code;
-    setError(`We couldn't load everything (${src}${code ? `: ${code}` : ""}). Showing what we have.`);
+    setError("Some of your home details could not load. Try refreshing.");
     // Never leave vehicles null on a listener error: a null model keeps the
     // Home on the loading spinner forever. Empty data + the error caption is
     // always better than a silent hang.
     setVehicles((v) => v ?? []);
   };
     const subs = [
-      listenToMyVehicles(uid, tenantId, (v) => { setVehicles(v); settle("cars"); }, failFor("cars")),
-      listenToMyJobs(tenantId, uid, (v) => { setJobs(v); settle("visits"); }, failFor("visits")),
-      listenToMyPendingApprovals(tenantId, uid, (v) => { setApprovals(v); settle("approvals"); }, failFor("approvals")),
-      listenToMyIssuedInvoices(tenantId, uid, (v) => { setInvoices(v); settle("bills"); }, failFor("bills")),
-      listenToMyMemberships(tenantId, uid, (v) => { setMemberships(v); settle("memberships"); }, failFor("memberships")),
+      listenToMyVehicles(uid, tenantId, (v) => { if(!active)return;setVehicles(v); settle("cars"); }, failFor("cars")),
+      listenToMyJobs(tenantId, uid, (v) => { if(!active)return;setJobs(v); settle("visits"); }, failFor("visits")),
+      listenToMyPendingApprovals(tenantId, uid, (v) => { if(!active)return;setApprovals(v); settle("approvals"); }, failFor("approvals")),
+      listenToMyIssuedInvoices(tenantId, uid, (v) => { if(!active)return;setInvoices(v); settle("bills"); }, failFor("bills")),
+      listenToMyMemberships(tenantId, uid, (v) => { if(!active)return;setMemberships(v); settle("memberships"); }, failFor("memberships")),
     ];
     getMyBookings(uid, tenantId).then((v) => { if (active) { setBookings(v); settle("bookings"); } }).catch(failFor("bookings"));
     return () => { active = false; subs.forEach((u) => u()); };
@@ -123,8 +134,8 @@ export function useCustomerHome(uid: string | null, tenantId: string | null, fir
 
   const activeId = model?.activeVehicle?.id ?? null;
   useEffect(() => {
-    if (!uid || !tenantId || !activeId) return;
-    return listenToVehicleProtections(activeId, tenantId, uid, setProtections, () => setProtections([]));
+    setProtections([]);if (!uid || !tenantId || !activeId) return;let alive=true;
+    const stop=listenToVehicleProtections(activeId, tenantId, uid, v=>{if(alive)setProtections(v)}, () => {if(alive)setProtections([])});return()=>{alive=false;stop()};
   }, [uid, tenantId, activeId]);
 
   return { model, error, refresh: () => setTick((t) => t + 1) };

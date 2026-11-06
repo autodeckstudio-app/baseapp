@@ -9,10 +9,10 @@ import { useAuth } from "../hooks/useAuth";
 export const VEHICLE_SIZES: { value: VehicleCategory; label: string }[] = CAR_SEGMENTS;
 export function usePricingVehicle() {
  const auth=useAuth(); const [vehicle,setVehicle]=useState<Vehicle|null>(null);
- const uid=auth.status==="ready"?auth.user.uid:null;
+ const uid=auth.status==="ready"?auth.customerDocId:null;
  const tenant=auth.status==="ready"?auth.claims.tenantId:null;
- useEffect(()=>{if(!uid||!tenant){setVehicle(null);return;}
-  return listenToMyVehicles(uid,tenant,(vs)=>{void AsyncStorage.getItem("autodeck.activeVehicle").then(id=>setVehicle(vs.find(v=>v.id===id)??vs[0]??null));},()=>setVehicle(null));
+ useEffect(()=>{setVehicle(null);if(!uid||!tenant)return;let active=true,revision=0;
+  const stop=listenToMyVehicles(uid,tenant,(vs)=>{const current=++revision;void AsyncStorage.getItem("autodeck.activeVehicle").then(id=>{if(active&&current===revision)setVehicle(vs.find(v=>v.id===id)??vs[0]??null)}).catch(()=>{if(active&&current===revision)setVehicle(vs[0]??null)});},()=>{if(active)setVehicle(null)});return()=>{active=false;stop()};
  },[uid,tenant]);
  return {vehicle,category:normalizeSegment(vehicle?.category),label:segmentLabel(vehicle?.category)};
 }

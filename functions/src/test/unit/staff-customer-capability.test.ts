@@ -58,6 +58,7 @@ describe("additive customer capability", () => {
   it("customer context applies ownership and cancellation limits to staff", async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date("2026-01-01T04:00:00.000Z"));
     try {
+      h.docs["customers/staff"]={id:"staff",authUid:"staff",tenantId:"tenant"};
       h.docs["bookings/b"] = { tenantId: "tenant", customerId: "other", studioId: "studio", status: "CONFIRMED" };
       await expect(cancelBooking.run(req({ bookingId: "b", reason: "test", customerContext: true }))).rejects.toMatchObject({ code: "permission-denied" });
       h.docs["bookings/b"] = { ...h.docs["bookings/b"], customerId: "staff", scheduledAt: new Date(Date.now() + 3600000).toISOString(), scheduledDate: new Date().toISOString().slice(0,10) };
@@ -70,6 +71,7 @@ describe("additive customer capability", () => {
 
 describe("missed booking reschedule limits", () => {
   it("moves a missed slot without spending a reschedule and clears the stamp", async () => {
+    h.docs["customers/staff"]={id:"staff",authUid:"staff",tenantId:"tenant"};
     h.docs["bookings/b"] = { id: "b", tenantId: "tenant", customerId: "staff", studioId: "studio", status: "CONFIRMED", scheduledAt: "2026-01-01T04:30:00Z", serviceId: "svc", rescheduleCount: 3, missedAt: "2026-01-01T15:30:00Z" };
     h.docs["services/svc"] = { tenantId: "tenant", active: true, requiredBayType: "wash", estimatedDurationMinutes: 30 };
     h.docs["studioConfig/studio"] = { tenantId: "tenant", bays: [{ id: "bay", active: true, bayType: "wash" }], operatingHours: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, open: "09:00", close: "21:00", closed: false })), holidays: [], timezone: "Asia/Kolkata" };

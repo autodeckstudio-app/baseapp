@@ -1,3 +1,5 @@
+import{FactHighlights}from "./FactHighlights";
+import{rupees}from "./kit";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
@@ -60,7 +62,7 @@ export function PickupCard({ bookingId }: { bookingId: string }) {
             </>
           )}
           <Row title="Distance" detail={PICKUP_POLICY} />
-          {typeof req.feePaise === "number" ? <Row title="Pickup and drop fee" detail={req.memberMembershipId ? "Free with your membership" : req.feePaise === 0 ? "Free" : `Rs ${req.feePaise / 100}`} /> : null}
+          {typeof req.feePaise === "number" ? <FactHighlights facts={[{value:req.feePaise===0?"Free":rupees(req.feePaise),label:req.memberMembershipId?"Pickup and drop · membership":"Confirmed pickup and drop fee"}]}/> : null}
           {req.staffNote ? <Row title="Studio note" detail={req.staffNote} /> : null}
           <Row title="Payment" detail="Pay at the studio along with your service. Nothing is charged online." last />
         </Pane>

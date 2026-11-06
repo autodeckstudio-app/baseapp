@@ -1,6 +1,7 @@
+import {hasReleasedBay} from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import type { Service, StudioConfig, ServiceJob, Vehicle, Customer } from "@autodeck/core";
+import type { Service, StudioConfig, ServiceJob, Vehicle, Customer, Booking } from "@autodeck/core";
 import { jobHoldsBay } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
@@ -13,7 +14,7 @@ import {
   hasConflict,
   type OccupiedInterval,
 } from "../../lib/availability.js";
-import { utcToLocalDate, addDays, computeScheduleEnd } from "../../lib/schedule.js";
+import { utcToLocalDate, utcToLocalTime, addDays, computeScheduleEnd } from "../../lib/schedule.js";
 import { calculatePrice, taxFor } from "../../lib/pricing.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
@@ -98,6 +99,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
   );
   const estimatedEndDate = utcToLocalDate(estimatedEndAt, config.timezone);
   const jobRef = db.collection(COLLECTIONS.jobs()).doc();
+  const quoteBookingRef=service.priceOnRequest?db.collection(COLLECTIONS.bookings()).doc():null;
 
   await db.runTransaction(async (tx) => {
     const currentVehicleSnap=await tx.get(db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId));
@@ -133,7 +135,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
         .where("status", "in", ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"]),
     );
 
-    const bayJobs = activeJobsSnap.docs.map((d) => ({ ...(d.data() as ServiceJob), id: d.id }));
+    const bayJobs = activeJobsSnap.docs.map((d) => ({ ...(d.data() as ServiceJob), id: d.id })).filter(j=>!hasReleasedBay(j));
     const holder = bayJobs.find((j) => ["VEHICLE_RECEIVED", "IN_PROGRESS", "QUALITY_CHECK", "READY_FOR_DELIVERY"].includes(j.status));
     if (holder) {
       throw new HttpsError(
@@ -160,7 +162,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
       id: jobRef.id,
       tenantId: user.claims.tenantId,
       studioId: data.studioId,
-      bookingId: null,
+      bookingId: quoteBookingRef?.id??null,
       customerId: data.customerId,
       vehicleId: data.vehicleId,
       serviceId: data.serviceId,
@@ -191,6 +193,7 @@ export const createWalkinJob = onCall({ region: "asia-south1" , enforceAppCheck:
       sealedAt: null,
     };
 
+    if(quoteBookingRef){const b:Booking={id:quoteBookingRef.id,tenantId:user.claims.tenantId,studioId:data.studioId,customerId:data.customerId,vehicleId:data.vehicleId,serviceId:data.serviceId,vehicleCategory:data.vehicleCategory,scheduledAt:nowIso,scheduledDate,scheduledTime:utcToLocalTime(now,config.timezone),estimatedEndAt:estimatedEndAt.toISOString(),estimatedEndDate,estimatedEndTime:utcToLocalTime(estimatedEndAt,config.timezone),durationMinutes:service.estimatedDurationMinutes,bayId:data.bayId,assignedEmployeeId:user.uid,status:'ACTIVE',priceOnRequest:true,quoteStatus:'requested',priceBreakdown,totalAmount:priceBreakdown.total,membershipId:null,membershipDiscountApplied:false,membershipWashUsed:false,paymentStatus:'unpaid',payMode:'studio',holdExpiresAt:null,notes:data.notes??null,idempotencyKey:'walkin-'+jobRef.id,rescheduleCount:0,confirmedAt:nowIso,cancelledAt:null,cancellationReason:null,createdAt:nowIso,updatedAt:nowIso};tx.set(quoteBookingRef,b);}
     tx.set(jobRef, walkinJob);
     // Write the bay lock read above — forces Firestore to detect a conflict
     // and retry a genuinely concurrent second caller racing for this bay.

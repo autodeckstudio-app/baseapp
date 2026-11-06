@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "AutoDeck",
   slug: "autodeck-customer",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   icon: "./assets/brand/icon.png",
   web: { favicon: "./assets/brand/favicon.png" },
@@ -11,6 +11,7 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   ios: {
     supportsTablet: false,
+    buildNumber: "2",
     bundleIdentifier: "in.autodeck.customer",
     // Local Personal Team testing is free; store distribution needs separate approval.
     infoPlist: {
@@ -19,6 +20,9 @@ const config: ExpoConfig = {
   },
   android: {
     package: "in.autodeck.customer",
+    versionCode: 2,
+    // Photo-only uploads need neither microphone capture nor drawing over other apps.
+    blockedPermissions: ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"],
     adaptiveIcon: {
       backgroundColor: "#ffffff",
       foregroundImage: "./assets/brand/icon-512.png",

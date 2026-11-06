@@ -16,7 +16,8 @@ describe("pending online payment copy", () => {
     expect(r.reason).toMatch(/waiting for payment/);
   });
   it("labels the payment row and hides the Live chip while payment is pending", () => {
-    expect(detail).toContain("Awaiting payment");
+    expect(detail).toContain("customerPaymentLabel(payment");
+    expect(readFileSync("src/lib/existing-job-payment.ts", "utf8")).toContain("Online payment pending");
     expect(detail).toContain('!(booking.status === "PENDING" && (booking.payMode === "online" || Boolean(booking.holdExpiresAt)))');
     expect(detail).toContain("Held until");
   });

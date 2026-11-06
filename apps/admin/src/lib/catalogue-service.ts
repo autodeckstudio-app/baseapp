@@ -45,6 +45,7 @@ export async function calculateServicePrice(
 }
 
 export interface CreateServiceInput {
+  imageUrl?: string | null;
   internalRating?: "A" | "B" | "C" | "D" | null;
   name: string;
   category: ServiceCategory;

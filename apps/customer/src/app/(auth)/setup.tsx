@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { TextInput } from "@autodeck/ui";
 import { space } from "@autodeck/ui/theme";
 import { Ambient } from "@autodeck/ui/native";
-import { setupCustomerProfile, refreshAuthToken, auth } from "../../lib/auth-service";
+import { setupCustomerProfile, refreshAuthToken, auth, isClaimRequired, rememberMyCustomerDocId } from "../../lib/auth-service";
 import { Button, Kicker, T } from "../../ui/kit";
 
 export default function SetupScreen() {
@@ -23,7 +23,17 @@ export default function SetupScreen() {
     setBusy(true);
     setError(null);
     try {
-      await setupCustomerProfile(name.trim());
+      const res = await setupCustomerProfile(name.trim());
+      if (isClaimRequired(res)) {
+        // The studio already has a record for this email (walk-in). Claim it
+        // with the counter code instead of making a parallel profile.
+        router.replace({ pathname: "/(auth)/claim", params: { renewal: res.renewalRequired ? "1" : "0" } });
+        return;
+      }
+      const id = typeof res.customerId === "string" && res.customerId
+        ? res.customerId
+        : typeof (res.customer as { id?: unknown })?.id === "string" ? (res.customer as { id: string }).id : null;
+      if (id) await rememberMyCustomerDocId(id);
       // Force-refresh token to receive custom claims (role, tenantId)
       await refreshAuthToken();
       router.replace("/(tabs)");

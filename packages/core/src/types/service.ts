@@ -65,6 +65,9 @@ export interface Service {
   membershipWashEligible: boolean;
   // true = no fixed price; booking is created as a quote request and the studio sets the price.
   priceOnRequest?: boolean;
+  // Optional explicit published binding. Never derive from a similar display name.
+  productKey?: string | null;
+  ppfWork?: "full_body" | "removal" | "replacement" | null;
   // PPF only: the coverage level this package covers (menu groups by brand, then coverage).
   coverageLevel?: CoverageLevel | null;
   // true = show "from Rs X" instead of an exact price (full-body PPF by size tier).

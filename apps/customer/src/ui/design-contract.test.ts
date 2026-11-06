@@ -15,7 +15,7 @@ describe("unified product design contract",()=>{
     const source=read("src/app/(tabs)/cars/sell.tsx");expect(source).toContain("step===2 ? <Button");expect(source).toContain("if (busy) return");expect(source).toContain("validateSellStep(f, step, photos.length)");expect(read("src/lib/sell-validation.ts")).toContain("if (!photoCount)");
   });
   it("makes critical booking load failures retryable without false rollback claims",()=>{
-    const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(normalizeSegment(selectedVehicle?.category))');expect(booking).toContain('label="Retry"');expect(booking).toContain('date===selectedDate');
+    const booking=read("src/app/(tabs)/book/[serviceId].tsx");expect(booking).toContain('setSelectedCategory(normalizeSegment(selectedVehicle?.category))');expect(booking).toContain('label="Retry"');expect(booking).toContain('<ServiceTimePicker');expect(booking).toContain('initialDate={selectedDate}');expect(booking).toContain('onDayChange={date=>{setSelectedDate(date);setPickedSlot(null)}}');expect(booking).toContain('onPick={slot=>{setPickedSlot(slot);setSizeError(null)}}');const picker=read('src/ui/ServiceTimePicker.tsx');expect(picker).toContain('s.date===active');expect(picker).toContain('onDayChange?.(date)');expect(picker).toContain('onPick(s)');
     const confirm=read("src/app/(tabs)/book/confirm.tsx");expect(confirm).not.toContain("Nothing was booked");expect(confirm).toContain("Check your bookings first - if it reached the studio");expect(confirm).toContain("if(booking || !service || !vehicle || !breakdown)");
   });
   it("recovers missing-link reports and membership screens without endless loaders",()=>{
@@ -574,7 +574,8 @@ describe("one time format", () => {
 describe("form controls follow the theme", () => {
   it("SelectField and DateField read Day/Night, no fixed dark box", () => {
     const s = read("src/ui/inputs.tsx");
-    expect(s).toContain("controlFor(useExperienceTheme().name==='light')");
+    expect(s).toContain("const day=useExperienceTheme().name==='light'");
+    expect(s).toContain("controlFor(day)");
     expect(s).not.toContain("#202023");
     expect(s).not.toContain("borderRadius:14");
   });
@@ -764,7 +765,7 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
 
 it("gift-covered zero-total bookings use the shared next-step helper (behaviour tested in booking-next-step.test.ts)",()=>{
   const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("nextStepLine({ giftCovered, jobStatus: job?.status ?? null");
-  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Your slot is confirmed. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
+  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Confirm your slot. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
 });
 
 describe("row press targets never nest interactive elements", () => {
@@ -798,3 +799,5 @@ describe("row press targets never nest interactive elements", () => {
     expect(detail).toContain("Photo selected - it uploads when you save.");
   });
 });
+
+it('pre-submit booking copy never claims a confirmed slot before the booking action',()=>{const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).not.toContain('Your slot is confirmed.');expect(c).not.toContain('Your slot is confirmed now.');expect(c).toContain('Confirm your slot below. Pay when you collect your car.');});

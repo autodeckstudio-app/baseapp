@@ -1,3 +1,5 @@
+import{approvalFacts}from "../lib/approval-facts";
+import{FactHighlights}from "./FactHighlights";
 import { View } from "react-native";
 import type { ApprovalRequest } from "@autodeck/core";
 import { space } from "@autodeck/ui/theme";
@@ -39,20 +41,20 @@ export function LiveJobCard({ status, slotStarted = false, readyText, approvals,
           {readyText && stage.index < 3 ? <T role="bodyStrong">Expected ready {readyText}</T> : null}
         </View>
       </Pane>
-      {approvals.map((a) => (
+      {approvals.map((a) => {const facts=approvalFacts(a);return (
         <Pane key={a.id} pad="inset">
           <View style={{ gap: metrics.innerGap }}>
-            <Kicker tone="accent">Needs your OK</Kicker>
+            <Kicker tone="accent">{facts.label}</Kicker>
             <T role="heading">{a.serviceName}</T>
             {a.reason ? <T role="body" tone="secondary">{a.reason}</T> : null}
-            <T role="caption" tone="tertiary">Adds {rupees(a.priceImpact)}. New total {rupees(a.newTotal)}.</T>
-            <View style={{ gap: space.breath }}>
+            <FactHighlights facts={[{value:rupees(a.priceImpact),label:"Additional work"},...(facts.total!==null?[{value:rupees(facts.total),label:facts.totalLabel!}]:[])]}/>
+            {facts.actionable?<View style={{ gap: space.breath }}>
               <Button label={`Approve +${rupees(a.priceImpact)}`} busy={busyId === a.id} onPress={() => onDecide(a.id, "approved")} />
               <Button label="No thanks" kind="quiet" disabled={busyId === a.id} onPress={() => onDecide(a.id, "rejected")} />
-            </View>
+            </View>:null}
           </View>
         </Pane>
-      ))}
+      )})}
       {error ? <T role="caption" tone="danger">{error}</T> : null}
     </View>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { getStorage } from "firebase/storage";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, browserLocalPersistence, setPersistence } from "firebase/auth";
@@ -64,5 +65,6 @@ if (useEmulator) {
   void setPersistence(auth, browserLocalPersistence);
 }
 
-// App Check is off for now (see functions/src/lib/environment.ts). To turn it back on later,
-// call initializeAppCheck here with a ReCaptchaEnterpriseProvider and set APP_CHECK_ENFORCE=true on the functions.
+// Managed publishing always enforces verified App Check. No debug token/fallback.
+const catalogueAppCheckKey=process.env["NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY"];
+if(typeof window!=="undefined"&&!useEmulator&&catalogueAppCheckKey){initializeAppCheck(app,{provider:new ReCaptchaEnterpriseProvider(catalogueAppCheckKey),isTokenAutoRefreshEnabled:true});}

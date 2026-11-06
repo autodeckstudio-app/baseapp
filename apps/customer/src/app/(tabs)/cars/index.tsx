@@ -13,9 +13,9 @@ export default function CarsScreen() {
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    setError(false);
-    getCarListings(false).then(setAll).catch(() => setError(true));
-    getCarListings(true).then(setMine).catch(() => undefined);
+    let alive=true;setAll(null);setMine([]);setError(false);
+    getCarListings(false).then(v=>{if(alive)setAll(v)}).catch(() => {if(alive)setError(true)});
+    getCarListings(true).then(v=>{if(alive)setMine(v)}).catch(() => undefined);return()=>{alive=false};
   }, [attempt]);
   return <CarsHub all={all} mine={mine} error={error} initialTab={params.tab === "sell" ? "sell" : "buy"} onRetry={() => setAttempt((n) => n + 1)} onOpen={(id) => router.push(`/(tabs)/cars/${id}`)} onSell={() => router.push("/(tabs)/cars/sell")} />;
 }

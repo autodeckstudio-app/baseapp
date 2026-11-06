@@ -10,7 +10,8 @@
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "TZ=UTC vitest run --passWithNoTests",
-    "clean": "rm -rf .expo dist"
+    "clean": "rm -rf .expo dist",
+    "test:render": "vitest run --config vitest.render.config.ts"
   },
   "dependencies": {
     "@autodeck/auth": "workspace:*",

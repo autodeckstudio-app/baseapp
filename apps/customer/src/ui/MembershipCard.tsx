@@ -25,11 +25,11 @@ export function MembershipCard({ membership, today }: { membership: Membership; 
           <T role="display">{pending ? s.total : s.left}</T>
           <T tone="secondary">{pending ? "washes after activation" : `of ${s.total} washes left`}</T>
         </View>
-        <View accessibilityRole="progressbar" accessibilityLabel={`${s.left} of ${s.total} washes left`} style={{ flexDirection: "row", gap: 6 }}>
+        {!pending?<View accessibilityRole="progressbar" accessibilityLabel={`${s.left} of ${s.total} washes left`} style={{ flexDirection: "row", gap: 6 }}>
           {Array.from({ length: Math.min(s.total, 24) }, (_, i) => (
             <View key={i} style={{ flex: 1, height: 8, borderRadius: 9999, backgroundColor: !pending && i < s.left ? "#EC8638" : glassInner.backgroundColor }} />
           ))}
-        </View>
+        </View>:null}
         <T tone="secondary">
           {pending
             ? `${discountLine(membership.discountPercent) ? `${discountLine(membership.discountPercent)}. ` : ""}Benefits unlock once payment is confirmed.`

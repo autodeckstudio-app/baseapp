@@ -17,6 +17,7 @@ describe("canOfferPayment", () => {
     expect(canOfferPayment({ status: "pending" }, "unpaid").link).toBe(false);
     expect(canOfferPayment({ status: "refunded" }, "unpaid").link).toBe(false);
   });
+  it("pending, processing, completed and refunded never offer a second counter payment",()=>{for(const status of ["pending","processing","completed","refunded"])expect(canOfferPayment({status},"unpaid").counter).toBe(false)});
   it("failed or cancelled payment may be retried with a new link", () => {
     expect(canOfferPayment({ status: "failed" }, "unpaid").link).toBe(true);
     expect(canOfferPayment({ status: "cancelled" }, "unpaid").link).toBe(true);

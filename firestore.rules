@@ -55,6 +55,30 @@ service cloud.firestore {
       return studioId() == doc.studioId;
     }
 
+    // Customer-doc ownership: the referenced customer doc must exist, be bound
+    // to THIS auth uid, same tenant, not deleted. Covers legacy docs
+    // (id == authUid) and claimed staged docs (id != authUid) through one path;
+    // the token is never trusted on its own.
+    function ownsCustomerRef(cid) {
+      return exists(/databases/$(database)/documents/customers/$(cid))
+          && get(/databases/$(database)/documents/customers/$(cid)).data.authUid == request.auth.uid
+          && get(/databases/$(database)/documents/customers/$(cid)).data.tenantId == tenantId()
+          && get(/databases/$(database)/documents/customers/$(cid)).data.get("deletedAt", null) == null;
+    }
+
+    // Inspection evidence is retained, not inherited by a different car owner.
+    function originalAndCurrentVehicleOwner(cid, vid) {
+      return ownsCustomerRef(cid) && (
+          (exists(/databases/$(database)/documents/vehicles/$(vid))
+           && get(/databases/$(database)/documents/vehicles/$(vid)).data.ownerId == cid
+           && get(/databases/$(database)/documents/vehicles/$(vid)).data.tenantId == tenantId())
+          || (!exists(/databases/$(database)/documents/vehicles/$(vid))
+              && exists(/databases/$(database)/documents/deletedVehicles/$(vid))
+              && get(/databases/$(database)/documents/deletedVehicles/$(vid)).data.ownerId == cid
+              && get(/databases/$(database)/documents/deletedVehicles/$(vid)).data.tenantId == tenantId()));
+    }
+
+
     // âââ /tenants/{tenantId} ââââââââââââââââââââââââââââââââââââââââââââââââ
     // tenantId is the document ID, not a field â standard ownTenant() does not apply.
     match /tenants/{tid} {
@@ -64,15 +88,52 @@ service cloud.firestore {
     }
 
     // âââ /customers/{userId} ââââââââââââââââââââââââââââââââââââââââââââââââ
+    // Claim secrets and uid reservations are server-only. The code is shown
+    // once to staff at the counter; it is never readable by any client,
+    // staff included. Bindings are written by setup/claim transactions only.
+    match /claimChallenges/{id} {
+      allow read, write: if false;
+    }
+    match /customerUidBindings/{uid} {
+      allow read, write: if false;
+    }
+    match /walkinEmailKeys/{id} {
+      allow read, write: if false;
+    }
+
+    // Immutable quote-approval records (quote-approval join). Server-only:
+    // written inside respondToBookingQuote's transaction, read by payment
+    // callables. Clients - customer or staff - never read or write them.
+    match /consultQuoteApprovals/{id} {
+      allow read, write: if false;
+    }
+
+    // Customer-approved extra-work deltas bound to a frozen quote hash.
+    // Server-only, written inside respondToApproval's transaction.
+    match /consultApprovedDeltas/{id} {
+      allow read, write: if false;
+    }
+
     match /customers/{userId} {
+      // A claimed customer has no document at its Auth uid. Permit only a
+      // missing self-slot GET so the resolver can distinguish absence from
+      // transport denial. Existing documents never gain a uid shortcut.
+      allow get: if isAuthenticated() && request.auth.uid == userId
+          && !exists(/databases/$(database)/documents/customers/$(userId));
+      // Self-read goes through the stored binding only (authUid == caller,
+      // tenant-scoped, not deleted). Legacy docs have authUid == id, so the
+      // raw uid == userId shortcut is unnecessary and is NOT kept.
       allow read: if isAuthenticated()
-                  && (request.auth.uid == userId || isStudioOrAbove())
+                  && ((resource.data.authUid == request.auth.uid
+                       && resource.data.get("deletedAt", null) == null)
+                      || isStudioOrAbove())
                   && (isSuperadmin() || ownTenant(resource.data));
       // Create via Admin SDK on first login only
       allow create: if false;
       // Customer updates own profile (allowlist enforced in Cloud Function)
       allow update: if isAuthenticated()
-                    && request.auth.uid == userId
+                    && resource.data.authUid == request.auth.uid
+                    && resource.data.get("deletedAt", null) == null
                     && ownTenant(resource.data)
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['name', 'notificationPrefs', 'updatedAt']);
@@ -84,7 +145,7 @@ service cloud.firestore {
     match /vehicles/{vehicleId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.ownerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.ownerId));
       allow create: if false; // Cloud Function only
       // Cloud Function only (createVehicle/updateVehicle/archiveVehicle) â
       // the previous isStudioOrAbove() branch had NO field restriction and
@@ -114,10 +175,10 @@ service cloud.firestore {
         allow read: if isAuthenticated()
                     && (isSuperadmin() || ownTenant(resource.data))
                     && (isStudioOrAbove()
-                        || (resource.data.customerId == request.auth.uid
+                        || (ownsCustomerRef(resource.data.customerId)
                             && exists(/databases/$(database)/documents/vehicles/$(vehicleId))
                             && ownTenant(get(/databases/$(database)/documents/vehicles/$(vehicleId)).data)
-                            && get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.ownerId == request.auth.uid
+                            && ownsCustomerRef(get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.ownerId)
                             // Legacy cars may predate the deletedAt field entirely: a MISSING
                             // field means "never archived" (schema-compatible), while a SET
                             // timestamp still means archived and fails closed. Owner/tenant/
@@ -132,7 +193,7 @@ service cloud.firestore {
     match /deletedVehicles/{vehicleId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.ownerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.ownerId));
       allow write: if false;
     }
 
@@ -141,7 +202,7 @@ service cloud.firestore {
       // resource == null: the customer's card listens to a request that does not exist yet; without this the read errors and the form cannot load.
       allow read: if isAuthenticated()
                   && (resource == null || ((isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid)));
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId))));
       allow write: if false;
     }
 
@@ -157,7 +218,7 @@ service cloud.firestore {
     match /bookings/{bookingId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false; // Cloud Function only
       // Cloud Function only (rescheduleBooking/cancelBooking/etc.) â no
       // legitimate client caller exists (every app mutation already goes
@@ -174,7 +235,7 @@ service cloud.firestore {
       // Customer can only read their own job â restricted field set enforced in app layer
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false; // Cloud Function only
       // Cloud Function only (advanceJobStatus/assignBay/confirmManualPayment/
       // etc.) â the previous rule had no ownStudio() check and no field
@@ -191,7 +252,7 @@ service cloud.firestore {
     match /jobMessages/{messageId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow write: if false;
     }
 
@@ -199,7 +260,7 @@ service cloud.firestore {
     match /approvals/{approvalId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false; // Cloud Function only
       allow update: if false; // Cloud Function only (respondToApproval)
       allow delete: if false;
@@ -235,7 +296,7 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false; // Cloud Function / Admin SDK only
       allow update: if false; // Cloud Function / Admin SDK only
       allow delete: if false; // Immutable
@@ -250,7 +311,7 @@ service cloud.firestore {
       // authentication and passes through the ownership/tenant check below.
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -260,7 +321,7 @@ service cloud.firestore {
     match /warranties/{warrantyId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false; // System only, on job seal
       // Phase 2D tightening: warranty terms are historical truth (doc06 Â§6.4
       // Rule 3) â admin may only record an exceptional revocation, never
@@ -279,7 +340,7 @@ service cloud.firestore {
     match /inspections/{jobId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || originalAndCurrentVehicleOwner(resource.data.customerId, resource.data.vehicleId));
       allow write: if false;
     }
 
@@ -289,7 +350,7 @@ service cloud.firestore {
       // read memberships the same way they read payments (tenant-scoped).
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow create: if false; // Cloud Function only
       allow update: if false; // Cloud Function only
       allow delete: if false;
@@ -298,7 +359,7 @@ service cloud.firestore {
       match /usage/{usageId} {
         allow read: if isAuthenticated()
                     && (isSuperadmin() || ownTenant(resource.data))
-                    && (isAdminOrAbove() || resource.data.customerId == request.auth.uid);
+                    && (isAdminOrAbove() || ownsCustomerRef(resource.data.customerId));
         allow write: if false; // Cloud Function only
       }
     }
@@ -371,7 +432,7 @@ service cloud.firestore {
       // resource.data.userId == request.auth.uid for another user's records.
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.userId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.userId));
       allow write: if false; // Cloud Function only
     }
 
@@ -379,7 +440,7 @@ service cloud.firestore {
     match /reviews/{bookingId} {
       allow read: if isAuthenticated()
                   && (isSuperadmin() || ownTenant(resource.data))
-                  && (isStudioOrAbove() || resource.data.customerId == request.auth.uid);
+                  && (isStudioOrAbove() || ownsCustomerRef(resource.data.customerId));
       allow write: if false; // Cloud Function only (submitReview)
     }
 
@@ -476,7 +537,7 @@ service cloud.firestore {
     match /papers/{paperId} {
       allow read: if isStudioOrAbove() && ownTenant(resource.data)
                   || (isAuthenticated() && ownTenant(resource.data)
-                      && request.auth.uid == resource.data.customerId);
+                      && ownsCustomerRef(resource.data.customerId));
       allow write: if false;
     }
 

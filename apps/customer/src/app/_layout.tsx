@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import { View, Platform, Pressable } from "react-native";
 import { groundFor, groundImageFor } from "../lib/ground";
 import { setSurfaceMode, glassSurface } from "../lib/glass";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AutoExperienceThemeProvider, useExperienceTheme, installWebFonts } from "@autodeck/ui/native";
 import { useAuth } from "../hooks/useAuth";
-import { captureAuthReturn, consumeAuthReturn } from "../lib/auth-return";
+import { NavigationGuard } from "../ui/NavigationGuard";
 import { onForegroundPush, syncPushRegistration } from "../lib/push";
 import { installWebVitals } from "../lib/web-vitals";
 import { T } from "../ui/kit";
 import { ConnectionBanner } from "../ui/ConnectionBanner";
+import { NativeUpdateGate } from "../ui/NativeUpdateGate";
+import { CustomerSessionBoundary } from "../ui/CustomerSessionBoundary";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 
 installWebFonts();
@@ -26,45 +28,6 @@ const LOCAL_TEST_NOTICE: string | null =
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bodyDoc = (globalThis as any).document;
 
-// Any signed-in account may use the customer app. Staff access stays additive.
-function NavigationGuard({ children }: { children: React.ReactNode }) {
-  const auth = useAuth();
-  const router = useRouter();
-  const segments = useSegments();
-
-  useEffect(() => {
-    if (auth.status === "loading") return;
-    const segs = segments as string[];
-    const group = segs[0];
-    const inAuth = group === "(auth)";
-    if (__DEV__ && (group === "preview" || group === "preview-services" || group === "preview-car" || group === "preview-profile" || group === "preview-bookings" || group === "preview-booking" || group === "preview-help" || group === "preview-combos" || group === "preview-garage" || group === "preview-cars" || group === "preview-membership" || group === "preview-kit" || group === "preview-price" || group === "preview-service" || group === "preview-studio" || group === "preview-detail" || group === "preview-catalogue" || group === "preview-gifts" || group === "preview-stories" || group === "preview-shop")) return;
-    
-
-    if (auth.status === "unauthenticated") {
-      const browsingCars = (group === "(tabs)" && segs[1] === "cars" && segs[2] !== "sell") || group === "shop";
-      // Dev preview only: ?mock=1 renders the GARAGE sample screens without a session
-      // (__DEV__ stripped in prod). The bypass is deliberately narrow: navigating away
-      // (Book a service, history, tabs) hits the normal signed-out gate, so a sample
-      // preview can never escape into a live booking or other real screen.
-      const devMockPreview = __DEV__ && (segs[1] === "garage" || segs[1] === "bookings") && /[?&]mock=/.test((globalThis as { window?: { location?: { search?: string } } }).window?.location?.search ?? "");
-      if (!devMockPreview && !browsingCars && (!inAuth || (segs[1] !== "login" && segs[1] !== "welcome"))) {
-        // Remember where this signed-out visitor was heading (web deep link,
-        // e.g. a website service CTA) so sign-in can return them there.
-        const loc = (globalThis as { window?: { location?: { pathname: string; search: string } } }).window?.location;
-        if (loc) captureAuthReturn(loc.pathname + loc.search);
-        router.replace("/(auth)/login");
-      }
-    } else if (auth.status === "authenticated_no_claims") {
-      if (!inAuth || segs[1] !== "setup") router.replace("/(auth)/setup");
-
-    } else if (inAuth) {
-      router.replace(consumeAuthReturn() ?? "/(tabs)");
-    }
-  }, [auth, segments, router]);
-
-  return <>{children}</>;
-}
-
 // Web push: once signed in, silently re-register this device's token when
 // permission was granted earlier, and show foreground pushes as an in-app
 // banner (FCM shows no system notification while the tab is focused).
@@ -74,7 +37,7 @@ function PushBridge() {
 
   useEffect(() => {
     if (auth.status !== "ready") return undefined;
-    void syncPushRegistration();
+    void syncPushRegistration().catch(()=>undefined);
     return onForegroundPush((title, body) => setBanner({ title, body }));
   }, [auth.status]);
 
@@ -130,7 +93,7 @@ function ThemedRoot() {
         </View>
       ) : null}
       <ConnectionBanner />
-      <ErrorBoundary>
+      <NativeUpdateGate><CustomerSessionBoundary><ErrorBoundary>
       <NavigationGuard key={name}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" }, animation: "fade", animationDuration: 180 }}>
           <Stack.Screen name="(auth)" />
@@ -138,7 +101,7 @@ function ThemedRoot() {
         </Stack>
       </NavigationGuard>
       </ErrorBoundary>
-      <PushBridge />
+      <PushBridge /></CustomerSessionBoundary></NativeUpdateGate>
     </View>
   );
 }

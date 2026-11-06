@@ -1,6 +1,6 @@
 // You: account, membership, notifications, sign out.
 import { LegalLinks } from "../../ui/LegalLinks";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { useRouter } from "expo-router";
@@ -12,7 +12,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { useLang } from "../../lib/i18n";
 import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-service";
-import { uploadLicensePhoto } from "../../lib/vehicle-service";
+import { uploadLicensePhoto, type VehiclePhotoBody } from "../../lib/vehicle-service";
 import { FileUploader } from "../../ui/inputs";
 import { signOut } from "../../lib/auth-service";
 import { useAuth } from "../../hooks/useAuth";
@@ -36,40 +36,47 @@ export default function YouScreen() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lic, setLic] = useState<{ blob: Blob; contentType: string } | null>(null);
+  const [lic, setLic] = useState<{ blob: VehiclePhotoBody; contentType: string } | null>(null);
   const [licBusy, setLicBusy] = useState(false);
   const [licOpen, setLicOpen] = useState(false);
   const [licMsg, setLicMsg] = useState<string | null>(null);
+  const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.claims.tenantId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const generation=useRef(0),saveLock=useRef(false);
+  useEffect(()=>{generation.current++;saveLock.current=false;setEditing(false);setDraft('');setSaving(false);setSaveError(null);setLic(null);setLicBusy(false);setLicOpen(false);setLicMsg(null);setSavedName(null);setConfirm(false);setDelStep('idle');setDelBusy(false);setActionMessage(null);return()=>{generation.current++}},[scopeKey]);
   async function saveLicense() {
-    if (!lic || licBusy) return;
+    if (!lic || licBusy||saveLock.current) return;
+    const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;saveLock.current=true;
     setLicBusy(true); setLicMsg(null);
-    try { await uploadLicensePhoto(lic.blob, lic.contentType); setLic(null); setLicMsg("Licence saved."); }
-    catch (e) { setLicMsg(e instanceof Error ? e.message : "Could not save your licence. Try again."); }
-    finally { setLicBusy(false); }
+    try { await uploadLicensePhoto(lic.blob, lic.contentType); if(!current())return;setLic(null); setLicMsg("Licence saved."); }
+    catch (e) { if(current())setLicMsg(e instanceof Error ? e.message : "Could not save your licence. Try again."); }
+    finally { if(current()){saveLock.current=false;setLicBusy(false);} }
   }
   const [pref, setPref] = useState<ThemePref>(getThemePref());
   const [savedName, setSavedName] = useState<string | null>(null);
 
   async function saveName() {
-    if (auth.status !== "ready" || saving) return;
+    if (auth.status !== "ready" || saving||saveLock.current) return;
+    if (!auth.customerDocId) { setSaveError("Your profile is still linking. Try again once it is ready."); return; }
     const next = draft.trim();
     if (next.length < 2 || next.length > 100) {
       setSaveError("Enter your name, 2 to 100 characters.");
       return;
     }
+    const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;saveLock.current=true;
     setSaving(true);
     setSaveError(null);
     try {
-      await updateDoc(doc(db, COLLECTIONS.customers(), auth.user.uid), { name: next, updatedAt: new Date().toISOString() });
-      await updateProfile(auth.user, { displayName: next });
+      await updateDoc(doc(db, COLLECTIONS.customers(), auth.customerDocId), { name: next, updatedAt: new Date().toISOString() });
+      if(!current())return;await updateProfile(auth.user, { displayName: next });
+      if(!current())return;
       setSavedName(next);
       setEditing(false);
     } catch {
-      setSaveError("We could not save your name. Try again.");
+      if(current())setSaveError("We could not save your name. Try again.");
     } finally {
-      setSaving(false);
+      if(current()){saveLock.current=false;setSaving(false);}
     }
   }
+  async function changeDeletion(cancel:boolean){if(saveLock.current)return;const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;saveLock.current=true;setDelBusy(true);try{if(cancel)await cancelAccountDeletion();else await requestAccountDeletion();if(current())setDelStep(cancel?'idle':'sent')}catch{if(current())showActionMessage(cancel?'Could not cancel':'Request not confirmed',cancel?'The 7 day window may have passed. Contact the studio.':'Check your account status before trying again.')}finally{if(current()){saveLock.current=false;setDelBusy(false)}}}
   if (auth.status !== "ready") return <Loading />;
   const name = savedName ?? auth.user.displayName ?? "AutoDeck member";
 
@@ -93,18 +100,16 @@ export default function YouScreen() {
       ) : null}
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
-        {Platform.OS === "web" ? (
-          <>
+        <>
             <ListRow icon="search" title="Driving licence" detail="Add a photo. Only you and the studio see it" action={licOpen ? "Close" : "Add"} onPress={() => setLicOpen(!licOpen)} />
             {licOpen ? (
               <View style={{ gap: space.breath, paddingBottom: 14 }}>
-                <FileUploader files={lic ? [{ blob: lic.blob, type: lic.contentType }] : []} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
+                <FileUploader files={lic && !(lic.blob instanceof Uint8Array) ? [{ blob: lic.blob, type: lic.contentType }] : []} nativeEnabled nativeFileCount={lic?1:0} onNativeChange={fs=>{const f=fs[0];setLic(f?{blob:f.bytes,contentType:f.type}:null);setLicMsg(null);}} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
                 {lic ? <Button label="Save licence photo" busy={licBusy} onPress={() => void saveLicense()} /> : null}
                 {licMsg ? <T role="caption" tone={!licMsg.endsWith("saved.") ? "danger" : "tertiary"}>{licMsg}</T> : null}
               </View>
             ) : null}
-          </>
-        ) : null}
+        </>
         <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} />
       </View>
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
@@ -132,13 +137,13 @@ export default function YouScreen() {
         ) : delStep === "sent" ? (
           <View style={{ gap: space.breath }}>
             <T role="caption" tone="secondary">Your deletion request is in. Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
-            <Button kind="quiet" label="Cancel deletion" busy={delBusy} onPress={() => { setDelBusy(true); void cancelAccountDeletion().then(() => setDelStep("idle")).catch(() => showActionMessage("Could not cancel", "The 7 day window may have passed. Contact the studio.")).finally(() => setDelBusy(false)); }} />
+            <Button kind="quiet" label="Cancel deletion" busy={delBusy} onPress={() => void changeDeletion(true)} />
           </View>
         ) : delStep === "ask" ? (
           <View style={{ gap: space.breath }}>
             <T tone="secondary">Delete your account? Your personal data is removed after 30 days. Invoices and warranty records are kept for 8 years with your name and phone removed. You can cancel within 7 days.</T>
             <View style={{ flexDirection: "row", gap: space.breath }}>
-              <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => { setDelBusy(true); void requestAccountDeletion().then(() => setDelStep("sent")).catch(() => showActionMessage("Could not send", "Try again in a moment.")).finally(() => setDelBusy(false)); }} />
+              <Button kind="danger" label="Send request" busy={delBusy} style={{ flex: 1 }} onPress={() => void changeDeletion(false)} />
               <Button kind="quiet" label="Cancel" onPress={() => setDelStep("idle")} style={{ flex: 1 }} />
             </View>
           </View>

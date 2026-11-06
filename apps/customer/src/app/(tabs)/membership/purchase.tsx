@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View, Modal } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -32,38 +32,40 @@ export default function PurchaseMembershipScreen() {
   const [error, setError] = useState<string | null>(null);
   const [payOutcome, setPayOutcome] = useState<OnlinePayOutcome | null>(null);
   const [done, setDone] = useState<"online" | "studio" | null>(null);
-  const [idempotencyKey] = useState(() => generateIdempotencyKey());
+  const idempotencyKey=useRef(generateIdempotencyKey());const purchaseBusy=useRef(false),generation=useRef(0);
+  const scopeKey=JSON.stringify([planId,auth.status,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.claims.tenantId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;
+  useEffect(()=>{generation.current++;purchaseBusy.current=false;idempotencyKey.current=generateIdempotencyKey();setPurchasing(false);setDone(null);setPayOutcome(null);setError(null);setAskUpgrade(false);return()=>{generation.current++}},[scopeKey]);
 
-  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
 
   const [retryTick,setRetryTick] = useState(0);
   useEffect(() => {
-    if (!planId) {setLoading(false);return;}
+    let alive=true;setPlan(null);setDone(null);setPayOutcome(null);setAskUpgrade(false);if (!planId) {setLoading(false);return;}
     setLoading(true);setError(null);
     void getDoc(doc(db, COLLECTIONS.membershipPlans(), planId))
       .then((snap) => {
-        if (snap.exists()) setPlan(snap.data() as MembershipPlan);
+        if (alive&&snap.exists()) setPlan(snap.data() as MembershipPlan);
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Could not load plan.");
+        if(alive)setError("Your plan could not load. Try again.");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {if(alive)setLoading(false)});return()=>{alive=false};
   }, [planId,retryTick]);
 
   // Live status: an existing pending request turns active here without a
   // reload once payment is confirmed.
   useEffect(() => {
-    if (!uid || !tenantId) return;
-    return listenToMyMemberships(
+    setExisting(null);setActive(null);if (!uid || !tenantId) return;let alive=true;
+    const stop=listenToMyMemberships(
       tenantId,
       uid,
       (memberships) => {
-        setExisting(memberships.find((m) => m.status === "pending") ?? memberships.find((m) => m.status === "active") ?? null);
+        if(!alive)return;setExisting(memberships.find((m) => m.status === "pending") ?? memberships.find((m) => m.status === "active") ?? null);
         setActive(memberships.find((m) => m.status === "active") ?? null);
       },
       () => undefined,
-    );
+    );return()=>{alive=false;stop()};
   }, [uid, tenantId]);
 
   // The plan being replaced, to price the upgrade.
@@ -79,41 +81,47 @@ export default function PurchaseMembershipScreen() {
   // Reachable only from the Confirm upgrade button in the pop-up.
   async function confirmUpgrade(method: "razorpay_payment_link" | "cash") {
     if (!plan || purchasing) return;
+    if(purchaseBusy.current)return;
+    const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;purchaseBusy.current=true;
     setAskUpgrade(false);
     setPurchasing(true);
     setError(null);
     try {
-      const result = await upgradeMembership(plan.id, method, idempotencyKey);
+      const result = await upgradeMembership(plan.id, method, idempotencyKey.current);
+      if(!current())return;
       if (method === "razorpay_payment_link") {
         if (!result.paymentId) throw new Error("Payment is not ready. Please try again.");
         if (!result.paymentUrl) throw new Error("Your membership payment needs checking. Contact the studio before trying again; do not start another payment.");
-        setPayOutcome(await payWithPaymentLink(result.paymentId, result.paymentUrl));
+        const outcome=await payWithPaymentLink(result.paymentId, result.paymentUrl);if(!current())return;setPayOutcome(outcome);
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Please try again.");
+      if(current())setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
-      setPurchasing(false);
+      if(current()){purchaseBusy.current=false;setPurchasing(false);}
     }
   }
 
   async function handlePurchase(method: "razorpay_payment_link" | "cash") {
     if (!plan || purchasing) return;
+    if(purchaseBusy.current)return;
+    const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;purchaseBusy.current=true;
     setPurchasing(true);
     setError(null);
     try {
       // A pending upgrade is paid again through the same call (the server replays it, never makes a second one).
-      const result = pendingIsUpgrade ? await upgradeMembership(plan.id, method, idempotencyKey) : await purchaseMembership(plan.id, method, idempotencyKey);
+      const result = pendingIsUpgrade ? await upgradeMembership(plan.id, method, idempotencyKey.current) : await purchaseMembership(plan.id, method, idempotencyKey.current);
+      if(!current())return;
       if (method === "razorpay_payment_link") {
         if (!result.paymentId) throw new Error("Payment is not ready. Please try again.");
         if (!result.paymentUrl) throw new Error("Your membership payment needs checking. Contact the studio before trying again; do not start another payment.");
-        setPayOutcome(await payWithPaymentLink(result.paymentId, result.paymentUrl));
+        const outcome=await payWithPaymentLink(result.paymentId, result.paymentUrl);if(!current())return;setPayOutcome(outcome);
       }
       setDone(method === "cash" ? "studio" : "online");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Please try again.");
+      if(current())setError(err instanceof Error ? err.message : "Please try again.");
     } finally {
-      setPurchasing(false);
+      if(current()){purchaseBusy.current=false;setPurchasing(false);}
     }
   }
 

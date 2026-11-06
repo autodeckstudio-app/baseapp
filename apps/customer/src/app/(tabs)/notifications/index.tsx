@@ -40,23 +40,23 @@ export default function NotificationsScreen() {
   const [pushState, setPushState] = useState<PushPermission>(() => pushPermission());
 
   const load = useCallback(() => {
-    if (auth.status !== "ready") return undefined;
+    setNotifications([]);if (auth.status !== "ready") return undefined;let alive=true;
     setLoading(true);
     setError(null);
-    return listenToMyNotifications(
+    const stop=listenToMyNotifications(
       auth.claims.tenantId,
       auth.user.uid,
       (data) => {
-        setError(null);
+        if(!alive)return;setError(null);
         setNotifications(data);
         setLoading(false);
       },
       (err) => {
-        setError(err.message);
+        if(!alive)return;setError("Your updates could not load. Check your connection and retry.");
         setLoading(false);
       },
-    );
-  }, [auth.status]);
+    );return()=>{alive=false;stop()};
+  }, [auth.status,auth.status==="ready"?auth.user.uid:null,auth.status==="ready"?auth.claims.tenantId:null]);
 
   useEffect(() => {
     const unsub = load();

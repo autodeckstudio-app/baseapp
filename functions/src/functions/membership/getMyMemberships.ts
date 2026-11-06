@@ -1,3 +1,8 @@
+import { assertMembershipIdentityCompatible } from "../../lib/membership-identity-compat.js";
+import {
+  requireCustomerDocId,
+  resolveCustomerDocId,
+} from "../../lib/customer-identity.js";
 // Returns Membership documents for a customer (current + past), powering both
 // the "Current Membership" and "Membership history" screens. Customers may
 // only ever read their own records; studio/admin may look up any customer
@@ -13,35 +18,76 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { getMyMembershipsSchema } from "../../schemas/membership.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const getMyMemberships = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
-  const user = extractUser(request);
-  const data = validate(getMyMembershipsSchema, request.data);
-  await enforceRateLimit(subjectFrom(user), "read.myMemberships");
+export const getMyMemberships = onCall(
+  { region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() },
+  async (request) => {
+    const user = extractUser(request);
+    const data = validate(getMyMembershipsSchema, request.data);
+    await enforceRateLimit(subjectFrom(user), "read.myMemberships");
 
-  const isStudioOrAdmin = ["studio", "admin", "superadmin"].includes(user.claims.role);
-  const customerId = isStudioOrAdmin ? (data.customerId ?? user.uid) : user.uid;
+    const isStudioOrAdmin = ["studio", "admin", "superadmin"].includes(
+      user.claims.role,
+    );
+    const db = getFirestore();
+    const ownCustomerId = !isStudioOrAdmin
+      ? await requireCustomerDocId(
+          db,
+          COLLECTIONS.customers(),
+          user.claims.tenantId,
+          user.uid,
+        )
+      : !data.customerId
+        ? ((await resolveCustomerDocId(
+            db,
+            COLLECTIONS.customers(),
+            user.claims.tenantId,
+            user.uid,
+          )) ?? user.uid)
+        : null;
+    const customerId = isStudioOrAdmin
+      ? (data.customerId ?? ownCustomerId!)
+      : ownCustomerId!;
 
-  if (!isStudioOrAdmin && data.customerId !== undefined && data.customerId !== user.uid) {
-    throw new HttpsError("permission-denied", "Cannot read another customer's memberships.");
-  }
+    if (
+      !isStudioOrAdmin &&
+      data.customerId !== undefined &&
+      data.customerId !== ownCustomerId
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "Cannot read another customer's memberships.",
+      );
+    }
 
-  const db = getFirestore();
-  const snap = await db
-    .collection(COLLECTIONS.memberships())
-    .where("tenantId", "==", user.claims.tenantId)
-    .where("customerId", "==", customerId)
-    .orderBy("createdAt", "desc")
-    .get();
+    if (ownCustomerId && customerId === ownCustomerId)
+      await assertMembershipIdentityCompatible(
+        db,
+        user.claims.tenantId,
+        user.uid,
+        ownCustomerId,
+        undefined,
+        true,
+      );
+    const snap = await db
+      .collection(COLLECTIONS.memberships())
+      .where("tenantId", "==", user.claims.tenantId)
+      .where("customerId", "==", customerId)
+      .orderBy("createdAt", "desc")
+      .get();
 
-  // Display-only correction — never mutates the stored document (see
-  // getEffectiveMembershipStatus doc comment). A daily scheduled sweep
-  // keeps the stored status itself reasonably fresh too (see
-  // expireStaleMembershipsScheduled.ts), but this stays in place as a
-  // read-time guarantee that's correct even within the sweep's up-to-24h
-  // staleness window, or if it hasn't run yet in a given environment.
-  const memberships = snap.docs.map((doc) => {
-    const membership = doc.data() as Membership;
-    return { ...membership, status: getEffectiveMembershipStatus(membership) };
-  });
-  return { memberships };
-});
+    // Display-only correction — never mutates the stored document (see
+    // getEffectiveMembershipStatus doc comment). A daily scheduled sweep
+    // keeps the stored status itself reasonably fresh too (see
+    // expireStaleMembershipsScheduled.ts), but this stays in place as a
+    // read-time guarantee that's correct even within the sweep's up-to-24h
+    // staleness window, or if it hasn't run yet in a given environment.
+    const memberships = snap.docs.map((doc) => {
+      const membership = doc.data() as Membership;
+      return {
+        ...membership,
+        status: getEffectiveMembershipStatus(membership),
+      };
+    });
+    return { memberships };
+  },
+);

@@ -1,0 +1,2 @@
+import{View}from'react-native';import{Button,T}from'./kit';
+export function ServiceActionBar({car,price,label,disabled,onPress}:{car:string;price:string;label:string;disabled:boolean;onPress:()=>void}){return <View style={{width:'100%',flexDirection:'row',alignItems:'center',gap:12}}><View style={{flex:1,minWidth:0}}><T role="caption" tone="tertiary">{car}</T><T role="heading">{price}</T></View><Button label={label} disabled={disabled} onPress={onPress} style={{marginTop:0,maxWidth:'64%',paddingHorizontal:10}}/></View>}

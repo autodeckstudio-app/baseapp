@@ -34,6 +34,8 @@ export interface ServiceJob {
   serviceId: string;
   /** Set when the visit has more than one service: main service first, then the extras. Prices are paise snapshots. */
   lines?: Array<{ serviceId: string; name: string; price: number; durationMinutes: number }>;
+  bayReleasedAt?: string;
+  bayReleasedBy?: string;
   bayId: string; // empty while on standby
   standbyArrivedAt?: string | null;
   standbyAdmittedAt?: string | null;

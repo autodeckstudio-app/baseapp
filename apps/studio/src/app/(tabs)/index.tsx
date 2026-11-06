@@ -139,6 +139,7 @@ export default function TodaysJobsScreen() {
         ) : null}
         {day.note ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{day.note}</Text> : null}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs }}>
+          <Button label="Walk-in inspections" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/service-quotes")} />
           <Button label="Pickups" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/pickups")} />
           <Button label="Account" size="md" variant="secondary" fullWidth={false} onPress={() => router.push("/(tabs)/account")} />
         </View>

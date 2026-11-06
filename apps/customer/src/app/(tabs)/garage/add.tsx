@@ -1,3 +1,4 @@
+import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
 import { DateField, FileUploader, SelectField } from "../../../ui/inputs";
 import { VEHICLE_SIZES } from "../../../lib/vehicle-size";
 import { createElement, useEffect, useRef, useState } from "react";
@@ -12,7 +13,7 @@ import { ModalCard } from "../../../ui/ModalCard";
 import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
 import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
-import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto } from "../../../lib/vehicle-service";
+import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto, type VehiclePhotoBody } from "../../../lib/vehicle-service";
 import { createMyProtection, isCalendarDate, type MyProtectionKind } from "../../../lib/protection-service";
 import { addCarAbandonAllowed, addCarEditsFrozen, createAddCarJournal, journalPending, runAddCarJournal, type AddCarJournal } from "../../../lib/add-car-journal";
 
@@ -66,7 +67,7 @@ function validYears(v: string): boolean {
 }
 function validApplied(v: string): boolean {
   const t = v.trim();
-  return t === "" || isCalendarDate(t);
+  return validAppliedDate(t);
 }
 
 export default function AddVehicleScreen() {
@@ -95,7 +96,7 @@ export default function AddVehicleScreen() {
   const [journal, setJournal] = useState<PendingJournal | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
-  const [photo, setPhoto] = useState<{ blob: Blob; contentType: string; previewUrl: string } | null>(null);
+  const [photo, setPhoto] = useState<{ blob: VehiclePhotoBody; contentType: string; previewUrl: string } | null>(null);
   const [protection, setProtection] = useState<Record<MyProtectionKind, ProtectionEntry>>(() => ({ ppf: emptyProtection(), ceramic: emptyProtection() }));
   const [protectionError, setProtectionError] = useState<string | null>(null);
   const [protectionFailed, setProtectionFailed] = useState(false);
@@ -357,7 +358,8 @@ export default function AddVehicleScreen() {
     setError(null);
     try {
       if (auth.status === "ready") {
-        const uid = auth.user.uid;
+        const uid = auth.customerDocId;
+        if (!uid) { setError("Your profile is still linking. Try again once it is ready."); return; }
         const tenantId = auth.claims.tenantId;
         const existing = await findVehicleWithPlate(uid, tenantId, plate);
         if (isStale(seq, plate)) return;
@@ -412,7 +414,7 @@ export default function AddVehicleScreen() {
       const details = (err as { details?: { vehicleId?: string } }).details;
       if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
         if (auth.status === "ready") {
-          const verified = await verifyArchivedMatch(details.vehicleId, plate, auth.user.uid, auth.claims.tenantId);
+          const verified = await verifyArchivedMatch(details.vehicleId, plate, auth.customerDocId ?? "", auth.claims.tenantId);
           if (isStale(seq, plate)) return;
           if (verified) {
             setArchivedMatch({ vehicleId: verified.id, label: `${verified.registrationNumber} - ${verified.make} ${verified.model}` });
@@ -446,7 +448,7 @@ export default function AddVehicleScreen() {
     try {
       // Re-verify immediately before restoring: the record must still be an
       // archived car owned by this customer with this exact plate.
-      const verified = await verifyArchivedMatch(archivedMatch.vehicleId, plate, auth.user.uid, auth.claims.tenantId);
+      const verified = await verifyArchivedMatch(archivedMatch.vehicleId, plate, auth.customerDocId ?? "", auth.claims.tenantId);
       if (isStale(seq, plate)) return;
       if (!verified) {
         setArchivedMatch(null);
@@ -542,7 +544,7 @@ export default function AddVehicleScreen() {
                     label="Applied on (optional)"
                     value={protection[kind].applied}
                     onChange={(v: string) => updateProtection(kind, "applied", v)}
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={todayStudioDate()}
                   />
                 </>
               ) : null}
@@ -551,13 +553,13 @@ export default function AddVehicleScreen() {
           {protectionError ? <T role="caption" tone="danger">{protectionError}</T> : null}
         </View>
 
-        {Platform.OS === "web" ? (
+        <>
           <View style={{ gap: space.hair }}>
             <Kicker>Photo (optional)</Kicker>
-            <FileUploader files={photo?[{blob:photo.blob,type:photo.contentType}]:[]} onChange={fs=>pickPhoto(fs[0]?{blob:fs[0].blob,type:fs[0].type}:null)}/>
+            <FileUploader files={photo && !(photo.blob instanceof Uint8Array)?[{blob:photo.blob,type:photo.contentType}]:[]} nativeEnabled nativeFileCount={photo?1:0} onNativeChange={fs=>{if(editsFrozen())return;const f=fs[0];setPhoto(f?{blob:f.bytes,contentType:f.type,previewUrl:f.previewUri}:null);setError(null);}} onChange={fs=>pickPhoto(fs[0]?{blob:fs[0].blob,type:fs[0].type}:null)}/>
             {photo ? <T role="caption" tone="tertiary">Photo ready - it uploads when the car is added.</T> : null}
           </View>
-        ) : null}
+        </>
 
 
         {dupOpen && savedId ? (

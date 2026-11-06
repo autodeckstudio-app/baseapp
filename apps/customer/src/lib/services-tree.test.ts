@@ -23,7 +23,7 @@ describe("services type level", () => {
   it("coatings: ceramic and graphene are separate types, ceramic goes brand > product", () => {
     const t = buildTree(group("coatings"), all);
     expect(labels(t).slice(0, 2)).toEqual(["Ceramic paint coating", "Graphene paint coating"]);
-    expect(resolvePath(t, ["ceramic"]).nodes.map((n) => (n.kind === "branch" ? n.label : ""))).toEqual(["Fireball", "Kovalent", "3M", "AutoDeck Care", "Keramik", "Koch-Chemie"]);
+    expect(resolvePath(t, ["ceramic"]).nodes.map((n) => (n.kind === "branch" ? n.label : ""))).toEqual(["Fireball", "Kovalent", "3M", "AutoDeck Care", "Koch-Chemie"]);
     expect(resolvePath(t, ["ceramic", "Fireball"]).nodes.length).toBe(3);
     const graphene = leafServices(t.find((n) => n.kind === "branch" && n.key === "graphene")!);
     expect(graphene.map((s) => s.id)).toEqual(["menu-coat-kovalent-graphene"]);
@@ -58,7 +58,7 @@ describe("services type level", () => {
     }
   });
   it("type ids named in the vocabulary exist in the menu", () => {
-    const real = new Set(MENU_SEED.map((m) => m.id));
+    const real = new Set([...MENU_SEED.map((m) => m.id), ...visibility.ordinaryServiceIds]);
     for (const defs of Object.values(SERVICE_TYPES)) for (const d of defs) for (const id of d.ids ?? []) expect(real.has(id)).toBe(true);
   });
   it("a single child branch opens by itself; old ?brand= links resolve", () => {
@@ -92,7 +92,9 @@ it('all nine exact confirmed references remain enquiries and all 23 ordinary ser
   const enquiries=(nodes:TreeNode[]):string[]=>nodes.flatMap(n=>n.kind==='enquiry'?[n.key]:n.kind==='branch'?enquiries(n.children):[]);
   expect(enquiries(trees).filter(k=>visibility.confirmedEnquiryKeys.includes(k)).sort()).toEqual([...visibility.confirmedEnquiryKeys].sort());
   for(const id of visibility.ordinaryServiceIds) expect(customerOfferingVisible({id,active:true})).toBe(true);
-  expect(customerOfferingVisible({id:visibility.ordinaryServiceIds[0],active:false})).toBe(false);
+  expect(customerOfferingVisible({id:visibility.ordinaryServiceIds[0]!,active:false})).toBe(false);
 });
 
 it('source-qualified surface ranges never drift into paint coating and remain unpriced enquiries',()=>{const t=buildTree(group('coatings'),all);for(const [type,name]of [['fabric','Fabric'],['ppf-coat','Overlay'],['wheels','Ceramic Rims Cr0.01']]){const branch=t.find(n=>n.kind==='branch'&&n.key===type)as Extract<TreeNode,{kind:'branch'}>;expect(branch).toBeTruthy();expect(JSON.stringify(branch)).toContain(name);const ceramic=t.find(n=>n.kind==='branch'&&n.key==='ceramic');expect(JSON.stringify(ceramic)).not.toContain('"label":"'+name+'"');}expect(JSON.stringify(t)).not.toContain('Revive');});
+
+it('live explicit identities avoid misleading category fallback',async()=>{const {typeKeyOf}=await import('./services-tree');const row=(id:string,category:string)=>({id,category})as never;expect(typeKeyOf('coatings',row('svc-coating-maintenance','coating'))).toBe('maintenance-coating');expect(typeKeyOf('coatings',row('svc-coating-teflon','coating'))).toBe('sealant');expect(typeKeyOf('wash',row('svc-wash-detail-spa','washing'))).toBe('complete');expect(typeKeyOf('wash',row('svc-wash-headlight-buffing','washing'))).toBe('lamps');});

@@ -1,3 +1,5 @@
+import { assertMembershipIdentityCompatible } from "../../lib/membership-identity-compat.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 // Customer requests a membership plan. Creates a Membership in 'pending' status
 // plus a Payment record (targetType: "membership") using the same financial
 // architecture as job payments (Payment status machine, PaymentProvider).
@@ -8,7 +10,11 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Membership, MembershipPlan, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import {
+  extractCustomerUser,
+  assertRole,
+  assertTenant,
+} from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { purchaseMembershipSchema } from "../../schemas/membership.js";
@@ -18,175 +24,248 @@ import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
-export const purchaseMembership = onCall({ region: "asia-south1", secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
-  const user = extractCustomerUser(request);
-  assertRole(user, "customer");
+export const purchaseMembership = onCall(
+  {
+    region: "asia-south1",
+    secrets: [
+      "RAZORPAY_KEY_ID",
+      "RAZORPAY_KEY_SECRET",
+      "RAZORPAY_WEBHOOK_SECRET",
+    ],
+    enforceAppCheck: shouldEnforceAppCheck(),
+  },
+  async (request) => {
+    const user = extractCustomerUser(request);
+    assertRole(user, "customer");
 
-  const data = validate(purchaseMembershipSchema, request.data);
-  await enforceRateLimit(subjectFrom(user), "membership.purchase");
+    const data = validate(purchaseMembershipSchema, request.data);
+    await enforceRateLimit(subjectFrom(user), "membership.purchase");
 
-  const db = getFirestore();
-
-  const planSnap = await db.collection(COLLECTIONS.membershipPlans()).doc(data.planId).get();
-  if (!planSnap.exists) throw new HttpsError("not-found", "Membership plan not found.");
-  const plan = planSnap.data() as MembershipPlan;
-  assertTenant(user, plan.tenantId);
-  if (!plan.active) {
-    throw new HttpsError("failed-precondition", "This membership plan is not currently available.");
-  }
-
-  // At most one non-terminal membership per customer at a time. Fast-fail
-  // pre-check (cheap, avoids the Razorpay provider call and a transaction
-  // for an obviously-invalid request) — NOT the authoritative check, since
-  // it's mutable/racy across concurrent calls. See the re-check inside the
-  // transaction below (Phase 7 hostile-audit finding — this was previously
-  // pre-transaction-only, letting two genuinely concurrent purchase calls
-  // both pass and each create a separate Membership + Payment).
-  const preCheckSnap = await db
-    .collection(COLLECTIONS.memberships())
-    .where("tenantId", "==", user.claims.tenantId)
-    .where("customerId", "==", user.uid)
-    .where("status", "in", ["pending", "active"])
-    .limit(1)
-    .get();
-
-  if (!preCheckSnap.empty) {
-    const existing = preCheckSnap.docs[0]?.data() as Membership;
-    if (existing.status === "active") {
-      throw new HttpsError("already-exists", "You already have an active membership.");
-    }
-    // Idempotent replay: return the existing pending membership + its payment
-    // rather than creating a duplicate.
-    const paymentSnap = await db
-      .collection(COLLECTIONS.payments())
-      .where("membershipId", "==", existing.id)
-      .where("status", "in", ["pending", "processing", "completed"])
-      .limit(1)
-      .get();
-    const existingPayment = paymentSnap.docs[0]?.data() as Payment | undefined;
-    return { membershipId: existing.id, paymentId: existingPayment?.id ?? null, paymentUrl: await membershipPaymentUrl(db, existingPayment, user.phone ?? "") };
-  }
-
-  const now = new Date().toISOString();
-  const membershipRef = db.collection(COLLECTIONS.memberships()).doc();
-  const paymentRef = db.collection(COLLECTIONS.payments()).doc();
-
-  let paymentUrl: string | null = null;
-  const razorpayPaymentLinkId: string | null = null;
-  const razorpayOrderId: string | null = null;
-
-
-
-  const membership: Membership = {
-    id: membershipRef.id,
-    tenantId: user.claims.tenantId,
-    customerId: user.uid,
-    planId: plan.id,
-    tier: plan.tier,
-    status: "pending",
-    washesTotal: plan.includedWashes,
-    washesUsed: 0,
-    discountPercent: plan.discountPercent,
-    pickupsTotal: plan.freePickups ?? 0,
-    pickupsUsed: 0,
-    prioritySlot: plan.prioritySlot ?? false,
-    startDate: null,
-    endDate: null,
-    activatedAt: null,
-    activatedBy: null,
-    cancelledAt: null,
-    cancelledBy: null,
-    cancellationReason: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const payment: Payment = {
-    id: paymentRef.id,
-    tenantId: user.claims.tenantId,
-    studioId: null,
-    targetType: "membership",
-    jobId: null,
-    bookingId: null,
-    membershipId: membershipRef.id,
-    customerId: user.uid,
-    amount: plan.priceInPaise,
-    currency: "INR",
-    method: data.method,
-    status: "pending",
-    paymentUrl,
-    razorpayPaymentLinkId,
-    razorpayPaymentId: null,
-    razorpayOrderId,
-    razorpayRefundId: null,
-    refundAmount: null,
-    manualReference: null,
-    recordedBy: null,
-    invoiceId: null,
-    providerEventId: null,
-    completedAt: null,
-    failedAt: null,
-    cancelledAt: null,
-    refundedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  await db.runTransaction(async (tx) => {
-    // Authoritative re-check inside the transaction — two concurrent
-    // purchase calls for the same customer must not both pass the
-    // pre-check above and each create a separate Membership + Payment.
-    const freshExistingSnap = await tx.get(
-      db
-        .collection(COLLECTIONS.memberships())
-        .where("tenantId", "==", user.claims.tenantId)
-        .where("customerId", "==", user.uid)
-        .where("status", "in", ["pending", "active"])
-        .limit(1),
+    const db = getFirestore();
+    const customerId = await requireCustomerDocId(
+      db,
+      COLLECTIONS.customers(),
+      user.claims.tenantId,
+      user.uid,
     );
-    if (!freshExistingSnap.empty) {
+
+    await assertMembershipIdentityCompatible(
+      db,
+      user.claims.tenantId,
+      user.uid,
+      customerId,
+    );
+    const planSnap = await db
+      .collection(COLLECTIONS.membershipPlans())
+      .doc(data.planId)
+      .get();
+    if (!planSnap.exists)
+      throw new HttpsError("not-found", "Membership plan not found.");
+    const plan = planSnap.data() as MembershipPlan;
+    assertTenant(user, plan.tenantId);
+    if (!plan.active) {
       throw new HttpsError(
-        "already-exists",
-        "A membership purchase is already in progress or active for this customer.",
+        "failed-precondition",
+        "This membership plan is not currently available.",
       );
     }
-    // Per-customer claim document. The query above cannot detect a concurrent insert (phantom read), but a read of one
-    // specific document IS conflict-checked by Firestore transactions, so two simultaneous purchases both touch this
-    // document and one retries and then sees the other's pending membership. No release step is needed: the claim points
-    // at a membership, and it only blocks while that membership is still pending or active.
-    const claimRef = db.collection("membershipClaims").doc(`${user.claims.tenantId}_${user.uid}`);
-    const claimSnap = await tx.get(claimRef);
-    if (claimSnap.exists) {
-      const heldId = (claimSnap.data() as { membershipId?: string }).membershipId;
-      if (heldId) {
-        const heldSnap = await tx.get(db.collection(COLLECTIONS.memberships()).doc(heldId));
-        const heldStatus = heldSnap.exists ? (heldSnap.data() as Membership).status : null;
-        if (heldStatus === "pending" || heldStatus === "active") {
-          throw new HttpsError(
-            "already-exists",
-            "A membership purchase is already in progress or active for this customer.",
+
+    // At most one non-terminal membership per customer at a time. Fast-fail
+    // pre-check (cheap, avoids the Razorpay provider call and a transaction
+    // for an obviously-invalid request) — NOT the authoritative check, since
+    // it's mutable/racy across concurrent calls. See the re-check inside the
+    // transaction below (Phase 7 hostile-audit finding — this was previously
+    // pre-transaction-only, letting two genuinely concurrent purchase calls
+    // both pass and each create a separate Membership + Payment).
+    const preCheckSnap = await db
+      .collection(COLLECTIONS.memberships())
+      .where("tenantId", "==", user.claims.tenantId)
+      .where("customerId", "==", customerId)
+      .where("status", "in", ["pending", "active"])
+      .limit(1)
+      .get();
+
+    if (!preCheckSnap.empty) {
+      const existing = preCheckSnap.docs[0]?.data() as Membership;
+      if (existing.status === "active") {
+        throw new HttpsError(
+          "already-exists",
+          "You already have an active membership.",
+        );
+      }
+      // Idempotent replay: return the existing pending membership + its payment
+      // rather than creating a duplicate.
+      const paymentSnap = await db
+        .collection(COLLECTIONS.payments())
+        .where("membershipId", "==", existing.id)
+        .where("status", "in", ["pending", "processing", "completed"])
+        .limit(1)
+        .get();
+      const existingPayment = paymentSnap.docs[0]?.data() as
+        Payment | undefined;
+      return {
+        membershipId: existing.id,
+        paymentId: existingPayment?.id ?? null,
+        paymentUrl: await membershipPaymentUrl(
+          db,
+          existingPayment,
+          user.phone ?? "",
+        ),
+      };
+    }
+
+    const now = new Date().toISOString();
+    const membershipRef = db.collection(COLLECTIONS.memberships()).doc();
+    const paymentRef = db.collection(COLLECTIONS.payments()).doc();
+
+    let paymentUrl: string | null = null;
+    const razorpayPaymentLinkId: string | null = null;
+    const razorpayOrderId: string | null = null;
+
+    const membership: Membership = {
+      id: membershipRef.id,
+      tenantId: user.claims.tenantId,
+      customerId,
+      planId: plan.id,
+      tier: plan.tier,
+      status: "pending",
+      washesTotal: plan.includedWashes,
+      washesUsed: 0,
+      discountPercent: plan.discountPercent,
+      pickupsTotal: plan.freePickups ?? 0,
+      pickupsUsed: 0,
+      prioritySlot: plan.prioritySlot ?? false,
+      startDate: null,
+      endDate: null,
+      activatedAt: null,
+      activatedBy: null,
+      cancelledAt: null,
+      cancelledBy: null,
+      cancellationReason: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const payment: Payment = {
+      id: paymentRef.id,
+      tenantId: user.claims.tenantId,
+      studioId: null,
+      targetType: "membership",
+      jobId: null,
+      bookingId: null,
+      membershipId: membershipRef.id,
+      customerId,
+      amount: plan.priceInPaise,
+      currency: "INR",
+      method: data.method,
+      status: "pending",
+      paymentUrl,
+      razorpayPaymentLinkId,
+      razorpayPaymentId: null,
+      razorpayOrderId,
+      razorpayRefundId: null,
+      refundAmount: null,
+      manualReference: null,
+      recordedBy: null,
+      invoiceId: null,
+      providerEventId: null,
+      completedAt: null,
+      failedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.runTransaction(async (tx) => {
+      await assertMembershipIdentityCompatible(
+        db,
+        user.claims.tenantId,
+        user.uid,
+        customerId,
+        tx,
+      );
+      // Authoritative re-check inside the transaction — two concurrent
+      // purchase calls for the same customer must not both pass the
+      // pre-check above and each create a separate Membership + Payment.
+      const freshExistingSnap = await tx.get(
+        db
+          .collection(COLLECTIONS.memberships())
+          .where("tenantId", "==", user.claims.tenantId)
+          .where("customerId", "==", customerId)
+          .where("status", "in", ["pending", "active"])
+          .limit(1),
+      );
+      if (!freshExistingSnap.empty) {
+        throw new HttpsError(
+          "already-exists",
+          "A membership purchase is already in progress or active for this customer.",
+        );
+      }
+      // Per-customer claim document. The query above cannot detect a concurrent insert (phantom read), but a read of one
+      // specific document IS conflict-checked by Firestore transactions, so two simultaneous purchases both touch this
+      // document and one retries and then sees the other's pending membership. No release step is needed: the claim points
+      // at a membership, and it only blocks while that membership is still pending or active.
+      const claimRef = db
+        .collection("membershipClaims")
+        .doc(`${user.claims.tenantId}_${customerId}`);
+      const claimSnap = await tx.get(claimRef);
+      if (claimSnap.exists) {
+        const heldId = (claimSnap.data() as { membershipId?: string })
+          .membershipId;
+        if (heldId) {
+          const heldSnap = await tx.get(
+            db.collection(COLLECTIONS.memberships()).doc(heldId),
           );
+          const heldStatus = heldSnap.exists
+            ? (heldSnap.data() as Membership).status
+            : null;
+          if (heldStatus === "pending" || heldStatus === "active") {
+            throw new HttpsError(
+              "already-exists",
+              "A membership purchase is already in progress or active for this customer.",
+            );
+          }
         }
       }
-    }
-    tx.set(claimRef, { tenantId: user.claims.tenantId, customerId: user.uid, membershipId: membershipRef.id, updatedAt: now });
+      tx.set(claimRef, {
+        tenantId: user.claims.tenantId,
+        customerId,
+        membershipId: membershipRef.id,
+        updatedAt: now,
+      });
 
-    tx.set(membershipRef, membership);
-    tx.set(paymentRef, payment);
-    writeAuditLog(tx, {
-      action: "membership.purchased",
-      entityType: "Membership",
-      entityId: membershipRef.id,
-      user,
-      studioId: null,
-      after: { planId: plan.id, tier: plan.tier, priceInPaise: plan.priceInPaise, paymentId: paymentRef.id },
+      tx.set(membershipRef, membership);
+      tx.set(paymentRef, payment);
+      writeAuditLog(tx, {
+        action: "membership.purchased",
+        entityType: "Membership",
+        entityId: membershipRef.id,
+        user,
+        studioId: null,
+        after: {
+          planId: plan.id,
+          tier: plan.tier,
+          priceInPaise: plan.priceInPaise,
+          paymentId: paymentRef.id,
+        },
+      });
     });
-  });
 
-  if (data.method === "razorpay_payment_link") {
-    const stored = (await paymentRef.get()).data() as Payment;
-    const link = await obtainMembershipPaymentLink(db, stored, getPaymentProvider(), user.phone ?? "");
-    paymentUrl = link.outcome === "link_ready" ? link.paymentUrl : null;
-  }
-  return { membershipId: membershipRef.id, paymentId: paymentRef.id, paymentUrl };
-});
+    if (data.method === "razorpay_payment_link") {
+      const stored = (await paymentRef.get()).data() as Payment;
+      const link = await obtainMembershipPaymentLink(
+        db,
+        stored,
+        getPaymentProvider(),
+        user.phone ?? "",
+      );
+      paymentUrl = link.outcome === "link_ready" ? link.paymentUrl : null;
+    }
+    return {
+      membershipId: membershipRef.id,
+      paymentId: paymentRef.id,
+      paymentUrl,
+    };
+  },
+);

@@ -5,6 +5,7 @@
 // list (customers, payments, invoices, audit, ...) is built from these so
 // the whole back office reads as one product.
 import type { ReactNode } from "react";
+import {createPortal} from "react-dom";
 
 export interface Kpi {
   value: ReactNode;
@@ -137,9 +138,9 @@ export function ListPane<T extends { id: string }>({
   );
 }
 
-export function Drawer({ title, eyebrow, onClose, children }: { title: string; eyebrow?: string; onClose: () => void; children: ReactNode }) {
-  return (
-    <div className="ax-drawer-scrim" onClick={onClose}>
+export function Drawer({ title, eyebrow, onClose, children, portal=false }: { title: string; eyebrow?: string; onClose: () => void; children: ReactNode; portal?: boolean }) {
+  const content = (
+    <div className="ax-drawer-scrim" style={portal?{zIndex:100}:undefined} onClick={onClose}>
       <aside className="ax-drawer" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="ax-drawer-head">
           <div>
@@ -152,4 +153,5 @@ export function Drawer({ title, eyebrow, onClose, children }: { title: string; e
       </aside>
     </div>
   );
+  return portal && typeof document!=="undefined" ? createPortal(content,document.body) : content;
 }

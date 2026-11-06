@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -42,40 +42,43 @@ export default function ApprovalDetailScreen() {
   const [confirming, setConfirming] = useState<"approved" | "rejected" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const approvalRef=useRef(approval);approvalRef.current=approval;const scopeRef=useRef(id);scopeRef.current=id;const generation=useRef(0);const decidingRef=useRef(false);
   useEffect(() => {
-    if (!id) {setLoading(false);return undefined;}
+    generation.current++;setDeciding(false);decidingRef.current=false;
+    setApproval(null);setVehicle(null);setConfirming(null);setActionError(null);if (!id) {setLoading(false);return undefined;}
     setLoading(true);setError(null);
-    return listenToApproval(
+    let alive=true;const stop=listenToApproval(
       id,
       (data) => {
-        setError(null);setApproval(data);
+        if(!alive)return;setError(null);setApproval(data);
         setLoading(false);
       },
       (err) => {
-        setError(err.message);
+        if(!alive)return;setError("This request could not load. Check your connection and retry.");
         setLoading(false);
       },
-    );
+    );return()=>{generation.current++;alive=false;stop()};
   }, [id,retryTick]);
 
   useEffect(() => {
-    if (!approval?.vehicleId) return;
+    let alive=true;setVehicle(null);if (!approval?.vehicleId) return;
     void getDoc(doc(db, COLLECTIONS.vehicles(), approval.vehicleId)).then((snap) => {
-      if (snap.exists()) setVehicle(snap.data() as Vehicle);
-    }).catch(()=>setVehicle(null));
+      if (alive&&snap.exists()) setVehicle(snap.data() as Vehicle);
+    }).catch(()=>{if(alive)setVehicle(null)});return()=>{alive=false};
   }, [approval?.vehicleId]);
 
   async function handleDecision(decision: "approved" | "rejected") {
-    if (!id || deciding) return;
+    if (!id || decidingRef.current || approvalRef.current?.status!=="pending"||scopeRef.current!==id) return;
+    const scope=id,gen=generation.current;decidingRef.current=true;
     setDeciding(true);
     setActionError(null);
     try {
       await respondToApproval(id, decision);
-      setConfirming(null);
+      if(scopeRef.current===scope&&generation.current===gen)setConfirming(null);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to record your decision.");
+      if(scopeRef.current===scope&&generation.current===gen)setActionError(err instanceof Error ? err.message : "Failed to record your decision.");
     } finally {
-      setDeciding(false);
+      if(scopeRef.current===scope&&generation.current===gen){decidingRef.current=false;setDeciding(false);}
     }
   }
 

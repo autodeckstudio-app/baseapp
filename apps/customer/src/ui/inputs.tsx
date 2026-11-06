@@ -1,5 +1,5 @@
 import { createElement, useEffect, useId, useState } from 'react';
-import { Image, Platform, Pressable, View } from 'react-native';
+import { Image, Platform, Pressable, TextInput, View } from 'react-native';
 import { pickImagesFromLibrary, type PickedUpload } from '../lib/native-image-pick';
 import { space } from '@autodeck/ui/theme';
 import { T } from './kit';
@@ -15,13 +15,27 @@ export function SelectField({label,value,onChange,options,placeholder}:{label:st
  return createElement('div',{style:{position:'relative',width:'100%',minWidth:0}},createElement('style',null,css),createElement('select',{'aria-label':label,className:'autodeck-control',value,onChange:(e:{target:{value:string}})=>onChange(e.target.value),style:control},placeholder?createElement('option',{value:'',disabled:true,style:optStyle},placeholder):null,...options.map(o=>createElement('option',{key:o.value,value:o.value,style:optStyle},o.label))),createElement('span',{'aria-hidden':true,style:{position:'absolute',right:16,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'#b7b4b0',fontSize:18}},'⌄'));
 }
 export function DateField({label,value,onChange,min,max,error,disabled}:{label:string;value:string;onChange:(v:string)=>void;min?:string|undefined;max?:string|undefined;error?:string|undefined;disabled?:boolean|undefined}) {
- const control=controlFor(useExperienceTheme().name==='light');
- return <View style={{gap:space.breath}}><T role="label" tone="tertiary">{label}</T>{Platform.OS==='web'?createElement('input',{'aria-label':label,type:'date',value,min,max,disabled:disabled??false,'aria-disabled':disabled?true:undefined,className:'autodeck-control',style:{...control,appearance:'auto',paddingRight:16},onChange:(e:{target:{value:string}})=>{if(!disabled)onChange(e.target.value);}}):<T tone="secondary">Open AutoDeck on the web to choose this date.</T>}{error?<T role="caption" tone="danger">{error}</T>:null}</View>;
+ const day=useExperienceTheme().name==='light';const control=controlFor(day);
+ return <View style={{gap:space.breath}}><T role="label" tone="tertiary">{label}</T>{Platform.OS==='web'?createElement('input',{'aria-label':label,type:'date',value,min,max,disabled:disabled??false,'aria-disabled':disabled?true:undefined,className:'autodeck-control',style:{...control,appearance:'auto',paddingRight:16},onChange:(e:{target:{value:string}})=>{if(!disabled)onChange(e.target.value);}}):<NativeDateInput label={label} value={value} onChange={onChange} min={min} max={max} disabled={disabled} day={day}/>}{error?<T role="caption" tone="danger">{error}</T>:null}</View>;
 }
-export function FileUploader({files,onChange,accept='image/jpeg,image/png,image/webp',multiple=false,maxFiles=1,label='Add image',nativeEnabled=false,onNativeChange}:{files:UploadFile[];onChange:(files:UploadFile[])=>void;accept?:string;multiple?:boolean;maxFiles?:number;label?:string;nativeEnabled?:boolean;onNativeChange?:(files:PickedUpload[])=>void}) {
+function NativeDateInput({label,value,onChange,min,max,disabled,day}:{label:string;value:string;onChange:(v:string)=>void;min:string|undefined;max:string|undefined;disabled:boolean|undefined;day:boolean}) {
+ const [draft,setDraft]=useState(value);const [issue,setIssue]=useState('');
+ useEffect(()=>{setDraft(value);setIssue('');},[value]);
+ function commit(){
+  if(disabled)return;
+  if(!draft){setIssue('');onChange('');return;}
+  const parts=/^(\d{4})-(\d{2})-(\d{2})$/.exec(draft);
+  const date=parts?new Date(`${draft}T12:00:00Z`):null;
+  if(!date||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==draft){setIssue('Enter a valid date as YYYY-MM-DD.');return;}
+  if((min&&draft<min)||(max&&draft>max)){setIssue(`Choose a date${min?` from ${min}`:''}${max?` through ${max}`:''}.`);return;}
+  setIssue('');onChange(draft);
+ }
+ return <View style={{gap:8}}><TextInput accessibilityLabel={label} value={draft} editable={!disabled} placeholder="YYYY-MM-DD" placeholderTextColor={day?'#77737D':'#99959F'} maxLength={10} autoCapitalize="none" keyboardType="numbers-and-punctuation" onChangeText={v=>{if(!disabled){setDraft(v);setIssue('');onChange(v);}}} onBlur={commit} onSubmitEditing={commit} style={{minHeight:48,padding:14,borderRadius:16,borderWidth:1,borderColor:day?'#BDB9C2':'#68646E',color:day?'#1D1B26':'#F6F4F1'}}/><T role="caption" tone="tertiary">Year-month-day (YYYY-MM-DD)</T>{issue?<T role="caption" tone="danger">{issue}</T>:null}</View>;
+}
+export function FileUploader({files,onChange,accept='image/jpeg,image/png,image/webp',multiple=false,maxFiles=1,label='Add image',nativeEnabled=false,nativeFileCount,onNativeChange}:{files:UploadFile[];onChange:(files:UploadFile[])=>void;accept?:string;multiple?:boolean;maxFiles?:number;label?:string;nativeEnabled?:boolean;nativeFileCount?:number;onNativeChange?:(files:PickedUpload[])=>void}) {
  const day=useExperienceTheme().name==='light';const id=useId();const [previews,setPreviews]=useState<string[]>([]); const [error,setError]=useState('');const [confirmIdx,setConfirmIdx]=useState<number|null>(null);
  useEffect(()=>{if(Platform.OS!=='web')return;const urls=files.map(f=>f.type.startsWith('image/')?URL.createObjectURL(f.blob):'');setPreviews(urls);return ()=>urls.forEach(u=>{if(u)URL.revokeObjectURL(u);});},[files]);
- if(Platform.OS!=='web')return nativeEnabled&&onNativeChange?<NativeFileUploader fileCount={files.length} onNativeChange={onNativeChange} accept={accept} multiple={multiple} maxFiles={maxFiles} label={label}/>:null;
+ if(Platform.OS!=='web')return nativeEnabled&&onNativeChange?<NativeFileUploader fileCount={nativeFileCount ?? files.length} onNativeChange={onNativeChange} accept={accept} multiple={multiple} maxFiles={maxFiles} label={label}/>:null;
  function select(list:ArrayLike<File>|null){const picked=Array.from(list??[]);const allowed=accept.split(',');if(picked.length>maxFiles){setError(`Add up to ${maxFiles} images.`);return;}if(picked.some(f=>!allowed.includes(f.type))){setError('Choose a supported file type.');return;}setError('');onChange(picked.map(f=>({blob:f,type:f.type})));}
  const input=createElement('input',{id,type:'file',accept,multiple,'aria-label':label,style:{position:'absolute',opacity:0,width:'100%',height:'100%',inset:0,cursor:'pointer'},onChange:(e:{target:{files:ArrayLike<File>|null}})=>select(e.target.files)});
  const trigger=createElement('label',{htmlFor:id,style:{display:'block',position:'relative',cursor:'pointer'}},input,createElement('span',{style:{display:'flex',alignItems:'center',gap:14,minHeight:80,padding:18,boxSizing:'border-box',border:'1px dashed rgba(236,134,56,.5)',borderRadius:18,background:'linear-gradient(145deg,rgba(236,134,56,.10),rgba(236,134,56,.02))',color:'inherit'}},createElement('span',{'aria-hidden':true,style:{fontSize:24,color:'#EC8638'}},'▧'),createElement('span',null,createElement('strong',null,label),createElement('span',{style:{display:'block',fontSize:12,opacity:.7,color:'inherit',marginTop:6}},multiple?`Up to ${maxFiles} images. First image is the cover.`:'Choose an image or scan.'))));
@@ -42,7 +56,7 @@ function NativeFileUploader({fileCount,onNativeChange,accept,multiple,maxFiles,l
    setPicked(res);setError('');onNativeChange(res);
   }catch(e){setError(e instanceof Error?e.message:'The photo could not be read. Try a different image.');}
  }
- return <Pressable accessibilityRole="button" onPress={()=>void pick()} style={{borderWidth:1,borderStyle:'dashed',borderColor:'rgba(236,134,56,.5)',borderRadius:18,padding:18,minHeight:80,gap:8}}>
+ return <Pressable accessibilityRole="button" onPress={()=>void pick()} style={{borderWidth:1,borderStyle:'dashed',borderColor:'rgba(236,134,56,.5)',borderRadius:18,padding:18,minHeight:80,justifyContent:'center',alignSelf:'stretch',gap:8}}>
   <T tone="secondary">{label}{multiple?` (up to ${maxFiles})`:''}</T>
   {picked.length>0?<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{picked.map((p,i)=><Image key={i} source={{uri:p.previewUri}} style={{width:64,height:64,borderRadius:10}} accessibilityLabel={`Picked photo ${i+1}`}/>)}</View>:null}
   {error?<T role="caption" tone="danger">{error}</T>:null}

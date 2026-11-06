@@ -1,3 +1,5 @@
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import {hasReleasedBay} from "@autodeck/core";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { jobHoldsBay } from "@autodeck/core";
@@ -10,11 +12,10 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { standbyBookingSchema } from "../../schemas/job.js";
 import { buildOccupiedInterval, hasConflict } from "../../lib/availability.js";
 import { computeScheduleEnd, utcToLocalDate, utcToLocalTime, getDayOfWeek } from "../../lib/schedule.js";
-import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 // A standby car owns neither a slot nor a bay until admission. The common
 // studio lock serializes FIFO admission; bay locks also serialize bookings.
-export const standbyBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
+export const standbyBooking = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
   assertRole(user, "studio", "admin", "superadmin");
   const data = validate(standbyBookingSchema, request.data);
@@ -79,7 +80,7 @@ export const standbyBooking = onCall({ region: "asia-south1" , enforceAppCheck: 
     const bayLock = db.collection(COLLECTIONS.bayLocks()).doc(`${job.tenantId}__${job.studioId}__${bay.id}`);
     await tx.get(bayLock);
     const end = computeScheduleEnd(nowDate, job.estimatedDurationMinutes, config.operatingHours, config.holidays, config.timezone);
-    const occupants = jobs.filter(j => j.id !== job.id && j.bayId === bay.id && !["DELIVERED", "CANCELLED", "STANDBY"].includes(j.status) && !(j.status === "PENDING_VEHICLE" && !jobHoldsBay(j, nowDate.getTime())));
+    const occupants = jobs.filter(j => !hasReleasedBay(j)&&j.id !== job.id && j.bayId === bay.id && !["DELIVERED", "CANCELLED", "STANDBY"].includes(j.status) && !(j.status === "PENDING_VEHICLE" && !jobHoldsBay(j, nowDate.getTime())));
     // Physically present cars occupy the bay until handover even past estimate.
     if (occupants.some(j => j.status !== "PENDING_VEHICLE" && Date.parse(j.scheduledAt) <= nowDate.getTime()) || hasConflict(nowDate, end, occupants.map(j => buildOccupiedInterval(j.scheduledAt, j.estimatedEndAt)))) throw new HttpsError("resource-exhausted", "Bay is occupied or reserved during this service. Wait or choose another compatible bay.");
     const schedule = { bayId: bay.id, scheduledAt: now, scheduledDate: date, estimatedEndAt: end.toISOString(), estimatedEndDate: utcToLocalDate(end, config.timezone), standbyAdmittedAt: now, updatedAt: now };

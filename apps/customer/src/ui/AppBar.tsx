@@ -19,11 +19,12 @@ export function AppBar({ title, onBack }: { title: string; onBack?: (() => void)
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const ready = auth.status === "ready";
+  const owner=ready?`${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId??""}`:null;
   const myCode = ready ? referralCodeFor(auth.user.uid) : null;
   useEffect(() => {
-    if (auth.status !== "ready") return;
-    return listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => setUnread(n.filter((x) => x.readAt === null).length), () => undefined);
-  }, [auth.status]);
+    setOpen(false);setUnread(0);if (auth.status !== "ready") return;let alive=true;
+    const stop=listenToMyNotifications(auth.claims.tenantId, auth.user.uid, (n) => {if(alive)setUnread(n.filter((x) => x.readAt === null).length)}, () => undefined);return()=>{alive=false;stop()};
+  }, [owner]);
   const display = ready ? (auth.user.displayName ?? "AutoDeck").trim() || "AutoDeck" : "AutoDeck";
   const initial = display.charAt(0).toUpperCase() || "A";
   const go = (p: string) => () => router.push(p as never);

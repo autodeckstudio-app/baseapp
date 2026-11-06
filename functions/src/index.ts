@@ -211,3 +211,12 @@ export { settleMembershipCoveredJob } from "./functions/job/settleMembershipCove
 export { recordExternalReturn } from "./functions/payment/recordExternalReturn.js";
 
 export { requestGiftPaymentLink } from "./functions/payment/requestGiftPaymentLink.js";
+
+export {releaseCompletedBay} from "./functions/job/releaseCompletedBay.js";
+
+// Coordinated quote and minimized customer-history release preparation.
+export { requestServiceQuote, requestReferenceQuote, updateServiceQuote, getServiceQuotes, getQuoteInspectionTerms } from './functions/booking/serviceQuoteJourney.js';
+export { getCustomerJobs } from './functions/customer/getCustomerJobs.js';
+
+export { issueClaimCode } from "./functions/auth/issueClaimCode.js";
+export { claimCustomerRecord } from "./functions/auth/claimCustomerRecord.js";

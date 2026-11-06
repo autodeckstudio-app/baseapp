@@ -53,7 +53,12 @@ export function isBookingLateToday(b: { status: string; scheduledAt: string; sta
  * An "Awaiting vehicle" job holds it only until its slot end (start + duration) has passed; after that it is a no-show and the bay shows free.
  * One rule for the studio screens and the server bay checks.
  */
-export function jobHoldsBay(j: { status: string; estimatedEndAt: string }, now: number = Date.now()): boolean {
+export function hasReleasedBay(j:{status:string;bayReleasedAt?:string;bayReleasedBy?:string}):boolean {
+ return j.status==='READY_FOR_DELIVERY'&&typeof j.bayReleasedBy==='string'&&j.bayReleasedBy.length>0&&Number.isFinite(Date.parse(j.bayReleasedAt??''));
+}
+
+export function jobHoldsBay(j: { status: string; estimatedEndAt: string;bayReleasedAt?:string;bayReleasedBy?:string }, now: number = Date.now()): boolean {
+  if (hasReleasedBay(j)) return false;
   if (j.status === "PENDING_VEHICLE") {
     const end = Date.parse(j.estimatedEndAt);
     return Number.isFinite(end) ? now < end : true;

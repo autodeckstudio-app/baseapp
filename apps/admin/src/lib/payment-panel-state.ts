@@ -9,7 +9,7 @@ export function paymentPanelMode(payment: { id: string } | null | undefined): Pa
 /** Pay-link and counter-payment controls only exist once the listener has answered, and never for a job that is not unpaid. */
 export function canOfferPayment(payment: { status: string } | null | undefined, jobPaymentStatus: string): { link: boolean; counter: boolean } {
   if (payment === undefined || jobPaymentStatus !== "unpaid") return { link: false, counter: false };
-  return { link: payment === null || payment.status === "failed" || payment.status === "cancelled", counter: true };
+  return { link: payment === null || payment.status === "failed" || payment.status === "cancelled", counter: payment === null || payment.status === "failed" || payment.status === "cancelled" };
 }
 
 import { MEMBERSHIP_SETTLEMENT_ENABLED } from "./backend-features";

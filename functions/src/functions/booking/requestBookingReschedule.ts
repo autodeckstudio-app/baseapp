@@ -16,6 +16,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { requestBookingRescheduleSchema } from "../../schemas/booking.js";
 import { canRequestReschedule, classifyRequestRetry, isPremiumCategory } from "../../lib/reschedule-request.js";
 import { localToUTC } from "../../lib/schedule.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 export const requestBookingReschedule = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
@@ -23,11 +24,13 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
   const user = extractCustomerUser(request);
   await enforceRateLimit(subjectFrom(user), "booking.rescheduleRequest");
 
+  // extractCustomerUser retains existing staff self-customer mode; this is a defensive postcondition, not rejection of the raw staff role.
   if (user.claims.role !== "customer") {
     throw new HttpsError("permission-denied", "Only the customer can request a reschedule.");
   }
 
   const db = getFirestore();
+  const customerDocId=await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid);
   const bookingRef = db.collection(COLLECTIONS.bookings()).doc(data.bookingId);
 
   return db.runTransaction(async (tx) => {
@@ -37,7 +40,7 @@ export const requestBookingReschedule = onCall({ region: "asia-south1", enforceA
 
     assertTenant(user, booking.tenantId);
     assertStudio(user, booking.studioId, "Booking");
-    if (booking.customerId !== user.uid) {
+    if (booking.customerId !== customerDocId) {
       throw new HttpsError("permission-denied", "Cannot request a reschedule for another customer's booking.");
     }
 

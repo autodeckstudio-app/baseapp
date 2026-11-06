@@ -1,3 +1,4 @@
+import{FactHighlights}from "./FactHighlights";
 import { View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import type { PriceBreakdown } from "@autodeck/core";
@@ -24,7 +25,7 @@ export function ServicePrice(p: ServicePriceProps) {
   return (
     <>
           {p.priceOnRequest ? (
-            <Pane pad="gap"><Row title="Quote on request" detail={<T role="caption" tone="secondary">{p.category === "garage" || p.category === "modifications" ? "Book an inspection and the studio quotes after seeing the car. You approve it before any work starts." : "The studio confirms the price for your car. You approve it before any work starts."}</T>} last /></Pane>
+            <Pane pad="gap">{p.category === "garage" || p.category === "modifications"?<FactHighlights facts={[{value:"Free",label:"Walk-in inspection"},{value:"You approve",label:"Work and price before service"}]}/>:null}<Row title="Quote on request" detail={<T role="caption" tone="secondary">{p.category === "garage" || p.category === "modifications" ? "Walk-in inspection is free. You approve the work and price before service." : "The studio confirms the price for your car. You approve it before any work starts."}</T>} last /></Pane>
           ) : p.needsCarType ? (
             <Pane pad="gap">
               <Row title={p.hasCar ? "Car type needed" : "Add your car"} detail={<T role="caption" tone="secondary">{p.hasCar ? "This price depends on your car's type. Add the type once in Garage, edit car." : "This price depends on your car's type. Add your car in Garage to see it."}</T>} />
@@ -35,7 +36,6 @@ export function ServicePrice(p: ServicePriceProps) {
           ) : p.error ? (
             <View style={{ gap: space.line }}>
               <Notice title="Can't get the price" body={priceErrorInfo(p.error).body} />
-              <T role="caption" tone="tertiary">{p.error}</T>
               {priceErrorInfo(p.error).retry ? <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : null}
             </View>
           ) : priceBreakdown !== null ? (
@@ -51,7 +51,7 @@ export function ServicePrice(p: ServicePriceProps) {
                 <Row title="Membership discount" trailing={<T role="data" tone="premium">-{rupees(priceBreakdown.membershipDiscount)}</T>} />
               ) : null}
               {priceBreakdown.tax > 0 ? <Row title={priceBreakdown.taxDescription} trailing={<T role="data">{rupees(priceBreakdown.tax)}</T>} /> : null}
-              <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(priceBreakdown.total)}</T>} last />
+              <FactHighlights facts={[{value:rupees(priceBreakdown.total),label:"Total for your car"},...(priceBreakdown.membershipDiscount!==null&&priceBreakdown.membershipDiscount>0?[{value:rupees(priceBreakdown.membershipDiscount),label:"Membership saving"}]:[])]}/>
             </Pane>
           ) : null}
     </>

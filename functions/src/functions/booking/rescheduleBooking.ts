@@ -15,6 +15,7 @@ import { runRescheduleMove } from "../../lib/reschedule-move.js";
 import { isPremiumCategory } from "../../lib/reschedule-request.js";
 import { localToUTC, computeScheduleEnd } from "../../lib/schedule.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request): Promise<{ booking: Booking }> => {
   const data = validate(rescheduleBookingSchema, request.data);
@@ -22,6 +23,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppChec
   await enforceRateLimit(subjectFrom(user), "booking.reschedule");
 
   const db = getFirestore();
+  const customerDocId = user.claims.role === "customer" ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid) : null;
   const isCustomer = user.claims.role === "customer";
   const isStudioOrAbove =
     user.claims.role === "studio" ||
@@ -34,7 +36,7 @@ export const rescheduleBooking = onCall({ region: "asia-south1" , enforceAppChec
 
   assertTenant(user, booking.tenantId);
 
-  if (isCustomer && booking.customerId !== user.uid) {
+  if (isCustomer && booking.customerId !== customerDocId) {
     throw new HttpsError("permission-denied", "Cannot reschedule another customer's booking.");
   }
   if (!isCustomer && !isStudioOrAbove) {

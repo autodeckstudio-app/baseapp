@@ -10,6 +10,10 @@ import { COLLECTIONS } from "@autodeck/database";
  * 3D HANDOFF: "expired windows can be overwritten/reused safely").
  */
 export type RateLimitAction =
+  | "customer.claimIssue"
+  | "customer.claim"
+  | "read.jobs"
+  | "quote.create" | "quote.update" | "quote.list"
   | "auth.setupProfile"
   | "auth.resolveClaims"
   | "booking.create"
@@ -142,6 +146,12 @@ interface RateLimitConfig {
 // entirely â it was fixed there specifically to make this LOW-tier
 // assumption true again, not weakened.
 const RATE_LIMITS: Record<RateLimitAction, RateLimitConfig> = {
+  "customer.claimIssue": { limit: 30, windowMs: 3_600_000 },
+  "customer.claim": { limit: 10, windowMs: 600_000 },
+  "read.jobs": {limit:60,windowMs:60_000},
+  "quote.create": {limit:10,windowMs:60_000},
+  "quote.update": {limit:20,windowMs:60_000},
+  "quote.list": {limit:30,windowMs:60_000},
   "auth.setupProfile": { limit: 10, windowMs: 60_000 },
   "auth.resolveClaims": { limit: 20, windowMs: 60_000 },
   "booking.create": { limit: 10, windowMs: 60_000 },

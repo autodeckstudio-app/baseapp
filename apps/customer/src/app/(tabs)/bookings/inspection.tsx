@@ -38,7 +38,7 @@ export default function InspectionScreen() {
     setError(null);
     if (!jobId) {setInspection(null);return undefined;}
     setInspection(undefined);
-    return listenToInspection(jobId, value=>{setInspection(value);setError(null);}, (err) => setError(err.message));
+    let alive=true;const stop=listenToInspection(jobId, value=>{if(alive){setInspection(value);setError(null)}}, () => {if(alive)setError("Your report could not load. Check your connection and retry.")});return()=>{alive=false;stop()};
   }, [jobId,retryTick]);
 
   if (error) {

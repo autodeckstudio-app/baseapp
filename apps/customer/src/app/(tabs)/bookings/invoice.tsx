@@ -49,18 +49,18 @@ export default function InvoiceScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const onData = (inv: Invoice | null) => { setError(null); setInvoice(inv); setLoading(false); };
-    const onErr = (err: Error) => { setError(err.message); setLoading(false); };
-    setLoading(true); setError(null);
+    let alive=true;const onData = (inv: Invoice | null) => { if(!alive)return;setError(null); setInvoice(inv); setLoading(false); };
+    const onErr = (_err: Error) => { if(!alive)return;setError("Your invoice could not load. Check your connection and retry."); setLoading(false); };
+    setInvoice(null);setCustomer(null);setVehicle(null);setLoading(true); setError(null);
     if (number) {
       if (auth.status === "loading") return undefined;
-      if (auth.status !== "ready") { setLoading(false); return undefined; }
-      return listenToInvoiceByNumber(String(number).toUpperCase(), auth.claims.tenantId, auth.user.uid, onData, onErr);
+      if (auth.status !== "ready"||!auth.customerDocId) { setLoading(false); return undefined; }
+      const stop=listenToInvoiceByNumber(String(number).toUpperCase(), auth.claims.tenantId, auth.customerDocId, onData, onErr);return()=>{alive=false;stop()};
     }
-    if (invoiceId) return listenToInvoice(invoiceId, onData, onErr);
+    if (invoiceId){const stop=listenToInvoice(invoiceId, onData, onErr);return()=>{alive=false;stop()};}
     if (!jobId || !tenantId || !customerId) { setLoading(false); return; }
-    return listenToInvoiceForJob(jobId, tenantId, customerId, onData, onErr);
-  }, [invoiceId, number, auth.status, jobId, tenantId, customerId, retryTick]);
+    const stop=listenToInvoiceForJob(jobId, tenantId, customerId, onData, onErr);return()=>{alive=false;stop()};
+  }, [invoiceId, number, auth.status,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.claims.tenantId:null, jobId, tenantId, customerId, retryTick]);
 
   // Show the readable address (/invoice/INV-2026-00001) once the invoice is known.
   // Old ?invoiceId= links keep working and are tidied here on web.
