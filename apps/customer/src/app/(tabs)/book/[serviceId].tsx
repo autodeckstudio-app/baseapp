@@ -1,3 +1,4 @@
+import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { CarThumb } from "../../../ui/CarThumb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
@@ -92,19 +93,20 @@ export default function BookServiceScreen() {
 
   useEffect(() => {
     setTotal(null);
-    if (!serviceId || !selectedCategory) return;
+    if (!serviceId || !selectedCategory || !customerOfferingVisible({id:serviceId}) || !service || !customerOfferingVisible(service)) return;
     let current=true;
     void calculateServicePrice(serviceId, selectedCategory).then(({ breakdown }) => {if(current)setTotal(breakdown.total);}).catch(() => {if(current)setTotal(null);});
     return ()=>{current=false;};
-  }, [serviceId, selectedCategory]);
+  }, [serviceId, selectedCategory, service]);
 
   useEffect(() => {
     if (!serviceId || auth.status !== "ready") return;
-    setLoading(true); setLoadError(false);
+    if (!customerOfferingVisible({id:serviceId})) {setLoading(false);return;}
+    setService(null); setLoading(true); setLoadError(false);
     void (async () => {
       try {
         const serviceSnap = await getDoc(doc(db, COLLECTIONS.services(), serviceId));
-        if (serviceSnap.exists()) setService(serviceSnap.data() as Service);
+        if (serviceSnap.exists() && serviceSnap.data().active === true && customerOfferingVisible(serviceSnap.data() as Service)) setService(serviceSnap.data() as Service);
       } catch {
         setLoadError(true);
       } finally {

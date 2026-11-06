@@ -1,3 +1,4 @@
+import { customerOfferingVisible } from './customer-offering-visibility';
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "./firebase";
 import { priceCache, onPriceCacheScopeChange } from "./price-cache";
@@ -13,7 +14,7 @@ const devMock = (): Service[] | null => {
   return MENU_SEED.filter(previewEligible).map((m) => customerRatingPrivacy(({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingForCategory(m.category, m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service));
 };
 
-const previewEligible=(row:{id:string})=>customerCatalogueEligible(row,__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""));
+const previewEligible=(row:{id:string;brand?:string|null})=>customerOfferingVisible(row) && customerCatalogueEligible(row,__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""));
 const KEY = "autodeck.catalogue.v1";
 const TTL_MS = 5 * 60 * 1000;
 let memo: { at: number; p: Promise<Service[]> } | null = null;

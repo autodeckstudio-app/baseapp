@@ -5,6 +5,32 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# One-shot Keramik visibility release. Exact parent and file allowlist isolate this release.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  release_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -z "$release_parent" ]; then printf 'Keramik release ancestry unresolved: SKIP\n'; exit 0; fi
+  if [ "$release_parent" = db86ae802280ded4a8b30a9a02fbbad1faf96549 ]; then
+    [ -n "$release_root" ] || exit 0
+    cd "$release_root" || exit 0
+    release_paths="$(git diff --name-only "$release_parent" HEAD 2>/dev/null)" || exit 0
+    unexpected="$(printf '%s\n' "$release_paths" | grep -Fvx \
+      -e 'apps/customer/src/app/(tabs)/book/[serviceId].tsx' \
+      -e 'apps/customer/src/app/(tabs)/catalogue/[id].tsx' \
+      -e 'apps/customer/src/lib/brand-enquiries.ts' \
+      -e 'apps/customer/src/lib/catalogue-service.ts' \
+      -e 'apps/customer/src/lib/customer-offering-visibility.ts' \
+      -e 'apps/site/src/pages/services/[slug].astro' \
+      -e 'tests/keramik-customer-hold.test.mjs' \
+      -e 'tests/vercel-keramik-release.test.mjs' \
+      -e 'scripts/vercel-ignore.sh' | grep -v '^$' || true)"
+    if [ -n "$unexpected" ]; then printf 'Keramik release unexpected paths: SKIP\n'; exit 0; fi
+    case "$app" in
+      customer|site) printf 'Keramik visibility release: BUILD (%s)\n' "$app"; exit 1 ;;
+      *) printf 'Keramik visibility release: SKIP (%s)\n' "$app"; exit 0 ;;
+    esac
+  fi
+fi
 # Single approved website release. Exact parent + allowed paths keep other projects off.
 guard_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ -n "$guard_root" ] && [ -f "$guard_root/scripts/site-only-release-20261104" ]; then

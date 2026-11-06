@@ -1,3 +1,4 @@
+import { customerOfferingVisible } from '../../../lib/customer-offering-visibility';
 import { customerRatingPrivacy } from "@autodeck/core";
 import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
@@ -49,11 +50,12 @@ export default function ServiceDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
+    if (!customerOfferingVisible({id})) {setLoading(false);return;}
     if (!customerCatalogueEligible({id},__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""))) {setSourceHold(true);setLoading(false);return;}
     void (async () => {
       try {
         const snap = await getDoc(doc(db, COLLECTIONS.services(), id));
-        if (snap.exists() && snap.data().active === true) setService(applyBrandWarranty(customerRatingPrivacy(snap.data() as Service)));
+        if (snap.exists() && snap.data().active === true && customerOfferingVisible(snap.data() as Service)) setService(applyBrandWarranty(customerRatingPrivacy(snap.data() as Service)));
       } catch {
         setLoadError(true);
       } finally {

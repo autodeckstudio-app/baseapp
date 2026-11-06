@@ -8,9 +8,9 @@ import enquiries from '../../data/brand-enquiries.json';
 export function getStaticPaths(){return services.map(service=>({params:{slug:service.slug},props:{service}}))}
 const {service}=Astro.props;
 const categoryMap:Record<string,string[]>={'paint-protection':['ppf'],'ceramic-coating':['ceramic','coating'],'washing':['washing'],'detailing':['washing'],'garage':['garage','inspection','other'],'modifications':['modifications','tinting']};
-const listed=catalogue.services.filter(row=>customerCatalogueEligible(row,import.meta.env.CATALOGUE_IDENTITY_HOLD_PREVIEW === "true")).filter(s=>(categoryMap[service.slug]??[]).includes(s.category));
+const listed=catalogue.services.filter(row=>row.id!=='svc_852ed684301e188f572797265d7b106e'&&row.brand!=='Keramik').filter(row=>customerCatalogueEligible(row,import.meta.env.CATALOGUE_IDENTITY_HOLD_PREVIEW === "true")).filter(s=>(categoryMap[service.slug]??[]).includes(s.category));
 const enquiryGroup=service.slug==='paint-protection'?'ppf':service.slug==='ceramic-coating'?'coatings':null;
-const askRanges=enquiries.filter(s=>s.group===enquiryGroup);
+const askRanges=enquiries.filter(s=>s.brand!=='Keramik'&&s.group===enquiryGroup);
 
 const brandGroups=(rows:{brand:string|null}[])=>{const m=new Map<string,typeof rows>();for(const r of rows){const b=r.brand??'';if(!m.has(b))m.set(b,[]);m.get(b)!.push(r);}return [...m.entries()].sort((a,b)=>(a[0]===''?1:0)-(b[0]===''?1:0));};
 const shortName=(name:string,brand:string)=>brand!==''&&name.toLowerCase().startsWith(brand.toLowerCase())?name.slice(brand.length).trim():name;
