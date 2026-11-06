@@ -37,5 +37,8 @@ it("Customer soft night leaves day values unchanged and provides readable tonal 
   expect(
     contrastRatio(nightAction.selectedText, nightAction.selected),
   ).toBeGreaterThanOrEqual(4.5);
+  expect(customerNight.accent).toBe("#EC8638");
+  for (const background of [customerNight.canvas, customerNight.surface, customerNight.surfaceElevated])
+    expect(contrastRatio(customerNight.accent, background)).toBeGreaterThanOrEqual(4.5);
   expect(raised("light").card.backgroundColor).toBe("#FFFFFF");
 });

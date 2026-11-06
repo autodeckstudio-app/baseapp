@@ -467,6 +467,7 @@ function TypePhoto({
   source: ImageSourcePropType;
   label: string;
 }) {
+  const { colors } = useExperienceTheme();
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   return (
@@ -476,7 +477,7 @@ function TypePhoto({
         height: 88,
         borderRadius: 16,
         overflow: "hidden",
-        backgroundColor: "#303338",
+        backgroundColor: colors.surface,
         alignItems: "center",
         justifyContent: "center",
       }}

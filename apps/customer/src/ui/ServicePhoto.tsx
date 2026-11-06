@@ -92,7 +92,7 @@ export function ServicePhoto({
         style={[
           box,
           {
-            backgroundColor: "#15171B",
+            backgroundColor: colors.surface,
             alignItems: "center",
             justifyContent: "center",
           },
@@ -100,7 +100,7 @@ export function ServicePhoto({
       >
         <Icon
           name={garageIconFor(` ${service.name} `)}
-          color="#F4F1EC"
+          color={colors.textSecondary}
           size={40}
         />
       </View>
