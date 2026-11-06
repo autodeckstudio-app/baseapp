@@ -22,6 +22,7 @@ const adminUser = () => ({ uid: uid("admin"), claims: { role: "admin", tenantId:
 const adminAuth = () => ({ uid: uid("admin"), token: { role: "admin", tenantId: "t1", studioId: null }, rawToken: "t" });
 
 async function seed(o: { method: string; amount?: number; scheduledInHrs?: number }) {
+  await db.collection("customers").doc("c1").set({id:"c1",authUid:"c1",tenantId:"t1",deletedAt:null});
   const bookingId = uid("b");
   const jobId = uid("job");
   const payId = uid("pay");

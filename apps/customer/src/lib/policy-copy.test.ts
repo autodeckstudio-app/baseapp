@@ -23,3 +23,5 @@ describe("cancel bands come from one source", () => {
     }
   });
 });
+
+it("app FAQs do not promise the same reschedule allowance for every service",()=>{for(const f of ["./studio-info.ts","./showcase.ts"]){const text=r(f);expect(text).not.toMatch(/reschedule (from Bookings )?up to two times/);expect(text).toContain("Open your booking to see the change options available for that service.");}});

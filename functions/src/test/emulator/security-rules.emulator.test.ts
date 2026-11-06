@@ -41,6 +41,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await testEnv.clearFirestore();
+  for(const id of ["uid-alice","uid-bob"])await seedCustomer(id);
 });
 
 // ─── Seed helpers ─────────────────────────────────────────────────────────────
@@ -1680,6 +1681,7 @@ describe("Studio lookup — job history query shape", () => {
 
 // ─── /inspections/{jobId} — read-own, Cloud-Function writes only (Phase 4) ────
 async function seedInspection(jobId: string, customerId: string, tenantId = FIRST_TENANT_ID) {
+  await seedVehicle("vehicle-1",customerId,tenantId);
   const now = new Date().toISOString();
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await ctx.firestore().collection("inspections").doc(jobId).set({

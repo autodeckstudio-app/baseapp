@@ -1,3 +1,4 @@
+import type * as AdvancePaymentModule from "../../lib/advance-payment.js";
 import { it, expect, vi } from "vitest";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync } from "node:fs";
@@ -9,6 +10,7 @@ import { buildAdvancePaymentRequest } from "../../lib/advance-payment.js";
 import { mergeFloorJobs } from "@autodeck/core";
 import type { Booking, ServiceJob } from "@autodeck/core";
 import { createBooking } from "../../functions/booking/createBooking.js";
+vi.mock("../../lib/advance-payment.js",async()=>{const actual=await vi.importActual<typeof AdvancePaymentModule>("../../lib/advance-payment.js");return {...actual,advancePaymentEnabled:()=>true};});
 const db=getFirestore();
 it("old priced studio clients fail before writes; capable customer receives the same 15-minute hold", async () => {
   if (!process.env["FIRESTORE_EMULATOR_HOST"]) throw new Error("emulator required");
@@ -28,7 +30,7 @@ it("old priced studio clients fail before writes; capable customer receives the 
     const retry=await createBooking.run({...request,data:{...request.data,advanceFlowVersion:1}} as never) as typeof r;
     expect(retry.booking.id).toBe(r.booking.id);
     const booking=(await db.collection("bookings").doc(r.booking.id).get()).data() as Booking;
-    const advance=buildAdvancePaymentRequest({id:booking.id,payMode:booking.payMode!,currency:"INR",priceBreakdown:booking.priceBreakdown},"service_total_only","ceil");
+    const advance=buildAdvancePaymentRequest({id:booking.id,payMode:booking.payMode!,currency:"INR",priceBreakdown:booking.priceBreakdown},"service_total_only","ceil",{enabled:true});
     const pid=`advance-${booking.id}`,order=`order-${booking.id}`,eid=`event-${booking.id}`;
     await db.collection("payments").doc(pid).set({id:pid,tenantId:booking.tenantId,studioId:booking.studioId,customerId:booking.customerId,
       targetType:"booking",bookingId:booking.id,jobId:null,amount:advance.amountPaise,currency:"INR",status:"pending",method:"razorpay_payment_link",razorpayOrderId:order});
@@ -48,5 +50,11 @@ it("old priced studio clients fail before writes; capable customer receives the 
     expect(mergeFloorJobs([job],[job],job.scheduledDate,true).map(j=>j.id)).toEqual([job.id]);
     expect(advance.dueAtStudioPaise).toBe(booking.priceBreakdown.total-advance.amountPaise);
 
-  } finally {vi.useRealTimers();}
+  } finally {
+    // This file uses the shared static studio/slot fixture. Remove only records
+    // created by this activation attempt so the byte-baseline file sees a free bay.
+    const intents=await db.collection("bookingIntents").doc(key).get();const bookingId=intents.data()?.["bookingId"];
+    if(bookingId){for(const collection of ["jobs","payments"]){const rows=await db.collection(collection).where("bookingId","==",bookingId).get();for(const row of rows.docs)await row.ref.delete();}await db.collection("bookings").doc(bookingId).delete();}
+    await db.collection("bookingIntents").doc(key).delete();vi.useRealTimers();
+  }
 });

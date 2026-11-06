@@ -2,6 +2,7 @@ import { customerOfferingVisible } from '../../../lib/customer-offering-visibili
 import{SERVICE_QUOTE_JOURNEY_READY}from "../../../lib/service-quote";
 import{ServiceActionBar}from "../../../ui/ServiceActionBar";
 import { customerRatingPrivacy } from "@autodeck/core";
+import { ServiceVisitFacts } from "../../../ui/ServiceVisitFacts";
 import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
 import { TabPills } from "../../../ui/CarOverview";
@@ -38,6 +39,7 @@ export default function ServiceDetailScreen() {
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [catalogueTry, setCatalogueTry] = useState(0);
   const auth = useAuth();
   const pricingVehicle = usePricingVehicle();
   // The size comes only from the selected car's saved type (edited in Garage). Flat-priced services do not depend on size, so the server
@@ -62,7 +64,7 @@ export default function ServiceDetailScreen() {
       finally {if(alive)setLoading(false);}
     })();
     return()=>{alive=false};
-  }, [id]);
+  }, [id, catalogueTry]);
 
   useEffect(() => {
     setPriceBreakdown(null);
@@ -105,7 +107,7 @@ export default function ServiceDetailScreen() {
       priceLoading={priceLoading}
       priceError={priceError}
       priceBreakdown={priceBreakdown}
-      onRetry={() => setPriceTry((n) => n + 1)}
+      onRetry={() => { if(loadError) setCatalogueTry((n) => n + 1); else setPriceTry((n) => n + 1); }}
     />
   );
 }
@@ -140,8 +142,8 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
   const showBar = !!service && sheetBarVisible({ priceOnRequest: service.priceOnRequest === true, loading: priceLoading, hasTotal: priceBreakdown !== null, needsCarType, error: priceError !== null });
   if (loading) return <Loading label="Opening the menu" />;
-  if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." /></Screen>;
-  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
+  if (loadError) return <Screen><Notice title="Can't load this service" body="Check your connection and try again." action={<Button label="Try again" onPress={onRetry}/>} /></Screen>;
+  if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.push("/(tabs)/catalogue")}/>} /></Screen>;
 
   const sc = showcaseFor(service);
   const faqs = FAQS[service.category] ?? FAQS.washing ?? [];
@@ -174,12 +176,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
 
         {tab === "overview" ? (
           <>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.breath, alignItems: "center" }}>
-          {sc.studioPick ? <Chip label="Studio pick" tone="accent" /> : null}
-          {service.warrantyLabel !== null ? <Chip label={service.warrantyLabel} tone="premium" /> : null}
-          <Chip label={dur} />
-          {service.brand !== null ? <Chip label={service.brand} /> : null}
-        </View>
+        <ServiceVisitFacts duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
         <T role="heading">{sc.tagline || service.description}</T>
         {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description.split(/\n+/).slice(1).join("\n")}</T> : null}
@@ -224,7 +221,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         <View style={{ gap: space.line }}>
           {H(service.category === "garage" ? "Price" : "Price for your car")}
 
-          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
+          <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onHelp={() => router.push("/(tabs)/help")} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
         </View>
 
           </>

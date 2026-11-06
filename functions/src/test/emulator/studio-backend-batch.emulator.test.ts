@@ -136,6 +136,7 @@ async function seedService(serviceId: string, tenantId: string) {
 }
 
 async function seedVehicle(vehicleId: string, tenantId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:tenantId,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
@@ -644,6 +645,7 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
 
     expect(issued.path).toContain(`${job.tenantId}/jobs/${job.id}/photos/`);
     expect(issued.requiredHeaders["x-goog-meta-customerId"]).toBe(customerId);
+    expect(issued.requiredHeaders["x-goog-meta-vehicleId"]).toBe(job.vehicleId);
     // Overwrite/reuse threat: the issued URL is create-only. The
     // generation-match precondition means GCS answers 412 to any second PUT
     // at the same path inside (or after) the 10-minute window, so an
@@ -668,7 +670,7 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
     await storageEnv.withSecurityRulesDisabled(async (ctx) => {
       await ctx.storage(bucketUrl).ref(issued.path).put(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
         contentType: "image/jpeg",
-        customMetadata: { customerId },
+        customMetadata: { customerId: issued.requiredHeaders["x-goog-meta-customerId"]!, vehicleId: issued.requiredHeaders["x-goog-meta-vehicleId"]! },
       });
     });
 
@@ -696,6 +698,25 @@ describe("inspection photo upload - signed URL PUT, metadata binding, read scopi
     await updateInspection.run({ data: { jobId: job.id, addPhotos: [issued.path] }, auth: staff } as never);
     const snap = await db.collection(COLLECTIONS.inspections()).doc(job.id).get();
     expect(snap.data()?.photos).toEqual([issued.path]);
+    // Preserve the deployed private inspection read contract independently of direct Storage rules.
+    const { getPrivateFileUrl } = await import("../../functions/files/getPrivateFileUrl.js");
+    const privateRead = (who: string) => getPrivateFileUrl.run({ data: { kind: "inspectionPhoto", id: job.id, path: issued.path }, auth: customerAuth(who) } as never);
+    const read = await privateRead(customerId) as {url: string; expiresInSeconds: number};
+    expect(read.expiresInSeconds).toBe(600);
+    expect(read.url).toContain("X-Goog-Signature=");
+    const foreignReader=uid("foreign-reader");
+    await db.collection(COLLECTIONS.customers()).doc(foreignReader).set({id:foreignReader, authUid:foreignReader, tenantId:TENANT_A, deletedAt:null});
+    await expect(privateRead(foreignReader)).rejects.toThrow(/earlier ownership/);
+    const nextOwner = uid("next-photo-owner");
+    await db.collection(COLLECTIONS.customers()).doc(nextOwner).set({id: nextOwner, authUid: nextOwner, tenantId: TENANT_A, deletedAt: null});
+    await db.collection(COLLECTIONS.vehicles()).doc(job.vehicleId).update({ownerId: nextOwner});
+    await expect(privateRead(customerId)).rejects.toThrow(/earlier ownership/);
+    await expect(privateRead(nextOwner)).rejects.toThrow(/earlier ownership/);
+    await db.collection(COLLECTIONS.deletedVehicles()).doc(job.vehicleId).set({id:job.vehicleId, ownerId:customerId,tenantId:TENANT_A});
+    await db.collection(COLLECTIONS.vehicles()).doc(job.vehicleId).delete();
+    expect((await privateRead(customerId) as {expiresInSeconds:number}).expiresInSeconds).toBe(600);
+    await expect(privateRead(nextOwner)).rejects.toThrow(/earlier ownership/);
+
   }, 30000);
 });
 

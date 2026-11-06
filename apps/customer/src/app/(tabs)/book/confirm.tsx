@@ -1,3 +1,4 @@
+import {bookingConfirmCopy}from"../../../lib/booking-confirm-copy";
 import { formatServiceTime } from "../../../lib/duration";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { extrasFromParam } from "../../../lib/visit-extras";
@@ -18,6 +19,7 @@ import { payOnline, payWithPaymentLink } from "../../../lib/razorpay-checkout";
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
 import { space } from "@autodeck/ui/theme";
 import { Icon } from "@autodeck/ui/native";
+import { BookingReviewGuide } from "../../../ui/BookingReviewGuide";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
 import { MEMBERSHIP_WASH_LIVE, pickWash, todayInIndia, type WashDecision } from "../../../lib/membership-wash";
 import { getMyMemberships, getMembershipPlans } from "../../../lib/membership-service";
@@ -476,9 +478,9 @@ export default function BookingConfirmScreen() {
       {service?.priceOnRequest === true ? <Pane pad="gap"><Row title="Price" detail={<T role="caption" tone="secondary">Quote on request. The studio sets the price for your car and you approve it before work starts.</T>} last /></Pane> : null}
 
       <T role="caption" tone="tertiary" style={{ textAlign: "center" }}>
-        {service?.priceOnRequest === true ? "The studio sets your price and you approve it before work starts." : giftCode ? "Confirm your slot. Your gift covers this wash." : washOn ? "Confirm your slot. Price may vary based on final work." : payNow ? "Pay now to confirm your slot. Price may vary based on final work." : advanceDue ? "Pay 20% advance online to confirm your slot. The rest at the studio when you collect your car." : "Confirm your slot. Pay at the studio. Price may vary based on final work."}
+        {bookingConfirmCopy({quote:service?.priceOnRequest===true,gift:Boolean(giftCode),membership:washOn,online:payNow,advance:advanceDue})}
       </T>
-      {washOn || giftCode ? null : <View style={{ gap: space.line }}>
+      {service?.priceOnRequest === true || washOn || giftCode ? null : <View style={{ gap: space.line }}>
         <Kicker>How will you pay</Kicker>
         <Pane pad="gap">
           {payHow.online ? (
@@ -505,7 +507,7 @@ export default function BookingConfirmScreen() {
         </Pane>
       </View>}
 
-      <Pane pad="gap"><Kicker>Before you confirm</Kicker><Row title="Your visit" detail="Check the car, service and selected time above."/><Row title="Optional pickup" detail="Pickup and drop requests are separate. The studio agrees the exact time with you."/><Row title="Questions or a change of plan?" detail="Open Help & contact before confirming if anything is unclear." onPress={()=>router.push('/(tabs)/help')} last/></Pane>
+      <BookingReviewGuide payment={service?.priceOnRequest===true?'quote':giftCode?'gift':washOn?'membership':payNow?'online':advanceDue?'advance':'studio'} onHelp={()=>router.push('/(tabs)/help')}/>
 
       {bookError ? <Notice title={held ? "Payment pending" : "Could not confirm the request"} body={bookError} /> : null}
 

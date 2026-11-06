@@ -1,6 +1,6 @@
 // Help: call, WhatsApp, location, hours and a short FAQ.
 import { useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Linking, View } from "react-native";
 import { space } from "@autodeck/ui/theme";
 import { useExperienceTheme } from "@autodeck/ui/native";
@@ -14,12 +14,13 @@ import { StudioMapCanvas } from "../../ui/StudioMapCanvas";
 import { searchFaq } from "../../lib/faq-search";
 
 export default function HelpScreen() {
+  const router=useRouter();
   const { colors, name } = useExperienceTheme();
   const cut = name === "light" ? "#FFFFFF" : "#18181C";
   const { t } = useLang();
   const [open, setOpen] = useState<number | null>(null);
   const { q: initialQuery, service: serviceName } = useLocalSearchParams<{ q?: string; service?: string }>();
-  const [query, setQuery] = useState(__DEV__ && typeof initialQuery === "string" ? initialQuery : "");
+  const [query, setQuery] = useState(typeof initialQuery === "string" ? initialQuery.slice(0,160) : "");
   const shown = searchFaq(FAQ, query);
   const [liveHours, setLiveHours] = useState<string | null>(null);
   const [liveOperatingHours, setLiveOperatingHours] = useState<LiveStudioInfo["operatingHours"] | null>(null);
@@ -51,6 +52,7 @@ export default function HelpScreen() {
           {s.mapsUrl ? <Row title="Directions" detail="Open the studio in maps" onPress={() => void Linking.openURL(s.mapsUrl)} last /> : null}
         </Pane>
       ) : null}
+      <Pane pad="gap"><Kicker>Your visit</Kicker><Row title="Bookings and changes" detail="Open your booking for its current status, change options and cancellation review." onPress={()=>router.push('/(tabs)/bookings')}/><Row title="Quotes and approvals" detail="Review proposed work and prices before approving." onPress={()=>router.push('/(tabs)/quotes')} last/></Pane>
       <Kicker>{t("Questions")}</Kicker>
       <Field label="Search questions" value={query} onChangeText={(v: string) => { setQuery(v); setOpen(null); }} placeholder="Type a few words" />
       {query.trim() ? <T role="caption" tone="secondary">Please do not type phone numbers or car plates here.</T> : null}

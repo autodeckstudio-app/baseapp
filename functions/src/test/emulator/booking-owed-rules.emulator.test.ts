@@ -16,6 +16,7 @@ beforeAll(async () => {
   env = await initializeTestEnvironment({ projectId: TEST_PROJECT_ID, firestore: { rules: readFileSync(resolve(__dirname, "../../../../firestore.rules"), "utf8"), host: "localhost", port: FS_PORT } });
   await env.withSecurityRulesDisabled(async (c) => {
     const seedDb = c.firestore();
+    await seedDb.doc("customers/cust1").set({id:"cust1",authUid:"cust1",tenantId:T,deletedAt:null});
     await seedDb.doc(`jobs/${ID}`).set({id:ID,tenantId:T,studioId:"s1",customerId:"cust1",membershipWashUsed:true});
     await seedDb.doc(`bookings/${ID}`).set({ id: ID, tenantId: T, studioId: "s1", customerId: "cust1", status: "CANCELLED", manualRefundDuePaise: 10000, cancelIntent: { state: "waiting", requestedAt: "2026-10-24T00:00:00Z" } });
     await seedDb.doc(`bookingCancelIntents/${ID}`).set({ tenantId: T, customerId: "cust1", paymentId: "p", reason: "private fixture", requestedBy: "cust1", reviewAt: "2026-10-24T00:15:00Z", state: "waiting" });

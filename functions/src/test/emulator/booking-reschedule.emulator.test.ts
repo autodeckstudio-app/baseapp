@@ -108,6 +108,7 @@ async function seedService(serviceId: string) {
 }
 
 async function seedVehicle(vehicleId: string, ownerId: string) {
+  await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:TENANT_A,deletedAt:null}, {merge:true});
   const now = new Date().toISOString();
   const vehicle: Vehicle = {
     id: vehicleId,
@@ -234,6 +235,7 @@ describe("Customer booking reschedule", () => {
   it("rejects reschedule of another customer's booking", async () => {
     const booking = await makeBooking(customerId, service, vehicle);
     const otherCustomer = uid("cust-other");
+    await db.collection("customers").doc(otherCustomer).set({id:otherCustomer,authUid:otherCustomer,tenantId:TENANT_A,deletedAt:null});
 
     await expect(
       rescheduleBooking.run({
@@ -277,13 +279,15 @@ describe("Customer booking reschedule", () => {
       const job = await getJobForBooking(booking.id);
       expect(job.statusHistory.length, `iteration ${i}`).toBe(1); // just the initial PENDING_VEHICLE entry
 
-      const [advanceResult] = await Promise.allSettled([
+      const [advanceResult,cancelResult] = await Promise.allSettled([
         advanceJobStatus.run({ data: { jobId: job.id }, auth: studioAuth(uid("studio-user"), raceStudioId) } as never),
         cancelBooking.run(
           { data: { bookingId: booking.id, reason: "race test" }, auth: customerAuth(raceCustomerId) } as never,
         ),
       ]);
 
+      if(cancelResult.status==="rejected"){const snapshot=(await db.collection("bookings").doc(booking.id).get()).data();console.error("CANCEL_RACE_DIAGNOSTIC",{iteration:i,reason:cancelResult.reason,booking:snapshot,job:await getJobForBooking(booking.id),payments:(await db.collection("payments").where("bookingId","==",booking.id).get()).docs.map(d=>d.data())});}
+      expect(cancelResult.status, `iteration ${i}: cancel settlement must succeed`).toBe("fulfilled");
       const finalJob = await getJobForBooking(booking.id);
       const finalBooking = (await db.collection("bookings").doc(booking.id).get()).data() as Booking;
 

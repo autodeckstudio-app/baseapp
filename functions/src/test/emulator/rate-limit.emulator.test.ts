@@ -219,10 +219,12 @@ describe("Rate limiting integration with real Cloud Functions", () => {
       updatedAt: now,
       deletedAt: null,
     };
+    await db.collection("customers").doc(customerId).set({id:customerId,authUid:customerId,tenantId:TENANT_ID,deletedAt:null});
     await db.collection("vehicles").doc(vehicle.id).set(vehicle);
   });
 
   async function seedVehicleFor(ownerId: string): Promise<Vehicle> {
+    await db.collection("customers").doc(ownerId).set({id:ownerId,authUid:ownerId,tenantId:TENANT_ID,deletedAt:null});
     const now = new Date().toISOString();
     const v: Vehicle = {
       id: uid("veh"),

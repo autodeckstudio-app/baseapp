@@ -27,6 +27,7 @@ async function seed(opts: { category: string; hoursBefore: number; totalPaise: n
   const jobId = uid("job");
   const serviceId = uid("svc");
   const customerId = uid("cust");
+  await db.collection("customers").doc(customerId).set({id:customerId,authUid:customerId,tenantId:TENANT,deletedAt:null});
   const scheduledAt = new Date(Date.now() + opts.hoursBefore * H).toISOString();
   await db.collection("services").doc(serviceId).set({ id: serviceId, tenantId: TENANT, category: opts.category });
   await db.collection("bookings").doc(bookingId).set({
@@ -240,7 +241,9 @@ describe("customer self-cancel of a completed cash payment (cancelBooking, custo
 
   it("another customer cannot cancel it, and another tenant cannot either; nothing changes", async () => {
     const s = await seed({ category: "washing", hoursBefore: 10, totalPaise: 100000, paidPaise: 100000 });
-    await expect(selfCancel(s.bookingId, uid("other-customer"))).rejects.toMatchObject({ code: "permission-denied" });
+    const otherCustomer=uid("other-customer");
+    await db.collection("customers").doc(otherCustomer).set({id:otherCustomer,authUid:otherCustomer,tenantId:TENANT,deletedAt:null});
+    await expect(selfCancel(s.bookingId, otherCustomer)).rejects.toMatchObject({ code: "permission-denied" });
     await expect(selfCancel(s.bookingId, await ownerOf(s.bookingId), "other-tenant")).rejects.toMatchObject({ code: "permission-denied" });
     const b = await booking(s.bookingId);
     expect(b["status"]).toBe("CONFIRMED"); expect(b["manualRefundDuePaise"]).toBeUndefined();

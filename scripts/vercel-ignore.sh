@@ -5,6 +5,91 @@
 # Never triggers a build: docs, functions/, firestore/storage rules, tests, markdown.
 # Unknown base commit or git error => build (safe default).
 app="$1"
+# This isolated emulator-fixture branch never builds or promotes a website/app.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = qa/quote-fixtures-20261106 ]; then
+  printf 'isolated fixture QA branch: SKIP (%s)\n' "$app"
+  exit 0
+fi
+# Exact reviewed Customer + Site frontend release. Unknown source is never promoted.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ] && [ "$(git rev-parse --verify HEAD^ 2>/dev/null || true)" = 1686827c573e220d09d5055017e623d477c37b9c ]; then
+  release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$release_root" ] || exit 0
+  cd "$release_root" || exit 0
+  release_paths="$(git diff --name-only HEAD^ HEAD 2>/dev/null)" || exit 0
+  expected_paths=$(cat <<'REVIEWED_PATHS'
+.github/workflows/ci.yml
+apps/customer/src/app/(tabs)/book/confirm.tsx
+apps/customer/src/app/(tabs)/catalogue/[id].tsx
+apps/customer/src/app/(tabs)/help.tsx
+apps/customer/src/lib/booking-confirm-copy.test.ts
+apps/customer/src/lib/booking-confirm-copy.ts
+apps/customer/src/lib/day-surfaces.test.ts
+apps/customer/src/lib/policy-copy.test.ts
+apps/customer/src/lib/raised.ts
+apps/customer/src/lib/service-home-images.ts
+apps/customer/src/lib/showcase.ts
+apps/customer/src/lib/studio-info.ts
+apps/customer/src/ui/BookingReviewGuide.tsx
+apps/customer/src/ui/HomeView.tsx
+apps/customer/src/ui/ServiceHomes.tsx
+apps/customer/src/ui/ServicePrice.tsx
+apps/customer/src/ui/ServiceTimePicker.tsx
+apps/customer/src/ui/ServiceVisitFacts.tsx
+apps/customer/src/ui/booking-review-guide.render.test.tsx
+apps/customer/src/ui/design-contract.test.ts
+apps/customer/src/ui/home-merged.test.ts
+apps/customer/src/ui/homes-reference.render.test.tsx
+apps/customer/src/ui/service-homes-work.render.test.tsx
+apps/customer/src/ui/service-visit-facts.render.test.tsx
+apps/customer/src/ui/uc-review-contract.test.ts
+apps/site/src/data/redesign/services.html
+apps/site/src/data/site-service-family-overrides.json
+apps/site/src/pages/services.astro
+apps/site/src/pages/services/[slug].astro
+apps/site/tests/category-handoff.test.mjs
+apps/site/tests/public-cars.test.mjs
+apps/site/tests/recheck.test.mjs
+apps/site/tests/service-decision.test.mjs
+functions/src/functions/files/getPrivateFileUrl.ts
+functions/src/functions/inspection/issueInspectionPhotoUploadUrl.ts
+functions/src/lib/photo-provenance.ts
+functions/src/test/emulator/advance-activation-booking.emulator.test.ts
+functions/src/test/emulator/booking-cancel-money.emulator.test.ts
+functions/src/test/emulator/booking-owed-rules.emulator.test.ts
+functions/src/test/emulator/booking-reschedule-request.emulator.test.ts
+functions/src/test/emulator/booking-reschedule.emulator.test.ts
+functions/src/test/emulator/cancel-outbox.emulator.test.ts
+functions/src/test/emulator/garage-ownership.emulator.test.ts
+functions/src/test/emulator/inspection.emulator.test.ts
+functions/src/test/emulator/m6-office-rules.emulator.test.ts
+functions/src/test/emulator/membership-refund-policy.emulator.test.ts
+functions/src/test/emulator/membership.emulator.test.ts
+functions/src/test/emulator/multiday-booking.emulator.test.ts
+functions/src/test/emulator/native-membership-url.emulator.test.ts
+functions/src/test/emulator/notifications.emulator.test.ts
+functions/src/test/emulator/papers-real-transport.emulator.test.ts
+functions/src/test/emulator/payment-confirm.emulator.test.ts
+functions/src/test/emulator/protection-listener-rules.emulator.test.ts
+functions/src/test/emulator/rate-limit.emulator.test.ts
+functions/src/test/emulator/round2-history.emulator.test.ts
+functions/src/test/emulator/security-rules.emulator.test.ts
+functions/src/test/emulator/storage-rules.emulator.test.ts
+functions/src/test/emulator/studio-backend-batch.emulator.test.ts
+functions/src/test/emulator/upgrade-claim-barrier.emulator.test.ts
+functions/src/test/emulator/waiting-cancel-processing.emulator.test.ts
+functions/src/test/emulator/waiting-cancel.emulator.test.ts
+functions/src/test/fixtures/nonmember-byte-inputs.json
+functions/src/test/unit/paper-lifecycle-flow.test.ts
+functions/src/test/unit/private-file-url.test.ts
+scripts/vercel-ignore.sh
+REVIEWED_PATHS
+)
+  if [ "$release_paths" != "$expected_paths" ]; then printf 'reviewed frontend release paths do not match: SKIP\n'; exit 0; fi
+  case "$app" in
+    customer|site) printf 'reviewed frontend release: BUILD (%s)\n' "$app"; exit 1 ;;
+    *) printf 'reviewed frontend release: SKIP (%s)\n' "$app"; exit 0 ;;
+  esac
+fi
 # One-shot Confirmed-product visibility release. Exact parent and file allowlist isolate this release.
 if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
   release_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"

@@ -21,9 +21,11 @@ describe("merged Home", () => {
     expect(body.split("onPress={p.onBook}").length - 1).toBeLessThanOrEqual(1);
   });
   it("slot 1 is the live card OR the car chip, never both", () => {
-    expect(body).toMatch(/liveOn \? <LiveCard[^\n]*: <CarChips/);
+    expect(body).toMatch(/liveOn \? <LiveCard[^\n]*: p\.cars\.length>0 \? <CarChips/);
   });
   it("the lead card is live job OR next step, never both", () => {
     expect(body.split("<LeadCard").length - 1).toBe(1);
   });
 });
+
+it('keeps a single add-car entry in empty Home',()=>{expect(body).toContain('p.cars.length>0 ? <CarChips');});

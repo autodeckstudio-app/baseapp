@@ -10,6 +10,7 @@ afterAll(async()=>{await env.cleanup();});beforeEach(async()=>{await env.clearFi
 describe('Round 2 retained history on real Firestore emulator',()=>{
  it('delete keeps exact jobs/invoice amounts and owner-readable tombstone, denies other owner/tenant and client writes',async()=>{
  const db=getFirestore();const car={id:'r2-car',tenantId:'t',ownerId:'owner',registrationNumber:'GJ01AB1234',make:'Tata',model:'Nexon',year:2022,color:'White',photoUrl:null,deletedAt:'2026-10-01'};
+ await db.collection('customers').doc('owner').set({id:'owner',authUid:'owner',tenantId:'t',deletedAt:null});
  await db.collection('vehicles').doc(car.id).set(car);
  await db.collection('bookings').doc('r2-booking').set({tenantId:'t',customerId:'owner',vehicleId:car.id,status:'COMPLETED'});
  await db.collection('jobs').doc('r2-job').set({tenantId:'t',customerId:'owner',vehicleId:car.id,status:'DELIVERED'});

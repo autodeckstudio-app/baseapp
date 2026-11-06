@@ -599,7 +599,8 @@ describe("car lists wait for the sign-in to load", () => {
 import { DAY_ATMOSPHERE } from "@autodeck/ui/theme";
 describe("one Day background across the apps", () => {
   it("customer Day ground is the shared atmosphere, studio applies it, Home photo dissolves into it", () => {
-    expect(read("src/lib/raised.ts")).toContain(": DAY_ATMOSPHERE,");
+    expect(read("src/lib/raised.ts")).toContain('canvas: "#FFFFFF"');
+    expect(read("src/lib/raised.ts")).toContain("rgba(236,134,56,0.025)");
     expect(read("../studio/src/app/_layout.tsx")).toContain("rs.backgroundImage = DAY_ATMOSPHERE");
     const h = read("src/ui/HomeBackdrop.tsx");
     expect(h).toContain("maskImage");
@@ -765,7 +766,7 @@ describe("no studio photo behind app pages; the page light is the orange lamp gl
 
 it("gift-covered zero-total bookings use the shared next-step helper (behaviour tested in booking-next-step.test.ts)",()=>{
   const b=read("src/app/(tabs)/bookings/[id].tsx");expect(b).toContain("Boolean(booking.giftId) && booking.priceBreakdown.total === 0");expect(b).toContain("nextStepLine({ giftCovered, jobStatus: job?.status ?? null");
-  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain('giftCode ? "Confirm your slot. Your gift covers this wash."');expect(c).toContain("Pay at the studio. Price may vary based on final work.");
+  const c=read("src/app/(tabs)/book/confirm.tsx");expect(c).toContain("gift:Boolean(giftCode)");expect(read("src/lib/booking-confirm-copy.ts")).toContain("Your gift covers the selected wash.");expect(c).not.toContain("Price may vary based on final work.");
 });
 
 describe("row press targets never nest interactive elements", () => {

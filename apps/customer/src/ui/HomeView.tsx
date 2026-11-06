@@ -312,13 +312,13 @@ export function HomeView(p: HomeViewProps) {
 
       {p.banner}
 
-      {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} />}
+      {liveOn ? <LiveCard live={p.live!} pct={pct} car={car} /> : p.cars.length>0 ? <CarChips cars={p.cars} active={active} onActive={setActive} onOpen={(c) => p.onCar(c)} onAdd={p.onAddCar} /> : null}
 
       {top.length ? (
         <View style={{ gap: 12 }}>
           <Heading title="Services for you" action="All" onAction={p.onAllServices} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: TILE_GAP }}>
-            {top.map((t) => <View key={t.key} style={{ width: 204 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View>)}
+            {top.map((t) => <View key={t.key} style={{ width: 204, height: 146 }}><TopPickCard pick={t} onPress={() => p.onService(t.service)} /></View>)}
           </ScrollView>
         </View>
       ) : null}

@@ -71,6 +71,7 @@ export const issueInspectionPhotoUploadUrl = onCall({ region: "asia-south1" , en
   const requiredHeaders = {
     "Content-Type": data.contentType,
     "x-goog-meta-customerId": job.customerId,
+    "x-goog-meta-vehicleId": job.vehicleId,
     "x-goog-if-generation-match": "0",
   };
   const [uploadUrl] = await getStorage()

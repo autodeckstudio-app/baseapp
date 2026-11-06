@@ -8,6 +8,7 @@ const db=getFirestore();
 beforeAll(()=>{if(!process.env["GCLOUD_PROJECT"]?.startsWith("demo-"))throw Error("demo emulator only");});
 it("precommit barrier: two first upgrades cannot commit two pending memberships or links",async()=>{
  const uid=`upgrade-precommit-${Date.now()}`,old=`${uid}-old`,target=`${uid}-new`,active=`${uid}-active`;
+ await db.collection("customers").doc(uid).set({id:uid,authUid:uid,tenantId:"claim-barrier",deletedAt:null});
  for(const [id,price] of [[old,90000],[target,180000]] as const)await db.collection("membershipPlans").doc(id).set({id,tenantId:"claim-barrier",active:true,tier:"gold",name:id,priceInPaise:price,includedWashes:3,discountPercent:10,freePickups:0,prioritySlot:false});
  await db.collection("memberships").doc(active).set({id:active,tenantId:"claim-barrier",customerId:uid,planId:old,status:"active",tier:"silver",washesUsed:0,washesTotal:3,pickupsUsed:0});
  // Exercise the already-active claim too: it is legitimate, but must be READ.

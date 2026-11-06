@@ -1,3 +1,4 @@
+vi.mock('react-native',async()=>{const actual=await vi.importActual<any>('react-native');return{...actual,Image:'Image'}});
 import{vi}from'vitest';// Classification-only test: product eligibility is tested separately with real policy below.
 vi.mock('../lib/customer-offering-visibility',()=>({customerOfferingVisible:()=>true}));
 vi.mock('./ServicePhoto',()=>({ServicePhoto:()=>null}));

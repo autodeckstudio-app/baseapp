@@ -14,9 +14,12 @@ import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
+
+import { assertPhotoProvenance } from "../../lib/photo-provenance.js";
 
 const schema = z.object({
-  kind: z.enum(["paper", "license", "vehiclePhoto"]),
+  kind: z.enum(["paper", "license", "vehiclePhoto", "inspectionPhoto"]),
   id: z.string().min(1).max(120),
   path: z.string().min(1).max(300).optional(),
 }).strict();
@@ -29,12 +32,33 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
   const data = validate(schema, request.data);
   await enforceRateLimit(subjectFrom(user), "file.read");
   const db = getFirestore();
+  const customerDocId = user.claims.role === "customer" ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid) : null;
+
+  // Re-read immediately before minting, too: object IO must not leave a stale
+  // ownership proof if a transfer happens while the file is being checked.
+  async function assertInspectionRead(): Promise<void> {
+    const snap = await db.collection(COLLECTIONS.inspections()).doc(data.id).get();
+    if (!snap.exists) throw new HttpsError("not-found", "Inspection not found.");
+    const inspection = snap.data() as { tenantId: string; customerId: string; vehicleId: string; photos: string[] };
+    assertTenant(user, inspection.tenantId);
+    if (!data.path || !Array.isArray(inspection.photos) || !inspection.photos.includes(data.path) || !data.path.startsWith(`${inspection.tenantId}/jobs/${data.id}/photos/`)) throw new HttpsError("permission-denied", "Not this inspection's photo.");
+    if (user.claims.role === "customer") {
+      const current = await db.collection(COLLECTIONS.vehicles()).doc(inspection.vehicleId).get();
+      const proof = current.exists ? current : await db.collection(COLLECTIONS.deletedVehicles()).doc(inspection.vehicleId).get();
+      const owner = proof.data() as {ownerId?: string; tenantId?: string} | undefined;
+      if (inspection.customerId !== customerDocId || !owner || owner.ownerId !== customerDocId || owner.tenantId !== inspection.tenantId) throw new HttpsError("permission-denied", "This inspection belongs to an earlier ownership record.");
+    }
+  }
 
   let path: string | null = null;
+  let vehicleRef: ReturnType<ReturnType<typeof getFirestore>["doc"]> | null = null;
   let checkedPaperGeneration: string | null = null;
   let uploadedPaperGeneration: string | null = null;
   let expectedPrefix: string | null = null;
-  if (data.kind === "paper") {
+  if (data.kind === "inspectionPhoto") {
+    await assertInspectionRead();
+    path = data.path ?? null;
+  } else if (data.kind === "paper") {
     const snap = await db.collection(COLLECTIONS.papers()).doc(data.id).get();
     if (!snap.exists) throw new HttpsError("not-found", "Document not found.");
     const paper = snap.data() as PaperVerification & { evidencePath?: string | null; evidenceGeneration?: string | null };
@@ -46,7 +70,7 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
     if (!vSnap.exists || !vehicle || vehicle.tenantId !== paper.tenantId || vehicle.deletedAt) {
       throw new HttpsError("failed-precondition", "This document's car is not available.");
     }
-    if (user.claims.role === "customer" && (paper.customerId !== user.uid || vehicle.ownerId !== user.uid)) {
+    if (user.claims.role === "customer" && (paper.customerId !== customerDocId || vehicle.ownerId !== customerDocId)) {
       throw new HttpsError("permission-denied", "Not your document.");
     }
     path = paper.evidencePath ?? null;
@@ -62,14 +86,16 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
     if (!snap.exists) throw new HttpsError("not-found", "Customer not found.");
     const customer = snap.data() as Customer & { licensePhotoUrl?: string | null };
     assertTenant(user, customer.tenantId);
-    if (user.claims.role === "customer" && data.id !== user.uid) throw new HttpsError("permission-denied", "Not your profile.");
+    if (user.claims.role === "customer" && data.id !== customerDocId) throw new HttpsError("permission-denied", "Not your profile.");
     path = customer.licensePhotoUrl ?? null;
   } else {
-    const snap = await db.collection(COLLECTIONS.vehicles()).doc(data.id).get();
+    vehicleRef = db.collection(COLLECTIONS.vehicles()).doc(data.id);
+    const snap = await vehicleRef.get();
     if (!snap.exists) throw new HttpsError("not-found", "Vehicle not found.");
     const vehicle = snap.data() as Vehicle & { photoUrl?: string | null; rcPhotoUrl?: string | null };
     assertTenant(user, vehicle.tenantId);
-    if (user.claims.role === "customer" && vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    if (vehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
+    if (user.claims.role === "customer" && vehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     // The caller names the exact stored photo it wants; it must be one of the
     // record's own photo paths, never an arbitrary object in the bucket.
     path = data.path && (data.path === vehicle.photoUrl || data.path === vehicle.rcPhotoUrl) ? data.path : null;
@@ -105,6 +131,14 @@ export const getPrivateFileUrl = onCall({ region: "asia-south1", invoker: "publi
     });
     if (!exists) throw new HttpsError("not-found", "The stored file is gone.");
   }
+  if (data.kind === "vehiclePhoto" && user.claims.role === "customer") {
+    await assertPhotoProvenance(file, customerDocId!);
+    const fresh = (await vehicleRef!.get()).data() as Vehicle | undefined;
+    if (!fresh || fresh.ownerId !== customerDocId || fresh.tenantId !== user.claims.tenantId || fresh.deletedAt || (path !== fresh.photoUrl && path !== fresh.rcPhotoUrl)) {
+      throw new HttpsError("permission-denied", "Vehicle ownership or photo changed. Try again.");
+    }
+  }
+  if (data.kind === "inspectionPhoto") await assertInspectionRead();
   // Known limit, by design: a signed read URL stays usable for up to READ_WINDOW_MS after it
   // is minted. A transfer or archive landing in that window does NOT instantly revoke it -
   // the fresh ownership/tenant/archive checks above gate the MINT, not the bearer URL itself.

@@ -53,6 +53,7 @@ describe("papers real transport (emulator, no mocks)", () => {
   it("signed mint -> real bytes in real storage -> finalize binds real md5Hash -> pinned read returns the exact bytes", async () => {
     const me = `cust-${Date.now()}`;
     const vid = `veh-${Date.now()}`;
+    await db.collection("customers").doc(me).set({id:me,authUid:me,tenantId:TENANT,deletedAt:null});
     await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: me, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
 
     console.log("STEP: minting"); const mint: any = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "INSURANCE", reference: `POL-${Date.now()}`, contentType: "image/jpeg", contentMd5: MD5 }, auth: auth(me) } as never); console.log("STEP: minted", String(mint.uploadUrl).slice(0,80));
@@ -90,6 +91,7 @@ describe("papers real transport (emulator, no mocks)", () => {
   it("digest mismatch is refused by finalize against REAL stored metadata (the binding that holds everywhere)", async () => {
     const me = `cust2-${Date.now()}`;
     const vid = `veh2-${Date.now()}`;
+    await db.collection("customers").doc(me).set({id:me,authUid:me,tenantId:TENANT,deletedAt:null});
     await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: me, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
     const mint: any = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "PUC", reference: `PUC-${Date.now()}`, contentType: "image/jpeg", contentMd5: MD5 }, auth: auth(me) } as never);
     expectGenuinelySigned(mint.uploadUrl);
@@ -116,6 +118,7 @@ describe("papers real transport (emulator, no mocks)", () => {
   it("no-photo flow on real runtimes: submit without bytes sits PENDING, never an upload binding", async () => {
     const me = `cust3-${Date.now()}`;
     const vid = `veh3-${Date.now()}`;
+    await db.collection("customers").doc(me).set({id:me,authUid:me,tenantId:TENANT,deletedAt:null});
     await db.collection("vehicles").doc(vid).set({ id: vid, ownerId: me, tenantId: TENANT, registrationNumber: "GJ01AB1234" });
     const mint: any = await submitMyPaper.run({ data: { studioId: "s", vehicleId: vid, kind: "OTHER", title: "Card", reference: `OTH-${Date.now()}` }, auth: auth(me) } as never);
     expect(mint.uploadUrl).toBeNull();

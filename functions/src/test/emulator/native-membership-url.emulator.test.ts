@@ -8,9 +8,11 @@ import { getPaymentProvider } from "../../lib/razorpay-provider.js";
 const db = getFirestore();
 beforeAll(() => { if (!process.env["GCLOUD_PROJECT"]?.startsWith("demo-")) throw new Error("demo emulator required"); });
 const auth = (uid: string) => ({ uid, token: { role: "customer", tenantId: "native-member", studioId: null } });
+const seedCustomer = async (uid:string) => db.collection("customers").doc(uid).set({id:uid,authUid:uid,tenantId:"native-member",deletedAt:null});
 const plan = (id: string, price: number) => ({ id, tenantId: "native-member", active: true, tier: "gold", name: id, priceInPaise: price, includedWashes: 3, discountPercent: 10, freePickups: 0, prioritySlot: false });
 it("purchase returns/persists/replays hosted URL and recovers legacy missing-URL from its bound provider link", async () => {
   const id = `native-plan-${Date.now()}`, uid = `native-member-${Date.now()}`; await db.collection("membershipPlans").doc(id).set(plan(id, 90000));
+  await seedCustomer(uid);
   const req = { data: { planId: id, method: "razorpay_payment_link", idempotencyKey: "native-membership-url-test" }, auth: auth(uid) };
   const first = await purchaseMembership.run(req as never) as { paymentId: string; paymentUrl: string; membershipId: string };
   expect(first.paymentUrl).toContain("mock-razorpay.local"); expect((await db.collection("payments").doc(first.paymentId).get()).data()!.paymentUrl).toBe(first.paymentUrl);
@@ -25,6 +27,7 @@ it("upgrade returns/persists/replays the same hosted URL and same membership/pay
   const uid = `native-upgrade-${Date.now()}`, old = `${uid}-old`, target = `${uid}-new`;
   await db.collection("membershipPlans").doc(old).set(plan(old, 90000)); await db.collection("membershipPlans").doc(target).set(plan(target, 180000));
   await db.collection("memberships").doc(`${uid}-active`).set({ id: `${uid}-active`, tenantId: "native-member", customerId: uid, planId: old, status: "active", tier: "silver", washesUsed: 0, washesTotal: 3, pickupsUsed: 0 });
+  await seedCustomer(uid);
   const req = { data: { planId: target, method: "razorpay_payment_link", idempotencyKey: "native-upgrade-url-test" }, auth: auth(uid) };
   const first = await upgradeMembership.run(req as never) as { paymentId: string; paymentUrl: string };
   expect(first.paymentUrl).toContain("mock-razorpay.local"); expect((await db.collection("payments").doc(first.paymentId).get()).data()!.paymentUrl).toBe(first.paymentUrl);
@@ -36,6 +39,7 @@ it("provider response loss leaves committed payment with ambiguity; retry never 
  const uid=`native-loss-${Date.now()}`,id=`${uid}-plan`;await db.collection("membershipPlans").doc(id).set(plan(id,90000));
  const api=getPaymentProvider(), original=api.createPaymentLink.bind(api);
  const spy=vi.spyOn(api,"createPaymentLink").mockImplementationOnce(async params=>{await original(params);throw new Error("response lost");});
+ await seedCustomer(uid);
  const req={data:{planId:id,method:"razorpay_payment_link",idempotencyKey:"response-loss"},auth:auth(uid)};
  await expect(purchaseMembership.run(req as never)).rejects.toThrow(/response lost/);
  const ps=await db.collection("payments").where("customerId","==",uid).get();expect(ps.size).toBe(1);expect(ps.docs[0]!.data().orderAmbiguous).toBe(true);
@@ -52,6 +56,7 @@ it.each([[false,true],[false,false],[true,true],[true,false]])("first membership
  if(upgrade){await db.collection("membershipPlans").doc(old).set(plan(old,90000));await db.collection("memberships").doc(`${uid}-active`).set({id:`${uid}-active`,tenantId:"native-member",customerId:uid,planId:old,status:"active",tier:"silver",washesUsed:0,washesTotal:3,pickupsUsed:0});}
  const api=getPaymentProvider(),original=api.createPaymentLink.bind(api);let arrived=0;let release!:()=>void;const both=new Promise<void>(r=>{release=r;});
  const spy=vi.spyOn(api,"createPaymentLink").mockImplementation(async params=>{if(++arrived===2)release();await Promise.race([both,new Promise<void>(r=>setTimeout(r,3000))]);return original(params);});
+ await seedCustomer(uid);
  const fn=upgrade?upgradeMembership:purchaseMembership;
  const results=await Promise.allSettled([0,1].map(n=>fn.run({data:{planId:id,method:"razorpay_payment_link",idempotencyKey:`race-${sameKey?"same":n}`},auth:auth(uid)} as never)));
  const ms=await db.collection("memberships").where("customerId","==",uid).where("status","==","pending").get(),ps=await db.collection("payments").where("customerId","==",uid).get();

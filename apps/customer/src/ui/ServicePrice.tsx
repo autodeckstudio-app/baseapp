@@ -17,6 +17,7 @@ export type ServicePriceProps = {
   breakdown: PriceBreakdown | null;
   onRetry: () => void;
   onGarage: () => void;
+  onHelp?: () => void;
 };
 
 /** The price block of a service page. The car size is never chosen here: it is the selected car's saved type. */
@@ -36,7 +37,7 @@ export function ServicePrice(p: ServicePriceProps) {
           ) : p.error ? (
             <View style={{ gap: space.line }}>
               <Notice title="Can't get the price" body={priceErrorInfo(p.error).body} />
-              {priceErrorInfo(p.error).retry ? <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : null}
+              {priceErrorInfo(p.error).retry ? <Button label="Try again" kind="quiet" onPress={() => p.onRetry()} /> : p.onHelp ? <Button label="Get help" kind="quiet" onPress={p.onHelp} /> : null}
             </View>
           ) : priceBreakdown !== null ? (
             <Pane pad="gap">

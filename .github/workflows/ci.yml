@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     # Preview incorporation branch: hosted CI on push without involving main.
-    branches: [main, preview/gauri-basket]
+    branches: [main, preview/gauri-basket, qa/quote-fixtures-20261106]
 
 concurrency:
   group: ci-${{ github.ref }}

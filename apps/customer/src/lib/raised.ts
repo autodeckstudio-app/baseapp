@@ -3,7 +3,7 @@
 // (night). Orange is the only colour fill. One recipe per theme so every page
 // matches. Use raised(name) with the name from useExperienceTheme().
 import { Platform, type ViewStyle } from "react-native";
-import { lightColors, nightColors, DAY_ATMOSPHERE } from "@autodeck/ui/theme";
+import { lightColors, nightColors } from "@autodeck/ui/theme";
 
 const web = Platform.OS === "web";
 export type Mode = "light" | "night" | "dark";
@@ -37,7 +37,7 @@ const SH = {
 
 export function raised(mode: Mode): Raised {
   const night = isNight(mode);
-  const c = night ? nightColors : { ...lightColors, surface: "#FFFFFF", surfaceElevated: "#F7F6F3", canvas: "#F3F2EF" };
+  const c = night ? nightColors : { ...lightColors, surface: "#FFFFFF", surfaceElevated: "#F7F6F3", canvas: "#FFFFFF" };
   const s = night ? SH.night : SH.light;
   // One dark card colour everywhere (the same charcoal as Home and Garage), never the theme palette grey.
   const surf = night ? "#1B1B1F" : c.surface;
@@ -56,6 +56,6 @@ export function raised(mode: Mode): Raised {
     ground: c.canvas,
     groundImage: night
       ? "radial-gradient(120% 50% at 80% -10%, rgba(236,134,56,0.10) 0%, rgba(236,134,56,0) 60%), linear-gradient(180deg, #14151A 0%, #0F1013 60%, #0B0B0E 100%)"
-      : DAY_ATMOSPHERE,
+      : "radial-gradient(100% 40% at 50% 0%, rgba(236,134,56,0.025), transparent 70%), linear-gradient(180deg, #FFFFFF, #FDFDFC)",
   };
 }

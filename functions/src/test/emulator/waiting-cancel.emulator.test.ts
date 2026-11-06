@@ -11,6 +11,7 @@ const db = getFirestore(); let n=0;
 const auth = (uid:string, role="customer",tenant="wc") => ({uid,token:{role,tenantId:tenant,studioId:null},rawToken:"test"});
 async function seed(status="pending") {
  const id=`wc-${Date.now()}-${++n}`, now=new Date().toISOString(), customerId=`c-${id}`;
+ await db.collection("customers").doc(customerId).set({id:customerId,authUid:customerId,tenantId:"wc",deletedAt:null});
  await db.collection("bookings").doc(id).set({id,tenantId:"wc",studioId:"s",customerId,serviceId:"svc",status:"PENDING",paymentStatus:"unpaid",totalAmount:100000,scheduledAt:new Date(Date.now()+3600000).toISOString(),holdExpiresAt:new Date(Date.now()-60000).toISOString(),createdAt:now,updatedAt:now});
  await db.collection("jobs").doc(id).set({id,tenantId:"wc",studioId:"s",customerId,bookingId:id,status:"PENDING_VEHICLE",paymentStatus:"unpaid",statusHistory:[]});
  await db.collection("payments").doc(id).set({id,tenantId:"wc",studioId:"s",customerId,bookingId:id,jobId:id,status,method:"razorpay_payment_link",amount:100000,currency:"INR",razorpayPaymentLinkId:`link-${id}`,razorpayPaymentId:`pay-${id}`,refundAmount:0});
@@ -25,7 +26,7 @@ describe("waiting cancel retained-slot workflow (emulator fixtures)",()=>{
    const b=await doc("bookings",s.id);expect(b.status).toBe("PENDING");expect(Object.keys(b.cancelIntent).sort()).toEqual(["requestedAt","state"]);expect((await doc("jobs",s.id)).status).toBe("PENDING_VEHICLE");expect((await doc("payments",s.id)).status).toBe(status);
   }
  });
- it("other customer and tenant denied",async()=>{const s=await seed();for(const a of [auth("other"),auth(s.customerId,"customer","other")])await expect(cancelBooking.run({data:{bookingId:s.id,reason:"wait",customerContext:true},auth:a} as never)).rejects.toMatchObject({code:"permission-denied"});expect((await db.collection("bookingCancelIntents").doc(s.id).get()).exists).toBe(false);});
+ it("other customer and tenant denied",async()=>{const s=await seed();await db.collection("customers").doc("other").set({id:"other",authUid:"other",tenantId:"wc",deletedAt:null});for(const a of [auth("other"),auth(s.customerId,"customer","other")])await expect(cancelBooking.run({data:{bookingId:s.id,reason:"wait",customerContext:true},auth:a} as never)).rejects.toMatchObject({code:"permission-denied"});expect((await db.collection("bookingCancelIntents").doc(s.id).get()).exists).toBe(false);});
  it("both sweeps skip unresolved, review after15min retains; resolved marker does not exempt ordinary expiry/close",async()=>{
   const s=await seed();await req(s);const now=Date.now()+86400000;
   await sweepExpiredBookingHolds(db,now);await flagMissedBookings(db,now);expect((await doc("bookings",s.id)).status).toBe("PENDING");expect((await doc("bookings",s.id)).cancelIntent.state).toBe("needs_review");
