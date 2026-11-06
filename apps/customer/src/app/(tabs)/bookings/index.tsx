@@ -116,6 +116,9 @@ export default function BookingsScreen() {
     return () => { alive = false; };
   }, [bookings, walkIns, svcs]);
 
+  if(auth.status==="loading")return <Loading label="Checking your account" />;
+  if(auth.status!=="ready")return <Screen><Notice title="Sign in to view your bookings" body="Your account session could not be verified." action={<Button label="Sign in" onPress={()=>router.push("/login")} />} /></Screen>;
+  if(!auth.customerDocId)return <Screen header={<PageHeader title="Bookings" />}><Notice title={auth.claims.role!=="customer"?"Bookings use a customer account":"Customer profile could not be verified"} body={auth.claims.role!=="customer"?"You are signed in with a staff or admin account. You can browse services here, but customer bookings need a customer account. Your staff access has not changed.":"We could not verify the customer profile linked to this sign-in. Your bookings have not been changed. Return to your account and try signing in again, or contact the studio."} action={<Button label="Go to your account" onPress={()=>router.push("/(tabs)/profile")} />} /><Button label="Browse services" kind="quiet" onPress={()=>router.push("/(tabs)/catalogue")} /></Screen>;
   if (!bookings && !error) return <Loading label="Loading bookings" />;
   const all = [...(bookings ?? []), ...walkIns];
   const { inStudio, upcoming, past } = bookingSections(all);
@@ -170,7 +173,7 @@ export default function BookingsScreen() {
   };
 
   return (
-    <Screen appBar="Bookings" header={<PageHeader title={liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={[upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
+    <Screen appBar="Bookings" header={<PageHeader title={error || bookings === null ? "Bookings" : liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={error || bookings === null ? "" : [upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
       <View {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 220, 480) }, swipe.style]}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
 
