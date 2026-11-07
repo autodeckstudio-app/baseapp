@@ -397,8 +397,8 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     const current = currentSnap.data() as (PaperVerification & { evidencePath?: string | null; pendingEvidencePath?: string | null; revision?: number }) | undefined;
     if (!current || current.status !== "PENDING" || current.verificationMode === "manual") return;
     const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
-    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== customerDocId || freshVehicle.tenantId !== current.tenantId || freshVehicle.deletedAt) return;
-    if (current.customerId !== customerDocId || current.vehicleId !== paper.vehicleId || current.tenantId !== paper.tenantId) return;
+    if (!freshVehicleSnap.exists || !freshVehicle || (freshVehicle.ownerId !== customerDocId && freshVehicle.ownerId !== user.uid) || freshVehicle.tenantId !== current.tenantId || freshVehicle.deletedAt) return;
+    if ((current.customerId !== customerDocId && current.customerId !== user.uid) || current.vehicleId !== paper.vehicleId || current.tenantId !== paper.tenantId) return;
     // Supersede guard: this call may only write the exact state it read. A staged-photo finalize applies
     // only while its own staging is still current; a submit-flow finalize applies only while no edit has
     // staged a replacement and the evidence is untouched. Otherwise an older finalize would overwrite the
@@ -450,7 +450,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     if (!latest.exists) throw new HttpsError("failed-precondition", "This document was removed while its checks ran.");
     const cur = latest.data() as PaperVerification & { customerId?: string };
     const v = vSnap.data() as Vehicle | undefined;
-    if (!vSnap.exists || !v || v.ownerId !== customerDocId || v.tenantId !== cur.tenantId || cur.customerId !== customerDocId) {
+    if (!vSnap.exists || !v || (v.ownerId !== customerDocId && v.ownerId !== user.uid) || v.tenantId !== cur.tenantId || (cur.customerId !== customerDocId && cur.customerId !== user.uid)) {
       throw new HttpsError("failed-precondition", "This document's checks could not be completed. Open the document to see its current state.");
     }
     return { status: cur.status, reason: "This document changed while its checks ran. Its latest state is shown." };

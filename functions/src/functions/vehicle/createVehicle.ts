@@ -27,13 +27,10 @@ export const createVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
   // target customer must already exist in this tenant (doc20: full
   // customer-creation-from-studio is explicitly not V1 scope; only an
   // existing account's vehicle can be added this way).
-  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs
-  // from the auth uid. Customers must own a profile; staff without one keep
-  // legacy uid keying, matching createBooking's role-agnostic shape.
-  const resolvedDocId = user.claims.role === "customer"
-    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
-    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
-  let ownerId = resolvedDocId ?? user.uid;
+  // Records key on the customer DOCUMENT id when one resolves: a claimed walk-in's doc
+  // id differs from the auth uid. Base behavior stamped the uid directly with no profile
+  // lookup; a verified-absent profile (customer or staff) keeps exactly that uid keying.
+  let ownerId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
   // A self reference is the resolved doc id OR the raw auth uid (older clients
   // still send their uid); anything else is an on-behalf intake by staff.
   if (data.ownerId && data.ownerId !== ownerId && data.ownerId !== user.uid) {

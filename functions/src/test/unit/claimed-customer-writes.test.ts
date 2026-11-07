@@ -47,7 +47,7 @@ import { getPickupQuote } from "../../functions/booking/pickupQuote.js";
 import { submitReview } from "../../functions/booking/submitReview.js";
 import { requestPickupDrop } from "../../functions/booking/pickupRequests.js";
 import { createMyProtection } from "../../functions/protection/createMyProtection.js";
-import { submitMyPaper } from "../../functions/papers/submitMyPaper.js";
+import { submitMyPaper, finalizeMyPaper } from "../../functions/papers/submitMyPaper.js";
 
 const UID = "auth-1";
 const DOC = "cust-staged"; // claimed walk-in: doc id != auth uid
@@ -136,5 +136,10 @@ describe("claimed customer (doc id != auth uid): writers stamp and guard the can
   it("one active RC per car across both keys: a pre-fix uid-keyed active RC blocks a second RC", async () => {
     h.rows.set("papers/p-rc-old", { id: "p-rc-old", tenantId: "t", customerId: UID, vehicleId: "v1", kind: "RC", reference: "GJ01AB1234", submittedBy: "customer", status: "VERIFIED" });
     await expect((submitMyPaper as any).run(req({ studioId: "st1", vehicleId: "v1", submissionId: "55555555-5555-4555-8555-555555555555", kind: "RC", reference: "GJ 01 XY 9999" }))).rejects.toMatchObject({ code: "already-exists" });
+  });
+  it("finalizeMyPaper processes a claimed principal's pre-fix uid-keyed PENDING paper (deep guards dual-principal)", async () => {
+    h.rows.set("papers/p-pending", { id: "p-pending", tenantId: "t", customerId: UID, vehicleId: "v1", kind: "RC", reference: "GJ01AB1234", submittedBy: "customer", status: "PENDING", evidencePath: "t/vehicles/v1/paper-p-pending.jpg" });
+    const out = await (finalizeMyPaper as any).run(req({ paperId: "p-pending" }));
+    expect(out.status).toBe("PENDING"); // photo unreadable in the harness -> stays pending, never a ownership/lockout error
   });
 });
