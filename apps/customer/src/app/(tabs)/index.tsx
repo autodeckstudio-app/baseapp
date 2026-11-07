@@ -1,4 +1,5 @@
 import { RateCard } from "../../ui/RateCard";
+import { listOwnerKey } from "../../lib/owner-key";
 import { rateCandidate } from "../../lib/rate-card";
 import { liveTrackTarget, sinceLabel } from "../../lib/bookings-view";
 import { LIVE_PROGRESS } from "../../lib/garage-live";
@@ -93,9 +94,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useExperienceTheme();
   const ready = auth.status === "ready";
-  const owner = ready ? `${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId??""}` : null;
+  const ownerKey = ready ? listOwnerKey(auth) : null;
+  const owner = ready ? `${auth.claims.tenantId}:${auth.user.uid}:${ownerKey?.key ?? ""}` : null;
   const myCode = ready ? referralCodeFor(auth.user.uid) : null;
-  const home = useCustomerHome(ready ? auth.customerDocId : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
+  const home = useCustomerHome(ownerKey ? ownerKey.key : null, ready ? auth.claims.tenantId : null, ready ? auth.user.displayName : null);
   const [unread, setUnread] = useState(0);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [open, setOpen] = useState<StoryGroup | null>(null);
@@ -133,9 +135,9 @@ export default function HomeScreen() {
   }, [owner]);
 
   useEffect(() => {
-    setPast([]);if (!ready || !auth.customerDocId) return;
+    setPast([]);if (!ready || !ownerKey) return;
     let alive = true;
-    void getMyBookings(auth.customerDocId, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
+    void getMyBookings(ownerKey.key, auth.claims.tenantId).then((l) => { if (alive) setPast(l); }).catch(() => undefined);
     return () => { alive = false; };
   }, [owner]);
   const carId = ready ? home.model?.activeVehicle?.id ?? null : null;

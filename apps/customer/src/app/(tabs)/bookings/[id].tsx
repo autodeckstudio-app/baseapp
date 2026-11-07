@@ -1,5 +1,6 @@
 import{verifyMyCustomerDocId}from'../../../lib/auth-service';
 import { bookingPayOutcomeMessage } from "../../../lib/native-pay-core";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { useMinuteNow } from "@autodeck/ui/clock";
 import { membershipCoveredLabel, visitTiming, customerTimingLine } from "@autodeck/core";
 import { manualRefundNotice } from "../../../lib/manual-refund-notice";
@@ -112,7 +113,7 @@ export default function BookingDetailScreen() {
   const [payingNow, setPayingNow] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const routeScope=JSON.stringify([id,authB.status,authB.status==='ready'?authB.customerDocId:null,authB.status==='ready'?authB.claims.tenantId:null,retryTick]);const routeRef=useRef(routeScope);routeRef.current=routeScope;const actionEpoch=useRef(0),actionLock=useRef(false);
+  const routeScope=JSON.stringify([id,authB.status,authB.status==='ready'?listOwnerKey(authB)?.key??null:null,authB.status==='ready'?authB.claims.tenantId:null,retryTick]);const routeRef=useRef(routeScope);routeRef.current=routeScope;const actionEpoch=useRef(0),actionLock=useRef(false);
   useEffect(()=>{actionEpoch.current++;actionLock.current=false;setCancelling(false);setPayingNow(false);setConfirmingCancel(false);setActionError(null);setStars(0);setNote('');setRated(false);setRateBusy(false);setRateError(null);setDecidingId(null);setDecideError(null);setQuoteBusy(false);return()=>{actionEpoch.current++}},[routeScope]);
   const mockWriteBlocked = (): boolean => {
     if (!isMock) return false;
@@ -199,7 +200,7 @@ export default function BookingDetailScreen() {
 
   const liveBookingRef=useRef(booking),livePaymentRef=useRef(payment);liveBookingRef.current=booking;livePaymentRef.current=payment;
   const [verifiedOwner,setVerifiedOwner]=useState('');
-  const ownerKey=authB.status==='ready'&&job&&booking&&job.customerId===booking.customerId&&authB.customerDocId===job.customerId&&job.tenantId===booking.tenantId&&job.tenantId===authB.claims.tenantId&&resolvedRoute===id?[authB.user.uid,authB.claims.tenantId,job.customerId,job.id,id].join('|'):'';
+  const bookOwnerKey=authB.status==='ready'?listOwnerKey(authB):null;const ownerKey=authB.status==='ready'&&job&&booking&&job.customerId===booking.customerId&&bookOwnerKey!==null&&bookOwnerKey.key===job.customerId&&job.tenantId===booking.tenantId&&job.tenantId===authB.claims.tenantId&&resolvedRoute===id?[authB.user.uid,authB.claims.tenantId,job.customerId,job.id,id].join('|'):'';
   useEffect(()=>{let alive=true;setVerifiedOwner('');if(ownerKey&&job)void verifyMyCustomerDocId(job.customerId).then(ok=>{if(alive&&ok)setVerifiedOwner(ownerKey)}).catch(()=>{});return()=>{alive=false};},[ownerKey]);
   const ownerVerified=Boolean(ownerKey)&&verifiedOwner===ownerKey;
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { validAppliedDate, todayStudioDate } from "../../../lib/applied-date";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
 import { buildCarePlan } from "../../../lib/care-plan";
@@ -70,6 +71,8 @@ export default function VehicleDetailScreen() {
   };
   const router = useRouter();
   const auth = useAuth();
+  const ownerKey = listOwnerKey(auth);
+  const ownerId = auth.status === "ready" && ownerKey ? ownerKey.key : null;
 
   const [feedError,setFeedError] = useState<string|null>(null);
   const [retryTick,setRetryTick] = useState(0);
@@ -133,7 +136,7 @@ export default function VehicleDetailScreen() {
   }, []);
   const [protForm, setProtForm] = useState({ brand: "", years: "", applied: "", notes: "" });
   const [protBusy, setProtBusy] = useState(false);
-  const authKey = auth.status === "ready" ? `${auth.user.uid}:${auth.claims.tenantId}:${auth.customerDocId}` : auth.status;
+  const authKey = auth.status === "ready" ? `${auth.user.uid}:${auth.claims.tenantId}:${ownerId}` : auth.status;
   const contextKey = `${id}:${authKey}`;
   const ctxRef = useRef(contextKey);
   if (ctxRef.current !== contextKey) {
@@ -197,32 +200,32 @@ export default function VehicleDetailScreen() {
   // Invoices live in service history: one listener per car, matched to jobs by jobId.
   useEffect(() => {
     if (mockDetail) { setInvoices(mockDetail.invoices); return undefined; }
-    setInvoices([]);if (!id || auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
-    const stop=listenToInvoicesForVehicle(id, auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setInvoices(rows)}, () => undefined);return()=>{alive=false;stop()};
+    setInvoices([]);if (!id || auth.status !== "ready" || !ownerId) return undefined;let alive=true;
+    const stop=listenToInvoicesForVehicle(id, auth.claims.tenantId, ownerId, rows=>{if(alive)setInvoices(rows)}, () => undefined);return()=>{alive=false;stop()};
   }, [id, authKey, retryTick]);
 
   useEffect(() => {
     if (mockDetail) { setJobs(mockDetail.jobs); return undefined; }
-    setJobs([]);if (!id || auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
-    const stop=listenToJobsForVehicle(id, auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setJobs(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
+    setJobs([]);if (!id || auth.status !== "ready" || !ownerId) return undefined;let alive=true;
+    const stop=listenToJobsForVehicle(id, auth.claims.tenantId, ownerId, rows=>{if(alive)setJobs(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
   }, [id, authKey,retryTick]);
 
   useEffect(() => {
     if (mockDetail) { setProtections(mockDetail.protections); return undefined; }
-    setProtections([]);if (!id || auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
-    const stop=listenToVehicleProtections(id, auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setProtections(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
+    setProtections([]);if (!id || auth.status !== "ready" || !ownerId) return undefined;let alive=true;
+    const stop=listenToVehicleProtections(id, auth.claims.tenantId, ownerId, rows=>{if(alive)setProtections(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
   }, [id, authKey,retryTick]);
 
   useEffect(() => {
     if (mockDetail) { setPapers(mockDetail.papers); return undefined; }
-    setPapers([]);if (!id || auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
-    const stop=listenToVehiclePapers(id, auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setPapers(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
+    setPapers([]);if (!id || auth.status !== "ready" || !ownerId) return undefined;let alive=true;
+    const stop=listenToVehiclePapers(id, auth.claims.tenantId, ownerId, rows=>{if(alive)setPapers(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
   }, [id, authKey,retryTick]);
 
   useEffect(() => {
     if (mockDetail) { setAllPapers(mockDetail.allPapers); return undefined; }
-    setAllPapers([]);if (auth.status !== "ready"||!auth.customerDocId) return undefined;let alive=true;
-    const stop=listenToCustomerPapers(auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setAllPapers(rows)}, () => undefined);return()=>{alive=false;stop()};
+    setAllPapers([]);if (auth.status !== "ready"||!ownerId) return undefined;let alive=true;
+    const stop=listenToCustomerPapers(auth.claims.tenantId, ownerId, rows=>{if(alive)setAllPapers(rows)}, () => undefined);return()=>{alive=false;stop()};
   }, [authKey, retryTick]);
 
   function resetDocForm() {
@@ -336,8 +339,8 @@ export default function VehicleDetailScreen() {
 
   useEffect(() => {
     if (mockDetail) { setWarranties(mockDetail.warranties); return undefined; }
-    setWarranties([]);if (!id || auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
-    const stop=listenToVehicleWarranties(id, auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setWarranties(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
+    setWarranties([]);if (!id || auth.status !== "ready" || !ownerId) return undefined;let alive=true;
+    const stop=listenToVehicleWarranties(id, auth.claims.tenantId, ownerId, rows=>{if(alive)setWarranties(rows)}, ()=>{if(alive)setFeedError("Could not load some car records. Check your connection and retry.")});return()=>{alive=false;stop()};
   }, [id, authKey,retryTick]);
 
   useEffect(() => {
@@ -354,8 +357,8 @@ export default function VehicleDetailScreen() {
 
   useEffect(() => {
     if (mockDetail) { setUpcomingBookings(mockDetail.upcomingBookings); setUpcomingBooking(mockDetail.upcomingBookings[0] ?? null); return; }
-    if (!id || auth.status !== "ready" || !auth.customerDocId) return;
-    setUpcomingBookings([]);setUpcomingBooking(null);let alive=true;void getMyBookings(auth.customerDocId, auth.claims.tenantId)
+    if (!id || auth.status !== "ready" || !ownerId) return;
+    setUpcomingBookings([]);setUpcomingBooking(null);let alive=true;void getMyBookings(ownerId, auth.claims.tenantId)
       .then((bookings) => {
         if(!alive)return;const upcoming = bookings
           .filter((b) => b.vehicleId === id && (b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "ACTIVE"))

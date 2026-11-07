@@ -266,11 +266,16 @@ async function resolveCustomerDocIdState(allowSetup: boolean): Promise<CustomerD
       return { outcome: "error" };
     }
     if (candidates.length === 1) {
-      const probe = await probeMyCustomerDoc(candidates[0]);
-      if (probe === "mine" && current()) {
-        try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, candidates[0]); } catch { /* best effort */ }
-        return { outcome: "resolved", customerDocId: candidates[0] };
+      const candidate = candidates[0] as string;
+      const probe = await probeMyCustomerDoc(candidate);
+      if (probe === "mine") {
+        // A principal switch mid-probe is a superseded attempt, never an
+        // absence: "absent" would grant the new principal a legacy-self key.
+        if (!current()) return { outcome: "error" };
+        try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, candidate); } catch { /* best effort */ }
+        return { outcome: "resolved", customerDocId: candidate };
       }
+      if (!current()) return { outcome: "error" };
       return { outcome: probe === "error" ? "error" : "absent" };
     }
     if (candidates.length > 1) return { outcome: "error" }; // ambiguous: never pick
@@ -295,10 +300,12 @@ async function resolveCustomerDocIdState(allowSetup: boolean): Promise<CustomerD
       : null;
   if (id) {
     const probe = await probeMyCustomerDoc(id);
-    if (probe === "mine" && current()) {
+    if (probe === "mine") {
+      if (!current()) return { outcome: "error" }; // superseded, never absent
       try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, id); } catch { /* best effort */ }
       return { outcome: "resolved", customerDocId: id };
     }
+    if (!current()) return { outcome: "error" };
     if (probe === "error") return { outcome: "error" };
   }
   return { outcome: "absent" };

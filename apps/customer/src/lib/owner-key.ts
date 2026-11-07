@@ -6,7 +6,7 @@ export type OwnerKey = { key: string; kind: OwnerKeyKind };
 type AuthLike = {
   status: string;
   user?: { uid: string };
-  claims?: { role?: UserRole };
+  claims?: { role?: UserRole; tenantId?: string };
   customerDocId?: string | null;
   customerDocResolution?: string;
 };

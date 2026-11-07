@@ -1,4 +1,5 @@
 import { SceneIntro } from "../../../ui/SceneIntro";
+import { listOwnerKey } from "../../../lib/owner-key";
 // Permanent service history. Keyed by vehicleId only and built from the
 // customer's own jobs and invoices, so it still works after the car document
 // is deleted (the garage room returns "Vehicle not found" in that case).

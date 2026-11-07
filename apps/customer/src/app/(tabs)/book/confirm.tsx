@@ -1,4 +1,5 @@
 import {bookingConfirmCopy}from"../../../lib/booking-confirm-copy";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { formatServiceTime } from "../../../lib/duration";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { extrasFromParam } from "../../../lib/visit-extras";
@@ -332,7 +333,7 @@ export default function BookingConfirmScreen() {
       }
       if (result.status === "PENDING" && auth.status === "ready") {
         // Held for 15 minutes until paid. Pay now; if it fails the customer retries on this page.
-        const jobId = auth.customerDocId ? await getJobIdForBooking(result.id, auth.claims.tenantId, auth.customerDocId).catch(() => null) : null;
+        const jobOwnerKey = listOwnerKey(auth); const jobId = jobOwnerKey ? await getJobIdForBooking(result.id, auth.claims.tenantId, jobOwnerKey.key).catch(() => null) : null;
         if(!current())return;
         const h = { bookingId: result.id, paymentJobId: jobId, expiresAt: Date.parse(result.holdExpiresAt ?? "") || Date.now() + 15 * 60_000, pickupSent };
         setHeld(h);

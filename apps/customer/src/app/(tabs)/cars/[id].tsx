@@ -1,5 +1,6 @@
 // One car: photos, plain facts, "I'm interested" (goes to the studio, never to the seller) and "Report this listing".
 import { STUDIO_INFO } from "../../../lib/studio-info";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { useEffect, useState, useRef } from "react";
 import { Image, Linking, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -38,7 +39,7 @@ export default function CarDetail() {
   const [busy, setBusy] = useState(false);
   const [showReport, setShowReport] = useState(false);
 
-  const scopeKey=JSON.stringify([id,authState.status,authState.status==='ready'?authState.customerDocId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const operation=useRef(0),busyRef=useRef(false);
+  const scopeKey=JSON.stringify([id,authState.status,authState.status==='ready'?listOwnerKey(authState)?.key??null:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const operation=useRef(0),busyRef=useRef(false);
   useEffect(()=>{operation.current++;busyRef.current=false;setBusy(false);setPhotoBusy(false);setReplacing(false);setSent(null);setPhone('');setNote('');setPhoneError(undefined);return()=>{operation.current++}},[scopeKey]);
   useEffect(() => {
     let alive=true;setCar(undefined);setPhotoIndex(0);setShowEnquiry(false);setShowReport(false);setConfirmSold(false);setConfirmPhoto(false);setError(null);setReplacement(null);setPhotoError(null);setLoadError(false);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import type { MembershipUsage } from "@autodeck/core";
@@ -19,16 +20,17 @@ function formatDate(iso: string): string {
 export default function MembershipUsageScreen() {
   const router = useRouter();
   const auth = useAuth();
-  const owner=auth.status==='ready'&&auth.customerDocId?`${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId}`:null;const currentOwner=useRef(owner);currentOwner.current=owner;const generation=useRef(0);
+  const ownerKey=listOwnerKey(auth);
+  const owner=auth.status==='ready'&&ownerKey?`${auth.claims.tenantId}:${auth.user.uid}:${ownerKey.key}`:null;const currentOwner=useRef(owner);currentOwner.current=owner;const generation=useRef(0);
   const [usage, setUsage] = useState<MembershipUsage[]>([]);
   const [jobs, setJobs] = useState<ServiceJob[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   useEffect(() => {
-    setJobs([]);setInvoices([]);setNames({});if (auth.status !== "ready" || !auth.customerDocId) return undefined;let alive=true;
+    setJobs([]);setInvoices([]);setNames({});if (auth.status !== "ready" || !ownerKey) return undefined;let alive=true;
     const noop = () => undefined;
-    const a = listenToMyJobs(auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setJobs(rows)}, noop);
-    const b = listenToMyInvoices(auth.claims.tenantId, auth.customerDocId, rows=>{if(alive)setInvoices(rows)}, noop);
+    const a = listenToMyJobs(auth.claims.tenantId, ownerKey.key, rows=>{if(alive)setJobs(rows)}, noop);
+    const b = listenToMyInvoices(auth.claims.tenantId, ownerKey.key, rows=>{if(alive)setInvoices(rows)}, noop);
     void getServiceCatalogue().then((all) => alive&&setNames(Object.fromEntries(all.map((x) => [x.id, x.name])))).catch(noop);
     return () => {alive=false; a(); b(); };
   }, [owner]);
