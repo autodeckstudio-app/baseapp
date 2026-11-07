@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DAYS, dueSoonFor, lastServiceFor } from "../../../lib/booking-ideas";
 import { isBookingMissed, type Booking } from "@autodeck/core";
 import { formatDateShort } from "@autodeck/ui";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { space } from "@autodeck/ui/theme";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
@@ -52,7 +53,7 @@ export default function BookingsScreen() {
   const { colors: ink } = useExperienceTheme();
   const router = useRouter();
   const auth = useAuth();
-  const owner=auth.status==="ready"&&auth.customerDocId?`${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId}`:null;const ownerRef=useRef(owner);ownerRef.current=owner;
+  const ownerKey=listOwnerKey(auth);const owner=auth.status==="ready"&&ownerKey?`${auth.claims.tenantId}:${auth.user.uid}:${ownerKey.key}`:null;const ownerRef=useRef(owner);ownerRef.current=owner;
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState(false);
   const [walkIns, setWalkIns] = useState<Booking[]>([]);
@@ -74,10 +75,10 @@ export default function BookingsScreen() {
   const [activeId, setActiveId] = useState<string | null>(null);
   useEffect(() => {let alive=true;setActiveId(null);void AsyncStorage.getItem("autodeck.activeVehicle").then(v=>{if(alive)setActiveId(v)}).catch(()=>undefined);return()=>{alive=false};}, [cars,owner]);
   useEffect(() => {
-    loadVersion.current++;cancelLock.current=false;setCancelBusy(false);setCars({});setJobs([]);setWalkIns([]);setInvoices([]);setSvcs({});setExtraNames({});setConfirmCancel(false);setCancelError(null);setSegPick(null);setBookings(null);if (auth.status !== "ready" || !auth.customerDocId) return;let alive=true;
-    const un = listenToMyVehicles(auth.customerDocId, auth.claims.tenantId, (vs) => {if(alive)setCars(Object.fromEntries(vs.map((v) => [v.id, v])))}, () => {});
-    const unJobs = listenToMyJobs(auth.claims.tenantId, auth.customerDocId, (js) => { if(!alive)return;setJobs(js); setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)); }, () => {});
-    const unInv = listenToMyInvoices(auth.claims.tenantId, auth.customerDocId, v=>{if(alive)setInvoices(v)}, () => {});
+    loadVersion.current++;cancelLock.current=false;setCancelBusy(false);setCars({});setJobs([]);setWalkIns([]);setInvoices([]);setSvcs({});setExtraNames({});setConfirmCancel(false);setCancelError(null);setSegPick(null);setBookings(null);if (auth.status !== "ready" || !ownerKey) return;let alive=true;
+    const un = listenToMyVehicles(ownerKey.key, auth.claims.tenantId, (vs) => {if(alive)setCars(Object.fromEntries(vs.map((v) => [v.id, v])))}, () => {});
+    const unJobs = listenToMyJobs(auth.claims.tenantId, ownerKey.key, (js) => { if(!alive)return;setJobs(js); setWalkIns(js.filter((j) => !j.bookingId).map(bookingFromJob)); }, () => {});
+    const unInv = listenToMyInvoices(auth.claims.tenantId, ownerKey.key, v=>{if(alive)setInvoices(v)}, () => {});
     getServiceCatalogue().then((l) => {if(alive)setSvcs(Object.fromEntries(l.map((x) => [x.id, x])))}).catch(() => {});
     return () => { alive=false;un(); unJobs(); unInv(); };
   }, [owner]);
@@ -86,15 +87,15 @@ export default function BookingsScreen() {
   const liveJobId = liveJob?.id ?? null;
   useEffect(() => {
     setApprovals([]);
-    if (auth.status !== "ready" || !auth.customerDocId || !liveJobId) return;
-    let alive=true;const stop=listenToApprovalsForJob(liveJobId, auth.claims.tenantId, auth.customerDocId, v=>{if(alive)setApprovals(v)}, () => {});return()=>{alive=false;stop()};
+    if (auth.status !== "ready" || !ownerKey || !liveJobId) return;
+    let alive=true;const stop=listenToApprovalsForJob(liveJobId, auth.claims.tenantId, ownerKey.key, v=>{if(alive)setApprovals(v)}, () => {});return()=>{alive=false;stop()};
   }, [owner, liveJobId]);
 
   const load = useCallback(async () => {
-    if (auth.status !== "ready" || !auth.customerDocId) return;
+    if (auth.status !== "ready" || !ownerKey) return;
     const scope=owner,version=++loadVersion.current;setError(false);
     try {
-      const rows=await getMyBookings(auth.customerDocId, auth.claims.tenantId);if(ownerRef.current===scope&&loadVersion.current===version)setBookings(rows);
+      const rows=await getMyBookings(ownerKey.key, auth.claims.tenantId);if(ownerRef.current===scope&&loadVersion.current===version)setBookings(rows);
     } catch {
       if(ownerRef.current===scope&&loadVersion.current===version)setError(true);
     }

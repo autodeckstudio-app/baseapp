@@ -6,10 +6,11 @@ import { CAR_SEGMENTS, isSizePriced, normalizeSegment, segmentLabel } from "@aut
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { listenToMyVehicles } from "./vehicle-service";
 import { useAuth } from "../hooks/useAuth";
+import { listOwnerKey } from "./owner-key";
 export const VEHICLE_SIZES: { value: VehicleCategory; label: string }[] = CAR_SEGMENTS;
 export function usePricingVehicle() {
  const auth=useAuth(); const [vehicle,setVehicle]=useState<Vehicle|null>(null);
- const uid=auth.status==="ready"?auth.customerDocId:null;
+ const uid=listOwnerKey(auth)?.key??null;
  const tenant=auth.status==="ready"?auth.claims.tenantId:null;
  useEffect(()=>{setVehicle(null);if(!uid||!tenant)return;let active=true,revision=0;
   const stop=listenToMyVehicles(uid,tenant,(vs)=>{const current=++revision;void AsyncStorage.getItem("autodeck.activeVehicle").then(id=>{if(active&&current===revision)setVehicle(vs.find(v=>v.id===id)??vs[0]??null)}).catch(()=>{if(active&&current===revision)setVehicle(vs[0]??null)});},()=>{if(active)setVehicle(null)});return()=>{active=false;stop()};

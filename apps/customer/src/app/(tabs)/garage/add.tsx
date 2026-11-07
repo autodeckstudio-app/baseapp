@@ -15,6 +15,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { db } from "../../../lib/firebase";
 import { limitRegistrationInput, REG_RAW_MAX } from "../../../lib/registration-input";
 import { createVehicle, restoreVehicle, findVehicleWithPlate, normalizePlate, uploadVehiclePhoto, type VehiclePhotoBody } from "../../../lib/vehicle-service";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { createMyProtection, isCalendarDate, type MyProtectionKind } from "../../../lib/protection-service";
 import { addCarAbandonAllowed, addCarEditsFrozen, createAddCarJournal, journalPending, runAddCarJournal, type AddCarJournal } from "../../../lib/add-car-journal";
 
@@ -359,7 +360,7 @@ export default function AddVehicleScreen() {
     setError(null);
     try {
       if (auth.status === "ready") {
-        const uid = auth.customerDocId;
+        const uid = listOwnerKey(auth)?.key ?? null;
         if (!uid) { setError("Your profile is still linking. Try again once it is ready."); return; }
         const tenantId = auth.claims.tenantId;
         const existing = await findVehicleWithPlate(uid, tenantId, plate);
@@ -415,7 +416,7 @@ export default function AddVehicleScreen() {
       const details = (err as { details?: { vehicleId?: string } }).details;
       if (/failed-precondition/.test(code) && /archived-match/.test(msg) && details?.vehicleId) {
         if (auth.status === "ready") {
-          const verified = await verifyArchivedMatch(details.vehicleId, plate, auth.customerDocId ?? "", auth.claims.tenantId);
+          const verified = await verifyArchivedMatch(details.vehicleId, plate, listOwnerKey(auth)?.key ?? "", auth.claims.tenantId);
           if (isStale(seq, plate)) return;
           if (verified) {
             setArchivedMatch({ vehicleId: verified.id, label: `${verified.registrationNumber} - ${verified.make} ${verified.model}` });
@@ -449,7 +450,7 @@ export default function AddVehicleScreen() {
     try {
       // Re-verify immediately before restoring: the record must still be an
       // archived car owned by this customer with this exact plate.
-      const verified = await verifyArchivedMatch(archivedMatch.vehicleId, plate, auth.customerDocId ?? "", auth.claims.tenantId);
+      const verified = await verifyArchivedMatch(archivedMatch.vehicleId, plate, listOwnerKey(auth)?.key ?? "", auth.claims.tenantId);
       if (isStale(seq, plate)) return;
       if (!verified) {
         setArchivedMatch(null);

@@ -12,6 +12,7 @@ import { pickDay, comboFor } from "../../../lib/booking-ideas";
 import { formatDuration } from "../../../lib/duration";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles, updateVehicle } from "../../../lib/vehicle-service";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { getAvailability, peekAvailability, todayIST, type AvailableSlot } from "../../../lib/booking-service";
 import type { Service, Vehicle, VehicleCategory } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -100,11 +101,11 @@ export default function BookServiceScreen() {
     return ()=>{current=false;};
   }, [serviceId, selectedCategory, service]);
 
-  const owner=auth.status==='ready'&&auth.customerDocId?`${auth.claims.tenantId}:${auth.user.uid}:${auth.customerDocId}`:null;
+  const ownerKey=listOwnerKey(auth);const owner=auth.status==='ready'&&ownerKey?`${auth.claims.tenantId}:${auth.user.uid}:${ownerKey.key}`:null;
   useEffect(()=>{let alive=true;setService(null);setSlots([]);setPickedSlot(null);setLoadError(false);setLoading(true);if(!serviceId||!customerOfferingVisible({id:serviceId})||auth.status!=='ready'){setLoading(false);return;}
     void getServiceCatalogue().then(list=>{if(alive)setService(list.find(s=>s.id===serviceId && s.active === true && customerOfferingVisible(s))??null)}).catch(()=>{if(alive)setLoadError(true)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false};
   },[serviceId,owner,retryTick]);
-  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesError(false);if(auth.status!=='ready'||!auth.customerDocId)return;let alive=true,revision=0;const stop=listenToMyVehicles(auth.customerDocId,auth.claims.tenantId,list=>{if(!alive)return;const rev=++revision;setVehicles(list);void AsyncStorage.getItem('autodeck.activeVehicle').then(activeId=>{if(alive&&revision===rev)setSelectedVehicle(cur=>{const keep=cur&&list.find(v=>v.id===cur.id);return keep??list.find(v=>v.id===activeId)??list[0]??null})}).catch(()=>{if(alive&&revision===rev)setSelectedVehicle(list[0]??null)})},()=>{if(alive)setVehiclesError(true)});return()=>{alive=false;stop()};},[owner,retryTick]);
+  useEffect(()=>{setVehicles([]);setSelectedVehicle(null);setVehiclesError(false);if(auth.status!=='ready'||!ownerKey)return;let alive=true,revision=0;const stop=listenToMyVehicles(ownerKey.key,auth.claims.tenantId,list=>{if(!alive)return;const rev=++revision;setVehicles(list);void AsyncStorage.getItem('autodeck.activeVehicle').then(activeId=>{if(alive&&revision===rev)setSelectedVehicle(cur=>{const keep=cur&&list.find(v=>v.id===cur.id);return keep??list.find(v=>v.id===activeId)??list[0]??null})}).catch(()=>{if(alive&&revision===rev)setSelectedVehicle(list[0]??null)})},()=>{if(alive)setVehiclesError(true)});return()=>{alive=false;stop()};},[owner,retryTick]);
 
   useEffect(()=>{setSelectedCategory(normalizeSegment(selectedVehicle?.category));setSizeError(null);},[selectedVehicle?.id,selectedVehicle?.category]);
 
@@ -163,7 +164,11 @@ export default function BookServiceScreen() {
   // cannot book.
   if (auth.status === "loading") return <Loading label="Checking your account" />;
   if (auth.status !== "ready") return <Screen><Notice title="Sign in to book" body="Your account session could not be verified." action={<Button label="Sign in" onPress={() => router.push("/login")} />} /></Screen>;
-  if (!auth.customerDocId) return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.push("/(tabs)/profile")} onBrowse={() => router.push("/(tabs)/catalogue")} />;
+  if (!ownerKey) {
+    // Resolution error is truthful unknown (retry), never an account denial.
+    if (auth.customerDocResolution === "error") return <Screen><Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => setRetryTick((n) => n + 1)} />} /></Screen>;
+    return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.push("/(tabs)/profile")} onBrowse={() => router.push("/(tabs)/catalogue")} />;
+  }
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {

@@ -11,6 +11,7 @@ import { space } from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { deleteVehiclePermanently, restoreVehicle, listenToMyArchivedVehicles, listenToMyVehicles } from "../../../lib/vehicle-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { glassPane } from "../../../lib/glass-pane";
@@ -58,18 +59,19 @@ export default function GarageScreen() {
   const [plan, setPlan] = useState<Membership | null>(mock ? mock.plan : null);
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
-  const uid = auth.status === "ready" ? auth.customerDocId : null;
+  const owner = listOwnerKey(auth);
+  const uid = owner?.key ?? null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
-  // Truthful owner states: a null canonical id is never reported as a
-  // connectivity problem, and no cause is ruled out either. "error" =
-  // resolution failed, state UNKNOWN (never show empty); "claim-required"
-  // = a claim really is pending; "absent" for a customer = no profile
-  // found (setup/recovery needed, nothing is linking in the background);
-  // staff with verifiably no record genuinely have an empty garage.
-  const ownerUnknown = auth.status === "ready" && !uid && auth.customerDocResolution === "error";
-  const ownerLinking = auth.status === "ready" && !uid && auth.customerDocResolution === "claim-required";
-  const ownerNoProfile = auth.status === "ready" && !uid && auth.customerDocResolution === "absent" && auth.claims.role === "customer";
-  const ownerMissing = auth.status === "ready" && !uid;
+  // Truthful owner states: no owner key is never reported as a connectivity
+  // problem, and no cause is ruled out either. "error" = resolution failed,
+  // state UNKNOWN (never show empty); "claim-required" = a claim really is
+  // pending; "absent" for a customer = no profile found (setup/recovery
+  // needed, nothing is linking in the background). Staff with a founded
+  // absent resolution read their own legacy uid-keyed records instead.
+  const ownerUnknown = auth.status === "ready" && !owner && auth.customerDocResolution === "error";
+  const ownerLinking = auth.status === "ready" && !owner && auth.customerDocResolution === "claim-required";
+  const ownerNoProfile = auth.status === "ready" && !owner && auth.customerDocResolution === "absent" && auth.claims.role === "customer";
+  const ownerMissing = auth.status === "ready" && !owner;
   const ownerKey=JSON.stringify([uid,tenantId,auth.status==='ready'?auth.user.uid:null]);const ownerRef=useRef(ownerKey);ownerRef.current=ownerKey;const archiveLock=useRef(false),archiveGeneration=useRef(0);
   useEffect(()=>{archiveGeneration.current++;archiveLock.current=false;setArchiveActionBusy(null);return()=>{archiveGeneration.current++}},[ownerKey]);
   // Re-subscribes whenever the signed-in customer or tenant changes, and on manual retry.
@@ -148,7 +150,7 @@ export default function GarageScreen() {
       <SceneIntro eyebrow="Your garage" compact title="Your cars, connected."/>
       <View testID="garage-swipe-area" style={{ gap: 20, minHeight: Math.max(winH - 240, 400) }}>
       {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
-      {ownerLinking ? <Notice title="Your profile is still linking" body="Try again once it is ready." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      {ownerLinking ? <Notice title="Your profile is waiting to be claimed" body="Claim it to see your cars, bookings and bills here." action={<Button label="Claim your profile" onPress={() => router.push("/(auth)/claim")} />} /> : null}
       {ownerNoProfile ? <Notice title="We couldn't find your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (

@@ -6,6 +6,7 @@ import type { Customer, Invoice, Vehicle } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToInvoice, listenToInvoiceByNumber, listenToInvoiceForJob } from "../../../lib/invoice-service";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { invoiceShareText, whatsappShareUrl } from "../../../lib/invoice-share";
 import { buildInvoiceHtml, gstSplit, printInvoiceHtml, serviceLabel } from "../../../lib/invoice-display";
 import { getServiceCatalogue } from "../../../lib/catalogue-service";
@@ -54,13 +55,14 @@ export default function InvoiceScreen() {
     setInvoice(null);setCustomer(null);setVehicle(null);setLoading(true); setError(null);
     if (number) {
       if (auth.status === "loading") return undefined;
-      if (auth.status !== "ready"||!auth.customerDocId) { setLoading(false); return undefined; }
-      const stop=listenToInvoiceByNumber(String(number).toUpperCase(), auth.claims.tenantId, auth.customerDocId, onData, onErr);return()=>{alive=false;stop()};
+      const invoiceOwnerKey=listOwnerKey(auth);
+      if (auth.status !== "ready"||!invoiceOwnerKey) { setLoading(false); return undefined; }
+      const stop=listenToInvoiceByNumber(String(number).toUpperCase(), auth.claims.tenantId, invoiceOwnerKey.key, onData, onErr);return()=>{alive=false;stop()};
     }
     if (invoiceId){const stop=listenToInvoice(invoiceId, onData, onErr);return()=>{alive=false;stop()};}
     if (!jobId || !tenantId || !customerId) { setLoading(false); return; }
     const stop=listenToInvoiceForJob(jobId, tenantId, customerId, onData, onErr);return()=>{alive=false;stop()};
-  }, [invoiceId, number, auth.status,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.claims.tenantId:null, jobId, tenantId, customerId, retryTick]);
+  }, [invoiceId, number, auth.status,auth.status==='ready'?listOwnerKey(auth)?.key??null:null,auth.status==='ready'?auth.claims.tenantId:null, jobId, tenantId, customerId, retryTick]);
 
   // Show the readable address (/invoice/INV-2026-00001) once the invoice is known.
   // Old ?invoiceId= links keep working and are tidied here on web.

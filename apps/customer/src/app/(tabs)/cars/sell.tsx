@@ -6,6 +6,7 @@ import type { Vehicle } from "@autodeck/core";
 import { useExperienceTheme } from "@autodeck/ui/native";
 import { useAuth } from "../../../hooks/useAuth";
 import { listenToMyVehicles } from "../../../lib/vehicle-service";
+import { listOwnerKey } from "../../../lib/owner-key";
 import { sellCarLabel, sellPrefillFromVehicle } from "../../../lib/sell-prefill";
 import { useRouter } from "expo-router";
 import { space } from "@autodeck/ui/theme";
@@ -23,7 +24,7 @@ export default function SellScreen() {
   const light = themeName === "light";
   const [garage, setGarage] = useState<Vehicle[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
-  const uid = auth.status === "ready" ? auth.customerDocId : null;
+  const uid = listOwnerKey(auth)?.key ?? null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
   useEffect(() => {
     setGarage([]);if (!uid || !tenantId) return;let alive=true;
