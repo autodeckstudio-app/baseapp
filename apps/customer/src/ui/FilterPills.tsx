@@ -35,9 +35,11 @@ export function FilterPills<K extends string | null>({ items, value, onChange, t
     const on = value === c.key;
     // flat (Garage): plain text tab, the picked one underlined in gold; no pill fill.
     if (flat) {
+      // Full labels always: a car's make + model is its identity, never ellipsized. The row scrolls
+      // when the labels do not fit, and the picked pill scrolls itself into view (scrollToKey).
       return (
-        <Pressable key={c.key ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} onLayout={(e) => onPillLayout(c.key, e.nativeEvent.layout.x)} style={[{ minWidth: 0, paddingHorizontal: 2, paddingVertical: 9, borderBottomWidth: 2, borderBottomColor: on ? ink.premium : "transparent" }, items.length > 3 ? null : fixedFirst && c.key === items[0]?.key ? { flexGrow: 0, flexShrink: 0 } : { flexGrow: 0, flexShrink: 1, maxWidth: 160 }]}>
-          <Text numberOfLines={1} ellipsizeMode="tail" style={[{ color: on ? ink.textPrimary : ink.textSecondary, fontSize: 14, fontWeight: on ? "800" : "600" }, items.length > 3 ? { maxWidth: 200 } : null]}>{c.label}</Text>
+        <Pressable key={c.key ?? "all"} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(c.key)} onLayout={(e) => onPillLayout(c.key, e.nativeEvent.layout.x)} style={{ paddingHorizontal: 2, paddingVertical: 9, borderBottomWidth: 2, borderBottomColor: on ? ink.premium : "transparent" }}>
+          <Text numberOfLines={1} style={{ color: on ? ink.textPrimary : ink.textSecondary, fontSize: 14, fontWeight: on ? "800" : "600" }}>{c.label}</Text>
         </Pressable>
       );
     }
@@ -57,16 +59,8 @@ export function FilterPills<K extends string | null>({ items, value, onChange, t
     </ScrollView>
   );
   if (flat) {
-    // Garage tabs: up to three share the row - "All" keeps natural width, car tabs shrink and ellipsize in place.
-    // With more cars an equal split turns every label into a few letters, so the row scrolls with full labels instead.
-    if (items.length <= 3) {
-      return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minWidth: 0, width: "100%" }}>
-          {items.map(pill)}
-          {trailing}
-        </View>
-      );
-    }
+    // Garage tabs: "All" (with fixedFirst) stays pinned at the left; car tabs keep their full
+    // make + model labels and the row scrolls when they do not fit, so identity is never truncated.
     return (
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minWidth: 0, width: "100%" }}>
         {fixedFirst && items.length > 0 ? pill(items[0]!) : null}
