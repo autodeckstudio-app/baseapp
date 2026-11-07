@@ -148,7 +148,7 @@ export function ReferencePackageCard({
           <T role="bodyStrong" tone="accent">
             Quote to confirm
           </T>
-          <T role="caption">View range</T>
+          <T role="caption">{item.brand ? "View range" : "View details"}</T>
         </View>
       </View>
     </SceneCard>
