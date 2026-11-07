@@ -23,6 +23,9 @@ export { issueVehiclePhotoUploadUrl } from "./functions/vehicle/issueVehiclePhot
 
 // âââ Service Catalogue âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export { getServiceCatalogue } from "./functions/service/getServiceCatalogue.js";
+export { saveCatalogueDraft, getCatalogueDrafts, reviewCatalogueDraftVersion } from "./functions/service/catalogueDrafts.js";
+export { cataloguePublicSheetWorker, getManagedCataloguePublishStatus, reviewManagedCatalogue, publishManagedCatalogue, inspectManagedCatalogueRecovery, reviewManagedCatalogueRecovery, finishManagedCatalogueRecovery } from "./functions/service/catalogueRuntime.js";
+export { recoverManagedCataloguePublish } from "./functions/service/catalogueRescue.js";
 export { calculateServicePrice } from "./functions/service/calculatePrice.js";
 export { createService } from "./functions/service/createService.js";
 export { updateService } from "./functions/service/updateService.js";
