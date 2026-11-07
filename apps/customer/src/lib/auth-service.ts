@@ -195,25 +195,46 @@ export async function getMyCustomerDocId(): Promise<string | null> {
  * claimRequired returns null - the claim screen owns that state. Null must
  * NEVER be used as a reason to create anything.
  */
+/**
+ * Resolution outcome, kept distinct so routes can tell the truth:
+ * "resolved" - a verified canonical record id; "absent" - every candidate
+ * verifiably missed (for a customer that means pre-setup/claim-pending);
+ * "error" - a transient read failure, so the record state is UNKNOWN and
+ * must never render as genuinely empty; "claim-required" - the server says
+ * this email has an unclaimed record, and the claim screen owns that state.
+ */
+export type CustomerDocResolution =
+  | { outcome: "resolved"; customerDocId: string }
+  | { outcome: "absent" }
+  | { outcome: "error" }
+  | { outcome: "claim-required" };
+
 const DOC_ID_STORAGE_PREFIX = "autodeck.customerDocId.";
-export async function resolveMyCustomerDocId(): Promise<string | null> {
+
+/**
+ * Shared resolution walk. allowSetup=false is the READ-ONLY staff path: it
+ * stops after the verified candidates and NEVER calls setupCustomerProfile,
+ * so resolving a staff account can never create a record.
+ */
+async function resolveCustomerDocIdState(allowSetup: boolean): Promise<CustomerDocResolution> {
   const uid = auth.currentUser?.uid;
-  if (!uid) return null;
+  if (!uid) return { outcome: "absent" };
   // Principal-switch guard: every candidate is accepted only if the SAME
   // account is still signed in after the await that produced it.
   const current = () => auth.currentUser?.uid === uid;
   const fast = await probeMyCustomerDoc(uid);
-  if (fast === "mine") return current() ? uid : null;
-  if (fast === "error" || !current()) return null; // transient read failure: never fall through to a mutating call
+  if (fast === "mine") return current() ? { outcome: "resolved", customerDocId: uid } : { outcome: "error" };
+  if (fast === "error" || !current()) return { outcome: "error" }; // transient read failure: never fall through to a mutating call
   let stored: string | null = null;
   try {
     stored = await AsyncStorage.getItem(DOC_ID_STORAGE_PREFIX + uid);
   } catch { /* storage unavailable - fall through to server resolution */ }
   if (stored && current()) {
     const probe = await probeMyCustomerDoc(stored);
-    if (probe === "mine") return current() ? stored : null;
-    if (probe === "error" || !current()) return null;
+    if (probe === "mine") return current() ? { outcome: "resolved", customerDocId: stored } : { outcome: "error" };
+    if (probe === "error" || !current()) return { outcome: "error" };
   }
+  if (!allowSetup) return { outcome: "absent" };
   // Server semantics (verified in the callable): this returns the CLAIMED
   // profile for a claimed account, claimRequired for a known unclaimed
   // email, and only creates a profile for a genuinely new email - the app's
@@ -222,10 +243,10 @@ export async function resolveMyCustomerDocId(): Promise<string | null> {
   try {
     r = await setupCustomerProfile();
   } catch {
-    return null; // terminal: the hook still reaches ready, the next token event retries
+    return { outcome: "error" }; // terminal: the hook still reaches ready, the next token event retries
   }
-  if (!current()) return null;
-  if (isClaimRequired(r)) return null;
+  if (!current()) return { outcome: "error" };
+  if (isClaimRequired(r)) return { outcome: "claim-required" };
   const id = typeof r.customerId === "string" && r.customerId
     ? r.customerId
     : typeof (r.customer as { id?: unknown })?.id === "string"
@@ -235,10 +256,37 @@ export async function resolveMyCustomerDocId(): Promise<string | null> {
     const probe = await probeMyCustomerDoc(id);
     if (probe === "mine" && current()) {
       try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, id); } catch { /* best effort */ }
-      return id;
+      return { outcome: "resolved", customerDocId: id };
     }
+    if (probe === "error") return { outcome: "error" };
   }
-  return null;
+  return { outcome: "absent" };
+}
+
+/** Legacy wrapper: the id, or null for every non-resolved outcome. */
+export async function resolveMyCustomerDocId(): Promise<string | null> {
+  const r = await resolveMyCustomerDocResolution();
+  return r.outcome === "resolved" ? r.customerDocId : null;
+}
+
+/**
+ * CUSTOMER-role resolution with the truthful outcome: full walk including
+ * the app's own self-serve setupCustomerProfile fall-through.
+ */
+export async function resolveMyCustomerDocResolution(): Promise<CustomerDocResolution> {
+  return resolveCustomerDocIdState(true);
+}
+
+/**
+ * STAFF-role resolution, READ-ONLY: a staff account can own a genuine
+ * customer record (legacy doc at uid, or a claimed staged id persisted on
+ * this device), and this resolves it with the same verified-ownership bar -
+ * but it never calls setupCustomerProfile, so it can never create, merge or
+ * backfill anything. "absent" means verifiably no record; "error" means
+ * unknown, not empty.
+ */
+export async function resolveExistingCustomerDocId(): Promise<CustomerDocResolution> {
+  return resolveCustomerDocIdState(false);
 }
 
 /** Persists the id at the moments the app already knows it (setup/claim). */

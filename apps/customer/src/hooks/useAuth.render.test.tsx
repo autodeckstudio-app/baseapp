@@ -8,6 +8,7 @@ import React, { createElement } from "react";
 const h = vi.hoisted(() => ({
   cb: null as null | ((user: unknown) => Promise<void>),
   resolve: vi.fn(),
+  resolveStaff: vi.fn(),
   unsub: vi.fn(),
 }));
 
@@ -16,7 +17,8 @@ vi.mock("../lib/auth-service", () => ({
     h.cb = cb;
     return h.unsub;
   },
-  resolveMyCustomerDocId: () => h.resolve(),
+  resolveMyCustomerDocResolution: () => h.resolve(),
+  resolveExistingCustomerDocId: () => h.resolveStaff(),
 }));
 vi.mock("../lib/price-cache", () => ({ priceCache: { setScope: () => {} } }));
 
@@ -72,6 +74,7 @@ async function fire(user: unknown) {
 beforeEach(() => {
   h.cb = null;
   h.resolve.mockReset();
+  h.resolveStaff.mockReset();
   h.unsub.mockReset();
   last = { status: "init" };
 });
@@ -88,34 +91,77 @@ describe("useAuth terminal + stale-async behavior", () => {
     expect(last.status).toBe("unauthenticated");
   });
 
-  it("resolver throw still ends ready with null customerDocId", async () => {
+  it("resolver throw still ends ready with null customerDocId and error outcome", async () => {
     h.resolve.mockRejectedValue(new Error("boom"));
     await mount();
     await fire(userA);
     expect(last.status).toBe("ready");
     expect((last as { customerDocId?: unknown }).customerDocId).toBeNull();
+    expect((last as { customerDocResolution?: unknown }).customerDocResolution).toBe("error");
   });
 
   it("normal resolution: ready carries the canonical id", async () => {
-    h.resolve.mockResolvedValue("staged-9");
+    h.resolve.mockResolvedValue({ outcome: "resolved", customerDocId: "staged-9" });
     await mount();
     await fire(userA);
     expect(last.status).toBe("ready");
     expect((last as { customerDocId?: unknown }).customerDocId).toBe(
       "staged-9",
     );
+    expect((last as { customerDocResolution?: unknown }).customerDocResolution).toBe("resolved");
+  });
+
+  it("customer claim-required resolves to null id with its own outcome", async () => {
+    h.resolve.mockResolvedValue({ outcome: "claim-required" });
+    await mount();
+    await fire(userA);
+    expect(last.status).toBe("ready");
+    expect((last as { customerDocId?: unknown }).customerDocId).toBeNull();
+    expect((last as { customerDocResolution?: unknown }).customerDocResolution).toBe("claim-required");
+  });
+
+  it("staff role resolves an existing verified record read-only", async () => {
+    h.resolveStaff.mockResolvedValue({ outcome: "resolved", customerDocId: "uid-S" });
+    await mount();
+    await fire({
+      uid: "uid-S",
+      getIdTokenResult: async () => ({ claims: { role: "admin", tenantId: "automodz" } }),
+    });
+    expect(last.status).toBe("ready");
+    expect((last as { customerDocId?: unknown }).customerDocId).toBe("uid-S");
+    expect((last as { customerDocResolution?: unknown }).customerDocResolution).toBe("resolved");
+    expect(h.resolve).not.toHaveBeenCalled(); // staff never take the self-serve path
+  });
+
+  it("staff with no record is absent, and a staff resolution error stays truthful", async () => {
+    h.resolveStaff.mockResolvedValueOnce({ outcome: "absent" });
+    await mount();
+    await fire({
+      uid: "uid-S1",
+      getIdTokenResult: async () => ({ claims: { role: "studio", tenantId: "automodz" } }),
+    });
+    expect((last as { customerDocId?: unknown }).customerDocId).toBeNull();
+    expect((last as { customerDocResolution?: unknown }).customerDocResolution).toBe("absent");
+    h.resolveStaff.mockResolvedValueOnce({ outcome: "error" });
+    await fire({
+      uid: "uid-S2",
+      getIdTokenResult: async () => ({ claims: { role: "admin", tenantId: "automodz" } }),
+    });
+    expect((last as { customerDocId?: unknown }).customerDocId).toBeNull();
+    expect((last as { customerDocResolution?: unknown }).customerDocResolution).toBe("error");
+    expect(h.resolve).not.toHaveBeenCalled();
   });
 
   it("a superseded resolution never overwrites the newer principal", async () => {
-    let resolveA!: (v: string) => void;
+    let resolveA!: (v: { outcome: string; customerDocId?: string }) => void;
     h.resolve
       .mockImplementationOnce(
         () =>
-          new Promise<string>((r) => {
+          new Promise<{ outcome: string; customerDocId?: string }>((r) => {
             resolveA = r;
           }),
       ) // A: slow
-      .mockResolvedValueOnce("id-B"); // B: fast
+      .mockResolvedValueOnce({ outcome: "resolved", customerDocId: "id-B" }); // B: fast
     await mount();
     const pA = h.cb!(userA); // in flight, not awaited, no act wrapper
     await act(async () => {
@@ -127,7 +173,7 @@ describe("useAuth terminal + stale-async behavior", () => {
     expect((last as unknown as { user: { uid: string } }).user.uid).toBe(
       "uid-B",
     );
-    resolveA("id-A-STALE");
+    resolveA({ outcome: "resolved", customerDocId: "id-A-STALE" });
     await act(async () => {
       await pA.catch(() => {});
     });
@@ -138,10 +184,10 @@ describe("useAuth terminal + stale-async behavior", () => {
   });
 
   it("sign-out during resolution never lands ready for the old account", async () => {
-    let resolveA!: (v: string) => void;
+    let resolveA!: (v: { outcome: string; customerDocId?: string }) => void;
     h.resolve.mockImplementationOnce(
       () =>
-        new Promise<string>((r) => {
+        new Promise<{ outcome: string; customerDocId?: string }>((r) => {
           resolveA = r;
         }),
     );
@@ -154,7 +200,7 @@ describe("useAuth terminal + stale-async behavior", () => {
       await h.cb!(null);
     });
     expect(last.status).toBe("unauthenticated");
-    resolveA("id-A-STALE");
+    resolveA({ outcome: "resolved", customerDocId: "id-A-STALE" });
     await act(async () => {
       await pA.catch(() => {});
     });
@@ -164,10 +210,10 @@ describe("useAuth terminal + stale-async behavior", () => {
 
 describe("useAuth unmount", () => {
   it("a resolution still in flight at unmount never lands", async () => {
-    let resolveA!: (v: string) => void;
+    let resolveA!: (v: { outcome: string; customerDocId?: string }) => void;
     h.resolve.mockImplementationOnce(
       () =>
-        new Promise<string>((r) => {
+        new Promise<{ outcome: string; customerDocId?: string }>((r) => {
           resolveA = r;
         }),
     );
@@ -181,7 +227,7 @@ describe("useAuth unmount", () => {
       renderer.unmount();
     }); // act flushes the deferred effect cleanup
     expect(h.unsub).toHaveBeenCalledTimes(1); // effect cleanup ran: unsubscribe + generation bump
-    resolveA("id-A-LATE");
+    resolveA({ outcome: "resolved", customerDocId: "id-A-LATE" });
     await act(async () => {
       await pA.catch(() => {});
     }); // must not reject
@@ -200,7 +246,7 @@ it("actual session boundary immediately drops former private route while replace
     }, []);
     return React.createElement("private", null, "OLD PRIVATE ROUTE");
   }
-  h.resolve.mockResolvedValue("canonical-A");
+  h.resolve.mockResolvedValue({ outcome: "resolved", customerDocId: "canonical-A" });
   let r: any;
   await act(async () => {
     r = create(
@@ -227,7 +273,7 @@ it("actual session boundary immediately drops former private route while replace
     await Promise.resolve();
   });
   expect(r.root.findAllByType("private")).toHaveLength(0);
-  h.resolve.mockResolvedValue("canonical-B");
+  h.resolve.mockResolvedValue({ outcome: "resolved", customerDocId: "canonical-B" });
   await act(async () => {
     resolveToken({ claims: { role: "customer", tenantId: "automodz" } });
     await pending;
@@ -238,7 +284,7 @@ it("actual session boundary immediately drops former private route while replace
 });
 
 it("refresh with revoked/missing claims clears canonical customer and reaches setup state, never prior ready identity", async () => {
-  h.resolve.mockResolvedValue("canonical-A");
+  h.resolve.mockResolvedValue({ outcome: "resolved", customerDocId: "canonical-A" });
   await mount();
   await fire(userA);
   expect(last.customerDocId).toBe("canonical-A");
@@ -251,7 +297,7 @@ it("restored signed-out session becomes terminal unauthenticated; restored custo
   await mount();
   await fire(null);
   expect(last.status).toBe("unauthenticated");
-  h.resolve.mockResolvedValue("restored-canonical");
+  h.resolve.mockResolvedValue({ outcome: "resolved", customerDocId: "restored-canonical" });
   await fire(userB);
   expect(last.status).toBe("ready");
   expect(last.customerDocId).toBe("restored-canonical");

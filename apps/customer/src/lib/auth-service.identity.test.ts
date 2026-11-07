@@ -41,7 +41,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { verifyMyCustomerDocId, getMyCustomerDocId, resolveMyCustomerDocId } from "./auth-service";
+import { verifyMyCustomerDocId, getMyCustomerDocId, resolveMyCustomerDocId, resolveExistingCustomerDocId } from "./auth-service";
 
 const snap = (d: Record<string, unknown> | undefined) => ({ exists: () => d !== undefined, data: () => d });
 const mine = { authUid: "uid-1", tenantId: "automodz", deletedAt: null };
@@ -158,5 +158,66 @@ describe("resolveMyCustomerDocId", () => {
     });
     await expect(resolveMyCustomerDocId()).resolves.toBeNull();
     expect(h.store.has(KEY)).toBe(false);
+  });
+});
+
+describe("resolveExistingCustomerDocId (staff read-only)", () => {
+  it("legacy doc at uid verifies: resolved, setup NEVER called", async () => {
+    h.getDoc.mockResolvedValue(snap(mine));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "resolved", customerDocId: "uid-1" });
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("no record anywhere: absent, setup NEVER called (staff resolution can never create)", async () => {
+    h.getDoc.mockResolvedValue(snap(undefined));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "absent" });
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("persisted claimed id verifies for a staff account: resolved read-only", async () => {
+    h.store.set(KEY, "staged-9");
+    h.getDoc.mockImplementationOnce(() => Promise.resolve(snap(undefined)))
+      .mockImplementationOnce(() => Promise.resolve(snap({ ...mine })));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "resolved", customerDocId: "staged-9" });
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("stale stored id (doc gone or cross-user) fails ownership: absent, never setup", async () => {
+    h.store.set(KEY, "staged-OLD");
+    h.getDoc.mockResolvedValue(snap(undefined)); // uid doc and stored doc both missing
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "absent" });
+    expect(h.setup).not.toHaveBeenCalled();
+    h.store.set(KEY, "staged-OTHER");
+    h.getDoc.mockImplementationOnce(() => Promise.resolve(snap(undefined)))
+      .mockImplementationOnce(() => Promise.resolve(snap({ ...mine, authUid: "uid-2" }))); // bound to another user
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "absent" });
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("deleted stored record fails ownership: absent", async () => {
+    h.store.set(KEY, "staged-9");
+    h.getDoc.mockImplementationOnce(() => Promise.resolve(snap(undefined)))
+      .mockImplementationOnce(() => Promise.resolve(snap({ ...mine, deletedAt: "2026-11-01" })));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "absent" });
+  });
+
+  it("transient read errors surface as error (unknown), never absent", async () => {
+    h.getDoc.mockRejectedValue(new Error("network"));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "error" });
+    h.getDoc.mockReset();
+    h.store.set(KEY, "staged-9");
+    h.getDoc.mockImplementationOnce(() => Promise.resolve(snap(undefined)))
+      .mockImplementationOnce(() => Promise.reject(new Error("appcheck")));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "error" });
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("principal switch mid-flight never resolves", async () => {
+    h.getDoc.mockImplementation(async () => {
+      h.uid = "uid-2";
+      return snap(mine);
+    });
+    const r = await resolveExistingCustomerDocId();
+    expect(r.outcome).not.toBe("resolved");
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { AutoDeckClaims } from "@autodeck/auth";
-import { onIdTokenChanged, resolveMyCustomerDocId } from "../lib/auth-service";
+import { onIdTokenChanged, resolveExistingCustomerDocId, resolveMyCustomerDocResolution, type CustomerDocResolution } from "../lib/auth-service";
 import { priceCache } from "../lib/price-cache";
 
 type AuthState =
@@ -13,6 +13,10 @@ type AuthState =
       user: User;
       claims: AutoDeckClaims;
       customerDocId: string | null;
+      // Truthful resolution outcome: routes must distinguish "absent"
+      // (verifiably no record / claim pending) from "error" (unknown - a
+      // transient failure, never render as genuinely empty).
+      customerDocResolution: CustomerDocResolution["outcome"];
     };
 
 /**
@@ -74,18 +78,26 @@ export function useAuth(): AuthState {
         priceCache.setScope(user.uid, claims.tenantId);
         // Canonical customer record id (staff-first): a claimed walk-in
         // record keeps its staged doc id. Lists must key on this, never uid.
-        // Null only pre-setup/claim-pending; never a reason to create.
-        // resolveMyCustomerDocId never throws (errors resolve to null), but
-        // keep the terminal guarantee explicit: ready always fires.
+        // Customers resolve through the app's self-serve path (which can
+        // create/claim); staff resolve READ-ONLY (an existing verified
+        // record only, never a creation). Null is never a reason to create.
+        // Resolvers never throw, but keep the terminal guarantee explicit:
+        // ready always fires.
         let customerDocId: string | null = null;
+        let customerDocResolution: CustomerDocResolution["outcome"] = "error";
         try {
-          customerDocId =
-            claims.role === "customer" ? await resolveMyCustomerDocId() : null;
+          const r =
+            claims.role === "customer"
+              ? await resolveMyCustomerDocResolution()
+              : await resolveExistingCustomerDocId();
+          customerDocResolution = r.outcome;
+          customerDocId = r.outcome === "resolved" ? r.customerDocId : null;
         } catch {
           customerDocId = null;
+          customerDocResolution = "error";
         }
         if (gen !== generation) return; // superseded while resolving
-        setState({ status: "ready", user, claims, customerDocId });
+        setState({ status: "ready", user, claims, customerDocId, customerDocResolution });
       } else {
         // User is signed in but claims not set yet (first sign-in)
         priceCache.setScope(user.uid, null);
