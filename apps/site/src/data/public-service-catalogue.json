@@ -1,274 +1,13 @@
 {
   "schemaVersion": 1,
-  "asOf": "2026-11-03",
+  "asOf": "2026-11-07",
   "services": [
-    {
-      "id": "menu-garage-ac",
-      "name": "AC check",
-      "brand": null,
-      "category": "garage",
-      "description": "Cooling performance, gas level and leak check.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-garage-alignment",
-      "name": "Wheel alignment and balancing",
-      "brand": null,
-      "category": "garage",
-      "description": "Four-wheel alignment and balancing.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-garage-battery",
-      "name": "Battery check",
-      "brand": null,
-      "category": "garage",
-      "description": "Battery health, terminals and charging system test.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-garage-inspection",
-      "name": "Multi-point inspection",
-      "brand": null,
-      "category": "garage",
-      "description": "Paint, body, underbody, tyres, brakes and fluids checked and reported.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-garage-repairs",
-      "name": "Repairs and other work (book an inspection)",
-      "brand": null,
-      "category": "garage",
-      "description": "Tell us what is wrong. We inspect the car and quote the work.",
-      "priceOnRequest": true,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-mods-styling",
-      "name": "Accessories and styling",
-      "brand": null,
-      "category": "modifications",
-      "description": "Accessories and styling work, quoted per job.",
-      "priceOnRequest": true,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-mods-tint",
-      "name": "Window tint",
-      "brand": null,
-      "category": "modifications",
-      "description": "Heat-rejecting window films. Quoted by car and film.",
-      "priceOnRequest": true,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-mods-wrap",
-      "name": "Vinyl wraps and colour change",
-      "brand": null,
-      "category": "modifications",
-      "description": "Full and partial wraps. Quoted after seeing the car.",
-      "priceOnRequest": true,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-pickup",
-      "name": "Pickup and drop",
-      "brand": null,
-      "category": "pickup",
-      "description": "We collect your car and bring it back. Flat rate within the city.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-ppf-3m-full-body",
-      "name": "3M Full body",
-      "brand": "3M",
-      "category": "ppf",
-      "description": "3M paint protection film, full body coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_body"
-    },
-    {
-      "id": "menu-ppf-3m-full-front",
-      "name": "3M Full front",
-      "brand": "3M",
-      "category": "ppf",
-      "description": "3M paint protection film, full front coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_front"
-    },
-    {
-      "id": "menu-ppf-3m-high-impact",
-      "name": "3M High-impact kit",
-      "brand": "3M",
-      "category": "ppf",
-      "description": "3M paint protection film, high-impact kit coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "high_impact"
-    },
-    {
-      "id": "menu-ppf-colour",
-      "name": "Colour and black PPF",
-      "brand": "Colour films",
-      "category": "ppf",
-      "description": "Coloured, black and satin films. Priced after we see the car.",
-      "priceOnRequest": true,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-ppf-garware-full-body",
-      "name": "Garware Full body",
-      "brand": "Garware",
-      "category": "ppf",
-      "description": "Garware paint protection film, full body coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_body"
-    },
-    {
-      "id": "menu-ppf-garware-full-front",
-      "name": "Garware Full front",
-      "brand": "Garware",
-      "category": "ppf",
-      "description": "Garware paint protection film, full front coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_front"
-    },
-    {
-      "id": "menu-ppf-garware-high-impact",
-      "name": "Garware High-impact kit",
-      "brand": "Garware",
-      "category": "ppf",
-      "description": "Garware paint protection film, high-impact kit coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "high_impact"
-    },
-    {
-      "id": "menu-ppf-llumar-full-body",
-      "name": "LLumar Full body",
-      "brand": "LLumar",
-      "category": "ppf",
-      "description": "LLumar paint protection film, full body coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_body"
-    },
-    {
-      "id": "menu-ppf-llumar-full-front",
-      "name": "LLumar Full front",
-      "brand": "LLumar",
-      "category": "ppf",
-      "description": "LLumar paint protection film, full front coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_front"
-    },
-    {
-      "id": "menu-ppf-llumar-high-impact",
-      "name": "LLumar High-impact kit",
-      "brand": "LLumar",
-      "category": "ppf",
-      "description": "LLumar paint protection film, high-impact kit coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "high_impact"
-    },
-    {
-      "id": "menu-ppf-xpel-full-body",
-      "name": "XPEL Full body",
-      "brand": "XPEL",
-      "category": "ppf",
-      "description": "XPEL paint protection film, full body coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_body"
-    },
-    {
-      "id": "menu-ppf-xpel-full-front",
-      "name": "XPEL Full front",
-      "brand": "XPEL",
-      "category": "ppf",
-      "description": "XPEL paint protection film, full front coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "full_front"
-    },
-    {
-      "id": "menu-ppf-xpel-high-impact",
-      "name": "XPEL High-impact kit",
-      "brand": "XPEL",
-      "category": "ppf",
-      "description": "XPEL paint protection film, high-impact kit coverage.",
-      "priceOnRequest": false,
-      "coverageLevel": "high_impact"
-    },
-    {
-      "id": "menu-wash-exterior",
-      "name": "Ceramic wash",
-      "brand": null,
-      "category": "washing",
-      "description": "Extended premium koach foam wash with additional polishing of dashboard, doors, tyres and trims\n\n- Includes Ceramic wash & spray",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-wash-full",
-      "name": "Full detail wash",
-      "brand": null,
-      "category": "washing",
-      "description": "Interior deep clean and exterior detail wash together.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "menu-wash-interior",
-      "name": "Interior deep clean",
-      "brand": null,
-      "category": "washing",
-      "description": "Vacuum, steam clean and conditioning of seats, mats and trim.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "svc-wash-detail-spa",
-      "name": "Detail SPA",
-      "brand": null,
-      "category": "washing",
-      "description": "Thorough wash and detailing spa treatment.\n- Engine cleaning\n- Under body cleaning\n- Interior cleaning\n- Dashboard, Tyre and Trims polishing",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "svc-wash-headlight-buffing",
-      "name": "Headlight Buffing",
-      "brand": null,
-      "category": "washing",
-      "description": "Headlight restoration and buffing.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "svc-wash-premium",
-      "name": "Premium Wash",
-      "brand": null,
-      "category": "washing",
-      "description": "Extended premium koach foam wash with additional interior polishing of dashboard and doors.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
-    {
-      "id": "svc-wash-regular",
-      "name": "Regular Wash",
-      "brand": null,
-      "category": "washing",
-      "description": "Standard exterior wash and dry with foam.",
-      "priceOnRequest": false,
-      "coverageLevel": null
-    },
     {
       "id": "svc_c2ad7236d8a3a5cacfd1027321fe03a3",
       "name": "CarPro CQUARTZ Lite 2.0",
       "brand": "CarPro",
       "category": "ceramic",
-      "description": "CarPro's easiest and most versatile coating; applicable indoors or outdoors, even in sunshine or light wind.",
+      "description": "CarPro's easiest and most versatile coating; applies indoors or outdoors, even in sunshine or light wind\n- Where used: Paint\n- Why choose it: The easiest CQUARTZ to live with - a strong first coating for a daily car\n- Brand rating: up to 2 years (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -277,7 +16,7 @@
       "name": "CarPro CQUARTZ SiC",
       "brand": "CarPro",
       "category": "ceramic",
-      "description": "SiC-formula paint coating with added chemical resistance; improved ease of use, water-spot resistance, gloss and depth per brand.",
+      "description": "SiC-formula paint coating with added chemical resistance; improved ease of use, water-spot resistance, gloss and depth per brand.\n- Silicon carbide (SiC) formula - the next step in the CQUARTZ line\n- Where used: Paint\n- Why choose it: For the newer SiC chemistry in a consumer-applied coating",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -286,7 +25,7 @@
       "name": "CarPro CQUARTZ UK 3.0",
       "brand": "CarPro",
       "category": "ceramic",
-      "description": "CarPro's most refined consumer-grade coating; third iteration with the consumer line's highest performance figures.",
+      "description": "CQUARTZ UK edition, third iteration\n- Consumer CQUARTZ line's highest performance figures\n- Where used: Paint\n- Why choose it: Formulated for wet, humid conditions - suits cars parked outdoors\n- Brand rating: 18-24 months real-world (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -295,7 +34,7 @@
       "name": "CarPro DQUARTZ Go",
       "brand": "CarPro",
       "category": "ceramic",
-      "description": "DQUARTZ nanodiamond paint coating in an easy-to-use package per brand.",
+      "description": "DQUARTZ nanodiamond paint coating in an easy-to-use package per brand.\n- Nano-diamond formula with DQUARTZ hardness, reworked for easier use\n- Where used: Paint\n- Why choose it: Pro-grade hardness without a pro-only application",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -304,7 +43,7 @@
       "name": "Fireball Aegis",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Entry-level SiO2-titanium all-rounder for exterior and interior surfaces; UV and rain resistance.",
+      "description": "Fireball Aegis ceramic coating\n- Where used: Paint\n- Why choose it: A shorter-commitment Fireball ceramic - suits leased or soon-to-change cars\n- Brand rating: 2-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -313,7 +52,7 @@
       "name": "Fireball Butterfly",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Fireball's best-selling single-layer ceramic coating, positioned for all-weather use.",
+      "description": "Fireball Butterfly single-layer ceramic coating\n- Where used: Paint\n- Why choose it: Fireball's long-life paint coating\n- Brand rating: 7-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -322,7 +61,7 @@
       "name": "Fireball Butterfly Graphene",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Graphene-infused evolution of Butterfly; graphene oxides and oils, over 80% solids, above 9H.",
+      "description": "Graphene-infused evolution of Butterfly\n- Where used: Paint\n- Brand rating: 8-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -331,7 +70,7 @@
       "name": "Fireball Devil's Blood",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Polysilazane-siloxane hybrid with six SiO2 compounds; extreme water repellence and high gloss per brand.",
+      "description": "Fireball Devil's Blood ceramic coating\n- Where used: Paint\n- Why choose it: Mid-life Fireball ceramic for regular daily use\n- Brand rating: 3-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -340,7 +79,7 @@
       "name": "Fireball Dok Do",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Flagship dual-layer coating: super-hard base plus chemical-resistant glossy top coat; highest SiO2 content in Fireball's line, exceeding 9H.",
+      "description": "Fireball Dok Do ceramic coating\n- Where used: Paint\n- Brand rating: 10-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -349,7 +88,7 @@
       "name": "Fireball FX88",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Color-enriching depth and shine with resistance to thermocycling stress per brand.",
+      "description": "Color-enriching depth and shine with resistance to thermocycling stress per brand.\n- Where used: Paint",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -358,7 +97,7 @@
       "name": "Fireball HERA",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Easy application with short install times; smooth soft finish with high water repellency and gloss per brand.",
+      "description": "Easy application with short install times; smooth soft finish with high water repellency and gloss per brand.\n- Where used: Paint",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -367,7 +106,7 @@
       "name": "Fireball RED EYE",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Quick-curing paint ceramic; the easiest ceramic to apply in the range, with a beading focus per brand.",
+      "description": "Quick-curing paint ceramic; the easiest ceramic to apply in the range, with a beading focus per brand.\n- Where used: Paint\n- Why choose it: Suits a first coating or a quicker turnaround",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -376,7 +115,7 @@
       "name": "Fireball Silla",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Ceramic coating with Fireball's highest corrosion resistance against salt, rust and grime; the brand's best-value pick.",
+      "description": "Fireball Silla ceramic coating\n- Where used: Paint\n- Why choose it: Balanced Fireball ceramic for long-term daily protection\n- Brand rating: 5-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -385,7 +124,7 @@
       "name": "Fireball WIZARD",
       "brand": "Fireball",
       "category": "ceramic",
-      "description": "Fireball's easiest-to-apply, nearly fail-safe coating; usable on painted and PPF surfaces.",
+      "description": "Fireball's easiest-to-apply, nearly fail-safe coating; usable on painted and PPF surfaces.\n- Where used: Paint",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -394,7 +133,7 @@
       "name": "Gtechniq C1 Crystal Lacquer",
       "brand": "Gtechniq",
       "category": "ceramic",
-      "description": "Entry-level quartz paint coating per brand. Special order.",
+      "description": "Entry-level quartz paint coating per brand. Special order.\n- Forms a hard crystalline film that resists swirl marks and minor scratches from everyday hand washing\n- Guards against bird droppings, tree sap and UV fading\n- Where used: Paint, matte finishes, satin finishes, single-stage paint\n- Why choose it: Adds little extra gloss - suited to matte and satin finishes",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -403,16 +142,7 @@
       "name": "Gtechniq Crystal Serum Light",
       "brand": "Gtechniq",
       "category": "ceramic",
-      "description": "The accessible version of Crystal Serum Ultra paint coating per brand. Special order.",
-      "priceOnRequest": true,
-      "coverageLevel": null
-    },
-    {
-      "id": "svc_852ed684301e188f572797265d7b106e",
-      "name": "Keramik 10H Graphene",
-      "brand": "Keramik",
-      "category": "ceramic",
-      "description": "Keramik 10H graphene ceramic coating, two-year protection tier.",
+      "description": "The accessible version of Crystal Serum Ultra paint coating per brand. Special order.\n- About 80% of Crystal Serum Ultra's performance with easier application\n- Where used: Paint\n- Brand rating: up to 5 years (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -421,7 +151,7 @@
       "name": "Koch-Chemie Ceramic Allround C0.02",
       "brand": "Koch-Chemie",
       "category": "ceramic",
-      "description": "One ceramic coating for paint, plastics and rims; highly hydrophobic, full cure in about 9 days.",
+      "description": "One ceramic coating for paint, plastics and rims; highly hydrophobic, full cure in about 9 days.\n- One coating that bonds to many surfaces\n- Where used: Paint and other exterior surfaces\n- Why choose it: One product when several surfaces need coating in the same visit\n- Brand rating: 20-24 months (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -430,7 +160,7 @@
       "name": "Koch-Chemie Ceramic Body Cb0.01",
       "brand": "Koch-Chemie",
       "category": "ceramic",
-      "description": "Paint ceramic with lotus-effect beading and easy-clean behaviour; resistant to acid and alkaline cleaners per brand.",
+      "description": "Paint ceramic with lotus-effect beading and easy-clean behaviour; resistant to acid and alkaline cleaners per brand.\n- Where used: Painted bodywork\n- Why choose it: The long-life Koch option for paint\n- Brand rating: upwards of 36 months (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -439,7 +169,7 @@
       "name": "Koch-Chemie Ceramic Neo C0.03",
       "brand": "Koch-Chemie",
       "category": "ceramic",
-      "description": "Next-generation paint ceramic for extreme deep gloss and color enhancement; brand requires a topper before delivery.",
+      "description": "Next-generation paint ceramic for extreme deep gloss and color enhancement; brand requires a topper before delivery.\n- Koch's next-generation sealant - deep gloss, strong water repellency\n- Where used: Paint\n- Why choose it: When gloss depth matters most",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -448,16 +178,16 @@
       "name": "Kovalent Borophene",
       "brand": "Kovalent",
       "category": "ceramic",
-      "description": "Kovalent flagship coating.",
+      "description": "Kovalent Borophene coating on Boron Nitride technology\n- 9H+ hardness and 10-micron film with extreme gloss, on Boron Nitride technology\n- Where used: Paint\n- Brand rating: 9 years durability (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
     {
       "id": "menu-coat-kovalent-graphene",
-      "name": "Kovalent Graphene 7-year",
+      "name": "Kovalent Graphene",
       "brand": "Kovalent",
       "category": "ceramic",
-      "description": "Kovalent graphene coating, seven-year tier.",
+      "description": "Kovalent graphene coating\n- Stands up to high temperatures, UV and contaminants\n- Where used: Paint",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -466,7 +196,7 @@
       "name": "Kovalent Graphene Matrix",
       "brand": "Kovalent",
       "category": "ceramic",
-      "description": "Brand says it self-heals minor swirls when heat-activated.",
+      "description": "Kovalent Graphene Matrix graphene coating\n- Gloss, hydrophobic effect and durability in one graphene coating\n- Where used: Paint",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -475,7 +205,7 @@
       "name": "Kovalent Matte",
       "brand": "Kovalent",
       "category": "ceramic",
-      "description": "Ceramic coating for matte and satin paint; preserves the non-reflective finish.",
+      "description": "Ceramic coating for matte and satin paint; preserves the non-reflective finish.\n- Protects while preserving the non-reflective matte look\n- Where used: Matte paint and matte-finish surfaces\n- Why choose it: For matte cars - protection without added gloss",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -484,7 +214,7 @@
       "name": "Kovalent Prolong",
       "brand": "Kovalent",
       "category": "ceramic",
-      "description": "Kovalent Prolong ceramic coating.",
+      "description": "Kovalent Prolong ceramic coating.\n- 9H ceramic with heat resistance and a brilliant finish\n- Where used: Paint",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -493,7 +223,7 @@
       "name": "Kovalent Prolong Light",
       "brand": "Kovalent",
       "category": "ceramic",
-      "description": "Lighter single-layer 9H ceramic for daily drivers; 85% of Prolong's strength per brand.",
+      "description": "Single-layer Kovalent ceramic at 85% of Prolong's strength\n- Where used: Paint\n- Why choose it: For daily drivers - lighter commitment than full Prolong\n- Brand rating: 3-year protective shield (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -511,7 +241,7 @@
       "name": "CarPro CQUARTZ DLUX 2.0",
       "brand": "CarPro",
       "category": "coating",
-      "description": "Coating for wheels and exterior trim; restores gloss and color of plastic and rubber trim and protects from fading per brand.",
+      "description": "Coating for wheels and exterior trim; restores gloss and color of plastic and rubber trim and protects from fading per brand.\n- Thicker film with 50% silica, built for harsh wheel conditions\n- Where used: Wheels, plastic trim\n- Why choose it: Keeps wheels easier to clean against brake dust and road grime",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -520,7 +250,7 @@
       "name": "CarPro CQUARTZ DLight",
       "brand": "CarPro",
       "category": "coating",
-      "description": "UV-blocking coating for headlights, PPF and other plastics; formulated for long-lasting protection of light lenses and trim plastics.",
+      "description": "UV-blocking coating for headlights, PPF and other plastics; formulated for long-lasting protection of light lenses and trim plastics.\n- UV blockers across 260-360nm against yellowing, fading and cracking\n- Where used: Headlights, PPF and other plastics\n- Why choose it: For headlights and films that see strong sun\n- Brand rating: up to 3 years UV-blocking (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -529,7 +259,7 @@
       "name": "CarPro CQUARTZ Fabric 2.0",
       "brand": "CarPro",
       "category": "coating",
-      "description": "Improved dedicated breathable fabric coating per brand.",
+      "description": "Improved dedicated breathable fabric coating per brand.\n- Hydrophobic and stain-resistant without stiffening the fabric or blocking its weave\n- Where used: Fabric seats, mats and soft tops\n- Why choose it: Keeps fabric feeling like fabric",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -538,7 +268,7 @@
       "name": "CarPro CQUARTZ Leather 2.0",
       "brand": "CarPro",
       "category": "coating",
-      "description": "Water-based leather coating safe on all leather including Nappa; hydrophobic and resistant to UV, denim dye transfer, abrasion and stains per brand.",
+      "description": "CarPro's dedicated leather and vinyl coating\n- Where used: Leather and vinyl",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -547,7 +277,7 @@
       "name": "CarPro CQUARTZ Skin",
       "brand": "CarPro",
       "category": "coating",
-      "description": "Coating developed for PPF, vinyl films, clear bra and plastic trim; heavy UV blockers with chemical and salt resistance per brand.",
+      "description": "Coating developed for PPF, vinyl films, clear bra and plastic trim; heavy UV blockers with chemical and salt resistance per brand.\n- Built around heavy UVA/UVB blockers\n- Where used: PPF, vinyl wraps, clear bra and plastic trim\n- Why choose it: Shields wraps and film from UV ageing",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -556,7 +286,7 @@
       "name": "CarPro DQUARTZ GForce",
       "brand": "CarPro",
       "category": "coating",
-      "description": "High-clarity hydrophobic glass coating for the windshield and glass; extreme water repellency and abrasion resistance per brand.",
+      "description": "High-clarity hydrophobic glass coating on DQUARTZ nano-diamond technology\n- Where used: Glass\n- Why choose it: For the clearest wet-weather vision",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -574,7 +304,7 @@
       "name": "Fireball RAPTOR",
       "brand": "Fireball",
       "category": "coating",
-      "description": "Newest Fireball line entry; hydrophobic anti-fouling coating for wheels, plastic and exterior trim.",
+      "description": "Fireball RAPTOR coating for wheels and trim\n- Where used: Wheels",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -583,7 +313,7 @@
       "name": "Fireball Talon",
       "brand": "Fireball",
       "category": "coating",
-      "description": "High-temperature ceramic for wheels, brake components, engine parts, exhaust tips and unpainted trim.",
+      "description": "High-temperature ceramic for wheels, brake components, engine parts, exhaust tips and unpainted trim.\n- Where used: Wheels\n- Brand rating: 1-year (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -601,7 +331,7 @@
       "name": "Gtechniq C4 Permanent Trim Restorer",
       "brand": "Gtechniq",
       "category": "coating",
-      "description": "Restores and protects exterior trim per brand. Special order.",
+      "description": "Restores and protects exterior trim per brand. Special order.\n- Restores faded black plastic trim and keeps it protected wash after wash\n- Where used: Exterior plastic trim",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -610,7 +340,7 @@
       "name": "Gtechniq C5 Wheel Armour",
       "brand": "Gtechniq",
       "category": "coating",
-      "description": "Dedicated wheel coating. Special order.",
+      "description": "Dedicated wheel coating. Special order.\n- Where used: Wheels\n- Why choose it: Dedicated wheel armour from the Gtechniq ceramic line\n- Brand rating: up to 2 years (manufacturer claim; not an AutoDeck warranty)",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -619,7 +349,7 @@
       "name": "Gtechniq HALOv2 Flexible Film Coating",
       "brand": "Gtechniq",
       "category": "coating",
-      "description": "Flexible coating formulated for PPF and vinyl film. Special order.",
+      "description": "Flexible coating formulated for PPF and vinyl film. Special order.\n- Where used: PPF and vinyl wrap\n- Why choose it: Keeps film easier to clean and maintain",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -628,7 +358,7 @@
       "name": "Koch-Chemie Ceramic Rims Cr0.01",
       "brand": "Koch-Chemie",
       "category": "coating",
-      "description": "Ceramic coating for painted rims; lotus-effect beading and easy-clean behaviour per brand.",
+      "description": "Ceramic coating for painted rims; lotus-effect beading and easy-clean behaviour per brand.\n- Where used: Wheel rims",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -637,7 +367,7 @@
       "name": "Kovalent Fabric",
       "brand": "Kovalent",
       "category": "coating",
-      "description": "Fabric and textile coating; anti-bacterial per brand.",
+      "description": "Fabric and textile coating; anti-bacterial per brand.\n- Protects while keeping fabric breathable; anti-bacterial\n- Where used: Fabric seats and mats",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -646,7 +376,7 @@
       "name": "Kovalent Glass",
       "brand": "Kovalent",
       "category": "coating",
-      "description": "Glass coating; water-repellent and abrasion-resistant per brand.",
+      "description": "Glass coating; water-repellent and abrasion-resistant per brand.\n- Where used: Glass",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -655,7 +385,7 @@
       "name": "Kovalent Overlay",
       "brand": "Kovalent",
       "category": "coating",
-      "description": "Ceramic coating made to be applied over PPF; easier cleaning and reduced contamination per brand.",
+      "description": "Ceramic coating made to be applied over PPF; easier cleaning and reduced contamination per brand.\n- Where used: PPF\n- Why choose it: Protects the film you already have",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -664,7 +394,7 @@
       "name": "Kovalent Restore",
       "brand": "Kovalent",
       "category": "coating",
-      "description": "Coating for leather, vinyl and plastic; matte finish, water-repellent and UV-resistant per brand.",
+      "description": "Coating for leather, vinyl and plastic; matte finish, water-repellent and UV-resistant per brand.\n- Where used: Leather, vinyl and plastic",
       "priceOnRequest": true,
       "coverageLevel": null
     },
@@ -710,6 +440,150 @@
       "brand": "Add-ons",
       "category": "coating",
       "description": "Ceramic coating for wheel faces and barrels.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-garage-ac",
+      "name": "AC check",
+      "brand": null,
+      "category": "garage",
+      "description": "Cooling performance, gas level and leak check.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-garage-battery",
+      "name": "Battery check",
+      "brand": null,
+      "category": "garage",
+      "description": "Battery health, terminals and charging system test.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-garage-inspection",
+      "name": "Multi-point inspection",
+      "brand": null,
+      "category": "garage",
+      "description": "Paint, body, underbody, tyres, brakes and fluids checked and reported.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-garage-repairs",
+      "name": "Repairs and other work (book an inspection)",
+      "brand": null,
+      "category": "garage",
+      "description": "Tell us what is wrong. We inspect the car and quote the work.",
+      "priceOnRequest": true,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-garage-alignment",
+      "name": "Wheel alignment and balancing",
+      "brand": null,
+      "category": "garage",
+      "description": "Four-wheel alignment and balancing.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-mods-styling",
+      "name": "Accessories and styling",
+      "brand": null,
+      "category": "modifications",
+      "description": "Accessories and styling work, quoted per job.",
+      "priceOnRequest": true,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-mods-wrap",
+      "name": "Vinyl wraps and colour change",
+      "brand": null,
+      "category": "modifications",
+      "description": "Full and partial wraps. Quoted after seeing the car.",
+      "priceOnRequest": true,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-mods-tint",
+      "name": "Window tint",
+      "brand": null,
+      "category": "modifications",
+      "description": "Heat-rejecting window films. Quoted by car and film.",
+      "priceOnRequest": true,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-pickup",
+      "name": "Pickup and drop",
+      "brand": null,
+      "category": "pickup",
+      "description": "We collect your car and bring it back. Flat rate within the city.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-wash-exterior",
+      "name": "Ceramic wash",
+      "brand": null,
+      "category": "washing",
+      "description": "Extended premium koach foam wash with additional polishing of dashboard, doors, tyres and trims\n\n- Includes Ceramic wash & spray",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "svc-wash-detail-spa",
+      "name": "Detail SPA",
+      "brand": null,
+      "category": "washing",
+      "description": "Thorough wash and detailing spa treatment.\n- Engine cleaning\n- Under body cleaning\n- Interior cleaning\n- Dashboard, Tyre and Trims polishing",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-wash-full",
+      "name": "Full detail wash",
+      "brand": null,
+      "category": "washing",
+      "description": "Interior deep clean and exterior detail wash together.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "svc-wash-headlight-buffing",
+      "name": "Headlight Buffing",
+      "brand": null,
+      "category": "washing",
+      "description": "Headlight restoration and buffing.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "menu-wash-interior",
+      "name": "Interior deep clean",
+      "brand": null,
+      "category": "washing",
+      "description": "Vacuum, steam clean and conditioning of seats, mats and trim.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "svc-wash-premium",
+      "name": "Premium Wash",
+      "brand": null,
+      "category": "washing",
+      "description": "Extended premium koach foam wash with additional interior polishing of dashboard and doors.",
+      "priceOnRequest": false,
+      "coverageLevel": null
+    },
+    {
+      "id": "svc-wash-regular",
+      "name": "Regular Wash",
+      "brand": null,
+      "category": "washing",
+      "description": "Standard exterior wash and dry with foam.",
       "priceOnRequest": false,
       "coverageLevel": null
     }

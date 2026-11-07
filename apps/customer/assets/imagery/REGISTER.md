@@ -149,6 +149,8 @@ Official brand marks, proportion-preserving contain fit; no brand claim/warranty
 
 Generated illustrative unbranded service scenes: ai-trim-restore, ai-decon, ai-glass, ai-odour, ai-rust, ai-audio, ai-camera, ai-mats, ai-periodic.jpg. Generated3Nov2026 to match dark studio/vertical LED style. Not actual AutoDeck work or branded product photography. New generation attempts that timed out are not used.
 
+gen-pps-spray.jpg (symlink to src/assets/gen-pps-spray.jpg): generated unbranded paint-protection-spray enquiry visual, 7 Nov 2026. Generic application imagery for the brand-less PPS enquiry concept; not product packaging, not an installed-product photo.
+
 ## Added brand enquiry marks,3Nov2026
 Official homepage header assets: GSWF190x57 https://gswf.com/wp-content/uploads/2026/03/GSWF-Logo-WHITE-1-190x57.webp ; NAR176x37 https://www.narppf.com/template/default/images/logo.png ; AVVYX sourceAVIF convertedPNG without recolour https://avvyx.com/wp-content/uploads/2025/09/AVVYX__3_-removebg-preview.avif . Exact marks, not claims of authorised installer or stock. Enquiry product cards use generic protection application imagery, not fake product packaging. Small intrinsic headermarks are not called high-resolution assets.
 
