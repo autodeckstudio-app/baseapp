@@ -154,6 +154,16 @@ export default function BookServiceScreen() {
 
   if (loading) return <Loading label="Finding times" />;
   if (loadError) return <Screen><Notice title="Can't open booking" body="Check your connection and try again." action={<Button label="Retry" onPress={()=>setRetryTick(n=>n+1)}/>} /></Screen>;
+  // Booking needs a verified customer record. Mirrors the quote-request
+  // terminal account states: while auth resolves show a loading state (never a
+  // false "Service not found"); a signed-out or claims-less session gets a
+  // sign-in notice; staff/admin sign-ins (and a customer sign-in whose record
+  // is not verified yet) get the honest gate, never the misleading
+  // "Service not found" below - the service may exist; the account simply
+  // cannot book.
+  if (auth.status === "loading") return <Loading label="Checking your account" />;
+  if (auth.status !== "ready") return <Screen><Notice title="Sign in to book" body="Your account session could not be verified." action={<Button label="Sign in" onPress={() => router.push("/login")} />} /></Screen>;
+  if (!auth.customerDocId) return <BookingRoleGate staff={auth.claims.role !== "customer"} onAccount={() => router.push("/(tabs)/profile")} onBrowse={() => router.push("/(tabs)/catalogue")} />;
   if (!service || service.active === false) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." /></Screen>;
 
   const slotsByDate = slots.reduce<Record<string, AvailableSlot[]>>((acc, slot) => {
@@ -241,6 +251,22 @@ export default function BookServiceScreen() {
         {sizeError ? <T role="caption" tone="danger">{sizeError}</T> : null}
         <Button label={pickedSlot ? `Continue with ${pickedSlot.startTime}` : "Pick a time to continue"} disabled={!pickedSlot || !selectedVehicle || vehiclesError || sizeSaving} busy={sizeSaving} onPress={() => { if (pickedSlot) void handleSelectSlot(pickedSlot); }} />
       </View>
+    </Screen>
+  );
+}
+
+/** Honest terminal state for accounts that cannot book (see gate above). */
+export function BookingRoleGate({ staff, onAccount, onBrowse }: { staff: boolean; onAccount: () => void; onBrowse: () => void }) {
+  return (
+    <Screen>
+      <Notice
+        title={staff ? "Booking uses a customer account" : "Customer profile could not be verified"}
+        body={staff
+          ? "You are signed in with a staff or admin account. You can browse services, but bookings need a customer account. Your staff access has not changed."
+          : "We could not verify the customer profile linked to this sign-in. Your bookings have not been changed. Return to your account and try signing in again, or contact the studio."}
+        action={<Button label="Go to your account" onPress={onAccount} />}
+      />
+      <Button label="Browse services" onPress={onBrowse} />
     </Screen>
   );
 }
