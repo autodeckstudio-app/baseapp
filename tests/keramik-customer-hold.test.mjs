@@ -31,10 +31,11 @@ test('cached, fetched and mock catalogue all pass same hold; direct enquiry is f
  assert.match(booking,/\[serviceId, selectedCategory, service\]/);
 });
 
-test('site hides exact held named service and its reference without changing shared data',()=>{
- const site=fs.readFileSync(new URL('apps/site/src/pages/services/[slug].astro',root),'utf8');
- assert.match(site,/catalogue.services.filter\(customerOfferingVisible\)/);
- assert.match(site,/askRanges=enquiries.filter\(s=>customerOfferingVisible\(s\)/);
+test('site carries no Keramik reference while the identity hold stands',()=>{
+ const site=JSON.parse(fs.readFileSync(new URL('apps/site/src/data/brand-enquiries.json',root),'utf8'));
+ assert(!site.some(x=>/keramik/i.test(x.brand??'')||/keramik/i.test(x.key)));
+ const customer=JSON.parse(fs.readFileSync(new URL('packages/core/src/brand-enquiries.json',root),'utf8'));
+ for(const ref of customer.filter(x=>/keramik/i.test(x.brand??'')||/keramik/i.test(x.key)))assert.equal(ctx.customerOfferingVisible(ref),false);
 });
 
-test('all raw reference and live package identities obey confirmation guard',()=>{const fn=ctx.customerOfferingVisible;const refs=JSON.parse(fs.readFileSync(new URL('packages/core/src/brand-enquiries.json',root)));assert.equal(refs.filter(fn).length,9);for(const ref of refs)assert.equal(fn(ref),manifest.confirmedEnquiryKeys.includes(ref.key));for(const brand of ['garware','xpel','llumar','3m'])for(const coverage of ['high-impact','full-front','full-body'])assert.equal(fn({id:`menu-ppf-${brand}-${coverage}`}),false);assert.equal(fn({id:'menu-ppf-colour'}),false);assert.equal(fn({key:'pps-spray'}),false);assert.equal(fn({id:'unknown-new-product'}),false);});
+test('all raw reference and live package identities obey confirmation guard',()=>{const fn=ctx.customerOfferingVisible;const refs=JSON.parse(fs.readFileSync(new URL('packages/core/src/brand-enquiries.json',root)));assert.equal(refs.filter(fn).length,35);for(const ref of refs)assert.equal(fn(ref),manifest.confirmedEnquiryKeys.includes(ref.key));for(const brand of ['garware','xpel','llumar','3m'])for(const coverage of ['high-impact','full-front','full-body'])assert.equal(fn({id:`menu-ppf-${brand}-${coverage}`}),false);assert.equal(fn({id:'menu-ppf-colour'}),false);assert.equal(fn({key:'pps-spray'}),true);for(const key of ['xpel-ultimate-plus','ultraguard-clear-ppf','gswf-0'])assert.equal(fn({key}),true);for(const key of ['garware-black-ppf','garware-white-ppf','llumar-select-black-ppf','avery-reference','suntek-reference'])assert.equal(fn({key}),false);assert.equal(fn({id:'unknown-new-product'}),false);});

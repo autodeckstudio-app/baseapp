@@ -56,6 +56,24 @@
     "source": "https://avvyx.com/"
   },
   {
+    "key": "ultraguard-clear-ppf",
+    "brand": "Ultraguard",
+    "name": "Clear PPF series",
+    "group": "ppf",
+    "note": "Paint protection film. Ask the studio about the right coverage for your car.",
+    "source": "https://www.ultraguardindia.com/products",
+    "surface": "brand-film"
+  },
+  {
+    "key": "ultraguard-matte-ppf",
+    "brand": "Ultraguard",
+    "name": "Matte PPF series",
+    "group": "ppf",
+    "note": "Paint protection film in a matte finish. Ask about the right finish and coverage for your car.",
+    "source": "https://www.ultraguardindia.com/products",
+    "surface": "brand-film"
+  },
+  {
     "key": "kovalent-matrix",
     "brand": "Kovalent",
     "name": "Graphene Matrix",

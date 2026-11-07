@@ -26,23 +26,23 @@ export function HistoryVisitRow({ at, title, caption, status, first, onPress, ex
         testID={testID}
         accessibilityRole={onPress ? "button" : undefined}
         onPress={onPress}
-        style={({ pressed }: { pressed: boolean }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderTopWidth: first ? 0 : 1, borderTopColor: "rgba(128,128,128,0.16)", opacity: pressed ? 0.85 : 1 })}
+        style={({ pressed }: { pressed: boolean }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 9, borderTopWidth: first ? 0 : 1, borderTopColor: "rgba(128,128,128,0.16)", opacity: pressed ? 0.85 : 1 })}
       >
-        <View style={{ width: 44, alignItems: "center" }}>
+        <View style={{ width: 34, alignItems: "center" }}>
           {d ? (
             <>
-              <T role="heading" style={{ fontWeight: "800" }}>{d.getDate()}</T>
-              <T role="caption" tone="secondary" style={{ textTransform: "uppercase" }}>{d.toLocaleDateString("en-IN", { month: "short" })}</T>
+              <T role="bodyStrong" style={{ fontWeight: "700" }}>{d.getDate()}</T>
+              <T role="caption" tone="secondary" style={{ textTransform: "uppercase", fontSize: 10, lineHeight: 13 }}>{d.toLocaleDateString("en-IN", { month: "short" })}</T>
             </>
           ) : (
             <T role="caption" tone="secondary">--</T>
           )}
         </View>
-        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <T role="heading" numberOfLines={2}>{title}</T>
+        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <T role="bodyStrong" numberOfLines={2}>{title}</T>
           <T role="caption" tone="secondary" numberOfLines={1}>{caption}</T>
         </View>
-        <Chip label={status.replace(/_/g, " ").toUpperCase()} tone="premium" />
+        <Chip label={status.replace(/_/g, " ").toUpperCase()} tone="premium" small />
       </Pressable>
       {extra ? <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>{extra}</View> : null}
     </View>

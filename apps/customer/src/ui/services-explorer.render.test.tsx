@@ -62,7 +62,7 @@ const press = async (r: any, label: string) => {
   expect(p, label).toBeTruthy();
   await act(async () => p.props.onPress());
 };
-it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty states, no unknown products or double reference", async () => {
+it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film lineup and PPS concept card, no unknown products or double reference", async () => {
   const opened = vi.fn(),
     help = vi.fn();
   let r: any;
@@ -99,24 +99,39 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   await press(r, "Change brand");
   expect(JSON.stringify(r.toJSON())).not.toContain("GSWF");
   await act(async () => r.unmount());
-  // PPF removal: still no confirmed product - honest empty state via help.
-  await act(async () => {
-    r = create(
+  // PPF removal: the confirmed sheet film lineup shows enquiry-only (no product, price or booking); held references stay hidden.
+  const ppfReference = vi.fn();
+  function PpfApp() {
+    const [p, setP] = useState<ServicesPath>({ home: "paint", family: "PPF", work: "removal" });
+    return (
       <ServicesExplorer
         services={rows}
-        path={{ home: "paint", family: "PPF", work: "removal" }}
+        path={p}
         query=""
-        onPath={vi.fn()}
+        onPath={setP}
         onOpen={opened}
         onHelp={help}
-        onReference={vi.fn()}
+        onReference={ppfReference}
         priceLabel={() => null}
-      />,
+      />
     );
+  }
+  await act(async () => {
+    r = create(<PpfApp />);
   });
-  expect(JSON.stringify(r.toJSON())).toContain("No confirmed current product");
-  await press(r, "Ask about this service");
-  expect(help.mock.calls.at(-1)![0]).toContain("PPF");
+  const ppfText = JSON.stringify(r.toJSON());
+  expect(ppfText).toContain("Choose a brand to see its current offerings");
+  expect(ppfText).not.toContain("No confirmed current product");
+  await press(r, "Garware");
+  const gText = JSON.stringify(r.toJSON());
+  expect(gText).toContain("Premium PPF");
+  expect(gText).toContain("Quote to confirm");
+  expect(gText).not.toContain("Black PPF");
+  expect(gText).not.toContain("Avery Dennison");
+  expect(gText).not.toContain("\u20b9");
+  await press(r, "View Premium PPF");
+  expect((ppfReference.mock.calls.at(-1)![0] as any).key).toBe("garware-premium-exact");
+  expect(opened).toHaveBeenCalledTimes(1);
   await act(async () => r.unmount());
   // PPS: the confirmed brand-less service concept card - quote-to-confirm, enquiry route, no price, no booking.
   const reference = vi.fn();

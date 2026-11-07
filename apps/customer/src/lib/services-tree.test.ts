@@ -76,16 +76,23 @@ describe("services type level", () => {
   });
 });
 
-it('unconfirmed film brands and generic product enquiry fallbacks are absent; the confirmed brand-less PPS concept is the only film-group enquiry',()=>{
+it('the confirmed sheet film lineup shows as enquiry rows under Film by brand; unverified references and colour films stay hidden; PPS is the only brand-less film-group enquiry',()=>{
   const eligible=all.filter(customerOfferingVisible);
   // pps-spray is the confirmed, brand-less PPS service concept: enquiry-only, no stock/price.
-  expect(buildTree(group('ppf'),eligible).map(n=>n.kind==='enquiry'?n.key:n.kind)).toEqual(['pps-spray']);
+  const ppf=buildTree(group('ppf'),eligible);
+  expect(ppf.map(n=>n.kind==='enquiry'?n.key:n.kind)).toEqual(['branch','pps-spray']);
+  const film=ppf.find(n=>n.kind==='branch'&&n.key==='brand-film');
+  const brands=film&&film.kind==='branch'?film.children.map(n=>n.kind==='branch'?n.key:'').sort():[];
+  expect(brands).toEqual(['3M','AVVYX','Garware','GSWF','LLumar','NAR','Ultraguard','XPEL']);
+  const ppfJson=JSON.stringify(ppf);
+  // Colour and black/white films live under Modifications & Wraps > Colour PPF, not Paint Protection; reference brands are unverified.
+  for(const hidden of ['Avery Dennison','Rodium','SunTek','ProWrap','STEK','Legend PPF','Black PPF','White PPF','Select Black']) expect(ppfJson).not.toContain(hidden);
   const tree=buildTree(group('coatings'),eligible);
   for(const key of ['tyre','dashboard','matte','ppf-coat','maintenance-coating']) {
     expect(tree.some(n=>n.kind==='enquiry'&&n.key===key)).toBe(false);
   }
   expect(JSON.stringify(tree)).not.toContain('PowerShield');
-  expect(JSON.stringify(buildTree(group('ppf'),all))).not.toMatch(/GSWF|NAR|AVVYX|Matte and satin film/);
+  expect(ppfJson).not.toContain('Matte and satin film');
 });
 
 it('every confirmed reference remains an enquiry and all 23 ordinary services remain visible',()=>{

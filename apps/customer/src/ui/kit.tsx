@@ -397,12 +397,12 @@ export function LinkAction({ label, onPress, testID }: { label: string; onPress:
   );
 }
 
-export function Chip({ label, tone = "neutral", onDark }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger"; onDark?: boolean }) {
+export function Chip({ label, tone = "neutral", onDark, small }: { label: string; tone?: "neutral" | "accent" | "premium" | "danger"; onDark?: boolean; small?: boolean }) {
   const { colors, name } = useExperienceTheme();
   const c = onDark && tone !== "danger" ? "#FFFFFF" : tone === "accent" ? colors.textPrimary : tone === "premium" ? colors.premium : tone === "danger" ? colors.danger : colors.textSecondary;
   return (
-    <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
-      <T role="label" style={{ color: c }}>
+    <View style={{ borderRadius: radius.pill, borderWidth: 1, borderColor: c, paddingHorizontal: small ? 8 : 10, paddingVertical: small ? 2 : 3, alignSelf: "flex-start", backgroundColor: name === "night" ? "rgba(255,255,255,0.08)" : "rgba(29,27,38,0.05)" }}>
+      <T role="label" style={[{ color: c }, small ? { fontSize: 10, lineHeight: 13 } : null] as never}>
         {label}
       </T>
     </View>
