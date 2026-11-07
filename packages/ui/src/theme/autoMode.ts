@@ -65,7 +65,7 @@ export function currentMode(): "light" | "night" {
   // Dev only: ?theme=light or ?theme=night on web pins the mode so both can be checked at any hour.
   const q = (globalThis as { location?: { search?: string } }).location?.search ?? "";
   const m = /[?&]theme=(light|night)/.exec(q);
-  if (m && (globalThis as { __DEV__?: boolean }).__DEV__ !== false) return m[1] as "light" | "night";
+  if (m && (globalThis as { __DEV__?: boolean }).__DEV__ === true) return m[1] as "light" | "night";
   const pref = getThemePref();
   if (pref !== "auto") return pref;
   return resolveMode(new Date(), deviceWantsDark());

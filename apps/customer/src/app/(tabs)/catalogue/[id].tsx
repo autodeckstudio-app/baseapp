@@ -8,7 +8,6 @@ import { customerRatingPrivacy } from "@autodeck/core";
 import { ServiceVisitFacts } from "../../../ui/ServiceVisitFacts";
 import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
-import { TabPills } from "../../../ui/CarOverview";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
 import { Pressable, View } from "react-native";
@@ -139,7 +138,6 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const { colors, name: mode } = useExperienceTheme();
   const [after, setAfter] = useState(true);
-  const [tab, setTab] = useState<"overview" | "includes">("overview");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   // Spacer below the page matches the actual floating bar height, so the last line always scrolls clear (320px stacked bar is taller than a row bar).
   // Book now is offered only when there is a confirmed price to book against, or the service is a quote. With no car, no car type or no price the
@@ -168,7 +166,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <View style={{ gap: space.hair }}>
             <SceneIntro compact eyebrow={[SERVICE_HOMES.find(h=>h.key===servicePlacement(service)?.home)?.label,servicePlacement(service)?.family].filter(Boolean).join(" · ") || "Service"} title={service.name} />
             {pricingVehicle.label ? <T role="caption" tone="accent">Prices for your {pricingVehicle.vehicle?.make} {pricingVehicle.vehicle?.model} · {pricingVehicle.label}</T> : null}
-            {service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
+            {service.brand === "Add-ons" ? <T role="caption" tone="secondary">Optional extra, added along with a main service</T> : service.brand !== null ? <T role="caption" tone="secondary">{service.brand}</T> : null}
           </View>
         }
       >
@@ -176,14 +174,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <ServicePhoto service={service} aspect={4 / 3} radius={26} />
         </Pane>
 
-        <TabPills tabs={[{ key: "overview", label: "Overview" }, { key: "includes", label: "Includes" }]} value={tab} onChange={setTab} />
-
-        {tab === "overview" ? (
-          <>
+        <>
         <ServiceVisitFacts duration={dur} warranty={service.warrantyLabel} brand={service.brand} quote={service.priceOnRequest===true} inspection={service.priceOnRequest===true&&(service.category==='garage'||service.category==='modifications')}/>
 
-        <T role="heading">{sc.tagline || service.description}</T>
-        {sc.tagline && sc.tagline !== service.description ? <T tone="secondary">{service.description}</T> : null}
         {service.priceEstimate ? <T role="caption" tone="tertiary">Estimated price. The studio confirms the final amount before work starts.</T> : null}
 
         {reviews && reviews.count > 0 ? (
@@ -228,11 +221,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           <ServicePrice category={service.category} priceOnRequest={service.priceOnRequest === true} needsCarType={needsCarType} hasCar={!!pricingVehicle.vehicle} carSizeKnown={!!selectedCategory} loading={priceLoading} error={priceError} breakdown={priceBreakdown} onRetry={onRetry} onHelp={() => router.push("/(tabs)/help")} onGarage={() => router.push(pricingVehicle.vehicle ? `/(tabs)/garage/${pricingVehicle.vehicle.id}` : "/(tabs)/garage/add")} />
         </View>
 
-          </>
-        ) : null}
+        </>
 
-        {tab === "includes" ? (
-          <>
+        <>
         <ServiceScope service={service} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
 
         {sc.benefits.length > 0 ? (
@@ -273,8 +264,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           </Pane>
         </View>
 
-          </>
-        ) : null}
+        </>
 
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
         <View style={{ height: showBar ? barH + 24 : 0 }} />

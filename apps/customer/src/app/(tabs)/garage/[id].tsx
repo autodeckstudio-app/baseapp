@@ -24,6 +24,7 @@ import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc, rem
 import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
+import { CategoryCarImage } from "../../../ui/CategoryCarImage";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { isCalendarDate, listenToVehicleProtections, updateMyProtection } from "../../../lib/protection-service";
 import { reconcileProtectionReadback, upsertProtection } from "../../../lib/protection-readback";
@@ -537,7 +538,7 @@ export default function VehicleDetailScreen() {
       header={
         <View style={{ gap: space.breath }}>
           <CarHero
-            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : <CarThumb car={vehicle} height={vehicle.photoUrl ? metrics.heroTall : metrics.heroCompact} radius={0} />}
+            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : vehicle.photoUrl ? <CarThumb car={vehicle} height={metrics.heroTall} radius={0} /> : <CategoryCarImage category={vehicle.category} height={metrics.heroTall} />}
             title={`${vehicle.make} ${vehicle.model}`}
             plate={mockDetail ? null : vehicle.registrationNumber}
             facts={[
@@ -547,7 +548,7 @@ export default function VehicleDetailScreen() {
               ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
               ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
             ]}
-            compact={!vehicle.photoUrl && !newPhoto}
+            compact={false}
             next={null}
             onNext={undefined}
             onBook={undefined}

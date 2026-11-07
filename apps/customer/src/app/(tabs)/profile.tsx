@@ -1,4 +1,5 @@
-import { SavedLicensePhoto } from "../../ui/SavedLicensePhoto";
+import { LicenceSection } from "../../ui/LicenceSection";
+import { ListRow } from "../../ui/ListRow";
 // You: account, membership, notifications, sign out.
 import { LegalLinks } from "../../ui/LegalLinks";
 import { useState, useEffect, useRef } from "react";
@@ -13,8 +14,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { db } from "../../lib/firebase";
 import { useLang } from "../../lib/i18n";
 import { cancelAccountDeletion, requestAccountDeletion } from "../../lib/pickup-service";
-import { uploadLicensePhoto, type VehiclePhotoBody } from "../../lib/vehicle-service";
-import { FileUploader } from "../../ui/inputs";
+import { uploadLicensePhoto } from "../../lib/vehicle-service";
 import { signOut } from "../../lib/auth-service";
 import { useAuth } from "../../hooks/useAuth";
 import { ProfileHero } from "../../ui/ProfileHero";
@@ -37,21 +37,8 @@ export default function YouScreen() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lic, setLic] = useState<{ blob: VehiclePhotoBody; contentType: string } | null>(null);
-  const [licBusy, setLicBusy] = useState(false);
-  const [licOpen, setLicOpen] = useState(false);
-  const [licRefresh,setLicRefresh]=useState(0);
-  const [licMsg, setLicMsg] = useState<string | null>(null);
   const scopeKey=JSON.stringify([auth.status,auth.status==='ready'?auth.user.uid:null,auth.status==='ready'?auth.customerDocId:null,auth.status==='ready'?auth.claims.tenantId:null]);const scopeRef=useRef(scopeKey);scopeRef.current=scopeKey;const generation=useRef(0),saveLock=useRef(false);
-  useEffect(()=>{generation.current++;saveLock.current=false;setEditing(false);setDraft('');setSaving(false);setSaveError(null);setLic(null);setLicBusy(false);setLicOpen(false);setLicMsg(null);setSavedName(null);setConfirm(false);setDelStep('idle');setDelBusy(false);setActionMessage(null);return()=>{generation.current++}},[scopeKey]);
-  async function saveLicense() {
-    if (!lic || licBusy||saveLock.current) return;
-    const scope=scopeKey,gen=generation.current;const current=()=>scopeRef.current===scope&&generation.current===gen;saveLock.current=true;
-    setLicBusy(true); setLicMsg(null);
-    try { await uploadLicensePhoto(lic.blob, lic.contentType); if(!current())return;setLic(null); setLicRefresh(n=>n+1); setLicMsg("Licence saved."); }
-    catch (e) { if(current())setLicMsg(e instanceof Error ? e.message : "Could not save your licence. Try again."); }
-    finally { if(current()){saveLock.current=false;setLicBusy(false);} }
-  }
+  useEffect(()=>{generation.current++;saveLock.current=false;setEditing(false);setDraft('');setSaving(false);setSaveError(null);setSavedName(null);setConfirm(false);setDelStep('idle');setDelBusy(false);setActionMessage(null);return()=>{generation.current++}},[scopeKey]);
   const [pref, setPref] = useState<ThemePref>(getThemePref());
   const [savedName, setSavedName] = useState<string | null>(null);
 
@@ -103,17 +90,7 @@ export default function YouScreen() {
       ) : null}
       {actionMessage ? <Notice title="Account update" body={actionMessage} /> : null}
       <View style={{ ...glassPane(light), paddingHorizontal: 16 }}>
-        <>
-            <ListRow icon="search" title="Driving licence" detail="Private photo for the studio" action={licOpen ? "Close" : "Add"} onPress={() => setLicOpen(!licOpen)} />
-            {licOpen ? (
-              <View style={{ gap: space.breath, paddingBottom: 14 }}>
-                {auth.customerDocId?<SavedLicensePhoto customerId={auth.customerDocId} scope={scopeKey} refresh={licRefresh}/>:<T role="caption">Customer profile could not be verified. Your licence has not been changed.</T>}
-                <FileUploader label="Choose or replace licence photo" files={lic && !(lic.blob instanceof Uint8Array) ? [{ blob: lic.blob, type: lic.contentType }] : []} nativeEnabled nativeFileCount={lic?1:0} onNativeChange={fs=>{const f=fs[0];setLic(f?{blob:f.bytes,contentType:f.type}:null);setLicMsg(null);}} onChange={(fs) => { const f = fs[0]; setLic(f ? { blob: f.blob, contentType: f.type } : null); setLicMsg(null); }} />
-                {lic ? <Button label="Save licence photo" busy={licBusy} onPress={() => void saveLicense()} /> : null}
-                {licMsg ? <T role="caption" tone={licMsg.startsWith("Licence saved.") ? "tertiary" : "danger"}>{licMsg}</T> : null}
-              </View>
-            ) : null}
-        </>
+        <LicenceSection customerId={auth.status==="ready"?auth.customerDocId:null} scope={scopeKey} upload={uploadLicensePhoto} lock={saveLock} epoch={generation} />
         <ListRow last icon="chat" title="Help & contact" detail="Call or WhatsApp the studio" onPress={() => router.push("/(tabs)/help")} />
       </View>
       <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
@@ -163,16 +140,3 @@ export default function YouScreen() {
   );
 }
 
-function ListRow({ icon, title, detail, action, onPress, last }: { icon: "search" | "chat"; title: string; detail: string; action?: string; onPress: () => void; last?: boolean }) {
-  const { colors } = useExperienceTheme();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.8 : 1, borderBottomWidth: last ? 0 : 1, borderBottomColor: "rgba(128,128,128,0.16)" })}>
-      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(128,128,128,0.12)", alignItems: "center", justifyContent: "center" }}><NavIcon name={icon} color={colors.textPrimary} size={20} cut="#18181C" /></View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>{title}</Text>
-        <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 11 }}>{detail}</Text>
-      </View>
-      {action ? <View style={{ borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "rgba(128,128,128,0.14)" }}><Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "700" }}>{action}</Text></View> : null}
-    </Pressable>
-  );
-}

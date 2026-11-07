@@ -30,7 +30,10 @@ import catGarage from "../../assets/imagery/category/garage.jpg";
 import catMods from "../../assets/imagery/category/modifications.jpg";
 import genPickup from "../../assets/imagery/generated/pickup.jpg";
 import genCoating from "../../assets/imagery/generated/ai-coat-apply.jpg";
-import vehicleSedan from "../../assets/imagery/stock/x-polish-red.jpg";
+import vehicleHatchback from "../../assets/imagery/stock/x-glossy-black.jpg";
+import vehicleSedan from "../../assets/imagery/curated/car.jpg";
+import vehicleSuv from "../../assets/imagery/stock/x-suv-garage.jpg";
+import vehicleLuxury from "../../assets/imagery/stock/x-black-reflect.jpg";
 
 /** One photograph per service category, shown on catalogue cards and detail heroes. */
 /** Approved category photographs. Detailing has no category of its own: it is the Complete detailing type under Wash & Care. */
@@ -49,14 +52,20 @@ export const serviceImagery: Record<ServiceCategory, ImageSourcePropType> = {
   pickup: genPickup,
 };
 
-/** Fallback portrait per vehicle category until customers add their own car photos. */
-export const vehicleImagery: Record<VehicleCategory, ImageSourcePropType> = {
-  hatchback: heroAlt,
+/**
+ * Category portraits shown in the car room when a car has no uploaded photo.
+ * Owner decision (Nov 7, 2026, WhatsApp wamid.HBgMOTE5MDk5Nzk2ODExFQIAEhgUM0ExMDMzNDgzQUQ0MjU1NzYwQ0IA,
+ * verbatim: "Instead of 3d model there should be car images"). Every entry is a
+ * pixel-verified photograph of an actual car of that body style - never a
+ * service or worker scene. Categories without a verified portrait (van,
+ * commercial) stay unmapped on purpose: CategoryCarImage fails closed to the
+ * neutral car icon instead of showing the wrong kind of vehicle.
+ */
+export const vehicleImagery: Partial<Record<VehicleCategory, ImageSourcePropType>> = {
+  hatchback: vehicleHatchback,
   sedan: vehicleSedan,
-  suv: heroAlt,
-  luxury: heroAlt,
-  van: heroAlt,
-  commercial: heroAlt,
+  suv: vehicleSuv,
+  luxury: vehicleLuxury,
 };
 
 /** Scene photography: home hero, membership, and other full-bleed moments. */

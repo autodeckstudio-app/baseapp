@@ -14,7 +14,6 @@ import { useAuth } from "../../../hooks/useAuth";
 import { setActiveVehicle } from "../../../hooks/useCustomerHome";
 import { CarThumb } from "../../../ui/CarThumb";
 import { glassPane } from "../../../lib/glass-pane";
-import { useSegmentSwipe } from "../../../lib/segment-swipe";
 import { FilterPills } from "../../../ui/FilterPills";
 import { compactDueChip, dueChip } from "../../../lib/garage-due";
 import { listenToMyJobs } from "../../../lib/job-service";
@@ -22,7 +21,7 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
-import { GarageShowroom, CarPhotoCard } from "../../../ui/GarageShowroom";
+import { GarageShowroom } from "../../../ui/GarageShowroom";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
@@ -93,7 +92,6 @@ export default function GarageScreen() {
   const { height: winH } = useWindowDimensions();
   const swipeList = [...(vehicles ?? [])].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   const pickRef = useRef(pick); pickRef.current = pick;
-  const swipe = useSegmentSwipe(["all", ...swipeList.map(v=>v.id)], () => pickRef.current && swipeList.some(v=>v.id===pickRef.current) ? pickRef.current : "all", key=>setPick(key === "all" ? null : key));
 
   if (!vehicles && !error) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
@@ -137,7 +135,7 @@ export default function GarageScreen() {
   return (
     <Screen appBar="Garage">
       <SceneIntro eyebrow="Your garage" compact title="Your cars, connected."/>
-      <View testID="garage-swipe-area" {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 240, 400) }, swipe.style]}>
+      <View testID="garage-swipe-area" style={{ gap: 20, minHeight: Math.max(winH - 240, 400) }}>
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
         <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
@@ -168,11 +166,9 @@ export default function GarageScreen() {
           })() : null}
         </View>
       ) : (
-        <View style={{ gap: metrics.sectionGap }}>
-          {list.map((v) => (
-            <CarPhotoCard key={v.id} car={v} height={230} badge={liveJobForCar(jobs, v.id) ? "In the bay now" : null} onOpen={open} chip={overlay(v)} />
-          ))}
-        </View>
+        // "All" is the garage floor itself: every car on the floor, swipe to move focus
+        // between them, tap one to open its room. Swiping does not select; the pills above do.
+        <GarageShowroom cars={list} selectedId={null} onSelect={(id) => setPick(id)} onOpen={open} chipFor={overlay} />
       )}
       {list.length > 0 ? (
         <View style={{ gap: space.breath, marginTop: metrics.sectionGap }}>

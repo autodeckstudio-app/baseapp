@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TextInput, View, useWindowDimensions } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { SERVICE_HOMES, GST_ENABLED, type Service } from "@autodeck/core";
 import { FilterPills } from "../../../ui/FilterPills";
@@ -29,7 +29,7 @@ import { glassInner } from "../../../lib/glass";
 
 export default function CatalogueScreen() {
   const router = useRouter(),
-    params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string}>();
+    params = useLocalSearchParams<{home?:string;family?:string;brand?:string;work?:string;cat?:string;need?:string;p?:string;mock?:string;theme?:string}>();
   const { colors } = useExperienceTheme();
   const [services, setServices] = useState<Service[] | null>(() =>
       peekCatalogue(),
@@ -52,11 +52,14 @@ export default function CatalogueScreen() {
   const path = routePath(params, all);
   const pricingVehicle = usePricingVehicle(),
     prices = useVehiclePrices(all, pricingVehicle.category);
+  const selfPath = usePathname();
   const navigate = (next: ServicesPath, replace = false) => {
     setQ("");
+    // Stay on the current pathname so dev previews (e.g. /preview-catalogue) keep working,
+    // and keep dev-only params (mock/theme) across in-screen navigation.
     const href = {
-      pathname: "/(tabs)/catalogue" as const,
-      params: pathParams(next),
+      pathname: selfPath as "/(tabs)/catalogue",
+      params: { ...pathParams(next), ...(params.mock ? { mock: params.mock } : {}), ...(params.theme ? { theme: params.theme } : {}) },
     };
     if (replace) router.replace(href);
     else router.push(href);

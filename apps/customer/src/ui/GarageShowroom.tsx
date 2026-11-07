@@ -1,11 +1,17 @@
 import { SceneCard } from "./SceneCard";
-// Garage showroom: the selected car as one full-width hero photo. Changing car is done with the chips above only (no swipe, no dots).
-import { Platform, Pressable, Text, View } from "react-native";
+// Garage floor: swipe sideways between cars. The focused car sits full size on a dark
+// floor with its reflection; neighbours recede (smaller, dimmed) so the floor reads as
+// depth. Tapping a car opens its room. 2D motion/depth, not a 3D model.
+import { Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
 import { segmentLabel } from "@autodeck/core";
 import type { Vehicle } from "@autodeck/core";
 import { CarThumb } from "./CarThumb";
 import { Plate } from "./kit";
 import { metrics } from "../lib/metrics";
+
+const GAP = 16;
+const PEEK = 28; // how much of the next car shows at the edge, signalling the swipe
 
 export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Vehicle; height: number; badge?: string | null; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
@@ -32,23 +38,95 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
   );
 }
 
-export function GarageShowroom({ cars, selectedId, onOpen, chipFor }: { cars: Vehicle[]; selectedId: string; onSelect?: (id: string) => void; onOpen: (v: Vehicle) => void; chipFor: (v: Vehicle) => React.ReactNode }) {
-  const v = cars.find((c) => c.id === selectedId) ?? cars[0];
-  if (!v) return null;
+/** One car on the floor: hero photo, dark floor band with a soft reflection under it. */
+function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car: Vehicle; width: number; height: number; focused: boolean; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
+  const floorH = 54;
   return (
     <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
-      <View style={{ height: metrics.heroTall + 40, borderRadius: 24, borderWidth:1,borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
-        <CarThumb car={v} height={metrics.heroTall + 40} radius={0} />
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 130, ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
-        <View style={{ position: "absolute", left: 16, right: 16, bottom: 14, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
-          <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 30, letterSpacing:-0.8, fontWeight: "600" }}>{name}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+      <View style={{ width, opacity: focused ? 1 : 0.72, transform: [{ scale: focused ? 1 : 0.94 }] }}>
+        <View style={{ height, borderRadius: 24, borderWidth:1,borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
+          <CarThumb car={v} height={height} radius={0} />
+          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(height * 0.62), ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
+          <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
+            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 28, letterSpacing:-0.8, fontWeight: "600" }}>{name}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+            </View>
           </View>
+          {chip ? <View style={{ position: "absolute", right: 12, top: 12 }}>{chip}</View> : null}
         </View>
-        {chipFor(v) ? <View style={{ position: "absolute", right: 14, top: 14 }}>{chipFor(v)}</View> : null}
+        {/* garage floor: a dark polished band with the car's soft reflection fading down */}
+        <View pointerEvents="none" style={{ height: floorH, marginHorizontal: 10, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, overflow: "hidden", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(20,20,26,0.9) 0%, rgba(20,20,26,0) 100%)" } as object) : { backgroundColor: "rgba(20,20,26,0.35)" }) }}>
+          {Platform.OS === "web" ? (
+            <View style={{ height, transform: [{ scaleY: -1 }], opacity: 0.28, ...( { maskImage: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 85%)", WebkitMaskImage: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 85%)" } as object ) }}>
+              <CarThumb car={v} height={height} radius={0} />
+            </View>
+          ) : null}
+        </View>
       </View>
     </SceneCard>
+  );
+}
+
+export function GarageShowroom({ cars, selectedId, onOpen, onSelect, chipFor }: { cars: Vehicle[]; selectedId?: string | null; onSelect?: (id: string) => void; onOpen: (v: Vehicle) => void; chipFor: (v: Vehicle) => React.ReactNode }) {
+  const { width: winW } = useWindowDimensions();
+  const cardW = Math.min(winW - PEEK * 2, 480);
+  const interval = cardW + GAP;
+  const heroH = metrics.heroTall + 40;
+  const scrollRef = useRef<ScrollView>(null);
+  // Focus follows the swipe locally; a selection from outside (the car list) moves the floor.
+  const controlled = selectedId !== null && selectedId !== undefined;
+  const initialIdx = Math.max(0, cars.findIndex((c) => c.id === (selectedId ?? cars[0]?.id)));
+  const [focusIdx, setFocusIdx] = useState(initialIdx);
+  const scrollX = useRef(initialIdx * interval);
+  const snapT = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const focusId = cars[focusIdx]?.id ?? cars[0]?.id;
+  useEffect(() => () => { if (snapT.current) clearTimeout(snapT.current); }, []);
+  useEffect(() => {
+    if (!controlled) return;
+    const i = Math.max(0, cars.findIndex((c) => c.id === selectedId));
+    setFocusIdx(i);
+    scrollX.current = i * interval;
+    scrollRef.current?.scrollTo({ x: i * interval, animated: true });
+  }, [selectedId]);
+  if (cars.length === 0) return null;
+  if (cars.length === 1) {
+    const v = cars[0]!;
+    return <FloorCar car={v} width={Math.min(winW, 536)} height={heroH} focused onOpen={onOpen} chip={chipFor(v)} />;
+  }
+  return (
+    <View style={{ marginHorizontal: -PEEK }}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        snapToInterval={interval}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: GAP, paddingHorizontal: PEEK }}
+        scrollEventThrottle={16}
+        onLayout={() => scrollRef.current?.scrollTo({ x: initialIdx * interval, animated: false })}
+        onScroll={(e) => {
+          scrollX.current = e.nativeEvent.contentOffset.x;
+          const i = Math.max(0, Math.min(cars.length - 1, Math.round(scrollX.current / interval)));
+          if (i !== focusIdx) {
+            setFocusIdx(i);
+            if (controlled) onSelect?.(cars[i]!.id);
+          }
+          // Snap after the scroll goes quiet: RN web does not fire momentum-end reliably.
+          if (snapT.current) clearTimeout(snapT.current);
+          snapT.current = setTimeout(() => {
+            const target = Math.max(0, Math.min(cars.length - 1, Math.round(scrollX.current / interval))) * interval;
+            if (Math.abs(target - scrollX.current) > 2) scrollRef.current?.scrollTo({ x: target, animated: true });
+          }, 140);
+        }}
+      >
+        {cars.map((v) => (
+          <FloorCar key={v.id} car={v} width={cardW} height={heroH} focused={v.id === focusId} onOpen={onOpen} chip={chipFor(v)} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }

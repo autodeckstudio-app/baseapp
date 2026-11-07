@@ -27,6 +27,7 @@ const h = vi.hoisted(() => ({
   cover: vi.fn(), rc: vi.fn(),
 }));
 
+vi.mock("../../../ui/CategoryCarImage", () => ({ CategoryCarImage: () => null }));
 vi.mock("react-native", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {

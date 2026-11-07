@@ -23,7 +23,15 @@ export function devGarage(o: { live: boolean; empty: boolean }) {
 // booking. No photos, no real customer data, never bundled into production.
 export function devGarageDetail(vehicleId: string) {
   const uid = "dev-customer";
-  const vehicle = { id: vehicleId, tenantId: "dev", ownerId: uid, registrationNumber: "SAMPLE 01", make: "BMW", model: "M340i", year: "2023", color: "Black", category: "sedan", odometer: 18450, photoUrl: null, deletedAt: null, createdAt: day(400), updatedAt: day(1) } as unknown as Vehicle;
+  // Sample cars per preview id, all SAMPLE-labelled: "a" sedan, "b" SUV (Thar),
+  // "d" an unmapped category that must fall back to the neutral car icon.
+  const sampleCars: Record<string, { make: string; model: string; category: string }> = {
+    a: { make: "BMW", model: "M340i", category: "sedan" },
+    b: { make: "Mahindra", model: "Thar", category: "suv" },
+    d: { make: "Sample", model: "Car", category: "crossover" },
+  };
+  const sampleCar = sampleCars[vehicleId] ?? sampleCars.a!;
+  const vehicle = { id: vehicleId, tenantId: "dev", ownerId: uid, registrationNumber: "SAMPLE 01", make: sampleCar.make, model: sampleCar.model, year: "2023", color: "Black", category: sampleCar.category, odometer: 18450, photoUrl: null, deletedAt: null, createdAt: day(400), updatedAt: day(1) } as unknown as Vehicle;
   const jobs = [
     { id: "dj1", vehicleId, serviceId: "menu-coat-autodeck-1", status: "DELIVERED", createdAt: day(60), sealedAt: day(59) },
     { id: "dj2", vehicleId, serviceId: "menu-wash-foam", status: "DELIVERED", createdAt: day(20), sealedAt: day(20) },

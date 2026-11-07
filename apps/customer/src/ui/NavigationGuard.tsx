@@ -34,7 +34,9 @@ export function NavigationGuard({ children }: { children: React.ReactNode }) {
         group === "preview-catalogue" ||
         group === "preview-gifts" ||
         group === "preview-stories" ||
-        group === "preview-shop")
+        group === "preview-shop" ||
+        group === "preview-quote" ||
+        group === "preview-licence")
     )
       return;
 

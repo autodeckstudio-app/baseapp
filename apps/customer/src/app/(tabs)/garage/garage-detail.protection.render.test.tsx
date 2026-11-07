@@ -29,6 +29,7 @@ const h = vi.hoisted(() => {
 // react-native-web's TextInput effect touches `document`, which the node
 // render environment does not have. A host-element stand-in keeps the
 // editable/disabled props assertable without pulling in a DOM dependency.
+vi.mock("../../../ui/CategoryCarImage", () => ({ CategoryCarImage: () => null }));
 vi.mock("react-native", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, Platform:{...(actual.Platform as object),get OS(){return h.native?"android":"web";}}, TextInput: (props: Record<string, unknown>) => createElement("TextInput", props) };

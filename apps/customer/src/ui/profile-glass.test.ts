@@ -10,7 +10,7 @@ describe("Profile (concept A)", () => {
     expect(src).not.toContain("Your account");
   });
   it("each thing appears once, in order: identity, list, appearance, sign out", () => {
-    const order = ["<ProfileHero", 'title="Driving licence"', 'title="Help & contact"', "Appearance", "Delete my account", "<LegalLinks"];
+    const order = ["<ProfileHero", "<LicenceSection", 'title="Help & contact"', "Appearance", "Delete my account", "<LegalLinks"];
     const pos = order.map((o) => src.indexOf(o));
     expect(pos.every((x) => x > 0)).toBe(true);
     expect([...pos].sort((a, b) => a - b)).toEqual(pos);

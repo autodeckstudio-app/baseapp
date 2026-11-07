@@ -40,6 +40,9 @@ Kovalent bottle images were cut out of the brand's product tiles (icon boxes rem
 
 Older CC-BY placeholders (Flickr) are listed in ATTRIBUTION.md and still used for hero/membership/vehicle fallbacks and the category fallback.
 
+## Vehicle category portraits (car room fallback)
+`vehicleImagery` in src/lib/imagery.ts maps a vehicle category to a portrait shown in the car room only when the car has no uploaded photo. Every mapped file is pixel-verified: an actual car of that body style, no people, no service work, no visible plate. hatchback = stock/x-glossy-black.jpg, sedan = curated/car.jpg (derivative of the CC-BY vehicle-sedan.jpg), suv = stock/x-suv-garage.jpg, luxury = stock/x-black-reflect.jpg. van and commercial have no verified portrait and stay unmapped: the room fails closed to the neutral car icon rather than showing the wrong kind of vehicle.
+
 ## Distinct service photos (pool, TEST placeholders)
 Files stock/x-*.jpg are Pexels photos (free licence), each taken from pexels.com/photo/<slug>-<id>/ where the id is in the pool list in src/lib/imagery.ts. Assigned one per service by primeVisuals(); replace with studio photos before launch.
 
@@ -66,7 +69,7 @@ Every file under stock/ and curated/ is a placeholder until the studio shoot. Pr
 | File | Source | Status |
 | --- | --- | --- |
 | stock/x-bentley-hose.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
-| stock/x-black-reflect.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-black-reflect.jpg | https://www.pexels.com/photo/vintage-red-sports-car-by-scenic-roadside-38058755/ | STOCK-OK, replaced 7 Nov 2026: classic coupe side profile, pixel-verified no badge/plate/people |
 | stock/x-black-sunlight.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-buff-rear.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-buff-roof.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
@@ -81,7 +84,7 @@ Every file under stock/ and curated/ is a placeholder until the studio shoot. Pr
 | stock/x-film-window.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-foam-street.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-foil-garage.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
-| stock/x-glossy-black.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-glossy-black.jpg | https://www.pexels.com/photo/black-hatchback-car-parked-on-the-street-9290470/ | STOCK-OK, replaced 7 Nov 2026: hatchback side profile, pixel-verified no badge/plate/people |
 | stock/x-headlight-black.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-headlight-grille.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-polish-door.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
@@ -94,6 +97,7 @@ Every file under stock/ and curated/ is a placeholder until the studio shoot. Pr
 | stock/x-spray-booth.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-suv-rinse.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-suv-suds.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
+| stock/x-suv-garage.jpg | https://www.pexels.com/photo/sleek-blue-suv-parked-in-urban-setting-28957990/ | STOCK-OK, replaced 7 Nov 2026: SUV side profile, pixel-verified no badge/plate/people (was G-Class with visible Mercedes star) |
 | stock/x-tan-leather.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-tyre-clean.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |
 | stock/x-underbody-a.jpg | Pexels, page URL not recorded | STOCK-OK, placeholder, replace with shoot |

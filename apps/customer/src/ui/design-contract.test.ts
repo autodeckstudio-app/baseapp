@@ -34,7 +34,10 @@ describe("unified product design contract",()=>{
     const source=read("src/hooks/useCustomerHome.ts");expect(source).toContain("settled.size === 6");expect(source).toContain("vehicles === null || !coreReady");expect(source).toContain('failFor("memberships")');
   });
   it("does not choose unrelated images for vehicle fallbacks",()=>{
-    const source=read("src/lib/imagery.ts");expect(source).toContain("suv: heroAlt");expect(source).toContain("luxury: heroAlt");expect(source).not.toContain("ALL_POOL");
+    // Vehicle fallbacks resolve to the pixel-verified portrait imports, never a
+    // scene alias (heroAlt/heroHome) or a service photo. The full banned-alias
+    // list lives in lib/category-imagery.test.ts.
+    const source=read("src/lib/imagery.ts");expect(source).toContain("suv: vehicleSuv");expect(source).toContain("luxury: vehicleLuxury");expect(source).not.toContain("suv: heroAlt");expect(source).not.toContain("ALL_POOL");
   });
 });
 describe("garage detail presentation contract",()=>{
@@ -511,7 +514,7 @@ it("lists every stock image in the imagery register",()=>{
 
 it("profile settings sit in glass panes (concept A), Help once, no repeated tab links",()=>{
   const p=read("src/app/(tabs)/profile.tsx");
-  expect(p).toContain("<Kicker>Appearance</Kicker>");expect(p).toContain('title="Driving licence"');
+  expect(p).toContain("<Kicker>Appearance</Kicker>");expect(p).toContain("<LicenceSection");expect(readFileSync(resolve(".", "src/ui/LicenceSection.tsx"), "utf8")).toContain('title="Driving licence"');
   expect((p.match(/glassPane\(light\)/g)??[]).length).toBeGreaterThanOrEqual(2);
   expect(p.split('title="Help & contact"').length-1).toBe(1);
 });
@@ -632,13 +635,18 @@ describe("car detail and add car (batch 1)", () => {
   });
 });
 
-describe("service detail tabs (batch 2)", () => {
-  it("has Overview and Includes tabs and no Reviews tab", () => {
+describe("service detail (batch 2)", () => {
+  it("is one page: no Overview/Includes tabs, scope once via ServiceScope, one Questions block", () => {
     const d = read("src/app/(tabs)/catalogue/[id].tsx");
-    expect(d).toContain('label: "Overview"');
-    expect(d).toContain('label: "Includes"');
+    expect(d).not.toContain("TabPills");
+    expect(d).not.toContain('label: "Overview"');
     expect(d).not.toContain('label: "Reviews"');
     expect(d).toContain("reviews.count > 0");
+    expect((d.match(/<ServiceScope /g) ?? []).length).toBe(1);
+    expect((d.match(/H\("Questions"/g) ?? []).length).toBe(1);
+    const scope = read("src/ui/ServiceScope.tsx");
+    expect(scope).not.toContain("Before you book"); // folded into the one Questions block
+    expect(scope).toContain("What's included");
   });
 });
 

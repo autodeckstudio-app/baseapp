@@ -22,7 +22,7 @@ export function useReduceMotion(): boolean {
       setMedia(mq.matches);
       mq.addEventListener?.("change", onMq);
     }
-    return () => { alive = false; sub.remove(); mq?.removeEventListener?.("change", onMq); };
+    return () => { alive = false; sub?.remove?.(); mq?.removeEventListener?.("change", onMq); };
   }, []);
   return combineReduce(device, media);
 }

@@ -14,8 +14,8 @@ const S = (n: number, hoursAgo: number, title: string | null, caption: string | 
 const LIST = [S(1, 2, null, "Ceramic coat delivery"), S(2, 30, "Ceramic", "Gtechniq on a Thar"), S(3, 50, "Ceramic", null), S(4, 90, "PPF", "Full body PPF"), S(5, 120, "Washing", "Foam wash")];
 
 export default function PreviewStories() {
-  if (!__DEV__) return null;
   const groups = groupStories(LIST);
+  if (!__DEV__) return null;
   const [open, setOpen] = useState<StoryGroup | null>(String((globalThis as { location?: { search?: string } }).location?.search ?? "").includes("open=1") ? groups[0] ?? null : null);
   const [seen, setSeen] = useState<Set<string>>(new Set([seenKeyOf(groups[1]!)]));
   return (

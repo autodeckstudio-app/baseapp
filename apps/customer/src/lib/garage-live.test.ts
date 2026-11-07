@@ -27,7 +27,12 @@ describe("garage showroom guards", () => {
   it("keeps the All chip and the due chip", () => { expect(g).toContain('label: "All"'); expect(g).toContain("dueChip("); });
   it("has one Book a service button", () => { expect((g.match(/label="Book a service"/g) ?? []).length).toBe(1); });
   it("respects Reduce Motion in the care ring", () => { expect(read("../ui/CareRing.tsx")).toContain("useReduceMotion"); });
-  it("hero is one photo: no swipe, no paging, no page dots, no parallax", () => { expect(s).not.toMatch(/ScrollView|pagingEnabled|Animated|onMomentumScrollEnd|Car \$\{index/); expect(s).toContain("chips above only"); });
+  it("garage floor: snap carousel between cars with a single-car fallback, honest 2D depth", () => {
+    expect(s).toContain("snapToInterval");
+    expect(s).toContain("reflection");
+    expect(s).toMatch(/cars\.length === 1|single|fallback/i);
+    expect(s).toContain("2D");
+  });
   it("uses only allowed radii and no emoji", () => { expect(s).not.toMatch(/borderRadius: (?!12|16|24|9999|0\b)\d+/); });
   it("hero fade is a gradient, not a hard band, and the page clears the tab bar", () => { expect(s).toContain("linear-gradient"); expect(g).not.toContain("paddingBottom: 100"); });
   it("sections of the selected car are spaced by the section gap, one value for all", () => { expect(g).toContain("gap: metrics.sectionGap }}"); expect(g).toContain("marginTop: metrics.sectionGap"); expect(g).not.toMatch(/gap: space\.breath, paddingBottom/); });
@@ -60,8 +65,8 @@ describe("garage services have one price for every car", () => {
 });
 describe("garage All view and selected view share one language", () => {
   const g = read("../app/(tabs)/garage/index.tsx");
-  it("cars are photo cards with nothing stacked below them, no Today or Coming up blocks, no swipe", () => {
-    expect(g).toContain("<CarPhotoCard"); expect(g).toContain("<GarageShowroom");
+  it("the All view IS the garage floor: every car swipable on the floor, no Today or Coming up blocks", () => {
+    expect((g.match(/<GarageShowroom/g) ?? []).length).toBe(2);
     expect(g).not.toMatch(/TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
   });
   it("Track stays reachable as a text chip on the card of a car in the bay, not a second button", () => {

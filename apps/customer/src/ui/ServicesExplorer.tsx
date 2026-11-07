@@ -302,10 +302,15 @@ export function ServicesExplorer({
           path.work as (typeof PPF_CUSTOMER_OPTIONS)[number]["key"],
         )
       : [];
+  // "Add-ons" is a service type (optional extras added along with a main service),
+  // not a brand: keep them out of the brand list and show them in their own section.
+  const ADDON_BRAND = "Add-ons";
+  const addonServices = selected.filter((s) => s.brand === ADDON_BRAND);
+  const addonRefs = selectedRefs.filter((r) => r.brand === ADDON_BRAND);
   const brands = [
     ...new Set([
-      ...selected.map((s) => s.brand).filter((b): b is string => !!b),
-      ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b),
+      ...selected.map((s) => s.brand).filter((b): b is string => !!b && b !== ADDON_BRAND),
+      ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b && b !== ADDON_BRAND),
     ]),
   ].sort();
   const chooseBrands = !!family && brands.length > 0 && !path.brand;
@@ -352,7 +357,11 @@ export function ServicesExplorer({
       </View>
       <SceneIntro
         compact
-        eyebrow={path.brand ? (family ?? home.label) : home.label}
+        eyebrow={
+          path.brand && (family ?? home.label).toLowerCase() !== (path.brand ?? "").toLowerCase()
+            ? (family ?? home.label)
+            : ""
+        }
         title={path.brand ?? workLabel ?? family ?? home.label}
       />
       {!family ? (
@@ -413,7 +422,7 @@ export function ServicesExplorer({
                   key={b}
                   title={b}
                   brand
-                  detail={`${selected.filter((s) => s.brand === b).length + selectedRefs.filter((r) => r.brand === b).length} current options`}
+                  detail={(() => { const n = selected.filter((s) => s.brand === b).length + selectedRefs.filter((r) => r.brand === b).length; return `${n} current option${n === 1 ? "" : "s"}`; })()}
                   onPress={() => onPath({ ...path, brand: b })}
                 />
               ))}
@@ -421,6 +430,14 @@ export function ServicesExplorer({
                 selected.filter((s) => !s.brand),
                 selectedRefs.filter((r) => !r.brand),
               )}
+              {addonServices.length + addonRefs.length > 0 ? (
+                <>
+                  <T role="caption" tone="secondary">
+                    Optional extras you can add along with a main service.
+                  </T>
+                  {products(addonServices, addonRefs)}
+                </>
+              ) : null}
             </>
           ) : shown.length + shownRefs.length ? (
             products(shown, shownRefs)

@@ -4,8 +4,11 @@ export const quoteOperationId=()=>`q_${Date.now().toString(36)}_${Math.random().
 export async function requestServiceQuote(requestId:string,studioId:string,scope:QuoteScope){return(await httpsCallable<unknown,CustomerQuote>(functions,'requestServiceQuote')({requestId,studioId,scope})).data}
 export type QuoteCursor={createdAt:string;id:string};
 export async function getServiceQuotes(cursor?:QuoteCursor){return(await httpsCallable<unknown,{quotes:CustomerQuote[];limited:boolean;nextCursor:QuoteCursor|null}>(functions,'getServiceQuotes')({customerContext:true,...(cursor?{cursor}:{})})).data}
-export async function getQuoteInspectionTerms(id:string){return(await httpsCallable<unknown,InspectionAgreement>(functions,'getQuoteInspectionTerms')({id})).data}
-export async function updateServiceQuote(q:CustomerQuote,operationId:string,command:Exclude<QuoteCommand,{kind:'confirm_inspection'}|{kind:'record_booking'}>|{kind:'confirm_inspection';agreedVersion:string}){return(await httpsCallable<unknown,CustomerQuote>(functions,'updateServiceQuote')({id:q.id,expectedVersion:q.version,operationId,command,customerContext:true})).data}
+let quotePreviewHooks:{terms?:typeof getQuoteInspectionTerms;update?:typeof updateServiceQuote}|null=null;
+/** Dev-preview hook: /preview-quote installs these so the REAL panel can be tapped through without a session. Never set in production builds. */
+export function __setQuotePreviewHooks(h:{terms?:typeof getQuoteInspectionTerms;update?:typeof updateServiceQuote}|null){if((globalThis as {__DEV__?:boolean}).__DEV__!==true)return;quotePreviewHooks=h}
+export async function getQuoteInspectionTerms(id:string):Promise<InspectionAgreement>{if(quotePreviewHooks?.terms)return quotePreviewHooks.terms(id);return(await httpsCallable<unknown,InspectionAgreement>(functions,'getQuoteInspectionTerms')({id})).data}
+export async function updateServiceQuote(q:CustomerQuote,operationId:string,command:Exclude<QuoteCommand,{kind:'confirm_inspection'}|{kind:'record_booking'}>|{kind:'confirm_inspection';agreedVersion:string}):Promise<CustomerQuote>{if(quotePreviewHooks?.update)return quotePreviewHooks.update(q,operationId,command);return(await httpsCallable<unknown,CustomerQuote>(functions,'updateServiceQuote')({id:q.id,expectedVersion:q.version,operationId,command,customerContext:true})).data}
 /** Release gate. Server, canonical booking integration and native acceptance must be verified before activation. */
 export const SERVICE_QUOTE_JOURNEY_READY=true;
 
