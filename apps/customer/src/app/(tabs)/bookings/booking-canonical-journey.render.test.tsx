@@ -27,6 +27,8 @@ vi.mock("../../../lib/auth-service", () => ({
     return () => {};
   },
   resolveMyCustomerDocId: async () => (h.claimed ? "c" : null),
+  resolveMyCustomerDocResolution: async () => (h.claimed ? { outcome: "resolved", customerDocId: "c" } : { outcome: "absent" }),
+  resolveExistingCustomerDocId: async () => (h.claimed ? { outcome: "resolved", customerDocId: "c" } : { outcome: "absent" }),
   claimCustomerRecord: async () => {
     h.claimed = true;
     return { customerId: "c" };
