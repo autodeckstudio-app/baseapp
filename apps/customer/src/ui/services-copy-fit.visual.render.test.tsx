@@ -75,7 +75,7 @@ vi.mock('./ServicePhoto', async () => {
       const src = product ? A('imagery/brands/' + PRODUCT_IMG[product])
         : brand === 'Kovalent' ? A('imagery/brands/kovalent-logo.png')
         : brand === 'Fireball' ? A('imagery/brands/fireball-logo.png')
-        : (props?.service?.name ?? '').toLowerCase().includes('pps') ? A('../../src/assets/gen-pps-spray.jpg')
+        : (props?.service?.name ?? '').toLowerCase().includes('pps') ? A('imagery/gen-pps-spray.jpg')
         : cat === 'ppf' ? TYPE_IMG.PPF
         : cat === 'pickup' ? A('imagery/generated/pickup.jpg')
         : cat === 'coating' || cat === 'washing' ? HOME_IMG[cat === 'coating' ? 'detailing' : 'washing']
