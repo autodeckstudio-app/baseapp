@@ -97,7 +97,7 @@ import { StyleSheet, View } from 'react-native';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ExperienceThemeProvider } from '@autodeck/ui/native';
 import { setSurfaceMode } from '../lib/glass';
-import { DAY_ATMOSPHERE } from '@autodeck/ui/theme/glass';
+import { DAY_ATMOSPHERE } from '@autodeck/ui/theme';
 import { ServicesExplorer } from './ServicesExplorer';
 import { ServiceScope } from './ServiceScope';
 import type { Service } from '@autodeck/core';

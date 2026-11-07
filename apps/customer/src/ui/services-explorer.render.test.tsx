@@ -136,7 +136,7 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   });
   const ppsText = JSON.stringify(r.toJSON());
   expect(ppsText).toContain("PPS - spray-on paint protection");
-  expect(ppsText).toContain("Ask the studio about the product and coverage");
+  expect(ppsText).toContain("Ask the studio about product and coverage");
   expect(ppsText).toContain("Quote to confirm");
   expect(ppsText).not.toContain("No confirmed current product");
   expect(ppsText).not.toContain("\u20b9");

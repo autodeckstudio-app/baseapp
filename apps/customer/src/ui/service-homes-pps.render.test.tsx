@@ -19,7 +19,7 @@ it('Paint Protection serves the PPS service concept as an honest brand-less enqu
   await act(async () => r.root.findAllByType(Button).find((b: any) => b.props.label === 'Range to confirm').props.onPress());
   text = JSON.stringify(r.toJSON());
   expect(text).toContain('PPS - spray-on paint protection');
-  expect(text).toContain('Ask the studio about the product and coverage');
+  expect(text).toContain('Ask the studio about product and coverage');
   expect(text).toContain('Request a quote');
   expect(text).not.toMatch(/₹|price/i);
   await act(async () => r.root.findAllByType(Pressable).find((p: any) => p.findAll((n: any) => n.props.children === 'PPS - spray-on paint protection').length > 0).props.onPress());

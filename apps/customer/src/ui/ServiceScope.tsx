@@ -14,8 +14,8 @@ export function ServiceScope({service,onAsk}:{service:Pick<Service,'name'|'descr
   {scope.length ? <View style={{gap:space.breath}}><Kicker>What's included</Kicker><Pane pad="gap">{scope.map((text,i)=>{
    // Only a "Where used:" line renders as chips, and each chip is a complete
    // surface name. Every other line is a full row so copy never fragments.
-   const m=/^Where used:\s*(.+)$/i.exec(text);
-   const areas=m?m[1].split(/,\s*/).map(x=>x.trim()).filter(Boolean):null;
+   const captured=/^Where used:\s*(.+)$/i.exec(text)?.[1];
+   const areas=captured?captured.split(/,\s*/).map(x=>x.trim()).filter(Boolean):null;
    return areas&&areas.length?(
     <View key={text} style={{gap:8,paddingVertical:i?10:0,borderTopWidth:i?1:0,borderTopColor:'rgba(128,128,128,0.14)'}}>
      <T role="caption" tone="secondary">Where used</T>
