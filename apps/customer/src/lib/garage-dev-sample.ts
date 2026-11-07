@@ -44,8 +44,8 @@ export function devGarageDetail(vehicleId: string) {
   ] as unknown as Protection[];
   const papers = [
     { id: "dc1", vehicleId, customerId: uid, kind: "RC", reference: "RC-SAMPLE-1", title: "Registration Certificate", expiresOn: null, createdAt: day(400), updatedAt: day(400) },
-    { id: "dc2", vehicleId, customerId: uid, kind: "INSURANCE", reference: "POL-882134", title: "Insurance", expiresOn: day(-40).slice(0, 10), createdAt: day(300), updatedAt: day(300) },
-    { id: "dc3", vehicleId, customerId: uid, kind: "PUC", reference: "PUC-551200", title: "PUC", expiresOn: day(10).slice(0, 10), createdAt: day(180), updatedAt: day(180) },
+    { id: "dc2", vehicleId, customerId: uid, kind: "INSURANCE", reference: "POL-SAMPLE-2", title: "Insurance", expiresOn: day(-40).slice(0, 10), createdAt: day(300), updatedAt: day(300) },
+    { id: "dc3", vehicleId, customerId: uid, kind: "PUC", reference: "PUC-SAMPLE-3", title: "PUC", expiresOn: day(10).slice(0, 10), createdAt: day(180), updatedAt: day(180) },
   ] as unknown as MyPaper[];
   const warranties = [
     { id: "dw1", tenantId: "dev", vehicleId, customerId: uid, jobId: "dj1", warrantyLabel: "1-year coating warranty", serviceName: "AutoDeck Care Ceramic 1-year", startDate: day(59).slice(0, 10), endDate: day(-306).slice(0, 10), revokedAt: null, coverageTerms: null, createdAt: day(59), updatedAt: day(59) },

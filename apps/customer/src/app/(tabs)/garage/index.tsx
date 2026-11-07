@@ -121,7 +121,7 @@ export default function GarageScreen() {
     return () => clearTimeout(t);
   }, [auth.status, retryTick, vehicles]);
 
-  const { height: winH, width: winW } = useWindowDimensions();
+  const { height: winH } = useWindowDimensions();
   const swipeList = [...(vehicles ?? [])].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   const pickRef = useRef(pick); pickRef.current = pick;
 
@@ -188,7 +188,7 @@ export default function GarageScreen() {
       ) : one ? (
         <View style={{ gap: metrics.sectionGap }}>
           <View>
-            <FloorCar car={one} width={Math.min(winW, 536)} height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(one)} />
+            <FloorCar car={one} width="100%" height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(one)} />
           </View>
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
@@ -209,7 +209,7 @@ export default function GarageScreen() {
         // sideways swipe. Tapping a card opens its preview pop-up.
         <View style={{ gap: 20 }}>
           {list.map((v) => (
-            <FloorCar key={v.id} car={v} width={Math.min(winW, 536)} height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(v)} />
+            <FloorCar key={v.id} car={v} width="100%" height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(v)} />
           ))}
         </View>
       )}
