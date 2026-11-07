@@ -99,32 +99,50 @@ it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty st
   await press(r, "Change brand");
   expect(JSON.stringify(r.toJSON())).not.toContain("GSWF");
   await act(async () => r.unmount());
-  for (const family of ["PPS", "PPF"]) {
-    await act(async () => {
-      r = create(
-        <ServicesExplorer
-          services={rows}
-          path={{
-            home: "paint",
-            family,
-            ...(family === "PPF" ? { work: "removal" } : {}),
-          }}
-          query=""
-          onPath={vi.fn()}
-          onOpen={opened}
-          onHelp={help}
-          onReference={vi.fn()}
-          priceLabel={() => null}
-        />,
-      );
-    });
-    expect(JSON.stringify(r.toJSON())).toContain(
-      "No confirmed current product",
+  // PPF removal: still no confirmed product - honest empty state via help.
+  await act(async () => {
+    r = create(
+      <ServicesExplorer
+        services={rows}
+        path={{ home: "paint", family: "PPF", work: "removal" }}
+        query=""
+        onPath={vi.fn()}
+        onOpen={opened}
+        onHelp={help}
+        onReference={vi.fn()}
+        priceLabel={() => null}
+      />,
     );
-    await press(r, "Ask about this service");
-    expect(help.mock.calls.at(-1)![0]).toContain(family);
-    await act(async () => r.unmount());
-  }
+  });
+  expect(JSON.stringify(r.toJSON())).toContain("No confirmed current product");
+  await press(r, "Ask about this service");
+  expect(help.mock.calls.at(-1)![0]).toContain("PPF");
+  await act(async () => r.unmount());
+  // PPS: the confirmed brand-less service concept card - quote-to-confirm, enquiry route, no price, no booking.
+  const reference = vi.fn();
+  await act(async () => {
+    r = create(
+      <ServicesExplorer
+        services={rows}
+        path={{ home: "paint", family: "PPS" }}
+        query=""
+        onPath={vi.fn()}
+        onOpen={opened}
+        onHelp={help}
+        onReference={reference}
+        priceLabel={() => null}
+      />,
+    );
+  });
+  const ppsText = JSON.stringify(r.toJSON());
+  expect(ppsText).toContain("PPS - spray-on paint protection");
+  expect(ppsText).toContain("Ask the studio about the product and coverage");
+  expect(ppsText).toContain("Quote to confirm");
+  expect(ppsText).not.toContain("No confirmed current product");
+  expect(ppsText).not.toContain("\u20b9");
+  await press(r, "View PPS - spray-on paint protection");
+  expect((reference.mock.calls.at(-1)![0] as any).key).toBe("pps-spray");
+  await act(async () => r.unmount());
 });
 it("Washing presents interior once, exact record on action, and search uses the same card callback", async () => {
   const opened = vi.fn();

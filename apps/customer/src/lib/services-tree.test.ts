@@ -79,7 +79,7 @@ describe("services type level", () => {
 it('unconfirmed film brands and generic product enquiry fallbacks are absent; the confirmed brand-less PPS concept is the only film-group enquiry',()=>{
   const eligible=all.filter(customerOfferingVisible);
   // pps-spray is the confirmed, brand-less PPS service concept: enquiry-only, no stock/price.
-  expect(buildTree(group('ppf'),eligible).map(n=>n.key)).toEqual(['pps-spray']);
+  expect(buildTree(group('ppf'),eligible).map(n=>n.kind==='enquiry'?n.key:n.kind)).toEqual(['pps-spray']);
   const tree=buildTree(group('coatings'),eligible);
   for(const key of ['tyre','dashboard','matte','ppf-coat','maintenance-coating']) {
     expect(tree.some(n=>n.kind==='enquiry'&&n.key===key)).toBe(false);
