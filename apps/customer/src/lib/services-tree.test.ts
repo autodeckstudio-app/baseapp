@@ -76,18 +76,19 @@ describe("services type level", () => {
   });
 });
 
-it('unconfirmed film brands and generic product enquiry fallbacks are absent',()=>{
+it('unconfirmed film brands and generic product enquiry fallbacks are absent; the confirmed brand-less PPS concept is the only film-group enquiry',()=>{
   const eligible=all.filter(customerOfferingVisible);
-  expect(buildTree(group('ppf'),eligible)).toEqual([]);
+  // pps-spray is the confirmed, brand-less PPS service concept: enquiry-only, no stock/price.
+  expect(buildTree(group('ppf'),eligible).map(n=>n.key)).toEqual(['pps-spray']);
   const tree=buildTree(group('coatings'),eligible);
   for(const key of ['tyre','dashboard','matte','ppf-coat','maintenance-coating']) {
     expect(tree.some(n=>n.kind==='enquiry'&&n.key===key)).toBe(false);
   }
   expect(JSON.stringify(tree)).not.toContain('PowerShield');
-  expect(JSON.stringify(buildTree(group('ppf'),all))).not.toMatch(/GSWF|NAR|AVVYX|Matte and satin film|PPS/);
+  expect(JSON.stringify(buildTree(group('ppf'),all))).not.toMatch(/GSWF|NAR|AVVYX|Matte and satin film/);
 });
 
-it('all nine exact confirmed references remain enquiries and all 23 ordinary services remain visible',()=>{
+it('every confirmed reference remains an enquiry and all 23 ordinary services remain visible',()=>{
   const trees=MENU_GROUPS.flatMap(g=>buildTree(g,all.filter(customerOfferingVisible)));
   const enquiries=(nodes:TreeNode[]):string[]=>nodes.flatMap(n=>n.kind==='enquiry'?[n.key]:n.kind==='branch'?enquiries(n.children):[]);
   expect(enquiries(trees).filter(k=>visibility.confirmedEnquiryKeys.includes(k)).sort()).toEqual([...visibility.confirmedEnquiryKeys].sort());

@@ -69,14 +69,15 @@
     "menu-pickup"
   ],
   "confirmedEnquiryKeys": [
-    "kovalent-matrix",
-    "kovalent-prolong-light",
-    "kovalent-overlay",
-    "kovalent-matte",
-    "kovalent-fabric",
     "koch-chemie-ceramic-allround-c0-02",
     "koch-chemie-ceramic-body-cb0-01",
+    "koch-chemie-ceramic-neo-c0-03",
     "koch-chemie-ceramic-rims-cr0-01",
-    "koch-chemie-ceramic-neo-c0-03"
+    "kovalent-fabric",
+    "kovalent-matrix",
+    "kovalent-matte",
+    "kovalent-overlay",
+    "kovalent-prolong-light",
+    "pps-spray"
   ]
 }

@@ -179,8 +179,11 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
   try {
   // Round 7 point 5: one active RC per car. A second RC is an edit, not a new record.
   if (data.kind === "RC") {
-    const existing = await db.collection(COLLECTIONS.papers()).where("vehicleId", "==", data.vehicleId).where("customerId", "==", customerDocId).get();
-    if (existing.docs.some((d) => { const p = d.data() as PaperVerification; return p.kind === "RC" && isActivePaper(p); })) {
+    // One active RC per car across BOTH keys of the same verified principal: a pre-fix
+    // uid-keyed active RC must block a second RC exactly like a canonical-keyed one.
+    const keys = customerDocId !== user.uid ? [customerDocId, user.uid] : [customerDocId];
+    const snaps = await Promise.all(keys.map((k) => db.collection(COLLECTIONS.papers()).where("vehicleId", "==", data.vehicleId).where("customerId", "==", k).get()));
+    if (snaps.some((snap) => snap.docs.some((d) => { const p = d.data() as PaperVerification; return p.kind === "RC" && isActivePaper(p); }))) {
       throw new HttpsError("already-exists", "This car already has an RC. Edit it to replace it.");
     }
   }

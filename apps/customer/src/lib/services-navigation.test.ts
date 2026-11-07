@@ -59,7 +59,8 @@ it("film aftercare is not film installation, surface coatings never become ceram
 it("paint has all three service TYPES even with no confirmed film/spray stock, modifications retains colour-film service type", () => {
   expect(familyChoices("paint", [], [])).toEqual(["Ceramic", "PPF", "PPS"]);
   expect(familyChoices("modifications", [], [])).toContain("Colour PPF");
-  expect(referenceChoices([]).some((r) => r.group === "ppf")).toBe(false);
+  // The only film-group reference is the confirmed brand-less PPS service concept.
+  expect(referenceChoices([]).filter((r) => r.group === "ppf").map((r) => r.key)).toEqual(["pps-spray"]);
 });
 it("same published range does not reappear as a reference; no similar-tier merge", () => {
   const xs = [
