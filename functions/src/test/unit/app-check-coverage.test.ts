@@ -55,6 +55,9 @@ function listTsFilesRecursive(dir: string): string[] {
 // the admin app gets a genuine free App Check provider (ReCaptchaV3Provider)
 // with no native/EAS blocker.
 const ENFORCED = [
+  "service/catalogueDrafts.ts",
+  "service/catalogueManaged.ts",
+  "service/catalogueRescue.ts",
   "booking/serviceQuoteJourney.ts",
   "customer/getCustomerJobs.ts",
   "job/releaseCompletedBay.ts",
@@ -209,6 +212,7 @@ const ENFORCED = [
 // all (unlike onCall/onRequest) — they cannot become publicly callable
 // regardless of App Check.
 const EXCLUDED_NON_CALLABLE = [
+  "service/catalogueRuntime.ts",
   "approval/expireStaleApprovalsScheduled.ts",
   "booking/flagMissedBookingsScheduled.ts",
   "membership/expireStaleMembershipsScheduled.ts",
@@ -252,10 +256,14 @@ describe("Phase 5B P1-13: App Check coverage", () => {
     expect(classifiedButMissingOnDisk, "classified in this test but no longer exists on disk — remove it from the classification").toEqual([]);
   });
 
-  it.each(ENFORCED)("%s enforces App Check via shouldEnforceAppCheck()", (relPath) => {
+  it.each(ENFORCED)("%s enforces App Check (env-gated or hardcoded)", (relPath) => {
     const source = readFileSync(join(FUNCTIONS_DIR, relPath), "utf8");
-    expect(source).toContain("enforceAppCheck: shouldEnforceAppCheck()");
-    expect(source).toMatch(/import\s*\{\s*shouldEnforceAppCheck\s*\}\s*from\s*["'].*lib\/environment\.js["']/);
+    const gated = source.includes("enforceAppCheck: shouldEnforceAppCheck()");
+    // Managed catalogue callables pin enforceAppCheck:true (stronger than the
+    // staged flag): accepted, and the environment import is not required then.
+    const hardcoded = /enforceAppCheck\s*:\s*true/.test(source);
+    expect(gated || hardcoded, "callable must wire enforceAppCheck (env-gated or hardcoded true)").toBe(true);
+    if (gated) expect(source).toMatch(/import\s*\{\s*shouldEnforceAppCheck\s*\}\s*from\s*["'].*lib\/environment\.js["']/);
   });
 
   it.each(NEVER_PUBLIC)("%s never enforces App Check (guest surface, no attestation-capable client)", (relPath) => {
