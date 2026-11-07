@@ -2,16 +2,19 @@ import { customerOfferingVisible } from './customer-offering-visibility';
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "./firebase";
 import { priceCache, onPriceCacheScopeChange } from "./price-cache";
+import { devCatalogue } from "./dev-catalogue-loader";
 import { rupees } from "../ui/kit";
 import { primeVisuals } from "./imagery";
 import { customerCatalogueEligible, customerRatingPrivacy, MENU_SEED, sizePricingForCategory, isSizePriced } from "@autodeck/core";
+import type { MenuSeed } from "@autodeck/core";
 import { applyBrandWarranty } from "./warranty-labels";
 import type { Service, ServiceCategory, VehicleCategory, PriceBreakdown, PriceSnapshot } from "@autodeck/core";
 
 // Dev-only: ?mock=1 on web renders the real screens from the seeded menu (no Firebase session needed).
 const devMock = (): Service[] | null => {
   if (!__DEV__ || !/mock=1/.test((globalThis as { location?: { search?: string } }).location?.search ?? "")) return null;
-  return MENU_SEED.filter(previewEligible).map((m) => customerRatingPrivacy(({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingForCategory(m.category, m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service));
+  const rows = (devCatalogue ?? MENU_SEED) as MenuSeed[];
+  return rows.filter(previewEligible).map((m) => customerRatingPrivacy(({ id: m.id, tenantId: "dev", name: m.name, category: m.category, brand: m.brand, description: m.description, basePrice: m.rupees * 100, currency: "INR", estimatedDurationMinutes: m.minutes, warrantyLabel: m.warrantyLabel ?? null, vehicleCategoryPricing: sizePricingForCategory(m.category, m.rupees * 100), requiredBayType: m.bay, membershipWashEligible: false, priceOnRequest: m.consult === true, coverageLevel: m.coverageLevel ?? null, priceFrom: m.priceFrom === true, active: true, displayOrder: m.order, createdAt: "", updatedAt: "" }) as unknown as Service));
 };
 
 const previewEligible=(row:{id:string;brand?:string|null})=>customerOfferingVisible(row) && customerCatalogueEligible(row,__DEV__ && /identityPreview=1/.test((globalThis as {location?:{search?:string}}).location?.search ?? ""));

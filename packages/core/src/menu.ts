@@ -162,10 +162,10 @@ export const MENU_SEED: MenuSeed[] = [
   coat("fireball-1", "Fireball 1-year", "Fireball", 12000, 1, "Fireball ceramic coating, one-year tier.", 120),
   coat("fireball-2", "Fireball 2-year", "Fireball", 16000, 2, "Fireball ceramic coating, two-year tier.", 130),
   coat("fireball-3", "Fireball 3-year", "Fireball", 20000, 3, "Fireball ceramic coating, three-year tier.", 140),
-  coat("kovalent-prolong", "Kovalent Prolong", "Kovalent", 22000, null, "Kovalent Prolong ceramic coating.", 150, true),
+  coat("kovalent-prolong", "Kovalent Prolong", "Kovalent", 22000, null, "Kovalent Prolong ceramic coating.\n- 9H ceramic with heat resistance and a brilliant finish\n- Where used: Paint", 150, true),
   coat("kovalent-graphene", "Kovalent Graphene", "Kovalent", 32000, null, "Kovalent graphene coating.", 160),
-  coat("kovalent-borophene", "Kovalent Borophene", "Kovalent", 50000, null, "Kovalent Borophene coating on Boron Nitride technology.", 170),
-  coat("3m-ceramic", "3M Ceramic Coating", "3M", 45000, null, "3M ceramic coating, flagship tier.", 180, true),
+  coat("kovalent-borophene", "Kovalent Borophene", "Kovalent", 50000, null, "Kovalent Borophene coating on Boron Nitride technology\n- 9H+ hardness and 10-micron film with extreme gloss, on Boron Nitride technology\n- Where used: Paint\n- Brand rating: 9 years durability (manufacturer claim; not an AutoDeck warranty)", 170),
+  coat("3m-ceramic", "3M Ceramic Coating", "3M", 45000, null, "3M ceramic coating.", 180, true),
   // Surface add-ons (pre-quoted, editable)
   addon("glass", "Glass coating", 4000, "Hydrophobic coating for all glass.", 200),
   addon("wheels", "Wheel coating", 5000, "Ceramic coating for wheel faces and barrels.", 210),

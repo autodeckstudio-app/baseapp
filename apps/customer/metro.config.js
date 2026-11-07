@@ -54,7 +54,7 @@ config.resolver.extraNodeModules = {
 if (process.env.NODE_ENV === "production") {
   const devOnly = [
     /[\\/]src[\\/]app[\\/]preview[^\\/]*\.tsx$/,
-    /[\\/]src[\\/]lib[\\/](garage-dev-sample|booking-dev-sample|live-packages-sample)\.ts$/,
+    /[\\/]src[\\/]lib[\\/](garage-dev-sample|booking-dev-sample|live-packages-sample|catalogue-dev-sample)\.ts$/,
   ];
   const prior = config.resolver.blockList;
   config.resolver.blockList = [...(Array.isArray(prior) ? prior : prior ? [prior] : []), ...devOnly];
