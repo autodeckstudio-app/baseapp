@@ -38,8 +38,8 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
   );
 }
 
-/** One car on the floor: hero photo, dark floor band with a soft reflection under it. */
-function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car: Vehicle; width: number; height: number; focused: boolean; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
+/** One car card: hero photo with identity overlaid, or a compact card when the car has no photo yet. Used by the stacked garage list. */
+export function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car: Vehicle; width: number; height: number; focused: boolean; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
   // A car with no photo yet gets a compact card: a short thumb band keeps the
   // truthful empty state, and identity lives in a solid dark bar BELOW it - no

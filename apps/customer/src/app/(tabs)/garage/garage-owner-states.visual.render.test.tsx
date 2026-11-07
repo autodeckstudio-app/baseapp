@@ -33,6 +33,7 @@ vi.mock('../../../lib/vehicle-service', () => ({ listenToMyVehicles: (o: any, t:
 vi.mock('../../../lib/job-service', () => ({ listenToMyJobs: (_t: any, _o: any, fn: any) => { fn([]); return () => {}; } }));
 vi.mock('../../../lib/home-service', () => ({ listenToMyMemberships: (_t: any, _o: any, fn: any) => { fn([]); return () => {}; } }));
 vi.mock('../../../lib/catalogue-service', () => ({ getServiceCatalogue: async () => [] }));
+vi.mock('../../../lib/paper-service', () => ({ listenToVehiclePapers: (_v: any, _t: any, _c: any, fn: any) => { fn([]); return () => {}; }, daysUntil: () => null }));
 vi.mock('../../../lib/dev-garage-loader', async () => {
   const real = await vi.importActual<any>('../../../lib/garage-dev-sample');
   return { devGarage: real.devGarage, devGarageDetail: real.devGarageDetail ?? null };

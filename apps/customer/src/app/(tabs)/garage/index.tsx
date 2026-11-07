@@ -22,13 +22,15 @@ import { getServiceCatalogue } from "../../../lib/catalogue-service";
 import type { ServiceJob } from "@autodeck/core";
 import { metrics } from "../../../lib/metrics";
 import { Button, Loading, Notice, Plate, Screen, T } from "../../../ui/kit";
-import { GarageShowroom } from "../../../ui/GarageShowroom";
+import { FloorCar } from "../../../ui/GarageShowroom";
 import { CareRing } from "../../../ui/CareRing";
 import { careRing, jobStep, liveJobForCar, LIVE_STEP_NAMES, readyBy } from "../../../lib/garage-live";
 import { liveTrackTarget } from "../../../lib/bookings-view";
 import { listenToMyMemberships } from "../../../lib/home-service";
 import type { Membership } from "@autodeck/core";
-import { devGarage } from "../../../lib/dev-garage-loader";
+import { devGarage, devGarageDetail } from "../../../lib/dev-garage-loader";
+import { listenToVehiclePapers, type MyPaper } from "../../../lib/paper-service";
+import { GarageCarSheet } from "../../../ui/GarageCarSheet";
 
 
 function DueChip({ text }: { text: string }) {
@@ -54,6 +56,9 @@ export default function GarageScreen() {
   const [photoCleanupNote,setPhotoCleanupNote]=useState<string|null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
   const [pick, setPick] = useState<string | null>(mock ? q.pick ?? null : null);
+  // Car preview pop-up: tapping a stacked card opens it; tapping outside closes it.
+  const [sheet, setSheet] = useState<Vehicle | null>(null);
+  const [sheetPapers, setSheetPapers] = useState<MyPaper[] | null>(null);
   const [jobs, setJobs] = useState<ServiceJob[]>(mock ? mock.jobs : []);
   const [svcMap, setSvcMap] = useState<Record<string, { id: string; name: string; category: string }>>(mock ? mock.svcMap : {});
   const [plan, setPlan] = useState<Membership | null>(mock ? mock.plan : null);
@@ -81,6 +86,20 @@ export default function GarageScreen() {
   }, [uid, tenantId, retryTick]);
 
   useEffect(() => { if(mock)return;setJobs([]);if (!uid || !tenantId) return;let alive=true;const stop=listenToMyJobs(tenantId, uid, v=>{if(alive)setJobs(v)}, () => undefined);return()=>{alive=false;stop()}; }, [uid, tenantId, retryTick]);
+  // Documents for the car preview pop-up: load when a card opens, drop on close.
+  // Deps are primitives: the dev sample objects are rebuilt every render, so an
+  // object dep would re-fire (and re-set state) forever.
+  const mockOn = !!mock;
+  const sheetId = sheet?.id ?? null;
+  useEffect(() => {
+    if (!sheetId) { setSheetPapers(null); return; }
+    if (mockOn) { setSheetPapers(devGarageDetail ? devGarageDetail(sheetId).papers : []); return; }
+    setSheetPapers(null);
+    if (!uid || !tenantId) return;
+    let alive = true;
+    const stop = listenToVehiclePapers(sheetId, tenantId, uid, (rows) => { if (alive) setSheetPapers(rows); }, () => { if (alive) setSheetPapers([]); });
+    return () => { alive = false; stop(); };
+  }, [sheetId, mockOn, uid, tenantId]);
   useEffect(() => { if(mock)return;setPlan(null);if (!uid || !tenantId) return;let alive=true;const stop=listenToMyMemberships(tenantId, uid, (ms) => {if(alive)setPlan(ms.find((m) => m.status === "active") ?? null)}, () => undefined);return()=>{alive=false;stop()}; }, [uid, tenantId, retryTick]);
   useEffect(() => { if (mock) return; void getServiceCatalogue().then((all) => { const m: Record<string, { id: string; name: string; category: string }> = {}; for (const x of all) m[x.id] = { id: x.id, name: x.name, category: x.category }; setSvcMap(m); }).catch(() => undefined); }, [retryTick]);
   useEffect(()=>{if(mock)return;setArchived([]);setShowArchived(false);if(!uid||!tenantId)return;let alive=true;const stop=listenToMyArchivedVehicles(uid,tenantId,v=>{if(alive)setArchived(v)},()=>{if(alive)setArchiveActionError("Could not load archived cars. Retry before restoring or deleting.")});return()=>{alive=false;stop()};},[uid,tenantId,retryTick]);
@@ -102,13 +121,17 @@ export default function GarageScreen() {
     return () => clearTimeout(t);
   }, [auth.status, retryTick, vehicles]);
 
-  const { height: winH } = useWindowDimensions();
+  const { height: winH, width: winW } = useWindowDimensions();
   const swipeList = [...(vehicles ?? [])].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   const pickRef = useRef(pick); pickRef.current = pick;
 
   if (!vehicles && !error && !ownerMissing) return <Loading label="Opening your garage" />;
   const open = (v: Vehicle) => {
     void setActiveVehicle(v.id);
+    setSheet(v);
+  };
+  const openRoom = (v: Vehicle) => {
+    setSheet(null);
     router.push({ pathname: "/(tabs)/garage/[id]", params: { id: v.id } });
   };
   async function confirmDeletePermanently() {
@@ -165,7 +188,7 @@ export default function GarageScreen() {
       ) : one ? (
         <View style={{ gap: metrics.sectionGap }}>
           <View>
-            <GarageShowroom cars={list} selectedId={one.id} onSelect={(id) => setPick(id)} onOpen={open} chipFor={overlay} />
+            <FloorCar car={one} width={Math.min(winW, 536)} height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(one)} />
           </View>
           {careRing(plan) ? (() => {
             const r = careRing(plan)!;
@@ -182,9 +205,13 @@ export default function GarageScreen() {
           })() : null}
         </View>
       ) : (
-        // "All" is the garage floor itself: every car on the floor, swipe to move focus
-        // between them, tap one to open its room. Swiping does not select; the pills above do.
-        <GarageShowroom cars={list} selectedId={null} onSelect={(id) => setPick(id)} onOpen={open} chipFor={overlay} />
+        // "All": every car stacked one below the other, so no car hides behind a
+        // sideways swipe. Tapping a card opens its preview pop-up.
+        <View style={{ gap: 20 }}>
+          {list.map((v) => (
+            <FloorCar key={v.id} car={v} width={Math.min(winW, 536)} height={metrics.heroTall + 40} focused onOpen={open} chip={overlay(v)} />
+          ))}
+        </View>
       )}
       {list.length > 0 ? (
         <View style={{ gap: space.breath, marginTop: metrics.sectionGap }}>
@@ -226,6 +253,7 @@ export default function GarageScreen() {
           )) : null}
         </View>
       ) : null}
+      <GarageCarSheet car={sheet} onClose={() => setSheet(null)} onOpenRoom={openRoom} jobs={jobs} svcNames={Object.fromEntries(Object.values(svcMap).map((s) => [s.id, s.name]))} papers={sheetPapers} />
       {photoCleanupNote?<Notice title="Photo removal pending" body={photoCleanupNote} action={<Button label="Got it" kind="quiet" onPress={()=>setPhotoCleanupNote(null)}/>}/>:null}
       {archiveActionError?<Notice title="Archived cars" body={archiveActionError} action={<View style={{gap:space.line}}>{archiveActionError.includes("booking")?<Button label="Open bookings to cancel" kind="quiet" onPress={()=>router.push("/(tabs)/bookings")}/>:null}<Button label="Retry" onPress={()=>{setArchiveActionError(null);setRetryTick(n=>n+1);}}/></View>}/>:null}
       </View>

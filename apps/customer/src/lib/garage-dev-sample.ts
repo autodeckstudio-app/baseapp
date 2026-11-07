@@ -6,8 +6,8 @@ const day = (n: number): string => new Date(Date.now() - n * 86_400_000).toISOSt
 
 export function devGarage(o: { live: boolean; empty: boolean }) {
   const vehicles = (o.empty ? [] : [
-    { id: "a", make: "BMW", model: "M340i", registrationNumber: "MH 40 AB 1234", category: "sedan", updatedAt: day(1) },
-    { id: "b", make: "Mahindra", model: "Thar", registrationNumber: "MH 31 XY 5678", category: "suv", updatedAt: day(3) },
+    { id: "a", make: "BMW", model: "M340i", registrationNumber: "MH 40 AB 1234", category: "sedan", year: 2023, color: "Black", odometer: 18450, updatedAt: day(1) },
+    { id: "b", make: "Mahindra", model: "Thar", registrationNumber: "MH 31 XY 5678", category: "suv", year: 2021, color: "Red", odometer: 40210, updatedAt: day(3) },
   ]) as unknown as Vehicle[];
   const jobs = [
     { id: "j1", vehicleId: "a", serviceId: "s1", status: "DELIVERED", createdAt: day(40), sealedAt: day(39) },

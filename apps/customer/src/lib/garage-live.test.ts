@@ -65,9 +65,10 @@ describe("garage services have one price for every car", () => {
 });
 describe("garage All view and selected view share one language", () => {
   const g = read("../app/(tabs)/garage/index.tsx");
-  it("the All view IS the garage floor: every car swipable on the floor, no Today or Coming up blocks", () => {
-    expect((g.match(/<GarageShowroom/g) ?? []).length).toBe(2);
-    expect(g).not.toMatch(/TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
+  it("the All view stacks every car one below the other, a tap opens the car preview pop-up, no Today or Coming up blocks", () => {
+    expect(g).toContain("list.map((v) =>");
+    expect(g).toContain("<GarageCarSheet");
+    expect(g).not.toMatch(/<GarageShowroom|TodayStrip|COMING UP|GarageCarFacts|LAST SERVICE|NEXT DUE|ScrollView horizontal pagingEnabled/);
   });
   it("Track stays reachable as a text chip on the card of a car in the bay, not a second button", () => {
     expect(g).toContain('accessibilityLabel="Track"'); expect(g).not.toContain('Track and chat');

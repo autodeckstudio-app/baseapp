@@ -200,6 +200,7 @@ vi.mock("../../../hooks/useCustomerHome", () => ({
   setActiveVehicle: vi.fn(),
 }));
 vi.mock("../../../ui/LegalLinks", () => ({ LegalLinks: () => null }));
+vi.mock('../../../lib/paper-service', () => ({ listenToVehiclePapers: (_v: any, _t: any, _c: any, fn: any) => { fn([]); return () => {}; }, daysUntil: () => null }));
 import ClaimScreen from "../../(auth)/claim";
 import Bookings from "./index";
 import Garage from "../garage/index";
