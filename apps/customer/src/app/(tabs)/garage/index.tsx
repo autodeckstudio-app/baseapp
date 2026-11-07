@@ -60,12 +60,15 @@ export default function GarageScreen() {
   const [retryTick, setRetryTick] = useState(0);
   const uid = auth.status === "ready" ? auth.customerDocId : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
-  // Truthful owner states: a null canonical id is never a connectivity
-  // problem. "error" = resolution failed, state UNKNOWN (do not show empty);
-  // "absent"/"claim-required" for a customer = profile still linking;
+  // Truthful owner states: a null canonical id is never reported as a
+  // connectivity problem, and no cause is ruled out either. "error" =
+  // resolution failed, state UNKNOWN (never show empty); "claim-required"
+  // = a claim really is pending; "absent" for a customer = no profile
+  // found (setup/recovery needed, nothing is linking in the background);
   // staff with verifiably no record genuinely have an empty garage.
   const ownerUnknown = auth.status === "ready" && !uid && auth.customerDocResolution === "error";
-  const ownerLinking = auth.status === "ready" && !uid && auth.customerDocResolution !== "error" && auth.claims.role === "customer";
+  const ownerLinking = auth.status === "ready" && !uid && auth.customerDocResolution === "claim-required";
+  const ownerNoProfile = auth.status === "ready" && !uid && auth.customerDocResolution === "absent" && auth.claims.role === "customer";
   const ownerMissing = auth.status === "ready" && !uid;
   const ownerKey=JSON.stringify([uid,tenantId,auth.status==='ready'?auth.user.uid:null]);const ownerRef=useRef(ownerKey);ownerRef.current=ownerKey;const archiveLock=useRef(false),archiveGeneration=useRef(0);
   useEffect(()=>{archiveGeneration.current++;archiveLock.current=false;setArchiveActionBusy(null);return()=>{archiveGeneration.current++}},[ownerKey]);
@@ -144,13 +147,14 @@ export default function GarageScreen() {
     <Screen appBar="Garage">
       <SceneIntro eyebrow="Your garage" compact title="Your cars, connected."/>
       <View testID="garage-swipe-area" style={{ gap: 20, minHeight: Math.max(winH - 240, 400) }}>
-      {ownerUnknown ? <Notice title="We couldn't confirm your profile" body="This is not your connection - we could not check your account. Try again in a moment; your cars are not affected." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {ownerLinking ? <Notice title="Your profile is still linking" body="Try again once it is ready." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
+      {ownerNoProfile ? <Notice title="We couldn't find your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {error ? <Notice title="Can't load your cars" body="Check your connection. We'll refresh as soon as we're back." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {list.length > 0 ? (
         <FilterPills fixedFirst items={[{ key: null as string | null, label: "All" }, ...list.map((v) => ({ key: v.id as string | null, label: `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber }))]} value={sel} onChange={setPick} flat trailing={<Pressable accessibilityRole="button" accessibilityLabel="Add a car" onPress={() => router.push("/(tabs)/garage/add")} style={{ paddingHorizontal: 2, paddingVertical: 9, flexDirection: "row", alignItems: "center", gap: 4 }}><Text style={{ color: ink.premium, fontSize: 16, fontWeight: "800" }}>+</Text><Text style={{ color: ink.textPrimary, fontSize: 13, fontWeight: "700" }}>Add car</Text></Pressable>} />
       ) : null}
-      {list.length === 0 && !error && !ownerUnknown && !ownerLinking ? (
+      {list.length === 0 && !error && !ownerUnknown && !ownerLinking && !ownerNoProfile ? (
         <View style={{ ...glassPane(light), padding: metrics.cardPad, gap: space.breath }}>
           <T role="heading">No cars yet</T>
           <T tone="secondary">Add your car once. Bookings, bills and papers attach to it from then on.</T>
