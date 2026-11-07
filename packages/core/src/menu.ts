@@ -163,8 +163,8 @@ export const MENU_SEED: MenuSeed[] = [
   coat("fireball-2", "Fireball 2-year", "Fireball", 16000, 2, "Fireball ceramic coating, two-year tier.", 130),
   coat("fireball-3", "Fireball 3-year", "Fireball", 20000, 3, "Fireball ceramic coating, three-year tier.", 140),
   coat("kovalent-prolong", "Kovalent Prolong", "Kovalent", 22000, null, "Kovalent Prolong ceramic coating.", 150, true),
-  coat("kovalent-graphene", "Kovalent Graphene 7-year", "Kovalent", 32000, 7, "Kovalent graphene coating, seven-year tier.", 160),
-  coat("kovalent-borophene", "Kovalent Borophene", "Kovalent", 50000, null, "Kovalent flagship coating.", 170),
+  coat("kovalent-graphene", "Kovalent Graphene", "Kovalent", 32000, null, "Kovalent graphene coating.", 160),
+  coat("kovalent-borophene", "Kovalent Borophene", "Kovalent", 50000, null, "Kovalent Borophene coating on Boron Nitride technology.", 170),
   coat("3m-ceramic", "3M Ceramic Coating", "3M", 45000, null, "3M ceramic coating, flagship tier.", 180, true),
   // Surface add-ons (pre-quoted, editable)
   addon("glass", "Glass coating", 4000, "Hydrophobic coating for all glass.", 200),
