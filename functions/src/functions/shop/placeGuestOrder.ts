@@ -21,7 +21,7 @@ const schema = z.object({
     productId: z.string().min(1),
     variantId: z.string().min(1),
     quantity: z.number().int().min(1),
-  }).strict()).min(1),
+  }).strict()).min(1).max(50),
   guest: z.object({
     name: z.string(), mobile: z.string(), email: z.string().optional(),
     address: z.string(), city: z.string(), state: z.string(), pincode: z.string(),

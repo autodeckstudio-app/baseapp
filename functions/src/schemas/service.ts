@@ -56,7 +56,7 @@ export const createServiceSchema = z.object({
   // send these yet — omitted means unconfigured (null), never guessed.
   warrantyDurationValue: z.number().int().min(1).nullable().optional(),
   warrantyDurationUnit: warrantyDurationUnitEnum.nullable().optional(),
-  vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),
+  vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).max(6).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),
@@ -80,7 +80,7 @@ export const updateServiceSchema = z.object({
   careTips: z.array(z.string().min(1).max(200).trim()).max(12).optional(),
   warrantyDurationValue: z.number().int().min(1).nullable().optional(),
   warrantyDurationUnit: warrantyDurationUnitEnum.nullable().optional(),
-  vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).optional(),
+  vehicleCategoryPricing: z.array(vehicleCategoryPricingSchema).max(6).optional(),
   requiredBayType: bayTypeEnum.optional(),
   membershipWashEligible: z.boolean().optional(),
   priceOnRequest: z.boolean().optional(),

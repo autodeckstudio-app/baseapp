@@ -12,6 +12,22 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
     ],
   },
+  // Security headers (66B7): baseline set enforced. COOP allows popups because
+  // Google sign-in uses signInWithRedirect primarily and signInWithPopup as fallback.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+        ],
+      },
+    ];
+  },
   // Serves Firebase's sign-in handler from this site so redirect sign-in works in Safari.
   async rewrites() {
     const host = process.env["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"];

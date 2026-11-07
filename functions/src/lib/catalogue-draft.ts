@@ -1,0 +1,28 @@
+import{createHash}from'node:crypto';
+import{assertValidMinorUnits}from'./pricing.js';
+export const canonicalCatalogueJson=(value:unknown):string=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
+export const catalogueReviewHash=(body:unknown)=>createHash('sha256').update(canonicalCatalogueJson(body)).digest('hex');import{z}from'zod';import{createServiceSchema}from'../schemas/service.js';
+export const cataloguePublicDestinationSchema=z.enum(['Ceramic','Coatings','Garage','Modifications and wraps','Paint Protection','Pickup and drop','Wash and care']);
+export const cataloguePayloadSchema=createServiceSchema.extend({active:z.boolean().optional()}).strict();
+export const catalogueDraftSchema=z.object({draftId:z.string().regex(/^[A-Za-z0-9_-]{1,128}$/).optional(),serviceId:z.string().regex(/^[A-Za-z0-9_-]{1,128}$/).nullable(),expectedServiceUpdatedAt:z.string().min(1).nullable(),expectedDraftVersion:z.number().int().nonnegative(),publicDestination:cataloguePublicDestinationSchema.nullable().optional(),payload:cataloguePayloadSchema}).strict();
+export type DraftState='draft'|'reviewed'|'publishing'|'published'|'blocked';
+export interface CatalogueDraft{ id:string;tenantId:string;serviceId:string|null;expectedServiceUpdatedAt:string|null;version:number;state:DraftState;payload:z.infer<typeof cataloguePayloadSchema>;createdBy:string;updatedBy:string;createdAt:string;updatedAt:string;reviewHash:string|null;reviewedBy:string|null;reviewedByRole:string|null;reviewedAt:string|null;expectedPublicRowHash?:string|null;newServiceId?:string|null;expectedNewTabHash?:string|null;publicDestination?:z.infer<typeof cataloguePublicDestinationSchema>|null }
+export function buildCatalogueDraft({id,tenantId,actor,now,input,existing}:{id:string;tenantId:string;actor:string;now:string;input:z.infer<typeof catalogueDraftSchema>;existing:CatalogueDraft|null}):CatalogueDraft{
+ input=catalogueDraftSchema.parse(input);if(!Number.isSafeInteger(input.payload.basePrice)||(input.payload.vehicleCategoryPricing??[]).some(r=>!Number.isSafeInteger(r.additionalPricePaise)))throw Error('Safe minor units required');assertValidMinorUnits(input.payload.basePrice,'basePrice');for(const rule of input.payload.vehicleCategoryPricing??[])assertValidMinorUnits(rule.additionalPricePaise,'size price');
+ if(existing&&(existing.tenantId!==tenantId||existing.id!==id||existing.serviceId!==input.serviceId))throw Error('Draft identity mismatch');
+ if((existing?.version??0)!==input.expectedDraftVersion)throw Error('Draft changed since it was opened');
+ if(existing&&['publishing','published','blocked'].includes(existing.state))throw Error('Draft cannot be edited in this state');
+ if(input.serviceId&&!input.expectedServiceUpdatedAt||!input.serviceId&&input.expectedServiceUpdatedAt)throw Error('Exact service version required');
+ return{id,tenantId,serviceId:input.serviceId,expectedServiceUpdatedAt:input.expectedServiceUpdatedAt,version:(existing?.version??0)+1,state:'draft',payload:input.payload,createdBy:existing?.createdBy??actor,updatedBy:actor,createdAt:existing?.createdAt??now,updatedAt:now,reviewHash:null,reviewedBy:null,reviewedByRole:null,reviewedAt:null,expectedPublicRowHash:null,newServiceId:null,expectedNewTabHash:null,publicDestination:input.publicDestination??existing?.publicDestination??null};
+}
+export function reviewCatalogueDraft(draft:CatalogueDraft,{actor,role='admin',now,expectedVersion,currentServiceUpdatedAt,trustedPublicRowHash=null,trustedNewRow=null,trustedMissingRow=false}:{actor:string;role?:string;now:string;expectedVersion:number;currentServiceUpdatedAt:string|null;trustedPublicRowHash?:string|null;trustedNewRow?:{serviceId:string;tabHash:string}|null;/** Server-side only: the trusted sheet scan proved this existing service has no public row, so the frozen tab append preimage is bound to the existing canonical id. Callers must never forward a client-supplied flag here. */trustedMissingRow?:boolean}):CatalogueDraft{
+ if(trustedNewRow&&!((!draft.serviceId&&/^svc_[a-f0-9]{32}$/.test(trustedNewRow.serviceId))||(trustedMissingRow&&draft.serviceId===trustedNewRow.serviceId)))throw Error('Trusted new row required');
+ if(trustedMissingRow&&(!trustedNewRow||!draft.serviceId||draft.publicDestination==null||trustedPublicRowHash!==null))throw Error('Trusted new row required');
+ if(trustedNewRow&&(!draft.publicDestination||!/^[a-f0-9]{64}$/.test(trustedNewRow.tabHash)))throw Error('Trusted new row required');
+ if(trustedPublicRowHash!==null&&!/^[a-f0-9]{64}$/.test(trustedPublicRowHash))throw Error('Trusted public row version required');
+ if(!['admin','superadmin'].includes(role))throw Error('Reviewer role denied');
+ if(!draft.serviceId&&!draft.publicDestination)throw Error('Choose an explicit public catalogue destination');
+ if(draft.state!=='draft'||draft.version!==expectedVersion||draft.expectedServiceUpdatedAt!==currentServiceUpdatedAt)throw Error('Stale or unavailable draft review');
+ const body={id:draft.id,tenantId:draft.tenantId,serviceId:draft.serviceId,expectedServiceUpdatedAt:draft.expectedServiceUpdatedAt,version:draft.version,payload:draft.payload,expectedPublicRowHash:trustedPublicRowHash,publicDestination:draft.publicDestination??null,newServiceId:trustedNewRow?.serviceId??null,expectedNewTabHash:trustedNewRow?.tabHash??null};
+ return{...draft,newServiceId:trustedNewRow?.serviceId??null,expectedNewTabHash:trustedNewRow?.tabHash??null,expectedPublicRowHash:trustedPublicRowHash,state:'reviewed',reviewHash:catalogueReviewHash(body),reviewedBy:actor,reviewedByRole:role,reviewedAt:now,updatedAt:now};
+}
