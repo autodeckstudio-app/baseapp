@@ -16,7 +16,7 @@ vi.mock('@autodeck/ui/native', async () => {
   };
 });
 // Real illustrative assets as file:// URIs so headless Chrome paints actual pixels.
-const { A, HOME_IMG, TYPE_IMG } = vi.hoisted(() => {
+const { A, HOME_IMG, TYPE_IMG, PRODUCT_IMG } = vi.hoisted(() => {
 const A = (rel: string) => ({ uri: 'file:///tmp/baseapp/apps/customer/assets/' + rel });
 const HOME_IMG: Record<string, any> = {
   paint: A('imagery/optimized/paint-protection.jpg'),
@@ -31,7 +31,33 @@ const TYPE_IMG: Record<string, any> = {
   'Colour PPF': A('imagery/service-types/colour-ppf.jpg'),
   'Accessories & styling': A('imagery/service-types/accessories.jpg'),
 };
-return { A, HOME_IMG, TYPE_IMG };
+const PRODUCT_IMG: Record<string, string> = {
+  'borophene': 'kovalent-borophene.png',
+  'graphene-matrix': 'kovalent-graphene-matrix.png',
+  'graphene': 'kovalent-graphene.png',
+  'matte': 'kovalent-matte.png',
+  'prolong-light': 'kovalent-prolong-light.png',
+  'prolong': 'kovalent-prolong.png',
+  'powershield': 'kovalent-powershield.png',
+};
+return { A, HOME_IMG, TYPE_IMG, PRODUCT_IMG };
+});
+// RN-web's SSR Image drops file:// sources; swap Image for a plain <img> in
+// this visual harness only so real asset pixels reach the screenshot.
+vi.mock('react-native', async (importOriginal) => {
+  const mod = await importOriginal<any>();
+  const React = await import('react');
+  return {
+    ...mod,
+    Image: (props: any) => {
+      const flat = mod.StyleSheet?.flatten ? mod.StyleSheet.flatten(props.style) : (props.style ?? {});
+      const { position, top, left, right, bottom, width, height, borderRadius, ...rest } = flat ?? {};
+      return React.createElement('img', {
+        src: props?.source?.uri ?? '',
+        style: { position: position ?? 'absolute', top: top ?? 0, left: left ?? 0, width: width ?? '100%', height: height ?? '100%', borderRadius: borderRadius ?? 0, objectFit: 'cover' },
+      });
+    },
+  };
 });
 vi.mock('../lib/service-type-images', () => ({
   serviceTypeImage: (home: string, family: string) => TYPE_IMG[family] ?? HOME_IMG[home],
@@ -44,7 +70,10 @@ vi.mock('./ServicePhoto', async () => {
     ServicePhoto: (props: any) => {
       const cat = props?.service?.category ?? '';
       const brand = props?.service?.brand ?? '';
-      const src = brand === 'Kovalent' ? A('imagery/brands/kovalent-logo.png')
+      const slug = (props?.service?.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const product = Object.keys(PRODUCT_IMG).find((k) => slug.includes(k));
+      const src = product ? A('imagery/brands/' + PRODUCT_IMG[product])
+        : brand === 'Kovalent' ? A('imagery/brands/kovalent-logo.png')
         : brand === 'Fireball' ? A('imagery/brands/fireball-logo.png')
         : cat === 'ppf' ? TYPE_IMG.PPF
         : cat === 'pickup' ? HOME_IMG.garage
