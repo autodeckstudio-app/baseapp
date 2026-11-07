@@ -179,10 +179,13 @@ export function routePath(
 ): ServicesPath {
   const home = SERVICE_HOMES.find((h) => h.key === params.home)?.key;
   if (home)
+    // Brand only narrows a family: a brand without a family would float over
+    // every family card and imply offerings the brand may not have (e.g. a
+    // ceramic-only brand over PPF/PPS), so it is dropped here.
     return {
       home,
       ...(params.family ? { family: params.family } : {}),
-      ...(params.brand ? { brand: params.brand } : {}),
+      ...(params.family && params.brand ? { brand: params.brand } : {}),
       ...(params.work ? { work: params.work } : {}),
     };
   const cat =
@@ -223,16 +226,15 @@ export function routePath(
       family: detailFamily[type],
       ...(brand ? { brand } : {}),
     };
-  if (cat && homeByCat[cat])
+  if (cat && homeByCat[cat]) {
+    const fam =
+      cat === "ppf" ? "PPF" : cat === "coatings" ? "Ceramic" : undefined;
     return {
       home: homeByCat[cat],
-      ...(cat === "ppf"
-        ? { family: "PPF" }
-        : cat === "coatings"
-          ? { family: "Ceramic" }
-          : {}),
-      ...(brand ? { brand } : {}),
+      ...(fam ? { family: fam } : {}),
+      ...(fam && brand ? { brand } : {}),
     };
+  }
   return {};
 }
 export function pathParams(path: ServicesPath): Record<string, string> {

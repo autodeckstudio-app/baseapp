@@ -289,6 +289,9 @@ export function ServicesExplorer({
   const families = familyChoices(home.key, mine, rr);
   const family =
     path.family && families.includes(path.family) ? path.family : null;
+  // Brand is meaningful only inside a family (brand-less concepts like PPS
+  // stay outside brand context); ignore a brand that arrives without one.
+  const activeBrand = family ? (path.brand ?? null) : null;
   let selected = family
     ? mine.filter((s) => servicePlacement(s)?.family === family)
     : [];
@@ -313,12 +316,12 @@ export function ServicesExplorer({
       ...selectedRefs.map((r) => r.brand).filter((b): b is string => !!b && b !== ADDON_BRAND),
     ]),
   ].sort();
-  const chooseBrands = !!family && brands.length > 0 && !path.brand;
-  const shown = path.brand
-    ? selected.filter((s) => s.brand === path.brand)
+  const chooseBrands = !!family && brands.length > 0 && !activeBrand;
+  const shown = activeBrand
+    ? selected.filter((s) => s.brand === activeBrand)
     : selected;
-  const shownRefs = path.brand
-    ? selectedRefs.filter((r) => r.brand === path.brand)
+  const shownRefs = activeBrand
+    ? selectedRefs.filter((r) => r.brand === activeBrand)
     : selectedRefs;
   const workLabel = PPF_CUSTOMER_OPTIONS.find(
     (w) => w.key === path.work,
@@ -358,11 +361,11 @@ export function ServicesExplorer({
       <SceneIntro
         compact
         eyebrow={
-          path.brand && (family ?? home.label).toLowerCase() !== (path.brand ?? "").toLowerCase()
+          activeBrand && (family ?? home.label).toLowerCase() !== (activeBrand ?? "").toLowerCase()
             ? (family ?? home.label)
             : ""
         }
-        title={path.brand ?? workLabel ?? family ?? home.label}
+        title={activeBrand ?? workLabel ?? family ?? home.label}
       />
       {!family ? (
         <>
@@ -456,7 +459,7 @@ export function ServicesExplorer({
                 label="Ask about this service"
                 onPress={() =>
                   onHelp(
-                    [home.label, family, workLabel, path.brand]
+                    [home.label, family, workLabel, activeBrand]
                       .filter(Boolean)
                       .join(" · "),
                   )
@@ -466,7 +469,7 @@ export function ServicesExplorer({
           )}
         </>
       )}
-      {path.brand ? (
+      {activeBrand ? (
         <Button
           kind="quiet"
           label="Change brand"
