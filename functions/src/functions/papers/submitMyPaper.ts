@@ -77,7 +77,12 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     }
     // The operation lock is the submission's tombstone: it survives replacement and deletion,
     // so a completed op can never be recreated by a retry.
-    const opSnap = await db.collection(PAPER_LOCKS).doc(opLockId(vehicle.tenantId, customerDocId, data.submissionId)).get();
+    let opSnap = await db.collection(PAPER_LOCKS).doc(opLockId(vehicle.tenantId, customerDocId, data.submissionId)).get();
+    if (!opSnap.exists && customerDocId !== user.uid) {
+      // Cross-deploy replay: a first attempt made BEFORE canonical keying wrote the op
+      // lock under the same verified principal's uid. Look that exact old key up too.
+      opSnap = await db.collection(PAPER_LOCKS).doc(opLockId(vehicle.tenantId, user.uid, data.submissionId)).get();
+    }
     if (!opSnap.exists) return null; // no earlier attempt of this submission
     const lock = opSnap.data() as { paperId: string; tenantId?: string; customerId?: string; vehicleId?: string };
     // The lock's immutable identity must match THIS request and tenant - a lock row that
@@ -179,7 +184,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
       throw new HttpsError("already-exists", "This car already has an RC. Edit it to replace it.");
     }
   }
-  await assertNumberUnused(db, { tenantId: vehicle.tenantId, customerId: customerDocId, reference: data.reference });
+  await assertNumberUnused(db, { tenantId: vehicle.tenantId, customerId: customerDocId, altCustomerId: user.uid, reference: data.reference });
 
   const ref = db.collection(COLLECTIONS.papers()).doc();
   const now = new Date().toISOString();
@@ -264,8 +269,14 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     if (opRef) {
       const opSnap = await tx.get(opRef);
       if (opSnap.exists) throw new HttpsError("already-exists", "This submission is already recorded.");
+      if (customerDocId !== user.uid) {
+        // Same verified principal's pre-fix uid-keyed op lock: it also proves this
+        // submission was already recorded (replay resolves it after the throw).
+        const legacyOpSnap = await tx.get(db.collection(PAPER_LOCKS).doc(opLockId(freshVehicle.tenantId, user.uid, data.submissionId!)));
+        if (legacyOpSnap.exists) throw new HttpsError("already-exists", "This submission is already recorded.");
+      }
     }
-    const claims = await readClaims(tx, db, { tenantId: freshVehicle.tenantId, customerId: customerDocId, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
+    const claims = await readClaims(tx, db, { tenantId: freshVehicle.tenantId, customerId: customerDocId, altCustomerId: user.uid, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
     tx.set(ref, paper);
     if (opRef) tx.set(opRef, { paperId: ref.id, tenantId: freshVehicle.tenantId, customerId: customerDocId, vehicleId: data.vehicleId });
     for (const c of claims) tx.set(c.ref, c.data);

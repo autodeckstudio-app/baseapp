@@ -116,4 +116,21 @@ describe("claimed customer (doc id != auth uid): writers stamp and guard the can
     expect(written?.[1]?.customerId).toBe(DOC);
     await expect((submitMyPaper as any).run(req({ studioId: "st1", vehicleId: "v2", submissionId: "22222222-2222-4222-8222-222222222222", kind: "RC", reference: "GJ02CD5678" }))).rejects.toMatchObject({ code: "permission-denied" });
   });
+  it("cross-deploy replay: a pre-fix uid-keyed op lock + paper is found and replayed, never duplicated", async () => {
+    const subId = "33333333-3333-4333-8333-333333333333";
+    h.rows.set("papers/p-old", { id: "p-old", tenantId: "t", customerId: UID, vehicleId: "v1", kind: "RC", reference: "GJ01AB1234", submittedBy: "customer", status: "PENDING",
+      submission: { submissionId: subId, vehicleId: "v1", kind: "RC", reference: "GJ01AB1234", studioId: "st1" } });
+    // Pre-fix keying: the op lock id carries the auth uid, not the canonical doc id.
+    h.rows.set(`paperLocks/op__t__${UID}__${subId}`, { paperId: "p-old", tenantId: "t", customerId: UID, vehicleId: "v1" });
+    const out = await (submitMyPaper as any).run(req({ studioId: "st1", vehicleId: "v1", submissionId: subId, kind: "RC", reference: "GJ01AB1234" }));
+    expect(out.id).toBe("p-old");
+    expect(out.replayed).toBe(true);
+    expect([...h.rows.keys()].filter((k) => k.startsWith("papers/"))).toEqual(["papers/p-old"]);
+  });
+
+  it("dual-key uniqueness: a pre-fix uid-keyed active paper still blocks the same number", async () => {
+    h.rows.set("papers/p-dup", { id: "p-dup", tenantId: "t", customerId: UID, vehicleId: "v1", kind: "PUC", reference: "PUC 551200", submittedBy: "customer", status: "PENDING" });
+    h.rows.set(`paperLocks/num__t__${UID}__PUC551200`, { paperId: "p-dup", kind: "number" });
+    await expect((submitMyPaper as any).run(req({ studioId: "st1", vehicleId: "v1", submissionId: "44444444-4444-4444-8444-444444444444", kind: "PUC", reference: "PUC551200" }))).rejects.toMatchObject({ code: "already-exists" });
+  });
 });

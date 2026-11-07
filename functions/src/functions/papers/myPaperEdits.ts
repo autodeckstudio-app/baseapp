@@ -54,7 +54,7 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
   if (paper.kind === "OTHER" && data.title === undefined && !paper.title) {
     // Old OTHER papers have no name; editing one is allowed without forcing a name.
   }
-  await assertNumberUnused(db, { tenantId: paper.tenantId, customerId: customerDocId, reference, exceptPaperId: paper.id });
+  await assertNumberUnused(db, { tenantId: paper.tenantId, customerId: customerDocId, altCustomerId: user.uid, reference, exceptPaperId: paper.id });
 
   const now = new Date().toISOString();
   // Every staged replacement gets its own unique path (nonce inside the paper's own prefix, so all
@@ -135,11 +135,17 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
       throw new HttpsError("aborted", "This document changed while you were saving. Open it and save again.");
     }
     committed.evidencePath = fresh.evidencePath ?? null;
-    const claims = await readClaims(tx, db, { tenantId: paper.tenantId, customerId: customerDocId, vehicleId: paper.vehicleId, paperId: paper.id, reference, kind: paper.kind, claimRc: paper.kind === "RC" });
+    const claims = await readClaims(tx, db, { tenantId: paper.tenantId, customerId: customerDocId, altCustomerId: user.uid, vehicleId: paper.vehicleId, paperId: paper.id, reference, kind: paper.kind, claimRc: paper.kind === "RC" });
     if (numberLockId(paper.tenantId, customerDocId, fresh.reference) !== numberLockId(paper.tenantId, customerDocId, reference)) {
       const oldRef = db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, customerDocId, fresh.reference));
       const old = await tx.get(oldRef);
       if (old.exists && (old.data() as { paperId: string }).paperId === paper.id) tx.delete(oldRef);
+      // Same verified principal's pre-fix uid-keyed lock for the old number, if any.
+      const oldUidRef = db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, user.uid, fresh.reference));
+      if (oldUidRef.id !== oldRef.id) {
+        const oldUid = await tx.get(oldUidRef);
+        if (oldUid.exists && (oldUid.data() as { paperId: string }).paperId === paper.id) tx.delete(oldUidRef);
+      }
     }
     for (const c of claims) tx.set(c.ref, c.data);
     tx.update(ref, { ...update, revision: currentRevision + 1 });
@@ -200,7 +206,8 @@ export const deleteMyPaper = onCall({ region: "asia-south1", invoker: "public", 
       throw new HttpsError("aborted", "This document changed while you were deleting it. Open it and delete again.");
     }
     pathsToDelete = [...new Set([fresh.evidencePath, fresh.pendingEvidencePath].filter((p): p is string => safePath(p)))];
-    const locks = [db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, customerDocId, paper.reference)), ...(paper.kind === "RC" ? [db.collection(PAPER_LOCKS).doc(rcLockId(paper.vehicleId))] : [])];
+    const locks = [...new Set([numberLockId(paper.tenantId, customerDocId, paper.reference), numberLockId(paper.tenantId, user.uid, paper.reference)])].map((id) => db.collection(PAPER_LOCKS).doc(id));
+    if (paper.kind === "RC") locks.push(db.collection(PAPER_LOCKS).doc(rcLockId(paper.vehicleId)));
     const snaps = await Promise.all(locks.map((l) => tx.get(l)));
     tx.delete(ref);
     snaps.forEach((sn, i) => { if (sn.exists && (sn.data() as { paperId: string }).paperId === paper.id) tx.delete(locks[i]!); });
