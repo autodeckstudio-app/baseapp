@@ -9,12 +9,12 @@ import {
   pickupRoadKmForDisplay,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { roadMetersBetween, GOOGLE_ROUTES_API_KEY } from "../../lib/road-distance.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { requireCustomerDocId } from "../../lib/customer-identity.js";
+import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 const quoteSchema = z
   .object({
@@ -36,8 +36,8 @@ export const PICKUP_QUOTE_TTL_MS = 30 * 60 * 1000;
  * distance cannot be known: the client then offers booking without pickup, never an estimate.
  */
 export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck(), secrets: [GOOGLE_ROUTES_API_KEY] }, async (request) => {
-  const user = extractCustomerUser(request);
-  assertRole(user, "customer");
+  const user = extractUser(request);
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   assertTenant(user, user.claims.tenantId);
   const data = validate(quoteSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "pickup.quote");
@@ -54,8 +54,12 @@ export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: s
   const roadMeters = legs.reduce((sum, l) => sum + l.roadMeters, 0);
   const now = Date.now();
   const db = getFirestore();
-  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
-  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  // Self-service is role-agnostic like createBooking: customers must own a
+  // profile; staff without one keep legacy uid-keyed ownership.
+  const resolvedDocId = user.claims.role === "customer"
+    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
+    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const customerDocId = resolvedDocId ?? user.uid;
   const ref = db.collection(COLLECTIONS.pickupQuotes()).doc();
   await ref.set({
     id: ref.id,

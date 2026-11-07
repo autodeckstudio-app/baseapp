@@ -5,10 +5,10 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import type { Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { requireCustomerDocId } from "../../lib/customer-identity.js";
+import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const submitReviewSchema = z.object({
@@ -18,14 +18,18 @@ const submitReviewSchema = z.object({
 });
 
 export const submitReview = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
-  const user = extractCustomerUser(request);
-  assertRole(user, "customer");
+  const user = extractUser(request);
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   const data = validate(submitReviewSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.review");
 
   const db = getFirestore();
-  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
-  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  // Self-service is role-agnostic like createBooking: customers must own a
+  // profile; staff without one keep legacy uid-keyed ownership.
+  const resolvedDocId = user.claims.role === "customer"
+    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
+    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const customerDocId = resolvedDocId ?? user.uid;
   const snap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
   if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
   const booking = snap.data() as Booking;

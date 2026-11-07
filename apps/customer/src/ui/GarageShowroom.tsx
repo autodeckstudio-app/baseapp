@@ -28,7 +28,7 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
         ) : null}
         <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-            <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 28, letterSpacing:-0.8, fontWeight: "600" }}>{name}</Text>
+            <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 20, letterSpacing:-0.4, fontWeight: "700" }}>{name}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
           </View>
         </View>
@@ -41,28 +41,39 @@ export function CarPhotoCard({ car: v, height, badge, onOpen, chip }: { car: Veh
 /** One car on the floor: hero photo, dark floor band with a soft reflection under it. */
 function FloorCar({ car: v, width, height, focused, onOpen, chip }: { car: Vehicle; width: number; height: number; focused: boolean; onOpen: (v: Vehicle) => void; chip?: React.ReactNode }) {
   const name = `${v.make ?? ""} ${v.model ?? ""}`.trim() || v.registrationNumber;
-  const floorH = 54;
+  // A car with no photo yet gets a compact card: a short thumb band keeps the
+  // truthful empty state, and identity lives in a solid dark bar BELOW it - no
+  // overlay collisions, name and plate always fully readable. The full hero
+  // height with the photo gradient is earned by a real photo.
+  if (!v.photoUrl) {
+    return (
+      <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
+        <View style={{ width, opacity: focused ? 1 : 0.72, transform: [{ scale: focused ? 1 : 0.94 }] }}>
+          <View style={{ borderRadius: 24, borderWidth:1, borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
+            <CarThumb car={v} height={88} radius={0} />
+            <View style={{ backgroundColor: "rgba(20,20,26,0.92)", paddingHorizontal: 14, paddingVertical: 12, gap: 6 }}>
+              <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 16, letterSpacing:-0.2, fontWeight: "700" }}>{name}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+            </View>
+            {chip ? <View style={{ position: "absolute", right: 12, top: 12 }}>{chip}</View> : null}
+          </View>
+        </View>
+      </SceneCard>
+    );
+  }
   return (
     <SceneCard label={`Open ${name}`} onPress={() => onOpen(v)}>
       <View style={{ width, opacity: focused ? 1 : 0.72, transform: [{ scale: focused ? 1 : 0.94 }] }}>
         <View style={{ height, borderRadius: 24, borderWidth:1,borderColor:"rgba(180,180,190,0.20)", overflow: "hidden", backgroundColor: "rgba(127,127,135,0.14)" }}>
           <CarThumb car={v} height={height} radius={0} />
           <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(height * 0.62), ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.78) 100%)" } as object) : { backgroundColor: "rgba(0,0,0,0.45)" }) }} />
-          <View style={{ position: "absolute", left: 18, right: 18, bottom: 16, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
+          <View style={{ position: "absolute", left: 16, right: 16, bottom: 14, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
             <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-              <Text numberOfLines={1} style={{ color: "#FFFFFF", fontSize: 28, letterSpacing:-0.8, fontWeight: "600" }}>{name}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
+              <Text numberOfLines={2} style={{ color: "#FFFFFF", fontSize: 20, letterSpacing:-0.4, fontWeight: "700" }}>{name}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}><Plate value={v.registrationNumber} />{segmentLabel(v.category) ? <Text style={{ color: "#E4E2DF", fontSize: 12 }}>{segmentLabel(v.category)}</Text> : null}</View>
             </View>
           </View>
           {chip ? <View style={{ position: "absolute", right: 12, top: 12 }}>{chip}</View> : null}
-        </View>
-        {/* garage floor: a dark polished band with the car's soft reflection fading down */}
-        <View pointerEvents="none" style={{ height: floorH, marginHorizontal: 10, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, overflow: "hidden", ...(Platform.OS === "web" ? ({ backgroundImage: "linear-gradient(180deg, rgba(20,20,26,0.9) 0%, rgba(20,20,26,0) 100%)" } as object) : { backgroundColor: "rgba(20,20,26,0.35)" }) }}>
-          {Platform.OS === "web" ? (
-            <View style={{ height, transform: [{ scaleY: -1 }], opacity: 0.28, ...( { maskImage: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 85%)", WebkitMaskImage: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 85%)" } as object ) }}>
-              <CarThumb car={v} height={height} radius={0} />
-            </View>
-          ) : null}
         </View>
       </View>
     </SceneCard>

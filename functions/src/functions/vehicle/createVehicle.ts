@@ -34,7 +34,9 @@ export const createVehicle = onCall({ region: "asia-south1" , enforceAppCheck: s
     ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
     : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   let ownerId = resolvedDocId ?? user.uid;
-  if (data.ownerId && data.ownerId !== ownerId) {
+  // A self reference is the resolved doc id OR the raw auth uid (older clients
+  // still send their uid); anything else is an on-behalf intake by staff.
+  if (data.ownerId && data.ownerId !== ownerId && data.ownerId !== user.uid) {
     if (user.claims.role === "customer") {
       throw new HttpsError("permission-denied", "Cannot create a vehicle for another customer.");
     }

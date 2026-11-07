@@ -6,13 +6,13 @@ import { applyPickupFees, legFees } from "../../lib/pickup-fee.js";
 import { membershipForFreePickup } from "../../lib/pickup-benefit.js";
 import { pickupRoadKmForDisplay, type Booking, type Invoice, type ServiceJob, type Membership } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractCustomerUser, extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { studioLocalToIso } from "../../lib/studio-time.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { requireCustomerDocId } from "../../lib/customer-identity.js";
+import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 // Customer preference only - never a promised slot. The studio agrees the
 // actual time with the customer by phone call and enters it on approval
@@ -85,8 +85,8 @@ async function studioTimezone(db: FirebaseFirestore.Firestore, studioId: string)
 
 /** Customer asks the studio to collect and/or return the car. A request only: the studio confirms or declines. New, additive. */
 export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
-  const user = extractCustomerUser(request);
-  assertRole(user, "customer");
+  const user = extractUser(request);
+  assertRole(user, "customer", "studio", "admin", "superadmin");
   assertTenant(user, user.claims.tenantId);
   const data = validate(requestSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "pickup.request");
@@ -95,8 +95,12 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
   // The fee is decided here from the distance. null = no location sent, so the studio confirms the distance and fee by phone.
   let feePaise: number | null = null;
   const db = getFirestore();
-  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
-  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  // Self-service is role-agnostic like createBooking: customers must own a
+  // profile; staff without one keep legacy uid-keyed ownership.
+  const resolvedDocId = user.claims.role === "customer"
+    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
+    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const customerDocId = resolvedDocId ?? user.uid;
   let quoteRef: FirebaseFirestore.DocumentReference | null = null;
   if (data.quoteId) {
     // Stored server-side quote is the single source of truth: charge EXACTLY what the customer was shown.
