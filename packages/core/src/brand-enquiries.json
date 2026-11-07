@@ -244,7 +244,7 @@
     "group": "ppf",
     "note": "Paint protection film. Ask about the right finish and coverage for your car.",
     "source": "https://www.garwareppf.com/",
-    "surface": "brand-film"
+    "surface": "colour-ppf"
   },
   {
     "key": "garware-white-ppf",
@@ -253,7 +253,7 @@
     "group": "ppf",
     "note": "Paint protection film. Ask about the right finish and coverage for your car.",
     "source": "https://www.garwareppf.com/",
-    "surface": "brand-film"
+    "surface": "colour-ppf"
   },
   {
     "key": "garware-protect-ppf",
@@ -280,7 +280,7 @@
     "group": "ppf",
     "note": "Paint protection film. Ask about the right finish and coverage for your car.",
     "source": "https://llumar.com/en/paint-protection-film/",
-    "surface": "brand-film"
+    "surface": "colour-ppf"
   },
   {
     "key": "llumar-platinum-extra-ppf",

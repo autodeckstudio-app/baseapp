@@ -34,10 +34,10 @@ describe("services type level", () => {
     const years = leafServices({ kind: "branch", key: "x", label: "x", children: t.filter((n) => n.kind === "branch") }).filter((s) => /year/i.test(s.warrantyLabel ?? ""));
     expect(years.every((s) => /^menu-coat-(autodeck|fireball|kovalent)/.test(s.id))).toBe(true);
   });
-  it("ppf: colour is a film type, never a brand; brands are the four real ones", () => {
+  it("ppf: colour is a film type, never a brand; brand-film enquiry brands are the confirmed sheet lineup", () => {
     const t = buildTree(group("ppf"), all);
     const film = resolvePath(t, ["brand-film"]).nodes.map((n) => (n.kind === "branch" ? n.label : ""));
-    expect(film).toEqual(["Garware", "XPEL", "LLumar", "3M"]);
+    expect([...film].sort()).toEqual(["3M", "AVVYX", "GSWF", "Garware", "LLumar", "NAR", "Ultraguard", "XPEL"]);
     expect(film).not.toContain("Colour films");
     expect(t.some((n) => n.kind === "branch" && n.key === "colour")).toBe(true);
   });
@@ -83,7 +83,7 @@ it('the confirmed sheet film lineup shows as enquiry rows under Film by brand; u
   expect(ppf.map(n=>n.kind==='enquiry'?n.key:n.kind)).toEqual(['branch','pps-spray']);
   const film=ppf.find(n=>n.kind==='branch'&&n.key==='brand-film');
   const brands=film&&film.kind==='branch'?film.children.map(n=>n.kind==='branch'?n.key:'').sort():[];
-  expect(brands).toEqual(['3M','AVVYX','Garware','GSWF','LLumar','NAR','Ultraguard','XPEL']);
+  expect(brands).toEqual(['3M','AVVYX','GSWF','Garware','LLumar','NAR','Ultraguard','XPEL']);
   const ppfJson=JSON.stringify(ppf);
   // Colour and black/white films live under Modifications & Wraps > Colour PPF, not Paint Protection; reference brands are unverified.
   for(const hidden of ['Avery Dennison','Rodium','SunTek','ProWrap','STEK','Legend PPF','Black PPF','White PPF','Select Black']) expect(ppfJson).not.toContain(hidden);

@@ -99,7 +99,8 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
   await press(r, "Change brand");
   expect(JSON.stringify(r.toJSON())).not.toContain("GSWF");
   await act(async () => r.unmount());
-  // PPF removal: the confirmed sheet film lineup shows enquiry-only (no product, price or booking); held references stay hidden.
+  // PPF removal: film ranges belong to full-body fitting only, so removal and
+  // replacement never show the film-brand chooser - they confirm with the studio.
   const ppfReference = vi.fn();
   function PpfApp() {
     const [p, setP] = useState<ServicesPath>({ home: "paint", family: "PPF", work: "removal" });
@@ -120,8 +121,36 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
     r = create(<PpfApp />);
   });
   const ppfText = JSON.stringify(r.toJSON());
-  expect(ppfText).toContain("Choose a brand to see its current offerings");
-  expect(ppfText).not.toContain("No confirmed current product");
+  expect(ppfText).toContain("Confirm Remove existing film with the studio");
+  expect(ppfText).not.toContain("Choose a brand");
+  expect(ppfText).not.toContain("Garware");
+  await press(r, "Ask about this service");
+  expect(help).toHaveBeenCalledWith("Paint Protection · PPF · Remove existing film");
+  await act(async () => r.unmount());
+  // Full-body fitting: the confirmed sheet film lineup shows enquiry-only (no
+  // product, price or booking); held references stay hidden.
+  help.mockClear();
+  function FullBodyApp() {
+    const [p, setP] = useState<ServicesPath>({ home: "paint", family: "PPF", work: "full_body" });
+    return (
+      <ServicesExplorer
+        services={rows}
+        path={p}
+        query=""
+        onPath={setP}
+        onOpen={opened}
+        onHelp={help}
+        onReference={ppfReference}
+        priceLabel={() => null}
+      />
+    );
+  }
+  await act(async () => {
+    r = create(<FullBodyApp />);
+  });
+  const fullText = JSON.stringify(r.toJSON());
+  expect(fullText).toContain("Choose a brand to see its current offerings");
+  expect(fullText).not.toContain("No confirmed current product");
   await press(r, "Garware");
   const gText = JSON.stringify(r.toJSON());
   expect(gText).toContain("Premium PPF");
@@ -132,6 +161,40 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
   await press(r, "View Premium PPF");
   expect((ppfReference.mock.calls.at(-1)![0] as any).key).toBe("garware-premium-exact");
   expect(opened).toHaveBeenCalledTimes(1);
+  await act(async () => r.unmount());
+  // Colour PPF: black/white films live under Modifications & Wraps > Colour PPF
+  // (owner taxonomy, 5 Nov), enquiry-only, not under Paint Protection.
+  const colourReference = vi.fn();
+  function ColourApp() {
+    const [p, setP] = useState<ServicesPath>({ home: "modifications", family: "Colour PPF" });
+    return (
+      <ServicesExplorer
+        services={rows}
+        path={p}
+        query=""
+        onPath={setP}
+        onOpen={opened}
+        onHelp={help}
+        onReference={colourReference}
+        priceLabel={() => null}
+      />
+    );
+  }
+  await act(async () => {
+    r = create(<ColourApp />);
+  });
+  const cText = JSON.stringify(r.toJSON());
+  expect(cText).toContain("Choose a brand to see its current offerings");
+  expect(cText).not.toContain("Premium PPF");
+  await press(r, "Garware");
+  const cgText = JSON.stringify(r.toJSON());
+  expect(cgText).toContain("Black PPF");
+  expect(cgText).toContain("White PPF");
+  expect(cgText).toContain("Quote to confirm");
+  expect(cgText).not.toContain("Premium PPF");
+  expect(cgText).not.toContain("\u20b9");
+  await press(r, "View Black PPF");
+  expect((colourReference.mock.calls.at(-1)![0] as any).key).toBe("garware-black-ppf");
   await act(async () => r.unmount());
   // PPS: the confirmed brand-less service concept card - quote-to-confirm, enquiry route, no price, no booking.
   const reference = vi.fn();

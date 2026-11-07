@@ -59,6 +59,7 @@ export const SERVICE_TYPES: Record<string, TypeDef[]> = {
     E("periodic", "Periodic service"), E("brakes", "Brakes"), E("suspension", "Suspension"), E("rust", "Anti-rust protection"),
   ],
   mods: [
+    { key: "colour-ppf", label: "Colour PPF", blurb: "Coloured and black paint protection films. Quoted after seeing the car." },
     { key: "wraps", label: "Vinyl wraps and graphics", blurb: "Full and partial wraps. Quoted after seeing the car.", ids: ["menu-mods-wrap"] },
     { key: "styling", label: "Accessories and styling", blurb: "Quoted per job.", ids: ["menu-mods-styling"], test: (s) => s.category === "modifications" },
     { key: "film", label: "Window film (fitment check first)", blurb: "Quoted by car and film, after a legality and fitment check.", ids: ["menu-mods-tint"], test: (s) => s.category === "tinting" },
@@ -105,7 +106,9 @@ export function buildTree(group: Pick<MenuGroup, "key" | "categories">, all: Ser
     const pps=BRAND_ENQUIRIES.find(x=>x.key==='pps-spray');
     if(pps) asks.push({kind:'enquiry',key:pps.key,label:pps.name,blurb:pps.note,infoKey:pps.key});
   }
-  for(const item of BRAND_ENQUIRIES.filter(x=>x.group===group.key&&x.key!=='pps-spray'&&x.brand!==null)) {
+  // Colour-film references are ppf-group records that the owner taxonomy (5 Nov)
+  // places under Modifications & Wraps > Colour PPF.
+  for(const item of BRAND_ENQUIRIES.filter(x=>(x.group===group.key||(group.key==='mods'&&x.surface==='colour-ppf'))&&x.key!=='pps-spray'&&x.brand!==null)) {
     const typeKey=item.surface??additionType;
     let dest=offered.find((node):node is Extract<TreeNode,{kind:'branch'}>=>node.kind==='branch'&&node.key===typeKey);
     if(!dest){const def=defs.find(x=>x.key===typeKey);if(!def)continue;dest={kind:'branch',key:def.key,label:def.label,children:[]};offered.push(dest);const duplicate=asks.findIndex(n=>n.kind==='enquiry'&&n.key===def.key);if(duplicate>=0)asks.splice(duplicate,1);}

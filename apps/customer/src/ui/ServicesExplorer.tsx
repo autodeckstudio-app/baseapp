@@ -295,8 +295,14 @@ export function ServicesExplorer({
   let selected = family
     ? mine.filter((s) => servicePlacement(s)?.family === family)
     : [];
+  // Film ranges belong to full-body fitting only. Removal and replacement
+  // are their own work and fall through to the confirm-with-studio pane.
   const selectedRefs = family
-    ? rr.filter((r) => referencePlacement(r).family === family)
+    ? rr.filter(
+        (r) =>
+          referencePlacement(r).family === family &&
+          (family !== "PPF" || !path.work || path.work === "full_body"),
+      )
     : [];
   if (family === "PPF")
     selected = path.work

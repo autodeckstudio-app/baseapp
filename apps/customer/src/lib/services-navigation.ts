@@ -24,6 +24,8 @@ export const FAMILY_COPY: Record<string, string> = {
     "Paint coatings, with the exact product and preparation confirmed for your car.",
   PPF: "Paint protection film. Full-body fitting, removal and replacement are separate work.",
   PPS: "Spray-on paint protection. A different treatment from film or ceramic coating.",
+  "Colour PPF":
+    "Coloured and black paint protection films. The studio confirms the film, coverage and quote for your car.",
 };
 /** Display grouping only. Product identity, price, eligibility and scope remain on the original record. */
 export function servicePlacement(
@@ -107,6 +109,10 @@ export function referencePlacement(r: BrandEnquiry): {
   home: ServiceHomeKey;
   family: string;
 } {
+  // Owner taxonomy (5 Nov): black/white/colour films live under
+  // Modifications & Wraps > Colour PPF, not under Paint Protection.
+  if (r.surface === "colour-ppf")
+    return { home: "modifications", family: "Colour PPF" };
   if (r.group === "ppf")
     return { home: "paint", family: r.key === "pps-spray" ? "PPS" : "PPF" };
   const surface = r.surface ?? "";
