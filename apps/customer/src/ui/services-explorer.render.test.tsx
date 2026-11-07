@@ -121,10 +121,10 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
     r = create(<PpfApp />);
   });
   const ppfText = JSON.stringify(r.toJSON());
-  expect(ppfText).toContain("Confirm Remove existing film with the studio");
+  expect(ppfText).toContain("Ask the studio about Remove existing film");
   expect(ppfText).not.toContain("Choose a brand");
   expect(ppfText).not.toContain("Garware");
-  await press(r, "Ask about this service");
+  await press(r, "Ask the studio");
   expect(help).toHaveBeenCalledWith("Paint Protection · PPF · Remove existing film");
   await act(async () => r.unmount());
   // Full-body fitting: the confirmed sheet film lineup shows enquiry-only (no

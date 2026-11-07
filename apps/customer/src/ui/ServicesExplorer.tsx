@@ -453,16 +453,15 @@ export function ServicesExplorer({
           ) : (
             <Pane pad="gap">
               <T role="bodyStrong">
-                Confirm {workLabel ?? family} with the studio
+                Ask the studio about {workLabel ?? family}
               </T>
               <T tone="secondary">
-                No confirmed current product or online package is listed for
-                this choice. Ask the studio about availability, work, price and
-                written terms before booking.
+                The studio confirms the work, time and quote for your car
+                before you book.
               </T>
               <Button
                 kind="quiet"
-                label="Ask about this service"
+                label="Ask the studio"
                 onPress={() =>
                   onHelp(
                     [home.label, family, workLabel, activeBrand]
