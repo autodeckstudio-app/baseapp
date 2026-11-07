@@ -23,7 +23,7 @@ import {
   type Unsubscribe,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, limit, query, where } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLLECTIONS } from "@autodeck/database";
 import { auth, db, functions, useEmulator, emulatorBackend } from "./firebase";
@@ -234,7 +234,48 @@ async function resolveCustomerDocIdState(allowSetup: boolean): Promise<CustomerD
     if (probe === "mine") return current() ? { outcome: "resolved", customerDocId: stored } : { outcome: "error" };
     if (probe === "error" || !current()) return { outcome: "error" };
   }
-  if (!allowSetup) return { outcome: "absent" };
+  if (!allowSetup) {
+    // New-device discovery for staff: a claimed server-generated record id
+    // unknown to this device (never persisted here). One narrow READ-ONLY
+    // query on the account's OWN authUid+tenant; every candidate is still
+    // probe-verified. Exactly one resolves (and persists for next launch);
+    // zero is a founded "absent"; more than one is ambiguous - truthful
+    // "error", never a guess. No writes, no setup callable, no widening
+    // beyond the account's own authUid+tenant.
+    let tenantId: string | null = null;
+    try {
+      const t = (await auth.currentUser?.getIdTokenResult())?.claims["tenantId"];
+      tenantId = typeof t === "string" && t ? t : null;
+    } catch {
+      return { outcome: "error" };
+    }
+    if (!tenantId || !current()) return { outcome: "error" };
+    let candidates: string[];
+    try {
+      const qs = await getDocs(query(
+        collection(db, COLLECTIONS.customers()),
+        where("authUid", "==", uid),
+        where("tenantId", "==", tenantId),
+        limit(3),
+      ));
+      if (!current()) return { outcome: "error" };
+      candidates = qs.docs
+        .filter((d) => !(d.data() as { deletedAt?: unknown }).deletedAt)
+        .map((d) => d.id);
+    } catch {
+      return { outcome: "error" };
+    }
+    if (candidates.length === 1) {
+      const probe = await probeMyCustomerDoc(candidates[0]);
+      if (probe === "mine" && current()) {
+        try { await AsyncStorage.setItem(DOC_ID_STORAGE_PREFIX + uid, candidates[0]); } catch { /* best effort */ }
+        return { outcome: "resolved", customerDocId: candidates[0] };
+      }
+      return { outcome: probe === "error" ? "error" : "absent" };
+    }
+    if (candidates.length > 1) return { outcome: "error" }; // ambiguous: never pick
+    return { outcome: "absent" };
+  }
   // Server semantics (verified in the callable): this returns the CLAIMED
   // profile for a claimed account, claimRequired for a known unclaimed
   // email, and only creates a profile for a genuinely new email - the app's

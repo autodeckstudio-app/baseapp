@@ -7,6 +7,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const h = vi.hoisted(() => ({
   getDoc: vi.fn(),
+  getDocs: vi.fn(),
   token: vi.fn(),
   setup: vi.fn(),
   uid: "uid-1",
@@ -23,6 +24,11 @@ vi.mock("../lib/firebase", () => ({
 vi.mock("firebase/firestore", () => ({
   doc: (_db: unknown, ...parts: string[]) => ({ parts }),
   getDoc: () => h.getDoc(),
+  collection: (_db: unknown, ...parts: string[]) => ({ parts }),
+  query: (...a: unknown[]) => ({ a }),
+  where: (...a: unknown[]) => ({ a }),
+  limit: (n: number) => ({ n }),
+  getDocs: () => h.getDocs(),
 }));
 vi.mock("firebase/functions", () => ({
   httpsCallable: (_f: unknown, name: string) => async (data?: unknown) => {
@@ -48,10 +54,11 @@ const mine = { authUid: "uid-1", tenantId: "automodz", deletedAt: null };
 const KEY = "autodeck.customerDocId.uid-1";
 
 beforeEach(() => {
-  h.getDoc.mockReset(); h.setup.mockReset(); h.token.mockReset();
+  h.getDoc.mockReset(); h.getDocs.mockReset(); h.setup.mockReset(); h.token.mockReset();
   h.uid = "uid-1"; h.store.clear();
   h.token.mockResolvedValue({ claims: { tenantId: "automodz" } });
   h.setup.mockResolvedValue({ claimRequired: true });
+  h.getDocs.mockResolvedValue({ docs: [] });
 });
 
 describe("verifyMyCustomerDocId", () => {
@@ -219,5 +226,53 @@ describe("resolveExistingCustomerDocId (staff read-only)", () => {
     });
     const r = await resolveExistingCustomerDocId();
     expect(r.outcome).not.toBe("resolved");
+  });
+
+  it("new-device discovery: one live authUid+tenant candidate resolves and persists, setup never called", async () => {
+    h.getDoc.mockImplementation(() => Promise.resolve(snap(undefined))); // uid doc missing
+    h.getDocs.mockResolvedValue({ docs: [{ id: "staged-9", data: () => ({ deletedAt: null }) }] });
+    h.getDoc.mockImplementationOnce(() => Promise.resolve(snap(undefined))) // fast path uid
+      .mockImplementationOnce(() => Promise.resolve(snap(mine))); // probe of discovered id
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "resolved", customerDocId: "staged-9" });
+    expect(h.store.get(KEY)).toBe("staged-9");
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("discovery ambiguity (two live candidates) is truthful error, never a pick", async () => {
+    h.getDoc.mockResolvedValue(snap(undefined));
+    h.getDocs.mockResolvedValue({ docs: [
+      { id: "staged-9", data: () => ({ deletedAt: null }) },
+      { id: "staged-10", data: () => ({ deletedAt: null }) },
+    ] });
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "error" });
+    expect(h.store.has(KEY)).toBe(false);
+    expect(h.setup).not.toHaveBeenCalled();
+  });
+
+  it("discovery with only deleted candidates is a founded absent", async () => {
+    h.getDoc.mockResolvedValue(snap(undefined));
+    h.getDocs.mockResolvedValue({ docs: [{ id: "staged-9", data: () => ({ deletedAt: "2026-11-01" }) }] });
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "absent" });
+    expect(h.store.has(KEY)).toBe(false);
+  });
+
+  it("discovery query failure is error (unknown), never absent", async () => {
+    h.getDoc.mockResolvedValue(snap(undefined));
+    h.getDocs.mockRejectedValue(new Error("permission-denied"));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "error" });
+  });
+
+  it("auth switch A->B->A: cached id for A re-verifies, B never inherits it", async () => {
+    h.store.set(KEY, "staged-9");
+    h.getDoc.mockImplementationOnce(() => Promise.resolve(snap(undefined)))
+      .mockImplementationOnce(() => Promise.resolve(snap(mine)));
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "resolved", customerDocId: "staged-9" });
+    // Switch to B: per-uid cache key means B has no stored id; B's own walk runs.
+    h.uid = "uid-2";
+    h.token.mockResolvedValue({ claims: { tenantId: "automodz" } });
+    h.getDoc.mockResolvedValue(snap(undefined));
+    h.getDocs.mockResolvedValue({ docs: [] });
+    await expect(resolveExistingCustomerDocId()).resolves.toEqual({ outcome: "absent" });
+    expect(h.store.has("autodeck.customerDocId.uid-2")).toBe(false);
   });
 });
