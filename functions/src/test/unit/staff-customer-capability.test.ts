@@ -18,6 +18,7 @@ import { requestPickupDrop } from "../../functions/booking/pickupRequests.js";
 import { expressInterest, markMyListingSold } from "../../functions/carsale/carsale.js";
 import { rescheduleBooking } from "../../functions/booking/rescheduleBooking.js";
 import { cancelBooking } from "../../functions/booking/cancelBooking.js";
+vi.mock('../../lib/customer-identity.js',()=>({resolveCustomerDocId:async(_db:any,_c:any,_t:any,uid:string)=>uid,requireCustomerDocId:async(_db:any,_c:any,_t:any,uid:string)=>uid}));
 const req = (payload: any, role = "studio"): any => ({ data: payload, auth: { uid: "staff", token: { role, tenantId: "tenant", studioId: "studio", email: "staff@example.com" } } });
 beforeEach(() => { h.docs = {}; h.writes = []; h.next = 0; });
 describe("additive customer capability", () => {

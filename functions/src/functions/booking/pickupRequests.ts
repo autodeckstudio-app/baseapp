@@ -12,6 +12,7 @@ import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { studioLocalToIso } from "../../lib/studio-time.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 // Customer preference only - never a promised slot. The studio agrees the
 // actual time with the customer by phone call and enters it on approval
@@ -94,6 +95,8 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
   // The fee is decided here from the distance. null = no location sent, so the studio confirms the distance and fee by phone.
   let feePaise: number | null = null;
   const db = getFirestore();
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   let quoteRef: FirebaseFirestore.DocumentReference | null = null;
   if (data.quoteId) {
     // Stored server-side quote is the single source of truth: charge EXACTLY what the customer was shown.
@@ -102,7 +105,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
     if (!qSnap.exists) throw new HttpsError("not-found", "That pickup quote is gone - check the distance again.");
     const q = qSnap.data() as { tenantId: string; customerId: string; kind: string; lat: number; lng: number; roadMeters: number; feePaise: number; expiresAt: string; consumedAt: string | null };
     assertTenant(user, q.tenantId);
-    if (q.customerId !== user.uid) throw new HttpsError("permission-denied", "That is not your pickup quote.");
+    if (q.customerId !== customerDocId) throw new HttpsError("permission-denied", "That is not your pickup quote.");
     if (q.kind !== data.kind) throw new HttpsError("invalid-argument", "That quote is for a different pickup selection - check the distance again.");
     if (q.consumedAt) throw new HttpsError("failed-precondition", "That pickup quote was already used - check the distance again.");
     if (Date.parse(q.expiresAt) <= Date.now()) throw new HttpsError("failed-precondition", "That pickup quote expired - check the distance again.");
@@ -123,7 +126,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
   if (!bookingSnap.exists) throw new HttpsError("not-found", "Booking not found.");
   const booking = bookingSnap.data() as Booking;
   assertTenant(user, booking.tenantId);
-  if (booking.customerId !== user.uid) throw new HttpsError("permission-denied", "That is not your booking.");
+  if (booking.customerId !== customerDocId) throw new HttpsError("permission-denied", "That is not your booking.");
   if (booking.status === "CANCELLED" || booking.status === "COMPLETED" || booking.status === "EXPIRED") {
     throw new HttpsError("failed-precondition", "This booking is closed, so pickup and drop cannot be requested.");
   }
@@ -134,7 +137,7 @@ export const requestPickupDrop = onCall({ region: "asia-south1" , enforceAppChec
     tenantId: booking.tenantId,
     studioId: booking.studioId,
     bookingId: data.bookingId,
-    customerId: user.uid,
+    customerId: customerDocId,
     kind: data.kind,
     address: data.address,
     preferredTime: data.preferredTime ?? "",

@@ -11,6 +11,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateMyPaperSchema, deleteMyPaperSchema, normalizeRcReference } from "../../schemas/paper.js";
 import { assertNumberUnused, readClaims, numberLockId, rcLockId, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const RC_PATTERN = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
@@ -24,11 +25,13 @@ async function loadOwnedPaper(user: ReturnType<typeof extractCustomerUser>, pape
   if (!snap.exists) throw new HttpsError("not-found", "Document not found.");
   const paper = snap.data() as StoredPaper;
   assertTenant(user, paper.tenantId);
-  if (paper.customerId !== user.uid) throw new HttpsError("permission-denied", "Not your document.");
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  if (paper.customerId !== customerDocId) throw new HttpsError("permission-denied", "Not your document.");
   const vehicleSnap = await db.collection(COLLECTIONS.vehicles()).doc(paper.vehicleId).get();
   const vehicle = vehicleSnap.data() as Vehicle | undefined;
-  if (!vehicle || vehicle.ownerId !== user.uid || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
-  return { db, ref, paper };
+  if (!vehicle || vehicle.ownerId !== customerDocId || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+  return { db, ref, paper, customerDocId };
 }
 
 // Customer edit: number, expiry, name and photo only. The change goes back to review. Reuses finalizeMyPaper for the photo.
@@ -37,7 +40,7 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
   assertRole(user, "customer");
   const data = validate(updateMyPaperSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "paper.update");
-  const { db, ref, paper } = await loadOwnedPaper(user, data.paperId);
+  const { db, ref, paper, customerDocId } = await loadOwnedPaper(user, data.paperId);
   if (paper.supersededAt) throw new HttpsError("failed-precondition", "This document was replaced.");
 
   let reference = data.reference ?? paper.reference;
@@ -49,7 +52,7 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
   if (paper.kind === "OTHER" && data.title === undefined && !paper.title) {
     // Old OTHER papers have no name; editing one is allowed without forcing a name.
   }
-  await assertNumberUnused(db, { tenantId: paper.tenantId, customerId: user.uid, reference, exceptPaperId: paper.id });
+  await assertNumberUnused(db, { tenantId: paper.tenantId, customerId: customerDocId, reference, exceptPaperId: paper.id });
 
   const now = new Date().toISOString();
   // Every staged replacement gets its own unique path (nonce inside the paper's own prefix, so all
@@ -67,8 +70,8 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
     // and GCS itself rejects bytes that do not match the declared digest. The digest is a
     // byte-corruption/mismatch binding (MD5 is not collision-resistant); the generation pin
     // owns version identity.
-    [uploadUrl] = await getStorage().bucket().file(path).getSignedUrl({ version: "v4", action: "write", expires: Date.now() + 10 * 60 * 1000, contentType: data.contentType, extensionHeaders: { "x-goog-meta-ownerId": user.uid, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) } });
-    requiredHeaders = { "Content-Type": data.contentType, "x-goog-meta-ownerId": user.uid, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) };
+    [uploadUrl] = await getStorage().bucket().file(path).getSignedUrl({ version: "v4", action: "write", expires: Date.now() + 10 * 60 * 1000, contentType: data.contentType, extensionHeaders: { "x-goog-meta-ownerId": customerDocId, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) } });
+    requiredHeaders = { "Content-Type": data.contentType, "x-goog-meta-ownerId": customerDocId, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) };
   }
 
   // A replacement photo is STAGED, never swapped in here: evidencePath/evidenceUrl keep pointing at the
@@ -112,9 +115,9 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
     // transfer, archive or tenant change landing meanwhile must not let
     // this write through.
     const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
-    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== user.uid || freshVehicle.tenantId !== fresh.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== customerDocId || freshVehicle.tenantId !== fresh.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     if (freshVehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
-    if (fresh.customerId !== user.uid || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
+    if (fresh.customerId !== customerDocId || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
     // Conflict guard: the record must still be exactly the state we pre-read before minting URLs or
     // deleting objects. A concurrent finalize/edit landing in between would otherwise be clobbered by
     // this write, or have its freshly promoted photo deleted as "stillborn" by the cleanup below.
@@ -130,9 +133,9 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
       throw new HttpsError("aborted", "This document changed while you were saving. Open it and save again.");
     }
     committed.evidencePath = fresh.evidencePath ?? null;
-    const claims = await readClaims(tx, db, { tenantId: paper.tenantId, customerId: user.uid, vehicleId: paper.vehicleId, paperId: paper.id, reference, kind: paper.kind, claimRc: paper.kind === "RC" });
-    if (numberLockId(paper.tenantId, user.uid, fresh.reference) !== numberLockId(paper.tenantId, user.uid, reference)) {
-      const oldRef = db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, user.uid, fresh.reference));
+    const claims = await readClaims(tx, db, { tenantId: paper.tenantId, customerId: customerDocId, vehicleId: paper.vehicleId, paperId: paper.id, reference, kind: paper.kind, claimRc: paper.kind === "RC" });
+    if (numberLockId(paper.tenantId, customerDocId, fresh.reference) !== numberLockId(paper.tenantId, customerDocId, reference)) {
+      const oldRef = db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, customerDocId, fresh.reference));
       const old = await tx.get(oldRef);
       if (old.exists && (old.data() as { paperId: string }).paperId === paper.id) tx.delete(oldRef);
     }
@@ -172,7 +175,7 @@ export const deleteMyPaper = onCall({ region: "asia-south1", invoker: "public", 
   assertRole(user, "customer");
   const data = validate(deleteMyPaperSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "paper.update");
-  const { db, ref, paper } = await loadOwnedPaper(user, data.paperId);
+  const { db, ref, paper, customerDocId } = await loadOwnedPaper(user, data.paperId);
   const prefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
   const safePath = (p: string | null | undefined): p is string => !!p && p.startsWith(prefix) && !p.includes("..");
   let pathsToDelete: string[] = [];
@@ -181,8 +184,8 @@ export const deleteMyPaper = onCall({ region: "asia-south1", invoker: "public", 
     const fresh = freshSnap.data() as StoredPaper | undefined;
     if (!fresh || fresh.supersededAt) throw new HttpsError("failed-precondition", "This document was replaced.");
     const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
-    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== user.uid || freshVehicle.tenantId !== fresh.tenantId || freshVehicle.deletedAt) throw new HttpsError("permission-denied", "You do not own this vehicle.");
-    if (fresh.customerId !== user.uid || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
+    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== customerDocId || freshVehicle.tenantId !== fresh.tenantId || freshVehicle.deletedAt) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    if (fresh.customerId !== customerDocId || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
     // Exact evidence concurrency: only the paths the record still names may be removed. A
     // concurrent finalize/edit that changed them aborts the delete with nothing touched.
     if ((fresh.evidencePath ?? null) !== (paper.evidencePath ?? null) || (fresh.pendingEvidencePath ?? null) !== (paper.pendingEvidencePath ?? null)) {
@@ -195,7 +198,7 @@ export const deleteMyPaper = onCall({ region: "asia-south1", invoker: "public", 
       throw new HttpsError("aborted", "This document changed while you were deleting it. Open it and delete again.");
     }
     pathsToDelete = [...new Set([fresh.evidencePath, fresh.pendingEvidencePath].filter((p): p is string => safePath(p)))];
-    const locks = [db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, user.uid, paper.reference)), ...(paper.kind === "RC" ? [db.collection(PAPER_LOCKS).doc(rcLockId(paper.vehicleId))] : [])];
+    const locks = [db.collection(PAPER_LOCKS).doc(numberLockId(paper.tenantId, customerDocId, paper.reference)), ...(paper.kind === "RC" ? [db.collection(PAPER_LOCKS).doc(rcLockId(paper.vehicleId))] : [])];
     const snaps = await Promise.all(locks.map((l) => tx.get(l)));
     tx.delete(ref);
     snaps.forEach((sn, i) => { if (sn.exists && (sn.data() as { paperId: string }).paperId === paper.id) tx.delete(locks[i]!); });

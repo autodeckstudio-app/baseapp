@@ -6,7 +6,7 @@ vi.mock("../../middleware/rateLimit.js", () => ({ enforceRateLimit: vi.fn(), sub
 vi.mock("../../middleware/audit.js", () => ({ writeAuditLog: (_tx: any, p: any) => h.audit.push(p) }));
 vi.mock("firebase-admin/storage", () => ({ getStorage: () => ({ bucket: () => ({ file: (p: string) => ({ delete: async () => { if (h.storageFail) throw new Error("storage down"); h.storageDeleted.push(p); }, getSignedUrl: async () => ["https://signed.example/put"] }) }) }) }));
 vi.mock("firebase-admin/firestore", () => {
-  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => ({ exists: h.rows.has(path), data: () => h.rows.get(path) }) });
+  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => { if (path.startsWith("customers/") && !h.rows.has(path)) { const id = path.split("/").pop(); return { exists: true, data: () => ({ authUid: id, tenantId: "t", deletedAt: null }) }; } return { exists: h.rows.has(path), data: () => h.rows.get(path) }; } });
   const query = (col: string, filters: Array<[string, unknown]>) => ({
     where: (f: string, _o: string, v: unknown) => query(col, [...filters, [f, v]]),
     get: async () => ({ docs: [...h.rows.entries()].filter(([k, r]) => k.startsWith(col + "/") && filters.every(([f, v]) => r[f] === v)).map(([, r]) => ({ data: () => r })) }),
@@ -16,7 +16,7 @@ vi.mock("firebase-admin/firestore", () => {
     runTransaction: async (fn: any) => { if (h.txFail) { throw new Error("firestore down"); } let mutated = false; const mutateOnce = () => { if (!mutated && h.txMutate) { mutated = true; h.txMutate(); } }; return fn({ get: async (r: any) => { mutateOnce(); return r.get(); }, set: (r: any, d: any) => { h.rows.set(r.path, d); }, update: (r: any, d: any) => { h.writes.push({ path: r.path, d }); h.rows.set(r.path, { ...h.rows.get(r.path), ...d }); }, delete: (r: any) => { h.deleted.push(r.path); h.rows.delete(r.path); } }); },
   }) };
 });
-vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", auditLog: () => "audit" } }));
+vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", customers: () => "customers", auditLog: () => "audit" } }));
 import { updateMyPaper, deleteMyPaper } from "../../functions/papers/myPaperEdits.js";
 import { submitMyPaperSchema } from "../../schemas/paper.js";
 import { paperNumberKey, assertNumberUnused } from "../../lib/paper-numbers.js";

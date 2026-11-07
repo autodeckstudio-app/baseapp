@@ -15,6 +15,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { submitMyPaperSchema } from "../../schemas/paper.js";
 import { assertNumberUnused, isActivePaper, readClaims, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
@@ -47,12 +48,14 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
   await enforceRateLimit(subjectFrom(user), "paper.submit");
 
   const db = getFirestore();
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const vehicleRef = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
   const vehicleSnap = await vehicleRef.get();
   if (!vehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
   const vehicle = vehicleSnap.data() as Vehicle;
   assertTenant(user, vehicle.tenantId);
-  if (vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+  if (vehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
   if (vehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
 
   // Operation-identity replay: the client generates one submissionId per add-document
@@ -67,17 +70,17 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     // Fresh ownership/tenant/archive gate BEFORE anything is returned or minted.
     const vSnap = await vehicleRef.get();
     const v = vSnap.data() as Vehicle | undefined;
-    if (!vSnap.exists || !v || v.ownerId !== user.uid || v.tenantId !== vehicle.tenantId || v.deletedAt) {
+    if (!vSnap.exists || !v || v.ownerId !== customerDocId || v.tenantId !== vehicle.tenantId || v.deletedAt) {
       throw new HttpsError("failed-precondition", "This car is not available for this submission.");
     }
     // The operation lock is the submission's tombstone: it survives replacement and deletion,
     // so a completed op can never be recreated by a retry.
-    const opSnap = await db.collection(PAPER_LOCKS).doc(opLockId(vehicle.tenantId, user.uid, data.submissionId)).get();
+    const opSnap = await db.collection(PAPER_LOCKS).doc(opLockId(vehicle.tenantId, customerDocId, data.submissionId)).get();
     if (!opSnap.exists) return null; // no earlier attempt of this submission
     const lock = opSnap.data() as { paperId: string; tenantId?: string; customerId?: string; vehicleId?: string };
     // The lock's immutable identity must match THIS request and tenant - a lock row that
     // disagrees is not proof of anything and fails closed.
-    if (lock.tenantId !== vehicle.tenantId || lock.customerId !== user.uid || lock.vehicleId !== data.vehicleId) {
+    if (lock.tenantId !== vehicle.tenantId || lock.customerId !== customerDocId || lock.vehicleId !== data.vehicleId) {
       throw new HttpsError("aborted", "This submission conflicts with an existing record. Open your documents and review it before adding again.");
     }
     const opPaperId = lock.paperId;
@@ -87,7 +90,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     }
     const existing = existingSnap.data() as PaperVerification & { submittedBy?: string; submission?: SubmissionSnapshot | null; evidencePath?: string | null; pendingEvidencePath?: string | null };
     // The locked document's own identity must match the request: tenant, owner, vehicle.
-    if (existing.id !== opPaperId || existing.tenantId !== vehicle.tenantId || existing.customerId !== user.uid || existing.vehicleId !== data.vehicleId) {
+    if (existing.id !== opPaperId || existing.tenantId !== vehicle.tenantId || existing.customerId !== customerDocId || existing.vehicleId !== data.vehicleId) {
       throw new HttpsError("aborted", "This submission conflicts with an existing record. Open your documents and review it before adding again.");
     }
     const snap = existing.submission;
@@ -157,9 +160,9 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
       // bytes across EVERY outstanding write URL for this path (first attempt, replay mint):
       // the first successful upload wins and any later PUT - same MIME, different bytes -
       // fails 412 instead of silently replacing evidence the checks may already have seen.
-      extensionHeaders: { "x-goog-meta-ownerId": user.uid, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) },
+      extensionHeaders: { "x-goog-meta-ownerId": customerDocId, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) },
     });
-    return { id: existing.id, uploadUrl: url, requiredHeaders: { "Content-Type": data.contentType, "x-goog-meta-ownerId": user.uid, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) }, photoState: "awaiting_upload", replayed: true };
+    return { id: existing.id, uploadUrl: url, requiredHeaders: { "Content-Type": data.contentType, "x-goog-meta-ownerId": customerDocId, "x-goog-if-generation-match": "0", ...(data.contentMd5 ? { "Content-MD5": data.contentMd5 } : {}) }, photoState: "awaiting_upload", replayed: true };
   };
 
   {
@@ -169,12 +172,12 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
   try {
   // Round 7 point 5: one active RC per car. A second RC is an edit, not a new record.
   if (data.kind === "RC") {
-    const existing = await db.collection(COLLECTIONS.papers()).where("vehicleId", "==", data.vehicleId).where("customerId", "==", user.uid).get();
+    const existing = await db.collection(COLLECTIONS.papers()).where("vehicleId", "==", data.vehicleId).where("customerId", "==", customerDocId).get();
     if (existing.docs.some((d) => { const p = d.data() as PaperVerification; return p.kind === "RC" && isActivePaper(p); })) {
       throw new HttpsError("already-exists", "This car already has an RC. Edit it to replace it.");
     }
   }
-  await assertNumberUnused(db, { tenantId: vehicle.tenantId, customerId: user.uid, reference: data.reference });
+  await assertNumberUnused(db, { tenantId: vehicle.tenantId, customerId: customerDocId, reference: data.reference });
 
   const ref = db.collection(COLLECTIONS.papers()).doc();
   const now = new Date().toISOString();
@@ -249,20 +252,20 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     if (!freshVehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
     const freshVehicle = freshVehicleSnap.data() as Vehicle;
     assertTenant(user, freshVehicle.tenantId);
-    if (freshVehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    if (freshVehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     if (freshVehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
     // The operation lock is checked and set INSIDE this transaction: two concurrent first
     // attempts of the same submission (even with different numbers) cannot both create.
     const opRef = data.submissionId
-      ? db.collection(PAPER_LOCKS).doc(opLockId(freshVehicle.tenantId, user.uid, data.submissionId))
+      ? db.collection(PAPER_LOCKS).doc(opLockId(freshVehicle.tenantId, customerDocId, data.submissionId))
       : null;
     if (opRef) {
       const opSnap = await tx.get(opRef);
       if (opSnap.exists) throw new HttpsError("already-exists", "This submission is already recorded.");
     }
-    const claims = await readClaims(tx, db, { tenantId: freshVehicle.tenantId, customerId: user.uid, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
+    const claims = await readClaims(tx, db, { tenantId: freshVehicle.tenantId, customerId: customerDocId, vehicleId: data.vehicleId, paperId: ref.id, reference: data.reference, kind: data.kind, claimRc: data.kind === "RC" });
     tx.set(ref, paper);
-    if (opRef) tx.set(opRef, { paperId: ref.id, tenantId: freshVehicle.tenantId, customerId: user.uid, vehicleId: data.vehicleId });
+    if (opRef) tx.set(opRef, { paperId: ref.id, tenantId: freshVehicle.tenantId, customerId: customerDocId, vehicleId: data.vehicleId });
     for (const c of claims) tx.set(c.ref, c.data);
   });
 
@@ -285,16 +288,18 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
   const { paperId } = validate(z.object({ paperId: z.string().min(1).max(120) }).strict(), request.data);
   await enforceRateLimit(subjectFrom(user), "paper.review");
   const db = getFirestore();
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const ref = db.collection(COLLECTIONS.papers()).doc(paperId);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Document not found.");
   const paper = snap.data() as PaperVerification & { evidencePath?: string; pendingEvidencePath?: string | null; submittedBy?: string };
   assertTenant(user, paper.tenantId);
-  if (paper.customerId !== user.uid || paper.submittedBy !== "customer") throw new HttpsError("permission-denied", "Not your document.");
+  if (paper.customerId !== customerDocId || paper.submittedBy !== "customer") throw new HttpsError("permission-denied", "Not your document.");
   if (paper.status !== "PENDING" || paper.verificationMode === "automatic") return { status: paper.status };
   const vehicleSnap = await db.collection(COLLECTIONS.vehicles()).doc(paper.vehicleId).get();
   const vehicle = vehicleSnap.data() as Vehicle | undefined;
-  if (!vehicle || vehicle.ownerId !== user.uid || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Vehicle ownership changed.");
+  if (!vehicle || vehicle.ownerId !== customerDocId || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Vehicle ownership changed.");
   const prefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
   // A replacement photo is staged on the record as pendingEvidencePath by updateMyPaper; the current
   // evidence keeps serving until the new object is confirmed here. Fresh uploads use evidencePath directly.
@@ -375,8 +380,8 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     const current = currentSnap.data() as (PaperVerification & { evidencePath?: string | null; pendingEvidencePath?: string | null; revision?: number }) | undefined;
     if (!current || current.status !== "PENDING" || current.verificationMode === "manual") return;
     const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
-    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== user.uid || freshVehicle.tenantId !== current.tenantId || freshVehicle.deletedAt) return;
-    if (current.customerId !== user.uid || current.vehicleId !== paper.vehicleId || current.tenantId !== paper.tenantId) return;
+    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== customerDocId || freshVehicle.tenantId !== current.tenantId || freshVehicle.deletedAt) return;
+    if (current.customerId !== customerDocId || current.vehicleId !== paper.vehicleId || current.tenantId !== paper.tenantId) return;
     // Supersede guard: this call may only write the exact state it read. A staged-photo finalize applies
     // only while its own staging is still current; a submit-flow finalize applies only while no edit has
     // staged a replacement and the evidence is untouched. Otherwise an older finalize would overwrite the
@@ -428,7 +433,7 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
     if (!latest.exists) throw new HttpsError("failed-precondition", "This document was removed while its checks ran.");
     const cur = latest.data() as PaperVerification & { customerId?: string };
     const v = vSnap.data() as Vehicle | undefined;
-    if (!vSnap.exists || !v || v.ownerId !== user.uid || v.tenantId !== cur.tenantId || cur.customerId !== user.uid) {
+    if (!vSnap.exists || !v || v.ownerId !== customerDocId || v.tenantId !== cur.tenantId || cur.customerId !== customerDocId) {
       throw new HttpsError("failed-precondition", "This document's checks could not be completed. Open the document to see its current state.");
     }
     return { status: cur.status, reason: "This document changed while its checks ran. Its latest state is shown." };

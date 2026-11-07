@@ -8,6 +8,7 @@ import { COLLECTIONS } from "@autodeck/database";
 import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const submitReviewSchema = z.object({
@@ -23,11 +24,13 @@ export const submitReview = onCall({ region: "asia-south1" , enforceAppCheck: sh
   await enforceRateLimit(subjectFrom(user), "booking.review");
 
   const db = getFirestore();
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const snap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
   if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
   const booking = snap.data() as Booking;
   assertTenant(user, booking.tenantId);
-  if (booking.customerId !== user.uid) throw new HttpsError("permission-denied", "This is not your booking.");
+  if (booking.customerId !== customerDocId) throw new HttpsError("permission-denied", "This is not your booking.");
   if (booking.status !== "COMPLETED") throw new HttpsError("failed-precondition", "You can rate a visit once it is completed.");
 
   const now = new Date().toISOString();
@@ -37,7 +40,7 @@ export const submitReview = onCall({ region: "asia-south1" , enforceAppCheck: sh
     id: data.bookingId,
     bookingId: data.bookingId,
     tenantId: booking.tenantId,
-    customerId: user.uid,
+    customerId: customerDocId,
     serviceId: booking.serviceId,
     rating: data.rating,
     comment: data.comment ?? "",

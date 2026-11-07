@@ -4,7 +4,7 @@ const h = vi.hoisted(() => ({ rows: new Map<string, any>(), audit: [] as any[], 
 vi.mock("../../middleware/rateLimit.js", () => ({ enforceRateLimit: vi.fn(), subjectFrom: () => "me" }));
 vi.mock("../../middleware/audit.js", () => ({ writeAuditLog: (_tx: any, p: any) => h.audit.push(p) }));
 vi.mock("firebase-admin/firestore", () => {
-  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => ({ exists: h.rows.has(path), data: () => h.rows.get(path) }) });
+  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => { if (path.startsWith("customers/") && !h.rows.has(path)) { const id = path.split("/").pop(); return { exists: true, data: () => ({ authUid: id, tenantId: "t", deletedAt: null }) }; } return { exists: h.rows.has(path), data: () => h.rows.get(path) }; } });
   return { getFirestore: () => ({
     collection: (c: string) => ({ doc: (id?: string) => docRef(`${c}/${id ?? "newid1"}`) }),
     runTransaction: async (fn: any) => {
@@ -19,7 +19,7 @@ vi.mock("firebase-admin/firestore", () => {
   }) };
 });
 vi.mock("@autodeck/database", () => ({
-  COLLECTIONS: { vehicles: () => "vehicles", auditLog: () => "audit" },
+  COLLECTIONS: { vehicles: () => "vehicles", customers: () => "customers", auditLog: () => "audit" },
   SUBCOLLECTIONS: { vehicleProtections: (v: string) => `vehicles/${v}/protections` },
 }));
 import { createMyProtection } from "../../functions/protection/createMyProtection.js";

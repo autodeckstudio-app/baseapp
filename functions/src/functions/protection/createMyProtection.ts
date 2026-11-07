@@ -14,6 +14,7 @@ import { validate } from "../../middleware/validate.js";
 import { writeAuditLog } from "../../middleware/audit.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { createMyProtectionSchema } from "../../schemas/protection.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 export const createMyProtection = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
   const user = extractUser(request);
@@ -23,6 +24,8 @@ export const createMyProtection = onCall({ region: "asia-south1", enforceAppChec
   await enforceRateLimit(subjectFrom(user), "protection.create");
 
   const db = getFirestore();
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
   const vehicleRef = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
   // Deterministic id from the client-supplied declaration identity: a retry
   // after a lost response finds the same record and returns it unchanged.
@@ -35,7 +38,7 @@ export const createMyProtection = onCall({ region: "asia-south1", enforceAppChec
     if (!vehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
     const vehicle = vehicleSnap.data() as Vehicle;
     assertTenant(user, vehicle.tenantId);
-    if (vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "Not your car.");
+    if (vehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "Not your car.");
     if (vehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
     if (existingSnap.exists) {
       const existing = existingSnap.data() as Protection;
@@ -52,10 +55,10 @@ export const createMyProtection = onCall({ region: "asia-south1", enforceAppChec
         (existing.startDate ?? null) === (data.startDate ?? null) &&
         (existing.warrantyYears ?? null) === (data.warrantyYears ?? null) &&
         (existing.notes ?? null) === (data.notes ?? null);
-      if (existing.source === "customer" && existing.customerId === user.uid && sameIdentity && samePayload) {
+      if (existing.source === "customer" && existing.customerId === customerDocId && sameIdentity && samePayload) {
         return existing;
       }
-      if (existing.source === "customer" && existing.customerId === user.uid) {
+      if (existing.source === "customer" && existing.customerId === customerDocId) {
         throw new HttpsError("already-exists", "This declarationId was already used with different details.");
       }
       throw new HttpsError("already-exists", "This declarationId is already used.");
@@ -66,7 +69,7 @@ export const createMyProtection = onCall({ region: "asia-south1", enforceAppChec
       id: ref.id,
       tenantId: vehicle.tenantId,
       vehicleId: data.vehicleId,
-      customerId: user.uid,
+      customerId: customerDocId,
       kind: data.kind,
       provider: data.provider ?? null,
       policyNumber: null,

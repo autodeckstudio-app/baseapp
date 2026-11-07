@@ -9,6 +9,7 @@ vi.mock("firebase-admin/firestore", () => ({ getFirestore: () => ({
 }) }));
 import { createVehicle } from "../../functions/vehicle/createVehicle.js";
 import { restoreVehicle } from "../../functions/vehicle/restoreVehicle.js";
+vi.mock('../../lib/customer-identity.js',()=>({resolveCustomerDocId:async(_db:any,_c:any,_t:any,uid:string)=>uid,requireCustomerDocId:async(_db:any,_c:any,_t:any,uid:string)=>uid}));
 const data = { registrationNumber: "MH40CQ3182", make: "Maruti Suzuki", model: "Fronx", year: 2022, color: "White" };
 const req = (payload: any): any => ({ data: payload });
 const row = (plate: string, deletedAt: string | null = null) => ({ id: "original", registrationNumber: plate, deletedAt, tenantId: "tenant", ownerId: "owner", make: "Maruti Suzuki", model: "Fronx", year: 2022, color: "White" });

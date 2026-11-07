@@ -14,6 +14,7 @@ import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { roadMetersBetween, GOOGLE_ROUTES_API_KEY } from "../../lib/road-distance.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
 
 const quoteSchema = z
   .object({
@@ -52,11 +53,14 @@ export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: s
   const feePaise = pickupLegsFeePaise(legs.map((l) => l.roadMeters));
   const roadMeters = legs.reduce((sum, l) => sum + l.roadMeters, 0);
   const now = Date.now();
-  const ref = getFirestore().collection(COLLECTIONS.pickupQuotes()).doc();
+  const db = getFirestore();
+  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
+  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  const ref = db.collection(COLLECTIONS.pickupQuotes()).doc();
   await ref.set({
     id: ref.id,
     tenantId: user.claims.tenantId,
-    customerId: user.uid,
+    customerId: customerDocId,
     kind: data.kind,
     lat: data.lat,
     lng: data.lng,

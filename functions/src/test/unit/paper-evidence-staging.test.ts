@@ -53,7 +53,7 @@ vi.mock("firebase-admin/storage", () => ({
   }),
 }));
 vi.mock("firebase-admin/firestore", () => {
-  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => ({ exists: h.rows.has(path), data: () => h.rows.get(path) }) });
+  const docRef = (path: string) => ({ id: path.split("/").pop(), path, get: async () => { if (path.startsWith("customers/") && !h.rows.has(path)) { const id = path.split("/").pop(); return { exists: true, data: () => ({ authUid: id, tenantId: "t", deletedAt: null }) }; } return { exists: h.rows.has(path), data: () => h.rows.get(path) }; } });
   const query = (col: string, filters: Array<[string, unknown]>) => ({
     where: (f: string, _o: string, v: unknown) => query(col, [...filters, [f, v]]),
     get: async () => ({ docs: [...h.rows.entries()].filter(([k, r]) => k.startsWith(col + "/") && filters.every(([f, v]) => r[f] === v)).map(([, r]) => ({ data: () => r })) }),
@@ -84,7 +84,7 @@ vi.mock("firebase-admin/firestore", () => {
     },
   }) };
 });
-vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", auditLog: () => "audit" } }));
+vi.mock("@autodeck/database", () => ({ COLLECTIONS: { papers: () => "papers", vehicles: () => "vehicles", customers: () => "customers", auditLog: () => "audit" } }));
 import { updateMyPaper, deleteMyPaper } from "../../functions/papers/myPaperEdits.js";
 import { numberLockId, rcLockId, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 import { finalizeMyPaper, submitMyPaper } from "../../functions/papers/submitMyPaper.js";
