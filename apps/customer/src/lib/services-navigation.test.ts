@@ -59,25 +59,29 @@ it("film aftercare is not film installation, surface coatings never become ceram
 it("paint has all three service TYPES even with no confirmed film/spray stock, modifications retains colour-film service type", () => {
   expect(familyChoices("paint", [], [])).toEqual(["Ceramic", "PPF", "PPS"]);
   expect(familyChoices("modifications", [], [])).toContain("Colour PPF");
-  // The film-group references are the confirmed sheet film lineup plus the
-  // brand-less PPS service concept and the colour films under Colour PPF.
-  const ppfRefs = referenceChoices([])
-    .filter((r) => r.group === "ppf")
-    .map((r) => r.key);
-  expect(ppfRefs).toContain("pps-spray");
-  expect(ppfRefs).toContain("ultraguard-clear-ppf");
-  expect(ppfRefs).toContain("garware-black-ppf");
-  expect(ppfRefs.length).toBe(29);
-  // Owner taxonomy (5 Nov): black/white films place under Modifications & Wraps.
+  // The only film-group reference is the confirmed brand-less PPS service concept.
+  expect(referenceChoices([]).filter((r) => r.group === "ppf").map((r) => r.key)).toEqual(["pps-spray"]);
+  // Owner taxonomy (5 Nov): a colour/black film record places under
+  // Modifications & Wraps > Colour PPF; a clear film record stays under Paint
+  // Protection > PPF. Placement is structural, independent of visibility.
   expect(
-    referencePlacement(
-      BRAND_ENQUIRIES.find((r) => r.key === "garware-black-ppf")!,
-    ),
+    referencePlacement({
+      key: "colour-film-x",
+      group: "ppf",
+      surface: "colour-ppf",
+      brand: "Garware",
+      name: "Black PPF",
+      note: "",
+    } as (typeof BRAND_ENQUIRIES)[number]),
   ).toEqual({ home: "modifications", family: "Colour PPF" });
   expect(
-    referencePlacement(
-      BRAND_ENQUIRIES.find((r) => r.key === "ultraguard-clear-ppf")!,
-    ),
+    referencePlacement({
+      key: "clear-film-x",
+      group: "ppf",
+      brand: "XPEL",
+      name: "Clear PPF",
+      note: "",
+    } as (typeof BRAND_ENQUIRIES)[number]),
   ).toEqual({ home: "paint", family: "PPF" });
 });
 it("same published range does not reappear as a reference; no similar-tier merge", () => {
@@ -102,7 +106,7 @@ it("same published range does not reappear as a reference; no similar-tier merge
 });
 it("every confirmed reference has exactly one home/family placement", () => {
   for (const r of BRAND_ENQUIRIES)
-    expect(referencePlacement(r).home).toMatch(/paint|detailing|modifications/);
+    expect(referencePlacement(r).home).toMatch(/paint|detailing/);
 });
 it("old chips/deep links normalize to the same hierarchy instead of a parallel tree", () => {
   expect(routePath({ cat: "wash" }, [])).toEqual({ home: "washing" });

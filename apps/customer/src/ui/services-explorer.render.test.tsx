@@ -62,7 +62,7 @@ const press = async (r: any, label: string) => {
   expect(p, label).toBeTruthy();
   await act(async () => p.props.onPress());
 };
-it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film lineup and PPS concept card, no unknown products or double reference", async () => {
+it("connected home -> ceramic -> brand -> exact service, PPF/PPS honest empty states, no unknown products or double reference", async () => {
   const opened = vi.fn(),
     help = vi.fn();
   let r: any;
@@ -121,14 +121,14 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
     r = create(<PpfApp />);
   });
   const ppfText = JSON.stringify(r.toJSON());
-  expect(ppfText).toContain("Ask the studio about Remove existing film");
+  expect(ppfText).toContain('"Ask the studio about ","film removal"');
   expect(ppfText).not.toContain("Choose a brand");
   expect(ppfText).not.toContain("Garware");
   await press(r, "Ask the studio");
   expect(help).toHaveBeenCalledWith("Paint Protection · PPF · Remove existing film");
   await act(async () => r.unmount());
-  // Full-body fitting: the confirmed sheet film lineup shows enquiry-only (no
-  // product, price or booking); held references stay hidden.
+  // Full-body fitting: film ranges stay held until the owner confirms sourcing,
+  // so there is no brand chooser - the studio confirms the work directly.
   help.mockClear();
   function FullBodyApp() {
     const [p, setP] = useState<ServicesPath>({ home: "paint", family: "PPF", work: "full_body" });
@@ -149,21 +149,17 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
     r = create(<FullBodyApp />);
   });
   const fullText = JSON.stringify(r.toJSON());
-  expect(fullText).toContain("Choose a brand to see its current offerings");
-  expect(fullText).not.toContain("No confirmed current product");
-  await press(r, "Garware");
-  const gText = JSON.stringify(r.toJSON());
-  expect(gText).toContain("Premium PPF");
-  expect(gText).toContain("Quote to confirm");
-  expect(gText).not.toContain("Black PPF");
-  expect(gText).not.toContain("Avery Dennison");
-  expect(gText).not.toContain("\u20b9");
-  await press(r, "View Premium PPF");
-  expect((ppfReference.mock.calls.at(-1)![0] as any).key).toBe("garware-premium-exact");
-  expect(opened).toHaveBeenCalledTimes(1);
+  expect(fullText).toContain('"Ask the studio about ","full-body protection"');
+  expect(fullText).not.toContain("Choose a brand");
+  expect(fullText).not.toContain("Garware");
+  expect(fullText).not.toContain("\u20b9");
+  await press(r, "Ask the studio");
+  expect(help).toHaveBeenCalledWith("Paint Protection · PPF · Full-body protection");
+  expect(ppfReference).not.toHaveBeenCalled();
   await act(async () => r.unmount());
-  // Colour PPF: black/white films live under Modifications & Wraps > Colour PPF
-  // (owner taxonomy, 5 Nov), enquiry-only, not under Paint Protection.
+  // Colour PPF lives under Modifications & Wraps > Colour PPF (owner taxonomy,
+  // 5 Nov), not under Paint Protection. Colour film ranges are held too, so the
+  // family confirms with the studio until the owner confirms sourcing.
   const colourReference = vi.fn();
   function ColourApp() {
     const [p, setP] = useState<ServicesPath>({ home: "modifications", family: "Colour PPF" });
@@ -184,17 +180,13 @@ it("connected home -> ceramic -> brand -> exact service, PPF enquiry-only film l
     r = create(<ColourApp />);
   });
   const cText = JSON.stringify(r.toJSON());
-  expect(cText).toContain("Choose a brand to see its current offerings");
-  expect(cText).not.toContain("Premium PPF");
-  await press(r, "Garware");
-  const cgText = JSON.stringify(r.toJSON());
-  expect(cgText).toContain("Black PPF");
-  expect(cgText).toContain("White PPF");
-  expect(cgText).toContain("Quote to confirm");
-  expect(cgText).not.toContain("Premium PPF");
-  expect(cgText).not.toContain("\u20b9");
-  await press(r, "View Black PPF");
-  expect((colourReference.mock.calls.at(-1)![0] as any).key).toBe("garware-black-ppf");
+  expect(cText).toContain('"Ask the studio about ","Colour PPF"');
+  expect(cText).not.toContain("Choose a brand");
+  expect(cText).not.toContain("Garware");
+  expect(cText).not.toContain("\u20b9");
+  await press(r, "Ask the studio");
+  expect(help.mock.calls.at(-1)![0]).toContain("Colour PPF");
+  expect(colourReference).not.toHaveBeenCalled();
   await act(async () => r.unmount());
   // PPS: the confirmed brand-less service concept card - quote-to-confirm, enquiry route, no price, no booking.
   const reference = vi.fn();

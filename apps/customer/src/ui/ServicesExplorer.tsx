@@ -332,6 +332,15 @@ export function ServicesExplorer({
   const workLabel = PPF_CUSTOMER_OPTIONS.find(
     (w) => w.key === path.work,
   )?.label;
+  // The confirm pane reads as a sentence, so work names map to noun phrases.
+  const askLabel =
+    path.work === "removal"
+      ? "film removal"
+      : path.work === "replacement"
+        ? "film replacement"
+        : path.work === "full_body"
+          ? "full-body protection"
+          : (workLabel ?? family);
   return (
     <View style={{ gap: 18 }}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -453,7 +462,7 @@ export function ServicesExplorer({
           ) : (
             <Pane pad="gap">
               <T role="bodyStrong">
-                Ask the studio about {workLabel ?? family}
+                Ask the studio about {askLabel}
               </T>
               <T tone="secondary">
                 The studio confirms the work, time and quote for your car
