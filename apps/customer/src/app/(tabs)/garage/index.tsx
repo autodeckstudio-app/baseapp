@@ -45,7 +45,7 @@ export default function GarageScreen() {
   const auth = useAuth();
   const router = useRouter();
   const q = useLocalSearchParams<{ mock?: string; live?: string; pick?: string; empty?: string }>();
-  const mock = __DEV__ && devGarage && q.mock === "1" ? devGarage({ live: !!q.live, empty: !!q.empty }) : null; // dev preview only: sample cars, never real data
+  const mock = devGarage && q.mock === "1" ? devGarage({ live: !!q.live, empty: !!q.empty }) : null; // dev preview only: loader itself is __DEV__-gated, never real data
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(mock ? mock.vehicles : null);
   const [archived,setArchived]=useState<Vehicle[]>([]);
   const [showArchived,setShowArchived]=useState(false);

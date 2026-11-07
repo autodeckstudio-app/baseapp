@@ -9,6 +9,7 @@ import { it, expect, vi } from 'vitest';
 const h = vi.hoisted(() => ({
   auth: { status: 'ready', customerDocId: null as string | null, customerDocResolution: 'absent', user: { uid: 'auth-1' }, claims: { tenantId: 't', role: 'customer' } } as any,
   vehicleSubs: [] as any[],
+  params: {} as Record<string, string>,
 }));
 vi.mock('@autodeck/ui/native', async () => {
   const real = await import('../../../../../../packages/ui/src/native/ThemeContext');
@@ -21,21 +22,21 @@ vi.mock('@autodeck/ui/native', async () => {
     FadeImage: (props: any) => React.createElement('img', { src: props?.source?.uri, style: props?.style }),
   };
 });
-vi.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn() }), useNavigation: () => ({ getState: () => ({ routes: [] }), dispatch: vi.fn() }), useSegments: () => [], useFocusEffect: () => {} }));
+vi.mock('expo-router', () => ({ useLocalSearchParams: () => h.params, useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn() }), useNavigation: () => ({ getState: () => ({ routes: [] }), dispatch: vi.fn() }), useSegments: () => [], useFocusEffect: () => {} }));
 vi.mock('../../../hooks/useAuth', () => ({ useAuth: () => h.auth }));
 vi.mock('../../../hooks/useCustomerHome', () => ({ setActiveVehicle: vi.fn() }));
 vi.mock('../../../lib/firebase', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({ doc: (_: any, c: any, id: any) => ({ c, id }), getDoc: async () => ({ exists: () => false, data: () => ({}) }) }));
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: { getItem: async () => null } }));
 vi.mock('../../../lib/imagery', () => ({ sceneImagery: {}, serviceImagery: {} }));
-vi.mock('../../../ui/CarThumb', () => ({ CarThumb: () => null }));
-vi.mock('../../../ui/GarageShowroom', () => ({ GarageShowroom: () => null }));
-vi.mock('../../../ui/CareRing', () => ({ CareRing: () => null }));
 vi.mock('../../../lib/vehicle-service', () => ({ listenToMyVehicles: (o: any, t: any, fn: any) => { h.vehicleSubs.push([o, t]); fn([]); return () => {}; }, listenToMyArchivedVehicles: () => () => {}, deleteVehiclePermanently: vi.fn(), restoreVehicle: vi.fn() }));
 vi.mock('../../../lib/job-service', () => ({ listenToMyJobs: (_t: any, _o: any, fn: any) => { fn([]); return () => {}; } }));
 vi.mock('../../../lib/home-service', () => ({ listenToMyMemberships: (_t: any, _o: any, fn: any) => { fn([]); return () => {}; } }));
 vi.mock('../../../lib/catalogue-service', () => ({ getServiceCatalogue: async () => [] }));
-vi.mock('../../../lib/dev-garage-loader', () => ({ devGarage: null }));
+vi.mock('../../../lib/dev-garage-loader', async () => {
+  const real = await vi.importActual<any>('../../../lib/garage-dev-sample');
+  return { devGarage: real.devGarage, devGarageDetail: real.devGarageDetail ?? null };
+});
 
 // @ts-expect-error server-render harness
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -45,10 +46,15 @@ import { ExperienceThemeProvider } from '@autodeck/ui/native';
 import { setSurfaceMode } from '../../../lib/glass';
 import Garage from './index';
 
-const STATES: Array<{ label: string; auth: any; expectText: string }> = [
+const STATES: Array<{ label: string; auth: any; expectText: string; params?: Record<string, string> }> = [
   { label: 'owner-error', auth: { status: 'ready', customerDocId: null, customerDocResolution: 'error', user: { uid: 'auth-1' }, claims: { tenantId: 't', role: 'customer' } }, expectText: 'confirm your profile' },
   { label: 'claim-pending', auth: { status: 'ready', customerDocId: null, customerDocResolution: 'claim-required', user: { uid: 'auth-1' }, claims: { tenantId: 't', role: 'customer' } }, expectText: 'waiting to be claimed' },
   { label: 'customer-absent', auth: { status: 'ready', customerDocId: null, customerDocResolution: 'absent', user: { uid: 'auth-1' }, claims: { tenantId: 't', role: 'customer' } }, expectText: 'find your profile' },
+  // Staff layout proof: the dev sample seeds the screen synchronously, so SSR
+  // shows the real populated/empty layout (header, cards, nav) for a
+  // legacy-self staff account - the states an effect-driven render cannot reach.
+  { label: 'staff-empty', auth: { status: 'ready', customerDocId: null, customerDocResolution: 'absent', user: { uid: 'auth-1' }, claims: { tenantId: 't', role: 'admin' } }, expectText: 'No cars yet', params: { mock: '1', empty: '1' } },
+  { label: 'staff-populated', auth: { status: 'ready', customerDocId: null, customerDocResolution: 'absent', user: { uid: 'auth-1' }, claims: { tenantId: 't', role: 'admin' } }, expectText: 'Mahindra', params: { mock: '1' } },
 ];
 
 // SSR does not run effects, so the data-driven empty state cannot render
@@ -82,6 +88,7 @@ it('renders every garage owner state in day and night for pixel inspection', () 
   for (const name of ['light', 'night'] as const) {
     for (const st of STATES) {
       h.auth = st.auth;
+      h.params = st.params ?? {};
       setSurfaceMode(name); // same call the app root makes before rendering children
       const body = renderToStaticMarkup(
         <ExperienceThemeProvider name={name}>
@@ -101,5 +108,5 @@ it('renders every garage owner state in day and night for pixel inspection', () 
       files.push(file);
     }
   }
-  expect(files).toHaveLength(6);
+  expect(files).toHaveLength(10);
 });
