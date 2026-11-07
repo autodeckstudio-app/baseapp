@@ -142,7 +142,7 @@ export function ReferencePackageCard({
             {item.brand}
           </T>
           <T role="bodyStrong">{item.name}</T>
-          <T role="caption" tone="secondary" numberOfLines={2}>
+          <T role="caption" tone="secondary" numberOfLines={3}>
             {item.note}
           </T>
           <T role="bodyStrong" tone="accent">
