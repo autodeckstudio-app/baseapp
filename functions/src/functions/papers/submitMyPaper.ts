@@ -15,7 +15,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { submitMyPaperSchema } from "../../schemas/paper.js";
 import { assertNumberUnused, isActivePaper, readClaims, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { requireCustomerDocId } from "../../lib/customer-identity.js";
+import { resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
@@ -49,13 +49,15 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
 
   const db = getFirestore();
   // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
-  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  // Resolve the canonical customer doc id when a profile exists (claimed walk-in:
+  // doc id != uid); otherwise keep the exact base uid keying. No profile is required.
+  const customerDocId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
   const vehicleRef = db.collection(COLLECTIONS.vehicles()).doc(data.vehicleId);
   const vehicleSnap = await vehicleRef.get();
   if (!vehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
   const vehicle = vehicleSnap.data() as Vehicle;
   assertTenant(user, vehicle.tenantId);
-  if (vehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+  if (vehicle.ownerId !== customerDocId && vehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
   if (vehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
 
   // Operation-identity replay: the client generates one submissionId per add-document
@@ -70,7 +72,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     // Fresh ownership/tenant/archive gate BEFORE anything is returned or minted.
     const vSnap = await vehicleRef.get();
     const v = vSnap.data() as Vehicle | undefined;
-    if (!vSnap.exists || !v || v.ownerId !== customerDocId || v.tenantId !== vehicle.tenantId || v.deletedAt) {
+    if (!vSnap.exists || !v || (v.ownerId !== customerDocId && v.ownerId !== user.uid) || v.tenantId !== vehicle.tenantId || v.deletedAt) {
       throw new HttpsError("failed-precondition", "This car is not available for this submission.");
     }
     // The operation lock is the submission's tombstone: it survives replacement and deletion,
@@ -80,7 +82,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     const lock = opSnap.data() as { paperId: string; tenantId?: string; customerId?: string; vehicleId?: string };
     // The lock's immutable identity must match THIS request and tenant - a lock row that
     // disagrees is not proof of anything and fails closed.
-    if (lock.tenantId !== vehicle.tenantId || lock.customerId !== customerDocId || lock.vehicleId !== data.vehicleId) {
+    if (lock.tenantId !== vehicle.tenantId || (lock.customerId !== customerDocId && lock.customerId !== user.uid) || lock.vehicleId !== data.vehicleId) {
       throw new HttpsError("aborted", "This submission conflicts with an existing record. Open your documents and review it before adding again.");
     }
     const opPaperId = lock.paperId;
@@ -90,7 +92,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     }
     const existing = existingSnap.data() as PaperVerification & { submittedBy?: string; submission?: SubmissionSnapshot | null; evidencePath?: string | null; pendingEvidencePath?: string | null };
     // The locked document's own identity must match the request: tenant, owner, vehicle.
-    if (existing.id !== opPaperId || existing.tenantId !== vehicle.tenantId || existing.customerId !== customerDocId || existing.vehicleId !== data.vehicleId) {
+    if (existing.id !== opPaperId || existing.tenantId !== vehicle.tenantId || (existing.customerId !== customerDocId && existing.customerId !== user.uid) || existing.vehicleId !== data.vehicleId) {
       throw new HttpsError("aborted", "This submission conflicts with an existing record. Open your documents and review it before adding again.");
     }
     const snap = existing.submission;
@@ -252,7 +254,7 @@ export const submitMyPaper = onCall({ region: "asia-south1", timeoutSeconds: 60,
     if (!freshVehicleSnap.exists) throw new HttpsError("not-found", "Vehicle not found.");
     const freshVehicle = freshVehicleSnap.data() as Vehicle;
     assertTenant(user, freshVehicle.tenantId);
-    if (freshVehicle.ownerId !== customerDocId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    if (freshVehicle.ownerId !== customerDocId && freshVehicle.ownerId !== user.uid) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     if (freshVehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
     // The operation lock is checked and set INSIDE this transaction: two concurrent first
     // attempts of the same submission (even with different numbers) cannot both create.
@@ -288,18 +290,19 @@ export const finalizeMyPaper = onCall({ region: "asia-south1", invoker: "public"
   const { paperId } = validate(z.object({ paperId: z.string().min(1).max(120) }).strict(), request.data);
   await enforceRateLimit(subjectFrom(user), "paper.review");
   const db = getFirestore();
-  // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
-  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
+  // Resolve the canonical customer doc id when a profile exists; otherwise keep the exact
+  // base uid keying. No profile is required.
+  const customerDocId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
   const ref = db.collection(COLLECTIONS.papers()).doc(paperId);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Document not found.");
   const paper = snap.data() as PaperVerification & { evidencePath?: string; pendingEvidencePath?: string | null; submittedBy?: string };
   assertTenant(user, paper.tenantId);
-  if (paper.customerId !== customerDocId || paper.submittedBy !== "customer") throw new HttpsError("permission-denied", "Not your document.");
+  if ((paper.customerId !== customerDocId && paper.customerId !== user.uid) || paper.submittedBy !== "customer") throw new HttpsError("permission-denied", "Not your document.");
   if (paper.status !== "PENDING" || paper.verificationMode === "automatic") return { status: paper.status };
   const vehicleSnap = await db.collection(COLLECTIONS.vehicles()).doc(paper.vehicleId).get();
   const vehicle = vehicleSnap.data() as Vehicle | undefined;
-  if (!vehicle || vehicle.ownerId !== customerDocId || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Vehicle ownership changed.");
+  if (!vehicle || (vehicle.ownerId !== customerDocId && vehicle.ownerId !== user.uid) || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Vehicle ownership changed.");
   const prefix = `${paper.tenantId}/vehicles/${paper.vehicleId}/paper-${paper.id}.`;
   // A replacement photo is staged on the record as pendingEvidencePath by updateMyPaper; the current
   // evidence keeps serving until the new object is confirmed here. Fresh uploads use evidencePath directly.

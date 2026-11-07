@@ -11,7 +11,7 @@ import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { updateMyPaperSchema, deleteMyPaperSchema, normalizeRcReference } from "../../schemas/paper.js";
 import { assertNumberUnused, readClaims, numberLockId, rcLockId, PAPER_LOCKS } from "../../lib/paper-numbers.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { requireCustomerDocId } from "../../lib/customer-identity.js";
+import { resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const RC_PATTERN = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
@@ -26,11 +26,13 @@ async function loadOwnedPaper(user: ReturnType<typeof extractCustomerUser>, pape
   const paper = snap.data() as StoredPaper;
   assertTenant(user, paper.tenantId);
   // Records key on the customer DOCUMENT id: a claimed walk-in's doc id differs from the auth uid.
-  const customerDocId = await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
-  if (paper.customerId !== customerDocId) throw new HttpsError("permission-denied", "Not your document.");
+  // Canonical doc id when a profile exists, else the exact base uid keying. Legacy
+  // records keyed on the same verified principal's uid remain owned by that principal.
+  const customerDocId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
+  if (paper.customerId !== customerDocId && paper.customerId !== user.uid) throw new HttpsError("permission-denied", "Not your document.");
   const vehicleSnap = await db.collection(COLLECTIONS.vehicles()).doc(paper.vehicleId).get();
   const vehicle = vehicleSnap.data() as Vehicle | undefined;
-  if (!vehicle || vehicle.ownerId !== customerDocId || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+  if (!vehicle || (vehicle.ownerId !== customerDocId && vehicle.ownerId !== user.uid) || vehicle.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
   return { db, ref, paper, customerDocId };
 }
 
@@ -115,9 +117,9 @@ export const updateMyPaper = onCall({ region: "asia-south1", invoker: "public", 
     // transfer, archive or tenant change landing meanwhile must not let
     // this write through.
     const freshVehicle = freshVehicleSnap.data() as Vehicle | undefined;
-    if (!freshVehicleSnap.exists || !freshVehicle || freshVehicle.ownerId !== customerDocId || freshVehicle.tenantId !== fresh.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
+    if (!freshVehicleSnap.exists || !freshVehicle || (freshVehicle.ownerId !== customerDocId && freshVehicle.ownerId !== user.uid) || freshVehicle.tenantId !== fresh.tenantId) throw new HttpsError("permission-denied", "You do not own this vehicle.");
     if (freshVehicle.deletedAt) throw new HttpsError("failed-precondition", "This car is archived.");
-    if (fresh.customerId !== customerDocId || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
+    if ((fresh.customerId !== customerDocId && fresh.customerId !== user.uid) || fresh.vehicleId !== paper.vehicleId || fresh.tenantId !== paper.tenantId) throw new HttpsError("permission-denied", "Not your document.");
     // Conflict guard: the record must still be exactly the state we pre-read before minting URLs or
     // deleting objects. A concurrent finalize/edit landing in between would otherwise be clobbered by
     // this write, or have its freshly promoted photo deleted as "stillborn" by the cleanup below.

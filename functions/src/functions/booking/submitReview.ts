@@ -5,10 +5,10 @@ import { getFirestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import type { Booking } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
-import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
+import { resolveCustomerDocId } from "../../lib/customer-identity.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
 
 const submitReviewSchema = z.object({
@@ -18,23 +18,20 @@ const submitReviewSchema = z.object({
 });
 
 export const submitReview = onCall({ region: "asia-south1" , enforceAppCheck: shouldEnforceAppCheck() }, async (request) => {
-  const user = extractUser(request);
-  assertRole(user, "customer", "studio", "admin", "superadmin");
+  const user = extractCustomerUser(request);
+  assertRole(user, "customer");
   const data = validate(submitReviewSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "booking.review");
 
   const db = getFirestore();
-  // Self-service is role-agnostic like createBooking: customers must own a
-  // profile; staff without one keep legacy uid-keyed ownership.
-  const resolvedDocId = user.claims.role === "customer"
-    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
-    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
-  const customerDocId = resolvedDocId ?? user.uid;
+  // Declared boundary and base capability unchanged (see getPickupQuote): resolve to the
+  // canonical customer doc id when one exists, otherwise keep the exact base uid keying.
+  const customerDocId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
   const snap = await db.collection(COLLECTIONS.bookings()).doc(data.bookingId).get();
   if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
   const booking = snap.data() as Booking;
   assertTenant(user, booking.tenantId);
-  if (booking.customerId !== customerDocId) throw new HttpsError("permission-denied", "This is not your booking.");
+  if (booking.customerId !== customerDocId && booking.customerId !== user.uid) throw new HttpsError("permission-denied", "This is not your booking.");
   if (booking.status !== "COMPLETED") throw new HttpsError("failed-precondition", "You can rate a visit once it is completed.");
 
   const now = new Date().toISOString();

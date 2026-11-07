@@ -9,12 +9,12 @@ import {
   pickupRoadKmForDisplay,
 } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { extractUser, assertRole, assertTenant } from "../../middleware/auth.js";
+import { extractCustomerUser, assertRole, assertTenant } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { enforceRateLimit, subjectFrom } from "../../middleware/rateLimit.js";
 import { roadMetersBetween, GOOGLE_ROUTES_API_KEY } from "../../lib/road-distance.js";
 import { shouldEnforceAppCheck } from "../../lib/environment.js";
-import { requireCustomerDocId, resolveCustomerDocId } from "../../lib/customer-identity.js";
+import { resolveCustomerDocId } from "../../lib/customer-identity.js";
 
 const quoteSchema = z
   .object({
@@ -36,8 +36,8 @@ export const PICKUP_QUOTE_TTL_MS = 30 * 60 * 1000;
  * distance cannot be known: the client then offers booking without pickup, never an estimate.
  */
 export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: shouldEnforceAppCheck(), secrets: [GOOGLE_ROUTES_API_KEY] }, async (request) => {
-  const user = extractUser(request);
-  assertRole(user, "customer", "studio", "admin", "superadmin");
+  const user = extractCustomerUser(request);
+  assertRole(user, "customer");
   assertTenant(user, user.claims.tenantId);
   const data = validate(quoteSchema, request.data);
   await enforceRateLimit(subjectFrom(user), "pickup.quote");
@@ -54,12 +54,12 @@ export const getPickupQuote = onCall({ region: "asia-south1", enforceAppCheck: s
   const roadMeters = legs.reduce((sum, l) => sum + l.roadMeters, 0);
   const now = Date.now();
   const db = getFirestore();
-  // Self-service is role-agnostic like createBooking: customers must own a
-  // profile; staff without one keep legacy uid-keyed ownership.
-  const resolvedDocId = user.claims.role === "customer"
-    ? await requireCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)
-    : await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid);
-  const customerDocId = resolvedDocId ?? user.uid;
+  // Declared boundary and base capability unchanged: any principal the base relabeled
+  // could call, keyed on its uid. The only behavior change is identity: a caller whose
+  // auth uid resolves to a customer profile (claimed walk-in, doc id != uid) is stamped
+  // with the canonical doc id; everyone else keeps the exact base uid keying. No
+  // profile is required or created.
+  const customerDocId = (await resolveCustomerDocId(db, COLLECTIONS.customers(), user.claims.tenantId, user.uid)) ?? user.uid;
   const ref = db.collection(COLLECTIONS.pickupQuotes()).doc();
   await ref.set({
     id: ref.id,
