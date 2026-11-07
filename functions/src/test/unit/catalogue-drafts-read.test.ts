@@ -24,13 +24,13 @@ vi.mock("firebase-admin/firestore", () => ({
           return q;
         },
         orderBy: () => q,
-        startAfter: (v: string) => { q._after = v; return q; },
+        startAfter: (u: string, id?: string) => { q._after = [u, id]; return q; },
         limit: (n: number) => { q._limit = n; return q; },
         count: () => ({ get: async () => ({ data: () => ({ count: h.publishedCount }) }) }),
         get: async () => {
           let docs = q._states ? h.docs.filter((d) => q._states.includes(d.state)) : h.docs;
-          docs = [...docs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-          if (q._after) docs = docs.filter((d) => d.updatedAt < q._after!);
+          docs = [...docs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.id.localeCompare(a.id));
+          if (q._after) { const [u, id] = q._after; docs = docs.filter((d) => d.updatedAt < u || (d.updatedAt === u && id !== undefined && d.id < id)); }
           docs = docs.slice(0, q._limit);
           return { size: docs.length, docs: docs.map((d) => ({ data: () => d })) };
         },
@@ -84,6 +84,22 @@ describe("getCatalogueDrafts read split", () => {
     expect(page2.nextHistoryCursor).toBeNull();
     const overlap = page1.history.map((d: any) => d.id).filter((id: string) => page2.history.some((d: any) => d.id === id));
     expect(overlap).toEqual([]);
+  });
+
+  it("cursor is deterministic across a boundary tie (all rows share one updatedAt)", async () => {
+    h.docs = Array.from({ length: 30 }, (_, i) => draft(`tie-${String(i).padStart(2, "0")}`, "published", "2026-11-07T16:23:59.913Z"));
+    h.publishedCount = 30;
+    const auth = { uid: "a", token: { role: "admin", tenantId: "t", studioId: null }, rawToken: "x" };
+    const p1: any = await getCatalogueDrafts.run({ data: { history: true }, auth });
+    expect(p1.history).toHaveLength(25);
+    expect(p1.nextHistoryCursor).toContain("#");
+    const p2: any = await getCatalogueDrafts.run({ data: { history: true, historyCursor: p1.nextHistoryCursor }, auth });
+    expect(p2.history).toHaveLength(5);
+    expect(p2.nextHistoryCursor).toBeNull();
+    const ids1 = p1.history.map((d: any) => d.id);
+    const ids2 = p2.history.map((d: any) => d.id);
+    expect(ids1.filter((id: string) => ids2.includes(id))).toEqual([]);
+    expect([...ids1, ...ids2].sort()).toEqual(h.docs.map((d) => d.id).sort());
   });
 
   it("rejects unknown input keys (strict schema)", async () => {
