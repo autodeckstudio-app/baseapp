@@ -10,14 +10,14 @@ import { ServiceScope } from "../../../ui/ServiceScope";
 import { formatDurationWithDays } from "../../../lib/duration";
 import { usePricingVehicle } from "../../../lib/vehicle-size";
 import { useState, useEffect } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, Pressable, View, useWindowDimensions } from "react-native";
 import type { ReactNode } from "react";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { customerCatalogueEligible, isSizePriced, needsInspectionNote, PAINT_INSPECTION_NOTE, resolvePricingCategory, type Service, type VehicleCategory, type PriceBreakdown as PriceBreakdownData } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
-import { space} from "@autodeck/ui/theme";
+import { layout, space} from "@autodeck/ui/theme";
 import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { Button, Chip, Kicker, Loading, Notice, Pane, Row, Screen, T, rupees } from "../../../ui/kit";
 import { db } from "../../../lib/firebase";
@@ -27,7 +27,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { stickyPriceLabel, sheetBarVisible } from "../../../lib/sticky-price";
 import { ServicePrice } from "../../../ui/ServicePrice";
 import { ServicePhoto } from "../../../ui/ServicePhoto";
-import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, FAQS, showcaseFor } from "../../../lib/showcase";
+import { COPY_IS_DRAFT, SHOW_BEFORE_AFTER, showcaseFor } from "../../../lib/showcase";
 import { getServiceReviews, type ServiceReviews } from "../../../lib/review-service";
 import { FIRST_STUDIO_ID, GST_ENABLED } from "@autodeck/core";
 import { getAvailability, todayIST } from "../../../lib/booking-service";
@@ -135,10 +135,10 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   const router = useRouter();
   // The price bar is positioned over the whole page, so it must go away when another screen opens on top (Book now).
   const [focused, setFocused] = useState(true);
+  const { width } = useWindowDimensions();
   useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
   const { colors, name: mode } = useExperienceTheme();
   const [after, setAfter] = useState(true);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
   // Spacer below the page matches the actual floating bar height, so the last line always scrolls clear (320px stacked bar is taller than a row bar).
   // Book now is offered only when there is a confirmed price to book against, or the service is a quote. With no car, no car type or no price the
   // price block above carries the one action (Garage / Try again), so there is no second, enabled-looking Book button.
@@ -149,7 +149,6 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
   if (!service) return <Screen><Notice title="Service not found" body="It may have been taken off the menu." action={<Button kind="quiet" label="Browse services" onPress={()=>router.navigate("/(tabs)/catalogue")}/>} /></Screen>;
 
   const sc = showcaseFor(service);
-  const faqs = FAQS[service.category] ?? FAQS.washing ?? [];
   const H = (t: string, extra?: ReactNode) => (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
       <Kicker>{t}</Kicker>
@@ -224,7 +223,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </>
 
         <>
-        <ServiceScope service={service} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
+        <ServiceScope service={service} careTip={(service.careTips ?? [])[0] ?? null} onAsk={() => router.push({ pathname: "/(tabs)/help", params: { service: service.name } })} />
 
         {sc.benefits.length > 0 ? (
           <View style={{ gap: space.breath }}>
@@ -237,32 +236,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
           </View>
         ) : null}
 
-        {(service.careTips ?? []).length > 0 ? (
-          <View style={{ gap: space.breath }}>
-            {H("Care tips")}
-            <Pane pad="gap">
-              {(service.careTips ?? []).map((x, i, arr) => (
-                <Row key={`${i}-${x}`} title={x} last={i === arr.length - 1} />
-              ))}
-            </Pane>
-          </View>
-        ) : null}
 
-        <View style={{ gap: space.breath }}>
-          {H("Questions")}
-          <Pane pad="gap">
-            {faqs.map((f, i) => (
-              <Row
-                key={f.q}
-                title={f.q}
-                detail={openFaq === i ? <T role="caption" tone="secondary">{f.a}</T> : undefined}
-                trailing={<T tone="tertiary">{openFaq === i ? "−" : "+"}</T>}
-                onPress={() => setOpenFaq(openFaq === i ? null : i)}
-                last={i === faqs.length - 1}
-              />
-            ))}
-          </Pane>
-        </View>
 
         </>
 
@@ -271,7 +245,7 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
             viewport bottom, so content needs 92 + bar height + margin. */}
         <View style={{ height: showBar ? barH + 116 : 0 }} />
       </Screen>
-      {focused && showBar ? <View pointerEvents="box-none" style={{ position: Platform.OS === "web" ? ("fixed" as never) : "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View onLayout={(e) => setBarH(e.nativeEvent.layout.height)} style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : colors.surface, borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
+      {focused && showBar ? <View pointerEvents="box-none" style={{ position: Platform.OS === "web" ? ("fixed" as never) : "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: width < 360 ? layout.screenInsetCompact : layout.screenInset }}><View onLayout={(e) => setBarH(e.nativeEvent.layout.height)} style={{ width: "100%", maxWidth: layout.readingMeasure, alignItems: "center", padding: space.gap, backgroundColor: mode === "light" ? "#FFFFFF" : colors.surface, borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <ServiceActionBar car={`${pricingVehicle.label??"Your car"}${GST_ENABLED ? " · incl. GST" : ""}`} price={stickyPriceLabel({priceOnRequest:service.priceOnRequest===true,loading:priceLoading,total:priceBreakdown?priceBreakdown.total:null,from:service.priceFrom===true,needsCarType,hasCar:!!pricingVehicle.vehicle,error:priceError!==null},rupees)} disabled={!service.priceOnRequest&&priceBreakdown===null} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Book an inspection":"Request a quote"):"Book now"} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>
 
       </View></View> : null}

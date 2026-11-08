@@ -152,7 +152,7 @@ it("takes hero heights from metrics on car and booking detail",()=>{expect(read(
 it("uses the card padding rule on list cards",()=>{for(const f of ["bookings/index","membership/index","garage/index"])expect(read(`src/app/(tabs)/${f}.tsx`)).toContain("padding: metrics.cardPad")});
 it("shows the price total on the booking confirm screen",()=>{const s=read("src/app/(tabs)/book/confirm.tsx");expect(s).toContain("breakdown.total");expect(s).toContain("breakdown.tax")});
 it("keeps the service price bar on the card edges, hides empty story circles, and names walk-in visits",()=>{
-    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: 480");expect(svc).toContain('alignItems: "center", paddingHorizontal: 20');expect(svc).not.toContain('width: "92%"');expect(svc).toContain("height: showBar ? barH + 116 : 0");expect(svc).toContain("onLayout={(e) => setBarH(e.nativeEvent.layout.height)}"); // the spacer tracks the measured bar so the last line scrolls clear at 320px
+    const svc=read("src/app/(tabs)/catalogue/[id].tsx");expect(svc).toContain("left: 0, right: 0, bottom: 92");expect(svc).toContain("maxWidth: layout.readingMeasure");expect(svc).toContain('paddingHorizontal: width < 360 ? layout.screenInsetCompact : layout.screenInset');expect(svc).toContain("padding: space.gap");expect(svc).not.toContain('width: "92%"');expect(svc).not.toContain("maxWidth: 480");expect(svc).toContain("height: showBar ? barH + 116 : 0");expect(svc).toContain("onLayout={(e) => setBarH(e.nativeEvent.layout.height)}"); // the spacer tracks the measured bar so the last line scrolls clear at 320px
     expect(read("src/ui/StoryCircles.tsx")).toContain("if (shown.length === 0) return null;"); // no groups, no row; a group without a photo shows its initial
     expect(read("src/app/(tabs)/bookings/index.tsx")).toContain("visitTitle(nameOf(");expect(read("src/app/(tabs)/bookings/index.tsx")).not.toContain('?? "Service"');
   });
@@ -636,17 +636,21 @@ describe("car detail and add car (batch 1)", () => {
 });
 
 describe("service detail (batch 2)", () => {
-  it("is one page: no Overview/Includes tabs, scope once via ServiceScope, one Questions block", () => {
+  it("is one page: no Overview/Includes tabs, scope once via ServiceScope, no Questions block", () => {
     const d = read("src/app/(tabs)/catalogue/[id].tsx");
     expect(d).not.toContain("TabPills");
     expect(d).not.toContain('label: "Overview"');
     expect(d).not.toContain('label: "Reviews"');
     expect(d).toContain("reviews.count > 0");
     expect((d.match(/<ServiceScope /g) ?? []).length).toBe(1);
-    expect((d.match(/H\("Questions"/g) ?? []).length).toBe(1);
+    expect((d.match(/H\("Questions"/g) ?? []).length).toBe(0); // questions list removed; one Ask-the-studio row in the scope card instead
+    expect(d).not.toContain("FAQS");
+    expect(d).toContain("careTip="); // exactly one care tip shown, inside the scope card
     const scope = read("src/ui/ServiceScope.tsx");
-    expect(scope).not.toContain("Before you book"); // folded into the one Questions block
+    expect(scope).not.toContain("Before you book");
     expect(scope).toContain("What's included");
+    expect((scope.match(/Ask the studio/g) ?? []).length).toBe(3); // the single ask row, plus the empty-scope fallback body and action
+    expect(scope).not.toContain("Ask about this service"); // the duplicate ask box is gone
   });
 });
 
