@@ -68,6 +68,7 @@ export const recordManualPayment = onCall({ region: "asia-south1" , enforceAppCh
     const jobSnap = await tx.get(jobRef);
     if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
     const job = jobSnap.data() as ServiceJob;
+    if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts already exist. Use the receipt balance, not a second payment.");
 
     if (job.tenantId !== user.claims.tenantId) {
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");

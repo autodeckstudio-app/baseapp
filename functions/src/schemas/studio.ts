@@ -19,6 +19,7 @@ const operatingHoursSchema = z.object({
 
 export const updateStudioSettingsSchema = z.object({
   studioId: z.string().min(1),
+  invoiceIssuer: z.object({tradeName:z.string().trim().min(1).max(100),legalName:z.string().trim().min(1).max(150),address:z.string().trim().min(1).max(500),phone:z.string().trim().min(1).max(40),email:z.string().trim().email().max(150),gstRegistered:z.literal(false),gstin:z.null()}).strict().optional(),
   name: z.string().min(1).max(100).trim().optional(),
   timezone: z.string().min(1).max(64).optional(),
   operatingHours: z.array(operatingHoursSchema).length(7).optional(),

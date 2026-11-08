@@ -15,7 +15,7 @@ import type { Vehicle } from "@autodeck/core";
 import { Linking, Platform, View } from "react-native";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { listenToBooking, cancelBooking, approveBookingQuote } from "../../../lib/booking-service";
+import { listenToBooking, cancelBooking, approveBookingQuote, declineBookingQuote } from "../../../lib/booking-service";
 import { getJobIdForBooking } from "../../../lib/job-service";
 import { initiatePayment, requestAdvancePayment } from "../../../lib/payment-service";
 import { payOnline, payWithPaymentLink } from "../../../lib/razorpay-checkout";
@@ -243,6 +243,8 @@ export default function BookingDetailScreen() {
     return () => { alive = false; };
   }, [booking?.serviceId]);
 
+  const quoteWorkOpen = !!job && ["PENDING_VEHICLE", "VEHICLE_RECEIVED", "STANDBY"].includes(job.status);
+  const quoteExpired = !booking?.quoteExpiresAt || !Number.isFinite(Date.parse(booking.quoteExpiresAt)) || Date.now() >= Date.parse(booking.quoteExpiresAt);
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decideError, setDecideError] = useState<string | null>(null);
@@ -256,13 +258,13 @@ export default function BookingDetailScreen() {
     catch (err) { if(current())setDecideError(err instanceof Error ? err.message : "Could not record your answer. Try again."); }
     finally { if(current()){actionLock.current=false;setDecidingId(null);} }
   }
-  async function handleApproveQuote() {
+  async function handleApproveQuote(decline = false) {
     if (mockWriteBlocked()) return;
-    if (!id||!booking||!ownerVerified||livePaymentRef.current?.status==='completed'||liveBookingRef.current?.status==='CANCELLED'||liveBookingRef.current?.status==='EXPIRED'||liveBookingRef.current?.status==='COMPLETED'||routeRef.current!==routeScope||actionLock.current) return;
+    if (!id||!booking||!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||livePaymentRef.current?.status==='completed'||liveBookingRef.current?.status==='CANCELLED'||liveBookingRef.current?.status==='EXPIRED'||liveBookingRef.current?.status==='COMPLETED'||routeRef.current!==routeScope||actionLock.current) return;
     const scope=routeScope,gen=actionEpoch.current;const current=()=>routeRef.current===scope&&actionEpoch.current===gen;actionLock.current=true;
     setQuoteBusy(true);
     try {
-      await approveBookingQuote(booking.id,booking.totalAmount,booking.updatedAt);
+      await (decline ? declineBookingQuote : approveBookingQuote)(booking.id,booking.totalAmount,booking.updatedAt);
       // The live booking listener, not a stale request closure, projects approval.
     } catch (err) {
       if(current())setActionError(err instanceof Error ? err.message : "Could not approve the quote.");
@@ -514,9 +516,13 @@ export default function BookingDetailScreen() {
         {(booking.priceOnRequest === true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true) && booking.quoteStatus === "quoted" && !["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status) ? (
           <Pane pad="gap">
             <Row title="Studio quote" detail={<T role="caption" tone="secondary">Approve this exact total before payment.</T>} trailing={<T role="heading">{rupees(booking.totalAmount)}</T>} />
-            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy} onPress={() => void handleApproveQuote()} /></View>
+            <T role="caption" tone="secondary">{booking.quoteExpiresAt && Number.isFinite(Date.parse(booking.quoteExpiresAt)) ? `Valid until ${new Date(booking.quoteExpiresAt).toLocaleString("en-IN")}.` : "Ask the office to reissue this quote with a validity date."}</T>
+            {!quoteWorkOpen ? <T role="body" tone="secondary">This job needs an office review before the quote can be answered.</T> : null}
+            {quoteExpired ? <T role="body" tone="secondary">This quote expired or needs a validity date. Ask the office for a new quote. No work is approved.</T> : null}
+            <View style={{ marginTop: space.line }}><Button label="Approve quote" disabled={!ownerVerified||!quoteWorkOpen||quoteExpired||quoteBusy||["CANCELLED","COMPLETED","EXPIRED"].includes(booking.status)||payment?.status==='completed'} busy={quoteBusy} onPress={() => void handleApproveQuote()} /><Button label="Decline quote" kind="quiet" disabled={!ownerVerified || !quoteWorkOpen || quoteBusy || quoteExpired} onPress={() => void handleApproveQuote(true)} /></View>
           </Pane>
         ) : null}
+        {booking.quoteStatus === "declined" ? <Pane><T role="body">Quote declined. Work has not been approved. Contact the office for a new quote.</T></Pane> : null}
         {(booking.priceOnRequest === true||(booking as Booking & {requiresPriceApproval?:boolean}).requiresPriceApproval===true) && booking.quoteStatus === "requested" ? null : (
         <Pane pad="gap">
           <Row title="Base" trailing={<T role="data">{rupees(booking.priceBreakdown.basePrice)}</T>} />
@@ -531,9 +537,10 @@ export default function BookingDetailScreen() {
           ) : null}
           {booking.priceBreakdown.tax > 0 ? <Row title={booking.priceBreakdown.taxDescription} trailing={<T role="data">{rupees(booking.priceBreakdown.tax)}</T>} /> : null}
           <Row title={<T role="heading">Total</T>} trailing={<T role="heading">{rupees(booking.priceBreakdown.total)}</T>} />
-          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading'))} last />
+          <Row detailTone="secondary" title="Payment" detail={membershipCoveredLabel(booking) ?? (job?.offlineSettlement && job.paymentStatus==="partial" ? "Part payment recorded - balance due" : payment?.status==='completed'&&job?.paymentStatus!=='paid'&&!(payment as Payment & {invoiceReviewNeeded?:boolean}).invoiceReviewNeeded?'Payment records syncing - do not pay again':customerPaymentLabel(payment,paymentIsCurrent||isMock?'ready':paymentOwnerCurrent&&paymentScope===currentPaymentScope?paymentRead:'loading'))} last />
           {resumeAllowed?<View style={{gap:space.line,marginTop:space.line}}><Button label="Continue online payment" busy={payingNow} disabled={payingNow} onPress={()=>void resumePayment()}/><T role="caption" tone="secondary">Opens the existing payment link. Payment is confirmed only after server verification.</T></View>:null}
-          {job?<Button label="Refresh recorded payment status" kind="quiet" onPress={()=>setPaymentRefresh(n=>n+1)}/>:null}
+          {job?.offlineSettlement ? <View style={{marginTop:space.line}}><T role="caption" tone="secondary">Actual offline receipts</T><Row title="Applied to this visit" detail={rupees(job.offlineSettlement.appliedPaise)}/><Row title="Balance due" detail={rupees(booking.status==="CANCELLED"?0:Math.max(0,job.totalAmount-job.offlineSettlement.appliedPaise))}/>{job.offlineSettlement.officeReturnDuePaise>0?<Row title="Office return due" detail={rupees(job.offlineSettlement.officeReturnDuePaise)}/>:null}<T role="caption" tone="secondary">Only verified money is recorded. An office return is not automatic credit or a completed refund.</T></View>:null}
+          {job?<Button label="Refresh payment status" kind="quiet" onPress={()=>setPaymentRefresh(n=>n+1)}/>:null}
           {paymentIsCurrent && (payment?.invoiceId || job?.invoiceId || booking.invoiceId) && job ? (
             <View style={{ marginTop: space.line }}>
               <Button label="Invoice" kind="quiet" onPress={() => router.push(invoiceHref((payment?.invoiceId || job.invoiceId || booking.invoiceId) as string))} />

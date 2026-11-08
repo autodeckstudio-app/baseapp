@@ -1,3 +1,4 @@
+import {readOfflineLedger,offlineLedgerTotals} from "./offline-ledger.js";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Expense, Payment } from "@autodeck/core";
 import { COLLECTIONS } from "@autodeck/database";
@@ -5,6 +6,8 @@ import { utcToLocalDate } from "./schedule.js";
 import { refundsOwed } from "./refunds-owed.js";
 
 export interface DayAggregates {
+  offlineReturnsPaise?: number;
+  cashOfflineReturnsPaise?: number;
   cashPaise: number; // completed cash payments (gross, before cash expenses)
   upiPaise: number;
   bankTransferPaise: number;
@@ -60,7 +63,7 @@ export async function dayAggregates(
 
   for (const doc of paymentsSnap.docs) {
     const p = doc.data() as Payment;
-    if (!p.completedAt) continue;
+    if (!p.completedAt || p.offlineReceiptSettlement) continue;
     if (utcToLocalDate(new Date(p.completedAt), "Asia/Kolkata") !== date) continue;
     agg.paymentCount += 1;
     agg.totalRevenuePaise += p.amount;
@@ -85,7 +88,11 @@ export async function dayAggregates(
     if (e.paidVia === "CASH") agg.cashExpensesPaise += e.amount;
   }
 
-  agg.expectedCashPaise = agg.cashPaise - agg.cashExpensesPaise;
+  const offline = offlineLedgerTotals(await readOfflineLedger(db,tenantId,studioId),date);
+  agg.cashPaise += offline.cashPaise; agg.upiPaise += offline.upiPaise; agg.bankTransferPaise += offline.bankTransferPaise;
+  agg.totalRevenuePaise += offline.appliedPaise; agg.paymentCount += offline.paymentCount;
+  agg.offlineReturnsPaise = offline.returnedPaise; agg.cashOfflineReturnsPaise = offline.cashReturnedPaise;
+  agg.expectedCashPaise = agg.cashPaise - agg.cashExpensesPaise - offline.cashReturnedPaise;
   const owed = await refundsOwed(db, tenantId, studioId);
   agg.refundsOwedPaise = owed.owedPaise; agg.refundsOwedCount = owed.count; agg.refundsOwedTruncated = owed.truncated;
   return agg;

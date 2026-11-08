@@ -1,7 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
 // Studio is white theme only: the shared palette code reads this at bundle time.
-process.env.EXPO_PUBLIC_THEME_LOCK = "light";
+(process.env as Record<string,string|undefined>)["EXPO_PUBLIC_THEME_LOCK"] = "light";
 
 const config: ExpoConfig = {
   name: "AutoDeck Studio",

@@ -223,3 +223,11 @@ export { getCustomerJobs } from './functions/customer/getCustomerJobs.js';
 
 export { issueClaimCode } from "./functions/auth/issueClaimCode.js";
 export { claimCustomerRecord } from "./functions/auth/claimCustomerRecord.js";
+
+export { recordOfflineReceipt } from "./functions/payment/recordOfflineReceipt.js";
+export { getOfflineReceiptReview, settleOfflineReturn } from "./functions/payment/offlineReceiptReview.js";
+
+export {issuePickupHandoverPhotoUploadUrl,recordPickupHandover,getPickupHandoverPhotos,getPickupHandover} from "./functions/booking/pickupHandover.js";
+
+export {getInvoicePdfUrl} from './functions/invoice/getInvoicePdfUrl.js';
+export {onInvoiceCreatedPdf} from './functions/invoice/onInvoiceCreatedPdf.js';

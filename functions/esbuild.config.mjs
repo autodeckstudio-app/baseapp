@@ -12,6 +12,7 @@
 // packages at build time, so the deployed/emulated function never needs Node
 // to resolve them at runtime. firebase-admin/firebase-functions/zod are real
 // published npm packages and stay external (already correctly resolvable).
+import { cpSync, mkdirSync } from "node:fs";
 import { build, context } from "esbuild";
 
 const watch = process.argv.includes("--watch");
@@ -25,7 +26,7 @@ const options = {
   outfile: "lib/index.js",
   sourcemap: true,
   logLevel: "info",
-  external: ["firebase-admin", "firebase-functions", "zod", "tesseract.js", "@tesseract.js-data/eng"],
+  external: ["firebase-admin", "firebase-functions", "zod", "pdfkit", "tesseract.js", "@tesseract.js-data/eng"],
 };
 
 if (watch) {
@@ -34,4 +35,6 @@ if (watch) {
   console.log("[esbuild] watching for changes...");
 } else {
   await build(options);
+  mkdirSync("lib/invoice-assets", {recursive:true});
+  cpSync("src/invoice-assets", "lib/invoice-assets", {recursive:true});
 }

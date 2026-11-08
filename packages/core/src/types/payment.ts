@@ -21,6 +21,8 @@ export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 export type PaymentTargetType = "job" | "membership" | "gift" | "booking";
 
 export interface Payment {
+  /** Final invoice settlement projection only. Actual collections are in offlineReceipts. */
+  offlineReceiptSettlement?: boolean;
   id: string;
   tenantId: string;
   studioId: string | null; // null for membership purchases — not studio-scoped
@@ -82,6 +84,11 @@ export interface Payment {
 }
 
 export interface Invoice {
+  issuerSnapshot?: import("../invoice-issuer.js").InvoiceIssuer;
+  pdfStatus?: "ready" | "needs_office_review";
+  pdfStoragePath?: string;
+  pdfGeneratedAt?: string;
+  pdfError?: string;
   settlementKind?: "membership_covered";
   membershipId?: string;
   id: string;

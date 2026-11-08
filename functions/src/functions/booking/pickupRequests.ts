@@ -335,7 +335,7 @@ export const updatePickupRequest = onCall({ region: "asia-south1" , enforceAppCh
           tx.get(bRef),
         ]);
         const invoiced = inv.docs.some((d) => (d.data() as Invoice).status !== "void");
-        const locked = invoiced || !pay.empty || job.paymentStatus === "paid" || job.status === "CANCELLED" || job.status === "DELIVERED";
+        const locked = invoiced || !!job.offlineSettlement || !pay.empty || job.paymentStatus === "paid" || job.status === "CANCELLED" || job.status === "DELIVERED";
         const want = wantFee ? fees : { pickup: 0, drop: 0 };
         if (!locked) {
           const next = applyPickupFees(job.priceBreakdown, want.pickup, want.drop);

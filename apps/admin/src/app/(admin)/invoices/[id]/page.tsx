@@ -1,7 +1,7 @@
 "use client";
 
 import { goBackOrTo } from "../../../../lib/go-back";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Invoice, Customer, Vehicle, Payment } from "@autodeck/core";
 import { useAdminAuth } from "../../../../lib/auth-context";
@@ -17,7 +17,10 @@ import { FIRST_STUDIO_ID } from "@autodeck/core";
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { claims } = useAdminAuth();
+  const { user, claims } = useAdminAuth();
+  const scope=[id,user?.uid,claims?.tenantId,claims?.role].join("|");
+  const live=useRef(scope);live.current=scope;
+  const [resolved,setResolved]=useState("");
 
   const [invoice, setInvoice] = useState<Invoice | null | undefined>(undefined);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -35,17 +38,21 @@ export default function InvoiceDetailPage() {
 
   useEffect(() => {
     if (!id) return undefined;
-    return listenToInvoice(id, setInvoice, (err) => setError(err.message));
-  }, [id]);
+    setInvoice(undefined);setError(null);setCustomer(null);setVehicle(null);setPayment(null);setStatus(null);
+    const current=scope;
+    return listenToInvoice(id, value=>{if(live.current===current){setInvoice(value);setResolved(current)}}, (err) => {if(live.current===current)setError(err.message)});
+  }, [id,scope]);
 
   useEffect(() => {
     if (!invoice) return undefined;
-    void getCustomer(invoice.customerId).then(setCustomer);
-    void getVehicle(invoice.vehicleId).then(setVehicle);
-    if (!claims || !invoice.paymentId) return undefined;
+    let alive=true;const current=scope;
+    void getCustomer(invoice.customerId).then(c=>{if(alive&&live.current===current)setCustomer(c)}).catch(()=>undefined);
+    void getVehicle(invoice.vehicleId).then(v=>{if(alive&&live.current===current)setVehicle(v)}).catch(()=>undefined);
+    if (!claims || !invoice.paymentId) return ()=>{alive=false};
     const q = query(collection(db, COLLECTIONS.payments()), where("tenantId", "==", claims.tenantId), where("invoiceId", "==", invoice.id));
-    return onSnapshot(q, (snap) => setPayment(snap.empty ? null : (snap.docs[0]?.data() as Payment)), (err) => setError(err.message));
-  }, [invoice, claims]);
+    const stop=onSnapshot(q, (snap) => {if(alive&&live.current===current)setPayment(snap.empty ? null : (snap.docs[0]?.data() as Payment))}, (err) => {if(alive&&live.current===current)setError(err.message)});
+    return()=>{alive=false;stop()};
+  }, [invoice, claims,scope]);
 
   async function handleVoid(reason: string) {
     if (!invoice) return;
@@ -63,11 +70,12 @@ export default function InvoiceDetailPage() {
   }
 
   if (error) return <div className="ax-panel ax-empty" role="alert"><p className="ax-title">Couldn&apos;t load this invoice</p><p>{error}</p></div>;
-  if (invoice === undefined) return <div className="ax-page"><div className="ax-skel" style={{ height: 480 }} /></div>;
+  if (invoice === undefined||resolved!==scope) return <div className="ax-page"><div className="ax-skel" style={{ height: 480 }} /></div>;
   if (invoice === null) return <div className="ax-panel ax-empty"><p className="ax-title">Invoice not found</p><p>Check the number and try again.</p></div>;
 
   return (
     <InvoiceView
+      key={scope}
       invoice={invoice}
       customer={customer}
       vehicle={vehicle}

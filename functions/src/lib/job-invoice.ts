@@ -74,8 +74,12 @@ export async function prepareJobInvoice(
 
   // Deterministic id for the first invoice of a job; a later one (after a void) gets an auto id.
   const invoiceRef = fixedSnap.exists ? invoices.doc() : invoices.doc(invoiceIdForJob(job.id));
+  const issuerDoc = await tx.get(db.collection(COLLECTIONS.studioConfig()).doc(job.studioId));
+  const issuerConfig = issuerDoc.data();
+  const issuerSnapshot = issuerConfig?.tenantId === job.tenantId ? issuerConfig.invoiceIssuer : undefined;
   const invoiceNumber = await allocateInvoiceNumber(tx, db, job.tenantId);
   const invoice = buildInvoice({
+    ...(issuerSnapshot ? { issuerSnapshot } : {}),
     invoiceId: invoiceRef.id,
     invoiceNumber,
     tenantId: job.tenantId,

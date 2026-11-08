@@ -1,3 +1,4 @@
+import {readOfflineLedger,offlineLedgerTotals} from "../../lib/offline-ledger.js";
 import { onCall } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Expense, Payment, ServiceJob } from "@autodeck/core";
@@ -55,7 +56,7 @@ export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck:
 
   for (const doc of paymentsSnap.docs) {
     const p = doc.data() as Payment;
-    if (!p.completedAt) continue;
+    if (!p.completedAt || p.offlineReceiptSettlement) continue;
     const localDate = utcToLocalDate(new Date(p.completedAt), "Asia/Kolkata");
     if (!localDate.startsWith(data.month)) continue;
     paymentCount += 1;
@@ -67,6 +68,9 @@ export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck:
     else razorpayPaise += p.amount;
   }
 
+  const offline = offlineLedgerTotals(await readOfflineLedger(db,tenantId,data.studioId),data.month);
+  totalRevenuePaise += offline.appliedPaise; cashPaise += offline.cashPaise; upiPaise += offline.upiPaise; bankTransferPaise += offline.bankTransferPaise; paymentCount += offline.paymentCount;
+  for(const [day,applied] of Object.entries(offline.revenueByDay))revenueByDay[day]=(revenueByDay[day]??0)+applied;
   let expensesPaise = 0;
   const expensesByCategory: Record<string, number> = {};
   for (const doc of expensesSnap.docs) {
@@ -91,6 +95,9 @@ export const getOfficeReport = onCall({ region: "asia-south1" , enforceAppCheck:
   }
 
   return {
+    offlineReceivedPaise:offline.receivedPaise,
+    offlineReturnsPaise:offline.returnedPaise,
+    cashOfflineReturnsPaise:offline.cashReturnedPaise,
     month: data.month,
     studioId: data.studioId,
     totalRevenuePaise,

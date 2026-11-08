@@ -1,3 +1,4 @@
+import {cancelOfflineVisit} from "../../lib/offline-cancel.js";
 import { requestWaitingCancel, unresolvedCancel } from "../../lib/waiting-cancel.js";
 // Admin-only cancel for a booking, with the fee and any refund decided here on the server.
 // Cancel and refund are admin-only for now (owner decision); studio staff have no cancel.
@@ -66,6 +67,7 @@ export async function runCancel(
     if (job && !CANCELLABLE_JOB.includes(job.status)) {
       throw new HttpsError("failed-precondition", "Work has already started on this job, so the booking cannot be cancelled here.");
     }
+    if(job?.offlineSettlement)return cancelOfflineVisit(user,data,actor);
     const paySnap = job
       ? await db.collection(COLLECTIONS.payments()).where("jobId", "==", job.id).where("status", "in", ["pending", "processing", "completed"]).limit(10).get()
       : null;
@@ -204,6 +206,7 @@ export async function runCancel(
       if (jobs.size > 1) throw new HttpsError("failed-precondition", "This booking has more than one job. Cancel it by hand.");
       const jobDoc = jobs.docs[0];
       const j = jobDoc?.data() as ServiceJob | undefined;
+      if(j?.offlineSettlement)throw new HttpsError("failed-precondition","Actual receipt was recorded while cancelling. Refresh and review the receipt-funded cancellation.");
       if (j && !CANCELLABLE_JOB.includes(j.status)) throw new HttpsError("failed-precondition", "Work has already started on this job.");
       // Payment eligibility is re-derived INSIDE the transaction with the
       // same rules as the pre-transaction preview: a payment that appears,

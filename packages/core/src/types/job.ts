@@ -64,6 +64,9 @@ export interface ServiceJob {
   // the historical truth for payment/invoice, independent of bookingId.
   priceBreakdown: PriceBreakdown;
   totalAmount: number; // paise — equals priceBreakdown.total
+  /** Actual receipt register totals. Excess is a separate manual office-return due,
+   * never service revenue, store credit or a provider refund. Amounts in paise. */
+  offlineSettlement?: { appliedPaise: number; officeReturnDuePaise: number; receiptCount: number };
   paymentStatus: "unpaid" | "partial" | "paid" | "refunded";
   isWalkIn: boolean;
   createdAt: string;

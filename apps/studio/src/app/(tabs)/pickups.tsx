@@ -12,12 +12,14 @@ import { db, functions } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, spacing, typography, Button, ErrorState, LoadingState } from "@autodeck/ui";
 import { AgreedTimeInput } from "../../components/AgreedTimeInput";
+import {PickupHandoverForm, type PickupHandoverSummary} from "../../components/PickupHandoverForm";
+import {PICKUP_HANDOVER_ENABLED} from "../../lib/backend-features";
 import { PICKUP_LEG_PROGRESS_ENABLED } from "../../lib/backend-features";
 import { legsFor, canMarkLeg, legPayload, outstandingNote, type LegName } from "../../lib/pickup-legs";
 import { pickupFeeLabel, confirmBlockReason, checkAgreedTime } from "../../lib/pickup-form";
 
 type Bk = { plate: string; car: string; when: string; status: string };
-type Req = { pickupCompletedAt?: string | null; dropCompletedAt?: string | null; feePaise?: number | null; memberMembershipId?: string | null; id: string; bookingId: string; kind: string; address: string; preferredTime: string; requestedPickupTime?: string; requestedDropTime?: string; agreedPickupAt?: string | null; agreedDropAt?: string | null; note: string; status: string; staffNote: string };
+type Req = { pickupHandover?:PickupHandoverSummary|null;dropHandover?:PickupHandoverSummary|null;handoverUnavailable?:boolean; pickupCompletedAt?: string | null; dropCompletedAt?: string | null; feePaise?: number | null; memberMembershipId?: string | null; id: string; bookingId: string; kind: string; address: string; preferredTime: string; requestedPickupTime?: string; requestedDropTime?: string; agreedPickupAt?: string | null; agreedDropAt?: string | null; note: string; status: string; staffNote: string };
 const KIND: Record<string, string> = { pickup: "Pick up", drop: "Drop back", both: "Pick up and drop back" };
 
 function formatAgreed(iso: string): string {
@@ -29,6 +31,8 @@ function formatAgreed(iso: string): string {
 
 export default function PickupsScreen() {
   const auth = useAuth();
+  const [history,setHistory]=useState(false);
+  const loadGeneration=useRef(0);
   const [rows, setRows] = useState<Req[] | null>(null);
   const [error,setError] = useState<string|null>(null);
   const [bookings, setBookings] = useState<Record<string, Bk | null>>({});
@@ -39,13 +43,18 @@ export default function PickupsScreen() {
   const [agreedPickup, setAgreedPickup] = useState<Record<string, string>>({});
   const [agreedDrop, setAgreedDrop] = useState<Record<string, string>>({});
   const studioId = auth.status === "ready" ? auth.claims.studioId : null;
+  const principalId=auth.status === "ready" ? auth.user?.uid : null;
   const tenantId = auth.status === "ready" ? auth.claims.tenantId : null;
 
+  const principalScope=[principalId,tenantId,studioId,history].join("|");
+  const liveScope=useRef(principalScope);liveScope.current=principalScope;
+  const [resolvedScope,setResolvedScope]=useState("");
   const load = useCallback(async () => {
     if (!tenantId || !studioId) return;
+    const generation=++loadGeneration.current,scope=principalScope;
     setError(null);
     const snap = await getDocs(query(collection(db, COLLECTIONS.pickupRequests()), where("tenantId", "==", tenantId), where("studioId", "==", studioId)));
-    const list = snap.docs.map((d) => d.data() as Req).filter((r) => r.status === "REQUESTED" || r.status === "CONFIRMED");
+    const list = snap.docs.map((d) => d.data() as Req).filter((r) => (history ? r.status === "DONE" || r.status === "DECLINED" : r.status === "REQUESTED" || r.status === "CONFIRMED"));
     // Every request must belong to a real booking. Look each one up; requests with no booking behind them are not shown.
     const found: Record<string, Bk | null> = {};
     await Promise.all(list.map(async (r) => {
@@ -57,14 +66,17 @@ export default function PickupsScreen() {
         found[r.id] = { plate: v?.registrationNumber ?? "", car: [v?.make, v?.model].filter(Boolean).join(" "), when: d.scheduledAt ? formatAgreed(d.scheduledAt) : "", status: d.status ?? "" };
       } catch { found[r.id] = null; }
     }));
+    if(generation!==loadGeneration.current||liveScope.current!==scope)return;
     setBookings(found);
     // Same eligibility matrix as Admin: a COMPLETED booking still shows while a return (drop) is owed or the request just needs closing.
-    const real = list.filter((r) => pickupEligibility(r, found[r.id]?.status ?? null).actionable);
+    const real = list.filter((r) => history ? !!found[r.id] : pickupEligibility(r, found[r.id]?.status ?? null).actionable);
+    if(PICKUP_HANDOVER_ENABLED)await Promise.all(real.map(async r=>{try{for(const leg of legsFor(r)){const {data}=await httpsCallable<{requestId:string;leg:LegName},{record:PickupHandoverSummary|null}>(functions,"getPickupHandover")({requestId:r.id,leg:leg.leg});if(leg.leg==="pickup")r.pickupHandover=data.record;else r.dropHandover=data.record;}}catch{r.handoverUnavailable=true;}}));
+    if(generation!==loadGeneration.current||liveScope.current!==scope)return;
     setHidden(list.length - real.length);
-    setRows(real);
-  }, [tenantId, studioId]);
+    setRows(real);setResolvedScope(scope);
+  }, [tenantId, studioId, history, principalId, principalScope]);
 
-  useEffect(() => { void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); }, [load]);
+  useEffect(() => { setRows(null);setBookings({});setAgreedPickup({});setAgreedDrop({});void load().catch((e) => { setError(e instanceof Error ? e.message : "Try again."); }); return()=>{loadGeneration.current++};}, [load]);
 
   async function markLeg(r: Req, leg: LegName) {
     if (busyRef.current || !PICKUP_LEG_PROGRESS_ENABLED || !canMarkLeg(r, leg)) return;
@@ -103,13 +115,13 @@ export default function PickupsScreen() {
   }
 
   if (error && rows === null) return <ErrorState title="Requests unavailable" message={error} onRetry={()=>void load().catch(e=>setError(e instanceof Error?e.message:"Try again."))}/>;
-  if (rows === null) return <LoadingState />;
+  if (rows === null || resolvedScope!==principalScope) return <LoadingState />;
   const input = { ...typography.caption, color: colors.textPrimary, backgroundColor: colors.surfaceSunken, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: spacing.sm, height: 38, flex: 1, minWidth: 150 } as const;
   const wide = NightPlatform.OS === "web";
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: "transparent" }}
-      ListHeaderComponent={<CanvasTitle eyebrow="Pickup and drop" title="Requests" />}
+      ListHeaderComponent={<View><CanvasTitle eyebrow="Pickup and drop" title={history?"Completed requests":"Requests"}/>{PICKUP_HANDOVER_ENABLED?<Button label={history?"Open requests":"Completed history"} variant="secondary" size="md" onPress={()=>setHistory(v=>!v)}/>:null}</View>}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: 130, width: "100%", maxWidth: 1040, alignSelf: "center", gap: spacing.sm }}
       data={rows}
       keyExtractor={(r) => r.id}
@@ -125,7 +137,7 @@ export default function PickupsScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
               <Text style={{ ...typography.body, fontWeight: "700", color: colors.textPrimary }}>{KIND[r.kind] ?? r.kind}</Text>
               <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: confirmed ? "rgba(120,200,140,.2)" : "rgba(236,134,56,.2)" }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: confirmed ? "#8fd6a0" : colors.accent }}>{confirmed ? "Confirmed" : "New"}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: confirmed ? "#8fd6a0" : colors.accent }}>{history ? r.status === "DONE" ? "Done" : "Declined" : confirmed ? "Confirmed" : "New"}</Text>
               </View>
               {asked ? <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: "auto" }}>Asked for {asked}</Text> : null}
             </View>
@@ -151,12 +163,13 @@ export default function PickupsScreen() {
                 {outstandingNote(r) ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{outstandingNote(r)}</Text> : null}
               </View>
             ) : null}
+            {PICKUP_HANDOVER_ENABLED && (confirmed || history) ? <View style={{gap:spacing.sm}}>{legsFor(r).map(l=><PickupHandoverForm key={`${r.id}:${l.leg}:${tenantId}:${studioId}:${principalId}`} requestId={r.id} leg={l.leg} record={l.leg==="pickup"?r.pickupHandover:r.dropHandover} unavailable={r.handoverUnavailable} readOnly={history} onSaved={()=>void load()}/>)}</View> : null}
             {error && rows !== null && errId === r.id ? <Text style={{ ...typography.caption, color: colors.error }}>{error}</Text> : null}
-            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+            {!history ? <View style={{ flexDirection: "row", gap: spacing.sm }}>
               {r.status === "REQUESTED" ? <Button label="Confirm" size="md" fullWidth={false} disabled={busy !== null || block !== null} loading={busy === r.id} onPress={() => void setStatus(r, "CONFIRMED")} /> : null}
               {confirmed ? <Button label="Mark done" size="md" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "DONE")} /> : null}
               <Button label="Decline" size="md" variant="secondary" fullWidth={false} disabled={busy !== null} loading={busy === r.id} onPress={() => void setStatus(r, "DECLINED")} />
-            </View>
+            </View> : null}
           </View>
         );
       }}

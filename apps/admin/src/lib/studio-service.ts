@@ -12,6 +12,7 @@ export async function getStudioConfig(studioId: string): Promise<StudioConfig | 
 }
 
 interface UpdateStudioSettingsInput {
+  invoiceIssuer?: StudioConfig["invoiceIssuer"];
   studioId: string;
   name?: string;
   timezone?: string;

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type {CallableRequest} from "firebase-functions/v2/https";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
 // Records the query shape and serves seeded draft docs per state.
@@ -40,9 +41,11 @@ vi.mock("firebase-admin/firestore", () => ({
   }),
 }));
 
+const authFixture=(role="admin")=>({uid:"a",rawToken:"x",token:{role,tenantId:"t",studioId:null,aud:"demo-local",auth_time:0,exp:9999999999,iat:0,iss:"https://securetoken.google.com/demo-local",sub:"a",uid:"a",firebase:{identities:{},sign_in_provider:"custom"}}});
+
 import { getCatalogueDrafts } from "../../functions/service/catalogueDrafts.js";
 
-const req = (role = "admin"): any => ({ data: {}, auth: { uid: "a", token: { role, tenantId: "t", studioId: null }, rawToken: "x" } });
+const req = (role = "admin"): any => ({ data: {}, auth: authFixture(role) });
 const draft = (id: string, state: string, updatedAt = "2026-11-01T00:00:00.000Z") => ({ id, tenantId: "t", state, updatedAt, payload: { name: id }, version: 1 });
 
 beforeEach(() => { h.docs = []; h.wheres = []; h.publishedCount = 0; });
@@ -74,12 +77,12 @@ describe("getCatalogueDrafts read split", () => {
     h.docs = Array.from({ length: 30 }, (_, i) => draft(`p-${String(i).padStart(2, "0")}`, "published", `2026-10-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`));
     h.docs.push(draft("a1", "draft", "2026-11-07T00:00:00.000Z"));
     h.publishedCount = 30;
-    const page1: any = await getCatalogueDrafts.run({ data: { history: true }, auth: { uid: "a", token: { role: "admin", tenantId: "t", studioId: null }, rawToken: "x" } });
+    const page1: any = await getCatalogueDrafts.run({ rawRequest:{} as CallableRequest["rawRequest"], data: { history: true }, auth: authFixture() });
     expect(page1.drafts).toEqual([]);
     expect(page1.history).toHaveLength(25);
     expect(page1.nextHistoryCursor).toBeTruthy();
     expect(page1.publishedCount).toBe(30);
-    const page2: any = await getCatalogueDrafts.run({ data: { history: true, historyCursor: page1.nextHistoryCursor }, auth: { uid: "a", token: { role: "admin", tenantId: "t", studioId: null }, rawToken: "x" } });
+    const page2: any = await getCatalogueDrafts.run({ rawRequest:{} as CallableRequest["rawRequest"], data: { history: true, historyCursor: page1.nextHistoryCursor }, auth: authFixture() });
     expect(page2.history.length).toBe(5);
     expect(page2.nextHistoryCursor).toBeNull();
     const overlap = page1.history.map((d: any) => d.id).filter((id: string) => page2.history.some((d: any) => d.id === id));
@@ -89,11 +92,11 @@ describe("getCatalogueDrafts read split", () => {
   it("cursor is deterministic across a boundary tie (all rows share one updatedAt)", async () => {
     h.docs = Array.from({ length: 30 }, (_, i) => draft(`tie-${String(i).padStart(2, "0")}`, "published", "2026-11-07T16:23:59.913Z"));
     h.publishedCount = 30;
-    const auth = { uid: "a", token: { role: "admin", tenantId: "t", studioId: null }, rawToken: "x" };
-    const p1: any = await getCatalogueDrafts.run({ data: { history: true }, auth });
+    const auth = authFixture();
+    const p1: any = await getCatalogueDrafts.run({ rawRequest:{} as CallableRequest["rawRequest"], data: { history: true }, auth });
     expect(p1.history).toHaveLength(25);
     expect(p1.nextHistoryCursor).toContain("#");
-    const p2: any = await getCatalogueDrafts.run({ data: { history: true, historyCursor: p1.nextHistoryCursor }, auth });
+    const p2: any = await getCatalogueDrafts.run({ rawRequest:{} as CallableRequest["rawRequest"], data: { history: true, historyCursor: p1.nextHistoryCursor }, auth });
     expect(p2.history).toHaveLength(5);
     expect(p2.nextHistoryCursor).toBeNull();
     const ids1 = p1.history.map((d: any) => d.id);
@@ -103,7 +106,7 @@ describe("getCatalogueDrafts read split", () => {
   });
 
   it("rejects unknown input keys (strict schema)", async () => {
-    await expect(getCatalogueDrafts.run({ data: { history: true, bogus: 1 }, auth: { uid: "a", token: { role: "admin", tenantId: "t", studioId: null }, rawToken: "x" } })).rejects.toMatchObject({ code: "invalid-argument" });
+    await expect(getCatalogueDrafts.run({ rawRequest:{} as CallableRequest["rawRequest"], data: { history: true, bogus: 1 }, auth: authFixture() })).rejects.toMatchObject({ code: "invalid-argument" });
   });
 
   it("still rejects non-admin callers", async () => {

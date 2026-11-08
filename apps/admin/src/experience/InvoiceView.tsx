@@ -10,6 +10,9 @@ import { StatusBadge } from "../components/StatusBadge";
 import { formatPaise } from "../lib/format";
 import { methodLabel } from "../lib/status-label";
 
+import {INVOICE_PDF_ENABLED} from "../lib/backend-features";
+import {httpsCallable} from "firebase/functions";
+import {functions} from "../lib/firebase";
 export function InvoiceView(p: {
   invoice: Invoice;
   customer: Customer | null;
@@ -42,6 +45,8 @@ export function InvoiceView(p: {
   });
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
+  const [pdfBusy,setPdfBusy]=useState(false),[pdfError,setPdfError]=useState<string|null>(null);
+  async function downloadPdf(){if(pdfBusy)return;setPdfBusy(true);setPdfError(null);try{const{data}=await httpsCallable<{invoiceId:string},{url:string}>(functions,"getInvoicePdfUrl")({invoiceId:inv.id});window.open(data.url,"_blank","noopener,noreferrer")}catch{setPdfError("PDF is not available. The office needs to review its issued snapshots.")}finally{setPdfBusy(false)}}
 
   return (
     <div className="ax-page">
@@ -70,6 +75,8 @@ export function InvoiceView(p: {
             <span className="ax-label">Actions</span>
             <div className="ax-panel-actions" style={{ marginTop: 0 }}>
               <button type="button" className="ax-button ax-button--primary" onClick={() => printInvoiceHtml(html)}>Print</button>
+              {INVOICE_PDF_ENABLED&&<button type="button" className="ax-button" disabled={pdfBusy||inv.pdfStatus!=="ready"||!["issued","paid"].includes(inv.status)} onClick={()=>void downloadPdf()}>Download verified PDF</button>}
+              {pdfError&&<p role="alert">{pdfError}</p>}
               <button type="button" className="ax-button" onClick={() => p.onOpen(`/jobs/${inv.jobId}`)}>Open job</button>
               {inv.bookingId && <button type="button" className="ax-button" onClick={() => p.onOpen(`/bookings/${inv.bookingId}`)}>Open booking</button>}
             </div>

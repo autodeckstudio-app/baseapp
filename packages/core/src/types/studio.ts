@@ -17,6 +17,7 @@ export interface OperatingHours {
 }
 
 export interface StudioConfig {
+  invoiceIssuer?: import("../invoice-issuer.js").InvoiceIssuer;
   id: string;
   tenantId: string;
   studioId: string;

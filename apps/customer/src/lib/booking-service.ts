@@ -177,6 +177,11 @@ export async function approveBookingQuote(bookingId: string,expectedTotalPaise:n
   await fn({ bookingId,expectedTotalPaise,expectedUpdatedAt });
 }
 
+export async function declineBookingQuote(bookingId: string, expectedTotalPaise: number, expectedUpdatedAt: string): Promise<void> {
+  const fn = httpsCallable(functions, "respondToBookingQuote");
+  await fn({ bookingId, expectedTotalPaise, expectedUpdatedAt, decision: "declined" });
+}
+
 export async function getStudioInfo(studioId: string): Promise<LiveStudioInfo> {
   const fn = httpsCallable<{ studioId: string }, LiveStudioInfo>(functions, "getStudioInfo");
   return (await fn({ studioId })).data;

@@ -28,7 +28,7 @@ export interface PriceBreakdown {
   currency: string; // ISO 4217; snapshotted
 }
 
-export type QuoteStatus = "requested" | "quoted" | "approved";
+export type QuoteStatus = "requested" | "quoted" | "approved" | "declined";
 
 export interface Booking {
   settlementKind?: "membership_covered";
@@ -38,6 +38,8 @@ export interface Booking {
   id: string;
   // Set only for price-on-request services. requested -> quoted (studio sets price) -> approved (customer).
   quoteStatus?: QuoteStatus;
+  quoteExpiresAt?: string;
+  quoteRespondedAt?: string;
   priceOnRequest?: boolean;
   /** Revised pickup/drop total requires exact customer consent before payment. */
   requiresPriceApproval?: boolean;

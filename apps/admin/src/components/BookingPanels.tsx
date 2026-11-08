@@ -95,14 +95,16 @@ export function BookingPanels({ booking, job, service, bayName, onError }: { boo
       {booking.priceOnRequest === true && (
         <section className="ax-panel">
           <span className="ax-label">Quote</span>
-          <div className="kv"><span>{service?.brand ? `${service.brand} · ` : ""}{service?.name ?? "Product"}</span><span>{booking.quoteStatus === "approved" ? "Customer approved" : booking.quoteStatus === "quoted" ? "Waiting for customer" : "Needs a price"}</span></div>
+          <div className="kv"><span>{service?.brand ? `${service.brand} · ` : ""}{service?.name ?? "Product"}</span><span>{booking.quoteStatus === "approved" ? "Customer approved" : booking.quoteStatus === "quoted" ? "Waiting for customer" : booking.quoteStatus === "declined" ? "Customer declined" : "Needs a price"}</span></div>
           {booking.quoteStatus !== "approved" && (
             <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
               <input className="ax-input" inputMode="decimal" placeholder="Price in rupees, before tax" value={quoteRupees} onChange={(e) => setQuoteRupees(e.target.value)} />
               <button type="button" className="ax-button ax-button--primary" disabled={quoteBusy} onClick={() => void submitQuote()}>{booking.quoteStatus === "quoted" ? "Update quote" : "Send quote"}</button>
             </div>
           )}
-          <p className="ax-note">Work cannot start until the customer approves the quote.</p>
+          <p className="ax-note">Quotes are valid for 7 days. Work waits for customer approval. Changed scope or price needs fresh approval.</p>
+          {booking.quoteStatus === "quoted" && <><p className="ax-note">{booking.quoteExpiresAt ? `Valid until ${new Date(booking.quoteExpiresAt).toLocaleString("en-IN")}` : "Reissue this quote to add its validity date."}</p><p><a className="ax-button" href={`https://app.autodeck.in/bookings/${encodeURIComponent(booking.id)}`} target="_blank" rel="noopener noreferrer">Open customer approval link</a></p><p className="ax-note">For the customer to open in their browser and sign in. No installation needed. This link does not approve or send anything.</p></>}
+
         </section>
       )}
 

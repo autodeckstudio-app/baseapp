@@ -13,6 +13,10 @@ import {
 } from "../../../lib/studio-service";
 
 
+import {ComplaintLogPanel} from "../../../components/ComplaintLogPanel";
+import {InvoiceIdentityPanel} from "../../../components/InvoiceIdentityPanel";
+import {INVOICE_ISSUER_ENABLED} from "../../../lib/backend-features";
+
 export default function StudioSettingsPage() {
   const studioId = FIRST_STUDIO_ID;
   const [config, setConfig] = useState<StudioConfig | null>(null);
@@ -56,7 +60,7 @@ export default function StudioSettingsPage() {
   }
 
   return (
-    <StudioView
+    <><StudioView
       config={config}
       loading={loading}
       error={error}
@@ -73,6 +77,6 @@ export default function StudioSettingsPage() {
       onRemoveHoliday={(d) => void run(() => removeHoliday(studioId, d), "Holiday removed.", "Couldn't remove that holiday.")}
       onAddBay={(n, t) => void run(() => upsertBay({ studioId, name: n, bayType: t, active: true }), `${n} added.`, "Couldn't add the bay.")}
       onToggleBay={(id, active, n, t) => void run(() => upsertBay({ studioId, bayId: id, name: n, bayType: t, active: !active }), active ? `${n} taken out of use.` : `${n} is back in use.`, "Couldn't update the bay.")}
-    />
+    />{INVOICE_ISSUER_ENABLED&&config?<InvoiceIdentityPanel config={config} onSaved={()=>void refresh()}/>:null}<ComplaintLogPanel/></>
   );
 }

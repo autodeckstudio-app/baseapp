@@ -20,10 +20,9 @@ describe("my day actions", () => {
 });
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 describe("Account attendance rows use the same gating as Today (source guard only)", () => {
   it("disables each row from dayActions", () => {
-    const src = readFileSync(resolve(process.cwd(), "src/app/(tabs)/account.tsx"), "utf8");
+    const src = readFileSync(new URL("../app/(tabs)/account.tsx",import.meta.url), "utf8");
     for (const k of ["in", "be", "out"]) expect(src).toContain(`!acts.${k}`);
     // Start break is gone from the codebase, not merely gated off (peer final UI,
     // 2 Nov basket item 3). "End break" stays only while a break is open so a

@@ -9,7 +9,11 @@ export interface AccountantMoney {
   cap: number;
   truncated: { payments: boolean; expenses: boolean; invoices: boolean };
   report: null | { month: string; totalReceiptsPaise: number; cashPaise: number; upiPaise: number; bankTransferPaise: number; razorpayPaise: number; paymentCount: number; expensesPaise: number; expensesByCategory: Record<string, number> };
-  payments: Array<{ id: string; amount: number; currency: string; method: string; status: string; completedAt: string | null; createdAt: string; refundAmount: number | null; invoiceId: string | null }>;
+  offlineReceivedPaise?: number;
+  offlineReturnedPaise?: number;
+  offlineReceipts?: Array<{ id:string;createdAt:string;method:string;receivedPaise:number;appliedPaise:number;officeReturnDuePaise:number;balanceDuePaise:number }>;
+  offlineReturns?: Array<{ id:string;createdAt:string;method:string;amountPaise:number }>;
+  payments: Array<{ id: string; offlineReceiptSettlement?:boolean; amount: number; currency: string; method: string; status: string; completedAt: string | null; createdAt: string; refundAmount: number | null; invoiceId: string | null }>;
   invoices: Array<{ id: string; invoiceNumber: string; status: string; issuedAt: string | null; voidedAt: string | null; customerName: string | null; lineItems: Array<{ quantity: number; unitPrice: number; total: number }>; subtotal: number; discount: number; taxRatePercent: number; tax: number; total: number; currency: string }>;
   expenses: Array<{ id: string; amount: number; category: string; paidVia: string; date: string; month: string }>;
   dayCloses: Array<Record<string, unknown>>;

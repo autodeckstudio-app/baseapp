@@ -9,6 +9,7 @@ import { calculateTax } from "./pricing.js";
 import { randomUUID } from "node:crypto";
 
 export interface BuildInvoiceParams {
+  issuerSnapshot?: Invoice["issuerSnapshot"];
   coveredMembershipId?: string;
   invoiceId: string;
   invoiceNumber: string; // allocated atomically by allocateInvoiceNumber()
@@ -137,6 +138,7 @@ export function buildInvoice(params: BuildInvoiceParams): Invoice {
     visitId: jobId,
     ...(vehicleSnapshot ? { vehicleSnapshot } : {}),
     ...(customerSnapshot ? { customerSnapshot } : {}),
+    ...(params.issuerSnapshot ? { issuerSnapshot: structuredClone(params.issuerSnapshot) } : {}),
     paymentId,
     invoiceNumber,
     lineItems,

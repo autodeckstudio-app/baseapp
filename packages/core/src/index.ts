@@ -44,3 +44,5 @@ export * from "./customer-job.js";
 export * from './reference-ranges.js';
 
 export {customerOfferingVisible} from "./customer-offering-visibility";
+
+export * from "./invoice-issuer.js";

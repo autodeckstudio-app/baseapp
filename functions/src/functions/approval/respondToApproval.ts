@@ -87,6 +87,7 @@ export const respondToApproval = onCall(
       const jobSnap = await tx.get(jobRef);
       if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
       const job = jobSnap.data() as ServiceJob;
+      if(data.decision === "approved" && job.offlineSettlement)throw new HttpsError("failed-precondition","Actual receipts already exist. Contact the office before changing the agreed total.");
 
       // The underlying job (or its booking) may have been cancelled while this
       // approval was still pending — there is nothing left to authorize.

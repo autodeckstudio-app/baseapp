@@ -24,6 +24,7 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
 
   const job = jobSnap.data() as ServiceJob;
+  if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts exist. Use the receipt balance, not an online payment link.");
 
   // Ownership: customer pays own job; studio/admin can initiate payment for
   // any job within their own studio (Phase 5B P1-14 fix — a studio caller
@@ -85,6 +86,8 @@ export const initiatePayment = onCall({ region: "asia-south1", secrets: ["RAZORP
   // concurrent caller's own tx.get() query will see it and return the
   // existing payment instead of creating a duplicate.
   const claim = await db.runTransaction(async (tx) => {
+    const freshJob=(await tx.get(db.collection(COLLECTIONS.jobs()).doc(data.jobId))).data() as ServiceJob | undefined;
+    if(!freshJob||freshJob.id!==job.id||freshJob.customerId!==job.customerId||freshJob.studioId!==job.studioId||freshJob.tenantId!==job.tenantId||freshJob.totalAmount!==job.totalAmount||freshJob.status==="CANCELLED"||freshJob.offlineSettlement)throw new HttpsError("failed-precondition","Job or receipt balance changed. Refresh before payment.");
     const freshExisting = await tx.get(
       db
         .collection(COLLECTIONS.payments())

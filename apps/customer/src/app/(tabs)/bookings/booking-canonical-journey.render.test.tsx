@@ -270,7 +270,7 @@ it("real job-ID consult fallback uses linked booking ID and exact displayed revi
     r = create(<Detail />);
   });
   await act(async () => h.bookingCb(null));
-  await act(async () => h.jobCb({ ...job, bookingId: "quote-b" }));
+  await act(async () => h.jobCb({ ...job, status:"VEHICLE_RECEIVED", bookingId: "quote-b" }));
   const b = {
     ...job,
     id: "quote-b",
@@ -279,6 +279,7 @@ it("real job-ID consult fallback uses linked booking ID and exact displayed revi
     serviceId: "svc",
     priceOnRequest: true,
     quoteStatus: "quoted",
+    quoteExpiresAt:new Date(Date.now()+86400000).toISOString(),
     totalAmount: 129900,
     updatedAt: "v2",
     notes: null,

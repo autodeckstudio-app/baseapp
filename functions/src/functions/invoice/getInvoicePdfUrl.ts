@@ -1,0 +1,23 @@
+import { onCall,HttpsError } from "firebase-functions/v2/https";
+import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
+import { z } from "zod";
+import { COLLECTIONS } from "@autodeck/database";
+import { extractUser,assertRole,assertTenant } from "../../middleware/auth.js";
+import { requireCustomerDocId } from "../../lib/customer-identity.js";
+import { shouldEnforceAppCheck } from "../../lib/environment.js";
+import { validate } from "../../middleware/validate.js";
+import { enforceRateLimit,subjectFrom } from "../../middleware/rateLimit.js";
+export const getInvoicePdfUrl=onCall({region:"asia-south1",enforceAppCheck: shouldEnforceAppCheck()},async request=>{
+ const user=extractUser(request);assertRole(user,"customer","admin","superadmin","studio");
+ const {invoiceId}=validate(z.object({invoiceId:z.string().min(1).max(128).regex(/^[^/]+$/)}).strict(),request.data);
+ await enforceRateLimit(subjectFrom(user),"dailyClose.read");const db=getFirestore();
+ const snap=await db.collection(COLLECTIONS.invoices()).doc(invoiceId).get();if(!snap.exists)throw new HttpsError("not-found","Invoice not found.");
+ const inv=snap.data()!;assertTenant(user,inv.tenantId);
+ if(user.claims.role==="studio"&&user.claims.studioId!==inv.studioId)throw new HttpsError("permission-denied","This invoice belongs to another studio.");
+ if(user.claims.role==="customer"&&inv.customerId!==await requireCustomerDocId(db,COLLECTIONS.customers(),user.claims.tenantId,user.uid))throw new HttpsError("permission-denied","This is not your invoice.");
+ if(!["issued","paid"].includes(inv.status))throw new HttpsError("failed-precondition","This invoice was voided. Use its current invoice view for the void status.");
+ const path=`${inv.tenantId}/invoices/${snap.id}/issued.pdf`;
+ if(inv.pdfStatus!=="ready"||inv.pdfStoragePath!==path)throw new HttpsError("failed-precondition","Invoice PDF is not ready. Use Print while the office checks it.");
+ const [url]=await getStorage().bucket().file(path).getSignedUrl({version:"v4",action:"read",expires:Date.now()+10*60000});return {url,expiresInSeconds:600};
+});

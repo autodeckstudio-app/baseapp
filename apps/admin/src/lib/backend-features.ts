@@ -9,3 +9,9 @@ export const MEMBERSHIP_SETTLEMENT_ENABLED = true;
 export const ACCOUNTANT_MONEY_ENABLED = false;
 // requestAdminApproval / respondToAdminApproval / adminApprovalRequests (staff ask, office decides). Provisional contract, not deployed.
 export const ADMIN_APPROVAL_REVIEW_ENABLED = true;
+
+// Local integration only, waits for coordinated receipt/cancel/report backend qualification and release.
+export const OFFLINE_RECEIPT_REGISTER_ENABLED = false;
+
+export const INVOICE_ISSUER_ENABLED = false;
+export const INVOICE_PDF_ENABLED = false;

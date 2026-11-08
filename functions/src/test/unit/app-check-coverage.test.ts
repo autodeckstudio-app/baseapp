@@ -89,6 +89,8 @@ const ENFORCED = [
   "booking/getServiceReviews.ts",
   "booking/noShowReview.ts",
   "booking/pickupRequests.ts",
+  "booking/pickupHandover.ts",
+  "invoice/getInvoicePdfUrl.ts",
   "booking/pickupQuote.ts",
   "booking/purgeTestBookings.ts",
   "booking/decideBookingRescheduleRequest.ts",
@@ -169,6 +171,8 @@ const ENFORCED = [
   "payment/listRefundWork.ts",
   "payment/processRefundOutbox.ts",
   "payment/reconcileRefundClaims.ts",
+  "payment/recordOfflineReceipt.ts",
+  "payment/offlineReceiptReview.ts",
   "payment/recordManualPayment.ts",
   "payment/requestAdvancePayment.ts",
   "payment/requestGiftPaymentLink.ts",
@@ -212,6 +216,7 @@ const ENFORCED = [
 // all (unlike onCall/onRequest) — they cannot become publicly callable
 // regardless of App Check.
 const EXCLUDED_NON_CALLABLE = [
+  "invoice/onInvoiceCreatedPdf.ts",
   "service/catalogueRuntime.ts",
   "approval/expireStaleApprovalsScheduled.ts",
   "booking/flagMissedBookingsScheduled.ts",

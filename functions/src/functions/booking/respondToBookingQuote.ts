@@ -1,3 +1,4 @@
+import { assertQuoteOfferCurrent } from "../../lib/quote-lifecycle.js";
 // Customer: approve the studio's quote on their own price-on-request booking. quoted -> approved.
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
@@ -29,6 +30,7 @@ const schema = z
       .positive()
       .max(Number.MAX_SAFE_INTEGER),
     expectedUpdatedAt: z.string().min(1),
+    decision: z.enum(["approved", "declined"]).default("approved"),
   })
   .strict();
 
@@ -52,6 +54,7 @@ export const respondToBookingQuote = onCall(
       if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
       const b = snap.data() as Booking;
       assertTenant(user, b.tenantId);
+      if (b.id !== data.bookingId) throw new HttpsError("failed-precondition", "Booking identity needs office review.");
       if (b.customerId !== customerId)
         throw new HttpsError("permission-denied", "Not your booking.");
       const profile = (
@@ -114,6 +117,7 @@ export const respondToBookingQuote = onCall(
         b as Booking & { consultQuoteApproval?: { quoteHash?: string } }
       ).consultQuoteApproval;
       if (b.quoteStatus === "approved" && marker?.quoteHash) {
+        if (data.decision === "declined") throw new HttpsError("failed-precondition", "This quote is already approved. Contact the office before changing agreed work.");
         const stored = (
           await tx.get(
             db.collection("consultQuoteApprovals").doc(marker.quoteHash),
@@ -151,7 +155,15 @@ export const respondToBookingQuote = onCall(
           "failed-precondition",
           "The displayed quote changed. Review it again.",
         );
+      assertQuoteOfferCurrent(b, data.expectedTotalPaise, data.expectedUpdatedAt, Date.now());
+      if (!["PENDING_VEHICLE", "VEHICLE_RECEIVED", "STANDBY"].includes(String(job.status)))
+        throw new HttpsError("failed-precondition", "Work has already started. Contact the office to review the quote.");
       const now = new Date().toISOString();
+      if (data.decision === "declined") {
+        tx.update(ref, { quoteStatus: "declined", quoteRespondedAt: now, updatedAt: now });
+        writeAuditLog(tx, { action: "booking.quote_declined", entityType: "Booking", entityId: data.bookingId, user, studioId: b.studioId, before: { quoteStatus: "quoted" }, after: { quoteStatus: "declined", total: b.totalAmount } });
+        return;
+      }
       const receipt = freezeConsultQuoteApproval(
         {
           version: 1,
@@ -173,6 +185,7 @@ export const respondToBookingQuote = onCall(
       );
       tx.update(ref, {
         quoteStatus: "approved",
+        quoteRespondedAt: now,
         consultQuoteApproval: { quoteHash: receipt.quoteHash },
         updatedAt: now,
       });

@@ -79,6 +79,7 @@ export const confirmManualPayment = onCall({ region: "asia-south1" , enforceAppC
     const jobSnap = await tx.get(jobRef);
     if (!jobSnap.exists) throw new HttpsError("not-found", "Job not found.");
     const job = jobSnap.data() as ServiceJob;
+    if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts already exist. Office review required before confirming another payment.");
 
     // Re-check status inside the transaction â a concurrent confirmation
     // (e.g. two staff tapping "Confirm" at once) must not double-complete.

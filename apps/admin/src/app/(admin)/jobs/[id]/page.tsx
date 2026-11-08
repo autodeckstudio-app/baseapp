@@ -1,4 +1,6 @@
 "use client";
+import {OfflineReceiptPanel} from "../../../../components/OfflineReceiptPanel";
+import {OFFLINE_RECEIPT_REGISTER_ENABLED} from "../../../../lib/backend-features";
 import { MembershipSettlement } from "../../../../components/MembershipSettlement";
 import { JobPaymentPanel } from "../../../../components/JobPaymentPanel";
 import {jobActivityLabel} from "../../../../lib/job-activity-label";
@@ -295,6 +297,7 @@ export default function JobDetailPage() {
             <div className="kv"><span>Total</span><span className="ax-data" style={{ color: "var(--ad-text-primary)" }}>{formatPaise(job.totalAmount)}</span></div>
           </section>
 
+          {OFFLINE_RECEIPT_REGISTER_ENABLED && currentScope && currentPayment !== undefined ? <OfflineReceiptPanel key={[job.id,user?.uid,claims?.tenantId].join("|")} jobId={job.id}/> : null}
           <JobPaymentPanel onRefreshPayment={()=>{setPayment(undefined);setStatus("Refreshing AutoDeck payment record. This does not charge or record money.");setAttempt(n=>n+1)}}
             job={job}
             booking={booking}

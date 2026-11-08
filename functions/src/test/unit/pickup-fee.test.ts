@@ -62,6 +62,7 @@ describe("the server wiring", () => {
   it("never edits a job that has an invoice or a payment, and reads before it writes", () => {
     expect(src).toContain("const locked = invoiced");
     expect(src).toContain("feeUnbilled");
+    expect(src).toContain("!!job.offlineSettlement");
     expect(src.indexOf("tx.get(bRef)")).toBeLessThan(src.indexOf("tx.update(jobDoc.ref"));
   });
 });

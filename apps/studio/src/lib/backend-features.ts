@@ -19,3 +19,6 @@ export const UPI_RECORD_ENABLED = true;
 // deliberately unproven because a synthetic pickup request cannot be hidden from the live
 // admin pickups listener (tenant-wide query) - do not create one to test it.
 export const PICKUP_LEG_PROGRESS_ENABLED = true;
+
+// Local-only handover preparation, waits for coordinated backend/private evidence release.
+export const PICKUP_HANDOVER_ENABLED = false;

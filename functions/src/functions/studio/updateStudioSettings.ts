@@ -30,6 +30,7 @@ export const updateStudioSettings = onCall({ region: "asia-south1", enforceAppCh
     assertTenant(user, existing.tenantId);
 
     const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (data.invoiceIssuer !== undefined) updates["invoiceIssuer"] = data.invoiceIssuer;
     if (data.name !== undefined) updates["name"] = data.name;
     if (data.timezone !== undefined) updates["timezone"] = data.timezone;
     if (data.operatingHours !== undefined) updates["operatingHours"] = data.operatingHours;

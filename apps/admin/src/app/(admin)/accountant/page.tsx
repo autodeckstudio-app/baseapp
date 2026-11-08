@@ -64,6 +64,12 @@ export default function AccountantPage() {
               </dl>
             ) : <p className="ax-note">Not shown: the data set is larger than the cap.</p>}
           </section>
+          {data.offlineReceipts && <section className="ax-panel" aria-label="Actual offline receipts">
+            <span className="ax-label">Actual offline receipts</span><p className="ax-note">Actual money received and returned, separate from final invoice settlement projections. Excess is not service revenue.</p>
+            <div className="kv"><span>Received this month</span><span>{formatPaise(data.offlineReceivedPaise ?? 0)}</span></div><div className="kv"><span>Returned this month</span><span>{formatPaise(data.offlineReturnedPaise ?? 0)}</span></div>
+            {data.offlineReceipts.map(r=><div className="kv" key={r.id}><span>{formatDate(r.createdAt)} - {r.method}</span><span>Received {formatPaise(r.receivedPaise)} / applied {formatPaise(r.appliedPaise)} / excess {formatPaise(r.officeReturnDuePaise)}</span></div>)}
+            {(data.offlineReturns ?? []).map(r=><div className="kv" key={r.id}><span>{formatDate(r.createdAt)} - {r.method}</span><span>Returned {formatPaise(r.amountPaise)}</span></div>)}
+          </section>}
           <section className="ax-panel" aria-label="Invoices">
             <span className="ax-label">Invoices ({data.invoices.length})</span>
             <table className="ax-table"><thead><tr><th>Number</th><th>Issued</th><th>Customer</th><th>Status</th><th>Tax</th><th>Total</th></tr></thead>
@@ -72,7 +78,7 @@ export default function AccountantPage() {
           <section className="ax-panel" aria-label="Payments">
             <span className="ax-label">Payments ({data.payments.length})</span>
             <table className="ax-table"><thead><tr><th>Completed</th><th>Method</th><th>Amount</th><th>Refunded</th></tr></thead>
-              <tbody>{data.payments.map((p) => <tr key={p.id}><td>{formatDate(p.completedAt)}</td><td>{p.method}</td><td>{formatPaise(p.amount)}</td><td>{p.refundAmount ? formatPaise(p.refundAmount) : "-"}</td></tr>)}</tbody></table>
+              <tbody>{data.payments.map((p) => <tr key={p.id}><td>{formatDate(p.completedAt)}</td><td>{p.method}{p.offlineReceiptSettlement ? " (settlement projection, not a new receipt)" : ""}</td><td>{formatPaise(p.amount)}</td><td>{p.refundAmount ? formatPaise(p.refundAmount) : "-"}</td></tr>)}</tbody></table>
           </section>
           <section className="ax-panel" aria-label="Expenses">
             <span className="ax-label">Expenses ({data.expenses.length})</span>

@@ -24,6 +24,7 @@ export const settleMembershipCoveredJob = onCall({ region: "asia-south1" , enfor
       snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError("not-found", "Job not found.");
     const job = snap.data() as ServiceJob;
+    if(job.offlineSettlement)throw new HttpsError("failed-precondition","Actual offline receipts already exist. Office review is required before membership settlement.");
     if (job.tenantId !== user.claims.tenantId)
       throw new HttpsError("permission-denied", "Cross-tenant access denied.");
     assertStudio(user, job.studioId, "Job");

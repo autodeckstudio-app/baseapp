@@ -1,3 +1,4 @@
+import {readOfflineLedger,offlineLedgerTotals} from "../../lib/offline-ledger.js";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import type { Expense, Invoice, Payment } from "@autodeck/core";
@@ -28,6 +29,7 @@ export function projectInvoice(i: Invoice) {
 }
 export function projectPayment(p: Payment) {
   return {
+    ...(p.offlineReceiptSettlement===true?{offlineReceiptSettlement:true}:{}),
     id: p.id, amount: p.amount, currency: p.currency, method: p.method, status: p.status,
     completedAt: p.completedAt ?? null, createdAt: p.createdAt, refundAmount: p.refundAmount ?? null, invoiceId: p.invoiceId ?? null,
   };
@@ -89,20 +91,24 @@ export const getAccountantMoney = onCall({ region: "asia-south1" , enforceAppChe
   const invoices = invDocs.filter((i) => (i.issuedAt ?? i.createdAt).slice(0, 7) === data.month);
   const dayCloses = closeSnaps.filter((s) => s.exists).map((s) => projectDayClose(s.data() as Record<string, unknown>));
 
+  const offline=offlineLedgerTotals(await readOfflineLedger(db,tenantId,data.studioId),data.month);
+
   // Aggregates only when their inputs are complete. Never a silently partial accounting total.
   let report: Record<string, unknown> | null = null;
   if (!payTrunc && !expTrunc) {
     let total = 0, cash = 0, upi = 0, bank = 0, razorpay = 0;
     for (const p of payments) {
+      if(p.offlineReceiptSettlement)continue;
       total += p.amount;
       if (p.method === "cash") cash += p.amount; else if (p.method === "upi_manual") upi += p.amount;
       else if (p.method === "bank_transfer") bank += p.amount; else razorpay += p.amount;
     }
+    total+=offline.receivedPaise;cash+=offline.cashPaise;upi+=offline.upiPaise;bank+=offline.bankTransferPaise;
     const byCat: Record<string, number> = {};
     let exp = 0;
     for (const e of expDocs) { exp += e.amount; byCat[e.category] = (byCat[e.category] ?? 0) + e.amount; }
     report = { month: data.month, totalReceiptsPaise: total, cashPaise: cash, upiPaise: upi, bankTransferPaise: bank, razorpayPaise: razorpay,
-      paymentCount: payments.length, expensesPaise: exp, expensesByCategory: byCat };
+      paymentCount: payments.filter(p=>!p.offlineReceiptSettlement).length+offline.paymentCount, expensesPaise: exp, expensesByCategory: byCat };
   }
 
   return {
@@ -111,11 +117,15 @@ export const getAccountantMoney = onCall({ region: "asia-south1" , enforceAppChe
     cap: ACCOUNTANT_CAP,
     truncated: { payments: payTrunc, expenses: expTrunc, invoices: invTruncIssued || invTruncVoid },
     report,
+    offlineReceipts:offline.receipts.map(({jobId:_jobId,...row})=>row),
+    offlineReturns:offline.returns.map(({jobId:_jobId,...row})=>row),
+    offlineReceivedPaise:offline.receivedPaise,
+    offlineReturnedPaise:offline.returnedPaise,
     payments: payments.slice(0, ACCOUNTANT_CAP).map(projectPayment),
     invoices: invoices.slice(0, ACCOUNTANT_CAP).map(projectInvoice),
     expenses: expDocs.slice(0, ACCOUNTANT_CAP).map(projectExpense),
     dayCloses,
     refundsOwed: { paise: owed.owedPaise, count: owed.count, truncated: owed.truncated },
-    notes: ["Receipts are completed payments (cash held), not net revenue. Refunds owed to customers are shown separately (open total, not for this month) and are not netted into receipts.", "No GSTIN or HSN is stored; this is not a tax-ready export."],
+    notes: ["Receipts are actual money received, not net revenue. Offline receipt settlement projections are not counted twice. Excess office returns are shown separately. Refunds owed to customers are shown separately (open total, not for this month) and are not netted into receipts.", "No GSTIN or HSN is stored; this is not a tax-ready export."],
   };
 });

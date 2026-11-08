@@ -50,6 +50,7 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
   if (isStudioOrAbove && booking.advancePaymentId) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "waive" }, "admin");
   if (isStudioOrAbove) {
     const js = await db.collection(COLLECTIONS.jobs()).where("bookingId", "==", data.bookingId).limit(1).get();
+    if(js.docs[0]?.data()["offlineSettlement"])return runCancel(user,{bookingId:data.bookingId,reason:data.reason,feeAction:"waive"},"admin");
     const ps = js.empty ? null : await db.collection(COLLECTIONS.payments()).where("jobId", "==", js.docs[0]!.id).where("status", "in", ["pending", "processing"]).get();
     if (booking.cancelIntent?.state === "waiting" || booking.cancelIntent?.state === "needs_review" || ps?.docs.some(d => d.data()["method"] === "razorpay_payment_link")) return runCancel(user, { bookingId: data.bookingId, reason: data.reason, feeAction: "waive" }, "admin");
   }
@@ -93,6 +94,7 @@ export const cancelBooking = onCall({ region: "asia-south1", secrets: ["RAZORPAY
     const paymentsOnJob = !jobsSnap.empty
       ? await tx.get(db.collection(COLLECTIONS.payments()).where("jobId", "==", jobsSnap.docs[0]?.id ?? "").where("status", "in", ["pending", "processing", "completed"]).limit(10))
       : null;
+    if(jobsSnap.docs[0]?.data()["offlineSettlement"])throw new HttpsError("failed-precondition","Receipt was recorded while cancelling. Refresh and review cancellation again.");
     // Money already taken, or being taken, needs an admin to settle it (adminCancelBooking). A payment that was only started (pending) holds no money, so it is simply closed.
     if (paymentsOnJob && paymentsOnJob.docs.some((d) => d.data()["status"] !== "pending")) {
       throw new HttpsError("failed-precondition", "This booking has a payment on it. Please contact the studio to cancel it and arrange any refund.");
