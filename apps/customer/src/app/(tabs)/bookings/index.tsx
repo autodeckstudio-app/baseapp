@@ -174,7 +174,7 @@ export default function BookingsScreen() {
   };
 
   return (
-    <Screen appBar="Bookings" header={<PageHeader title={error || bookings === null ? "Bookings" : liveJob ? "Your car is in the studio" : next ? "Your next visit is booked" : "Nothing booked right now"} sub={error || bookings === null ? "" : [upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
+    <Screen appBar="Bookings" header={<PageHeader title={error || bookings === null ? "Bookings" : liveJob ? "In the studio" : next ? "Upcoming visit" : "No upcoming visits"} sub={error || bookings === null ? "" : [upcoming.length > 0 ? `${upcoming.length} coming up` : "", past.length > 0 ? `${past.length} past` : ""].filter(Boolean).join(" · ") || "Book a service when you are ready."} />}>
       <View {...swipe.handlers} style={[{ gap: 20, minHeight: Math.max(winH - 220, 480) }, swipe.style]}>
       {error ? <Notice title="Can't load bookings" body="Check your connection and try again." action={<Button kind="quiet" label="Try again" onPress={() => void load()} />} /> : null}
 

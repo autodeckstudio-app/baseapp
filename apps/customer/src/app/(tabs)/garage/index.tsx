@@ -170,7 +170,7 @@ export default function GarageScreen() {
 
   return (
     <Screen appBar="Garage">
-      <SceneIntro eyebrow="Your garage" compact title="Your cars, connected."/>
+      <SceneIntro eyebrow="Your garage" compact title="Your cars"/>
       <View testID="garage-swipe-area" style={{ gap: 20, minHeight: Math.max(winH - 240, 400) }}>
       {ownerUnknown ? <Notice title="Couldn't confirm your profile" body="Try again in a moment." action={<Button label="Try again" onPress={() => { setError(false); setVehicles(null); setRetryTick((t) => t + 1); }} />} /> : null}
       {ownerLinking ? <Notice title="Your profile is waiting to be claimed" body="Claim it to see your cars, bookings and bills here." action={<Button label="Claim your profile" onPress={() => router.push("/(auth)/claim")} />} /> : null}

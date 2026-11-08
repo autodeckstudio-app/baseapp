@@ -232,7 +232,7 @@ export function ServicesExplorer({
         <SceneIntro
           compact
           eyebrow="AutoDeck care"
-          title="Care for the car you love."
+          title="Explore services"
         />
         {SERVICE_HOMES.map((h) => (
           <SceneCard
@@ -258,13 +258,13 @@ export function ServicesExplorer({
               />
             </View>
             <View style={{ padding: 18, gap: 8 }}>
-              <T role="heading" style={{ fontSize: 24, lineHeight: 29 }}>
-                {h.label}
-              </T>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <T role="heading" style={{ flex: 1, fontSize: 20, lineHeight: 25 }}>{h.label}</T>
+                <T role="caption" style={{ fontSize: 22, lineHeight: 24 }}>›</T>
+              </View>
               <T role="caption" tone="secondary">
                 {HOME_COPY[h.key]}
               </T>
-              <T role="caption">Explore services ›</T>
             </View>
           </SceneCard>
         ))}

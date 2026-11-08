@@ -368,29 +368,22 @@ export function HomeView(p: HomeViewProps) {
             </View>
           </View>
         </Pressable>
-        {p.quick?.length ? (
-          <View style={{ flexDirection: "row", gap: 8, padding: 12, paddingBottom: p.social?.length ? 8 : 12 }}>
-            {p.quick.map((q) => {
-              const tone = q.icon === "whatsapp" ? (name === "light" ? "#17643D" : "#8DE0AE") : q.icon === "directions" ? (name === "light" ? "#245A89" : "#9CCEF9") : (name === "light" ? "#88420E" : "#F8B982");
-              const wash = q.icon === "whatsapp" ? (name === "light" ? "#E1F2E7" : "#223D30") : q.icon === "directions" ? (name === "light" ? "#E5EFFA" : "#253746") : (name === "light" ? "#FAEADB" : "#443226");
-              return <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, minHeight: 80, paddingVertical: 10, paddingHorizontal: 4, borderRadius: 16, alignItems: "center", justifyContent: "center", gap: 7, borderWidth: 1, borderColor: pressed ? tone : colors.borderSubtle, backgroundColor: name === "light" ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.045)", opacity: pressed ? 0.78 : 1, transform: pressed && !reduceContactMotion ? [{scale:0.96}] : [], ...(Platform.OS === "web" ? ({cursor:"pointer"} as object) : {}) })}>
-                <View style={{width:32,height:32,borderRadius:12,alignItems:"center",justifyContent:"center",backgroundColor:wash}}><NavIcon name={navIconFor(q.icon)} color={tone} size={19} cut={wash}/></View>
-                <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: width < 360 ? 11 : 12, fontWeight: "700" }}>{q.label}</Text>
-              </Pressable>;
-            })}
-          </View>
-        ) : null}
-        {(p.social ?? []).length ? (
-          <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
-            {(p.social ?? []).map((x) => {
-              const tone = x.icon === "instagram" ? (name === "light" ? "#913B68" : "#F0A5CC") : (name === "light" ? "#17643D" : "#8DE0AE");
-              return <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={`${x.title}, ${x.sub}`} onPress={x.onPress} style={({ pressed }) => ({ flex: 1, minWidth: 0, minHeight: 46, paddingHorizontal: 10, paddingVertical: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: 16, borderWidth: 1, borderColor: pressed ? tone : colors.borderSubtle, backgroundColor: name === "light" ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.025)", opacity: pressed ? 0.75 : 1, transform: pressed && !reduceContactMotion ? [{scale:0.97}] : [], ...(Platform.OS === "web" ? ({cursor:"pointer"} as object) : {}) })}>
-                <NavIcon name={x.icon} color={tone} size={17} cut={name === "light" ? "#FFFFFF" : "#24262A"} />
-                <Text numberOfLines={2} style={{ flexShrink: 1, color: colors.textSecondary, fontSize: width < 360 ? 10 : 11, lineHeight: 14, fontWeight: "600" }}>{x.sub}</Text>
-              </Pressable>;
-            })}
-          </View>
-        ) : null}
+        <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 2, padding: 8 }}>
+          {p.quick?.length ? p.quick.map((q) => {
+            const tone = q.icon === "whatsapp" ? (name === "light" ? "#17643D" : "#8DE0AE") : q.icon === "directions" ? (name === "light" ? "#245A89" : "#9CCEF9") : (name === "light" ? "#88420E" : "#F8B982");
+            const wash = q.icon === "whatsapp" ? (name === "light" ? "#E1F2E7" : "#223D30") : q.icon === "directions" ? (name === "light" ? "#E5EFFA" : "#253746") : (name === "light" ? "#FAEADB" : "#443226");
+            return <Pressable key={q.key} accessibilityRole="button" accessibilityLabel={q.label} onPress={q.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "transparent", opacity: pressed ? 0.7 : 1, transform: pressed && !reduceContactMotion ? [{scale:0.96}] : [], ...(Platform.OS === "web" ? ({cursor:"pointer"} as object) : {}) })}>
+              <View style={{width:34,height:34,borderRadius:9999,alignItems:"center",justifyContent:"center",backgroundColor:wash}}><NavIcon name={navIconFor(q.icon)} color={tone} size={19} cut={wash}/></View>
+            </Pressable>;
+          }) : null}
+          {(p.social ?? []).length ? (p.social ?? []).map((x) => {
+            const tone = x.icon === "instagram" ? (name === "light" ? "#913B68" : "#F0A5CC") : (name === "light" ? "#17643D" : "#8DE0AE");
+            const wash = x.icon === "instagram" ? (name === "light" ? "#F8E8F0" : "#422D3B") : (name === "light" ? "#E1F2E7" : "#223D30");
+            return <Pressable key={x.key} accessibilityRole="button" accessibilityLabel={`${x.title}, ${x.sub}`} onPress={x.onPress} style={({ pressed }) => ({ width: 48, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "transparent", opacity: pressed ? 0.7 : 1, transform: pressed && !reduceContactMotion ? [{scale:0.97}] : [], ...(Platform.OS === "web" ? ({cursor:"pointer"} as object) : {}) })}>
+              <View style={{width:34,height:34,borderRadius:9999,alignItems:"center",justifyContent:"center",backgroundColor:wash}}><NavIcon name={x.icon} color={tone} size={19} cut={wash}/></View>
+            </Pressable>;
+          }) : null}
+        </View>
       </View>
     </View>
   );

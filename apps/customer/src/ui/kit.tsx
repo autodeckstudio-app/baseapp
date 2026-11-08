@@ -118,7 +118,7 @@ export function CanvasTitle({ eyebrow, title }: { eyebrow?: string; title: strin
   return (
     <View style={{ minHeight: 150, justifyContent: "flex-end" }}>
       {eyebrow ? <T role="label" style={{ color: "rgba(255,255,255,.92)", ...shadow } as never}>{eyebrow}</T> : null}
-      <T role="display" numberOfLines={1} style={{ fontSize: 52, lineHeight: 56, fontWeight: "500", letterSpacing: -2.2, color: "rgba(255,255,255,.95)", ...(web ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>{title}</T>
+      <T role="display" numberOfLines={2} style={{ fontSize: 32, lineHeight: 38, fontWeight: "500", letterSpacing: -1, color: "rgba(255,255,255,.95)", ...(web ? { textShadow: "0 6px 40px rgba(0,0,0,.4)" } : {}) } as never}>{title}</T>
     </View>
   );
 }
@@ -128,7 +128,7 @@ export function PageHeader({ kicker, title, sub }: { kicker?: string; title: str
   return (
     <View style={{ gap: 4 }}>
       {kicker ? <Kicker tone="accent">{kicker}</Kicker> : null}
-      <T role="title" style={{ fontSize: 26, lineHeight: 32, fontWeight: "700" } as never}>{title}</T>
+      <T role="title" style={{ fontSize: 22, lineHeight: 28, fontWeight: "700" } as never}>{title}</T>
       {sub ? <T role="body" tone="secondary">{sub}</T> : null}
     </View>
   );
