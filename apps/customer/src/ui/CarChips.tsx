@@ -2,7 +2,7 @@
 // Tap the car to open it in Garage.
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { segmentLabel } from "@autodeck/core";
-import { useExperienceTheme } from "@autodeck/ui/native";
+import { Icon, useExperienceTheme } from "@autodeck/ui/native";
 import { glassPane } from "../lib/glass-pane";
 import { metrics } from "../lib/metrics";
 import { Plate } from "./kit";
@@ -21,16 +21,25 @@ export function CarChips({ cars, active, onActive, onOpen, onAdd }: { cars: Home
   }
   const car = cars[Math.min(active, cars.length - 1)] ?? cars[0]!;
   const seg = segmentLabel(car.category ?? car.vehicle?.category);
+  // No photo on the vehicle record: a compact identity row, not a large empty frame.
+  // The 160px frame returns the moment a photo exists (loading states stay inside CarThumb).
+  const framed = !!car.vehicle?.photoUrl;
   return (
     <View style={{ padding: metrics.cardPad, gap: 12, ...glassPane(light) }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Open ${car.title}`} onPress={() => onOpen(car)} style={({ pressed }) => ({ gap: 12, opacity: pressed ? 0.88 : 1 })}>
-        <View style={{ borderRadius: 16, overflow: "hidden" }}><CarThumb car={car.vehicle} height={160} radius={16} /></View>
+        {framed ? <View style={{ borderRadius: 16, overflow: "hidden" }}><CarThumb car={car.vehicle} height={160} radius={16} /></View> : null}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {!framed ? (
+            <View style={{ width: 44, height: 44, borderRadius: 9999, alignItems: "center", justifyContent: "center", backgroundColor: light ? "rgba(29,27,38,0.06)" : "rgba(255,255,255,0.07)" }}>
+              <Icon name="car" color={colors.textSecondary} size={22} />
+            </View>
+          ) : null}
           <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
             <Text numberOfLines={1} style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800" }}>{car.title}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {car.plate ? <Plate value={car.plate} /> : null}
               {seg ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>{seg}</Text> : null}
+              {!framed ? <Text numberOfLines={1} style={{ color: colors.textSecondary, fontSize: 12 }}>Add a photo from the car page</Text> : null}
             </View>
           </View>
         </View>
