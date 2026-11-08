@@ -148,7 +148,7 @@ export function ReferencePackageCard({
           <T role="bodyStrong" tone="accent">
             Quote to confirm
           </T>
-          <T role="caption">{item.brand ? "View range" : "View details"}</T>
+          <T role="caption">{item.level === "brand" ? "View details" : item.brand ? "View range" : "View details"}</T>
         </View>
       </View>
     </SceneCard>
@@ -440,7 +440,7 @@ export function ServicesExplorer({
                   key={b}
                   title={b}
                   brand
-                  detail={(() => { const n = selected.filter((s) => s.brand === b).length + selectedRefs.filter((r) => r.brand === b).length; return `${n} current option${n === 1 ? "" : "s"}`; })()}
+                  detail={(() => { const n = selected.filter((s) => s.brand === b).length + selectedRefs.filter((r) => r.brand === b && r.level !== "brand").length; return n ? `${n} current option${n === 1 ? "" : "s"}` : "Confirm options with the studio"; })()}
                   onPress={() => onPath({ ...path, brand: b })}
                 />
               ))}

@@ -5,7 +5,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export function guardCatalogue(mapping,snapshot,enquiries){
  const allow=(row,keys)=>{if(Object.keys(row).some(key=>!keys.includes(key)))throw Error('Unexpected public field');};
  for(const row of snapshot.services)allow(row,['id','name','brand','category','description','priceOnRequest','coverageLevel']);
- for(const row of enquiries)allow(row,['key','brand','name','group','note','source','surface']);
+ for(const row of enquiries)allow(row,['key','brand','name','group','note','source','surface','level']);
  const ids=new Set(snapshot.services.map(x=>x.id));const asks=new Set(enquiries.map(x=>x.key));const seen=new Set();
  if(ids.size!==snapshot.services.length||asks.size!==enquiries.length)throw Error('Duplicate public identity');
  if(mapping.schemaVersion!==undefined&&mapping.schemaVersion!==1)throw Error('Unsupported source schema');

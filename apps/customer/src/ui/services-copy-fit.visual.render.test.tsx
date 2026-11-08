@@ -17,7 +17,7 @@ vi.mock('@autodeck/ui/native', async () => {
 });
 // Real illustrative assets as file:// URIs so headless Chrome paints actual pixels.
 const { A, HOME_IMG, TYPE_IMG, PRODUCT_IMG } = vi.hoisted(() => {
-const A = (rel: string) => ({ uri: 'file:///tmp/baseapp/apps/customer/assets/' + rel });
+const A = (rel: string) => ({ uri: new URL('../../../../apps/customer/assets/' + rel, import.meta.url).href });
 const HOME_IMG: Record<string, any> = {
   paint: A('imagery/optimized/paint-protection.jpg'),
   detailing: A('imagery/optimized/detailing.jpg'),
@@ -102,17 +102,18 @@ import { ServicesExplorer } from './ServicesExplorer';
 import { ServiceScope } from './ServiceScope';
 import type { Service } from '@autodeck/core';
 
-const final = JSON.parse(readFileSync('/tmp/service-details-final.json', 'utf8')).prepared_for as any[];
-const shape = JSON.parse(readFileSync('/tmp/live65-shape.json', 'utf8')) as any[];
-const liveDesc: Record<string, string> = Object.fromEntries(
-  (JSON.parse(readFileSync('/tmp/live65.json', 'utf8')) as any[]).map((l) => [l.id, l.desc]));
-const finalById = Object.fromEntries(final.map((p) => [p.id, p]));
+// Fixture source: the committed, published 65-record public catalogue
+// (apps/site/src/data/public-service-catalogue.json) - the sanitized final
+// verified copy, resolved repo-relative so this harness runs from any
+// checkout path with no /tmp fixtures.
+const shape = JSON.parse(
+  readFileSync(new URL('../../../../apps/site/src/data/public-service-catalogue.json', import.meta.url), 'utf8')
+).services as any[];
 
 const services = shape.map((s) => {
-  const f = finalById[s.id];
   return {
-    id: s.id, tenantId: 't', name: f?.proposed_name ?? s.name, category: s.category, brand: s.brand,
-    description: f?.proposed_description ?? liveDesc[s.id] ?? '', basePrice: 0, currency: 'INR',
+    id: s.id, tenantId: 't', name: s.name, category: s.category, brand: s.brand,
+    description: s.description ?? '', basePrice: 0, currency: 'INR',
     estimatedDurationMinutes: 60, warrantyLabel: null, warrantyDurationValue: null, warrantyDurationUnit: null,
     vehicleCategoryPricing: [], requiredBayType: 'protection', membershipWashEligible: false,
     priceOnRequest: s.priceOnRequest, coverageLevel: s.coverageLevel, active: true, displayOrder: 0,

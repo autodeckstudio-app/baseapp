@@ -835,6 +835,60 @@
       "serviceId": null,
       "enquiryKey": "legend-reference",
       "status": "catalogue-listed-unverified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:llumar-ppf",
+      "serviceId": null,
+      "enquiryKey": "llumar-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:garware-ppf",
+      "serviceId": null,
+      "enquiryKey": "garware-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:xpel-ppf",
+      "serviceId": null,
+      "enquiryKey": "xpel-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:avery-dennison-ppf",
+      "serviceId": null,
+      "enquiryKey": "avery-dennison-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:avvyx-ppf",
+      "serviceId": null,
+      "enquiryKey": "avvyx-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:nar-ppf",
+      "serviceId": null,
+      "enquiryKey": "nar-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "owner-confirmation-2026-11-08:gswf-ppf",
+      "serviceId": null,
+      "enquiryKey": "gswf-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
+      "key": "range:ultraguard-clear-ppf",
+      "serviceId": null,
+      "enquiryKey": "ultraguard-clear-ppf",
+      "status": "catalogue-listed-unverified-enquiry"
+    },
+    {
+      "key": "range:ultraguard-matte-ppf",
+      "serviceId": null,
+      "enquiryKey": "ultraguard-matte-ppf",
+      "status": "catalogue-listed-unverified-enquiry"
     }
   ]
 }
