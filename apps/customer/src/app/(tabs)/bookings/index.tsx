@@ -28,7 +28,7 @@ import type { ApprovalRequest, ServiceJob } from "@autodeck/core";
 import { listenToApprovalsForJob } from "../../../lib/approval-service";
 import { cancelBooking } from "../../../lib/booking-service";
 import { getRescheduleEligibility, cancelState, cancelConfirmBody } from "../../../lib/booking-rules";
-import { liveJobOf, recentDistinctServices } from "../../../lib/bookings-view";
+import { liveJobOf, recentDistinctServices, groupByMonth } from "../../../lib/bookings-view";
 import { STUDIO_INFO } from "../../../lib/studio-info";
 import { jobStage, readyIsAhead, STAGES } from "../../../ui/job-stage";
 import { TabPills } from "../../../ui/CarOverview";
@@ -38,7 +38,7 @@ import { listenToMyInvoices } from "../../../lib/invoice-service";
 import { visitServices, visitTitle, visitAlso } from "../../../lib/visit-services";
 import type { Invoice } from "@autodeck/core";
 import { glassInner } from "../../../lib/glass";
-import { HeroImage, Button, CanvasTitle, Chip, Kicker, LinkAction, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
+import { HeroImage, Button, CanvasTitle, Chip, Kicker, Loading, Notice, PageHeader, Pane, Screen, SectionTitle, T, rupees } from "../../../ui/kit";
 
 const STATUS: Record<Booking["status"], { label: string; tone: "accent" | "premium" | "neutral" | "danger" }> = {
   PENDING: { label: "Pending", tone: "accent" },
@@ -289,9 +289,7 @@ export default function BookingsScreen() {
       {seg === "past" ? (
         past.length > 0 ? (
           <View style={{ gap: space.line }}>
-            {/* Preview only: the two most recent visits. Full details keeps every record. */}
-            {list(past.slice(0, 2))}
-            <LinkAction label="Open full details" onPress={() => router.push("/(tabs)/garage/history")} />
+            {groupByMonth(past).map((g) => <View key={g.key} style={{ gap: space.line }}><T role="label" tone="secondary">{g.label.toUpperCase()}</T>{list(g.items)}</View>)}
           </View>
         ) : <Notice title="No past visits" body="Finished and cancelled visits show here." />
       ) : null}
