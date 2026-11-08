@@ -141,7 +141,7 @@ export function protectionDetail(p: Protection, formatDate: (iso: string) => str
   // Years are never an affirmed or active warranty - not for the customer's own
   // report, and not for a studio record: "Record verified" means the RECORD was
   // checked, never that coverage exists or was issued by the issuer.
-  if (p.warrantyYears) parts.push(isSelfDeclared(p) ? `Reported warranty: ${p.warrantyYears} years, not verified` : `Warranty on record: ${p.warrantyYears} years`);
+  if (p.warrantyYears) { const y = `${p.warrantyYears} ${p.warrantyYears === 1 ? "year" : "years"}`; parts.push(isSelfDeclared(p) ? `Reported warranty: ${y}, not verified` : `Warranty on record: ${y}`); }
   if (p.startDate) parts.push(`since ${formatDate(p.startDate)}`);
   if (p.expiryDate) parts.push(`Expires ${formatDate(p.expiryDate)}`);
   return parts.join(" · ");

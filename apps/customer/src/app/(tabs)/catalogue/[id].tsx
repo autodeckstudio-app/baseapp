@@ -267,7 +267,9 @@ export function ServiceDetailView(props: ServiceDetailViewProps) {
         </>
 
         {COPY_IS_DRAFT ? <T role="caption" tone="tertiary">Draft text, pending studio review.</T> : null}
-        <View style={{ height: showBar ? barH + 24 : 0 }} />
+        {/* Clearance for the floating action bar: it rides 92 above the
+            viewport bottom, so content needs 92 + bar height + margin. */}
+        <View style={{ height: showBar ? barH + 116 : 0 }} />
       </Screen>
       {focused && showBar ? <View pointerEvents="box-none" style={{ position: Platform.OS === "web" ? ("fixed" as never) : "absolute", left: 0, right: 0, bottom: 92, alignItems: "center", paddingHorizontal: 20 }}><View onLayout={(e) => setBarH(e.nativeEvent.layout.height)} style={{ width: "100%", maxWidth: 480, alignItems: "center", paddingHorizontal: space.inset, paddingVertical: space.line, backgroundColor: mode === "light" ? "#FFFFFF" : colors.surface, borderRadius: 24, borderWidth: 1, borderColor: mode === "light" ? "rgba(60,48,36,0.10)" : "rgba(255,255,255,0.08)", shadowColor: "#000", shadowOpacity: mode === "light" ? 0.14 : 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
         <ServiceActionBar car={`${pricingVehicle.label??"Your car"}${GST_ENABLED ? " · incl. GST" : ""}`} price={stickyPriceLabel({priceOnRequest:service.priceOnRequest===true,loading:priceLoading,total:priceBreakdown?priceBreakdown.total:null,from:service.priceFrom===true,needsCarType,hasCar:!!pricingVehicle.vehicle,error:priceError!==null},rupees)} disabled={!service.priceOnRequest&&priceBreakdown===null} label={service.priceOnRequest===true?(service.category==="garage"||service.category==="modifications"?"Book an inspection":"Request a quote"):"Book now"} onPress={()=>service.priceOnRequest===true&&SERVICE_QUOTE_JOURNEY_READY?router.push({pathname:"/(tabs)/quote-request",params:{serviceId:String(id)}}):router.push(`/(tabs)/book/${id}`)}/>

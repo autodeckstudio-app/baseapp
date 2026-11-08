@@ -3,6 +3,7 @@ import { listOwnerKey } from "../../../lib/owner-key";
 import { VISIT_FALLBACK, visitAlso, visitServices, visitTitle } from "../../../lib/visit-services";
 import { lastFinishedJob } from "../../../lib/care-due";
 import { buildCarStory } from "../../../lib/car-story";
+import { shareStoryHtml, shareStoryReady } from "../../../lib/share-story";
 import { buildCarePlan } from "../../../lib/care-plan";
 import { glassSurface, glassInner, glassOrange } from "../../../lib/glass";
 import { FileUploader, DateField, SelectField } from "../../../ui/inputs"; // DateField: calendar-valid date choice, no free-text dates // DateField: calendar-valid date choice, no free-text dates
@@ -26,7 +27,6 @@ import { updateVehicle, archiveVehicle, uploadVehiclePhoto, uploadVehicleRc, rem
 import { metrics } from "../../../lib/metrics";
 import { CarHero } from "../../../ui/CarHero";
 import { CarThumb } from "../../../ui/CarThumb";
-import { CategoryCarImage } from "../../../ui/CategoryCarImage";
 import { listenToJobsForVehicle } from "../../../lib/job-service";
 import { isCalendarDate, listenToVehicleProtections, updateMyProtection } from "../../../lib/protection-service";
 import { reconcileProtectionReadback, upsertProtection } from "../../../lib/protection-readback";
@@ -536,27 +536,42 @@ export default function VehicleDetailScreen() {
   }
 
   const due = null;
+  const heroFacts = [
+    { label: "Year", value: String(vehicle.year ?? "-") },
+    { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
+    ...(vehicle.category ? [{ label: "Type", value: segmentLabel(vehicle.category) ?? "" }] : []),
+    ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
+    ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
+  ];
 
   return (
     <Screen
       header={
         <View style={{ gap: space.breath }}>
+          {(newPhoto || vehicle.photoUrl) ? (
           <CarHero
-            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : vehicle.photoUrl ? <CarThumb car={vehicle} height={metrics.heroTall} radius={0} /> : <CategoryCarImage category={vehicle.category} height={metrics.heroTall} />}
+            photo={newPhoto ? (Platform.OS === "web" ? createElement("img", { src: newPhoto.previewUrl, alt: "New car photo", style: { width: "100%", height: metrics.heroTall, objectFit: "cover", display: "block" } }) : <Image source={{uri:newPhoto.previewUrl}} accessibilityLabel="New car photo" style={{width:"100%",height:metrics.heroTall}} resizeMode="cover" />) : <CarThumb car={vehicle} height={metrics.heroTall} radius={0} />}
             title={`${vehicle.make} ${vehicle.model}`}
             plate={mockDetail ? null : vehicle.registrationNumber}
-            facts={[
-              { label: "Year", value: String(vehicle.year ?? "-") },
-              { label: "Colour", value: vehicle.color ? vehicle.color.charAt(0).toUpperCase() + vehicle.color.slice(1) : "-" },
-              ...(vehicle.category ? [{ label: "Type", value: segmentLabel(vehicle.category) ?? "" }] : []),
-              ...(vehicle.odometer !== null && vehicle.odometer !== undefined ? [{ label: "Odometer", value: `${vehicle.odometer.toLocaleString("en-IN")} km` }] : []),
-              ...(verifiedProtections.length > 0 ? [{ label: "Protection", value: `${verifiedProtections.length} on file` }] : []),
-            ]}
+            facts={heroFacts}
             compact={false}
             next={null}
             onNext={undefined}
             onBook={undefined}
           />
+          ) : (
+          /* No recorded photo of THIS car: compact identity, never a stock
+             stand-in above the real name and records. */
+          <Pane pad="gap">
+            <View style={{ gap: space.line }}>
+              <T role="title">{`${vehicle.make} ${vehicle.model}`}</T>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {mockDetail ? null : <Plate value={vehicle.registrationNumber} />}
+                <T role="caption" tone="secondary">{heroFacts.filter((f) => f.value && f.value !== "-").map((f) => f.value).join("  ·  ")}</T>
+              </View>
+            </View>
+          </Pane>
+          )}
         </View>
       }
     >
@@ -690,11 +705,33 @@ export default function VehicleDetailScreen() {
         return story ? (
         <Pane pad="gap">
           <Kicker>Your car&apos;s story</Kicker>
-          {story.since ? <Row title="With AutoDeck since" detail={story.since} /> : null}
+          {story.since ? <Row title="First recorded completed visit" detail={story.since} /> : null}
           {story.visits > 0 ? <Row title="Visits completed" detail={String(story.visits)} /> : null}
           {story.protections.map((sp, i) => (
             <Row key={sp.title} title={sp.title} detail={sp.detail || undefined} last={i === story.protections.length - 1} />
           ))}
+          {(() => {
+            // Shareable export, safe by construction (see lib/share-story):
+            // verified protections and delivered visits only; never plate,
+            // bills, contact details or inspection evidence. Web download for
+            // now; native share lands with the native verification pass.
+            if (Platform.OS !== "web") return null;
+            const shareProt = currentProtections.filter((pr) => pr.status === "verified").map((pr) => ({ title: protectionRecordTitle(pr), detail: protectionDetail(pr, formatDate) }));
+            const shareVisits = jobs.filter((j) => j.status === "DELIVERED" && j.sealedAt).map((j) => ({ date: formatDate(j.sealedAt as string), service: visitTitle(visitServices(j, invoices.find((x) => x.jobId === j.id), serviceNames)) }));
+            const shareInput = { carTitle: `${vehicle.make} ${vehicle.model}`, subtitle: heroFacts.filter((f) => f.label !== "Odometer" && f.label !== "Protection" && f.value && f.value !== "-").map((f) => f.value).join(" · "), photoUrl: vehicle.photoUrl ?? null, visits: shareVisits, protections: shareProt, generatedOn: formatDate(todayStudioDate()) };
+            if (!shareStoryReady(shareInput)) return null;
+            return <LinkAction label="Share your car's story" testID="share-car-story" onPress={() => {
+              const html = shareStoryHtml(shareInput);
+              const doc2 = (globalThis as unknown as { document: { createElement(t: string): { href: string; download: string; click(): void } } }).document;
+              const blob = new Blob([html], { type: "text/html", lastModified: Date.now() });
+              const url = URL.createObjectURL(blob);
+              const a = doc2.createElement("a");
+              a.href = url;
+              a.download = `${vehicle.make} ${vehicle.model} - care story.html`;
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 10_000);
+            }} />;
+          })()}
         </Pane>
         ) : null;
       })()}
