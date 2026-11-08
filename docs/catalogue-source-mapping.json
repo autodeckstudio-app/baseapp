@@ -879,6 +879,12 @@
       "status": "source-qualified-enquiry"
     },
     {
+      "key": "owner-confirmation-2026-11-08:rodim-ppf",
+      "serviceId": null,
+      "enquiryKey": "rodim-ppf",
+      "status": "source-qualified-enquiry"
+    },
+    {
       "key": "range:ultraguard-clear-ppf",
       "serviceId": null,
       "enquiryKey": "ultraguard-clear-ppf",
