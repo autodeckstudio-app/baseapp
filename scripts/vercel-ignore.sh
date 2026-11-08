@@ -189,6 +189,23 @@ if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
     fi
   fi
 fi
+# One-shot site rebuild for the Rodim source-mapping fix (docs-only change;
+# customer/studio/admin unaffected). Fires only when HEAD's parent is exactly
+# 70c7a6a4 AND HEAD changes nothing but this script; doubt falls through.
+if [ "${VERCEL_GIT_COMMIT_REF:-}" = main ]; then
+  fix_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  fix_parent="$(git rev-parse --verify HEAD^ 2>/dev/null || true)"
+  if [ -n "$fix_root" ] && [ "$fix_parent" = 70c7a6a417e725a6cf0b3b9d96dc8b619804ca14 ]; then
+    cd "$fix_root" || exit 0
+    fix_changed="$(git diff --name-only "$fix_parent" HEAD 2>/dev/null)" || exit 0
+    if [ "$fix_changed" = scripts/vercel-ignore.sh ]; then
+      case "$app" in
+        site) printf 'rodim mapping site rebuild: BUILD (%s)\n' "$app"; exit 1 ;;
+        *) printf 'rodim mapping site rebuild: SKIP (%s)\n' "$app"; exit 0 ;;
+      esac
+    fi
+  fi
+fi
 # Website releases fail closed. An app-only push must never rebuild the site
 # merely because its older successful base is missing from a shallow clone.
 if [ "$app" = site ]; then
